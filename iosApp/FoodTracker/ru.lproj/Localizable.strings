@@ -6,7 +6,7 @@
 
 "location_filter_all" = "Все";
 
-"status_filter_active" = "Активные";
+"status_filter_all" = "Все";
 "status_filter_expiring_soon" = "Скоро истекают";
 "status_filter_expired" = "Просроченные";
 "status_filter_fresh" = "Свежее";

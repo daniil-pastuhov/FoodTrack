@@ -6,7 +6,7 @@
 
 "location_filter_all" = "All";
 
-"status_filter_active" = "Active";
+"status_filter_all" = "All";
 "status_filter_expiring_soon" = "Expiring Soon";
 "status_filter_expired" = "Expired";
 "status_filter_fresh" = "Fresh";

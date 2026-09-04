@@ -6,7 +6,7 @@
 
 "location_filter_all" = "Alle";
 
-"status_filter_active" = "Aktive";
+"status_filter_all" = "Alle";
 "status_filter_expiring_soon" = "Utløper snart";
 "status_filter_expired" = "Utløpt";
 "status_filter_fresh" = "Fersk";

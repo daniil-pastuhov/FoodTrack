@@ -20,12 +20,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.foodtracker.android.ui.theme.ExpiredRed
-import com.foodtracker.android.ui.theme.ExpiredRedBg
-import com.foodtracker.android.ui.theme.ExpiringAmber
-import com.foodtracker.android.ui.theme.ExpiringAmberBg
-import com.foodtracker.android.ui.theme.FreshGreen
-import com.foodtracker.android.ui.theme.FreshGreenBg
+import com.foodtracker.android.ui.theme.expiredStatusColors
+import com.foodtracker.android.ui.theme.expiringStatusColors
+import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.util.daysRemainingLabel
 import com.foodtracker.model.ExpiryStatus
 
@@ -35,12 +32,14 @@ fun ExpiryBadge(
     status: ExpiryStatus,
     modifier: Modifier = Modifier
 ) {
-    val (bg, textColor, icon) = when (status) {
-        ExpiryStatus.EXPIRED -> Triple(ExpiredRedBg, ExpiredRed, Icons.Default.Error)
+    val (colors, icon) = when (status) {
+        ExpiryStatus.EXPIRED -> expiredStatusColors() to Icons.Default.Error
         ExpiryStatus.EXPIRING_TODAY,
-        ExpiryStatus.EXPIRING_SOON -> Triple(ExpiringAmberBg, ExpiringAmber, Icons.Default.Warning)
-        ExpiryStatus.FRESH -> Triple(FreshGreenBg, FreshGreen, Icons.Default.Schedule)
+        ExpiryStatus.EXPIRING_SOON -> expiringStatusColors() to Icons.Default.Warning
+        ExpiryStatus.FRESH -> freshStatusColors() to Icons.Default.Schedule
     }
+    val bg = colors.background
+    val textColor = colors.foreground
 
     val label = daysRemainingLabel(daysRemaining)
 

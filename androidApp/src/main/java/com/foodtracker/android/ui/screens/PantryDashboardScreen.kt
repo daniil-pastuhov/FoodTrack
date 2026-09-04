@@ -71,12 +71,9 @@ import androidx.compose.ui.unit.sp
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.components.ItemCard
 import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.ExpiredRed
-import com.foodtracker.android.ui.theme.ExpiredRedBg
-import com.foodtracker.android.ui.theme.ExpiringAmber
-import com.foodtracker.android.ui.theme.ExpiringAmberBg
-import com.foodtracker.android.ui.theme.FreshGreen
-import com.foodtracker.android.ui.theme.FreshGreenBg
+import com.foodtracker.android.ui.theme.expiredStatusColors
+import com.foodtracker.android.ui.theme.expiringStatusColors
+import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.PantryItem
 import com.foodtracker.viewmodel.PantryStateHolder
@@ -196,31 +193,34 @@ fun PantryDashboardScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                val expiredColors = expiredStatusColors()
                 MetricCard(
                     title = stringResource(R.string.metric_expired),
                     count = state.expiredCount,
-                    color = ExpiredRed,
-                    bgColor = ExpiredRedBg,
+                    color = expiredColors.foreground,
+                    bgColor = expiredColors.background,
                     icon = Icons.Default.Error,
                     selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
                     onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
                     modifier = Modifier.weight(1f)
                 )
+                val expiringColors = expiringStatusColors()
                 MetricCard(
                     title = stringResource(R.string.metric_soon),
                     count = state.expiringSoonCount,
-                    color = ExpiringAmber,
-                    bgColor = ExpiringAmberBg,
+                    color = expiringColors.foreground,
+                    bgColor = expiringColors.background,
                     icon = Icons.Default.Warning,
                     selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
                     onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
                     modifier = Modifier.weight(1f)
                 )
+                val freshColors = freshStatusColors()
                 MetricCard(
                     title = stringResource(R.string.metric_fresh),
                     count = state.freshCount,
-                    color = FreshGreen,
-                    bgColor = FreshGreenBg,
+                    color = freshColors.foreground,
+                    bgColor = freshColors.background,
                     icon = Icons.Default.Schedule,
                     selected = state.selectedStatusFilter == StatusFilter.FRESH,
                     onClick = { toggleMetricFilter(StatusFilter.FRESH) },
@@ -377,7 +377,7 @@ private fun FilterSheetContent(
         }
 
         // Status Tabs. FRESH has no dedicated tab (it's only reachable via the metric
-        // card above), so fall back to highlighting "Active" rather than mislabeling
+        // card above), so fall back to highlighting "All" rather than mislabeling
         // a Fresh-only filter as Expired via a raw ordinal lookup.
         val tabIndex = when (selectedStatusFilter) {
             StatusFilter.EXPIRING_SOON -> 1
@@ -393,7 +393,7 @@ private fun FilterSheetContent(
             Tab(
                 selected = selectedStatusFilter == StatusFilter.ALL,
                 onClick = { stateHolder.onStatusFilterSelected(StatusFilter.ALL) },
-                text = { Text(stringResource(R.string.tab_active)) }
+                text = { Text(stringResource(R.string.tab_all)) }
             )
             Tab(
                 selected = selectedStatusFilter == StatusFilter.EXPIRING_SOON,

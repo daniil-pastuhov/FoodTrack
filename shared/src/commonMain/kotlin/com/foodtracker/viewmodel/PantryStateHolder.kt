@@ -6,8 +6,6 @@ import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.parser.GS1BarcodeParser
-import com.foodtracker.repository.InMemoryPantryRepository
-import com.foodtracker.repository.InMemorySettingsRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.util.DateUtils
@@ -48,8 +46,8 @@ data class PantryUiState(
 )
 
 class PantryStateHolder(
-    private val repository: PantryRepository = InMemoryPantryRepository(),
-    private val settingsRepository: SettingsRepository = InMemorySettingsRepository(),
+    private val repository: PantryRepository,
+    private val settingsRepository: SettingsRepository,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {

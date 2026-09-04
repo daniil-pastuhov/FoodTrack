@@ -17,7 +17,7 @@
     <string name="filter_content_description">Filters</string>
     <string name="filters_sheet_title">Filters</string>
 
-    <string name="tab_active">Active</string>
+    <string name="tab_all">All</string>
     <string name="tab_expiring_soon">Expiring Soon</string>
     <string name="tab_expired">Expired</string>
 

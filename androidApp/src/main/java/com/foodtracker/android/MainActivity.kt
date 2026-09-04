@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,7 +28,9 @@ import com.foodtracker.android.ui.screens.SettingsScreen
 import com.foodtracker.android.ui.theme.FoodTrackerTheme
 import com.foodtracker.model.AppTheme
 import com.foodtracker.model.PantryItem
+import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
+import org.koin.android.ext.android.inject
 
 enum class AppScreen {
     DASHBOARD,
@@ -37,11 +40,11 @@ enum class AppScreen {
 }
 
 class MainActivity : ComponentActivity() {
+
+    private val stateHolder: PantryStateHolder by inject()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val app = application as FoodTrackerApp
-        val stateHolder = app.stateHolder
 
         setContent {
             val uiState by stateHolder.uiState.collectAsState()
@@ -88,6 +91,22 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val navigateToDashboard: () -> Unit = {
+                        currentScreen = AppScreen.DASHBOARD
+                    }
+                    val navigateBackFromScanner: () -> Unit = {
+                        stateHolder.clearScanState()
+                        currentScreen = AppScreen.DASHBOARD
+                    }
+
+                    BackHandler(enabled = currentScreen != AppScreen.DASHBOARD) {
+                        when (currentScreen) {
+                            AppScreen.SCANNER -> navigateBackFromScanner()
+                            AppScreen.ADD_EDIT, AppScreen.SETTINGS -> navigateToDashboard()
+                            AppScreen.DASHBOARD -> Unit
+                        }
+                    }
+
                     when (currentScreen) {
                         AppScreen.DASHBOARD -> {
                             PantryDashboardScreen(
@@ -123,10 +142,7 @@ class MainActivity : ComponentActivity() {
                         AppScreen.SCANNER -> {
                             ScannerScreen(
                                 stateHolder = stateHolder,
-                                onNavigateBack = {
-                                    stateHolder.clearScanState()
-                                    currentScreen = AppScreen.DASHBOARD
-                                },
+                                onNavigateBack = navigateBackFromScanner,
                                 onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate ->
                                     editingItem = null
                                     prefillBarcode = barcode
@@ -148,9 +164,7 @@ class MainActivity : ComponentActivity() {
                                 prefillImageUrl = prefillImageUrl,
                                 prefillExpiryDate = prefillExpiryDate,
                                 settings = uiState.settings,
-                                onNavigateBack = {
-                                    currentScreen = AppScreen.DASHBOARD
-                                },
+                                onNavigateBack = navigateToDashboard,
                                 onSaveItem = { item ->
                                     com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, item)
                                     stateHolder.saveItem(item)
@@ -162,9 +176,7 @@ class MainActivity : ComponentActivity() {
                         AppScreen.SETTINGS -> {
                             SettingsScreen(
                                 settings = uiState.settings,
-                                onNavigateBack = {
-                                    currentScreen = AppScreen.DASHBOARD
-                                },
+                                onNavigateBack = navigateToDashboard,
                                 onSave = { newSettings ->
                                     val notificationsChanged = newSettings.notifications != uiState.settings.notifications
                                     stateHolder.updateSettings(newSettings)

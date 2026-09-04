@@ -17,7 +17,7 @@
     <string name="filter_content_description">Фильтры</string>
     <string name="filters_sheet_title">Фильтры</string>
 
-    <string name="tab_active">Активные</string>
+    <string name="tab_all">Все</string>
     <string name="tab_expiring_soon">Скоро истекают</string>
     <string name="tab_expired">Просроченные</string>
 

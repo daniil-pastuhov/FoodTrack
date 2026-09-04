@@ -1,8 +1,9 @@
 import Foundation
+import SwiftData
 import SwiftUI
 
 public enum NativeStatusFilter: String, CaseIterable, Identifiable {
-    case active = "Active"
+    case all = "All"
     case expiringSoon = "Expiring Soon"
     case expired = "Expired"
     case fresh = "Fresh"
@@ -11,11 +12,11 @@ public enum NativeStatusFilter: String, CaseIterable, Identifiable {
 
     /// The filter cases shown as tabs in the filter sheet. `fresh` is intentionally excluded —
     /// it's only reachable by tapping the Fresh metric card, mirroring the Android dashboard.
-    public static var tabCases: [NativeStatusFilter] { [.active, .expiringSoon, .expired] }
+    public static var tabCases: [NativeStatusFilter] { [.all, .expiringSoon, .expired] }
 
     public var localizedTitle: String {
         switch self {
-        case .active: return L10n.statusFilterActive
+        case .all: return L10n.statusFilterAll
         case .expiringSoon: return L10n.statusFilterExpiringSoon
         case .expired: return L10n.statusFilterExpired
         case .fresh: return L10n.statusFilterFresh
@@ -28,14 +29,34 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var items: [PantryItem] = []
     @Published public var searchQuery: String = ""
     @Published public var selectedLocation: String? = nil
-    @Published public var selectedFilter: NativeStatusFilter = .active
+    @Published public var selectedFilter: NativeStatusFilter = .all
     @Published public var isLookingUpBarcode: Bool = false
     @Published public var scannedProduct: ProductInfo? = nil
     @Published public var detectedDate: Date? = nil
 
-    public init() {}
+    private let modelContext: ModelContext
+
+    /// Shared on-disk container for pantry data. `NativePantryViewModel()` (used at every
+    /// call site) resolves to this by default; a test can pass an in-memory container instead.
+    public nonisolated static let sharedModelContainer: ModelContainer = {
+        do {
+            return try ModelContainer(for: PantryItemRecord.self)
+        } catch {
+            fatalError("Failed to create SwiftData ModelContainer for PantryItemRecord: \(error)")
+        }
+    }()
+
+    public init(modelContainer: ModelContainer = NativePantryViewModel.sharedModelContainer) {
+        modelContext = ModelContext(modelContainer)
+        loadItems()
+    }
 
     private var expiringSoonDays: Int { SettingsStore.shared.settings.expiringSoonDays }
+
+    private func loadItems() {
+        let descriptor = FetchDescriptor<PantryItemRecord>(sortBy: [SortDescriptor(\.expiryDate)])
+        items = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asPantryItem }
+    }
 
     public var filteredItems: [PantryItem] {
         items.filter { item in
@@ -43,7 +64,7 @@ public class NativePantryViewModel: ObservableObject {
 
             let matchesStatus: Bool
             switch selectedFilter {
-            case .active:
+            case .all:
                 matchesStatus = true
             case .expiringSoon:
                 matchesStatus = item.daysRemaining >= 0 && item.daysRemaining <= expiringSoonDays
@@ -75,14 +96,14 @@ public class NativePantryViewModel: ObservableObject {
 
     public var hasActiveFilters: Bool {
         selectedLocation != nil ||
-            selectedFilter != .active ||
+            selectedFilter != .all ||
             !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     /// Toggles a metric-card filter on/off: selecting an already-active filter clears it
-    /// back to `.active` (show everything), otherwise switches to the tapped filter.
+    /// back to `.all` (show everything), otherwise switches to the tapped filter.
     public func toggleMetricFilter(_ filter: NativeStatusFilter) {
-        selectedFilter = selectedFilter == filter ? .active : filter
+        selectedFilter = selectedFilter == filter ? .all : filter
     }
 
     public func lookupBarcode(_ barcode: String) {
@@ -143,16 +164,25 @@ public class NativePantryViewModel: ObservableObject {
     }
 
     public func saveItem(_ item: PantryItem) {
-        if let idx = items.firstIndex(where: { $0.id == item.id }) {
-            items[idx] = item
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == item.id })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.update(from: item)
         } else {
-            items.insert(item, at: 0)
+            modelContext.insert(PantryItemRecord(from: item))
         }
+        try? modelContext.save()
+        loadItems()
+
         IOSNotificationManager.shared.scheduleNotification(for: item)
         clearScanState()
     }
 
     public func deleteItem(_ id: String) {
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            modelContext.delete(existing)
+            try? modelContext.save()
+        }
         items.removeAll { $0.id == id }
         IOSNotificationManager.shared.cancelNotification(for: id)
     }
@@ -164,6 +194,8 @@ public class NativePantryViewModel: ObservableObject {
     }
 
     public func clearAllData() {
+        try? modelContext.delete(model: PantryItemRecord.self)
+        try? modelContext.save()
         items = []
         IOSNotificationManager.shared.cancelAll()
     }

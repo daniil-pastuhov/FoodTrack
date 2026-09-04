@@ -9,7 +9,7 @@ public enum L10n {
 
     public static var locationFilterAll: String { NSLocalizedString("location_filter_all", comment: "") }
 
-    public static var statusFilterActive: String { NSLocalizedString("status_filter_active", comment: "") }
+    public static var statusFilterAll: String { NSLocalizedString("status_filter_all", comment: "") }
     public static var statusFilterExpiringSoon: String { NSLocalizedString("status_filter_expiring_soon", comment: "") }
     public static var statusFilterExpired: String { NSLocalizedString("status_filter_expired", comment: "") }
     public static var statusFilterFresh: String { NSLocalizedString("status_filter_fresh", comment: "") }
