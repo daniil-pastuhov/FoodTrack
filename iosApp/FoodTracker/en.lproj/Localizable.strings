@@ -12,9 +12,17 @@
 "status_filter_fresh" = "Fresh";
 
 "empty_state_title" = "No items found";
-"empty_state_subtitle" = "Scan a barcode or tap '+' to track groceries.";
+"empty_state_subtitle" = "Scan a barcode or tap 'Add to Pantry' to track groceries.";
 
 "swipe_delete" = "Delete";
+
+"selection_count_format" = "%d selected";
+"exit_selection_button" = "Cancel";
+"select_items_button" = "Select";
+"more_options_button" = "More";
+"action_get_recipe_ideas" = "Get recipe ideas";
+"recipe_prompt_intro" = "I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:";
+"recipe_prompt_item_format" = "%@ (%@)";
 
 "search_placeholder" = "Search products or brands...";
 "scan_button" = "Scan";

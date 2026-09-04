@@ -19,6 +19,20 @@ public enum L10n {
 
     public static var swipeDelete: String { NSLocalizedString("swipe_delete", comment: "") }
 
+    public static var exitSelectionButton: String { NSLocalizedString("exit_selection_button", comment: "") }
+    public static var selectItemsButton: String { NSLocalizedString("select_items_button", comment: "") }
+    public static var moreOptionsButton: String { NSLocalizedString("more_options_button", comment: "") }
+    public static var actionGetRecipeIdeas: String { NSLocalizedString("action_get_recipe_ideas", comment: "") }
+    public static var recipePromptIntro: String { NSLocalizedString("recipe_prompt_intro", comment: "") }
+
+    public static func selectionCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("selection_count_format", comment: ""), count)
+    }
+
+    public static func recipePromptItem(name: String, expiry: String) -> String {
+        String(format: NSLocalizedString("recipe_prompt_item_format", comment: ""), name, expiry)
+    }
+
     public static var searchPlaceholder: String { NSLocalizedString("search_placeholder", comment: "") }
     public static var scanButton: String { NSLocalizedString("scan_button", comment: "") }
     public static var statusPickerLabel: String { NSLocalizedString("status_picker_label", comment: "") }

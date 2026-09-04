@@ -12,9 +12,17 @@
 "status_filter_fresh" = "Свежее";
 
 "empty_state_title" = "Ничего не найдено";
-"empty_state_subtitle" = "Отсканируйте штрихкод или нажмите «+», чтобы добавить продукты вручную.";
+"empty_state_subtitle" = "Отсканируйте штрихкод или нажмите «Добавить в кладовую», чтобы добавить продукты вручную.";
 
 "swipe_delete" = "Удалить";
+
+"selection_count_format" = "Выбрано: %d";
+"exit_selection_button" = "Отмена";
+"select_items_button" = "Выбрать";
+"more_options_button" = "Ещё";
+"action_get_recipe_ideas" = "Идеи рецептов";
+"recipe_prompt_intro" = "У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:";
+"recipe_prompt_item_format" = "%@ (%@)";
 
 "search_placeholder" = "Поиск по названию или бренду...";
 "scan_button" = "Сканировать";

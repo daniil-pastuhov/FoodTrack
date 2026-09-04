@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 public struct ScannerSheetView: View {
     @Environment(\.dismiss) private var dismiss
@@ -6,6 +7,10 @@ public struct ScannerSheetView: View {
 
     @State private var mode: IOSCameraMode = .barcode
     @State private var showManualAdd: Bool = false
+    @State private var cameraController: CameraScannerViewController?
+    @State private var isCapturingPhoto: Bool = false
+    @State private var capturedPhotoURL: URL?
+    @State private var photoCaptureFailed: Bool = false
 
     var onProceedToAdd: (String?, String?, String?, String?, Date?) -> Void
 
@@ -27,6 +32,9 @@ public struct ScannerSheetView: View {
                 },
                 onDateFound: { date in
                     viewModel.detectedDate = date
+                },
+                onControllerReady: { controller in
+                    cameraController = controller
                 }
             )
             .edgesIgnoringSafeArea(.all)
@@ -120,8 +128,53 @@ public struct ScannerSheetView: View {
 
                 Spacer()
 
+                if mode == .photo && photoCaptureFailed {
+                    Text(L10n.photoCaptureFailedMessage)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.red.opacity(0.85))
+                        .cornerRadius(20)
+                        .padding(.bottom, 8)
+                }
+
+                // Shutter Button (Photo mode, before a photo has been taken)
+                if mode == .photo && capturedPhotoURL == nil {
+                    Button(action: {
+                        guard let controller = cameraController, !isCapturingPhoto else { return }
+                        isCapturingPhoto = true
+                        photoCaptureFailed = false
+                        controller.capturePhoto { url in
+                            DispatchQueue.main.async {
+                                isCapturingPhoto = false
+                                capturedPhotoURL = url
+                                photoCaptureFailed = url == nil
+                            }
+                        }
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 72, height: 72)
+                                .overlay(Circle().stroke(Color.accentColor, lineWidth: 3))
+                            if isCapturingPhoto {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                            } else {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 26))
+                                    .foregroundColor(.black)
+                            }
+                        }
+                    }
+                    .disabled(isCapturingPhoto)
+                    .padding(.bottom, 24)
+                }
+
                 // Bottom Product Result Card
-                if viewModel.isLookingUpBarcode || viewModel.scannedProduct != nil {
+                if viewModel.isLookingUpBarcode || viewModel.scannedProduct != nil || (viewModel.productNotFoundBarcode != nil && mode != .photo) || capturedPhotoURL != nil {
                     VStack(alignment: .leading, spacing: 12) {
                         if viewModel.isLookingUpBarcode {
                             HStack(spacing: 12) {
@@ -131,6 +184,63 @@ public struct ScannerSheetView: View {
                                     .font(.subheadline)
                             }
                             .padding(.vertical, 8)
+                        } else if let photoURL = capturedPhotoURL {
+                            HStack(spacing: 12) {
+                                Group {
+                                    if let uiImage = UIImage(contentsOfFile: photoURL.path) {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } else {
+                                        Color.gray.opacity(0.3)
+                                    }
+                                }
+                                .frame(width: 50, height: 50)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L10n.photoCapturedTitle)
+                                        .font(.headline)
+                                    Text(L10n.photoCapturedMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                            }
+
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    capturedPhotoURL = nil
+                                }) {
+                                    HStack {
+                                        Image(systemName: "camera")
+                                        Text(L10n.retakePhotoButton)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color(.secondarySystemFill))
+                                    .cornerRadius(10)
+                                }
+
+                                Button(action: {
+                                    onProceedToAdd(
+                                        viewModel.scannedProduct?.barcode ?? viewModel.productNotFoundBarcode,
+                                        viewModel.scannedProduct?.name,
+                                        viewModel.scannedProduct?.brand,
+                                        photoURL.absoluteString,
+                                        viewModel.detectedDate
+                                    )
+                                    dismiss()
+                                }) {
+                                    Text(L10n.continueButton)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(Color.accentColor)
+                                        .cornerRadius(10)
+                                }
+                            }
                         } else if let product = viewModel.scannedProduct {
                             HStack(spacing: 12) {
                                 if let imgUrl = product.imageUrl, let url = URL(string: imgUrl) {
@@ -178,6 +288,47 @@ public struct ScannerSheetView: View {
                                         product.imageUrl,
                                         viewModel.detectedDate
                                     )
+                                    dismiss()
+                                }) {
+                                    Text(L10n.continueButton)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(Color.accentColor)
+                                        .cornerRadius(10)
+                                }
+                            }
+                        } else if let notFoundBarcode = viewModel.productNotFoundBarcode, mode != .photo {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "questionmark.circle")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(.secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L10n.productNotFoundTitle)
+                                        .font(.headline)
+                                    Text(L10n.productNotFoundMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    mode = .photo
+                                }) {
+                                    HStack {
+                                        Image(systemName: "camera")
+                                        Text(L10n.switchToPhotoButton)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color(.secondarySystemFill))
+                                    .cornerRadius(10)
+                                }
+
+                                Button(action: {
+                                    onProceedToAdd(notFoundBarcode, nil, nil, nil, viewModel.detectedDate)
                                     dismiss()
                                 }) {
                                     Text(L10n.continueButton)

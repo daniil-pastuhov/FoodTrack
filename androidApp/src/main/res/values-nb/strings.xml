@@ -68,6 +68,12 @@
 
     <string name="delete">Slett</string>
 
+    <string name="selection_count_format">%1$d valgt</string>
+    <string name="exit_selection_content_description">Avslutt utvalg</string>
+    <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>
+    <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:</string>
+    <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+
     <string name="expires_today">Utløper i dag</string>
     <string name="expires_tomorrow">Utløper i morgen</string>
 

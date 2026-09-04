@@ -40,6 +40,7 @@ data class PantryUiState(
     val settings: AppSettings = AppSettings(),
     // Scan flow state
     val scannedProduct: ProductInfo? = null,
+    val productNotFoundBarcode: String? = null,
     val detectedDate: LocalDate? = null,
     val isLookingUpBarcode: Boolean = false,
     val scanMessage: String? = null
@@ -216,7 +217,8 @@ class PantryStateHolder(
             val product = openFoodFactsApi.fetchProduct(barcode)
             _uiState.update {
                 it.copy(
-                    scannedProduct = product ?: ProductInfo(barcode = barcode, name = "Product $barcode"),
+                    scannedProduct = product,
+                    productNotFoundBarcode = if (product == null) barcode else null,
                     isLookingUpBarcode = false,
                     scanMessage = if (product != null) "Found ${product.name}" else "Product not in database - enter name"
                 )
@@ -250,6 +252,7 @@ class PantryStateHolder(
         _uiState.update {
             it.copy(
                 scannedProduct = null,
+                productNotFoundBarcode = null,
                 detectedDate = null,
                 isLookingUpBarcode = false,
                 scanMessage = null

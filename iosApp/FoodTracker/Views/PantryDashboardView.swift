@@ -9,6 +9,8 @@ public struct PantryDashboardView: View {
     @State private var showFilters: Bool = false
     @State private var showCalendar: Bool = false
     @State private var selectedItem: PantryItem? = nil
+    @State private var isSelecting: Bool = false
+    @State private var selectedItemIDs: Set<String> = []
 
     @State private var prefillBarcode: String? = nil
     @State private var prefillName: String? = nil
@@ -20,37 +22,63 @@ public struct PantryDashboardView: View {
 
     public var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Urgency Metrics Cards — also the primary status filter
-                HStack(spacing: 10) {
-                    MetricBadge(
-                        title: L10n.metricExpired,
-                        count: viewModel.expiredCount,
-                        color: .red,
-                        isSelected: viewModel.selectedFilter == .expired
-                    ) {
-                        viewModel.toggleMetricFilter(.expired)
+            List {
+                // Urgency Metrics Cards — also the primary status filter.
+                // Kept inside the List (rather than a fixed header above it) so it
+                // scrolls together with the items and the large title collapses in
+                // sync with it instead of the title reacting to list scroll while
+                // this row sits static.
+                Section {
+                    HStack(spacing: 10) {
+                        MetricBadge(
+                            title: L10n.metricExpired,
+                            count: viewModel.expiredCount,
+                            color: .red,
+                            isSelected: viewModel.selectedFilter == .expired
+                        ) {
+                            viewModel.toggleMetricFilter(.expired)
+                        }
+                        MetricBadge(
+                            title: L10n.metricExpiringSoon,
+                            count: viewModel.expiringSoonCount,
+                            color: .orange,
+                            isSelected: viewModel.selectedFilter == .expiringSoon
+                        ) {
+                            viewModel.toggleMetricFilter(.expiringSoon)
+                        }
+                        MetricBadge(
+                            title: L10n.metricFresh,
+                            count: viewModel.freshCount,
+                            color: .green,
+                            isSelected: viewModel.selectedFilter == .fresh
+                        ) {
+                            viewModel.toggleMetricFilter(.fresh)
+                        }
                     }
-                    MetricBadge(
-                        title: L10n.metricExpiringSoon,
-                        count: viewModel.expiringSoonCount,
-                        color: .orange,
-                        isSelected: viewModel.selectedFilter == .expiringSoon
-                    ) {
-                        viewModel.toggleMetricFilter(.expiringSoon)
-                    }
-                    MetricBadge(
-                        title: L10n.metricFresh,
-                        count: viewModel.freshCount,
-                        color: .green,
-                        isSelected: viewModel.selectedFilter == .fresh
-                    ) {
-                        viewModel.toggleMetricFilter(.fresh)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 6)
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
+                if !isSelecting {
+                    Section {
+                        Button(action: {
+                            selectedItem = nil
+                            prefillBarcode = nil
+                            prefillName = nil
+                            prefillBrand = nil
+                            prefillImageUrl = nil
+                            prefillDate = nil
+                            showAddEdit = true
+                        }) {
+                            Label(L10n.addItemTitle, systemImage: "plus.circle.fill")
+                                .font(.headline)
+                        }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 6)
 
                 // Items List
                 if viewModel.filteredItems.isEmpty {
@@ -67,69 +95,101 @@ public struct PantryDashboardView: View {
                             .foregroundColor(.secondary.opacity(0.8))
                         Spacer()
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 48)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
                 } else {
-                    List {
-                        ForEach(viewModel.filteredItems) { item in
+                    ForEach(viewModel.filteredItems) { item in
+                        HStack(spacing: 10) {
+                            if isSelecting {
+                                Image(systemName: selectedItemIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
+                                    .foregroundColor(selectedItemIDs.contains(item.id) ? .accentColor : .secondary)
+                                    .font(.system(size: 20))
+                            }
                             ItemRowView(item: item, expiringSoonDays: settingsStore.settings.expiringSoonDays)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    selectedItem = item
-                                    showAddEdit = true
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isSelecting {
+                                toggleSelection(item.id)
+                            } else {
+                                selectedItem = item
+                                showAddEdit = true
+                            }
+                        }
+                        .onLongPressGesture {
+                            isSelecting = true
+                            selectedItemIDs.insert(item.id)
+                        }
+                        .swipeActions(edge: .trailing) {
+                            if !isSelecting {
+                                Button(role: .destructive) {
+                                    viewModel.deleteItem(item.id)
+                                } label: {
+                                    Label(L10n.swipeDelete, systemImage: "trash.fill")
                                 }
-                                .swipeActions(edge: .trailing) {
-                                    Button(role: .destructive) {
-                                        viewModel.deleteItem(item.id)
-                                    } label: {
-                                        Label(L10n.swipeDelete, systemImage: "trash.fill")
-                                    }
-                                }
+                            }
                         }
                     }
-                    .listStyle(.insetGrouped)
                 }
             }
-            .navigationTitle(L10n.appName)
+            .listStyle(.insetGrouped)
+            .navigationTitle(isSelecting ? L10n.selectionCount(selectedItemIDs.count) : L10n.appName)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showScanner = true }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "barcode.viewfinder")
-                            Text(L10n.scanButton)
+                if isSelecting {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: {
+                            isSelecting = false
+                            selectedItemIDs.removeAll()
+                        }) {
+                            Text(L10n.exitSelectionButton)
                         }
-                        .fontWeight(.semibold)
                     }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        selectedItem = nil
-                        prefillBarcode = nil
-                        prefillName = nil
-                        prefillBrand = nil
-                        prefillImageUrl = nil
-                        prefillDate = nil
-                        showAddEdit = true
-                    }) {
-                        Image(systemName: "plus")
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        ShareLink(item: recipePromptText) {
+                            Image(systemName: "fork.knife.circle")
+                        }
+                        .disabled(selectedItemIDs.isEmpty)
+                        .accessibilityLabel(L10n.actionGetRecipeIdeas)
                     }
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showFilters = true }) {
-                        Image(systemName: viewModel.hasActiveFilters
-                            ? "line.3.horizontal.decrease.circle.fill"
-                            : "line.3.horizontal.decrease.circle")
+                } else {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: { showScanner = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "barcode.viewfinder")
+                                Text(L10n.scanButton)
+                            }
+                            .fontWeight(.semibold)
+                        }
                     }
-                    .accessibilityLabel(L10n.filtersButton)
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showCalendar = true }) {
-                        Image(systemName: "calendar")
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: { showCalendar = true }) {
+                            Image(systemName: "calendar")
+                        }
+                        .accessibilityLabel(L10n.calendarButton)
                     }
-                    .accessibilityLabel(L10n.calendarButton)
-                }
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: { showSettings = true }) {
-                        Image(systemName: "gearshape")
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: { showFilters = true }) {
+                            Image(systemName: viewModel.hasActiveFilters
+                                ? "line.3.horizontal.decrease.circle.fill"
+                                : "line.3.horizontal.decrease.circle")
+                        }
+                        .accessibilityLabel(L10n.filtersButton)
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Menu {
+                            Button(action: { isSelecting = true }) {
+                                Label(L10n.selectItemsButton, systemImage: "checkmark.circle")
+                            }
+                            Button(action: { showSettings = true }) {
+                                Label(L10n.settingsTitle, systemImage: "gearshape")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                        }
+                        .accessibilityLabel(L10n.moreOptionsButton)
                     }
                 }
             }
@@ -165,6 +225,19 @@ public struct PantryDashboardView: View {
             .sheet(isPresented: $showCalendar) {
                 CalendarView(viewModel: viewModel)
             }
+        }
+    }
+
+    private var recipePromptText: String {
+        let selectedItems = viewModel.items.filter { selectedItemIDs.contains($0.id) }
+        return NativePantryViewModel.recipePrompt(for: selectedItems)
+    }
+
+    private func toggleSelection(_ id: String) {
+        if selectedItemIDs.contains(id) {
+            selectedItemIDs.remove(id)
+        } else {
+            selectedItemIDs.insert(id)
         }
     }
 }
@@ -216,16 +289,20 @@ private struct FilterSheetView: View {
                 }
                 .padding(.top, 8)
 
-                // Status Filter Picker (Fresh is intentionally not a tab — it's only
+                // Status Filter Chips (Fresh is intentionally not included — it's only
                 // reachable via the Fresh metric card on the dashboard)
-                Picker(L10n.statusPickerLabel, selection: $viewModel.selectedFilter) {
-                    ForEach(NativeStatusFilter.tabCases) { filter in
-                        Text(filter.localizedTitle).tag(filter)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(NativeStatusFilter.tabCases) { filter in
+                            LocationChip(title: filter.localizedTitle, isSelected: viewModel.selectedFilter == filter) {
+                                viewModel.selectedFilter = filter
+                            }
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+                .padding(.top, 8)
 
                 Spacer()
             }

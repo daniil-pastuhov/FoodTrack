@@ -12,9 +12,17 @@
 "status_filter_fresh" = "Fersk";
 
 "empty_state_title" = "Ingen varer funnet";
-"empty_state_subtitle" = "Skann en strekkode eller trykk på «+» for å registrere varer.";
+"empty_state_subtitle" = "Skann en strekkode eller trykk på «Legg til i matskapet» for å registrere varer.";
 
 "swipe_delete" = "Slett";
+
+"selection_count_format" = "%d valgt";
+"exit_selection_button" = "Avbryt";
+"select_items_button" = "Velg";
+"more_options_button" = "Mer";
+"action_get_recipe_ideas" = "Få oppskriftsforslag";
+"recipe_prompt_intro" = "Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:";
+"recipe_prompt_item_format" = "%@ (%@)";
 
 "search_placeholder" = "Søk etter produkter eller merker...";
 "scan_button" = "Skann";

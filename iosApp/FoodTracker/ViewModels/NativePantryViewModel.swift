@@ -32,6 +32,7 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var selectedFilter: NativeStatusFilter = .all
     @Published public var isLookingUpBarcode: Bool = false
     @Published public var scannedProduct: ProductInfo? = nil
+    @Published public var productNotFoundBarcode: String? = nil
     @Published public var detectedDate: Date? = nil
 
     private let modelContext: ModelContext
@@ -139,25 +140,14 @@ public class NativePantryViewModel: ObservableObject {
                         category: category,
                         quantity: quantity
                     )
+                    self.productNotFoundBarcode = nil
                 } else {
-                    self.scannedProduct = ProductInfo(
-                        barcode: barcode,
-                        name: "Product \(barcode)",
-                        brand: nil,
-                        imageUrl: nil,
-                        category: nil,
-                        quantity: nil
-                    )
+                    self.scannedProduct = nil
+                    self.productNotFoundBarcode = barcode
                 }
             } catch {
-                self.scannedProduct = ProductInfo(
-                    barcode: barcode,
-                    name: "Product \(barcode)",
-                    brand: nil,
-                    imageUrl: nil,
-                    category: nil,
-                    quantity: nil
-                )
+                self.scannedProduct = nil
+                self.productNotFoundBarcode = barcode
             }
             self.isLookingUpBarcode = false
         }
@@ -189,6 +179,7 @@ public class NativePantryViewModel: ObservableObject {
 
     public func clearScanState() {
         scannedProduct = nil
+        productNotFoundBarcode = nil
         detectedDate = nil
         isLookingUpBarcode = false
     }
@@ -198,5 +189,15 @@ public class NativePantryViewModel: ObservableObject {
         try? modelContext.save()
         items = []
         IOSNotificationManager.shared.cancelAll()
+    }
+
+    /// Builds a device-language prompt asking an AI assistant (ChatGPT/Gemini/Claude, via the
+    /// share sheet) for recipe ideas using the given items, ordered soonest-to-expire first.
+    public static func recipePrompt(for items: [PantryItem]) -> String {
+        let lines = items
+            .sorted { $0.daysRemaining < $1.daysRemaining }
+            .map { "- " + L10n.recipePromptItem(name: $0.name, expiry: $0.daysRemainingFormatted) }
+            .joined(separator: "\n")
+        return L10n.recipePromptIntro + "\n\n" + lines
     }
 }

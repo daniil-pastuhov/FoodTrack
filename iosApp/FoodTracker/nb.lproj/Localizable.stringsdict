@@ -37,7 +37,7 @@
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%1$@ %2#@days@</string>
+        <string>%1$@ %2$#@days@</string>
         <key>days</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>

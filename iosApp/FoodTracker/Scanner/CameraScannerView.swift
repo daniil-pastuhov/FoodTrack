@@ -12,15 +12,18 @@ public struct CameraScannerView: UIViewControllerRepresentable {
     public var mode: IOSCameraMode
     public var onBarcodeFound: (String) -> Void
     public var onDateFound: (Date) -> Void
+    public var onControllerReady: ((CameraScannerViewController) -> Void)?
 
     public init(
         mode: IOSCameraMode,
         onBarcodeFound: @escaping (String) -> Void,
-        onDateFound: @escaping (Date) -> Void
+        onDateFound: @escaping (Date) -> Void,
+        onControllerReady: ((CameraScannerViewController) -> Void)? = nil
     ) {
         self.mode = mode
         self.onBarcodeFound = onBarcodeFound
         self.onDateFound = onDateFound
+        self.onControllerReady = onControllerReady
     }
 
     public func makeUIViewController(context: Context) -> CameraScannerViewController {
@@ -28,6 +31,9 @@ public struct CameraScannerView: UIViewControllerRepresentable {
         vc.mode = mode
         vc.onBarcodeFound = onBarcodeFound
         vc.onDateFound = onDateFound
+        DispatchQueue.main.async {
+            onControllerReady?(vc)
+        }
         return vc
     }
 
@@ -45,10 +51,24 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
     private var previewLayer: AVCaptureVideoPreviewLayer?
     private let videoOutput = AVCaptureVideoDataOutput()
     private let metadataOutput = AVCaptureMetadataOutput()
+    private let photoOutput = AVCapturePhotoOutput()
 
     private var lastBarcode: String?
     private var lastDateString: String?
     private var lastScanTime: Date = Date()
+    private var photoCaptureCompletion: ((URL?) -> Void)?
+    private var isPhotoOutputConfigured = false
+
+    public func capturePhoto(completion: @escaping (URL?) -> Void) {
+        guard isPhotoOutputConfigured else {
+            print("capturePhoto called but AVCapturePhotoOutput was never added to the session")
+            completion(nil)
+            return
+        }
+        photoCaptureCompletion = completion
+        let settings = AVCapturePhotoSettings()
+        photoOutput.capturePhoto(with: settings, delegate: self)
+    }
 
     public override func viewDidLoad() {
         super.viewDidLoad()
@@ -88,6 +108,14 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         if captureSession.canAddOutput(videoOutput) {
             videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "ocrQueue"))
             captureSession.addOutput(videoOutput)
+        }
+
+        // 3. Photo Output for manual "Photo" mode captures
+        if captureSession.canAddOutput(photoOutput) {
+            captureSession.addOutput(photoOutput)
+            isPhotoOutputConfigured = true
+        } else {
+            print("AVCaptureSession.canAddOutput(photoOutput) returned false — photo capture will be unavailable")
         }
 
         captureSession.commitConfiguration()
@@ -207,5 +235,61 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         if captureSession.isRunning {
             captureSession.stopRunning()
         }
+    }
+}
+
+// MARK: - Photo Capture Delegate
+extension CameraScannerViewController: AVCapturePhotoCaptureDelegate {
+    public func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        defer { photoCaptureCompletion = nil }
+
+        if let error = error {
+            print("Photo capture failed: \(error.localizedDescription)")
+            photoCaptureCompletion?(nil)
+            return
+        }
+
+        guard let data = photo.fileDataRepresentation() else {
+            print("Photo capture produced no file data representation")
+            photoCaptureCompletion?(nil)
+            return
+        }
+
+        guard let thumbnailData = Self.thumbnailJPEGData(from: data) else {
+            print("Failed to decode/resize captured photo data (\(data.count) bytes)")
+            photoCaptureCompletion?(nil)
+            return
+        }
+
+        let photosDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("ProductPhotos", isDirectory: true)
+
+        do {
+            try FileManager.default.createDirectory(at: photosDir, withIntermediateDirectories: true)
+            let fileURL = photosDir
+                .appendingPathComponent("product_photo_\(Int(Date().timeIntervalSince1970 * 1000)).jpg")
+            try thumbnailData.write(to: fileURL)
+            photoCaptureCompletion?(fileURL)
+        } catch {
+            print("Failed to write captured photo to disk: \(error.localizedDescription)")
+            photoCaptureCompletion?(nil)
+        }
+    }
+
+    /// Downscales the full-resolution capture (several MB as HEIC/JPEG straight off the sensor)
+    /// to a thumbnail suitable for a 96x96 preview and a 54x54 list row, decoded off the main
+    /// thread here rather than re-decoding the full image on every SwiftUI re-render.
+    private static func thumbnailJPEGData(from data: Data, maxDimension: CGFloat = 600) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+
+        let scale = min(1, maxDimension / max(image.size.width, image.size.height))
+        let targetSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+
+        let renderer = UIGraphicsImageRenderer(size: targetSize)
+        let thumbnail = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: targetSize))
+        }
+
+        return thumbnail.jpegData(compressionQuality: 0.7)
     }
 }

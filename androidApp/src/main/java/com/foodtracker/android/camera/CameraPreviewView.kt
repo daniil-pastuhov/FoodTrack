@@ -16,7 +16,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.concurrent.futures.await
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.datetime.LocalDate
-import java.io.File
 import java.util.concurrent.Executors
 
 enum class CameraScanMode {
@@ -30,7 +29,7 @@ fun CameraPreviewView(
     mode: CameraScanMode,
     onBarcodeFound: (String) -> Unit,
     onDateFound: (LocalDate) -> Unit,
-    onPhotoCaptured: ((File) -> Unit)? = null,
+    onImageCaptureReady: (ImageCapture) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -76,6 +75,7 @@ fun CameraPreviewView(
                 imageAnalysis,
                 imageCapture
             )
+            onImageCaptureReady(imageCapture)
         } catch (e: Exception) {
             e.printStackTrace()
         }

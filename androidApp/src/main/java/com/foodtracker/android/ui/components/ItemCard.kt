@@ -1,6 +1,9 @@
 package com.foodtracker.android.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,12 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.RadioButtonUnchecked
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -49,13 +55,17 @@ import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.PantryItem
 import com.foodtracker.util.DateUtils
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ItemCard(
     item: PantryItem,
     onDelete: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    expiringSoonDays: Int = 3
+    expiringSoonDays: Int = 3,
+    selectionMode: Boolean = false,
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     val today = remember { DateUtils.today() }
     val daysRemaining = item.daysRemaining(today)
@@ -63,13 +73,17 @@ fun ItemCard(
     var showMenu by remember { mutableStateOf(false) }
 
     Card(
-        onClick = onClick,
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (selected) Modifier.border(2.dp, BrandPrimary, RoundedCornerShape(16.dp)) else Modifier
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -77,6 +91,15 @@ fun ItemCard(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
+            if (selectionMode) {
+                Icon(
+                    imageVector = if (selected) Icons.Default.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = if (selected) BrandPrimary else TextSecondary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+
             // Product image or placeholder
             Box(
                 contentAlignment = Alignment.Center,
@@ -154,7 +177,9 @@ fun ItemCard(
                                 text = item.storageLocation,
                                 fontSize = 11.sp,
                                 color = TextSecondary,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -162,7 +187,7 @@ fun ItemCard(
             }
 
             // More Options Menu
-            Box {
+            if (!selectionMode) Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,

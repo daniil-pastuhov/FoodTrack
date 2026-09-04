@@ -1,5 +1,7 @@
 package com.foodtracker.android.ui.screens
 
+import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,11 +25,13 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -48,8 +52,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -65,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -76,6 +79,7 @@ import com.foodtracker.android.ui.theme.expiredStatusColors
 import com.foodtracker.android.ui.theme.expiringStatusColors
 import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.android.util.buildRecipePrompt
 import com.foodtracker.model.PantryItem
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.StatusFilter
@@ -92,7 +96,10 @@ fun PantryDashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
+    val context = LocalContext.current
     var showFilterSheet by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
+    val selectionMode = selectedIds.isNotEmpty()
     val filtersActive = state.selectedLocation != null ||
             state.selectedStatusFilter != StatusFilter.ALL ||
             state.searchQuery.isNotBlank()
@@ -103,66 +110,113 @@ fun PantryDashboardScreen(
         )
     }
 
+    fun toggleSelected(id: String) {
+        selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
+    }
+
+    fun shareRecipePrompt() {
+        val selectedItems = state.items.filter { it.id in selectedIds }
+        if (selectedItems.isEmpty()) return
+        val prompt = buildRecipePrompt(context, selectedItems)
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, prompt)
+        }
+        context.startActivity(Intent.createChooser(sendIntent, null))
+        selectedIds = emptySet()
+    }
+
+    BackHandler(enabled = selectionMode) {
+        selectedIds = emptySet()
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(BrandPrimary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Fastfood,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
+                    if (selectionMode) {
+                        Text(
+                            text = stringResource(R.string.selection_count_format, selectedIds.size),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                contentAlignment = Alignment.Center,
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(BrandPrimary)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Fastfood,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = stringResource(R.string.app_name),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = stringResource(R.string.app_subtitle),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = TextSecondary
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = stringResource(R.string.app_name),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = stringResource(R.string.app_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
+                    }
+                },
+                navigationIcon = {
+                    if (selectionMode) {
+                        IconButton(onClick = { selectedIds = emptySet() }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = stringResource(R.string.exit_selection_content_description)
                             )
                         }
                     }
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToCalendar) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = stringResource(R.string.calendar_content_description)
-                        )
-                    }
-                    IconButton(onClick = { showFilterSheet = true }) {
-                        BadgedBox(
-                            badge = {
-                                if (filtersActive) {
-                                    Badge(containerColor = BrandPrimary)
-                                }
-                            }
-                        ) {
+                    if (selectionMode) {
+                        IconButton(onClick = { shareRecipePrompt() }) {
                             Icon(
-                                imageVector = Icons.Default.Tune,
-                                contentDescription = stringResource(R.string.filter_content_description)
+                                imageVector = Icons.Default.RestaurantMenu,
+                                contentDescription = stringResource(R.string.action_get_recipe_ideas)
                             )
                         }
-                    }
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings_content_description)
-                        )
+                    } else {
+                        IconButton(onClick = onNavigateToCalendar) {
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = stringResource(R.string.calendar_content_description)
+                            )
+                        }
+                        IconButton(onClick = { showFilterSheet = true }) {
+                            BadgedBox(
+                                badge = {
+                                    if (filtersActive) {
+                                        Badge(containerColor = BrandPrimary)
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = stringResource(R.string.filter_content_description)
+                                )
+                            }
+                        }
+                        IconButton(onClick = onNavigateToSettings) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = stringResource(R.string.settings_content_description)
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -171,19 +225,21 @@ fun PantryDashboardScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToScanner,
-                containerColor = BrandPrimary,
-                contentColor = Color.White,
-                shape = CircleShape
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+            if (!selectionMode) {
+                FloatingActionButton(
+                    onClick = onNavigateToScanner,
+                    containerColor = BrandPrimary,
+                    contentColor = Color.White,
+                    shape = CircleShape
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_content_description))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.scan_item), fontWeight = FontWeight.SemiBold)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    ) {
+                        Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_content_description))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(text = stringResource(R.string.scan_item), fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         },
@@ -236,6 +292,33 @@ fun PantryDashboardScreen(
                 )
             }
 
+            if (!selectionMode) {
+                Card(
+                    onClick = { onNavigateToAddEdit(null) },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AddCircle,
+                            contentDescription = null,
+                            tint = BrandPrimary
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = stringResource(R.string.add_item_title),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
             // List of Items
             if (state.isLoading) {
                 Box(
@@ -276,8 +359,11 @@ fun PantryDashboardScreen(
             } else {
                 // Adaptive: 1 column on phones, more columns as width allows (tablets,
                 // landscape, foldables) — driven by available width, not a device check.
+                // 340dp keeps room for image + expiry badge + location chip + menu button
+                // on one line even for long day counts ("624 days expired") — below that,
+                // the info row wraps and the grid stretches every card in the row to match.
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 260.dp),
+                    columns = GridCells.Adaptive(minSize = 340.dp),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -287,7 +373,12 @@ fun PantryDashboardScreen(
                         ItemCard(
                             item = item,
                             onDelete = { onDeleteItem(item.id) },
-                            onClick = { onNavigateToAddEdit(item) },
+                            onClick = {
+                                if (selectionMode) toggleSelected(item.id) else onNavigateToAddEdit(item)
+                            },
+                            onLongClick = { toggleSelected(item.id) },
+                            selectionMode = selectionMode,
+                            selected = item.id in selectedIds,
                             expiringSoonDays = state.settings.expiringSoonDays
                         )
                     }
@@ -384,35 +475,46 @@ private fun FilterSheetContent(
             }
         }
 
-        // Status Tabs. FRESH has no dedicated tab (it's only reachable via the metric
-        // card above), so fall back to highlighting "All" rather than mislabeling
-        // a Fresh-only filter as Expired via a raw ordinal lookup.
-        val tabIndex = when (selectedStatusFilter) {
-            StatusFilter.EXPIRING_SOON -> 1
-            StatusFilter.EXPIRED -> 2
-            else -> 0
-        }
-        TabRow(
-            selectedTabIndex = tabIndex,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = BrandPrimary,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        // Status Filter Chips. FRESH has no dedicated chip (it's only reachable via the
+        // metric card above), so it simply falls outside this row's selection.
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 4.dp)
         ) {
-            Tab(
-                selected = selectedStatusFilter == StatusFilter.ALL,
-                onClick = { stateHolder.onStatusFilterSelected(StatusFilter.ALL) },
-                text = { Text(stringResource(R.string.tab_all)) }
-            )
-            Tab(
-                selected = selectedStatusFilter == StatusFilter.EXPIRING_SOON,
-                onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRING_SOON) },
-                text = { Text(stringResource(R.string.tab_expiring_soon)) }
-            )
-            Tab(
-                selected = selectedStatusFilter == StatusFilter.EXPIRED,
-                onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRED) },
-                text = { Text(stringResource(R.string.tab_expired)) }
-            )
+            item {
+                FilterChip(
+                    selected = selectedStatusFilter == StatusFilter.ALL,
+                    onClick = { stateHolder.onStatusFilterSelected(StatusFilter.ALL) },
+                    label = { Text(stringResource(R.string.tab_all)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
+                        selectedLabelColor = BrandPrimary
+                    )
+                )
+            }
+            item {
+                FilterChip(
+                    selected = selectedStatusFilter == StatusFilter.EXPIRING_SOON,
+                    onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRING_SOON) },
+                    label = { Text(stringResource(R.string.tab_expiring_soon)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
+                        selectedLabelColor = BrandPrimary
+                    )
+                )
+            }
+            item {
+                FilterChip(
+                    selected = selectedStatusFilter == StatusFilter.EXPIRED,
+                    onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRED) },
+                    label = { Text(stringResource(R.string.tab_expired)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
+                        selectedLabelColor = BrandPrimary
+                    )
+                )
+            }
         }
     }
 }

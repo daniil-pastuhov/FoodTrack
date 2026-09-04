@@ -68,6 +68,12 @@
 
     <string name="delete">Удалить</string>
 
+    <string name="selection_count_format">Выбрано: %1$d</string>
+    <string name="exit_selection_content_description">Отменить выбор</string>
+    <string name="action_get_recipe_ideas">Идеи рецептов</string>
+    <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:</string>
+    <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+
     <string name="expires_today">Истекает сегодня</string>
     <string name="expires_tomorrow">Истекает завтра</string>
 

@@ -1,5 +1,8 @@
 package com.foodtracker.android.ui.screens
 
+import android.net.Uri
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +25,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
@@ -46,11 +50,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import com.foodtracker.android.R
 import com.foodtracker.android.camera.CameraPreviewView
@@ -59,6 +65,7 @@ import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
+import java.io.File
 
 @Composable
 fun ScannerScreen(
@@ -69,6 +76,10 @@ fun ScannerScreen(
 ) {
     val state by stateHolder.uiState.collectAsState()
     var currentMode by remember { mutableStateOf(CameraScanMode.BARCODE) }
+    val context = LocalContext.current
+    var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
+    var isCapturingPhoto by remember { mutableStateOf(false) }
+    var capturedPhotoUri by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         // Live Camera Stream
@@ -79,7 +90,8 @@ fun ScannerScreen(
             },
             onDateFound = { date ->
                 stateHolder.onDateOcrDetected(date)
-            }
+            },
+            onImageCaptureReady = { imageCapture = it }
         )
 
         // Top Controls: Back button & Mode Chips
@@ -235,8 +247,61 @@ fun ScannerScreen(
             }
         }
 
-        // Bottom Result Card (Barcode lookup result or OCR detection)
-        if (state.isLookingUpBarcode || state.scannedProduct != null) {
+        // Shutter Button (Photo mode, before a photo has been taken)
+        if (currentMode == CameraScanMode.PHOTO && capturedPhotoUri == null) {
+            val resultCardShowing = state.isLookingUpBarcode || state.scannedProduct != null ||
+                (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO)
+            Box(
+                contentAlignment = Alignment.BottomCenter,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = if (resultCardShowing) 210.dp else 48.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val capture = imageCapture
+                        if (capture == null || isCapturingPhoto) return@IconButton
+                        isCapturingPhoto = true
+                        val photoFile = File(context.cacheDir, "product_photo_${System.currentTimeMillis()}.jpg")
+                        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+                        capture.takePicture(
+                            outputOptions,
+                            ContextCompat.getMainExecutor(context),
+                            object : ImageCapture.OnImageSavedCallback {
+                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                    isCapturingPhoto = false
+                                    capturedPhotoUri = Uri.fromFile(photoFile).toString()
+                                }
+
+                                override fun onError(exception: ImageCaptureException) {
+                                    isCapturingPhoto = false
+                                }
+                            }
+                        )
+                    },
+                    enabled = !isCapturingPhoto,
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(Color.White, CircleShape)
+                        .border(3.dp, BrandPrimary, CircleShape)
+                ) {
+                    if (isCapturingPhoto) {
+                        CircularProgressIndicator(color = BrandPrimary, modifier = Modifier.size(28.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = stringResource(R.string.take_photo_button),
+                            tint = Color.Black,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Bottom Result Card (Barcode lookup result, OCR detection, or captured photo)
+        if (state.isLookingUpBarcode || state.scannedProduct != null ||
+            (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) || capturedPhotoUri != null) {
             Card(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -264,6 +329,63 @@ fun ScannerScreen(
                                 text = stringResource(R.string.looking_up_product),
                                 style = MaterialTheme.typography.bodyMedium
                             )
+                        }
+                    } else if (capturedPhotoUri != null) {
+                        val product = state.scannedProduct
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AsyncImage(
+                                model = capturedPhotoUri,
+                                contentDescription = stringResource(R.string.photo_captured_title),
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.photo_captured_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = stringResource(R.string.photo_captured_message),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { capturedPhotoUri = null },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.retake_photo_button))
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Button(
+                                onClick = {
+                                    onProceedToAddItem(
+                                        product?.barcode ?: state.productNotFoundBarcode,
+                                        product?.name,
+                                        product?.brand,
+                                        capturedPhotoUri,
+                                        state.detectedDate
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.continue_button))
+                            }
                         }
                     } else if (state.scannedProduct != null) {
                         val product = state.scannedProduct!!
@@ -321,6 +443,61 @@ fun ScannerScreen(
                                         product.name,
                                         product.brand,
                                         product.imageUrl,
+                                        state.detectedDate
+                                    )
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.continue_button))
+                            }
+                        }
+                    } else if (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.product_not_found_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = stringResource(R.string.product_not_found_message),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { currentMode = CameraScanMode.PHOTO },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.switch_to_photo_button))
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Button(
+                                onClick = {
+                                    onProceedToAddItem(
+                                        state.productNotFoundBarcode,
+                                        null,
+                                        null,
+                                        null,
                                         state.detectedDate
                                     )
                                 },
