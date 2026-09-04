@@ -1,0 +1,94 @@
+import SwiftUI
+
+public struct ItemRowView: View {
+    public let item: PantryItem
+    public var expiringSoonDays: Int = 3
+
+    public var body: some View {
+        HStack(spacing: 12) {
+            // Product image
+            if let imageUrl = item.imageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable()
+                            .aspectRatio(contentMode: .fill)
+                    default:
+                        placeholderImage
+                    }
+                }
+                .frame(width: 54, height: 54)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                placeholderImage
+                    .frame(width: 54, height: 54)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            // Info
+            VStack(alignment: .leading, spacing: 4) {
+                Text(item.name)
+                    .font(.headline)
+                    .lineLimit(1)
+
+                if let brand = item.brand, !brand.isEmpty {
+                    Text(brand)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                HStack(spacing: 6) {
+                    badgeView
+
+                    Text(item.storageLocation)
+                        .font(.caption2)
+                        .fontWeight(.medium)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(.secondarySystemFill))
+                        .cornerRadius(6)
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    private var placeholderImage: some View {
+        ZStack {
+            Color(.secondarySystemFill)
+            Image(systemName: "takeoutbag.and.cup.and.straw.fill")
+                .foregroundColor(.accentColor)
+                .font(.system(size: 24))
+        }
+    }
+
+    private var badgeView: some View {
+        let (bg, fg, icon) = statusColorsAndIcon(for: item.expiryStatus(expiringSoonDays: expiringSoonDays))
+        return HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10, weight: .bold))
+            Text(item.daysRemainingFormatted)
+                .font(.caption2)
+                .fontWeight(.semibold)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3)
+        .background(bg)
+        .foregroundColor(fg)
+        .cornerRadius(6)
+    }
+
+    private func statusColorsAndIcon(for status: ExpiryStatus) -> (Color, Color, String) {
+        switch status {
+        case .expired:
+            return (Color.red.opacity(0.15), Color.red, "exclamationmark.triangle.fill")
+        case .expiringToday, .expiringSoon:
+            return (Color.orange.opacity(0.15), Color.orange, "clock.fill")
+        case .fresh:
+            return (Color.green.opacity(0.15), Color.green, "checkmark.circle.fill")
+        }
+    }
+}

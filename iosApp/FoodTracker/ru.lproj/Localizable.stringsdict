@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>expires_in_days_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Через %d день</string>
+            <key>few</key>
+            <string>Через %d дня</string>
+            <key>many</key>
+            <string>Через %d дней</string>
+            <key>other</key>
+            <string>Через %d дня</string>
+        </dict>
+    </dict>
+    <key>expired_days_ago_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Просрочено %d день назад</string>
+            <key>few</key>
+            <string>Просрочено %d дня назад</string>
+            <key>many</key>
+            <string>Просрочено %d дней назад</string>
+            <key>other</key>
+            <string>Просрочено %d дня назад</string>
+        </dict>
+    </dict>
+    <key>notif_body_soon_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%1$@ %2#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>истекает через %2$d день. Не забудьте съесть или заморозить его!</string>
+            <key>few</key>
+            <string>истекает через %2$d дня. Не забудьте съесть или заморозить его!</string>
+            <key>many</key>
+            <string>истекает через %2$d дней. Не забудьте съесть или заморозить его!</string>
+            <key>other</key>
+            <string>истекает через %2$d дня. Не забудьте съесть или заморозить его!</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

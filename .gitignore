@@ -1,0 +1,22 @@
+*.iml
+.gradle
+.kotlin
+/build
+/*/build
+/local.properties
+/.idea
+.DS_Store
+DerivedData/
+*.xcworkspace
+*.xcuserdatad
+
+# Release build output — never commit binaries
+/androidApp/release/
+
+# Claude Code scratch artifacts
+/.artifacts/
+
+# Release signing secrets — never commit these
+keystore.properties
+*.jks
+*.keystore

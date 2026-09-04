@@ -1,0 +1,95 @@
+"app_name" = "FoodTracker";
+
+"metric_expired" = "Utløpt";
+"metric_expiring_soon" = "Utløper snart";
+"metric_fresh" = "Fersk";
+
+"location_filter_all" = "Alle";
+
+"status_filter_active" = "Aktive";
+"status_filter_expiring_soon" = "Utløper snart";
+"status_filter_expired" = "Utløpt";
+"status_filter_fresh" = "Fersk";
+
+"empty_state_title" = "Ingen varer funnet";
+"empty_state_subtitle" = "Skann en strekkode eller trykk på «+» for å registrere varer.";
+
+"swipe_delete" = "Slett";
+
+"search_placeholder" = "Søk etter produkter eller merker...";
+"scan_button" = "Skann";
+"status_picker_label" = "Status";
+"filters_sheet_title" = "Filtre";
+"filters_button" = "Filtre";
+"done_button" = "Ferdig";
+
+"section_product_details" = "Produktdetaljer";
+"product_name_label" = "Produktnavn *";
+"brand_label" = "Merke / produsent";
+"barcode_word" = "Strekkode";
+
+"section_expiration_date" = "Utløpsdato";
+"expiry_picker_label" = "Best før / utløper";
+"quick_date_3_days" = "+3 dager";
+"quick_date_1_week" = "+1 uke";
+"quick_date_2_weeks" = "+2 uker";
+"quick_date_1_month" = "+1 mnd";
+
+"section_storage" = "Oppbevaring";
+"location_picker_label" = "Sted";
+
+"section_notes" = "Notater";
+"notes_field_placeholder" = "Valgfrie notater (f.eks. åpnet, fryserdør)";
+
+"edit_item_title" = "Rediger vare";
+"add_item_title" = "Legg til i matskapet";
+"cancel_button" = "Avbryt";
+"save_button" = "Lagre";
+
+"manual_entry_button" = "Manuelt";
+"scanner_mode_picker_label" = "Skannemodus";
+"scan_mode_barcode" = "Strekkode";
+"scan_mode_date_ocr" = "Datoskanning";
+"scan_mode_photo" = "Bilde";
+"looking_up_product" = "Slår opp produkt i Open Food Facts...";
+"scan_date_button" = "Skann dato";
+"continue_button" = "Fortsett";
+
+"reticle_hint_barcode" = "Plasser produktets strekkode innenfor rammen";
+"reticle_hint_date_ocr" = "Rett kameraet mot den trykte utløpsdatoen";
+"reticle_hint_photo" = "Plasser varen midt i bildet for å ta et bilde";
+
+"expires_today" = "Utløper i dag";
+"expires_tomorrow" = "Utløper i morgen";
+
+"notif_title_today" = "Produktet utløper i dag! ⚠️";
+"notif_title_soon" = "Produktet utløper snart! ⚠️";
+
+"expiry_date_found_format" = "Utløpsdato funnet: %@";
+"notif_body_today_format" = "%@ utløper i dag. Husk å spise eller fryse det!";
+
+"settings_title" = "Innstillinger";
+"settings_section_notifications" = "Varsler";
+"settings_notifications_enabled" = "Utløpspåminnelser";
+"settings_lead_days_label" = "Minn meg på dette antall dager før utløp";
+"settings_time_label" = "Varslingstidspunkt";
+
+"settings_section_expiring_soon" = "Terskel for «utløper snart»";
+"settings_expiring_soon_desc" = "Varer som utløper innen dette antall dager merkes som «Utløper snart»";
+
+"settings_section_locations" = "Oppbevaringssteder";
+"settings_locations_desc" = "Trykk på stjernen for å sette standard for nye varer";
+"settings_add_location_placeholder" = "Navn på nytt sted";
+"settings_add_location" = "Legg til sted";
+"settings_set_default_location" = "Sett som standard";
+
+"settings_section_appearance" = "Utseende";
+"settings_theme_system" = "System";
+"settings_theme_light" = "Lyst";
+"settings_theme_dark" = "Mørkt";
+
+"settings_section_data" = "Data";
+"settings_clear_data_button" = "Tøm alle data i matskapet";
+"clear_data_dialog_title" = "Tømme alle data i matskapet?";
+"clear_data_dialog_message" = "Dette fjerner alle varer fra matskapet og avbryter alle ventende utløpspåminnelser. Dette kan ikke angres.";
+"clear_data_confirm" = "Tøm data";

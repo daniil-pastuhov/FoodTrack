@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FoodTracker</string>
+    <string name="app_subtitle">Sporing av matvarer og utløpsdatoer</string>
+
+    <string name="scan_item">Skann vare</string>
+    <string name="scan_content_description">Skann</string>
+
+    <string name="metric_expired">Utløpt</string>
+    <string name="metric_soon">Snart</string>
+    <string name="metric_fresh">Fersk</string>
+
+    <string name="search_placeholder">Søk etter produkter eller merker...</string>
+    <string name="clear_content_description">Fjern</string>
+
+    <string name="filter_all_locations">Alle steder</string>
+    <string name="filter_content_description">Filtre</string>
+    <string name="filters_sheet_title">Filtre</string>
+
+    <string name="tab_active">Aktive</string>
+    <string name="tab_expiring_soon">Utløper snart</string>
+    <string name="tab_expired">Utløpt</string>
+
+    <string name="empty_state_title">Ingen varer funnet</string>
+    <string name="empty_state_subtitle">Trykk på «Skann vare» for å skanne en strekkode, eller legg til varer manuelt.</string>
+
+    <string name="back_content_description">Tilbake</string>
+    <string name="options_content_description">Alternativer</string>
+
+    <string name="edit_item_title">Rediger vare</string>
+    <string name="add_item_title">Legg til i matskapet</string>
+    <string name="barcode_format">Strekkode: %1$s</string>
+    <string name="new_item_placeholder">Ny vare</string>
+    <string name="product_name_label">Produktnavn *</string>
+    <string name="brand_label">Merke / produsent</string>
+    <string name="expiry_section_title">Best før / utløpsdato</string>
+    <string name="quick_date_3_days">+3 dager</string>
+    <string name="quick_date_1_week">+1 uke</string>
+    <string name="quick_date_2_weeks">+2 uker</string>
+    <string name="quick_date_1_month">+1 måned</string>
+    <string name="storage_location_title">Oppbevaringssted</string>
+    <string name="notes_label">Notater (f.eks. åpnet, mengde, hylle)</string>
+    <string name="update_item_button">Oppdater vare</string>
+    <string name="save_item_button">Lagre i matskapet</string>
+    <string name="date_picker_ok">OK</string>
+    <string name="date_picker_cancel">Avbryt</string>
+
+    <string name="manual_entry_button">Manuell registrering</string>
+    <string name="scan_mode_barcode">Strekkode</string>
+    <string name="scan_mode_date_ocr">Datoskanning</string>
+    <string name="scan_mode_photo">Bilde</string>
+    <string name="reticle_hint_barcode">Plasser produktets strekkode innenfor rammen</string>
+    <string name="reticle_hint_date_ocr">Rett kameraet mot den trykte utløpsdatoen\n(f.eks. «EXP 24.11.2026»)</string>
+    <string name="reticle_hint_photo">Plasser produktet midt i bildet for å ta et bilde</string>
+    <string name="expiry_date_found_format">Utløpsdato funnet: %1$s</string>
+    <string name="looking_up_product">Slår opp produkt i Open Food Facts...</string>
+    <string name="scan_date_button">Skann dato</string>
+    <string name="continue_button">Fortsett</string>
+
+    <string name="delete">Slett</string>
+
+    <string name="expires_today">Utløper i dag</string>
+    <string name="expires_tomorrow">Utløper i morgen</string>
+
+    <plurals name="expires_in_days">
+        <item quantity="one">Om %d dag</item>
+        <item quantity="other">Om %d dager</item>
+    </plurals>
+    <plurals name="expired_days_ago">
+        <item quantity="one">Utløpt for %d dag siden</item>
+        <item quantity="other">Utløpt for %d dager siden</item>
+    </plurals>
+
+    <string name="notification_channel_name">Varsler om utløpsdato</string>
+    <string name="notification_channel_desc">Varsler når matvarer snart går ut på dato</string>
+    <string name="notif_title_today">Produktet utløper i dag! ⚠️</string>
+    <string name="notif_title_soon">Produktet utløper snart! ⚠️</string>
+    <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise eller fryse det!</string>
+    <plurals name="notif_body_soon_format">
+        <item quantity="one">%1$s utløper om %2$d dag. Husk å spise eller fryse det!</item>
+        <item quantity="other">%1$s utløper om %2$d dager. Husk å spise eller fryse det!</item>
+    </plurals>
+    <string name="notif_fallback_title">Varsel om utløpsdato</string>
+    <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>
+
+    <string name="settings_content_description">Innstillinger</string>
+    <string name="settings_title">Innstillinger</string>
+
+    <string name="settings_section_notifications">Varsler</string>
+    <string name="settings_notifications_enabled">Utløpspåminnelser</string>
+    <string name="settings_lead_days_label">Minn meg på dette antall dager før utløp</string>
+    <string name="settings_time_label">Varslingstidspunkt</string>
+
+    <string name="settings_section_expiring_soon">Terskel for «utløper snart»</string>
+    <string name="settings_expiring_soon_desc">Varer som utløper innen dette antall dager merkes som «Utløper snart»</string>
+
+    <string name="settings_section_locations">Oppbevaringssteder</string>
+    <string name="settings_locations_desc">Trykk på stjernen for å sette standard for nye varer</string>
+    <string name="settings_confirm_rename">Bekreft omdøping</string>
+    <string name="settings_set_default_location">Sett som standard</string>
+    <string name="settings_rename_location">Endre navn</string>
+    <string name="settings_delete_location">Slett</string>
+    <string name="settings_add_location_placeholder">Navn på nytt sted</string>
+    <string name="settings_add_location">Legg til sted</string>
+
+    <string name="settings_section_appearance">Utseende</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Lyst</string>
+    <string name="settings_theme_dark">Mørkt</string>
+
+    <string name="settings_section_data">Data</string>
+    <string name="settings_clear_data_button">Tøm alle data i matskapet</string>
+    <string name="clear_data_dialog_title">Tømme alle data i matskapet?</string>
+    <string name="clear_data_dialog_message">Dette fjerner alle varer fra matskapet og avbryter alle ventende utløpspåminnelser. Dette kan ikke angres.</string>
+    <string name="clear_data_confirm">Tøm data</string>
+</resources>

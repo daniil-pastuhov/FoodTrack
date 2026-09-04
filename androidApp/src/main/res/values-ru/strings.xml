@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FoodTracker</string>
+    <string name="app_subtitle">Учёт продуктов и сроков годности</string>
+
+    <string name="scan_item">Сканировать</string>
+    <string name="scan_content_description">Сканировать</string>
+
+    <string name="metric_expired">Просрочено</string>
+    <string name="metric_soon">Скоро</string>
+    <string name="metric_fresh">Свежее</string>
+
+    <string name="search_placeholder">Поиск по названию или бренду...</string>
+    <string name="clear_content_description">Очистить</string>
+
+    <string name="filter_all_locations">Все места</string>
+    <string name="filter_content_description">Фильтры</string>
+    <string name="filters_sheet_title">Фильтры</string>
+
+    <string name="tab_active">Активные</string>
+    <string name="tab_expiring_soon">Скоро истекают</string>
+    <string name="tab_expired">Просроченные</string>
+
+    <string name="empty_state_title">Ничего не найдено</string>
+    <string name="empty_state_subtitle">Нажмите «Сканировать», чтобы отсканировать штрихкод, или добавьте продукты вручную.</string>
+
+    <string name="back_content_description">Назад</string>
+    <string name="options_content_description">Опции</string>
+
+    <string name="edit_item_title">Изменить продукт</string>
+    <string name="add_item_title">Добавить в кладовую</string>
+    <string name="barcode_format">Штрихкод: %1$s</string>
+    <string name="new_item_placeholder">Новый продукт</string>
+    <string name="product_name_label">Название продукта *</string>
+    <string name="brand_label">Бренд / производитель</string>
+    <string name="expiry_section_title">Срок годности / годен до</string>
+    <string name="quick_date_3_days">+3 дня</string>
+    <string name="quick_date_1_week">+1 неделя</string>
+    <string name="quick_date_2_weeks">+2 недели</string>
+    <string name="quick_date_1_month">+1 месяц</string>
+    <string name="storage_location_title">Место хранения</string>
+    <string name="notes_label">Заметки (напр. вскрыто, количество, полка)</string>
+    <string name="update_item_button">Обновить продукт</string>
+    <string name="save_item_button">Сохранить в кладовую</string>
+    <string name="date_picker_ok">ОК</string>
+    <string name="date_picker_cancel">Отмена</string>
+
+    <string name="manual_entry_button">Ввести вручную</string>
+    <string name="scan_mode_barcode">Штрихкод</string>
+    <string name="scan_mode_date_ocr">Скан даты</string>
+    <string name="scan_mode_photo">Фото</string>
+    <string name="reticle_hint_barcode">Совместите штрихкод продукта с рамкой</string>
+    <string name="reticle_hint_date_ocr">Наведите камеру на напечатанный срок годности\n(например, «EXP 24.11.2026»)</string>
+    <string name="reticle_hint_photo">Расположите продукт по центру, чтобы сделать снимок</string>
+    <string name="expiry_date_found_format">Найден срок годности: %1$s</string>
+    <string name="looking_up_product">Поиск продукта в Open Food Facts...</string>
+    <string name="scan_date_button">Сканировать дату</string>
+    <string name="continue_button">Продолжить</string>
+
+    <string name="delete">Удалить</string>
+
+    <string name="expires_today">Истекает сегодня</string>
+    <string name="expires_tomorrow">Истекает завтра</string>
+
+    <plurals name="expires_in_days">
+        <item quantity="one">Через %d день</item>
+        <item quantity="few">Через %d дня</item>
+        <item quantity="many">Через %d дней</item>
+        <item quantity="other">Через %d дня</item>
+    </plurals>
+    <plurals name="expired_days_ago">
+        <item quantity="one">Просрочено %d день назад</item>
+        <item quantity="few">Просрочено %d дня назад</item>
+        <item quantity="many">Просрочено %d дней назад</item>
+        <item quantity="other">Просрочено %d дня назад</item>
+    </plurals>
+
+    <string name="notification_channel_name">Уведомления о сроке годности</string>
+    <string name="notification_channel_desc">Уведомления, когда продукты скоро испортятся</string>
+    <string name="notif_title_today">Продукт истекает сегодня! ⚠️</string>
+    <string name="notif_title_soon">Продукт скоро истекает! ⚠️</string>
+    <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть или заморозить его!</string>
+    <plurals name="notif_body_soon_format">
+        <item quantity="one">%1$s истекает через %2$d день. Не забудьте съесть или заморозить его!</item>
+        <item quantity="few">%1$s истекает через %2$d дня. Не забудьте съесть или заморозить его!</item>
+        <item quantity="many">%1$s истекает через %2$d дней. Не забудьте съесть или заморозить его!</item>
+        <item quantity="other">%1$s истекает через %2$d дня. Не забудьте съесть или заморозить его!</item>
+    </plurals>
+    <string name="notif_fallback_title">Уведомление о сроке годности</string>
+    <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>
+
+    <string name="settings_content_description">Настройки</string>
+    <string name="settings_title">Настройки</string>
+
+    <string name="settings_section_notifications">Уведомления</string>
+    <string name="settings_notifications_enabled">Напоминания о сроке годности</string>
+    <string name="settings_lead_days_label">Напоминать за столько дней до истечения срока</string>
+    <string name="settings_time_label">Время напоминания</string>
+
+    <string name="settings_section_expiring_soon">Порог «скоро истекает»</string>
+    <string name="settings_expiring_soon_desc">Продукты, срок которых истекает в течение этого количества дней, помечаются как «Скоро истекают»</string>
+
+    <string name="settings_section_locations">Места хранения</string>
+    <string name="settings_locations_desc">Нажмите на звёздочку, чтобы задать место по умолчанию для новых продуктов</string>
+    <string name="settings_confirm_rename">Подтвердить переименование</string>
+    <string name="settings_set_default_location">Сделать по умолчанию</string>
+    <string name="settings_rename_location">Переименовать</string>
+    <string name="settings_delete_location">Удалить</string>
+    <string name="settings_add_location_placeholder">Название нового места</string>
+    <string name="settings_add_location">Добавить место</string>
+
+    <string name="settings_section_appearance">Внешний вид</string>
+    <string name="settings_theme_system">Системная</string>
+    <string name="settings_theme_light">Светлая</string>
+    <string name="settings_theme_dark">Тёмная</string>
+
+    <string name="settings_section_data">Данные</string>
+    <string name="settings_clear_data_button">Очистить все данные кладовой</string>
+    <string name="clear_data_dialog_title">Очистить все данные кладовой?</string>
+    <string name="clear_data_dialog_message">Это удалит все продукты из кладовой и отменит все ожидающие напоминания о сроке годности. Это действие необратимо.</string>
+    <string name="clear_data_confirm">Очистить данные</string>
+</resources>

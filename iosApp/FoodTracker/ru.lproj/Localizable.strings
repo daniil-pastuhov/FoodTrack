@@ -1,0 +1,95 @@
+"app_name" = "FoodTracker";
+
+"metric_expired" = "Просрочено";
+"metric_expiring_soon" = "Скоро истекают";
+"metric_fresh" = "Свежее";
+
+"location_filter_all" = "Все";
+
+"status_filter_active" = "Активные";
+"status_filter_expiring_soon" = "Скоро истекают";
+"status_filter_expired" = "Просроченные";
+"status_filter_fresh" = "Свежее";
+
+"empty_state_title" = "Ничего не найдено";
+"empty_state_subtitle" = "Отсканируйте штрихкод или нажмите «+», чтобы добавить продукты вручную.";
+
+"swipe_delete" = "Удалить";
+
+"search_placeholder" = "Поиск по названию или бренду...";
+"scan_button" = "Сканировать";
+"status_picker_label" = "Статус";
+"filters_sheet_title" = "Фильтры";
+"filters_button" = "Фильтры";
+"done_button" = "Готово";
+
+"section_product_details" = "Информация о продукте";
+"product_name_label" = "Название продукта *";
+"brand_label" = "Бренд / производитель";
+"barcode_word" = "Штрихкод";
+
+"section_expiration_date" = "Срок годности";
+"expiry_picker_label" = "Годен до";
+"quick_date_3_days" = "+3 дня";
+"quick_date_1_week" = "+1 нед.";
+"quick_date_2_weeks" = "+2 нед.";
+"quick_date_1_month" = "+1 мес.";
+
+"section_storage" = "Хранение";
+"location_picker_label" = "Место";
+
+"section_notes" = "Заметки";
+"notes_field_placeholder" = "Заметки (напр. вскрыто, дверца морозильника)";
+
+"edit_item_title" = "Изменить продукт";
+"add_item_title" = "Добавить в кладовую";
+"cancel_button" = "Отмена";
+"save_button" = "Сохранить";
+
+"manual_entry_button" = "Вручную";
+"scanner_mode_picker_label" = "Режим сканирования";
+"scan_mode_barcode" = "Штрихкод";
+"scan_mode_date_ocr" = "Скан даты";
+"scan_mode_photo" = "Фото";
+"looking_up_product" = "Поиск продукта в Open Food Facts...";
+"scan_date_button" = "Сканировать дату";
+"continue_button" = "Продолжить";
+
+"reticle_hint_barcode" = "Совместите штрихкод продукта с рамкой";
+"reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности";
+"reticle_hint_photo" = "Расположите продукт по центру, чтобы сделать снимок";
+
+"expires_today" = "Истекает сегодня";
+"expires_tomorrow" = "Истекает завтра";
+
+"notif_title_today" = "Продукт истекает сегодня! ⚠️";
+"notif_title_soon" = "Продукт скоро истекает! ⚠️";
+
+"expiry_date_found_format" = "Найден срок годности: %@";
+"notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть или заморозить его!";
+
+"settings_title" = "Настройки";
+"settings_section_notifications" = "Уведомления";
+"settings_notifications_enabled" = "Напоминания о сроке годности";
+"settings_lead_days_label" = "Напоминать за столько дней до истечения срока";
+"settings_time_label" = "Время напоминания";
+
+"settings_section_expiring_soon" = "Порог «скоро истекает»";
+"settings_expiring_soon_desc" = "Продукты, срок которых истекает в течение этого количества дней, помечаются как «Скоро истекают»";
+
+"settings_section_locations" = "Места хранения";
+"settings_locations_desc" = "Нажмите на звёздочку, чтобы задать место по умолчанию для новых продуктов";
+"settings_add_location_placeholder" = "Название нового места";
+"settings_add_location" = "Добавить место";
+"settings_set_default_location" = "Сделать по умолчанию";
+
+"settings_section_appearance" = "Внешний вид";
+"settings_theme_system" = "Системная";
+"settings_theme_light" = "Светлая";
+"settings_theme_dark" = "Тёмная";
+
+"settings_section_data" = "Данные";
+"settings_clear_data_button" = "Очистить все данные кладовой";
+"clear_data_dialog_title" = "Очистить все данные кладовой?";
+"clear_data_dialog_message" = "Это удалит все продукты из кладовой и отменит все ожидающие напоминания о сроке годности. Это действие необратимо.";
+"clear_data_confirm" = "Очистить данные";

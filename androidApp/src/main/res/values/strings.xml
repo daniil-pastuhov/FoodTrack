@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FoodTracker</string>
+    <string name="app_subtitle">Pantry &amp; Expiration Tracker</string>
+
+    <string name="scan_item">Scan Item</string>
+    <string name="scan_content_description">Scan</string>
+
+    <string name="metric_expired">Expired</string>
+    <string name="metric_soon">Soon</string>
+    <string name="metric_fresh">Fresh</string>
+
+    <string name="search_placeholder">Search products or brands...</string>
+    <string name="clear_content_description">Clear</string>
+
+    <string name="filter_all_locations">All Locations</string>
+    <string name="filter_content_description">Filters</string>
+    <string name="filters_sheet_title">Filters</string>
+
+    <string name="tab_active">Active</string>
+    <string name="tab_expiring_soon">Expiring Soon</string>
+    <string name="tab_expired">Expired</string>
+
+    <string name="empty_state_title">No items found</string>
+    <string name="empty_state_subtitle">Tap \'Scan Item\' to scan a barcode or add your groceries.</string>
+
+    <string name="back_content_description">Back</string>
+    <string name="options_content_description">Options</string>
+
+    <string name="edit_item_title">Edit Item</string>
+    <string name="add_item_title">Add to Pantry</string>
+    <string name="barcode_format">Barcode: %1$s</string>
+    <string name="new_item_placeholder">New Item</string>
+    <string name="product_name_label">Product Name *</string>
+    <string name="brand_label">Brand / Manufacturer</string>
+    <string name="expiry_section_title">Best Before / Expiration Date</string>
+    <string name="quick_date_3_days">+3 Days</string>
+    <string name="quick_date_1_week">+1 Week</string>
+    <string name="quick_date_2_weeks">+2 Weeks</string>
+    <string name="quick_date_1_month">+1 Month</string>
+    <string name="storage_location_title">Storage Location</string>
+    <string name="notes_label">Notes (e.g. opened, quantity, shelf)</string>
+    <string name="update_item_button">Update Item</string>
+    <string name="save_item_button">Save to Pantry</string>
+    <string name="date_picker_ok">OK</string>
+    <string name="date_picker_cancel">Cancel</string>
+
+    <string name="manual_entry_button">Manual Entry</string>
+    <string name="scan_mode_barcode">Barcode</string>
+    <string name="scan_mode_date_ocr">Date OCR</string>
+    <string name="scan_mode_photo">Photo</string>
+    <string name="reticle_hint_barcode">Align product barcode within frame</string>
+    <string name="reticle_hint_date_ocr">Point camera at printed expiration date\n(e.g., \'EXP 24.11.2026\')</string>
+    <string name="reticle_hint_photo">Position product in center to snap a picture</string>
+    <string name="expiry_date_found_format">Expiry Date Found: %1$s</string>
+    <string name="looking_up_product">Looking up product in Open Food Facts...</string>
+    <string name="scan_date_button">Scan Date</string>
+    <string name="continue_button">Continue</string>
+
+    <string name="delete">Delete</string>
+
+    <string name="expires_today">Expires today</string>
+    <string name="expires_tomorrow">Expires tomorrow</string>
+
+    <plurals name="expires_in_days">
+        <item quantity="one">In %d day</item>
+        <item quantity="other">In %d days</item>
+    </plurals>
+    <plurals name="expired_days_ago">
+        <item quantity="one">%d day expired</item>
+        <item quantity="other">%d days expired</item>
+    </plurals>
+
+    <string name="notification_channel_name">Food Expiration Alerts</string>
+    <string name="notification_channel_desc">Notifications when food items are about to expire</string>
+    <string name="notif_title_today">Product Expires Today! ⚠️</string>
+    <string name="notif_title_soon">Product Expiring Soon! ⚠️</string>
+    <string name="notif_body_today_format">%1$s expires today. Make sure to consume or freeze it!</string>
+    <plurals name="notif_body_soon_format">
+        <item quantity="one">%1$s expires in %2$d day. Make sure to consume or freeze it!</item>
+        <item quantity="other">%1$s expires in %2$d days. Make sure to consume or freeze it!</item>
+    </plurals>
+    <string name="notif_fallback_title">Food Expiration Alert</string>
+    <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>
+
+    <string name="settings_content_description">Settings</string>
+    <string name="settings_title">Settings</string>
+
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_notifications_enabled">Expiry reminders</string>
+    <string name="settings_lead_days_label">Remind me this many days before expiry</string>
+    <string name="settings_time_label">Reminder time</string>
+
+    <string name="settings_section_expiring_soon">Expiring Soon Threshold</string>
+    <string name="settings_expiring_soon_desc">Items expiring within this many days are flagged as \'Expiring Soon\'</string>
+
+    <string name="settings_section_locations">Storage Locations</string>
+    <string name="settings_locations_desc">Tap the star to set the default for new items</string>
+    <string name="settings_confirm_rename">Confirm rename</string>
+    <string name="settings_set_default_location">Set as default</string>
+    <string name="settings_rename_location">Rename</string>
+    <string name="settings_delete_location">Delete</string>
+    <string name="settings_add_location_placeholder">New location name</string>
+    <string name="settings_add_location">Add location</string>
+
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+
+    <string name="settings_section_data">Data</string>
+    <string name="settings_clear_data_button">Clear All Pantry Data</string>
+    <string name="clear_data_dialog_title">Clear all pantry data?</string>
+    <string name="clear_data_dialog_message">This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.</string>
+    <string name="clear_data_confirm">Clear Data</string>
+</resources>

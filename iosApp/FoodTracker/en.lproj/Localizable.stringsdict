@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>expires_in_days_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>In %d day</string>
+            <key>other</key>
+            <string>In %d days</string>
+        </dict>
+    </dict>
+    <key>expired_days_ago_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d day expired</string>
+            <key>other</key>
+            <string>%d days expired</string>
+        </dict>
+    </dict>
+    <key>notif_body_soon_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%1$@ %2#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>expires in %2$d day. Make sure to consume or freeze it!</string>
+            <key>other</key>
+            <string>expires in %2$d days. Make sure to consume or freeze it!</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

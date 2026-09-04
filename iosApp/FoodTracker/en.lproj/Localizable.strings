@@ -1,0 +1,95 @@
+"app_name" = "FoodTracker";
+
+"metric_expired" = "Expired";
+"metric_expiring_soon" = "Expiring Soon";
+"metric_fresh" = "Fresh";
+
+"location_filter_all" = "All";
+
+"status_filter_active" = "Active";
+"status_filter_expiring_soon" = "Expiring Soon";
+"status_filter_expired" = "Expired";
+"status_filter_fresh" = "Fresh";
+
+"empty_state_title" = "No items found";
+"empty_state_subtitle" = "Scan a barcode or tap '+' to track groceries.";
+
+"swipe_delete" = "Delete";
+
+"search_placeholder" = "Search products or brands...";
+"scan_button" = "Scan";
+"status_picker_label" = "Status";
+"filters_sheet_title" = "Filters";
+"filters_button" = "Filters";
+"done_button" = "Done";
+
+"section_product_details" = "Product Details";
+"product_name_label" = "Product Name *";
+"brand_label" = "Brand / Manufacturer";
+"barcode_word" = "Barcode";
+
+"section_expiration_date" = "Expiration Date";
+"expiry_picker_label" = "Best Before / Expiry";
+"quick_date_3_days" = "+3 Days";
+"quick_date_1_week" = "+1 Wk";
+"quick_date_2_weeks" = "+2 Wks";
+"quick_date_1_month" = "+1 Mo";
+
+"section_storage" = "Storage";
+"location_picker_label" = "Location";
+
+"section_notes" = "Notes";
+"notes_field_placeholder" = "Optional notes (e.g. opened, freezer door)";
+
+"edit_item_title" = "Edit Item";
+"add_item_title" = "Add to Pantry";
+"cancel_button" = "Cancel";
+"save_button" = "Save";
+
+"manual_entry_button" = "Manual";
+"scanner_mode_picker_label" = "Scanner Mode";
+"scan_mode_barcode" = "Barcode";
+"scan_mode_date_ocr" = "Date OCR";
+"scan_mode_photo" = "Photo";
+"looking_up_product" = "Looking up product in Open Food Facts...";
+"scan_date_button" = "Scan Date";
+"continue_button" = "Continue";
+
+"reticle_hint_barcode" = "Align product barcode within frame";
+"reticle_hint_date_ocr" = "Point camera at printed expiration date stamp";
+"reticle_hint_photo" = "Center item to capture photo";
+
+"expires_today" = "Expires today";
+"expires_tomorrow" = "Expires tomorrow";
+
+"notif_title_today" = "Product Expires Today! ⚠️";
+"notif_title_soon" = "Product Expiring Soon! ⚠️";
+
+"expiry_date_found_format" = "Found Expiry: %@";
+"notif_body_today_format" = "%@ expires today. Make sure to consume or freeze it!";
+
+"settings_title" = "Settings";
+"settings_section_notifications" = "Notifications";
+"settings_notifications_enabled" = "Expiry reminders";
+"settings_lead_days_label" = "Remind me this many days before expiry";
+"settings_time_label" = "Reminder time";
+
+"settings_section_expiring_soon" = "Expiring Soon Threshold";
+"settings_expiring_soon_desc" = "Items expiring within this many days are flagged as 'Expiring Soon'";
+
+"settings_section_locations" = "Storage Locations";
+"settings_locations_desc" = "Tap the star to set the default for new items";
+"settings_add_location_placeholder" = "New location name";
+"settings_add_location" = "Add location";
+"settings_set_default_location" = "Set as default";
+
+"settings_section_appearance" = "Appearance";
+"settings_theme_system" = "System";
+"settings_theme_light" = "Light";
+"settings_theme_dark" = "Dark";
+
+"settings_section_data" = "Data";
+"settings_clear_data_button" = "Clear All Pantry Data";
+"clear_data_dialog_title" = "Clear all pantry data?";
+"clear_data_dialog_message" = "This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.";
+"clear_data_confirm" = "Clear Data";
