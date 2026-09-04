@@ -4,10 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,14 +27,13 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -68,6 +69,9 @@ import kotlinx.datetime.plus
 
 private val WEEKDAY_HEADERS = listOf("M", "T", "W", "T", "F", "S", "S")
 
+/** Below this width the day list stacks under the grid instead of sitting beside it. */
+private val WIDE_LAYOUT_BREAKPOINT = 600.dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
@@ -78,7 +82,7 @@ fun CalendarScreen(
     val state by stateHolder.uiState.collectAsState()
     val today = remember { DateUtils.today() }
     var displayedMonth by remember { mutableStateOf(today) }
-    var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
+    var selectedDay by remember { mutableStateOf(today) }
 
     val grouped = remember(state.items) {
         groupItemsByExpiryDate(state.items.filter { it.status == ItemStatus.ACTIVE })
@@ -103,75 +107,158 @@ fun CalendarScreen(
         },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        Column(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                IconButton(onClick = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) }) {
-                    Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.calendar_previous_month))
-                }
-                IconButton(onClick = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) }) {
-                    Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.calendar_next_month))
-                }
-            }
+            val isWideLayout = maxWidth >= WIDE_LAYOUT_BREAKPOINT
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                gridItems(WEEKDAY_HEADERS) { label ->
-                    Box(
-                        contentAlignment = Alignment.Center,
+            if (isWideLayout) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    CalendarGridSection(
+                        displayedMonth = displayedMonth,
+                        today = today,
+                        grouped = grouped,
+                        selectedDay = selectedDay,
+                        onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
+                        onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
+                        onSelectDay = { selectedDay = it },
                         modifier = Modifier
-                            .aspectRatio(1f)
-                            .padding(2.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
+                            .weight(1f)
+                            .fillMaxHeight()
+                    )
+                    Divider(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .width(1.dp)
+                    )
+                    DayDetailSection(
+                        selectedDay = selectedDay,
+                        items = grouped[selectedDay].orEmpty(),
+                        today = today,
+                        expiringSoonDays = state.settings.expiringSoonDays,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    )
                 }
-                gridItems(monthGrid(displayedMonth), key = { it.date.toString() }) { day ->
-                    CalendarDayCell(
-                        day = day,
-                        isToday = day.date == today,
-                        itemCount = grouped[day.date]?.size ?: 0,
-                        onClick = { selectedDay = day.date }
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    CalendarGridSection(
+                        displayedMonth = displayedMonth,
+                        today = today,
+                        grouped = grouped,
+                        selectedDay = selectedDay,
+                        onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
+                        onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
+                        onSelectDay = { selectedDay = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Divider()
+                    DayDetailSection(
+                        selectedDay = selectedDay,
+                        items = grouped[selectedDay].orEmpty(),
+                        today = today,
+                        expiringSoonDays = state.settings.expiringSoonDays,
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
                     )
                 }
             }
         }
     }
+}
 
-    val itemsForSelectedDay = selectedDay?.let { grouped[it] }
-    if (selectedDay != null && itemsForSelectedDay != null) {
-        AlertDialog(
-            onDismissRequest = { selectedDay = null },
-            title = { Text(dayDialogTitle(selectedDay!!)) },
-            text = {
-                LazyColumn {
-                    items(itemsForSelectedDay, key = { it.id }) { item ->
-                        DayDetailRow(item = item, today = today, expiringSoonDays = state.settings.expiringSoonDays)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedDay = null }) {
-                    Text(stringResource(R.string.date_picker_ok))
+@Composable
+private fun CalendarGridSection(
+    displayedMonth: LocalDate,
+    today: LocalDate,
+    grouped: Map<LocalDate, List<PantryItem>>,
+    selectedDay: LocalDate,
+    onPrevMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onSelectDay: (LocalDate) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            IconButton(onClick = onPrevMonth) {
+                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.calendar_previous_month))
+            }
+            IconButton(onClick = onNextMonth) {
+                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.calendar_next_month))
+            }
+        }
+
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(7),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            gridItems(WEEKDAY_HEADERS) { label ->
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .aspectRatio(1f)
+                        .padding(2.dp)
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
+            gridItems(monthGrid(displayedMonth), key = { it.date.toString() }) { day ->
+                CalendarDayCell(
+                    day = day,
+                    isToday = day.date == today,
+                    isSelected = day.date == selectedDay,
+                    itemCount = grouped[day.date]?.size ?: 0,
+                    onClick = { onSelectDay(day.date) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayDetailSection(
+    selectedDay: LocalDate,
+    items: List<PantryItem>,
+    today: LocalDate,
+    expiringSoonDays: Int,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = dayDetailTitle(selectedDay),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
         )
+        if (items.isEmpty()) {
+            Text(
+                text = stringResource(R.string.calendar_no_items_for_day),
+                style = MaterialTheme.typography.bodyMedium,
+                color = TextSecondary,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                items(items, key = { it.id }) { item ->
+                    DayDetailRow(item = item, today = today, expiringSoonDays = expiringSoonDays)
+                }
+            }
+        }
     }
 }
 
@@ -179,6 +266,7 @@ fun CalendarScreen(
 private fun CalendarDayCell(
     day: CalendarDay,
     isToday: Boolean,
+    isSelected: Boolean,
     itemCount: Int,
     onClick: () -> Unit
 ) {
@@ -188,7 +276,7 @@ private fun CalendarDayCell(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(2.dp)
-            .then(if (hasItems) Modifier.clickable(onClick = onClick) else Modifier)
+            .clickable(onClick = onClick)
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -196,7 +284,11 @@ private fun CalendarDayCell(
                 .size(32.dp)
                 .clip(CircleShape)
                 .then(
-                    if (isToday) Modifier.background(BrandPrimary) else Modifier
+                    when {
+                        isToday -> Modifier.background(BrandPrimary)
+                        isSelected -> Modifier.background(BrandPrimary.copy(alpha = 0.15f))
+                        else -> Modifier
+                    }
                 )
         ) {
             Text(
@@ -206,7 +298,7 @@ private fun CalendarDayCell(
                     !day.inCurrentMonth -> TextSecondary.copy(alpha = 0.35f)
                     else -> MaterialTheme.colorScheme.onBackground
                 },
-                fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
+                fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
                 fontSize = 14.sp
             )
         }
@@ -233,7 +325,7 @@ private fun DayDetailRow(item: PantryItem, today: LocalDate, expiringSoonDays: I
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Icon(
             imageVector = Icons.Default.Fastfood,
@@ -271,7 +363,7 @@ private fun monthYearLabel(date: LocalDate): String {
     return "${monthName(date.month)} ${date.year}"
 }
 
-private fun dayDialogTitle(date: LocalDate): String {
+private fun dayDetailTitle(date: LocalDate): String {
     return "${monthName(date.month)} ${date.dayOfMonth}, ${date.year}"
 }
 

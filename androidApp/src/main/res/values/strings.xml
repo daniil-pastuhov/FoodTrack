@@ -57,6 +57,15 @@
     <string name="scan_date_button">Scan Date</string>
     <string name="continue_button">Continue</string>
 
+    <string name="product_not_found_title">Product not found</string>
+    <string name="product_not_found_message">This barcode isn\'t in our database yet. Try Photo mode to snap a picture, or continue and enter the details yourself.</string>
+    <string name="switch_to_photo_button">Try Photo Mode</string>
+
+    <string name="take_photo_button">Take photo</string>
+    <string name="photo_captured_title">Photo captured</string>
+    <string name="photo_captured_message">Use this photo for the item, or retake it.</string>
+    <string name="retake_photo_button">Retake</string>
+
     <string name="delete">Delete</string>
 
     <string name="expires_today">Expires today</string>
@@ -89,6 +98,7 @@
     <string name="calendar_content_description">Calendar</string>
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
+    <string name="calendar_no_items_for_day">No items expiring on this day</string>
 
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Expiry reminders</string>

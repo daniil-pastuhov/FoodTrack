@@ -25,6 +25,7 @@
 
 "calendar_button" = "Kalender";
 "calendar_title" = "Kalender";
+"calendar_no_items_for_day" = "Ingen varer utløper denne dagen";
 
 "section_product_details" = "Produktdetaljer";
 "product_name_label" = "Produktnavn *";
@@ -57,6 +58,16 @@
 "looking_up_product" = "Slår opp produkt i Open Food Facts...";
 "scan_date_button" = "Skann dato";
 "continue_button" = "Fortsett";
+
+"product_not_found_title" = "Fant ikke produktet";
+"product_not_found_message" = "Denne strekkoden finnes ikke i databasen ennå. Prøv bildemodus for å ta et bilde, eller fortsett og fyll inn detaljene selv.";
+"switch_to_photo_button" = "Prøv bilde";
+
+"take_photo_button" = "Ta bilde";
+"photo_captured_title" = "Bilde tatt";
+"photo_captured_message" = "Bruk dette bildet for varen, eller ta et nytt.";
+"retake_photo_button" = "Ta på nytt";
+"photo_capture_failed_message" = "Kunne ikke ta bilde. Prøv igjen.";
 
 "reticle_hint_barcode" = "Plasser produktets strekkode innenfor rammen";
 "reticle_hint_date_ocr" = "Rett kameraet mot den trykte utløpsdatoen";

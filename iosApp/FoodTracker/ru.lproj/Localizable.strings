@@ -25,6 +25,7 @@
 
 "calendar_button" = "Календарь";
 "calendar_title" = "Календарь";
+"calendar_no_items_for_day" = "В этот день ничего не истекает";
 
 "section_product_details" = "Информация о продукте";
 "product_name_label" = "Название продукта *";
@@ -57,6 +58,16 @@
 "looking_up_product" = "Поиск продукта в Open Food Facts...";
 "scan_date_button" = "Сканировать дату";
 "continue_button" = "Продолжить";
+
+"product_not_found_title" = "Продукт не найден";
+"product_not_found_message" = "Этого штрихкода пока нет в базе данных. Попробуйте режим фото, чтобы сделать снимок, или продолжите и заполните данные вручную.";
+"switch_to_photo_button" = "Режим фото";
+
+"take_photo_button" = "Сделать фото";
+"photo_captured_title" = "Фото сделано";
+"photo_captured_message" = "Использовать это фото для товара или переснять.";
+"retake_photo_button" = "Переснять";
+"photo_capture_failed_message" = "Не удалось сделать фото. Попробуйте снова.";
 
 "reticle_hint_barcode" = "Совместите штрихкод продукта с рамкой";
 "reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности";

@@ -29,42 +29,39 @@ struct CalendarView: View {
     @ObservedObject var viewModel: NativePantryViewModel
     @ObservedObject private var settingsStore = SettingsStore.shared
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var displayedMonth: Date = Date()
-    @State private var showDayDetail: Bool = false
-    @State private var selectedDay: Date = Date()
+    @State private var selectedDay: Date = Calendar.current.startOfDay(for: Date())
 
     private var groupedItems: [Date: [PantryItem]] {
         Dictionary(grouping: viewModel.items) { Calendar.current.startOfDay(for: $0.expiryDate) }
     }
 
+    private var selectedDayItems: [PantryItem] {
+        groupedItems[Calendar.current.startOfDay(for: selectedDay)] ?? []
+    }
+
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                monthHeader
-
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 4) {
-                    ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
-                        Text(symbol)
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.secondary)
-                            .frame(maxWidth: .infinity)
+            Group {
+                // Regular width (iPad, landscape on larger phones) puts the day list beside the
+                // grid; compact width (most iPhones in portrait) stacks it below instead.
+                if horizontalSizeClass == .regular {
+                    HStack(spacing: 0) {
+                        calendarSection
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        Divider()
+                        dayDetailSection
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
-                    ForEach(monthGrid(for: displayedMonth), id: \.date) { day in
-                        let dayItems = groupedItems[Calendar.current.startOfDay(for: day.date)] ?? []
-                        CalendarDayCell(day: day, itemCount: dayItems.count)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                guard !dayItems.isEmpty else { return }
-                                selectedDay = day.date
-                                showDayDetail = true
-                            }
+                } else {
+                    VStack(spacing: 0) {
+                        calendarSection
+                        Divider()
+                        dayDetailSection
                     }
                 }
-                .padding(.horizontal, 8)
-
-                Spacer()
             }
             .navigationTitle(L10n.calendarTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -74,13 +71,57 @@ struct CalendarView: View {
                         .fontWeight(.semibold)
                 }
             }
-            .sheet(isPresented: $showDayDetail) {
-                DayDetailView(
-                    date: selectedDay,
-                    items: groupedItems[Calendar.current.startOfDay(for: selectedDay)] ?? [],
-                    expiringSoonDays: settingsStore.settings.expiringSoonDays
-                )
-                .presentationDetents([.medium])
+        }
+    }
+
+    private var calendarSection: some View {
+        VStack(spacing: 0) {
+            monthHeader
+
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 4) {
+                ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+                ForEach(monthGrid(for: displayedMonth), id: \.date) { day in
+                    let dayItems = groupedItems[Calendar.current.startOfDay(for: day.date)] ?? []
+                    CalendarDayCell(
+                        day: day,
+                        itemCount: dayItems.count,
+                        isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDay)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedDay = day.date
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+        }
+    }
+
+    private var dayDetailSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(dayDetailFormatter.string(from: selectedDay))
+                .font(.headline)
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
+
+            if selectedDayItems.isEmpty {
+                Text(L10n.calendarNoItemsForDay)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 16)
+                Spacer()
+            } else {
+                List(selectedDayItems) { item in
+                    ItemRowView(item: item, expiringSoonDays: settingsStore.settings.expiringSoonDays)
+                }
+                .listStyle(.plain)
             }
         }
     }
@@ -117,11 +158,18 @@ struct CalendarView: View {
         formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
         return formatter
     }
+
+    private var dayDetailFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMMM d, yyyy")
+        return formatter
+    }
 }
 
 private struct CalendarDayCell: View {
     let day: CalendarDay
     let itemCount: Int
+    let isSelected: Bool
 
     private var isToday: Bool { Calendar.current.isDateInToday(day.date) }
     private var hasItems: Bool { itemCount > 0 }
@@ -130,10 +178,10 @@ private struct CalendarDayCell: View {
         VStack(spacing: 3) {
             Text("\(Calendar.current.component(.day, from: day.date))")
                 .font(.system(size: 15))
-                .fontWeight(isToday ? .bold : .regular)
+                .fontWeight(isToday || isSelected ? .bold : .regular)
                 .foregroundColor(textColor)
                 .frame(width: 30, height: 30)
-                .background(isToday ? Color.accentColor : Color.clear)
+                .background(background)
                 .clipShape(Circle())
 
             Circle()
@@ -143,38 +191,15 @@ private struct CalendarDayCell: View {
         .frame(maxWidth: .infinity, minHeight: 44)
     }
 
+    private var background: Color {
+        if isToday { return .accentColor }
+        if isSelected { return Color.accentColor.opacity(0.15) }
+        return .clear
+    }
+
     private var textColor: Color {
         if isToday { return .white }
         if !day.isInCurrentMonth { return .secondary.opacity(0.4) }
         return .primary
-    }
-}
-
-private struct DayDetailView: View {
-    let date: Date
-    let items: [PantryItem]
-    let expiringSoonDays: Int
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            List(items) { item in
-                ItemRowView(item: item, expiringSoonDays: expiringSoonDays)
-            }
-            .navigationTitle(dateFormatter.string(from: date))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(L10n.doneButton) { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
-        }
-    }
-
-    private var dateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.setLocalizedDateFormatFromTemplate("MMMM d, yyyy")
-        return formatter
     }
 }

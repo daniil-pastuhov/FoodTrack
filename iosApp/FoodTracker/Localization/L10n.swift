@@ -28,6 +28,7 @@ public enum L10n {
 
     public static var calendarButton: String { NSLocalizedString("calendar_button", comment: "") }
     public static var calendarTitle: String { NSLocalizedString("calendar_title", comment: "") }
+    public static var calendarNoItemsForDay: String { NSLocalizedString("calendar_no_items_for_day", comment: "") }
 
     public static var sectionProductDetails: String { NSLocalizedString("section_product_details", comment: "") }
     public static var productNameLabel: String { NSLocalizedString("product_name_label", comment: "") }
@@ -60,6 +61,16 @@ public enum L10n {
     public static var lookingUpProduct: String { NSLocalizedString("looking_up_product", comment: "") }
     public static var scanDateButton: String { NSLocalizedString("scan_date_button", comment: "") }
     public static var continueButton: String { NSLocalizedString("continue_button", comment: "") }
+
+    public static var productNotFoundTitle: String { NSLocalizedString("product_not_found_title", comment: "") }
+    public static var productNotFoundMessage: String { NSLocalizedString("product_not_found_message", comment: "") }
+    public static var switchToPhotoButton: String { NSLocalizedString("switch_to_photo_button", comment: "") }
+
+    public static var takePhotoButton: String { NSLocalizedString("take_photo_button", comment: "") }
+    public static var photoCapturedTitle: String { NSLocalizedString("photo_captured_title", comment: "") }
+    public static var photoCapturedMessage: String { NSLocalizedString("photo_captured_message", comment: "") }
+    public static var retakePhotoButton: String { NSLocalizedString("retake_photo_button", comment: "") }
+    public static var photoCaptureFailedMessage: String { NSLocalizedString("photo_capture_failed_message", comment: "") }
 
     public static var reticleHintBarcode: String { NSLocalizedString("reticle_hint_barcode", comment: "") }
     public static var reticleHintDateOcr: String { NSLocalizedString("reticle_hint_date_ocr", comment: "") }

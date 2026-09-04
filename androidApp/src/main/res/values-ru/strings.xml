@@ -57,6 +57,15 @@
     <string name="scan_date_button">Сканировать дату</string>
     <string name="continue_button">Продолжить</string>
 
+    <string name="product_not_found_title">Продукт не найден</string>
+    <string name="product_not_found_message">Этого штрихкода пока нет в базе данных. Попробуйте режим фото, чтобы сделать снимок, или продолжите и заполните данные вручную.</string>
+    <string name="switch_to_photo_button">Режим фото</string>
+
+    <string name="take_photo_button">Сделать фото</string>
+    <string name="photo_captured_title">Фото сделано</string>
+    <string name="photo_captured_message">Использовать это фото для товара или переснять.</string>
+    <string name="retake_photo_button">Переснять</string>
+
     <string name="delete">Удалить</string>
 
     <string name="expires_today">Истекает сегодня</string>
@@ -95,6 +104,7 @@
     <string name="calendar_content_description">Календарь</string>
     <string name="calendar_previous_month">Предыдущий месяц</string>
     <string name="calendar_next_month">Следующий месяц</string>
+    <string name="calendar_no_items_for_day">В этот день ничего не истекает</string>
 
     <string name="settings_section_notifications">Уведомления</string>
     <string name="settings_notifications_enabled">Напоминания о сроке годности</string>

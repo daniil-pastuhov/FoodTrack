@@ -57,6 +57,15 @@
     <string name="scan_date_button">Skann dato</string>
     <string name="continue_button">Fortsett</string>
 
+    <string name="product_not_found_title">Fant ikke produktet</string>
+    <string name="product_not_found_message">Denne strekkoden finnes ikke i databasen ennå. Prøv bildemodus for å ta et bilde, eller fortsett og fyll inn detaljene selv.</string>
+    <string name="switch_to_photo_button">Prøv bildemodus</string>
+
+    <string name="take_photo_button">Ta bilde</string>
+    <string name="photo_captured_title">Bilde tatt</string>
+    <string name="photo_captured_message">Bruk dette bildet for varen, eller ta et nytt.</string>
+    <string name="retake_photo_button">Ta på nytt</string>
+
     <string name="delete">Slett</string>
 
     <string name="expires_today">Utløper i dag</string>
@@ -89,6 +98,7 @@
     <string name="calendar_content_description">Kalender</string>
     <string name="calendar_previous_month">Forrige måned</string>
     <string name="calendar_next_month">Neste måned</string>
+    <string name="calendar_no_items_for_day">Ingen varer utløper denne dagen</string>
 
     <string name="settings_section_notifications">Varsler</string>
     <string name="settings_notifications_enabled">Utløpspåminnelser</string>

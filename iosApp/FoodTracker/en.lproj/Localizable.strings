@@ -25,6 +25,7 @@
 
 "calendar_button" = "Calendar";
 "calendar_title" = "Calendar";
+"calendar_no_items_for_day" = "No items expiring on this day";
 
 "section_product_details" = "Product Details";
 "product_name_label" = "Product Name *";
@@ -57,6 +58,16 @@
 "looking_up_product" = "Looking up product in Open Food Facts...";
 "scan_date_button" = "Scan Date";
 "continue_button" = "Continue";
+
+"product_not_found_title" = "Product not found";
+"product_not_found_message" = "This barcode isn't in our database yet. Try Photo mode to snap a picture, or continue and enter the details yourself.";
+"switch_to_photo_button" = "Try Photo";
+
+"take_photo_button" = "Take photo";
+"photo_captured_title" = "Photo captured";
+"photo_captured_message" = "Use this photo for the item, or retake it.";
+"retake_photo_button" = "Retake";
+"photo_capture_failed_message" = "Couldn't capture photo. Try again.";
 
 "reticle_hint_barcode" = "Align product barcode within frame";
 "reticle_hint_date_ocr" = "Point camera at printed expiration date stamp";
