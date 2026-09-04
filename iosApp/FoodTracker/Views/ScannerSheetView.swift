@@ -73,6 +73,7 @@ public struct ScannerSheetView: View {
                     Text(L10n.scanModePhoto).tag(IOSCameraMode.photo)
                 }
                 .pickerStyle(.segmented)
+                .colorScheme(.dark) // always sits over the live (dark) camera feed, independent of app theme
                 .padding(.horizontal, 40)
                 .padding(.top, 8)
 
