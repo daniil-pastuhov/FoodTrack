@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Fastfood
@@ -86,6 +87,7 @@ fun PantryDashboardScreen(
     onNavigateToScanner: () -> Unit,
     onNavigateToAddEdit: (PantryItem?) -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToCalendar: () -> Unit,
     onDeleteItem: (String) -> Unit = { stateHolder.deleteItem(it) },
     modifier: Modifier = Modifier
 ) {
@@ -136,6 +138,12 @@ fun PantryDashboardScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onNavigateToCalendar) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = stringResource(R.string.calendar_content_description)
+                        )
+                    }
                     IconButton(onClick = { showFilterSheet = true }) {
                         BadgedBox(
                             badge = {

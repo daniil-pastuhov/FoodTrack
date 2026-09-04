@@ -23,6 +23,9 @@
 "filters_button" = "Filtre";
 "done_button" = "Ferdig";
 
+"calendar_button" = "Kalender";
+"calendar_title" = "Kalender";
+
 "section_product_details" = "Produktdetaljer";
 "product_name_label" = "Produktnavn *";
 "brand_label" = "Merke / produsent";

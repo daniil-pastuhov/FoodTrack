@@ -86,6 +86,10 @@
     <string name="settings_content_description">Innstillinger</string>
     <string name="settings_title">Innstillinger</string>
 
+    <string name="calendar_content_description">Kalender</string>
+    <string name="calendar_previous_month">Forrige måned</string>
+    <string name="calendar_next_month">Neste måned</string>
+
     <string name="settings_section_notifications">Varsler</string>
     <string name="settings_notifications_enabled">Utløpspåminnelser</string>
     <string name="settings_lead_days_label">Minn meg på dette antall dager før utløp</string>

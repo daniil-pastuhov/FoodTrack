@@ -23,6 +23,9 @@
 "filters_button" = "Фильтры";
 "done_button" = "Готово";
 
+"calendar_button" = "Календарь";
+"calendar_title" = "Календарь";
+
 "section_product_details" = "Информация о продукте";
 "product_name_label" = "Название продукта *";
 "brand_label" = "Бренд / производитель";

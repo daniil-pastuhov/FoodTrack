@@ -7,6 +7,7 @@ public struct PantryDashboardView: View {
     @State private var showAddEdit: Bool = false
     @State private var showSettings: Bool = false
     @State private var showFilters: Bool = false
+    @State private var showCalendar: Bool = false
     @State private var selectedItem: PantryItem? = nil
 
     @State private var prefillBarcode: String? = nil
@@ -121,6 +122,12 @@ public struct PantryDashboardView: View {
                     .accessibilityLabel(L10n.filtersButton)
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: { showCalendar = true }) {
+                        Image(systemName: "calendar")
+                    }
+                    .accessibilityLabel(L10n.calendarButton)
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: { showSettings = true }) {
                         Image(systemName: "gearshape")
                     }
@@ -154,6 +161,9 @@ public struct PantryDashboardView: View {
             .sheet(isPresented: $showFilters) {
                 FilterSheetView(viewModel: viewModel, settingsStore: settingsStore)
                     .presentationDetents([.medium])
+            }
+            .sheet(isPresented: $showCalendar) {
+                CalendarView(viewModel: viewModel)
             }
         }
     }

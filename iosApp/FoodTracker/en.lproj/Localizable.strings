@@ -23,6 +23,9 @@
 "filters_button" = "Filters";
 "done_button" = "Done";
 
+"calendar_button" = "Calendar";
+"calendar_title" = "Calendar";
+
 "section_product_details" = "Product Details";
 "product_name_label" = "Product Name *";
 "brand_label" = "Brand / Manufacturer";

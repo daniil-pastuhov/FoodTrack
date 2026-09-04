@@ -26,6 +26,9 @@ public enum L10n {
     public static var filtersButton: String { NSLocalizedString("filters_button", comment: "") }
     public static var doneButton: String { NSLocalizedString("done_button", comment: "") }
 
+    public static var calendarButton: String { NSLocalizedString("calendar_button", comment: "") }
+    public static var calendarTitle: String { NSLocalizedString("calendar_title", comment: "") }
+
     public static var sectionProductDetails: String { NSLocalizedString("section_product_details", comment: "") }
     public static var productNameLabel: String { NSLocalizedString("product_name_label", comment: "") }
     public static var brandLabel: String { NSLocalizedString("brand_label", comment: "") }

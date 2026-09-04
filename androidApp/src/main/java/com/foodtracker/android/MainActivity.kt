@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.foodtracker.android.ui.screens.AddEditItemScreen
+import com.foodtracker.android.ui.screens.CalendarScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
@@ -36,7 +37,8 @@ enum class AppScreen {
     DASHBOARD,
     SCANNER,
     ADD_EDIT,
-    SETTINGS
+    SETTINGS,
+    CALENDAR
 }
 
 class MainActivity : ComponentActivity() {
@@ -102,7 +104,7 @@ class MainActivity : ComponentActivity() {
                     BackHandler(enabled = currentScreen != AppScreen.DASHBOARD) {
                         when (currentScreen) {
                             AppScreen.SCANNER -> navigateBackFromScanner()
-                            AppScreen.ADD_EDIT, AppScreen.SETTINGS -> navigateToDashboard()
+                            AppScreen.ADD_EDIT, AppScreen.SETTINGS, AppScreen.CALENDAR -> navigateToDashboard()
                             AppScreen.DASHBOARD -> Unit
                         }
                     }
@@ -132,10 +134,20 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSettings = {
                                     currentScreen = AppScreen.SETTINGS
                                 },
+                                onNavigateToCalendar = {
+                                    currentScreen = AppScreen.CALENDAR
+                                },
                                 onDeleteItem = { id ->
                                     com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, id)
                                     stateHolder.deleteItem(id)
                                 }
+                            )
+                        }
+
+                        AppScreen.CALENDAR -> {
+                            CalendarScreen(
+                                stateHolder = stateHolder,
+                                onNavigateBack = navigateToDashboard
                             )
                         }
 

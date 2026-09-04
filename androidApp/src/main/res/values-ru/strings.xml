@@ -92,6 +92,10 @@
     <string name="settings_content_description">Настройки</string>
     <string name="settings_title">Настройки</string>
 
+    <string name="calendar_content_description">Календарь</string>
+    <string name="calendar_previous_month">Предыдущий месяц</string>
+    <string name="calendar_next_month">Следующий месяц</string>
+
     <string name="settings_section_notifications">Уведомления</string>
     <string name="settings_notifications_enabled">Напоминания о сроке годности</string>
     <string name="settings_lead_days_label">Напоминать за столько дней до истечения срока</string>
