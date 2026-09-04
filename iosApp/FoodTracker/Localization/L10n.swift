@@ -67,6 +67,16 @@ public enum L10n {
     public static var cancelButton: String { NSLocalizedString("cancel_button", comment: "") }
     public static var saveButton: String { NSLocalizedString("save_button", comment: "") }
 
+    public static var essentialItemLabel: String { NSLocalizedString("essential_item_label", comment: "") }
+    public static var essentialItemDescription: String { NSLocalizedString("essential_item_description", comment: "") }
+
+    public static var shoppingListButton: String { NSLocalizedString("shopping_list_button", comment: "") }
+    public static var shoppingListTitle: String { NSLocalizedString("shopping_list_title", comment: "") }
+    public static var shoppingListAddPlaceholder: String { NSLocalizedString("shopping_list_add_placeholder", comment: "") }
+    public static var shoppingListEmptyTitle: String { NSLocalizedString("shopping_list_empty_title", comment: "") }
+    public static var shoppingListEmptySubtitle: String { NSLocalizedString("shopping_list_empty_subtitle", comment: "") }
+    public static var shoppingListCheckOff: String { NSLocalizedString("shopping_list_check_off", comment: "") }
+
     public static var manualEntryButton: String { NSLocalizedString("manual_entry_button", comment: "") }
     public static var scannerModePickerLabel: String { NSLocalizedString("scanner_mode_picker_label", comment: "") }
     public static var scanModeBarcode: String { NSLocalizedString("scan_mode_barcode", comment: "") }

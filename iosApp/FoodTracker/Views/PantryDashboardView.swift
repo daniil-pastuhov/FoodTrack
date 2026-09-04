@@ -8,6 +8,7 @@ public struct PantryDashboardView: View {
     @State private var showSettings: Bool = false
     @State private var showFilters: Bool = false
     @State private var showCalendar: Bool = false
+    @State private var showShoppingList: Bool = false
     @State private var selectedItem: PantryItem? = nil
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
@@ -171,6 +172,12 @@ public struct PantryDashboardView: View {
                         .accessibilityLabel(L10n.calendarButton)
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
+                        Button(action: { showShoppingList = true }) {
+                            Image(systemName: "cart")
+                        }
+                        .accessibilityLabel(L10n.shoppingListButton)
+                    }
+                    ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: { showFilters = true }) {
                             Image(systemName: viewModel.hasActiveFilters
                                 ? "line.3.horizontal.decrease.circle.fill"
@@ -224,6 +231,9 @@ public struct PantryDashboardView: View {
             }
             .sheet(isPresented: $showCalendar) {
                 CalendarView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showShoppingList) {
+                ShoppingListView(viewModel: viewModel)
             }
         }
     }

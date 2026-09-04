@@ -68,6 +68,17 @@
 
     <string name="delete">Slett</string>
 
+    <string name="essential_item_label">Nødvendig vare</string>
+    <string name="essential_item_description">Legges automatisk til handlelisten når varen fjernes fra matskapet</string>
+
+    <string name="shopping_list_title">Handleliste</string>
+    <string name="shopping_list_content_description">Handleliste</string>
+    <string name="shopping_list_add_placeholder">Legg til en vare …</string>
+    <string name="shopping_list_add_button">Legg til</string>
+    <string name="shopping_list_check_off_content_description">Kryss av</string>
+    <string name="shopping_list_empty_title">Handlelisten er tom</string>
+    <string name="shopping_list_empty_subtitle">Nødvendige varer du fjerner fra matskapet, dukker opp her.</string>
+
     <string name="selection_count_format">%1$d valgt</string>
     <string name="exit_selection_content_description">Avslutt utvalg</string>
     <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>

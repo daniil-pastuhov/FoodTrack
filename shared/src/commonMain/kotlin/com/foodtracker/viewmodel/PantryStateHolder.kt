@@ -5,8 +5,10 @@ import com.foodtracker.model.AppSettings
 import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
+import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.parser.GS1BarcodeParser
 import com.foodtracker.repository.PantryRepository
+import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +20,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlin.random.Random
 
 enum class StatusFilter {
     ALL,
@@ -43,12 +47,15 @@ data class PantryUiState(
     val productNotFoundBarcode: String? = null,
     val detectedDate: LocalDate? = null,
     val isLookingUpBarcode: Boolean = false,
-    val scanMessage: String? = null
+    val scanMessage: String? = null,
+    // Shopping list
+    val shoppingList: List<ShoppingListEntry> = emptyList()
 )
 
 class PantryStateHolder(
     private val repository: PantryRepository,
     private val settingsRepository: SettingsRepository,
+    private val shoppingListRepository: ShoppingListRepository,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
@@ -57,6 +64,7 @@ class PantryStateHolder(
 
     init {
         observeItems()
+        observeShoppingList()
     }
 
     private fun observeItems() {
@@ -89,6 +97,14 @@ class PantryStateHolder(
                         freshCount = freshCount
                     )
                 }
+            }
+        }
+    }
+
+    private fun observeShoppingList() {
+        coroutineScope.launch {
+            shoppingListRepository.getEntriesFlow().collectLatest { entries ->
+                _uiState.update { it.copy(shoppingList = entries) }
             }
         }
     }
@@ -237,15 +253,57 @@ class PantryStateHolder(
 
     fun saveItem(item: PantryItem) {
         coroutineScope.launch {
+            val isNewItem = repository.getItem(item.id) == null
             repository.saveItem(item)
+            if (isNewItem && item.barcode != null) {
+                shoppingListRepository.findByBarcode(item.barcode)?.let { match ->
+                    shoppingListRepository.deleteEntry(match.id)
+                }
+            }
             clearScanState()
         }
     }
 
     fun deleteItem(id: String) {
         coroutineScope.launch {
+            val item = repository.getItem(id)
             repository.deleteItem(id)
+            if (item?.essential == true) {
+                addToShoppingListIfAbsent(item.name, item.barcode)
+            }
         }
+    }
+
+    fun addManualShoppingListEntry(productName: String) {
+        val trimmed = productName.trim()
+        if (trimmed.isBlank()) return
+        coroutineScope.launch {
+            addToShoppingListIfAbsent(trimmed, barcode = null)
+        }
+    }
+
+    fun deleteShoppingListEntry(id: String) {
+        coroutineScope.launch {
+            shoppingListRepository.deleteEntry(id)
+        }
+    }
+
+    private suspend fun addToShoppingListIfAbsent(name: String, barcode: String?) {
+        val existing = if (barcode != null) {
+            shoppingListRepository.findByBarcode(barcode)
+        } else {
+            shoppingListRepository.findByName(name)
+        }
+        if (existing != null) return
+
+        shoppingListRepository.addEntry(
+            ShoppingListEntry(
+                id = "shopping_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt()}",
+                productName = name,
+                barcode = barcode,
+                addedDate = DateUtils.today()
+            )
+        )
     }
 
     fun clearScanState() {

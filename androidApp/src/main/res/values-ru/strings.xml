@@ -68,6 +68,17 @@
 
     <string name="delete">Удалить</string>
 
+    <string name="essential_item_label">Обязательный продукт</string>
+    <string name="essential_item_description">Автоматически добавляется в список покупок при удалении из кладовой</string>
+
+    <string name="shopping_list_title">Список покупок</string>
+    <string name="shopping_list_content_description">Список покупок</string>
+    <string name="shopping_list_add_placeholder">Добавить продукт…</string>
+    <string name="shopping_list_add_button">Добавить</string>
+    <string name="shopping_list_check_off_content_description">Отметить</string>
+    <string name="shopping_list_empty_title">Список покупок пуст</string>
+    <string name="shopping_list_empty_subtitle">Обязательные продукты, удалённые из кладовой, появятся здесь.</string>
+
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
     <string name="action_get_recipe_ideas">Идеи рецептов</string>

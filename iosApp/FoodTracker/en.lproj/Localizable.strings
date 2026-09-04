@@ -58,6 +58,16 @@
 "cancel_button" = "Cancel";
 "save_button" = "Save";
 
+"essential_item_label" = "Essential item";
+"essential_item_description" = "Automatically add to your shopping list when removed from the pantry";
+
+"shopping_list_button" = "Shopping List";
+"shopping_list_title" = "Shopping List";
+"shopping_list_add_placeholder" = "Add an item…";
+"shopping_list_empty_title" = "Your shopping list is empty";
+"shopping_list_empty_subtitle" = "Essential items you remove from the pantry will show up here.";
+"shopping_list_check_off" = "Check off";
+
 "manual_entry_button" = "Manual";
 "scanner_mode_picker_label" = "Scanner Mode";
 "scan_mode_barcode" = "Barcode";

@@ -15,11 +15,17 @@ data class PantryItem(
     val storageLocation: String = "Pantry",
     val category: String? = null,
     val status: ItemStatus = ItemStatus.ACTIVE,
-    val notes: String? = null
+    val notes: String? = null,
+    val essential: Boolean = true
 ) {
     fun daysRemaining(today: LocalDate): Int {
         return expiryDate.toEpochDays() - today.toEpochDays()
     }
+
+    /** Key used to match this item's product against a shopping list entry: barcode when
+     *  known, otherwise the trimmed/lowercased name (barcode-less matches are unreliable
+     *  across re-scans, but still needed to dedupe manual entries and deletions). */
+    fun shoppingMatchKey(): String = barcode ?: name.trim().lowercase()
 
     fun expiryStatus(today: LocalDate, expiringSoonDays: Int = 3): ExpiryStatus {
         return ExpiryStatus.compute(daysRemaining(today), expiringSoonDays)

@@ -58,6 +58,16 @@
 "cancel_button" = "Avbryt";
 "save_button" = "Lagre";
 
+"essential_item_label" = "Nødvendig vare";
+"essential_item_description" = "Legges automatisk til handlelisten når varen fjernes fra matskapet";
+
+"shopping_list_button" = "Handleliste";
+"shopping_list_title" = "Handleliste";
+"shopping_list_add_placeholder" = "Legg til en vare …";
+"shopping_list_empty_title" = "Handlelisten er tom";
+"shopping_list_empty_subtitle" = "Nødvendige varer du fjerner fra matskapet, dukker opp her.";
+"shopping_list_check_off" = "Kryss av";
+
 "manual_entry_button" = "Manuelt";
 "scanner_mode_picker_label" = "Skannemodus";
 "scan_mode_barcode" = "Strekkode";

@@ -18,7 +18,8 @@ data class PantryItemEntity(
     val storageLocation: String,
     val category: String?,
     val status: String,
-    val notes: String?
+    val notes: String?,
+    val essential: Boolean = true
 )
 
 fun PantryItemEntity.toDomain(): PantryItem = PantryItem(
@@ -32,7 +33,8 @@ fun PantryItemEntity.toDomain(): PantryItem = PantryItem(
     storageLocation = storageLocation,
     category = category,
     status = ItemStatus.valueOf(status),
-    notes = notes
+    notes = notes,
+    essential = essential
 )
 
 fun PantryItem.toEntity(): PantryItemEntity = PantryItemEntity(
@@ -46,5 +48,6 @@ fun PantryItem.toEntity(): PantryItemEntity = PantryItemEntity(
     storageLocation = storageLocation,
     category = category,
     status = status.name,
-    notes = notes
+    notes = notes,
+    essential = essential
 )

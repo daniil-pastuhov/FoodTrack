@@ -38,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -108,6 +109,9 @@ fun AddEditItemScreen(
     }
     var notes by remember {
         mutableStateOf(initialItem?.notes ?: "")
+    }
+    var essential by remember {
+        mutableStateOf(initialItem?.essential ?: true)
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -329,6 +333,29 @@ fun AddEditItemScreen(
                 }
             }
 
+            // Essential toggle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.essential_item_label),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = stringResource(R.string.essential_item_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+                Switch(checked = essential, onCheckedChange = { essential = it })
+            }
+
             // Notes Field
             OutlinedTextField(
                 value = notes,
@@ -355,7 +382,8 @@ fun AddEditItemScreen(
                             addedDate = initialItem?.addedDate ?: today,
                             storageLocation = storageLocation,
                             status = initialItem?.status ?: ItemStatus.ACTIVE,
-                            notes = notes.trim().ifBlank { null }
+                            notes = notes.trim().ifBlank { null },
+                            essential = essential
                         )
                         onSaveItem(item)
                     }

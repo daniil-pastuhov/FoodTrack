@@ -34,6 +34,7 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var scannedProduct: ProductInfo? = nil
     @Published public var productNotFoundBarcode: String? = nil
     @Published public var detectedDate: Date? = nil
+    @Published public var shoppingList: [ShoppingListEntry] = []
 
     private let modelContext: ModelContext
 
@@ -41,7 +42,7 @@ public class NativePantryViewModel: ObservableObject {
     /// call site) resolves to this by default; a test can pass an in-memory container instead.
     public nonisolated static let sharedModelContainer: ModelContainer = {
         do {
-            return try ModelContainer(for: PantryItemRecord.self)
+            return try ModelContainer(for: PantryItemRecord.self, ShoppingListEntryRecord.self)
         } catch {
             fatalError("Failed to create SwiftData ModelContainer for PantryItemRecord: \(error)")
         }
@@ -50,6 +51,7 @@ public class NativePantryViewModel: ObservableObject {
     public init(modelContainer: ModelContainer = NativePantryViewModel.sharedModelContainer) {
         modelContext = ModelContext(modelContainer)
         loadItems()
+        loadShoppingList()
     }
 
     private var expiringSoonDays: Int { SettingsStore.shared.settings.expiringSoonDays }
@@ -57,6 +59,11 @@ public class NativePantryViewModel: ObservableObject {
     private func loadItems() {
         let descriptor = FetchDescriptor<PantryItemRecord>(sortBy: [SortDescriptor(\.expiryDate)])
         items = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asPantryItem }
+    }
+
+    private func loadShoppingList() {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(sortBy: [SortDescriptor(\.addedDate, order: .reverse)])
+        shoppingList = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asEntry }
     }
 
     public var filteredItems: [PantryItem] {
@@ -155,19 +162,27 @@ public class NativePantryViewModel: ObservableObject {
 
     public func saveItem(_ item: PantryItem) {
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == item.id })
-        if let existing = try? modelContext.fetch(descriptor).first {
-            existing.update(from: item)
+        let existingRecord = try? modelContext.fetch(descriptor).first
+        let isNewItem = existingRecord == nil
+        if let existingRecord {
+            existingRecord.update(from: item)
         } else {
             modelContext.insert(PantryItemRecord(from: item))
         }
         try? modelContext.save()
         loadItems()
 
+        if isNewItem, let barcode = item.barcode {
+            removeShoppingListEntry(matchingBarcode: barcode)
+        }
+
         IOSNotificationManager.shared.scheduleNotification(for: item)
         clearScanState()
     }
 
     public func deleteItem(_ id: String) {
+        let deletedItem = items.first(where: { $0.id == id })
+
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
         if let existing = try? modelContext.fetch(descriptor).first {
             modelContext.delete(existing)
@@ -175,6 +190,53 @@ public class NativePantryViewModel: ObservableObject {
         }
         items.removeAll { $0.id == id }
         IOSNotificationManager.shared.cancelNotification(for: id)
+
+        if let deletedItem, deletedItem.essential {
+            addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode)
+        }
+    }
+
+    public func addManualShoppingListEntry(_ productName: String) {
+        let trimmed = productName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        addShoppingListEntryIfAbsent(name: trimmed, barcode: nil)
+    }
+
+    public func deleteShoppingListEntry(_ id: String) {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            modelContext.delete(existing)
+            try? modelContext.save()
+        }
+        loadShoppingList()
+    }
+
+    private func removeShoppingListEntry(matchingBarcode barcode: String) {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.barcode == barcode })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            modelContext.delete(existing)
+            try? modelContext.save()
+            loadShoppingList()
+        }
+    }
+
+    private func addShoppingListEntryIfAbsent(name: String, barcode: String?) {
+        let existing: ShoppingListEntryRecord?
+        if let barcode {
+            let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.barcode == barcode })
+            existing = try? modelContext.fetch(descriptor).first
+        } else {
+            let normalizedName = name.trimmingCharacters(in: .whitespaces).lowercased()
+            let descriptor = FetchDescriptor<ShoppingListEntryRecord>()
+            existing = ((try? modelContext.fetch(descriptor)) ?? []).first {
+                $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == normalizedName
+            }
+        }
+        guard existing == nil else { return }
+
+        modelContext.insert(ShoppingListEntryRecord(from: ShoppingListEntry(productName: name, barcode: barcode)))
+        try? modelContext.save()
+        loadShoppingList()
     }
 
     public func clearScanState() {

@@ -16,6 +16,7 @@ final class PantryItemRecord {
     var storageLocation: String
     var category: String?
     var notes: String?
+    var essential: Bool = true
 
     init(from item: PantryItem) {
         id = item.id
@@ -28,6 +29,7 @@ final class PantryItemRecord {
         storageLocation = item.storageLocation
         category = item.category
         notes = item.notes
+        essential = item.essential
     }
 
     func update(from item: PantryItem) {
@@ -40,6 +42,7 @@ final class PantryItemRecord {
         storageLocation = item.storageLocation
         category = item.category
         notes = item.notes
+        essential = item.essential
     }
 
     var asPantryItem: PantryItem {
@@ -53,7 +56,8 @@ final class PantryItemRecord {
             addedDate: addedDate,
             storageLocation: storageLocation,
             category: category,
-            notes: notes
+            notes: notes,
+            essential: essential
         )
     }
 }

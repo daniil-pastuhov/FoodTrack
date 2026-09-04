@@ -68,6 +68,17 @@
 
     <string name="delete">Delete</string>
 
+    <string name="essential_item_label">Essential item</string>
+    <string name="essential_item_description">Automatically add to your shopping list when removed from the pantry</string>
+
+    <string name="shopping_list_title">Shopping List</string>
+    <string name="shopping_list_content_description">Shopping list</string>
+    <string name="shopping_list_add_placeholder">Add an item…</string>
+    <string name="shopping_list_add_button">Add</string>
+    <string name="shopping_list_check_off_content_description">Check off</string>
+    <string name="shopping_list_empty_title">Your shopping list is empty</string>
+    <string name="shopping_list_empty_subtitle">Essential items you remove from the pantry will show up here.</string>
+
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
     <string name="action_get_recipe_ideas">Get recipe ideas</string>

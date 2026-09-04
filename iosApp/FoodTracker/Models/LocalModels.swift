@@ -19,6 +19,7 @@ public struct PantryItem: Identifiable, Codable {
     public var storageLocation: String
     public var category: String?
     public var notes: String?
+    public var essential: Bool
 
     public init(
         id: String = UUID().uuidString,
@@ -30,7 +31,8 @@ public struct PantryItem: Identifiable, Codable {
         addedDate: Date = Date(),
         storageLocation: String = "Pantry",
         category: String? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        essential: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -42,6 +44,13 @@ public struct PantryItem: Identifiable, Codable {
         self.storageLocation = storageLocation
         self.category = category
         self.notes = notes
+        self.essential = essential
+    }
+
+    /// Key used to match this item's product against a shopping list entry: barcode when
+    /// known, otherwise the trimmed/lowercased name (mirrors Android's `PantryItem.shoppingMatchKey()`).
+    public func shoppingMatchKey() -> String {
+        barcode ?? name.trimmingCharacters(in: .whitespaces).lowercased()
     }
 
     public var daysRemaining: Int {

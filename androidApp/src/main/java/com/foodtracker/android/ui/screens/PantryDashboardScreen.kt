@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
@@ -92,6 +93,7 @@ fun PantryDashboardScreen(
     onNavigateToAddEdit: (PantryItem?) -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToCalendar: () -> Unit,
+    onNavigateToShoppingList: () -> Unit,
     onDeleteItem: (String) -> Unit = { stateHolder.deleteItem(it) },
     modifier: Modifier = Modifier
 ) {
@@ -195,6 +197,12 @@ fun PantryDashboardScreen(
                             Icon(
                                 imageVector = Icons.Default.CalendarMonth,
                                 contentDescription = stringResource(R.string.calendar_content_description)
+                            )
+                        }
+                        IconButton(onClick = onNavigateToShoppingList) {
+                            Icon(
+                                imageVector = Icons.Default.ShoppingCart,
+                                contentDescription = stringResource(R.string.shopping_list_content_description)
                             )
                         }
                         IconButton(onClick = { showFilterSheet = true }) {

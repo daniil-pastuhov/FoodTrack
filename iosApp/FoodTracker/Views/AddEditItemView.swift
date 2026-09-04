@@ -20,6 +20,7 @@ public struct AddEditItemView: View {
     @State private var expiryDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
     @State private var storageLocation: String = "Pantry"
     @State private var notes: String = ""
+    @State private var essential: Bool = true
 
     public init(
         viewModel: NativePantryViewModel,
@@ -102,6 +103,17 @@ public struct AddEditItemView: View {
                     TextField(L10n.notesFieldPlaceholder, text: $notes, axis: .vertical)
                         .lineLimit(2...4)
                 }
+
+                Section {
+                    Toggle(isOn: $essential) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(L10n.essentialItemLabel)
+                            Text(L10n.essentialItemDescription)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
             }
             .navigationTitle(editingItem != nil ? L10n.editItemTitle : L10n.addItemTitle)
             .navigationBarTitleDisplayMode(.inline)
@@ -120,7 +132,8 @@ public struct AddEditItemView: View {
                             expiryDate: expiryDate,
                             addedDate: editingItem?.addedDate ?? Date(),
                             storageLocation: storageLocation,
-                            notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes
+                            notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
+                            essential: essential
                         )
                         viewModel.saveItem(item)
                         dismiss()
@@ -138,6 +151,7 @@ public struct AddEditItemView: View {
                     expiryDate = item.expiryDate
                     storageLocation = item.storageLocation
                     notes = item.notes ?? ""
+                    essential = item.essential
                 } else {
                     name = prefillName ?? ""
                     brand = prefillBrand ?? ""

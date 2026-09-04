@@ -58,6 +58,16 @@
 "cancel_button" = "Отмена";
 "save_button" = "Сохранить";
 
+"essential_item_label" = "Обязательный продукт";
+"essential_item_description" = "Автоматически добавляется в список покупок при удалении из кладовой";
+
+"shopping_list_button" = "Список покупок";
+"shopping_list_title" = "Список покупок";
+"shopping_list_add_placeholder" = "Добавить продукт…";
+"shopping_list_empty_title" = "Список покупок пуст";
+"shopping_list_empty_subtitle" = "Обязательные продукты, удалённые из кладовой, появятся здесь.";
+"shopping_list_check_off" = "Отметить";
+
 "manual_entry_button" = "Вручную";
 "scanner_mode_picker_label" = "Режим сканирования";
 "scan_mode_barcode" = "Штрихкод";
