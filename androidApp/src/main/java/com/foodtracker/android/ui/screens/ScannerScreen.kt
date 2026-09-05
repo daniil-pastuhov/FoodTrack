@@ -63,6 +63,7 @@ import com.foodtracker.android.camera.CameraPreviewView
 import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
+import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
 import java.io.File
@@ -221,7 +222,8 @@ fun ScannerScreen(
         }
 
         // Floating Date Detected Chip
-        if (state.detectedDate != null) {
+        val detectedDate = state.detectedDate
+        if (detectedDate != null) {
             Box(
                 contentAlignment = Alignment.TopCenter,
                 modifier = Modifier
@@ -238,7 +240,7 @@ fun ScannerScreen(
                     Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = stringResource(R.string.expiry_date_found_format, state.detectedDate.toString()),
+                        text = stringResource(R.string.expiry_date_found_format, formatLocalDate(detectedDate)),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp

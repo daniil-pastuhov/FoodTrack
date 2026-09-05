@@ -185,7 +185,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToAddEdit = {},
                                 onNavigateToSettings = {},
                                 onNavigateToCalendar = {},
-                                onNavigateToShoppingList = {}
+                                onNavigateToShoppingList = {},
+                                onDeleteItem = onDeleteItemHandler
                             )
                         }
 

@@ -113,7 +113,20 @@ object DateOcrParser {
             }
         }
 
-        // Pattern 5: MM/YY or MM/YYYY (Common on canned items & long shelf-life)
+        // Pattern 5: DDMMYYYY with no separator at all (e.g. 01122026)
+        val compactDmyRegex = Regex("""\b(\d{2})(\d{2})(20\d{2})\b""")
+        for (match in compactDmyRegex.findAll(text)) {
+            val d = match.groupValues[1].toIntOrNull() ?: continue
+            val m = match.groupValues[2].toIntOrNull() ?: continue
+            val y = match.groupValues[3].toIntOrNull() ?: continue
+
+            if (isValidDate(y, m, d, referenceYear)) {
+                val conf = if (hasKeywordNearby) 0.90f else 0.60f
+                out.add(DateOcrResult(LocalDate(y, m, d), match.value, conf, "DDMMYYYY"))
+            }
+        }
+
+        // Pattern 6: MM/YY or MM/YYYY (Common on canned items & long shelf-life)
         val monthYearOnlyRegex = Regex("""\b(0[1-9]|1[0-2])[\.\/\-](20\d{2}|\d{2})\b""")
         for (match in monthYearOnlyRegex.findAll(text)) {
             val m = match.groupValues[1].toIntOrNull() ?: continue

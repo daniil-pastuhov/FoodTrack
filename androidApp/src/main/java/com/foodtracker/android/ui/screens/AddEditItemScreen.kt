@@ -62,6 +62,7 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.daysRemainingLabel
+import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
@@ -273,7 +274,7 @@ fun AddEditItemScreen(
                         Icon(Icons.Default.CalendarToday, contentDescription = null, tint = BrandPrimary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = expiryDate.toString(),
+                            text = formatLocalDate(expiryDate),
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
                         )

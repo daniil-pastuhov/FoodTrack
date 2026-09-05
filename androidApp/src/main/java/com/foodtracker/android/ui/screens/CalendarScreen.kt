@@ -56,14 +56,16 @@ import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
+import com.foodtracker.android.util.formatMonthYear
+import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.util.CalendarDay
 import com.foodtracker.util.DateUtils
 import com.foodtracker.util.groupItemsByExpiryDate
 import com.foodtracker.util.monthGrid
 import com.foodtracker.viewmodel.PantryStateHolder
+import java.time.format.FormatStyle
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.Month
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 
@@ -93,7 +95,7 @@ fun CalendarScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = monthYearLabel(displayedMonth),
+                        text = formatMonthYear(displayedMonth),
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -240,7 +242,7 @@ private fun DayDetailSection(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = dayDetailTitle(selectedDay),
+            text = formatLocalDate(selectedDay, FormatStyle.LONG),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -359,12 +361,3 @@ private fun DayDetailRow(item: PantryItem, today: LocalDate, expiringSoonDays: I
     }
 }
 
-private fun monthYearLabel(date: LocalDate): String {
-    return "${monthName(date.month)} ${date.year}"
-}
-
-private fun dayDetailTitle(date: LocalDate): String {
-    return "${monthName(date.month)} ${date.dayOfMonth}, ${date.year}"
-}
-
-private fun monthName(month: Month): String = month.name.lowercase().replaceFirstChar { it.uppercase() }

@@ -94,7 +94,7 @@ fun PantryDashboardScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToCalendar: () -> Unit,
     onNavigateToShoppingList: () -> Unit,
-    onDeleteItem: (String) -> Unit = { stateHolder.deleteItem(it) },
+    onDeleteItem: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()

@@ -64,4 +64,35 @@ class DateOcrParserTest {
         assertNotNull(result)
         assertEquals(LocalDate(2027, 9, 30), result.date)
     }
+
+    @Test
+    fun testParseCompactNoSeparator() {
+        val lines = listOf(
+            "FROZEN PEAS",
+            "BEST BEFORE 01122026"
+        )
+        val result = DateOcrParser.parseBestDate(lines, referenceYear = 2026)
+        assertNotNull(result)
+        assertEquals(LocalDate(2026, 12, 1), result.date)
+    }
+
+    @Test
+    fun testParseDashFormat() {
+        val lines = listOf(
+            "USE BY 11-12-2027"
+        )
+        val result = DateOcrParser.parseBestDate(lines, referenceYear = 2026)
+        assertNotNull(result)
+        assertEquals(LocalDate(2027, 12, 11), result.date)
+    }
+
+    @Test
+    fun testParseSlashMonthYearFullYear() {
+        val lines = listOf(
+            "EXP 10/2026"
+        )
+        val result = DateOcrParser.parseBestDate(lines, referenceYear = 2026)
+        assertNotNull(result)
+        assertEquals(LocalDate(2026, 10, 31), result.date)
+    }
 }
