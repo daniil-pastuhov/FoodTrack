@@ -44,6 +44,7 @@
 		A1AA724AE8CD0A4206E3125B /* FoodTrackerWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3C083AAFB66DF19729847F9 /* FoodTrackerWidgetBundle.swift */; };
 		85D1219C4107167D7E51C5B1 /* ExpiringItemsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A960B86C989A0AE9FF7FEB6 /* ExpiringItemsWidget.swift */; };
 		CEBF5842F3D9AB3B5D3A66B7 /* ShoppingListWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFD2556F3F0A0AA96F66473D /* ShoppingListWidget.swift */; };
+		179C8C5A38574F59B9805E1E /* OverviewWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 723335A444AE4795857A463B /* OverviewWidget.swift */; };
 		48CC2BD06E56FE3885A8256C /* WidgetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */; };
 		CCD153CCCA6B574ED481F149 /* FoodTrackerWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 3764E7EDFC9E09ED698D0134 /* FoodTrackerWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		FE7B16743512870CBA9C7C8D /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE1DD74E5B2B66C9F038A7 /* AppRouter.swift */; };
@@ -85,6 +86,7 @@
 		D3C083AAFB66DF19729847F9 /* FoodTrackerWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodTrackerWidgetBundle.swift; sourceTree = "<group>"; };
 		0A960B86C989A0AE9FF7FEB6 /* ExpiringItemsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpiringItemsWidget.swift; sourceTree = "<group>"; };
 		DFD2556F3F0A0AA96F66473D /* ShoppingListWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListWidget.swift; sourceTree = "<group>"; };
+		723335A444AE4795857A463B /* OverviewWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewWidget.swift; sourceTree = "<group>"; };
 		FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSettings.swift; sourceTree = "<group>"; };
 		B3568D45ABFFD1894E1B1FB6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		AA192FD460A90E7EB53491B2 /* FoodTrackerWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FoodTrackerWidgetExtension.entitlements; sourceTree = "<group>"; };
@@ -141,6 +143,7 @@
 				D3C083AAFB66DF19729847F9 /* FoodTrackerWidgetBundle.swift */,
 				0A960B86C989A0AE9FF7FEB6 /* ExpiringItemsWidget.swift */,
 				DFD2556F3F0A0AA96F66473D /* ShoppingListWidget.swift */,
+				723335A444AE4795857A463B /* OverviewWidget.swift */,
 				FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */,
 				B3568D45ABFFD1894E1B1FB6 /* Info.plist */,
 				AA192FD460A90E7EB53491B2 /* FoodTrackerWidgetExtension.entitlements */,
@@ -409,6 +412,7 @@
 				A1AA724AE8CD0A4206E3125B /* FoodTrackerWidgetBundle.swift in Sources */,
 				85D1219C4107167D7E51C5B1 /* ExpiringItemsWidget.swift in Sources */,
 				CEBF5842F3D9AB3B5D3A66B7 /* ShoppingListWidget.swift in Sources */,
+				179C8C5A38574F59B9805E1E /* OverviewWidget.swift in Sources */,
 				48CC2BD06E56FE3885A8256C /* WidgetSettings.swift in Sources */,
 				E46F0883E74B2FE248486CDE /* AppGroup.swift in Sources */,
 				82B02A6C423CD43BB2166C6D /* LocalModels.swift in Sources */,

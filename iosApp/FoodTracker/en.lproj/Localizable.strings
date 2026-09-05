@@ -153,3 +153,5 @@
 "widget_shopping_list_title" = "Shopping List";
 "widget_shopping_list_description" = "Shows your current shopping list";
 "widget_shopping_list_empty" = "Your shopping list is empty";
+"widget_overview_title" = "Pantry Overview";
+"widget_overview_description" = "Shows what's expired or expiring soon, followed by your shopping list";

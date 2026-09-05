@@ -178,6 +178,8 @@ public enum L10n {
     public static var widgetShoppingListTitle: String { NSLocalizedString("widget_shopping_list_title", comment: "") }
     public static var widgetShoppingListDescription: String { NSLocalizedString("widget_shopping_list_description", comment: "") }
     public static var widgetShoppingListEmpty: String { NSLocalizedString("widget_shopping_list_empty", comment: "") }
+    public static var widgetOverviewTitle: String { NSLocalizedString("widget_overview_title", comment: "") }
+    public static var widgetOverviewDescription: String { NSLocalizedString("widget_overview_description", comment: "") }
 
     /// Mirrors PantryItem.daysRemainingFormatted, but resolved through the plural
     /// rules in Localizable.stringsdict instead of hardcoded English text.

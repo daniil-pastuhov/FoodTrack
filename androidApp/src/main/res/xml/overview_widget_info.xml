@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- No updatePeriodMillis: the widget is refreshed on-demand by WidgetUpdater whenever
      pantry or shopping-list data changes, since the OS's own periodic update has a
-     30-minute floor. Taller default than the single-list widgets since it shows two
-     sections. -->
+     30-minute floor. Default size is a compact 2-row footprint (like the single-list
+     widgets) rather than one sized to show every row unscrolled — it's resizable, and
+     the whole point of the LazyColumn is that it scrolls, so it doesn't need a tall
+     default to be useful. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
-    android:minHeight="220dp"
+    android:minHeight="110dp"
     android:targetCellWidth="3"
-    android:targetCellHeight="4"
+    android:targetCellHeight="2"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewImage="@drawable/widget_preview_overview"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:description="@string/widget_overview_description" />

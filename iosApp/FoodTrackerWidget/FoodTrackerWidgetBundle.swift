@@ -6,5 +6,6 @@ struct FoodTrackerWidgetBundle: WidgetBundle {
     var body: some Widget {
         ExpiringItemsWidget()
         ShoppingListWidget()
+        OverviewWidget()
     }
 }

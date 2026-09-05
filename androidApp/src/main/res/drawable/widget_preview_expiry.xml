@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Static mock of ExpiryWidget's layout for the widget picker's android:previewImage.
+     Uses the same widget_* color resources the real widget draws with, so it follows
+     light/dark automatically instead of needing a separate night-mode preview. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="180dp"
+    android:height="110dp"
+    android:viewportWidth="200"
+    android:viewportHeight="122">
+
+    <path
+        android:pathData="M8,0 H192 A8,8 0 0 1 200,8 V114 A8,8 0 0 1 192,122 H8 A8,8 0 0 1 0,114 V8 A8,8 0 0 1 8,0 Z"
+        android:fillColor="@color/widget_background" />
+
+    <!-- Title -->
+    <path android:pathData="M14,14 h64 v9 h-64 Z" android:fillColor="@color/widget_on_background" />
+
+    <!-- Row 1: expired -->
+    <path android:pathData="M20,38 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expired" />
+    <path android:pathData="M32,33 h96 v8 h-96 Z" android:fillColor="@color/widget_on_background" />
+    <path android:pathData="M32,45 h62 v6 h-62 Z" android:fillColor="@color/widget_status_expired" />
+
+    <!-- Divider -->
+    <path android:pathData="M14,58 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
+
+    <!-- Row 2: expiring soon -->
+    <path android:pathData="M20,72 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expiring" />
+    <path android:pathData="M32,67 h112 v8 h-112 Z" android:fillColor="@color/widget_on_background" />
+    <path android:pathData="M32,79 h54 v6 h-54 Z" android:fillColor="@color/widget_status_expiring" />
+
+    <!-- Divider -->
+    <path android:pathData="M14,92 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
+
+    <!-- Row 3 (partial, hints at more content below the fold) -->
+    <path android:pathData="M20,106 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expiring" />
+    <path android:pathData="M32,101 h80 v8 h-80 Z" android:fillColor="@color/widget_on_background_muted" />
+</vector>
