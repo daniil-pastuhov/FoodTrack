@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import SwiftUI
+import WidgetKit
 
 public enum NativeStatusFilter: String, CaseIterable, Identifiable {
     case all = "All"
@@ -36,23 +37,66 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var productNotFoundBarcode: String? = nil
     @Published public var detectedDate: Date? = nil
     @Published public var shoppingList: [ShoppingListEntry] = []
+    /// Set while the scan flow was launched from a specific shopping list row (rather than
+    /// the dashboard's general scan button), so `saveItem` knows to remove that exact entry
+    /// even if it has no barcode of its own to match against (manually-added entries).
+    @Published public var scanningShoppingListEntryId: String? = nil
+    /// Backs the shopping list's autosuggest — see `ProductNameRecord`.
+    @Published public var knownProductNames: [String] = []
 
     private let modelContext: ModelContext
 
     /// Shared on-disk container for pantry data. `NativePantryViewModel()` (used at every
     /// call site) resolves to this by default; a test can pass an in-memory container instead.
+    ///
+    /// Stored in the App Group container (rather than SwiftData's default per-app location) so
+    /// `FoodTrackerWidgetExtension` — a separate process/sandbox — can open the exact same
+    /// store via this same property.
     public nonisolated static let sharedModelContainer: ModelContainer = {
+        let schema = Schema([PantryItemRecord.self, ShoppingListEntryRecord.self, ProductNameRecord.self])
+        guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
+            fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see WIDGETS_TASK.md")
+        }
+        let storeURL = appGroupURL.appendingPathComponent("FoodTracker.store")
+        migrateLegacyStoreIfNeeded(to: storeURL)
+
+        let configuration = ModelConfiguration(schema: schema, url: storeURL)
         do {
-            return try ModelContainer(for: PantryItemRecord.self, ShoppingListEntryRecord.self)
+            return try ModelContainer(for: schema, configurations: [configuration])
         } catch {
             fatalError("Failed to create SwiftData ModelContainer for PantryItemRecord: \(error)")
         }
     }()
 
+    /// One-time migration for installs that predate the widget's App Group requirement:
+    /// SwiftData's default (no explicit `url:`) container lives at
+    /// `Application Support/default.store` (+ `-wal`/`-shm` sidecar files). Copies those into
+    /// the App Group container the first time this runs, so existing pantry data survives the
+    /// move instead of silently resetting to empty.
+    private nonisolated static func migrateLegacyStoreIfNeeded(to newStoreURL: URL) {
+        let fileManager = FileManager.default
+        guard !fileManager.fileExists(atPath: newStoreURL.path) else { return }
+
+        guard let appSupportURL = try? fileManager.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false
+        ) else { return }
+
+        let legacyBase = appSupportURL.appendingPathComponent("default.store").path
+        guard fileManager.fileExists(atPath: legacyBase) else { return }
+
+        let newBase = newStoreURL.path
+        for suffix in ["", "-wal", "-shm"] {
+            let source = legacyBase + suffix
+            guard fileManager.fileExists(atPath: source) else { continue }
+            try? fileManager.copyItem(atPath: source, toPath: newBase + suffix)
+        }
+    }
+
     public init(modelContainer: ModelContainer = NativePantryViewModel.sharedModelContainer) {
         modelContext = ModelContext(modelContainer)
         loadItems()
         loadShoppingList()
+        loadKnownProductNames()
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
     }
 
@@ -66,6 +110,30 @@ public class NativePantryViewModel: ObservableObject {
     private func loadShoppingList() {
         let descriptor = FetchDescriptor<ShoppingListEntryRecord>(sortBy: [SortDescriptor(\.addedDate, order: .reverse)])
         shoppingList = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asEntry }
+    }
+
+    private func loadKnownProductNames() {
+        var descriptor = FetchDescriptor<ProductNameRecord>(sortBy: [SortDescriptor(\.lastUsedAt, order: .reverse)])
+        descriptor.fetchLimit = 200
+        knownProductNames = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.displayName }
+    }
+
+    /// Records `name` as a known product name for the shopping list's autosuggest.
+    /// Persisted separately from shopping list entries themselves (see `ProductNameRecord`)
+    /// so the suggestion survives an entry being checked off or deleted.
+    private func recordProductName(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let normalized = trimmed.lowercased()
+        let descriptor = FetchDescriptor<ProductNameRecord>(predicate: #Predicate { $0.normalizedName == normalized })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.displayName = trimmed
+            existing.lastUsedAt = Date()
+        } else {
+            modelContext.insert(ProductNameRecord(normalizedName: normalized, displayName: trimmed, lastUsedAt: Date()))
+        }
+        try? modelContext.save()
+        loadKnownProductNames()
     }
 
     public var filteredItems: [PantryItem] {
@@ -194,14 +262,20 @@ public class NativePantryViewModel: ObservableObject {
         }
         try? modelContext.save()
         loadItems()
+        recordProductName(item.name)
 
-        if isNewItem, let barcode = item.barcode {
-            removeShoppingListEntry(matchingBarcode: barcode)
+        if isNewItem {
+            if let entryId = scanningShoppingListEntryId {
+                deleteShoppingListEntry(entryId)
+            } else if let barcode = item.barcode {
+                removeShoppingListEntry(matchingBarcode: barcode)
+            }
         }
 
         IOSNotificationManager.shared.scheduleNotification(for: item)
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
         clearScanState()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     public func deleteItem(_ id: String) {
@@ -219,6 +293,7 @@ public class NativePantryViewModel: ObservableObject {
         if let deletedItem, deletedItem.essential {
             addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode, category: deletedItem.category)
         }
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Decrements one unit of an item; once the last unit is used it is removed the same way
@@ -238,6 +313,11 @@ public class NativePantryViewModel: ObservableObject {
         let trimmed = productName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         addShoppingListEntryIfAbsent(name: trimmed, barcode: nil, category: nil)
+        recordProductName(trimmed)
+    }
+
+    public func beginScanForShoppingListEntry(_ id: String) {
+        scanningShoppingListEntryId = id
     }
 
     public func deleteShoppingListEntry(_ id: String) {
@@ -247,6 +327,7 @@ public class NativePantryViewModel: ObservableObject {
             try? modelContext.save()
         }
         loadShoppingList()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     public func incrementShoppingListQuantity(_ id: String) {
@@ -257,6 +338,7 @@ public class NativePantryViewModel: ObservableObject {
         existing.update(from: updated)
         try? modelContext.save()
         loadShoppingList()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     public func decrementShoppingListQuantity(_ id: String) {
@@ -267,6 +349,7 @@ public class NativePantryViewModel: ObservableObject {
         existing.update(from: updated)
         try? modelContext.save()
         loadShoppingList()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     private func removeShoppingListEntry(matchingBarcode barcode: String) {
@@ -302,6 +385,7 @@ public class NativePantryViewModel: ObservableObject {
         productNotFoundBarcode = nil
         detectedDate = nil
         isLookingUpBarcode = false
+        scanningShoppingListEntryId = nil
     }
 
     public func clearAllData() {
@@ -309,6 +393,7 @@ public class NativePantryViewModel: ObservableObject {
         try? modelContext.save()
         items = []
         IOSNotificationManager.shared.cancelAll()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Builds a device-language prompt asking an AI assistant (ChatGPT/Gemini/Claude, via the

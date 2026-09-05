@@ -8,6 +8,7 @@ import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.SortOption
 import com.foodtracker.parser.GS1BarcodeParser
 import com.foodtracker.repository.PantryRepository
+import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.util.DateUtils
@@ -49,14 +50,20 @@ data class PantryUiState(
     val detectedDate: LocalDate? = null,
     val isLookingUpBarcode: Boolean = false,
     val scanMessage: String? = null,
+    /** Set while the scan flow was launched from a specific shopping list row (rather than
+     *  the dashboard's general scan action), so [saveItem] knows to remove that exact entry
+     *  even if it has no barcode of its own to match against (manually-added entries). */
+    val scanningShoppingListEntryId: String? = null,
     // Shopping list
-    val shoppingList: List<ShoppingListEntry> = emptyList()
+    val shoppingList: List<ShoppingListEntry> = emptyList(),
+    val knownProductNames: List<String> = emptyList()
 )
 
 class PantryStateHolder(
     private val repository: PantryRepository,
     private val settingsRepository: SettingsRepository,
     private val shoppingListRepository: ShoppingListRepository,
+    private val productNameRepository: ProductNameRepository,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
@@ -66,6 +73,7 @@ class PantryStateHolder(
     init {
         observeItems()
         observeShoppingList()
+        observeKnownProductNames()
     }
 
     private fun observeItems() {
@@ -107,6 +115,14 @@ class PantryStateHolder(
         coroutineScope.launch {
             shoppingListRepository.getEntriesFlow().collectLatest { entries ->
                 _uiState.update { it.copy(shoppingList = entries) }
+            }
+        }
+    }
+
+    private fun observeKnownProductNames() {
+        coroutineScope.launch {
+            productNameRepository.getKnownNamesFlow().collectLatest { names ->
+                _uiState.update { it.copy(knownProductNames = names) }
             }
         }
     }
@@ -299,9 +315,15 @@ class PantryStateHolder(
         coroutineScope.launch {
             val isNewItem = repository.getItem(item.id) == null
             repository.saveItem(item)
-            if (isNewItem && item.barcode != null) {
-                shoppingListRepository.findByBarcode(item.barcode)?.let { match ->
-                    shoppingListRepository.deleteEntry(match.id)
+            recordProductName(item.name)
+            if (isNewItem) {
+                val scanEntryId = _uiState.value.scanningShoppingListEntryId
+                if (scanEntryId != null) {
+                    shoppingListRepository.deleteEntry(scanEntryId)
+                } else if (item.barcode != null) {
+                    shoppingListRepository.findByBarcode(item.barcode)?.let { match ->
+                        shoppingListRepository.deleteEntry(match.id)
+                    }
                 }
             }
             clearScanState()
@@ -343,7 +365,14 @@ class PantryStateHolder(
         if (trimmed.isBlank()) return
         coroutineScope.launch {
             addToShoppingListIfAbsent(trimmed, barcode = null, category = null)
+            recordProductName(trimmed)
         }
+    }
+
+    /** Marks [id] as the shopping list entry the in-progress scan flow is completing, so
+     *  [saveItem] removes it by id instead of relying on a barcode match. */
+    fun beginScanForShoppingListEntry(id: String) {
+        _uiState.update { it.copy(scanningShoppingListEntryId = id) }
     }
 
     fun deleteShoppingListEntry(id: String) {
@@ -386,6 +415,13 @@ class PantryStateHolder(
         )
     }
 
+    /** Records [name] as a known product name for the shopping list's autosuggest.
+     *  Persisted separately from shopping list entries themselves (see [ProductNameRepository])
+     *  so the suggestion survives an entry being checked off or deleted. */
+    private suspend fun recordProductName(name: String) {
+        productNameRepository.recordName(name)
+    }
+
     fun clearScanState() {
         _uiState.update {
             it.copy(
@@ -393,7 +429,8 @@ class PantryStateHolder(
                 productNotFoundBarcode = null,
                 detectedDate = null,
                 isLookingUpBarcode = false,
-                scanMessage = null
+                scanMessage = null,
+                scanningShoppingListEntryId = null
             )
         }
     }

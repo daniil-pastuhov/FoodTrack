@@ -3,6 +3,7 @@ package com.foodtracker.android.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,14 +13,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,18 +34,25 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -50,20 +63,44 @@ import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 
+private const val MAX_NAME_SUGGESTIONS = 5
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShoppingListScreen(
     stateHolder: PantryStateHolder,
     onNavigateBack: () -> Unit,
+    onScanEntry: (ShoppingListEntry) -> Unit,
+    onScanNewEntry: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
     var newEntryText by remember { mutableStateOf("") }
+    val inputFocusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     fun submitNewEntry() {
         if (newEntryText.isNotBlank()) {
             stateHolder.addManualShoppingListEntry(newEntryText)
             newEntryText = ""
+        }
+    }
+
+    // Nothing else to look at on an empty list, so put the cursor straight into the input.
+    LaunchedEffect(state.shoppingList.isEmpty()) {
+        if (state.shoppingList.isEmpty()) {
+            inputFocusRequester.requestFocus()
+            keyboardController?.show()
+        }
+    }
+
+    val suggestions = remember(newEntryText, state.knownProductNames) {
+        if (newEntryText.isBlank()) {
+            emptyList()
+        } else {
+            state.knownProductNames.filter {
+                it.contains(newEntryText, ignoreCase = true) && !it.equals(newEntryText, ignoreCase = true)
+            }.take(MAX_NAME_SUGGESTIONS)
         }
     }
 
@@ -104,14 +141,43 @@ fun ShoppingListScreen(
                     placeholder = { Text(stringResource(R.string.shopping_list_add_placeholder)) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submitNewEntry() }),
+                    modifier = Modifier
+                        .weight(1f)
+                        .focusRequester(inputFocusRequester)
                 )
-                IconButton(onClick = { submitNewEntry() }) {
+                // A blank field opens the scanner (the fast path most of the time); once the
+                // user starts typing, the same button submits that text instead.
+                IconButton(onClick = { if (newEntryText.isBlank()) onScanNewEntry() else submitNewEntry() }) {
                     Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = stringResource(R.string.shopping_list_add_button),
+                        imageVector = if (newEntryText.isBlank()) Icons.Default.QrCodeScanner else Icons.Default.Add,
+                        contentDescription = stringResource(
+                            if (newEntryText.isBlank()) R.string.shopping_list_scan_content_description
+                            else R.string.shopping_list_add_button
+                        ),
                         tint = BrandPrimary
                     )
+                }
+            }
+
+            if (suggestions.isNotEmpty()) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                ) {
+                    items(suggestions, key = { it }) { suggestion ->
+                        SuggestionChip(
+                            onClick = {
+                                stateHolder.addManualShoppingListEntry(suggestion)
+                                newEntryText = ""
+                            },
+                            label = { Text(suggestion) }
+                        )
+                    }
                 }
             }
 
@@ -150,7 +216,7 @@ fun ShoppingListScreen(
                 }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     grouped.forEach { (category, entries) ->
@@ -168,7 +234,8 @@ fun ShoppingListScreen(
                                 entry = entry,
                                 onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) },
                                 onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
-                                onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) }
+                                onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) },
+                                onScan = { onScanEntry(entry) }
                             )
                         }
                     }
@@ -184,7 +251,8 @@ private fun ShoppingListRow(
     entry: ShoppingListEntry,
     onCheckOff: () -> Unit,
     onIncrement: () -> Unit,
-    onDecrement: () -> Unit
+    onDecrement: () -> Unit,
+    onScan: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
@@ -212,6 +280,14 @@ private fun ShoppingListRow(
                         color = TextSecondary
                     )
                 }
+            }
+            IconButton(onClick = onScan, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = stringResource(R.string.shopping_list_scan_content_description),
+                    tint = BrandPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
             }
             IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp)) {
                 Icon(
@@ -244,4 +320,46 @@ private fun ShoppingListRow(
             }
         }
     }
+}
+
+/** Shown after a generic shopping-list scan resolves to one or more similarly-named entries
+ *  (rather than an exact barcode match, which skips this dialog) so the user can confirm which
+ *  list item they're buying, or fall through to adding a brand-new pantry item instead. */
+@Composable
+fun ShoppingListMatchDialog(
+    candidates: List<ShoppingListEntry>,
+    onCandidateSelected: (ShoppingListEntry) -> Unit,
+    onNoneOfThese: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.shopping_list_did_you_mean_title)) },
+        text = {
+            Column {
+                candidates.forEach { candidate ->
+                    TextButton(
+                        onClick = { onCandidateSelected(candidate) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "${candidate.productName} (${candidate.quantity})",
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onNoneOfThese) {
+                Text(stringResource(R.string.shopping_list_did_you_mean_none_of_these))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.shopping_list_did_you_mean_cancel))
+            }
+        }
+    )
 }

@@ -91,11 +91,14 @@
     <string name="shopping_list_add_placeholder">Добавить продукт…</string>
     <string name="shopping_list_add_button">Добавить</string>
     <string name="shopping_list_check_off_content_description">Отметить</string>
-    <string name="shopping_list_empty_title">Список покупок пуст</string>
+    <string name="shopping_list_scan_content_description">Сканировать продукт</string>    <string name="shopping_list_empty_title">Список покупок пуст</string>
     <string name="shopping_list_empty_subtitle">Обязательные продукты, удалённые из кладовой, появятся здесь.</string>
     <string name="shopping_list_uncategorized">Другое</string>
     <string name="shopping_list_quantity_decrease_content_description">Уменьшить количество</string>
     <string name="shopping_list_quantity_increase_content_description">Увеличить количество</string>
+    <string name="shopping_list_did_you_mean_title">Вы имели в виду одно из этих?</string>
+    <string name="shopping_list_did_you_mean_none_of_these">Ни один из них, добавить новый товар</string>
+    <string name="shopping_list_did_you_mean_cancel">Отмена</string>
 
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
@@ -177,6 +180,16 @@
     <string name="settings_theme_system">Системная</string>
     <string name="settings_theme_light">Светлая</string>
     <string name="settings_theme_dark">Тёмная</string>
+
+    <string name="widget_expiry_label">Истекающие продукты</string>
+    <string name="widget_expiry_description">Показывает просроченные и скоро истекающие продукты в кладовой</string>
+    <string name="widget_expiry_title">Скоро истекают</string>
+    <string name="widget_expiry_empty">Ничего не истекает в ближайшее время</string>
+
+    <string name="widget_shopping_list_label">Список покупок</string>
+    <string name="widget_shopping_list_description">Показывает ваш текущий список покупок</string>
+    <string name="widget_shopping_list_title">Список покупок</string>
+    <string name="widget_shopping_list_empty">Ваш список покупок пуст</string>
 
     <string name="settings_section_data">Данные</string>
     <string name="settings_clear_data_button">Очистить все данные кладовой</string>

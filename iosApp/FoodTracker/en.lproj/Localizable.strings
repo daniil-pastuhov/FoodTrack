@@ -77,10 +77,14 @@
 "shopping_list_button" = "Shopping List";
 "shopping_list_title" = "Shopping List";
 "shopping_list_add_placeholder" = "Add an item…";
+"shopping_list_add_button" = "Add";
 "shopping_list_empty_title" = "Your shopping list is empty";
 "shopping_list_empty_subtitle" = "Essential items you remove from the pantry will show up here.";
 "shopping_list_check_off" = "Check off";
 "shopping_list_uncategorized" = "Other";
+"shopping_list_scan" = "Scan product";
+"shopping_list_did_you_mean_title" = "Did you mean one of these?";
+"shopping_list_did_you_mean_none_of_these" = "None of these, add new item";
 
 "manual_entry_button" = "Manual";
 "scanner_mode_picker_label" = "Scanner Mode";
@@ -142,3 +146,10 @@
 "clear_data_dialog_title" = "Clear all pantry data?";
 "clear_data_dialog_message" = "This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.";
 "clear_data_confirm" = "Clear Data";
+
+"widget_expiring_title" = "Expiring";
+"widget_expiring_description" = "Shows what's expired or expiring soon in your pantry";
+"widget_expiring_empty" = "Nothing expiring soon";
+"widget_shopping_list_title" = "Shopping List";
+"widget_shopping_list_description" = "Shows your current shopping list";
+"widget_shopping_list_empty" = "Your shopping list is empty";

@@ -88,10 +88,14 @@ public enum L10n {
     public static var shoppingListButton: String { NSLocalizedString("shopping_list_button", comment: "") }
     public static var shoppingListTitle: String { NSLocalizedString("shopping_list_title", comment: "") }
     public static var shoppingListAddPlaceholder: String { NSLocalizedString("shopping_list_add_placeholder", comment: "") }
+    public static var shoppingListAddButton: String { NSLocalizedString("shopping_list_add_button", comment: "") }
     public static var shoppingListEmptyTitle: String { NSLocalizedString("shopping_list_empty_title", comment: "") }
     public static var shoppingListEmptySubtitle: String { NSLocalizedString("shopping_list_empty_subtitle", comment: "") }
     public static var shoppingListCheckOff: String { NSLocalizedString("shopping_list_check_off", comment: "") }
     public static var shoppingListUncategorized: String { NSLocalizedString("shopping_list_uncategorized", comment: "") }
+    public static var shoppingListScan: String { NSLocalizedString("shopping_list_scan", comment: "") }
+    public static var shoppingListDidYouMeanTitle: String { NSLocalizedString("shopping_list_did_you_mean_title", comment: "") }
+    public static var shoppingListDidYouMeanNoneOfThese: String { NSLocalizedString("shopping_list_did_you_mean_none_of_these", comment: "") }
 
     public static var manualEntryButton: String { NSLocalizedString("manual_entry_button", comment: "") }
     public static var scannerModePickerLabel: String { NSLocalizedString("scanner_mode_picker_label", comment: "") }
@@ -167,6 +171,13 @@ public enum L10n {
     public static var clearDataDialogTitle: String { NSLocalizedString("clear_data_dialog_title", comment: "") }
     public static var clearDataDialogMessage: String { NSLocalizedString("clear_data_dialog_message", comment: "") }
     public static var clearDataConfirm: String { NSLocalizedString("clear_data_confirm", comment: "") }
+
+    public static var widgetExpiringTitle: String { NSLocalizedString("widget_expiring_title", comment: "") }
+    public static var widgetExpiringDescription: String { NSLocalizedString("widget_expiring_description", comment: "") }
+    public static var widgetExpiringEmpty: String { NSLocalizedString("widget_expiring_empty", comment: "") }
+    public static var widgetShoppingListTitle: String { NSLocalizedString("widget_shopping_list_title", comment: "") }
+    public static var widgetShoppingListDescription: String { NSLocalizedString("widget_shopping_list_description", comment: "") }
+    public static var widgetShoppingListEmpty: String { NSLocalizedString("widget_shopping_list_empty", comment: "") }
 
     /// Mirrors PantryItem.daysRemainingFormatted, but resolved through the plural
     /// rules in Localizable.stringsdict instead of hardcoded English text.

@@ -91,11 +91,14 @@
     <string name="shopping_list_add_placeholder">Add an item…</string>
     <string name="shopping_list_add_button">Add</string>
     <string name="shopping_list_check_off_content_description">Check off</string>
-    <string name="shopping_list_empty_title">Your shopping list is empty</string>
+    <string name="shopping_list_scan_content_description">Scan product</string>    <string name="shopping_list_empty_title">Your shopping list is empty</string>
     <string name="shopping_list_empty_subtitle">Essential items you remove from the pantry will show up here.</string>
     <string name="shopping_list_uncategorized">Other</string>
     <string name="shopping_list_quantity_decrease_content_description">Decrease quantity</string>
     <string name="shopping_list_quantity_increase_content_description">Increase quantity</string>
+    <string name="shopping_list_did_you_mean_title">Did you mean one of these?</string>
+    <string name="shopping_list_did_you_mean_none_of_these">None of these, add new item</string>
+    <string name="shopping_list_did_you_mean_cancel">Cancel</string>
 
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
@@ -187,6 +190,16 @@
     <string name="settings_theme_dark">Dark</string>
 
     <string name="settings_section_data">Data</string>
+    <string name="widget_expiry_label">Expiring Items</string>
+    <string name="widget_expiry_description">Shows what\'s expired or expiring soon in your pantry</string>
+    <string name="widget_expiry_title">Expiring</string>
+    <string name="widget_expiry_empty">Nothing expiring soon</string>
+
+    <string name="widget_shopping_list_label">Shopping List</string>
+    <string name="widget_shopping_list_description">Shows your current shopping list</string>
+    <string name="widget_shopping_list_title">Shopping List</string>
+    <string name="widget_shopping_list_empty">Your shopping list is empty</string>
+
     <string name="settings_clear_data_button">Clear All Pantry Data</string>
     <string name="clear_data_dialog_title">Clear all pantry data?</string>
     <string name="clear_data_dialog_message">This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.</string>

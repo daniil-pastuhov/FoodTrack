@@ -1,6 +1,7 @@
 package com.foodtracker.android
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import androidx.activity.BackEventCompat
@@ -33,9 +34,13 @@ import com.foodtracker.android.ui.screens.PantryDashboardScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
 import com.foodtracker.android.ui.screens.ShoppingListScreen
+import com.foodtracker.android.ui.screens.ShoppingListMatchDialog
 import com.foodtracker.android.ui.theme.FoodTrackerTheme
+import com.foodtracker.match.ShoppingListMatchResult
+import com.foodtracker.match.ShoppingListMatcher
 import com.foodtracker.model.AppTheme
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CancellationException
 import kotlinx.datetime.LocalDate
@@ -50,6 +55,19 @@ enum class AppScreen {
     SHOPPING_LIST
 }
 
+/** Holds a generic shopping-list scan's resolved result plus its ranked candidate entries
+ *  while the "Did you mean?" dialog is up, so a tapped suggestion (or "None of these") can
+ *  proceed to Add/Edit with the same data the scanner already resolved. */
+private data class PendingShoppingListMatch(
+    val barcode: String?,
+    val name: String?,
+    val brand: String?,
+    val imageUrl: String?,
+    val expiryDate: LocalDate?,
+    val category: String?,
+    val candidates: List<ShoppingListEntry>
+)
+
 // Material predictive-back visual treatment for the screen being swiped away: it shrinks
 // slightly, shifts toward the swipe edge, and gains rounded corners as the gesture progresses.
 private const val PREDICTIVE_BACK_SCALE_FACTOR = 0.1f
@@ -60,8 +78,14 @@ class MainActivity : ComponentActivity() {
 
     private val stateHolder: PantryStateHolder by inject()
 
+    // Hoisted out of the composable (rather than `remember`ed) so the Shopping List widget's
+    // tap intent can navigate there via onNewIntent even when MainActivity is already running,
+    // not just on a cold start.
+    private val currentScreenState = mutableStateOf(AppScreen.DASHBOARD)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyScreenFromIntent(intent)
 
         setContent {
             val uiState by stateHolder.uiState.collectAsState()
@@ -76,7 +100,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var currentScreen by remember { mutableStateOf(AppScreen.DASHBOARD) }
+                    var currentScreen by currentScreenState
                     var editingItem by remember { mutableStateOf<PantryItem?>(null) }
                     var prefillBarcode by remember { mutableStateOf<String?>(null) }
                     var prefillName by remember { mutableStateOf<String?>(null) }
@@ -84,6 +108,23 @@ class MainActivity : ComponentActivity() {
                     var prefillImageUrl by remember { mutableStateOf<String?>(null) }
                     var prefillExpiryDate by remember { mutableStateOf<LocalDate?>(null) }
                     var prefillCategory by remember { mutableStateOf<String?>(null) }
+                    // Set when the scanner was launched from a specific shopping list row,
+                    // so a product-not-found result can still prefill the name/category the
+                    // user already typed there, instead of leaving Add/Edit blank.
+                    var scanningShoppingListEntry by remember { mutableStateOf<ShoppingListEntry?>(null) }
+                    // Set when the scanner was launched from the shopping list's own "scan to
+                    // add" action (rather than an existing row, or the dashboard's scan button):
+                    // a successful lookup is added straight to the shopping list instead of
+                    // proceeding to Add/Edit, since there's no pantry item to fill in yet.
+                    var isScanningForNewShoppingListEntry by remember { mutableStateOf(false) }
+                    // Screen to return to when the scanner/Add-Edit flow is backed out of or
+                    // completed — SCANNER and ADD_EDIT are reachable from both the Dashboard
+                    // and the Shopping List screen, so a hardcoded Dashboard destination would
+                    // strand a shopping-list-originated scan on the wrong screen.
+                    var scanReturnScreen by remember { mutableStateOf(AppScreen.DASHBOARD) }
+                    // Holds a generic shopping-list scan's ranked candidates while the "Did you
+                    // mean?" dialog is up; non-null triggers that dialog as an overlay.
+                    var pendingShoppingListMatch by remember { mutableStateOf<PendingShoppingListMatch?>(null) }
 
                     // Camera permission launcher
                     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -118,7 +159,9 @@ class MainActivity : ComponentActivity() {
                     }
                     val navigateBackFromScanner: () -> Unit = {
                         stateHolder.clearScanState()
-                        currentScreen = AppScreen.DASHBOARD
+                        scanningShoppingListEntry = null
+                        isScanningForNewShoppingListEntry = false
+                        currentScreen = scanReturnScreen
                     }
 
                     val onNavigateToScanner: () -> Unit = {
@@ -130,6 +173,25 @@ class MainActivity : ComponentActivity() {
                             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     }
+                    val onNavigateToScannerFromDashboard: () -> Unit = {
+                        scanReturnScreen = AppScreen.DASHBOARD
+                        scanningShoppingListEntry = null
+                        isScanningForNewShoppingListEntry = false
+                        onNavigateToScanner()
+                    }
+                    val onScanShoppingListEntry: (ShoppingListEntry) -> Unit = { entry ->
+                        scanReturnScreen = AppScreen.SHOPPING_LIST
+                        scanningShoppingListEntry = entry
+                        isScanningForNewShoppingListEntry = false
+                        stateHolder.beginScanForShoppingListEntry(entry.id)
+                        onNavigateToScanner()
+                    }
+                    val onScanNewShoppingListEntry: () -> Unit = {
+                        scanReturnScreen = AppScreen.SHOPPING_LIST
+                        scanningShoppingListEntry = null
+                        isScanningForNewShoppingListEntry = true
+                        onNavigateToScanner()
+                    }
                     val onNavigateToAddEdit: (PantryItem?) -> Unit = { item ->
                         editingItem = item
                         prefillBarcode = null
@@ -138,6 +200,7 @@ class MainActivity : ComponentActivity() {
                         prefillImageUrl = null
                         prefillExpiryDate = null
                         prefillCategory = null
+                        scanReturnScreen = AppScreen.DASHBOARD
                         currentScreen = AppScreen.ADD_EDIT
                     }
                     val onNavigateToSettingsScreen: () -> Unit = {
@@ -177,7 +240,8 @@ class MainActivity : ComponentActivity() {
                             backProgress = 0f
                             when (currentScreen) {
                                 AppScreen.SCANNER -> navigateBackFromScanner()
-                                AppScreen.ADD_EDIT, AppScreen.SETTINGS, AppScreen.CALENDAR, AppScreen.SHOPPING_LIST -> navigateToDashboard()
+                                AppScreen.ADD_EDIT -> currentScreen = scanReturnScreen
+                                AppScreen.SETTINGS, AppScreen.CALENDAR, AppScreen.SHOPPING_LIST -> navigateToDashboard()
                                 AppScreen.DASHBOARD -> Unit
                             }
                         } catch (e: CancellationException) {
@@ -233,7 +297,7 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.DASHBOARD -> {
                                     PantryDashboardScreen(
                                         stateHolder = stateHolder,
-                                        onNavigateToScanner = onNavigateToScanner,
+                                        onNavigateToScanner = onNavigateToScannerFromDashboard,
                                         onNavigateToAddEdit = onNavigateToAddEdit,
                                         onNavigateToSettings = onNavigateToSettingsScreen,
                                         onNavigateToCalendar = onNavigateToCalendarScreen,
@@ -253,7 +317,9 @@ class MainActivity : ComponentActivity() {
                                 AppScreen.SHOPPING_LIST -> {
                                     ShoppingListScreen(
                                         stateHolder = stateHolder,
-                                        onNavigateBack = navigateToDashboard
+                                        onNavigateBack = navigateToDashboard,
+                                        onScanEntry = onScanShoppingListEntry,
+                                        onScanNewEntry = onScanNewShoppingListEntry
                                     )
                                 }
 
@@ -262,14 +328,54 @@ class MainActivity : ComponentActivity() {
                                         stateHolder = stateHolder,
                                         onNavigateBack = navigateBackFromScanner,
                                         onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category ->
-                                            editingItem = null
-                                            prefillBarcode = barcode
-                                            prefillName = name
-                                            prefillBrand = brand
-                                            prefillImageUrl = imageUrl
-                                            prefillExpiryDate = expiryDate
-                                            prefillCategory = category
-                                            currentScreen = AppScreen.ADD_EDIT
+                                            if (isScanningForNewShoppingListEntry) {
+                                                isScanningForNewShoppingListEntry = false
+                                                when (val result = ShoppingListMatcher.match(name, barcode, uiState.shoppingList)) {
+                                                    is ShoppingListMatchResult.ExactBarcodeMatch -> {
+                                                        stateHolder.beginScanForShoppingListEntry(result.entry.id)
+                                                        editingItem = null
+                                                        prefillBarcode = barcode
+                                                        prefillName = name ?: result.entry.productName
+                                                        prefillBrand = brand
+                                                        prefillImageUrl = imageUrl
+                                                        prefillExpiryDate = expiryDate
+                                                        prefillCategory = category ?: result.entry.category
+                                                        currentScreen = AppScreen.ADD_EDIT
+                                                    }
+                                                    is ShoppingListMatchResult.Suggestions -> {
+                                                        pendingShoppingListMatch = PendingShoppingListMatch(
+                                                            barcode = barcode,
+                                                            name = name,
+                                                            brand = brand,
+                                                            imageUrl = imageUrl,
+                                                            expiryDate = expiryDate,
+                                                            category = category,
+                                                            candidates = result.candidates
+                                                        )
+                                                        currentScreen = scanReturnScreen
+                                                    }
+                                                    ShoppingListMatchResult.NoMatch -> {
+                                                        editingItem = null
+                                                        prefillBarcode = barcode
+                                                        prefillName = name
+                                                        prefillBrand = brand
+                                                        prefillImageUrl = imageUrl
+                                                        prefillExpiryDate = expiryDate
+                                                        prefillCategory = category
+                                                        currentScreen = AppScreen.ADD_EDIT
+                                                    }
+                                                }
+                                            } else {
+                                                val fallbackEntry = scanningShoppingListEntry
+                                                editingItem = null
+                                                prefillBarcode = barcode
+                                                prefillName = name ?: fallbackEntry?.productName
+                                                prefillBrand = brand
+                                                prefillImageUrl = imageUrl
+                                                prefillExpiryDate = expiryDate
+                                                prefillCategory = category ?: fallbackEntry?.category
+                                                currentScreen = AppScreen.ADD_EDIT
+                                            }
                                         }
                                     )
                                 }
@@ -284,11 +390,12 @@ class MainActivity : ComponentActivity() {
                                         prefillExpiryDate = prefillExpiryDate,
                                         prefillCategory = prefillCategory,
                                         settings = uiState.settings,
-                                        onNavigateBack = navigateToDashboard,
+                                        onNavigateBack = { currentScreen = scanReturnScreen },
                                         onSaveItem = { item ->
                                             com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, item)
                                             stateHolder.saveItem(item)
-                                            currentScreen = AppScreen.DASHBOARD
+                                            scanningShoppingListEntry = null
+                                            currentScreen = scanReturnScreen
                                         }
                                     )
                                 }
@@ -322,9 +429,55 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                         }
+
+                        pendingShoppingListMatch?.let { pending ->
+                            ShoppingListMatchDialog(
+                                candidates = pending.candidates,
+                                onCandidateSelected = { chosen ->
+                                    stateHolder.beginScanForShoppingListEntry(chosen.id)
+                                    editingItem = null
+                                    prefillBarcode = pending.barcode
+                                    prefillName = pending.name ?: chosen.productName
+                                    prefillBrand = pending.brand
+                                    prefillImageUrl = pending.imageUrl
+                                    prefillExpiryDate = pending.expiryDate
+                                    prefillCategory = pending.category ?: chosen.category
+                                    pendingShoppingListMatch = null
+                                    currentScreen = AppScreen.ADD_EDIT
+                                },
+                                onNoneOfThese = {
+                                    editingItem = null
+                                    prefillBarcode = pending.barcode
+                                    prefillName = pending.name
+                                    prefillBrand = pending.brand
+                                    prefillImageUrl = pending.imageUrl
+                                    prefillExpiryDate = pending.expiryDate
+                                    prefillCategory = pending.category
+                                    pendingShoppingListMatch = null
+                                    currentScreen = AppScreen.ADD_EDIT
+                                },
+                                onDismiss = { pendingShoppingListMatch = null }
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applyScreenFromIntent(intent)
+    }
+
+    private fun applyScreenFromIntent(intent: Intent) {
+        if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING_LIST, false)) {
+            currentScreenState.value = AppScreen.SHOPPING_LIST
+        }
+    }
+
+    companion object {
+        const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
     }
 }

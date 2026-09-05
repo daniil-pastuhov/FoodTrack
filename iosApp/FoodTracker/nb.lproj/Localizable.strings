@@ -77,10 +77,14 @@
 "shopping_list_button" = "Handleliste";
 "shopping_list_title" = "Handleliste";
 "shopping_list_add_placeholder" = "Legg til en vare …";
+"shopping_list_add_button" = "Legg til";
 "shopping_list_empty_title" = "Handlelisten er tom";
 "shopping_list_empty_subtitle" = "Nødvendige varer du fjerner fra matskapet, dukker opp her.";
 "shopping_list_check_off" = "Kryss av";
 "shopping_list_uncategorized" = "Annet";
+"shopping_list_scan" = "Skann produkt";
+"shopping_list_did_you_mean_title" = "Mente du en av disse?";
+"shopping_list_did_you_mean_none_of_these" = "Ingen av disse, legg til ny vare";
 
 "manual_entry_button" = "Manuelt";
 "scanner_mode_picker_label" = "Skannemodus";
@@ -142,3 +146,10 @@
 "clear_data_dialog_title" = "Tømme alle data i matskapet?";
 "clear_data_dialog_message" = "Dette fjerner alle varer fra matskapet og avbryter alle ventende utløpspåminnelser. Dette kan ikke angres.";
 "clear_data_confirm" = "Tøm data";
+
+"widget_expiring_title" = "Utløper snart";
+"widget_expiring_description" = "Viser hva som er utløpt eller snart utløper i matskapet ditt";
+"widget_expiring_empty" = "Ingenting utløper snart";
+"widget_shopping_list_title" = "Handleliste";
+"widget_shopping_list_description" = "Viser den gjeldende handlelisten din";
+"widget_shopping_list_empty" = "Handlelisten din er tom";
