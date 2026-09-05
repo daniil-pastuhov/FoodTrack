@@ -1,6 +1,7 @@
 import Foundation
 import UserNotifications
 import SwiftData
+import WidgetKit
 
 @MainActor
 public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate {
@@ -180,6 +181,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         let context = ModelContext(NativePantryViewModel.sharedModelContainer)
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
         guard let record = try? context.fetch(descriptor).first else { return }
+        defer { WidgetCenter.shared.reloadAllTimelines() }
 
         let wasEssential = record.essential
         let name = record.name

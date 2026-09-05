@@ -22,6 +22,17 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>FoodTracker requires camera access to scan barcodes, recognize expiration dates using machine learning, and photograph food items.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.foodbest.ios</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>foodtracker</string>
+			</array>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

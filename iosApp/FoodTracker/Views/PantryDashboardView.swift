@@ -3,6 +3,7 @@ import SwiftUI
 public struct PantryDashboardView: View {
     @StateObject private var viewModel = NativePantryViewModel()
     @ObservedObject private var settingsStore = SettingsStore.shared
+    @ObservedObject private var router = AppRouter.shared
     @State private var showScanner: Bool = false
     @State private var showAddEdit: Bool = false
     @State private var showSettings: Bool = false
@@ -179,7 +180,17 @@ public struct PantryDashboardView: View {
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: { showShoppingList = true }) {
-                            Image(systemName: "cart")
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: "cart")
+                                if !viewModel.shoppingList.isEmpty {
+                                    Text("\(viewModel.shoppingList.count)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundColor(.white)
+                                        .padding(4)
+                                        .background(Circle().fill(Color.accentColor))
+                                        .offset(x: 10, y: -10)
+                                }
+                            }
                         }
                         .accessibilityLabel(L10n.shoppingListButton)
                     }
@@ -242,6 +253,11 @@ public struct PantryDashboardView: View {
             }
             .sheet(isPresented: $showShoppingList) {
                 ShoppingListView(viewModel: viewModel)
+            }
+            .onChange(of: router.openShoppingList) { _, shouldOpen in
+                guard shouldOpen else { return }
+                showShoppingList = true
+                router.openShoppingList = false
             }
         }
     }

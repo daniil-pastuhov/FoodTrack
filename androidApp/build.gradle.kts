@@ -115,6 +115,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
+    implementation(libs.androidx.glance.appwidget)
+
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
 

@@ -79,7 +79,11 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_1_2, FoodTrackerDatabase.MIGRATION_2_3)
+            .addMigrations(
+                FoodTrackerDatabase.MIGRATION_1_2,
+                FoodTrackerDatabase.MIGRATION_2_3,
+                FoodTrackerDatabase.MIGRATION_3_4
+            )
             .build()
 
         val migratedItem = db.pantryDao().getById("existing-item")
@@ -152,7 +156,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_2_3)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_2_3, FoodTrackerDatabase.MIGRATION_3_4)
             .build()
 
         val migratedItem = db.pantryDao().getById("existing-item")

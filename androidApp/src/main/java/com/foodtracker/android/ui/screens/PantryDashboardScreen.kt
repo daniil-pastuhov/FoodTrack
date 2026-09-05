@@ -218,10 +218,20 @@ fun PantryDashboardScreen(
                             )
                         }
                         IconButton(onClick = onNavigateToShoppingList) {
-                            Icon(
-                                imageVector = Icons.Default.ShoppingCart,
-                                contentDescription = stringResource(R.string.shopping_list_content_description)
-                            )
+                            BadgedBox(
+                                badge = {
+                                    if (state.shoppingList.isNotEmpty()) {
+                                        Badge(containerColor = BrandPrimary) {
+                                            Text(state.shoppingList.size.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ShoppingCart,
+                                    contentDescription = stringResource(R.string.shopping_list_content_description)
+                                )
+                            }
                         }
                         IconButton(onClick = { showFilterSheet = true }) {
                             BadgedBox(

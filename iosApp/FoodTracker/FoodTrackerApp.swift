@@ -12,6 +12,9 @@ struct FoodTrackerApp: App {
                 .onAppear {
                     IOSNotificationManager.shared.requestAuthorization()
                 }
+                .onOpenURL { url in
+                    AppRouter.shared.handle(url)
+                }
         }
     }
 }

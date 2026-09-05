@@ -6,13 +6,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [PantryItemEntity::class, ShoppingListEntryEntity::class],
-    version = 3,
+    entities = [PantryItemEntity::class, ShoppingListEntryEntity::class, ProductNameEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
     abstract fun pantryDao(): PantryDao
     abstract fun shoppingListDao(): ShoppingListDao
+    abstract fun productNameDao(): ProductNameDao
 
     companion object {
         const val DB_NAME = "foodtracker.db"
@@ -74,6 +75,23 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
 
                 db.execSQL("ALTER TABLE shopping_list_entries ADD COLUMN category TEXT")
                 db.execSQL("ALTER TABLE shopping_list_entries ADD COLUMN quantity INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        // Adds the shopping list's autosuggest history — a standalone table (rather than
+        // reusing shopping_list_entries) so a name is still suggested after its entry is
+        // checked off or deleted.
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS known_product_names (
+                        normalizedName TEXT NOT NULL PRIMARY KEY,
+                        displayName TEXT NOT NULL,
+                        lastUsedAtEpochMillis INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
     }
