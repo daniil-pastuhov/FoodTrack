@@ -99,6 +99,7 @@
     <string name="shopping_list_did_you_mean_title">Did you mean one of these?</string>
     <string name="shopping_list_did_you_mean_none_of_these">None of these, add new item</string>
     <string name="shopping_list_did_you_mean_cancel">Cancel</string>
+    <string name="shopping_list_drag_handle_content_description">Drag to reorder</string>
 
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>

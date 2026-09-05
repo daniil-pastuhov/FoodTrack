@@ -82,7 +82,9 @@ class FoodTrackerMigrationTest {
             .addMigrations(
                 FoodTrackerDatabase.MIGRATION_1_2,
                 FoodTrackerDatabase.MIGRATION_2_3,
-                FoodTrackerDatabase.MIGRATION_3_4
+                FoodTrackerDatabase.MIGRATION_3_4,
+                FoodTrackerDatabase.MIGRATION_4_5,
+                FoodTrackerDatabase.MIGRATION_5_6
             )
             .build()
 
@@ -156,13 +158,210 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_2_3, FoodTrackerDatabase.MIGRATION_3_4)
+            .addMigrations(
+                FoodTrackerDatabase.MIGRATION_2_3,
+                FoodTrackerDatabase.MIGRATION_3_4,
+                FoodTrackerDatabase.MIGRATION_4_5,
+                FoodTrackerDatabase.MIGRATION_5_6
+            )
             .build()
 
         val migratedItem = db.pantryDao().getById("existing-item")
         assertNotNull("existing pantry item must survive the migration", migratedItem)
         assertEquals("Cheddar Cheese", migratedItem!!.name)
         assertEquals("quantity must default to 1 for pre-existing rows", 1, migratedItem.quantity)
+
+        db.close()
+    }
+
+    @Test
+    fun migrate4To5AddsSortOrderAndBackfillsExistingOrder() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-4-5.db")
+        dbFile.delete()
+
+        // Build the version-4 schema by hand (no sortOrder column on either table) and seed
+        // three shopping list rows out of insertion order, exactly as a real v4 install would
+        // have accumulated them.
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { db ->
+            db.execSQL(
+                """
+                CREATE TABLE pantry_items (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    barcode TEXT,
+                    imageUrl TEXT,
+                    expiryDateEpochDays INTEGER NOT NULL,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    storageLocation TEXT NOT NULL,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    notes TEXT,
+                    essential INTEGER NOT NULL DEFAULT 1
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE shopping_list_entries (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    productName TEXT NOT NULL,
+                    barcode TEXT,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    addedDateEpochDays INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE known_product_names (
+                    normalizedName TEXT NOT NULL PRIMARY KEY,
+                    displayName TEXT NOT NULL,
+                    lastUsedAtEpochMillis INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            // Inserted oldest-first, so pre-migration order (addedDateEpochDays DESC) is
+            // Milk (20002), Eggs (20001), Bread (20000) — the reverse of insertion order.
+            listOf(
+                Triple("bread", "Bread", 20000),
+                Triple("eggs", "Eggs", 20001),
+                Triple("milk", "Milk", 20002)
+            ).forEach { (id, name, addedDateEpochDays) ->
+                db.insert(
+                    "shopping_list_entries",
+                    null,
+                    ContentValues().apply {
+                        put("id", id)
+                        put("productName", name)
+                        put("barcode", null as String?)
+                        put("category", null as String?)
+                        put("quantity", 1)
+                        put("addedDateEpochDays", addedDateEpochDays)
+                    }
+                )
+            }
+            db.version = 4
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_4_5, FoodTrackerDatabase.MIGRATION_5_6)
+            .build()
+
+        val migrated = db.shoppingListDao().getAllFlow().first()
+        assertEquals(
+            "sortOrder must reproduce the pre-migration addedDateEpochDays DESC order",
+            listOf("milk", "eggs", "bread"),
+            migrated.map { it.id }
+        )
+
+        db.close()
+    }
+
+    @Test
+    fun migrate5To6BackfillsKnownProductNamesFromInventory() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-5-6.db")
+        dbFile.delete()
+
+        // Build the version-5 schema by hand and seed pantry items — including a duplicate
+        // name (two "Milk" rows) and a name that's already known from prior shopping-list
+        // activity, with an existing sortOrder that must survive untouched.
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { db ->
+            db.execSQL(
+                """
+                CREATE TABLE pantry_items (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    barcode TEXT,
+                    imageUrl TEXT,
+                    expiryDateEpochDays INTEGER NOT NULL,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    storageLocation TEXT NOT NULL,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    notes TEXT,
+                    essential INTEGER NOT NULL DEFAULT 1
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE shopping_list_entries (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    productName TEXT NOT NULL,
+                    barcode TEXT,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    sortOrder REAL NOT NULL DEFAULT 0
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE known_product_names (
+                    normalizedName TEXT NOT NULL PRIMARY KEY,
+                    displayName TEXT NOT NULL,
+                    lastUsedAtEpochMillis INTEGER NOT NULL,
+                    sortOrder REAL DEFAULT NULL
+                )
+                """.trimIndent()
+            )
+            listOf(
+                Triple("item-1", "Milk", 20000),
+                Triple("item-2", "Milk", 20005), // duplicate name, later date should win
+                Triple("item-3", "Eggs", 20001)
+            ).forEach { (id, name, addedDateEpochDays) ->
+                db.insert(
+                    "pantry_items",
+                    null,
+                    ContentValues().apply {
+                        put("id", id)
+                        put("name", name)
+                        put("brand", null as String?)
+                        put("barcode", null as String?)
+                        put("imageUrl", null as String?)
+                        put("expiryDateEpochDays", 20100)
+                        put("addedDateEpochDays", addedDateEpochDays)
+                        put("storageLocation", "Fridge")
+                        put("category", null as String?)
+                        put("quantity", 1)
+                        put("notes", null as String?)
+                        put("essential", 1)
+                    }
+                )
+            }
+            // "eggs" is already known with a manually-dragged sortOrder — the backfill must
+            // leave it alone rather than clobbering it.
+            db.insert(
+                "known_product_names",
+                null,
+                ContentValues().apply {
+                    put("normalizedName", "eggs")
+                    put("displayName", "Eggs")
+                    put("lastUsedAtEpochMillis", 123L)
+                    put("sortOrder", 7.0)
+                }
+            )
+            db.version = 5
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_5_6)
+            .build()
+
+        val knownNames = db.productNameDao().getRecentNamesFlow().first()
+        assertTrue("backfilled inventory name must be suggested", knownNames.contains("Milk"))
+
+        assertEquals(
+            "pre-existing known name's sortOrder must survive the backfill untouched",
+            7.0,
+            db.productNameDao().getSortOrder("eggs")
+        )
 
         db.close()
     }

@@ -21,9 +21,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlin.random.Random
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 
 enum class StatusFilter {
     ALL,
@@ -396,6 +397,7 @@ class PantryStateHolder(
         }
     }
 
+    @OptIn(ExperimentalTime::class)
     private suspend fun addToShoppingListIfAbsent(name: String, barcode: String?, category: String?) {
         val existing = if (barcode != null) {
             shoppingListRepository.findByBarcode(barcode)
@@ -404,15 +406,44 @@ class PantryStateHolder(
         }
         if (existing != null) return
 
+        // Restore this product's last manually-dragged position if it has one, so a re-added
+        // item (e.g. an essential pantry item running out again) lands back where the user put
+        // it rather than always appending to the end.
+        val sortOrder = productNameRepository.getSortOrder(name)
+            ?: ((shoppingListRepository.getMaxSortOrder() ?: 0.0) + 1.0)
+
         shoppingListRepository.addEntry(
             ShoppingListEntry(
                 id = "shopping_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt()}",
                 productName = name,
                 barcode = barcode,
                 category = category,
-                addedDate = DateUtils.today()
+                addedDate = DateUtils.today(),
+                sortOrder = sortOrder
             )
         )
+    }
+
+    /** Called after a drag-and-drop reorder completes. [beforeId]/[afterId] are the ids of the
+     *  entries now immediately above/below [movedId] within the same category group (null at a
+     *  group boundary). Computes a fractional sort order between them and persists it both on
+     *  the moved entry and on its product name, so the position is remembered the next time this
+     *  product re-enters the shopping list (see [addToShoppingListIfAbsent]). */
+    fun moveShoppingListEntry(movedId: String, beforeId: String?, afterId: String?) {
+        val list = _uiState.value.shoppingList
+        val moved = list.find { it.id == movedId } ?: return
+        val beforeOrder = beforeId?.let { id -> list.find { it.id == id }?.sortOrder }
+        val afterOrder = afterId?.let { id -> list.find { it.id == id }?.sortOrder }
+        val newSortOrder = when {
+            beforeOrder != null && afterOrder != null -> (beforeOrder + afterOrder) / 2.0
+            beforeOrder != null -> beforeOrder + 1.0
+            afterOrder != null -> afterOrder - 1.0
+            else -> moved.sortOrder
+        }
+        coroutineScope.launch {
+            shoppingListRepository.updateEntry(moved.copy(sortOrder = newSortOrder))
+            productNameRepository.recordSortOrder(moved.productName, newSortOrder)
+        }
     }
 
     /** Records [name] as a known product name for the shopping list's autosuggest.

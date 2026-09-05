@@ -16,6 +16,8 @@ class RoomShoppingListRepository(private val dao: ShoppingListDao) : ShoppingLis
     override suspend fun findByName(name: String): ShoppingListEntry? =
         dao.findByName(name)?.toDomain()
 
+    override suspend fun getMaxSortOrder(): Double? = dao.getMaxSortOrder()
+
     override suspend fun addEntry(entry: ShoppingListEntry) = dao.upsert(entry.toEntity())
 
     override suspend fun updateEntry(entry: ShoppingListEntry) = dao.upsert(entry.toEntity())

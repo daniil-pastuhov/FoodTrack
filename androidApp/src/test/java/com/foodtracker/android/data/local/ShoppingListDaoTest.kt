@@ -91,4 +91,44 @@ class ShoppingListDaoTest {
         assertEquals("entry-1", repo.findByName("CHEDDAR CHEESE")?.id)
         assertNull(repo.findByName("Swiss Cheese"))
     }
+
+    @Test
+    fun testGetAllFlowOrdersBySortOrderNotAddedDate() = runTest {
+        // Deliberately added in an order that would look wrong under both sortOrder ASC and
+        // addedDateEpochDays DESC if either field were ignored, so the assertion only passes if
+        // sortOrder is really what's driving the order.
+        repo.addEntry(
+            ShoppingListEntry(
+                id = "newest-but-last",
+                productName = "Milk",
+                addedDate = LocalDate(2026, 9, 5),
+                sortOrder = 3.0
+            )
+        )
+        repo.addEntry(
+            ShoppingListEntry(
+                id = "oldest-but-first",
+                productName = "Bread",
+                addedDate = LocalDate(2026, 9, 1),
+                sortOrder = 1.0
+            )
+        )
+
+        val ordered = repo.getEntriesFlow().first()
+        assertEquals(listOf("oldest-but-first", "newest-but-last"), ordered.map { it.id })
+    }
+
+    @Test
+    fun testGetMaxSortOrder() = runTest {
+        assertNull(repo.getMaxSortOrder())
+
+        repo.addEntry(
+            ShoppingListEntry(id = "entry-1", productName = "Milk", addedDate = LocalDate(2026, 9, 3), sortOrder = 2.0)
+        )
+        repo.addEntry(
+            ShoppingListEntry(id = "entry-2", productName = "Bread", addedDate = LocalDate(2026, 9, 3), sortOrder = 5.0)
+        )
+
+        assertEquals(5.0, repo.getMaxSortOrder())
+    }
 }

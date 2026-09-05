@@ -12,7 +12,8 @@ data class ShoppingListEntryEntity(
     val barcode: String?,
     val category: String? = null,
     val quantity: Int = 1,
-    val addedDateEpochDays: Int
+    val addedDateEpochDays: Int,
+    val sortOrder: Double = 0.0
 )
 
 fun ShoppingListEntryEntity.toDomain(): ShoppingListEntry = ShoppingListEntry(
@@ -21,7 +22,8 @@ fun ShoppingListEntryEntity.toDomain(): ShoppingListEntry = ShoppingListEntry(
     barcode = barcode,
     category = category,
     quantity = quantity,
-    addedDate = LocalDate.fromEpochDays(addedDateEpochDays)
+    addedDate = LocalDate.fromEpochDays(addedDateEpochDays),
+    sortOrder = sortOrder
 )
 
 fun ShoppingListEntry.toEntity(): ShoppingListEntryEntity = ShoppingListEntryEntity(
@@ -30,5 +32,6 @@ fun ShoppingListEntry.toEntity(): ShoppingListEntryEntity = ShoppingListEntryEnt
     barcode = barcode,
     category = category,
     quantity = quantity,
-    addedDateEpochDays = addedDate.toEpochDays()
+    addedDateEpochDays = addedDate.toEpochDays().toInt(),
+    sortOrder = sortOrder
 )

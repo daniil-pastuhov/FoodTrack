@@ -11,6 +11,7 @@ final class ShoppingListEntryRecord {
     var category: String?
     var quantity: Int = 1
     var addedDate: Date
+    var sortOrder: Double = 0
 
     init(from entry: ShoppingListEntry) {
         id = entry.id
@@ -19,6 +20,7 @@ final class ShoppingListEntryRecord {
         category = entry.category
         quantity = entry.quantity
         addedDate = entry.addedDate
+        sortOrder = entry.sortOrder
     }
 
     func update(from entry: ShoppingListEntry) {
@@ -27,6 +29,7 @@ final class ShoppingListEntryRecord {
         category = entry.category
         quantity = entry.quantity
         addedDate = entry.addedDate
+        sortOrder = entry.sortOrder
     }
 
     var asEntry: ShoppingListEntry {
@@ -36,7 +39,8 @@ final class ShoppingListEntryRecord {
             barcode: barcode,
             category: category,
             quantity: quantity,
-            addedDate: addedDate
+            addedDate: addedDate,
+            sortOrder: sortOrder
         )
     }
 }

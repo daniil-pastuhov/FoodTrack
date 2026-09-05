@@ -100,6 +100,9 @@ struct ShoppingListView: View {
                             Section(header: Text(group.category ?? L10n.shoppingListUncategorized)) {
                                 ForEach(group.entries) { entry in
                                     HStack {
+                                        // No .onDelete is attached, so this is only insurance
+                                        // against a stray delete affordance while edit mode is
+                                        // forced active below (for the reorder handle).
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(entry.productName)
                                                 .font(.body)
@@ -142,11 +145,23 @@ struct ShoppingListView: View {
                                             Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
                                         }
                                     }
+                                    .deleteDisabled(true)
+                                }
+                                .onMove { from, to in
+                                    guard let sourceIndex = from.first else { return }
+                                    let movedId = group.entries[sourceIndex].id
+                                    var reordered = group.entries
+                                    reordered.move(fromOffsets: from, toOffset: to)
+                                    guard let newIndex = reordered.firstIndex(where: { $0.id == movedId }) else { return }
+                                    let beforeId = newIndex > 0 ? reordered[newIndex - 1].id : nil
+                                    let afterId = newIndex < reordered.count - 1 ? reordered[newIndex + 1].id : nil
+                                    viewModel.moveShoppingListEntry(movedId, beforeId: beforeId, afterId: afterId)
                                 }
                             }
                         }
                     }
                     .listStyle(.plain)
+                    .environment(\.editMode, .constant(.active))
                 }
             }
             .navigationTitle(L10n.shoppingListTitle)

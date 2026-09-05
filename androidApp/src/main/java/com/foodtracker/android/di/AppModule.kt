@@ -24,7 +24,9 @@ val appModule = module {
             .addMigrations(
                 FoodTrackerDatabase.MIGRATION_1_2,
                 FoodTrackerDatabase.MIGRATION_2_3,
-                FoodTrackerDatabase.MIGRATION_3_4
+                FoodTrackerDatabase.MIGRATION_3_4,
+                FoodTrackerDatabase.MIGRATION_4_5,
+                FoodTrackerDatabase.MIGRATION_5_6
             )
             .build()
     }

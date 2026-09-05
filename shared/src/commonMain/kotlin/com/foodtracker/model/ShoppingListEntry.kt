@@ -10,7 +10,8 @@ data class ShoppingListEntry(
     val barcode: String? = null,
     val category: String? = null,
     val quantity: Int = 1,
-    val addedDate: LocalDate
+    val addedDate: LocalDate,
+    val sortOrder: Double = 0.0
 ) {
     /** Same matching rule as `PantryItem.shoppingMatchKey()`, so a deleted essential
      *  pantry item and a manually-added shopping list entry dedupe against each other. */

@@ -7,6 +7,7 @@ public struct ShoppingListEntry: Identifiable, Codable {
     public var category: String?
     public var quantity: Int
     public var addedDate: Date
+    public var sortOrder: Double
 
     public init(
         id: String = UUID().uuidString,
@@ -14,7 +15,8 @@ public struct ShoppingListEntry: Identifiable, Codable {
         barcode: String? = nil,
         category: String? = nil,
         quantity: Int = 1,
-        addedDate: Date = Date()
+        addedDate: Date = Date(),
+        sortOrder: Double = 0
     ) {
         self.id = id
         self.productName = productName
@@ -22,6 +24,7 @@ public struct ShoppingListEntry: Identifiable, Codable {
         self.category = category
         self.quantity = quantity
         self.addedDate = addedDate
+        self.sortOrder = sortOrder
     }
 
     /// Mirrors `PantryItem.shoppingMatchKey()` so a deleted essential pantry item and a

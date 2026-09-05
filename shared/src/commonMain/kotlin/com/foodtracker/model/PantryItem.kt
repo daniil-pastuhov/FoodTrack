@@ -19,7 +19,7 @@ data class PantryItem(
     val essential: Boolean = true
 ) {
     fun daysRemaining(today: LocalDate): Int {
-        return expiryDate.toEpochDays() - today.toEpochDays()
+        return (expiryDate.toEpochDays() - today.toEpochDays()).toInt()
     }
 
     /** Key used to match this item's product against a shopping list entry: barcode when
@@ -31,20 +31,22 @@ data class PantryItem(
         return ExpiryStatus.compute(daysRemaining(today), expiringSoonDays)
     }
 
+    @OptIn(kotlin.time.ExperimentalTime::class)
     val isExpired: Boolean
         get() = daysRemaining(currentSystemDate()) < 0
 
     companion object {
+        @OptIn(kotlin.time.ExperimentalTime::class)
         fun currentSystemDate(): LocalDate {
-            val instant = kotlinx.datetime.Clock.System.now()
+            val instant = kotlin.time.Clock.System.now()
             val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
-            return kotlinx.datetime.Instant.fromEpochMilliseconds(instant.toEpochMilliseconds())
+            return kotlin.time.Instant.fromEpochMilliseconds(instant.toEpochMilliseconds())
                 .let {
                     // Extract local date using kotlinx.datetime
-                    kotlinx.datetime.Clock.System.now()
+                    kotlin.time.Clock.System.now()
                 }
                 .let {
-                    val localDateTime = kotlinx.datetime.Clock.System.now()
+                    val localDateTime = kotlin.time.Clock.System.now()
                     // Safe conversion to LocalDate
                     val epochDays = (instant.toEpochMilliseconds() / (1000 * 60 * 60 * 24)).toInt()
                     LocalDate.fromEpochDays(epochDays)

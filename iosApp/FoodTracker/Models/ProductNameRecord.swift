@@ -11,10 +11,14 @@ final class ProductNameRecord {
     @Attribute(.unique) var normalizedName: String
     var displayName: String
     var lastUsedAt: Date
+    /// The shopping-list manual position last recorded for this product name, or nil if it has
+    /// never been dragged to a specific spot.
+    var sortOrder: Double?
 
-    init(normalizedName: String, displayName: String, lastUsedAt: Date) {
+    init(normalizedName: String, displayName: String, lastUsedAt: Date, sortOrder: Double? = nil) {
         self.normalizedName = normalizedName
         self.displayName = displayName
         self.lastUsedAt = lastUsedAt
+        self.sortOrder = sortOrder
     }
 }

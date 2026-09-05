@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [PantryItemEntity::class, ShoppingListEntryEntity::class, ProductNameEntity::class],
-    version = 4,
+    version = 6,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -90,6 +90,47 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                         displayName TEXT NOT NULL,
                         lastUsedAtEpochMillis INTEGER NOT NULL
                     )
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // Adds manual drag-reorder support: a sortOrder column on shopping list entries (and,
+        // separately, on known product names so a manually-dragged position is remembered per
+        // product and restored the next time that name re-enters the list). Existing rows are
+        // backfilled with a rank that reproduces their current addedDateEpochDays DESC order,
+        // so upgrading doesn't visually shuffle anyone's list.
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE shopping_list_entries ADD COLUMN sortOrder REAL NOT NULL DEFAULT 0")
+                db.execSQL(
+                    """
+                    UPDATE shopping_list_entries SET sortOrder = (
+                        SELECT COUNT(*) FROM shopping_list_entries AS t2
+                        WHERE t2.addedDateEpochDays > shopping_list_entries.addedDateEpochDays
+                           OR (t2.addedDateEpochDays = shopping_list_entries.addedDateEpochDays AND t2.rowid > shopping_list_entries.rowid)
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("ALTER TABLE known_product_names ADD COLUMN sortOrder REAL DEFAULT NULL")
+            }
+        }
+
+        // Backfills the shopping list's autosuggest with every product name already sitting in
+        // the pantry, so existing inventory suggests itself immediately instead of only after
+        // being re-scanned/re-saved (which is the only other path that calls recordName).
+        // INSERT OR IGNORE leaves any name already known (and its sortOrder) untouched; the
+        // GROUP BY collapses duplicate pantry item names to one row, and SQLite's documented
+        // bare-column/MAX() aggregate behavior picks the name/date from the same row that has
+        // the max addedDateEpochDays in each group.
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO known_product_names (normalizedName, displayName, lastUsedAtEpochMillis)
+                    SELECT LOWER(TRIM(name)), TRIM(name), MAX(addedDateEpochDays) * 86400000
+                    FROM pantry_items
+                    GROUP BY LOWER(TRIM(name))
                     """.trimIndent()
                 )
             }

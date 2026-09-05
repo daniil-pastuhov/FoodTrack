@@ -8,4 +8,10 @@ import kotlinx.coroutines.flow.Flow
 interface ProductNameRepository {
     fun getKnownNamesFlow(): Flow<List<String>>
     suspend fun recordName(name: String)
+
+    /** The manual shopping-list position last recorded for [name] via [recordSortOrder], or
+     *  null if it has never been manually reordered. Lets a shopping list entry re-enter the
+     *  list at the position the user last dragged it to, rather than always appending. */
+    suspend fun getSortOrder(name: String): Double?
+    suspend fun recordSortOrder(name: String, sortOrder: Double)
 }

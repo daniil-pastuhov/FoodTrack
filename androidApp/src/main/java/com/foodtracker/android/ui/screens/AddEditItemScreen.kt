@@ -68,12 +68,13 @@ import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.PantryItem
 import com.foodtracker.util.DateUtils
-import kotlinx.datetime.Instant
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalTime::class)
 @Composable
 fun AddEditItemScreen(
     initialItem: PantryItem?,
@@ -288,7 +289,7 @@ fun AddEditItemScreen(
                         )
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
-                            text = daysRemainingLabel(expiryDate.toEpochDays() - today.toEpochDays()),
+                            text = daysRemainingLabel((expiryDate.toEpochDays() - today.toEpochDays()).toInt()),
                             color = BrandPrimary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold

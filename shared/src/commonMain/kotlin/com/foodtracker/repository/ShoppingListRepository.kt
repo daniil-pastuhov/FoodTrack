@@ -7,6 +7,7 @@ interface ShoppingListRepository {
     fun getEntriesFlow(): Flow<List<ShoppingListEntry>>
     suspend fun findByBarcode(barcode: String): ShoppingListEntry?
     suspend fun findByName(name: String): ShoppingListEntry?
+    suspend fun getMaxSortOrder(): Double?
     suspend fun addEntry(entry: ShoppingListEntry)
     suspend fun updateEntry(entry: ShoppingListEntry)
     suspend fun deleteEntry(id: String)

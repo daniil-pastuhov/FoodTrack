@@ -10,5 +10,8 @@ import androidx.room.PrimaryKey
 data class ProductNameEntity(
     @PrimaryKey val normalizedName: String,
     val displayName: String,
-    val lastUsedAtEpochMillis: Long
+    val lastUsedAtEpochMillis: Long,
+    /** The shopping-list manual position last recorded for this product name, or null if it
+     *  has never been dragged to a specific spot. */
+    val sortOrder: Double? = null
 )

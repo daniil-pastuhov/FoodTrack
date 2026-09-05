@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -54,6 +56,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,6 +66,8 @@ import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 
 private const val MAX_NAME_SUGGESTIONS = 5
 
@@ -211,32 +217,86 @@ fun ShoppingListScreen(
                 }
             } else {
                 val uncategorizedLabel = stringResource(R.string.shopping_list_uncategorized)
-                val grouped = remember(state.shoppingList) {
-                    state.shoppingList.groupBy { it.category }.entries.sortedBy { it.key ?: "￿" }
+                // Flattened so drag reorder has a single index space to work with; headers are
+                // never wrapped in a ReorderableItem, so they can't be dragged themselves, and a
+                // move is only accepted (see reorderableState below) when both ends share a
+                // category, which keeps drags from crossing into a different group.
+                val flatRows = remember(state.shoppingList) {
+                    val grouped = state.shoppingList.groupBy { it.category }.entries.sortedBy { it.key ?: "￿" }
+                    buildList {
+                        grouped.forEach { (category, entries) ->
+                            add(ShoppingListFlatRow.Header(category))
+                            entries.forEach { add(ShoppingListFlatRow.Item(it)) }
+                        }
+                    }
                 }
+                var localRows by remember { mutableStateOf(flatRows) }
+                LaunchedEffect(flatRows) { localRows = flatRows }
+
+                val lazyListState = rememberLazyListState()
+                val haptics = LocalHapticFeedback.current
+                val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
+                    val fromRow = localRows.getOrNull(from.index) as? ShoppingListFlatRow.Item
+                    val toRow = localRows.getOrNull(to.index) as? ShoppingListFlatRow.Item
+                    if (fromRow != null && toRow != null && fromRow.entry.category == toRow.entry.category) {
+                        localRows = localRows.toMutableList().apply {
+                            add(to.index, removeAt(from.index))
+                        }
+                    }
+                }
+
+                fun commitReorder(movedId: String) {
+                    val index = localRows.indexOfFirst { it is ShoppingListFlatRow.Item && it.entry.id == movedId }
+                    if (index == -1) return
+                    val beforeId = (localRows.getOrNull(index - 1) as? ShoppingListFlatRow.Item)?.entry?.id
+                    val afterId = (localRows.getOrNull(index + 1) as? ShoppingListFlatRow.Item)?.entry?.id
+                    stateHolder.moveShoppingListEntry(movedId, beforeId, afterId)
+                }
+
                 LazyColumn(
+                    state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    grouped.forEach { (category, entries) ->
-                        item(key = "header_${category ?: "uncategorized"}") {
-                            Text(
-                                text = category ?: uncategorizedLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = TextSecondary,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
-                            )
+                    items(localRows, key = { row ->
+                        when (row) {
+                            is ShoppingListFlatRow.Header -> "header_${row.category ?: "uncategorized"}"
+                            is ShoppingListFlatRow.Item -> row.entry.id
                         }
-                        items(entries, key = { it.id }) { entry ->
-                            ShoppingListRow(
-                                entry = entry,
-                                onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) },
-                                onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
-                                onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) },
-                                onScan = { onScanEntry(entry) }
-                            )
+                    }) { row ->
+                        when (row) {
+                            is ShoppingListFlatRow.Header -> {
+                                Text(
+                                    text = row.category ?: uncategorizedLabel,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextSecondary,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                )
+                            }
+                            is ShoppingListFlatRow.Item -> {
+                                val entry = row.entry
+                                ReorderableItem(reorderableState, key = entry.id) { isDragging ->
+                                    ShoppingListRow(
+                                        entry = entry,
+                                        isDragging = isDragging,
+                                        dragHandleModifier = Modifier.draggableHandle(
+                                            onDragStarted = {
+                                                haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+                                            },
+                                            onDragStopped = {
+                                                haptics.performHapticFeedback(HapticFeedbackType.GestureEnd)
+                                                commitReorder(entry.id)
+                                            }
+                                        ),
+                                        onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) },
+                                        onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
+                                        onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) },
+                                        onScan = { onScanEntry(entry) }
+                                    )
+                                }
+                            }
                         }
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }
@@ -246,9 +306,19 @@ fun ShoppingListScreen(
     }
 }
 
+/** A row in the flattened, groupable-by-category shopping list rendered by [ShoppingListScreen]:
+ *  either a category header (never draggable) or a shopping list item (draggable within its
+ *  own category group only). */
+private sealed class ShoppingListFlatRow {
+    data class Header(val category: String?) : ShoppingListFlatRow()
+    data class Item(val entry: ShoppingListEntry) : ShoppingListFlatRow()
+}
+
 @Composable
 private fun ShoppingListRow(
     entry: ShoppingListEntry,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier,
     onCheckOff: () -> Unit,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
@@ -256,7 +326,9 @@ private fun ShoppingListRow(
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
+        ),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -265,6 +337,14 @@ private fun ShoppingListRow(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            Icon(
+                imageVector = Icons.Default.DragHandle,
+                contentDescription = stringResource(R.string.shopping_list_drag_handle_content_description),
+                tint = TextSecondary,
+                modifier = dragHandleModifier
+                    .padding(end = 8.dp)
+                    .size(20.dp)
+            )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = entry.productName,

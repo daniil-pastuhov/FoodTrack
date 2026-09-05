@@ -96,6 +96,7 @@ public class NativePantryViewModel: ObservableObject {
         modelContext = ModelContext(modelContainer)
         loadItems()
         loadShoppingList()
+        backfillKnownProductNamesFromInventoryIfNeeded()
         loadKnownProductNames()
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
     }
@@ -108,7 +109,9 @@ public class NativePantryViewModel: ObservableObject {
     }
 
     private func loadShoppingList() {
-        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(sortBy: [SortDescriptor(\.addedDate, order: .reverse)])
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(
+            sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.addedDate, order: .reverse)]
+        )
         shoppingList = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asEntry }
     }
 
@@ -116,6 +119,30 @@ public class NativePantryViewModel: ObservableObject {
         var descriptor = FetchDescriptor<ProductNameRecord>(sortBy: [SortDescriptor(\.lastUsedAt, order: .reverse)])
         descriptor.fetchLimit = 200
         knownProductNames = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.displayName }
+    }
+
+    /// Android's counterpart is a one-time Room migration (MIGRATION_5_6); SwiftData has no
+    /// declarative migration mechanism here, so this UserDefaults flag is the equivalent
+    /// "runs exactly once" guard. Backfills the shopping list's autosuggest with every product
+    /// name already sitting in the pantry, so existing inventory suggests itself immediately
+    /// instead of only after being re-scanned/re-saved (the only other path that records a
+    /// name). Existing known names (and their sortOrder) are left untouched, and lastUsedAt
+    /// uses each item's addedDate rather than "now" so backfilled names don't jump to the top
+    /// of the recency-ordered suggestion list.
+    private func backfillKnownProductNamesFromInventoryIfNeeded() {
+        let flagKey = "didBackfillKnownProductNamesFromInventory_v1"
+        guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
+
+        for item in items {
+            let trimmed = item.name.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty else { continue }
+            let normalized = trimmed.lowercased()
+            let descriptor = FetchDescriptor<ProductNameRecord>(predicate: #Predicate { $0.normalizedName == normalized })
+            guard (try? modelContext.fetch(descriptor).first) == nil else { continue }
+            modelContext.insert(ProductNameRecord(normalizedName: normalized, displayName: trimmed, lastUsedAt: item.addedDate))
+        }
+        try? modelContext.save()
+        UserDefaults.standard.set(true, forKey: flagKey)
     }
 
     /// Records `name` as a known product name for the shopping list's autosuggest.
@@ -134,6 +161,31 @@ public class NativePantryViewModel: ObservableObject {
         }
         try? modelContext.save()
         loadKnownProductNames()
+    }
+
+    /// The manual shopping-list position last recorded for `name` via `recordSortOrder`, or nil
+    /// if it has never been manually reordered. Lets a shopping list entry re-enter the list at
+    /// the position the user last dragged it to, rather than always appending.
+    private func sortOrder(forKnownProduct name: String) -> Double? {
+        let normalized = name.trimmingCharacters(in: .whitespaces).lowercased()
+        let descriptor = FetchDescriptor<ProductNameRecord>(predicate: #Predicate { $0.normalizedName == normalized })
+        return (try? modelContext.fetch(descriptor).first)?.sortOrder
+    }
+
+    /// Persists `sortOrder` as `name`'s remembered manual position, creating the known-product
+    /// record if this name has never been recorded before (e.g. an essential pantry item that
+    /// was never manually typed/scanned into the shopping list).
+    private func recordSortOrder(name: String, sortOrder: Double) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let normalized = trimmed.lowercased()
+        let descriptor = FetchDescriptor<ProductNameRecord>(predicate: #Predicate { $0.normalizedName == normalized })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.sortOrder = sortOrder
+        } else {
+            modelContext.insert(ProductNameRecord(normalizedName: normalized, displayName: trimmed, lastUsedAt: Date(), sortOrder: sortOrder))
+        }
+        try? modelContext.save()
     }
 
     public var filteredItems: [PantryItem] {
@@ -375,8 +427,59 @@ public class NativePantryViewModel: ObservableObject {
         }
         guard existing == nil else { return }
 
-        modelContext.insert(ShoppingListEntryRecord(from: ShoppingListEntry(productName: name, barcode: barcode, category: category)))
+        // Restore this product's last manually-dragged position if it has one, so a re-added
+        // item (e.g. an essential pantry item running out again) lands back where the user put
+        // it rather than always appending to the end.
+        let resolvedSortOrder = sortOrder(forKnownProduct: name) ?? (maxShoppingListSortOrder() + 1)
+
+        modelContext.insert(ShoppingListEntryRecord(from: ShoppingListEntry(
+            productName: name,
+            barcode: barcode,
+            category: category,
+            sortOrder: resolvedSortOrder
+        )))
         try? modelContext.save()
+        loadShoppingList()
+    }
+
+    private func maxShoppingListSortOrder() -> Double {
+        var descriptor = FetchDescriptor<ShoppingListEntryRecord>(sortBy: [SortDescriptor(\.sortOrder, order: .reverse)])
+        descriptor.fetchLimit = 1
+        return (try? modelContext.fetch(descriptor).first)?.sortOrder ?? 0
+    }
+
+    /// Called after a drag-and-drop reorder completes. `beforeId`/`afterId` are the ids of the
+    /// entries now immediately above/below `movedId` within the same category group (nil at a
+    /// group boundary). Computes a fractional sort order between them and persists it both on
+    /// the moved entry and on its product name, so the position is remembered the next time this
+    /// product re-enters the shopping list (see `addShoppingListEntryIfAbsent`).
+    public func moveShoppingListEntry(_ movedId: String, beforeId: String?, afterId: String?) {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == movedId })
+        guard let moved = try? modelContext.fetch(descriptor).first else { return }
+
+        let beforeOrder = beforeId.flatMap { id -> Double? in
+            let d = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
+            return (try? modelContext.fetch(d).first)?.sortOrder
+        }
+        let afterOrder = afterId.flatMap { id -> Double? in
+            let d = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
+            return (try? modelContext.fetch(d).first)?.sortOrder
+        }
+
+        let newSortOrder: Double
+        if let beforeOrder, let afterOrder {
+            newSortOrder = (beforeOrder + afterOrder) / 2
+        } else if let beforeOrder {
+            newSortOrder = beforeOrder + 1
+        } else if let afterOrder {
+            newSortOrder = afterOrder - 1
+        } else {
+            newSortOrder = moved.sortOrder
+        }
+
+        moved.sortOrder = newSortOrder
+        try? modelContext.save()
+        recordSortOrder(name: moved.productName, sortOrder: newSortOrder)
         loadShoppingList()
     }
 
