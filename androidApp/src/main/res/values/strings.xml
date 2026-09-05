@@ -101,10 +101,10 @@
     <string name="notification_channel_desc">Notifications when food items are about to expire</string>
     <string name="notif_title_today">Product Expires Today! ⚠️</string>
     <string name="notif_title_soon">Product Expiring Soon! ⚠️</string>
-    <string name="notif_body_today_format">%1$s expires today. Make sure to consume or freeze it!</string>
+    <string name="notif_body_today_format">%1$s expires today. Make sure to consume it!</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s expires in %2$d day. Make sure to consume or freeze it!</item>
-        <item quantity="other">%1$s expires in %2$d days. Make sure to consume or freeze it!</item>
+        <item quantity="one">%1$s expires in %2$d day. Make sure to consume it!</item>
+        <item quantity="other">%1$s expires in %2$d days. Make sure to consume it!</item>
     </plurals>
     <string name="notif_fallback_title">Food Expiration Alert</string>
     <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>

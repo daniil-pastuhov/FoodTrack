@@ -71,7 +71,6 @@ object NotificationHelper {
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
-        // Compute trigger time: 9:00 AM on expiry date in local time
         val calendar = Calendar.getInstance().apply {
             set(Calendar.YEAR, payload.triggerDate.year)
             set(Calendar.MONTH, payload.triggerDate.monthNumber - 1)
@@ -85,7 +84,6 @@ object NotificationHelper {
         var triggerMillis = calendar.timeInMillis
         val now = System.currentTimeMillis()
 
-        // If scheduled for today but 9:00 AM has already passed, schedule 5 seconds from now
         if (triggerMillis <= now) {
             triggerMillis = now + 5000L
         }
@@ -96,11 +94,8 @@ object NotificationHelper {
             putExtra(ExpiryNotificationReceiver.EXTRA_BODY, body)
         }
 
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val flags =
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        } else {
-            PendingIntent.FLAG_UPDATE_CURRENT
-        }
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
@@ -110,19 +105,11 @@ object NotificationHelper {
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerMillis,
-                    pendingIntent
-                )
-            } else {
-                alarmManager.set(
-                    AlarmManager.RTC_WAKEUP,
-                    triggerMillis,
-                    pendingIntent
-                )
-            }
+            alarmManager.setAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerMillis,
+                pendingIntent
+            )
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -132,11 +119,7 @@ object NotificationHelper {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val intent = Intent(context, ExpiryNotificationReceiver::class.java)
 
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
-        } else {
-            PendingIntent.FLAG_NO_CREATE
-        }
+        val flags = PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,

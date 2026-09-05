@@ -196,16 +196,19 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
             "yyyy-MM-dd",
             "dd.MM.yy", "dd/MM/yy",
             "dd MMM yyyy", "dd MMM yy",
-            "MM/yy", "MM/yyyy"
+            "MM/yy", "MM/yyyy", "MM.yy", "MM.yyyy", "MM-yy", "MM-yyyy"
         ]
+        // Month/year-only formats have no day component, so DateFormatter defaults to the
+        // 1st of the month; expiry dates are conventionally the last day of the printed month.
+        let monthYearOnlyFormats: Set<String> = ["MM/yy", "MM/yyyy", "MM.yy", "MM.yyyy", "MM-yy", "MM-yyyy"]
 
-        let fullText = lines.joined(separator: " ")
         for line in lines {
             // Check for date pattern
             let datePatterns = [
                 "\\b(\\d{1,2})[\\.\\/\\-](\\d{1,2})[\\.\\/\\-](\\d{2,4})\\b",
                 "\\b(20\\d{2})[\\.\\/\\-](\\d{1,2})[\\.\\/\\-](\\d{1,2})\\b",
-                "\\b(\\d{1,2})\\s+([A-Za-z]{3})\\.?\\s+(\\d{2,4})\\b"
+                "\\b(\\d{1,2})\\s+([A-Za-z]{3})\\.?\\s+(\\d{2,4})\\b",
+                "\\b(0[1-9]|1[0-2])[\\.\\/\\-](20\\d{2}|\\d{2})\\b"
             ]
 
             for pattern in datePatterns {
@@ -220,6 +223,9 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
                         formatter.dateFormat = format
                         formatter.locale = Locale(identifier: "en_US_POSIX")
                         if let parsed = formatter.date(from: matchedStr) {
+                            if monthYearOnlyFormats.contains(format) {
+                                return lastDayOfMonth(containing: parsed)
+                            }
                             return parsed
                         }
                     }
@@ -228,6 +234,15 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         }
 
         return nil
+    }
+
+    private func lastDayOfMonth(containing date: Date) -> Date {
+        let calendar = Calendar(identifier: .gregorian)
+        guard let range = calendar.range(of: .day, in: .month, for: date),
+              let firstOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: date)) else {
+            return date
+        }
+        return calendar.date(byAdding: .day, value: range.count - 1, to: firstOfMonth) ?? date
     }
 
     public override func viewWillDisappear(_ animated: Bool) {

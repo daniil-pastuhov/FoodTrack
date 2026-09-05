@@ -101,10 +101,10 @@
     <string name="notification_channel_desc">Varsler når matvarer snart går ut på dato</string>
     <string name="notif_title_today">Produktet utløper i dag! ⚠️</string>
     <string name="notif_title_soon">Produktet utløper snart! ⚠️</string>
-    <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise eller fryse det!</string>
+    <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise det!</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s utløper om %2$d dag. Husk å spise eller fryse det!</item>
-        <item quantity="other">%1$s utløper om %2$d dager. Husk å spise eller fryse det!</item>
+        <item quantity="one">%1$s utløper om %2$d dag. Husk å spise det!</item>
+        <item quantity="other">%1$s utløper om %2$d dager. Husk å spise det!</item>
     </plurals>
     <string name="notif_fallback_title">Varsel om utløpsdato</string>
     <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>

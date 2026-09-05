@@ -105,12 +105,12 @@
     <string name="notification_channel_desc">Уведомления, когда продукты скоро испортятся</string>
     <string name="notif_title_today">Продукт истекает сегодня! ⚠️</string>
     <string name="notif_title_soon">Продукт скоро истекает! ⚠️</string>
-    <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть или заморозить его!</string>
+    <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть его!</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s истекает через %2$d день. Не забудьте съесть или заморозить его!</item>
-        <item quantity="few">%1$s истекает через %2$d дня. Не забудьте съесть или заморозить его!</item>
-        <item quantity="many">%1$s истекает через %2$d дней. Не забудьте съесть или заморозить его!</item>
-        <item quantity="other">%1$s истекает через %2$d дня. Не забудьте съесть или заморозить его!</item>
+        <item quantity="one">%1$s истекает через %2$d день. Не забудьте съесть его!</item>
+        <item quantity="few">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
+        <item quantity="many">%1$s истекает через %2$d дней. Не забудьте съесть его!</item>
+        <item quantity="other">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
     </plurals>
     <string name="notif_fallback_title">Уведомление о сроке годности</string>
     <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>
