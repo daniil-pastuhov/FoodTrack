@@ -92,9 +92,25 @@
         <item quantity="one">In %d day</item>
         <item quantity="other">In %d days</item>
     </plurals>
+    <plurals name="expires_in_months">
+        <item quantity="one">In %d month</item>
+        <item quantity="other">In %d months</item>
+    </plurals>
+    <plurals name="expires_in_years">
+        <item quantity="one">In %d year</item>
+        <item quantity="other">In %d years</item>
+    </plurals>
     <plurals name="expired_days_ago">
         <item quantity="one">%d day expired</item>
         <item quantity="other">%d days expired</item>
+    </plurals>
+    <plurals name="expired_months_ago">
+        <item quantity="one">%d month expired</item>
+        <item quantity="other">%d months expired</item>
+    </plurals>
+    <plurals name="expired_years_ago">
+        <item quantity="one">%d year expired</item>
+        <item quantity="other">%d years expired</item>
     </plurals>
 
     <string name="notification_channel_name">Food Expiration Alerts</string>
