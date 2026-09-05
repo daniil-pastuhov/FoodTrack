@@ -5,11 +5,19 @@
 "metric_fresh" = "Свежее";
 
 "location_filter_all" = "Все";
+"category_filter_all" = "Все категории";
 
 "status_filter_all" = "Все";
 "status_filter_expiring_soon" = "Скоро истекают";
 "status_filter_expired" = "Просроченные";
 "status_filter_fresh" = "Свежее";
+
+"sort_button" = "Сортировка";
+"sort_sheet_title" = "Сортировать по";
+"sort_option_expiry_date" = "Сроку годности";
+"sort_option_name" = "Названию";
+"sort_option_date_added" = "Дате добавления";
+"sort_option_storage_location" = "Месту хранения";
 
 "empty_state_title" = "Ничего не найдено";
 "empty_state_subtitle" = "Отсканируйте штрихкод или нажмите «Добавить в кладовую», чтобы добавить продукты вручную.";
@@ -50,6 +58,11 @@
 "section_storage" = "Хранение";
 "location_picker_label" = "Место";
 
+"category_label" = "Категория (необязательно)";
+"quantity_label" = "Количество";
+"quantity_format" = "×%d";
+"use_one_button" = "Использовать одну штуку";
+
 "section_notes" = "Заметки";
 "notes_field_placeholder" = "Заметки (напр. вскрыто, дверца морозильника)";
 
@@ -67,6 +80,7 @@
 "shopping_list_empty_title" = "Список покупок пуст";
 "shopping_list_empty_subtitle" = "Обязательные продукты, удалённые из кладовой, появятся здесь.";
 "shopping_list_check_off" = "Отметить";
+"shopping_list_uncategorized" = "Другое";
 
 "manual_entry_button" = "Вручную";
 "scanner_mode_picker_label" = "Режим сканирования";
@@ -90,6 +104,7 @@
 "reticle_hint_barcode" = "Совместите штрихкод продукта с рамкой";
 "reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности";
 "reticle_hint_photo" = "Расположите продукт по центру, чтобы сделать снимок";
+"torch_toggle_button" = "Включить/выключить фонарик";
 
 "expires_today" = "Истекает сегодня";
 "expires_tomorrow" = "Истекает завтра";
@@ -99,6 +114,8 @@
 
 "expiry_date_found_format" = "Найден срок годности: %@";
 "notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть или заморозить его!";
+"notif_action_remove" = "Удалить";
+"notif_digest_title" = "Истекают на этой неделе";
 
 "settings_title" = "Настройки";
 "settings_section_notifications" = "Уведомления";

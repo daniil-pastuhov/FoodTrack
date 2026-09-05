@@ -8,11 +8,19 @@ public enum L10n {
     public static var metricFresh: String { NSLocalizedString("metric_fresh", comment: "") }
 
     public static var locationFilterAll: String { NSLocalizedString("location_filter_all", comment: "") }
+    public static var categoryFilterAll: String { NSLocalizedString("category_filter_all", comment: "") }
 
     public static var statusFilterAll: String { NSLocalizedString("status_filter_all", comment: "") }
     public static var statusFilterExpiringSoon: String { NSLocalizedString("status_filter_expiring_soon", comment: "") }
     public static var statusFilterExpired: String { NSLocalizedString("status_filter_expired", comment: "") }
     public static var statusFilterFresh: String { NSLocalizedString("status_filter_fresh", comment: "") }
+
+    public static var sortButton: String { NSLocalizedString("sort_button", comment: "") }
+    public static var sortSheetTitle: String { NSLocalizedString("sort_sheet_title", comment: "") }
+    public static var sortOptionExpiryDate: String { NSLocalizedString("sort_option_expiry_date", comment: "") }
+    public static var sortOptionName: String { NSLocalizedString("sort_option_name", comment: "") }
+    public static var sortOptionDateAdded: String { NSLocalizedString("sort_option_date_added", comment: "") }
+    public static var sortOptionStorageLocation: String { NSLocalizedString("sort_option_storage_location", comment: "") }
 
     public static var emptyStateTitle: String { NSLocalizedString("empty_state_title", comment: "") }
     public static var emptyStateSubtitle: String { NSLocalizedString("empty_state_subtitle", comment: "") }
@@ -59,6 +67,13 @@ public enum L10n {
     public static var sectionStorage: String { NSLocalizedString("section_storage", comment: "") }
     public static var locationPickerLabel: String { NSLocalizedString("location_picker_label", comment: "") }
 
+    public static var categoryLabel: String { NSLocalizedString("category_label", comment: "") }
+    public static var quantityLabel: String { NSLocalizedString("quantity_label", comment: "") }
+    public static func quantityFormat(_ count: Int) -> String {
+        String(format: NSLocalizedString("quantity_format", comment: ""), count)
+    }
+    public static var useOneButton: String { NSLocalizedString("use_one_button", comment: "") }
+
     public static var sectionNotes: String { NSLocalizedString("section_notes", comment: "") }
     public static var notesFieldPlaceholder: String { NSLocalizedString("notes_field_placeholder", comment: "") }
 
@@ -76,6 +91,7 @@ public enum L10n {
     public static var shoppingListEmptyTitle: String { NSLocalizedString("shopping_list_empty_title", comment: "") }
     public static var shoppingListEmptySubtitle: String { NSLocalizedString("shopping_list_empty_subtitle", comment: "") }
     public static var shoppingListCheckOff: String { NSLocalizedString("shopping_list_check_off", comment: "") }
+    public static var shoppingListUncategorized: String { NSLocalizedString("shopping_list_uncategorized", comment: "") }
 
     public static var manualEntryButton: String { NSLocalizedString("manual_entry_button", comment: "") }
     public static var scannerModePickerLabel: String { NSLocalizedString("scanner_mode_picker_label", comment: "") }
@@ -99,6 +115,7 @@ public enum L10n {
     public static var reticleHintBarcode: String { NSLocalizedString("reticle_hint_barcode", comment: "") }
     public static var reticleHintDateOcr: String { NSLocalizedString("reticle_hint_date_ocr", comment: "") }
     public static var reticleHintPhoto: String { NSLocalizedString("reticle_hint_photo", comment: "") }
+    public static var torchToggleButton: String { NSLocalizedString("torch_toggle_button", comment: "") }
 
     public static var expiresToday: String { NSLocalizedString("expires_today", comment: "") }
     public static var expiresTomorrow: String { NSLocalizedString("expires_tomorrow", comment: "") }
@@ -117,6 +134,12 @@ public enum L10n {
     public static func notifBodySoon(_ nameWithBrand: String, days: Int) -> String {
         let format = NSLocalizedString("notif_body_soon_format", comment: "")
         return String.localizedStringWithFormat(format, nameWithBrand, days)
+    }
+
+    public static var notifActionRemove: String { NSLocalizedString("notif_action_remove", comment: "") }
+    public static var notifDigestTitle: String { NSLocalizedString("notif_digest_title", comment: "") }
+    public static func notifDigestBody(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("notif_digest_body_format", comment: ""), count)
     }
 
     public static var settingsTitle: String { NSLocalizedString("settings_title", comment: "") }

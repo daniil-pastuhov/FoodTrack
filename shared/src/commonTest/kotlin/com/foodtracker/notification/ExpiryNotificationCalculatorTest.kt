@@ -1,6 +1,5 @@
 package com.foodtracker.notification
 
-import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -20,8 +19,7 @@ class ExpiryNotificationCalculatorTest {
             brand = "Organic Valley",
             expiryDate = LocalDate(2026, 9, 10),
             addedDate = today,
-            storageLocation = "Fridge",
-            status = ItemStatus.ACTIVE
+            storageLocation = "Fridge"
         )
 
         val notification = ExpiryNotificationCalculator.calculateNotification(item, today)
@@ -41,8 +39,7 @@ class ExpiryNotificationCalculatorTest {
             id = "item-999",
             name = "Fresh Salad",
             expiryDate = today,
-            addedDate = today,
-            status = ItemStatus.ACTIVE
+            addedDate = today
         )
 
         val notification = ExpiryNotificationCalculator.calculateNotification(item, today)
@@ -54,27 +51,12 @@ class ExpiryNotificationCalculatorTest {
     }
 
     @Test
-    fun testDiscardedItemDoesNotGenerateNotification() {
-        val item = PantryItem(
-            id = "item-456",
-            name = "Yogurt",
-            expiryDate = LocalDate(2026, 9, 10),
-            addedDate = today,
-            status = ItemStatus.DISCARDED
-        )
-
-        val notification = ExpiryNotificationCalculator.calculateNotification(item, today)
-        assertNull(notification)
-    }
-
-    @Test
     fun testPastExpiredItemDoesNotGenerateNotification() {
         val item = PantryItem(
             id = "item-789",
             name = "Old Bread",
             expiryDate = LocalDate(2026, 9, 1), // 2 days ago
-            addedDate = LocalDate(2026, 8, 25),
-            status = ItemStatus.ACTIVE
+            addedDate = LocalDate(2026, 8, 25)
         )
 
         val notification = ExpiryNotificationCalculator.calculateNotification(item, today)

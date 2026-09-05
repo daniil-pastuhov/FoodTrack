@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -34,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -140,16 +144,33 @@ fun ShoppingListScreen(
                     }
                 }
             } else {
+                val uncategorizedLabel = stringResource(R.string.shopping_list_uncategorized)
+                val grouped = remember(state.shoppingList) {
+                    state.shoppingList.groupBy { it.category }.entries.sortedBy { it.key ?: "￿" }
+                }
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(state.shoppingList, key = { it.id }) { entry ->
-                        ShoppingListRow(
-                            entry = entry,
-                            onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) }
-                        )
+                    grouped.forEach { (category, entries) ->
+                        item(key = "header_${category ?: "uncategorized"}") {
+                            Text(
+                                text = category ?: uncategorizedLabel,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                            )
+                        }
+                        items(entries, key = { it.id }) { entry ->
+                            ShoppingListRow(
+                                entry = entry,
+                                onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) },
+                                onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
+                                onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) }
+                            )
+                        }
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
@@ -161,7 +182,9 @@ fun ShoppingListScreen(
 @Composable
 private fun ShoppingListRow(
     entry: ShoppingListEntry,
-    onCheckOff: () -> Unit
+    onCheckOff: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit
 ) {
     Card(
         shape = RoundedCornerShape(14.dp),
@@ -189,6 +212,28 @@ private fun ShoppingListRow(
                         color = TextSecondary
                     )
                 }
+            }
+            IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Remove,
+                    contentDescription = stringResource(R.string.shopping_list_quantity_decrease_content_description),
+                    tint = TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Text(
+                text = entry.quantity.toString(),
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(20.dp)
+            )
+            IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = stringResource(R.string.shopping_list_quantity_increase_content_description),
+                    tint = TextSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
             IconButton(onClick = onCheckOff) {
                 Icon(

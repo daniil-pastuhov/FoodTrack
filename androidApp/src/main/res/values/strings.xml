@@ -14,12 +14,20 @@
     <string name="clear_content_description">Clear</string>
 
     <string name="filter_all_locations">All Locations</string>
+    <string name="filter_all_categories">All Categories</string>
     <string name="filter_content_description">Filters</string>
     <string name="filters_sheet_title">Filters</string>
 
     <string name="tab_all">All</string>
     <string name="tab_expiring_soon">Expiring Soon</string>
     <string name="tab_expired">Expired</string>
+
+    <string name="sort_content_description">Sort</string>
+    <string name="sort_sheet_title">Sort By</string>
+    <string name="sort_option_expiry_date">Expiry Date</string>
+    <string name="sort_option_name">Name</string>
+    <string name="sort_option_date_added">Date Added</string>
+    <string name="sort_option_storage_location">Storage Location</string>
 
     <string name="empty_state_title">No items found</string>
     <string name="empty_state_subtitle">Tap \'Scan Item\' to scan a barcode or add your groceries.</string>
@@ -39,6 +47,10 @@
     <string name="quick_date_2_weeks">+2 Weeks</string>
     <string name="quick_date_1_month">+1 Month</string>
     <string name="storage_location_title">Storage Location</string>
+    <string name="category_label">Category (optional)</string>
+    <string name="quantity_label">Quantity</string>
+    <string name="quantity_decrease_content_description">Decrease quantity</string>
+    <string name="quantity_increase_content_description">Increase quantity</string>
     <string name="notes_label">Notes (e.g. opened, quantity, shelf)</string>
     <string name="update_item_button">Update Item</string>
     <string name="save_item_button">Save to Pantry</string>
@@ -52,6 +64,7 @@
     <string name="reticle_hint_barcode">Align product barcode within frame</string>
     <string name="reticle_hint_date_ocr">Point camera at printed expiration date\n(e.g., \'EXP 24.11.2026\')</string>
     <string name="reticle_hint_photo">Position product in center to snap a picture</string>
+    <string name="torch_toggle_content_description">Toggle flashlight</string>
     <string name="expiry_date_found_format">Expiry Date Found: %1$s</string>
     <string name="looking_up_product">Looking up product in Open Food Facts...</string>
     <string name="scan_date_button">Scan Date</string>
@@ -67,6 +80,8 @@
     <string name="retake_photo_button">Retake</string>
 
     <string name="delete">Delete</string>
+    <string name="use_one_content_description">Use one</string>
+    <string name="quantity_format">×%1$d</string>
 
     <string name="essential_item_label">Essential item</string>
     <string name="essential_item_description">Automatically add to your shopping list when removed from the pantry</string>
@@ -78,12 +93,22 @@
     <string name="shopping_list_check_off_content_description">Check off</string>
     <string name="shopping_list_empty_title">Your shopping list is empty</string>
     <string name="shopping_list_empty_subtitle">Essential items you remove from the pantry will show up here.</string>
+    <string name="shopping_list_uncategorized">Other</string>
+    <string name="shopping_list_quantity_decrease_content_description">Decrease quantity</string>
+    <string name="shopping_list_quantity_increase_content_description">Increase quantity</string>
 
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
     <string name="action_get_recipe_ideas">Get recipe ideas</string>
     <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+    <string name="recipe_prompt_other_items_intro">I also have these other items at home, in case any of them are useful too:</string>
+    <string name="recipe_prompt_other_items_omitted">(+%1$d more items not shown)</string>
+    <string name="share_recipe_dialog_title">Get recipe ideas</string>
+    <string name="share_recipe_include_other_items_title">Include other pantry items</string>
+    <string name="share_recipe_include_other_items_subtitle">Optional — lets the AI suggest recipes using more of what you already have</string>
+    <string name="share_recipe_share_button">Share</string>
+    <string name="share_recipe_cancel_button">Cancel</string>
 
     <string name="expires_today">Expires today</string>
     <string name="expires_tomorrow">Expires tomorrow</string>
@@ -124,6 +149,12 @@
     </plurals>
     <string name="notif_fallback_title">Food Expiration Alert</string>
     <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>
+    <string name="notif_action_remove">Remove</string>
+    <string name="notif_digest_title">Expiring This Week</string>
+    <plurals name="notif_digest_body_format">
+        <item quantity="one">%1$d item expires in the next 7 days</item>
+        <item quantity="other">%1$d items expire in the next 7 days</item>
+    </plurals>
 
     <string name="settings_content_description">Settings</string>
     <string name="settings_title">Settings</string>

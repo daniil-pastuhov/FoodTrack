@@ -9,7 +9,7 @@ import android.content.Intent
 import android.os.Build
 import com.foodtracker.android.R
 import com.foodtracker.android.settings.AndroidSettingsRepository
-import com.foodtracker.model.ItemStatus
+import com.foodtracker.model.NotificationSettings
 import com.foodtracker.model.PantryItem
 import com.foodtracker.notification.ExpiryNotificationCalculator
 import com.foodtracker.util.DateUtils
@@ -145,6 +145,54 @@ object NotificationHelper {
      */
     fun rescheduleAll(context: Context, items: List<PantryItem>) {
         items.forEach { cancelNotification(context, it.id) }
-        items.filter { it.status == ItemStatus.ACTIVE }.forEach { scheduleNotification(context, it) }
+        items.forEach { scheduleNotification(context, it) }
+    }
+
+    private const val DIGEST_REQUEST_CODE = -1000
+
+    /**
+     * Schedules (or, if notifications are disabled, cancels) the once-daily digest that
+     * summarizes how many items expire within the coming week in a single notification.
+     * Fires at the same reminder time as per-item alerts and reschedules itself for the next
+     * day each time it fires — a one-shot-and-reschedule alarm, like [scheduleNotification],
+     * rather than `setRepeating`, which isn't reliably exact under Doze.
+     */
+    fun scheduleDigest(context: Context, notificationSettings: NotificationSettings) {
+        if (!notificationSettings.enabled) {
+            cancelDigest(context)
+            return
+        }
+
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, notificationSettings.hour)
+            set(Calendar.MINUTE, notificationSettings.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        val intent = Intent(context, DigestNotificationReceiver::class.java)
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val pendingIntent = PendingIntent.getBroadcast(context, DIGEST_REQUEST_CODE, intent, flags)
+
+        try {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    fun cancelDigest(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val intent = Intent(context, DigestNotificationReceiver::class.java)
+        val flags = PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        val pendingIntent = PendingIntent.getBroadcast(context, DIGEST_REQUEST_CODE, intent, flags)
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
+        }
     }
 }

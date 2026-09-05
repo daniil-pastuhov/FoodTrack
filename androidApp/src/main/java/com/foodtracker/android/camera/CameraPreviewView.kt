@@ -1,5 +1,6 @@
 package com.foodtracker.android.camera
 
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -9,7 +10,10 @@ import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
@@ -30,6 +34,8 @@ fun CameraPreviewView(
     onBarcodeFound: (String) -> Unit,
     onDateFound: (LocalDate) -> Unit,
     onImageCaptureReady: (ImageCapture) -> Unit = {},
+    torchEnabled: Boolean = false,
+    onTorchAvailabilityChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -38,6 +44,7 @@ fun CameraPreviewView(
     val previewView = remember { PreviewView(context) }
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val imageCapture = remember { ImageCapture.Builder().build() }
+    var camera by remember { mutableStateOf<Camera?>(null) }
 
     LaunchedEffect(mode) {
         try {
@@ -68,17 +75,23 @@ fun CameraPreviewView(
             }
 
             cameraProvider.unbindAll()
-            cameraProvider.bindToLifecycle(
+            val boundCamera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_BACK_CAMERA,
                 preview,
                 imageAnalysis,
                 imageCapture
             )
+            camera = boundCamera
+            onTorchAvailabilityChanged(boundCamera.cameraInfo.hasFlashUnit())
             onImageCaptureReady(imageCapture)
         } catch (e: Exception) {
             e.printStackTrace()
         }
+    }
+
+    LaunchedEffect(camera, torchEnabled) {
+        camera?.cameraControl?.enableTorch(torchEnabled)
     }
 
     AndroidView(

@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
                     var prefillBrand by remember { mutableStateOf<String?>(null) }
                     var prefillImageUrl by remember { mutableStateOf<String?>(null) }
                     var prefillExpiryDate by remember { mutableStateOf<LocalDate?>(null) }
+                    var prefillCategory by remember { mutableStateOf<String?>(null) }
 
                     // Camera permission launcher
                     val cameraPermissionLauncher = rememberLauncherForActivityResult(
@@ -106,6 +107,10 @@ class MainActivity : ComponentActivity() {
                                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                             }
                         }
+                        com.foodtracker.android.notification.NotificationHelper.scheduleDigest(
+                            this@MainActivity,
+                            uiState.settings.notifications
+                        )
                     }
 
                     val navigateToDashboard: () -> Unit = {
@@ -132,6 +137,7 @@ class MainActivity : ComponentActivity() {
                         prefillBrand = null
                         prefillImageUrl = null
                         prefillExpiryDate = null
+                        prefillCategory = null
                         currentScreen = AppScreen.ADD_EDIT
                     }
                     val onNavigateToSettingsScreen: () -> Unit = {
@@ -146,6 +152,11 @@ class MainActivity : ComponentActivity() {
                     val onDeleteItemHandler: (String) -> Unit = { id ->
                         com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, id)
                         stateHolder.deleteItem(id)
+                    }
+                    val onDecrementQuantityHandler: (String) -> Unit = { id ->
+                        stateHolder.decrementQuantity(id) {
+                            com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, id)
+                        }
                     }
 
                     // Predictive back state: tracks an in-flight system back gesture so the
@@ -186,7 +197,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToSettings = {},
                                 onNavigateToCalendar = {},
                                 onNavigateToShoppingList = {},
-                                onDeleteItem = onDeleteItemHandler
+                                onDeleteItem = onDeleteItemHandler,
+                                onDecrementQuantity = onDecrementQuantityHandler
                             )
                         }
 
@@ -226,7 +238,8 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToSettings = onNavigateToSettingsScreen,
                                         onNavigateToCalendar = onNavigateToCalendarScreen,
                                         onNavigateToShoppingList = onNavigateToShoppingListScreen,
-                                        onDeleteItem = onDeleteItemHandler
+                                        onDeleteItem = onDeleteItemHandler,
+                                        onDecrementQuantity = onDecrementQuantityHandler
                                     )
                                 }
 
@@ -248,13 +261,14 @@ class MainActivity : ComponentActivity() {
                                     ScannerScreen(
                                         stateHolder = stateHolder,
                                         onNavigateBack = navigateBackFromScanner,
-                                        onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate ->
+                                        onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category ->
                                             editingItem = null
                                             prefillBarcode = barcode
                                             prefillName = name
                                             prefillBrand = brand
                                             prefillImageUrl = imageUrl
                                             prefillExpiryDate = expiryDate
+                                            prefillCategory = category
                                             currentScreen = AppScreen.ADD_EDIT
                                         }
                                     )
@@ -268,6 +282,7 @@ class MainActivity : ComponentActivity() {
                                         prefillBrand = prefillBrand,
                                         prefillImageUrl = prefillImageUrl,
                                         prefillExpiryDate = prefillExpiryDate,
+                                        prefillCategory = prefillCategory,
                                         settings = uiState.settings,
                                         onNavigateBack = navigateToDashboard,
                                         onSaveItem = { item ->
@@ -289,6 +304,10 @@ class MainActivity : ComponentActivity() {
                                                 com.foodtracker.android.notification.NotificationHelper.rescheduleAll(
                                                     this@MainActivity,
                                                     stateHolder.uiState.value.items
+                                                )
+                                                com.foodtracker.android.notification.NotificationHelper.scheduleDigest(
+                                                    this@MainActivity,
+                                                    newSettings.notifications
                                                 )
                                             }
                                         },

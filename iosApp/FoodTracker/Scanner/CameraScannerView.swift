@@ -52,6 +52,20 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
     private let videoOutput = AVCaptureVideoDataOutput()
     private let metadataOutput = AVCaptureMetadataOutput()
     private let photoOutput = AVCapturePhotoOutput()
+    private var videoDevice: AVCaptureDevice?
+
+    public var hasTorch: Bool { videoDevice?.hasTorch ?? false }
+
+    public func setTorchEnabled(_ enabled: Bool) {
+        guard let device = videoDevice, device.hasTorch else { return }
+        do {
+            try device.lockForConfiguration()
+            device.torchMode = enabled ? .on : .off
+            device.unlockForConfiguration()
+        } catch {
+            print("Failed to toggle torch: \(error.localizedDescription)")
+        }
+    }
 
     private var lastBarcode: String?
     private var lastDateString: String?
@@ -94,6 +108,7 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
         }
+        self.videoDevice = videoDevice
 
         // 1. Metadata Output for Barcodes
         if captureSession.canAddOutput(metadataOutput) {

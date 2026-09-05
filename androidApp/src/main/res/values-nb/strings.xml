@@ -14,12 +14,20 @@
     <string name="clear_content_description">Fjern</string>
 
     <string name="filter_all_locations">Alle steder</string>
+    <string name="filter_all_categories">Alle kategorier</string>
     <string name="filter_content_description">Filtre</string>
     <string name="filters_sheet_title">Filtre</string>
 
     <string name="tab_all">Alle</string>
     <string name="tab_expiring_soon">Utløper snart</string>
     <string name="tab_expired">Utløpt</string>
+
+    <string name="sort_content_description">Sorter</string>
+    <string name="sort_sheet_title">Sorter etter</string>
+    <string name="sort_option_expiry_date">Utløpsdato</string>
+    <string name="sort_option_name">Navn</string>
+    <string name="sort_option_date_added">Dato lagt til</string>
+    <string name="sort_option_storage_location">Oppbevaringssted</string>
 
     <string name="empty_state_title">Ingen varer funnet</string>
     <string name="empty_state_subtitle">Trykk på «Skann vare» for å skanne en strekkode, eller legg til varer manuelt.</string>
@@ -39,6 +47,10 @@
     <string name="quick_date_2_weeks">+2 uker</string>
     <string name="quick_date_1_month">+1 måned</string>
     <string name="storage_location_title">Oppbevaringssted</string>
+    <string name="category_label">Kategori (valgfritt)</string>
+    <string name="quantity_label">Antall</string>
+    <string name="quantity_decrease_content_description">Reduser antall</string>
+    <string name="quantity_increase_content_description">Øk antall</string>
     <string name="notes_label">Notater (f.eks. åpnet, mengde, hylle)</string>
     <string name="update_item_button">Oppdater vare</string>
     <string name="save_item_button">Lagre i matskapet</string>
@@ -52,6 +64,7 @@
     <string name="reticle_hint_barcode">Plasser produktets strekkode innenfor rammen</string>
     <string name="reticle_hint_date_ocr">Rett kameraet mot den trykte utløpsdatoen\n(f.eks. «EXP 24.11.2026»)</string>
     <string name="reticle_hint_photo">Plasser produktet midt i bildet for å ta et bilde</string>
+    <string name="torch_toggle_content_description">Slå av/på lommelykt</string>
     <string name="expiry_date_found_format">Utløpsdato funnet: %1$s</string>
     <string name="looking_up_product">Slår opp produkt i Open Food Facts...</string>
     <string name="scan_date_button">Skann dato</string>
@@ -67,6 +80,8 @@
     <string name="retake_photo_button">Ta på nytt</string>
 
     <string name="delete">Slett</string>
+    <string name="use_one_content_description">Bruk én</string>
+    <string name="quantity_format">×%1$d</string>
 
     <string name="essential_item_label">Nødvendig vare</string>
     <string name="essential_item_description">Legges automatisk til handlelisten når varen fjernes fra matskapet</string>
@@ -78,12 +93,22 @@
     <string name="shopping_list_check_off_content_description">Kryss av</string>
     <string name="shopping_list_empty_title">Handlelisten er tom</string>
     <string name="shopping_list_empty_subtitle">Nødvendige varer du fjerner fra matskapet, dukker opp her.</string>
+    <string name="shopping_list_uncategorized">Annet</string>
+    <string name="shopping_list_quantity_decrease_content_description">Reduser antall</string>
+    <string name="shopping_list_quantity_increase_content_description">Øk antall</string>
 
     <string name="selection_count_format">%1$d valgt</string>
     <string name="exit_selection_content_description">Avslutt utvalg</string>
     <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>
     <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+    <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:</string>
+    <string name="recipe_prompt_other_items_omitted">(+%1$d flere varer vises ikke)</string>
+    <string name="share_recipe_dialog_title">Få oppskriftsforslag</string>
+    <string name="share_recipe_include_other_items_title">Inkluder andre varer i matskapet</string>
+    <string name="share_recipe_include_other_items_subtitle">Valgfritt – lar AI-en foreslå oppskrifter med mer av det du allerede har</string>
+    <string name="share_recipe_share_button">Del</string>
+    <string name="share_recipe_cancel_button">Avbryt</string>
 
     <string name="expires_today">Utløper i dag</string>
     <string name="expires_tomorrow">Utløper i morgen</string>
@@ -108,6 +133,12 @@
     </plurals>
     <string name="notif_fallback_title">Varsel om utløpsdato</string>
     <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>
+    <string name="notif_action_remove">Fjern</string>
+    <string name="notif_digest_title">Utløper denne uken</string>
+    <plurals name="notif_digest_body_format">
+        <item quantity="one">%1$d vare utløper de neste 7 dagene</item>
+        <item quantity="other">%1$d varer utløper de neste 7 dagene</item>
+    </plurals>
 
     <string name="settings_content_description">Innstillinger</string>
     <string name="settings_title">Innstillinger</string>

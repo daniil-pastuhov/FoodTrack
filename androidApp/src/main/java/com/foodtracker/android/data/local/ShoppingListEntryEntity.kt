@@ -10,6 +10,8 @@ data class ShoppingListEntryEntity(
     @PrimaryKey val id: String,
     val productName: String,
     val barcode: String?,
+    val category: String? = null,
+    val quantity: Int = 1,
     val addedDateEpochDays: Int
 )
 
@@ -17,6 +19,8 @@ fun ShoppingListEntryEntity.toDomain(): ShoppingListEntry = ShoppingListEntry(
     id = id,
     productName = productName,
     barcode = barcode,
+    category = category,
+    quantity = quantity,
     addedDate = LocalDate.fromEpochDays(addedDateEpochDays)
 )
 
@@ -24,5 +28,7 @@ fun ShoppingListEntry.toEntity(): ShoppingListEntryEntity = ShoppingListEntryEnt
     id = id,
     productName = productName,
     barcode = barcode,
+    category = category,
+    quantity = quantity,
     addedDateEpochDays = addedDate.toEpochDays()
 )

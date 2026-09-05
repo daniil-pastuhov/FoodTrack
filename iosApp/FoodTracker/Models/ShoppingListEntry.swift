@@ -4,12 +4,23 @@ public struct ShoppingListEntry: Identifiable, Codable {
     public let id: String
     public var productName: String
     public var barcode: String?
+    public var category: String?
+    public var quantity: Int
     public var addedDate: Date
 
-    public init(id: String = UUID().uuidString, productName: String, barcode: String? = nil, addedDate: Date = Date()) {
+    public init(
+        id: String = UUID().uuidString,
+        productName: String,
+        barcode: String? = nil,
+        category: String? = nil,
+        quantity: Int = 1,
+        addedDate: Date = Date()
+    ) {
         self.id = id
         self.productName = productName
         self.barcode = barcode
+        self.category = category
+        self.quantity = quantity
         self.addedDate = addedDate
     }
 

@@ -79,7 +79,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_1_2)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_1_2, FoodTrackerDatabase.MIGRATION_2_3)
             .build()
 
         val migratedItem = db.pantryDao().getById("existing-item")
@@ -89,6 +89,76 @@ class FoodTrackerMigrationTest {
 
         val shoppingList = db.shoppingListDao().getAllFlow().first()
         assertEquals(0, shoppingList.size)
+
+        db.close()
+    }
+
+    @Test
+    fun migrate2To3DropsStatusAndBackfillsQuantity() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-2-3.db")
+        dbFile.delete()
+
+        // Build the version-2 schema by hand (still has the never-used `status` column,
+        // no `quantity`/shopping-list `category`) and seed one row, as a real v2 install would have.
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { db ->
+            db.execSQL(
+                """
+                CREATE TABLE pantry_items (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    barcode TEXT,
+                    imageUrl TEXT,
+                    expiryDateEpochDays INTEGER NOT NULL,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    storageLocation TEXT NOT NULL,
+                    category TEXT,
+                    status TEXT NOT NULL,
+                    notes TEXT,
+                    essential INTEGER NOT NULL DEFAULT 1
+                )
+                """.trimIndent()
+            )
+            db.insert(
+                "pantry_items",
+                null,
+                ContentValues().apply {
+                    put("id", "existing-item")
+                    put("name", "Cheddar Cheese")
+                    put("brand", null as String?)
+                    put("barcode", null as String?)
+                    put("imageUrl", null as String?)
+                    put("expiryDateEpochDays", 20000)
+                    put("addedDateEpochDays", 19990)
+                    put("storageLocation", "Fridge")
+                    put("category", null as String?)
+                    put("status", "ACTIVE")
+                    put("notes", null as String?)
+                    put("essential", 1)
+                }
+            )
+            db.execSQL(
+                """
+                CREATE TABLE shopping_list_entries (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    productName TEXT NOT NULL,
+                    barcode TEXT,
+                    addedDateEpochDays INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+            db.version = 2
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_2_3)
+            .build()
+
+        val migratedItem = db.pantryDao().getById("existing-item")
+        assertNotNull("existing pantry item must survive the migration", migratedItem)
+        assertEquals("Cheddar Cheese", migratedItem!!.name)
+        assertEquals("quantity must default to 1 for pre-existing rows", 1, migratedItem.quantity)
 
         db.close()
     }

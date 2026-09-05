@@ -5,11 +5,19 @@
 "metric_fresh" = "Fresh";
 
 "location_filter_all" = "All";
+"category_filter_all" = "All Categories";
 
 "status_filter_all" = "All";
 "status_filter_expiring_soon" = "Expiring Soon";
 "status_filter_expired" = "Expired";
 "status_filter_fresh" = "Fresh";
+
+"sort_button" = "Sort";
+"sort_sheet_title" = "Sort By";
+"sort_option_expiry_date" = "Expiry Date";
+"sort_option_name" = "Name";
+"sort_option_date_added" = "Date Added";
+"sort_option_storage_location" = "Storage Location";
 
 "empty_state_title" = "No items found";
 "empty_state_subtitle" = "Scan a barcode or tap 'Add to Pantry' to track groceries.";
@@ -50,6 +58,11 @@
 "section_storage" = "Storage";
 "location_picker_label" = "Location";
 
+"category_label" = "Category (optional)";
+"quantity_label" = "Quantity";
+"quantity_format" = "×%d";
+"use_one_button" = "Use one";
+
 "section_notes" = "Notes";
 "notes_field_placeholder" = "Optional notes (e.g. opened, freezer door)";
 
@@ -67,6 +80,7 @@
 "shopping_list_empty_title" = "Your shopping list is empty";
 "shopping_list_empty_subtitle" = "Essential items you remove from the pantry will show up here.";
 "shopping_list_check_off" = "Check off";
+"shopping_list_uncategorized" = "Other";
 
 "manual_entry_button" = "Manual";
 "scanner_mode_picker_label" = "Scanner Mode";
@@ -90,6 +104,7 @@
 "reticle_hint_barcode" = "Align product barcode within frame";
 "reticle_hint_date_ocr" = "Point camera at printed expiration date stamp";
 "reticle_hint_photo" = "Center item to capture photo";
+"torch_toggle_button" = "Toggle flashlight";
 
 "expires_today" = "Expires today";
 "expires_tomorrow" = "Expires tomorrow";
@@ -99,6 +114,8 @@
 
 "expiry_date_found_format" = "Found Expiry: %@";
 "notif_body_today_format" = "%@ expires today. Make sure to consume or freeze it!";
+"notif_action_remove" = "Remove";
+"notif_digest_title" = "Expiring This Week";
 
 "settings_title" = "Settings";
 "settings_section_notifications" = "Notifications";

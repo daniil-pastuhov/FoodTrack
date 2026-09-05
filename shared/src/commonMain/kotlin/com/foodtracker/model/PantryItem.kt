@@ -14,7 +14,7 @@ data class PantryItem(
     val addedDate: LocalDate,
     val storageLocation: String = "Pantry",
     val category: String? = null,
-    val status: ItemStatus = ItemStatus.ACTIVE,
+    val quantity: Int = 1,
     val notes: String? = null,
     val essential: Boolean = true
 ) {
@@ -32,7 +32,7 @@ data class PantryItem(
     }
 
     val isExpired: Boolean
-        get() = status == ItemStatus.ACTIVE && daysRemaining(currentSystemDate()) < 0
+        get() = daysRemaining(currentSystemDate()) < 0
 
     companion object {
         fun currentSystemDate(): LocalDate {

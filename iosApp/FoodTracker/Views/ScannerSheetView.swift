@@ -11,12 +11,13 @@ public struct ScannerSheetView: View {
     @State private var isCapturingPhoto: Bool = false
     @State private var capturedPhotoURL: URL?
     @State private var photoCaptureFailed: Bool = false
+    @State private var torchEnabled: Bool = false
 
-    var onProceedToAdd: (String?, String?, String?, String?, Date?) -> Void
+    var onProceedToAdd: (String?, String?, String?, String?, Date?, String?) -> Void
 
     public init(
         viewModel: NativePantryViewModel,
-        onProceedToAdd: @escaping (String?, String?, String?, String?, Date?) -> Void
+        onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?) -> Void
     ) {
         self.viewModel = viewModel
         self.onProceedToAdd = onProceedToAdd
@@ -28,6 +29,9 @@ public struct ScannerSheetView: View {
             CameraScannerView(
                 mode: mode,
                 onBarcodeFound: { barcode in
+                    if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
+                        viewModel.detectedDate = gs1Date
+                    }
                     viewModel.lookupBarcode(barcode)
                 },
                 onDateFound: { date in
@@ -54,8 +58,23 @@ public struct ScannerSheetView: View {
 
                     Spacer()
 
+                    if cameraController?.hasTorch == true {
+                        Button(action: {
+                            torchEnabled.toggle()
+                            cameraController?.setTorchEnabled(torchEnabled)
+                        }) {
+                            Image(systemName: torchEnabled ? "bolt.fill" : "bolt.slash.fill")
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(10)
+                                .background(Color.black.opacity(0.6))
+                                .clipShape(Circle())
+                        }
+                        .accessibilityLabel(L10n.torchToggleButton)
+                    }
+
                     Button(action: {
-                        onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate)
+                        onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil)
                         dismiss()
                     }) {
                         HStack(spacing: 4) {
@@ -228,7 +247,8 @@ public struct ScannerSheetView: View {
                                         viewModel.scannedProduct?.name,
                                         viewModel.scannedProduct?.brand,
                                         photoURL.absoluteString,
-                                        viewModel.detectedDate
+                                        viewModel.detectedDate,
+                                        viewModel.scannedProduct?.category
                                     )
                                     dismiss()
                                 }) {
@@ -286,7 +306,8 @@ public struct ScannerSheetView: View {
                                         product.name,
                                         product.brand,
                                         product.imageUrl,
-                                        viewModel.detectedDate
+                                        viewModel.detectedDate,
+                                        product.category
                                     )
                                     dismiss()
                                 }) {
@@ -328,7 +349,7 @@ public struct ScannerSheetView: View {
                                 }
 
                                 Button(action: {
-                                    onProceedToAdd(notFoundBarcode, nil, nil, nil, viewModel.detectedDate)
+                                    onProceedToAdd(notFoundBarcode, nil, nil, nil, viewModel.detectedDate, nil)
                                     dismiss()
                                 }) {
                                     Text(L10n.continueButton)

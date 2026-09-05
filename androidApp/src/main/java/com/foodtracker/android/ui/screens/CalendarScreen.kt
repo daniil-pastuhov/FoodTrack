@@ -54,7 +54,6 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.components.ExpiryBadge
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
-import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.android.util.formatMonthYear
 import com.foodtracker.android.util.formatLocalDate
@@ -87,7 +86,7 @@ fun CalendarScreen(
     var selectedDay by remember { mutableStateOf(today) }
 
     val grouped = remember(state.items) {
-        groupItemsByExpiryDate(state.items.filter { it.status == ItemStatus.ACTIVE })
+        groupItemsByExpiryDate(state.items)
     }
 
     Scaffold(

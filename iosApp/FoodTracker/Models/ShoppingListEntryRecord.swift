@@ -8,12 +8,24 @@ final class ShoppingListEntryRecord {
     @Attribute(.unique) var id: String
     var productName: String
     var barcode: String?
+    var category: String?
+    var quantity: Int = 1
     var addedDate: Date
 
     init(from entry: ShoppingListEntry) {
         id = entry.id
         productName = entry.productName
         barcode = entry.barcode
+        category = entry.category
+        quantity = entry.quantity
+        addedDate = entry.addedDate
+    }
+
+    func update(from entry: ShoppingListEntry) {
+        productName = entry.productName
+        barcode = entry.barcode
+        category = entry.category
+        quantity = entry.quantity
         addedDate = entry.addedDate
     }
 
@@ -22,6 +34,8 @@ final class ShoppingListEntryRecord {
             id: id,
             productName: productName,
             barcode: barcode,
+            category: category,
+            quantity: quantity,
             addedDate: addedDate
         )
     }

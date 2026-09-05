@@ -1,6 +1,5 @@
 package com.foodtracker.notification
 
-import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.NotificationPayload
 import com.foodtracker.model.PantryItem
 import kotlinx.datetime.LocalDate
@@ -10,7 +9,7 @@ object ExpiryNotificationCalculator {
     /**
      * Calculates the expiration notification payload for an item.
      * Triggers at 9:00 AM one day before expiration, so the user has time to act.
-     * Returns null if the item is not active (e.g. discarded) or expired in the past.
+     * Returns null if the item already expired in the past.
      */
     fun calculateNotification(
         item: PantryItem,
@@ -19,8 +18,6 @@ object ExpiryNotificationCalculator {
         hour: Int = 9,
         minute: Int = 0
     ): NotificationPayload? {
-        if (item.status != ItemStatus.ACTIVE) return null
-
         val daysRemaining = item.daysRemaining(today)
 
         // If the item already expired before today, do not schedule

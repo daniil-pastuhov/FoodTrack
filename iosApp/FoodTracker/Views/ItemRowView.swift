@@ -4,6 +4,7 @@ import UIKit
 public struct ItemRowView: View {
     public let item: PantryItem
     public var expiringSoonDays: Int = 3
+    public var onDecrement: (() -> Void)? = nil
 
     public var body: some View {
         HStack(spacing: 12) {
@@ -61,10 +62,35 @@ public struct ItemRowView: View {
                         .padding(.vertical, 2)
                         .background(Color(.secondarySystemFill))
                         .cornerRadius(6)
+
+                    if let category = item.category, !category.isEmpty {
+                        Text(category)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color(.secondarySystemFill))
+                            .cornerRadius(6)
+                    }
                 }
             }
 
             Spacer()
+
+            if let onDecrement {
+                HStack(spacing: 4) {
+                    Button(action: onDecrement) {
+                        Image(systemName: "minus.circle")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.useOneButton)
+                    Text(L10n.quantityFormat(item.quantity))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
+            }
         }
         .padding(.vertical, 4)
     }

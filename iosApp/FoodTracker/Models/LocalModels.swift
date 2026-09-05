@@ -18,6 +18,7 @@ public struct PantryItem: Identifiable, Codable {
     public var addedDate: Date
     public var storageLocation: String
     public var category: String?
+    public var quantity: Int
     public var notes: String?
     public var essential: Bool
 
@@ -31,6 +32,7 @@ public struct PantryItem: Identifiable, Codable {
         addedDate: Date = Date(),
         storageLocation: String = "Pantry",
         category: String? = nil,
+        quantity: Int = 1,
         notes: String? = nil,
         essential: Bool = true
     ) {
@@ -43,6 +45,7 @@ public struct PantryItem: Identifiable, Codable {
         self.addedDate = addedDate
         self.storageLocation = storageLocation
         self.category = category
+        self.quantity = quantity
         self.notes = notes
         self.essential = essential
     }
@@ -121,24 +124,58 @@ public enum AppTheme: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+public enum SortOption: String, Codable, CaseIterable, Identifiable {
+    case expiryDate
+    case name
+    case dateAdded
+    case storageLocation
+
+    public var id: String { rawValue }
+
+    public var localizedTitle: String {
+        switch self {
+        case .expiryDate: return L10n.sortOptionExpiryDate
+        case .name: return L10n.sortOptionName
+        case .dateAdded: return L10n.sortOptionDateAdded
+        case .storageLocation: return L10n.sortOptionStorageLocation
+        }
+    }
+}
+
 public struct AppSettings: Codable, Equatable {
     public var notifications: NotificationSettings
     public var expiringSoonDays: Int
     public var storageLocations: [String]
     public var defaultStorageLocation: String
     public var theme: AppTheme
+    public var sortOption: SortOption
 
     public init(
         notifications: NotificationSettings = NotificationSettings(),
         expiringSoonDays: Int = 3,
         storageLocations: [String] = ["Fridge", "Freezer", "Pantry"],
         defaultStorageLocation: String = "Pantry",
-        theme: AppTheme = .system
+        theme: AppTheme = .system,
+        sortOption: SortOption = .expiryDate
     ) {
         self.notifications = notifications
         self.expiringSoonDays = expiringSoonDays
         self.storageLocations = storageLocations
         self.defaultStorageLocation = defaultStorageLocation
         self.theme = theme
+        self.sortOption = sortOption
+    }
+
+    // Custom decoding so settings saved before `sortOption` existed still decode instead of
+    // silently falling back to all-defaults (JSONDecoder fails a whole struct on a missing
+    // non-optional key with the synthesized initializer).
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        notifications = try container.decode(NotificationSettings.self, forKey: .notifications)
+        expiringSoonDays = try container.decode(Int.self, forKey: .expiringSoonDays)
+        storageLocations = try container.decode([String].self, forKey: .storageLocations)
+        defaultStorageLocation = try container.decode(String.self, forKey: .defaultStorageLocation)
+        theme = try container.decode(AppTheme.self, forKey: .theme)
+        sortOption = try container.decodeIfPresent(SortOption.self, forKey: .sortOption) ?? .expiryDate
     }
 }

@@ -18,10 +18,19 @@ enum class AppTheme {
 }
 
 @Serializable
+enum class SortOption {
+    EXPIRY_DATE,
+    NAME,
+    DATE_ADDED,
+    STORAGE_LOCATION
+}
+
+@Serializable
 data class AppSettings(
     val notifications: NotificationSettings = NotificationSettings(),
     val expiringSoonDays: Int = 3,
     val storageLocations: List<String> = listOf("Fridge", "Freezer", "Pantry"),
     val defaultStorageLocation: String = "Pantry",
-    val theme: AppTheme = AppTheme.SYSTEM
+    val theme: AppTheme = AppTheme.SYSTEM,
+    val sortOption: SortOption = SortOption.EXPIRY_DATE
 )

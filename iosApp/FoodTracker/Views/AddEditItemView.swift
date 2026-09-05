@@ -12,6 +12,7 @@ public struct AddEditItemView: View {
     var prefillBrand: String?
     var prefillImageUrl: String?
     var prefillDate: Date?
+    var prefillCategory: String?
 
     @State private var name: String = ""
     @State private var brand: String = ""
@@ -19,6 +20,8 @@ public struct AddEditItemView: View {
     @State private var imageUrl: String? = nil
     @State private var expiryDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
     @State private var storageLocation: String = "Pantry"
+    @State private var category: String = ""
+    @State private var quantity: Int = 1
     @State private var notes: String = ""
     @State private var essential: Bool = true
 
@@ -29,7 +32,8 @@ public struct AddEditItemView: View {
         prefillName: String? = nil,
         prefillBrand: String? = nil,
         prefillImageUrl: String? = nil,
-        prefillDate: Date? = nil
+        prefillDate: Date? = nil,
+        prefillCategory: String? = nil
     ) {
         self.viewModel = viewModel
         self.editingItem = editingItem
@@ -38,6 +42,7 @@ public struct AddEditItemView: View {
         self.prefillBrand = prefillBrand
         self.prefillImageUrl = prefillImageUrl
         self.prefillDate = prefillDate
+        self.prefillCategory = prefillCategory
     }
 
     public var body: some View {
@@ -99,6 +104,19 @@ public struct AddEditItemView: View {
                     .padding(.vertical, 4)
                 }
 
+                Section {
+                    TextField(L10n.categoryLabel, text: $category)
+
+                    Stepper(value: $quantity, in: 1...99) {
+                        HStack {
+                            Text(L10n.quantityLabel)
+                            Spacer()
+                            Text("\(quantity)")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
                 Section(header: Text(L10n.sectionNotes)) {
                     TextField(L10n.notesFieldPlaceholder, text: $notes, axis: .vertical)
                         .lineLimit(2...4)
@@ -132,6 +150,8 @@ public struct AddEditItemView: View {
                             expiryDate: expiryDate,
                             addedDate: editingItem?.addedDate ?? Date(),
                             storageLocation: storageLocation,
+                            category: category.trimmingCharacters(in: .whitespaces).isEmpty ? nil : category,
+                            quantity: quantity,
                             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
                             essential: essential
                         )
@@ -150,6 +170,8 @@ public struct AddEditItemView: View {
                     imageUrl = item.imageUrl
                     expiryDate = item.expiryDate
                     storageLocation = item.storageLocation
+                    category = item.category ?? ""
+                    quantity = item.quantity
                     notes = item.notes ?? ""
                     essential = item.essential
                 } else {
@@ -158,6 +180,7 @@ public struct AddEditItemView: View {
                     barcode = prefillBarcode ?? ""
                     imageUrl = prefillImageUrl
                     storageLocation = settingsStore.settings.defaultStorageLocation
+                    category = prefillCategory ?? ""
                     if let date = prefillDate {
                         expiryDate = date
                     }

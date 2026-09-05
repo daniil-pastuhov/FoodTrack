@@ -8,6 +8,8 @@ data class ShoppingListEntry(
     val id: String,
     val productName: String,
     val barcode: String? = null,
+    val category: String? = null,
+    val quantity: Int = 1,
     val addedDate: LocalDate
 ) {
     /** Same matching rule as `PantryItem.shoppingMatchKey()`, so a deleted essential

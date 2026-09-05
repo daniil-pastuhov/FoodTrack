@@ -50,5 +50,21 @@
             <string>expires in %2$d days. Make sure to consume or freeze it!</string>
         </dict>
     </dict>
+    <key>notif_digest_body_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d item expires in the next 7 days</string>
+            <key>other</key>
+            <string>%d items expire in the next 7 days</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

@@ -14,12 +14,20 @@
     <string name="clear_content_description">Очистить</string>
 
     <string name="filter_all_locations">Все места</string>
+    <string name="filter_all_categories">Все категории</string>
     <string name="filter_content_description">Фильтры</string>
     <string name="filters_sheet_title">Фильтры</string>
 
     <string name="tab_all">Все</string>
     <string name="tab_expiring_soon">Скоро истекают</string>
     <string name="tab_expired">Просроченные</string>
+
+    <string name="sort_content_description">Сортировка</string>
+    <string name="sort_sheet_title">Сортировать по</string>
+    <string name="sort_option_expiry_date">Сроку годности</string>
+    <string name="sort_option_name">Названию</string>
+    <string name="sort_option_date_added">Дате добавления</string>
+    <string name="sort_option_storage_location">Месту хранения</string>
 
     <string name="empty_state_title">Ничего не найдено</string>
     <string name="empty_state_subtitle">Нажмите «Сканировать», чтобы отсканировать штрихкод, или добавьте продукты вручную.</string>
@@ -39,6 +47,10 @@
     <string name="quick_date_2_weeks">+2 недели</string>
     <string name="quick_date_1_month">+1 месяц</string>
     <string name="storage_location_title">Место хранения</string>
+    <string name="category_label">Категория (необязательно)</string>
+    <string name="quantity_label">Количество</string>
+    <string name="quantity_decrease_content_description">Уменьшить количество</string>
+    <string name="quantity_increase_content_description">Увеличить количество</string>
     <string name="notes_label">Заметки (напр. вскрыто, количество, полка)</string>
     <string name="update_item_button">Обновить продукт</string>
     <string name="save_item_button">Сохранить в кладовую</string>
@@ -52,6 +64,7 @@
     <string name="reticle_hint_barcode">Совместите штрихкод продукта с рамкой</string>
     <string name="reticle_hint_date_ocr">Наведите камеру на напечатанный срок годности\n(например, «EXP 24.11.2026»)</string>
     <string name="reticle_hint_photo">Расположите продукт по центру, чтобы сделать снимок</string>
+    <string name="torch_toggle_content_description">Включить/выключить фонарик</string>
     <string name="expiry_date_found_format">Найден срок годности: %1$s</string>
     <string name="looking_up_product">Поиск продукта в Open Food Facts...</string>
     <string name="scan_date_button">Сканировать дату</string>
@@ -67,6 +80,8 @@
     <string name="retake_photo_button">Переснять</string>
 
     <string name="delete">Удалить</string>
+    <string name="use_one_content_description">Использовать одну штуку</string>
+    <string name="quantity_format">×%1$d</string>
 
     <string name="essential_item_label">Обязательный продукт</string>
     <string name="essential_item_description">Автоматически добавляется в список покупок при удалении из кладовой</string>
@@ -78,12 +93,22 @@
     <string name="shopping_list_check_off_content_description">Отметить</string>
     <string name="shopping_list_empty_title">Список покупок пуст</string>
     <string name="shopping_list_empty_subtitle">Обязательные продукты, удалённые из кладовой, появятся здесь.</string>
+    <string name="shopping_list_uncategorized">Другое</string>
+    <string name="shopping_list_quantity_decrease_content_description">Уменьшить количество</string>
+    <string name="shopping_list_quantity_increase_content_description">Увеличить количество</string>
 
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
     <string name="action_get_recipe_ideas">Идеи рецептов</string>
     <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+    <string name="recipe_prompt_other_items_intro">У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:</string>
+    <string name="recipe_prompt_other_items_omitted">(+ещё %1$d продуктов не показано)</string>
+    <string name="share_recipe_dialog_title">Идеи рецептов</string>
+    <string name="share_recipe_include_other_items_title">Включить остальные продукты</string>
+    <string name="share_recipe_include_other_items_subtitle">Необязательно — поможет ИИ предложить рецепты с учётом того, что у вас уже есть</string>
+    <string name="share_recipe_share_button">Поделиться</string>
+    <string name="share_recipe_cancel_button">Отмена</string>
 
     <string name="expires_today">Истекает сегодня</string>
     <string name="expires_tomorrow">Истекает завтра</string>
@@ -114,6 +139,14 @@
     </plurals>
     <string name="notif_fallback_title">Уведомление о сроке годности</string>
     <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>
+    <string name="notif_action_remove">Удалить</string>
+    <string name="notif_digest_title">Истекают на этой неделе</string>
+    <plurals name="notif_digest_body_format">
+        <item quantity="one">%1$d продукт истекает в течение следующих 7 дней</item>
+        <item quantity="few">%1$d продукта истекают в течение следующих 7 дней</item>
+        <item quantity="many">%1$d продуктов истекают в течение следующих 7 дней</item>
+        <item quantity="other">%1$d продукта истекают в течение следующих 7 дней</item>
+    </plurals>
 
     <string name="settings_content_description">Настройки</string>
     <string name="settings_title">Настройки</string>

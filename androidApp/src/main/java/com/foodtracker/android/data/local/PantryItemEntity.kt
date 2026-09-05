@@ -2,7 +2,6 @@ package com.foodtracker.android.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import kotlinx.datetime.LocalDate
 
@@ -17,7 +16,7 @@ data class PantryItemEntity(
     val addedDateEpochDays: Int,
     val storageLocation: String,
     val category: String?,
-    val status: String,
+    val quantity: Int = 1,
     val notes: String?,
     val essential: Boolean = true
 )
@@ -32,7 +31,7 @@ fun PantryItemEntity.toDomain(): PantryItem = PantryItem(
     addedDate = LocalDate.fromEpochDays(addedDateEpochDays),
     storageLocation = storageLocation,
     category = category,
-    status = ItemStatus.valueOf(status),
+    quantity = quantity,
     notes = notes,
     essential = essential
 )
@@ -47,7 +46,7 @@ fun PantryItem.toEntity(): PantryItemEntity = PantryItemEntity(
     addedDateEpochDays = addedDate.toEpochDays(),
     storageLocation = storageLocation,
     category = category,
-    status = status.name,
+    quantity = quantity,
     notes = notes,
     essential = essential
 )

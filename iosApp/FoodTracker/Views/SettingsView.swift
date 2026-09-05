@@ -62,6 +62,7 @@ public struct SettingsView: View {
                 set: { newValue in
                     update { $0.notifications.enabled = newValue }
                     IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
+                    IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
                 }
             ))
 
@@ -71,6 +72,7 @@ public struct SettingsView: View {
                     set: { newValue in
                         update { $0.notifications.leadDays = newValue }
                         IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
+                        IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
                     }
                 )) {
                     ForEach([1, 2, 3, 5, 7], id: \.self) { days in
@@ -89,6 +91,7 @@ public struct SettingsView: View {
                                 $0.notifications.minute = comps.minute ?? 0
                             }
                             IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
+                            IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
                         }
                     ),
                     displayedComponents: [.hourAndMinute]

@@ -27,6 +27,7 @@
 		34ABF7588B0A4445983CA756 /* ShoppingListEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7119136C074AAB8D3B3F03 /* ShoppingListEntry.swift */; };
 		1ABE51D293E748EE9425B7BF /* ShoppingListEntryRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 13AEE2C0BAD94D898F6896A2 /* ShoppingListEntryRecord.swift */; };
 		3ABD5F0FF74D43DDA10D1B95 /* ShoppingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F5E332BCAB482A98210E13 /* ShoppingListView.swift */; };
+		901AADB658784A23AAF863A4 /* GS1BarcodeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD3E32DD4AA44818E5AFD19 /* GS1BarcodeParser.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -56,6 +57,7 @@
 		4F7119136C074AAB8D3B3F03 /* ShoppingListEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListEntry.swift; sourceTree = "<group>"; };
 		13AEE2C0BAD94D898F6896A2 /* ShoppingListEntryRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListEntryRecord.swift; sourceTree = "<group>"; };
 		32F5E332BCAB482A98210E13 /* ShoppingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListView.swift; sourceTree = "<group>"; };
+		7FD3E32DD4AA44818E5AFD19 /* GS1BarcodeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GS1BarcodeParser.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -76,6 +78,7 @@
 				8970EA59CABD5F82A6ADE69E /* Models */,
 				C2B1E2A3D4E5F60718293A4B /* Localization */,
 				6280FA330EBE6402795FA2D2 /* Notifications */,
+				C8572D1DAE71493E8D0E5A56 /* Parsers */,
 				AD1F103AE47056858C6DCC46 /* Scanner */,
 				00676966D8FA67B56C8B4F74 /* Settings */,
 				DBD80D2A50945E688EF39B0B /* ViewModels */,
@@ -151,6 +154,14 @@
 				7DBE84CCB4F35377B5719F24 /* CameraScannerView.swift */,
 			);
 			path = Scanner;
+			sourceTree = "<group>";
+		};
+		C8572D1DAE71493E8D0E5A56 /* Parsers */ = {
+			isa = PBXGroup;
+			children = (
+				7FD3E32DD4AA44818E5AFD19 /* GS1BarcodeParser.swift */,
+			);
+			path = Parsers;
 			sourceTree = "<group>";
 		};
 		C2B1E2A3D4E5F60718293A4B /* Localization */ = {
@@ -268,6 +279,7 @@
 				34ABF7588B0A4445983CA756 /* ShoppingListEntry.swift in Sources */,
 				1ABE51D293E748EE9425B7BF /* ShoppingListEntryRecord.swift in Sources */,
 				3ABD5F0FF74D43DDA10D1B95 /* ShoppingListView.swift in Sources */,
+				901AADB658784A23AAF863A4 /* GS1BarcodeParser.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

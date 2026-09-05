@@ -15,6 +15,7 @@ final class PantryItemRecord {
     var addedDate: Date
     var storageLocation: String
     var category: String?
+    var quantity: Int = 1
     var notes: String?
     var essential: Bool = true
 
@@ -28,6 +29,7 @@ final class PantryItemRecord {
         addedDate = item.addedDate
         storageLocation = item.storageLocation
         category = item.category
+        quantity = item.quantity
         notes = item.notes
         essential = item.essential
     }
@@ -41,6 +43,7 @@ final class PantryItemRecord {
         addedDate = item.addedDate
         storageLocation = item.storageLocation
         category = item.category
+        quantity = item.quantity
         notes = item.notes
         essential = item.essential
     }
@@ -56,6 +59,7 @@ final class PantryItemRecord {
             addedDate: addedDate,
             storageLocation: storageLocation,
             category: category,
+            quantity: quantity,
             notes: notes,
             essential: essential
         )

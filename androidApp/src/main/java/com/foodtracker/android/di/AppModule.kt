@@ -18,7 +18,7 @@ val appModule = module {
         Room.databaseBuilder(androidContext(), FoodTrackerDatabase::class.java, FoodTrackerDatabase.DB_NAME)
             // Adds the essential column + shopping list table in place — a real Migration,
             // not a destructive fallback, so existing users don't lose their pantry data.
-            .addMigrations(FoodTrackerDatabase.MIGRATION_1_2)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_1_2, FoodTrackerDatabase.MIGRATION_2_3)
             .build()
     }
     single { get<FoodTrackerDatabase>().pantryDao() }

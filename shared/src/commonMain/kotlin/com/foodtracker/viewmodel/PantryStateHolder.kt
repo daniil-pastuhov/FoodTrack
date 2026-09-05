@@ -2,10 +2,10 @@ package com.foodtracker.viewmodel
 
 import com.foodtracker.api.OpenFoodFactsApi
 import com.foodtracker.model.AppSettings
-import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.SortOption
 import com.foodtracker.parser.GS1BarcodeParser
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ShoppingListRepository
@@ -35,6 +35,7 @@ data class PantryUiState(
     val items: List<PantryItem> = emptyList(),
     val filteredItems: List<PantryItem> = emptyList(),
     val selectedLocation: String? = null,
+    val selectedCategory: String? = null,
     val selectedStatusFilter: StatusFilter = StatusFilter.ALL,
     val searchQuery: String = "",
     val isLoading: Boolean = true,
@@ -73,19 +74,20 @@ class PantryStateHolder(
                 _uiState.update { current ->
                     val today = DateUtils.today()
                     val expiringSoonDays = current.settings.expiringSoonDays
-                    val activeItems = allItems.filter { it.status == ItemStatus.ACTIVE }
 
-                    val expiredCount = activeItems.count { it.daysRemaining(today) < 0 }
-                    val expiringSoonCount = activeItems.count { it.daysRemaining(today) in 0..expiringSoonDays }
-                    val freshCount = activeItems.count { it.daysRemaining(today) > expiringSoonDays }
+                    val expiredCount = allItems.count { it.daysRemaining(today) < 0 }
+                    val expiringSoonCount = allItems.count { it.daysRemaining(today) in 0..expiringSoonDays }
+                    val freshCount = allItems.count { it.daysRemaining(today) > expiringSoonDays }
 
                     val filtered = computeFiltered(
                         allItems,
                         current.selectedLocation,
+                        current.selectedCategory,
                         current.selectedStatusFilter,
                         current.searchQuery,
                         today,
-                        expiringSoonDays
+                        expiringSoonDays,
+                        current.settings.sortOption
                     )
 
                     current.copy(
@@ -112,21 +114,26 @@ class PantryStateHolder(
     private fun computeFiltered(
         items: List<PantryItem>,
         location: String?,
+        category: String?,
         filter: StatusFilter,
         query: String,
         today: LocalDate,
-        expiringSoonDays: Int
+        expiringSoonDays: Int,
+        sortOption: SortOption
     ): List<PantryItem> {
         return items.filter { item ->
             // Location filter
             val matchesLoc = location == null || item.storageLocation == location
 
+            // Category filter
+            val matchesCategory = category == null || item.category == category
+
             // Status filter
             val matchesStatus = when (filter) {
-                StatusFilter.ALL -> item.status == ItemStatus.ACTIVE
-                StatusFilter.EXPIRING_SOON -> item.status == ItemStatus.ACTIVE && item.daysRemaining(today) in 0..expiringSoonDays
-                StatusFilter.EXPIRED -> item.status == ItemStatus.ACTIVE && item.daysRemaining(today) < 0
-                StatusFilter.FRESH -> item.status == ItemStatus.ACTIVE && item.daysRemaining(today) > expiringSoonDays
+                StatusFilter.ALL -> true
+                StatusFilter.EXPIRING_SOON -> item.daysRemaining(today) in 0..expiringSoonDays
+                StatusFilter.EXPIRED -> item.daysRemaining(today) < 0
+                StatusFilter.FRESH -> item.daysRemaining(today) > expiringSoonDays
             }
 
             // Search query
@@ -134,8 +141,15 @@ class PantryStateHolder(
                     item.name.contains(query, ignoreCase = true) ||
                     (item.brand?.contains(query, ignoreCase = true) == true)
 
-            matchesLoc && matchesStatus && matchesQuery
-        }.sortedBy { it.expiryDate.toEpochDays() }
+            matchesLoc && matchesCategory && matchesStatus && matchesQuery
+        }.sortedWith(sortComparator(sortOption))
+    }
+
+    private fun sortComparator(option: SortOption): Comparator<PantryItem> = when (option) {
+        SortOption.EXPIRY_DATE -> compareBy { it.expiryDate.toEpochDays() }
+        SortOption.NAME -> compareBy { it.name.lowercase() }
+        SortOption.DATE_ADDED -> compareByDescending { it.addedDate.toEpochDays() }
+        SortOption.STORAGE_LOCATION -> compareBy { it.storageLocation.lowercase() }
     }
 
     fun onSearchQueryChanged(query: String) {
@@ -146,10 +160,12 @@ class PantryStateHolder(
                 filteredItems = computeFiltered(
                     current.items,
                     current.selectedLocation,
+                    current.selectedCategory,
                     current.selectedStatusFilter,
                     query,
                     today,
-                    current.settings.expiringSoonDays
+                    current.settings.expiringSoonDays,
+                    current.settings.sortOption
                 )
             )
         }
@@ -163,10 +179,31 @@ class PantryStateHolder(
                 filteredItems = computeFiltered(
                     current.items,
                     location,
+                    current.selectedCategory,
                     current.selectedStatusFilter,
                     current.searchQuery,
                     today,
-                    current.settings.expiringSoonDays
+                    current.settings.expiringSoonDays,
+                    current.settings.sortOption
+                )
+            )
+        }
+    }
+
+    fun onCategorySelected(category: String?) {
+        _uiState.update { current ->
+            val today = DateUtils.today()
+            current.copy(
+                selectedCategory = category,
+                filteredItems = computeFiltered(
+                    current.items,
+                    current.selectedLocation,
+                    category,
+                    current.selectedStatusFilter,
+                    current.searchQuery,
+                    today,
+                    current.settings.expiringSoonDays,
+                    current.settings.sortOption
                 )
             )
         }
@@ -180,34 +217,41 @@ class PantryStateHolder(
                 filteredItems = computeFiltered(
                     current.items,
                     current.selectedLocation,
+                    current.selectedCategory,
                     filter,
                     current.searchQuery,
                     today,
-                    current.settings.expiringSoonDays
+                    current.settings.expiringSoonDays,
+                    current.settings.sortOption
                 )
             )
         }
+    }
+
+    fun onSortOptionSelected(option: SortOption) {
+        updateSettings(_uiState.value.settings.copy(sortOption = option))
     }
 
     fun updateSettings(newSettings: AppSettings) {
         settingsRepository.saveSettings(newSettings)
         _uiState.update { current ->
             val today = DateUtils.today()
-            val activeItems = current.items.filter { it.status == ItemStatus.ACTIVE }
             val expiringSoonDays = newSettings.expiringSoonDays
 
             current.copy(
                 settings = newSettings,
-                expiredCount = activeItems.count { it.daysRemaining(today) < 0 },
-                expiringSoonCount = activeItems.count { it.daysRemaining(today) in 0..expiringSoonDays },
-                freshCount = activeItems.count { it.daysRemaining(today) > expiringSoonDays },
+                expiredCount = current.items.count { it.daysRemaining(today) < 0 },
+                expiringSoonCount = current.items.count { it.daysRemaining(today) in 0..expiringSoonDays },
+                freshCount = current.items.count { it.daysRemaining(today) > expiringSoonDays },
                 filteredItems = computeFiltered(
                     current.items,
                     current.selectedLocation,
+                    current.selectedCategory,
                     current.selectedStatusFilter,
                     current.searchQuery,
                     today,
-                    expiringSoonDays
+                    expiringSoonDays,
+                    newSettings.sortOption
                 )
             )
         }
@@ -269,7 +313,27 @@ class PantryStateHolder(
             val item = repository.getItem(id)
             repository.deleteItem(id)
             if (item?.essential == true) {
-                addToShoppingListIfAbsent(item.name, item.barcode)
+                addToShoppingListIfAbsent(item.name, item.barcode, item.category)
+            }
+        }
+    }
+
+    /** Decrements one unit of an item; once the last unit is used it is removed the same way
+     *  [deleteItem] removes a whole item (essential items get re-added to the shopping list).
+     *  [onItemRemoved] fires only when that full removal happens, so callers that mirror
+     *  side effects onto a removed item (e.g. cancelling its scheduled notification) know
+     *  not to do so for a plain decrement that leaves the item in place. */
+    fun decrementQuantity(id: String, onItemRemoved: () -> Unit = {}) {
+        coroutineScope.launch {
+            val item = repository.getItem(id) ?: return@launch
+            if (item.quantity <= 1) {
+                repository.deleteItem(id)
+                onItemRemoved()
+                if (item.essential) {
+                    addToShoppingListIfAbsent(item.name, item.barcode, item.category)
+                }
+            } else {
+                repository.saveItem(item.copy(quantity = item.quantity - 1))
             }
         }
     }
@@ -278,7 +342,7 @@ class PantryStateHolder(
         val trimmed = productName.trim()
         if (trimmed.isBlank()) return
         coroutineScope.launch {
-            addToShoppingListIfAbsent(trimmed, barcode = null)
+            addToShoppingListIfAbsent(trimmed, barcode = null, category = null)
         }
     }
 
@@ -288,7 +352,22 @@ class PantryStateHolder(
         }
     }
 
-    private suspend fun addToShoppingListIfAbsent(name: String, barcode: String?) {
+    fun incrementShoppingListQuantity(id: String) {
+        val entry = _uiState.value.shoppingList.find { it.id == id } ?: return
+        coroutineScope.launch {
+            shoppingListRepository.updateEntry(entry.copy(quantity = entry.quantity + 1))
+        }
+    }
+
+    fun decrementShoppingListQuantity(id: String) {
+        val entry = _uiState.value.shoppingList.find { it.id == id } ?: return
+        if (entry.quantity <= 1) return
+        coroutineScope.launch {
+            shoppingListRepository.updateEntry(entry.copy(quantity = entry.quantity - 1))
+        }
+    }
+
+    private suspend fun addToShoppingListIfAbsent(name: String, barcode: String?, category: String?) {
         val existing = if (barcode != null) {
             shoppingListRepository.findByBarcode(barcode)
         } else {
@@ -301,6 +380,7 @@ class PantryStateHolder(
                 id = "shopping_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt()}",
                 productName = name,
                 barcode = barcode,
+                category = category,
                 addedDate = DateUtils.today()
             )
         )

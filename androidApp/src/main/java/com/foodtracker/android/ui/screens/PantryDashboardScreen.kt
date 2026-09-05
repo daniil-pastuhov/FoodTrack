@@ -36,12 +36,15 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -54,6 +57,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -83,6 +87,7 @@ import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.buildRecipePrompt
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.SortOption
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.StatusFilter
 
@@ -96,14 +101,18 @@ fun PantryDashboardScreen(
     onNavigateToCalendar: () -> Unit,
     onNavigateToShoppingList: () -> Unit,
     onDeleteItem: (String) -> Unit,
+    onDecrementQuantity: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
     val context = LocalContext.current
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showShareDialog by remember { mutableStateOf(false) }
+    var includeOtherItemsInShare by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     val selectionMode = selectedIds.isNotEmpty()
     val filtersActive = state.selectedLocation != null ||
+            state.selectedCategory != null ||
             state.selectedStatusFilter != StatusFilter.ALL ||
             state.searchQuery.isNotBlank()
 
@@ -117,16 +126,22 @@ fun PantryDashboardScreen(
         selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
     }
 
-    fun shareRecipePrompt() {
+    fun shareRecipePrompt(includeOtherItems: Boolean) {
         val selectedItems = state.items.filter { it.id in selectedIds }
         if (selectedItems.isEmpty()) return
-        val prompt = buildRecipePrompt(context, selectedItems)
+        val otherItems = if (includeOtherItems) {
+            state.items.filter { it.id !in selectedIds }
+        } else {
+            emptyList()
+        }
+        val prompt = buildRecipePrompt(context, selectedItems, otherItems)
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_TEXT, prompt)
         }
         context.startActivity(Intent.createChooser(sendIntent, null))
         selectedIds = emptySet()
+        includeOtherItemsInShare = false
     }
 
     BackHandler(enabled = selectionMode) {
@@ -189,7 +204,7 @@ fun PantryDashboardScreen(
                 },
                 actions = {
                     if (selectionMode) {
-                        IconButton(onClick = { shareRecipePrompt() }) {
+                        IconButton(onClick = { showShareDialog = true }) {
                             Icon(
                                 imageVector = Icons.Default.RestaurantMenu,
                                 contentDescription = stringResource(R.string.action_get_recipe_ideas)
@@ -384,6 +399,7 @@ fun PantryDashboardScreen(
                         ItemCard(
                             item = item,
                             onDelete = { onDeleteItem(item.id) },
+                            onDecrement = { onDecrementQuantity(item.id) },
                             onClick = {
                                 if (selectionMode) toggleSelected(item.id) else onNavigateToAddEdit(item)
                             },
@@ -398,6 +414,46 @@ fun PantryDashboardScreen(
         }
     }
 
+    if (showShareDialog) {
+        AlertDialog(
+            onDismissRequest = { showShareDialog = false },
+            title = { Text(stringResource(R.string.share_recipe_dialog_title)) },
+            text = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = includeOtherItemsInShare,
+                        onCheckedChange = { includeOtherItemsInShare = it }
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Column {
+                        Text(
+                            text = stringResource(R.string.share_recipe_include_other_items_title),
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                        Text(
+                            text = stringResource(R.string.share_recipe_include_other_items_subtitle),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showShareDialog = false
+                    shareRecipePrompt(includeOtherItemsInShare)
+                }) {
+                    Text(stringResource(R.string.share_recipe_share_button), color = BrandPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showShareDialog = false }) {
+                    Text(stringResource(R.string.share_recipe_cancel_button))
+                }
+            }
+        )
+    }
+
     if (showFilterSheet) {
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
@@ -409,7 +465,10 @@ fun PantryDashboardScreen(
                 searchQuery = state.searchQuery,
                 selectedLocation = state.selectedLocation,
                 storageLocations = state.settings.storageLocations,
-                selectedStatusFilter = state.selectedStatusFilter
+                selectedCategory = state.selectedCategory,
+                categories = remember(state.items) { state.items.mapNotNull { it.category }.distinct().sorted() },
+                selectedStatusFilter = state.selectedStatusFilter,
+                sortOption = state.settings.sortOption
             )
         }
     }
@@ -421,7 +480,10 @@ private fun FilterSheetContent(
     searchQuery: String,
     selectedLocation: String?,
     storageLocations: List<String>,
-    selectedStatusFilter: StatusFilter
+    selectedCategory: String?,
+    categories: List<String>,
+    selectedStatusFilter: StatusFilter,
+    sortOption: SortOption
 ) {
     Column(
         modifier = Modifier
@@ -486,6 +548,40 @@ private fun FilterSheetContent(
             }
         }
 
+        // Category Filter Chips — derived from categories present on current items rather
+        // than a fixed settings list, since (unlike storage locations) there's no user-edited
+        // category list.
+        if (categories.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(vertical = 4.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedCategory == null,
+                        onClick = { stateHolder.onCategorySelected(null) },
+                        label = { Text(stringResource(R.string.filter_all_categories)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
+                            selectedLabelColor = BrandPrimary
+                        )
+                    )
+                }
+                items(categories) { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { stateHolder.onCategorySelected(category) },
+                        label = { Text(category) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
+                            selectedLabelColor = BrandPrimary
+                        )
+                    )
+                }
+            }
+        }
+
         // Status Filter Chips. FRESH has no dedicated chip (it's only reachable via the
         // metric card above), so it simply falls outside this row's selection.
         LazyRow(
@@ -520,6 +616,40 @@ private fun FilterSheetContent(
                     selected = selectedStatusFilter == StatusFilter.EXPIRED,
                     onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRED) },
                     label = { Text(stringResource(R.string.tab_expired)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
+                        selectedLabelColor = BrandPrimary
+                    )
+                )
+            }
+        }
+
+        // Sort Order
+        Text(
+            text = stringResource(R.string.sort_sheet_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+        )
+        val sortLabels = listOf(
+            SortOption.EXPIRY_DATE to stringResource(R.string.sort_option_expiry_date),
+            SortOption.NAME to stringResource(R.string.sort_option_name),
+            SortOption.DATE_ADDED to stringResource(R.string.sort_option_date_added),
+            SortOption.STORAGE_LOCATION to stringResource(R.string.sort_option_storage_location)
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(vertical = 4.dp)
+        ) {
+            items(sortLabels) { (option, label) ->
+                FilterChip(
+                    selected = sortOption == option,
+                    onClick = { stateHolder.onSortOptionSelected(option) },
+                    label = { Text(label) },
+                    leadingIcon = if (sortOption == option) {
+                        { Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                    } else null,
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
                         selectedLabelColor = BrandPrimary

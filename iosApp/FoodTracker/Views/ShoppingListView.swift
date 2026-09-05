@@ -41,21 +41,42 @@ struct ShoppingListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List {
-                        ForEach(viewModel.shoppingList) { entry in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entry.productName)
-                                    .font(.body)
-                                if let barcode = entry.barcode {
-                                    Text(barcode)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    viewModel.deleteShoppingListEntry(entry.id)
-                                } label: {
-                                    Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
+                        ForEach(groupedEntries, id: \.category) { group in
+                            Section(header: Text(group.category ?? L10n.shoppingListUncategorized)) {
+                                ForEach(group.entries) { entry in
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(entry.productName)
+                                                .font(.body)
+                                            if let barcode = entry.barcode {
+                                                Text(barcode)
+                                                    .font(.caption)
+                                                    .foregroundColor(.secondary)
+                                            }
+                                        }
+                                        Spacer()
+                                        Button {
+                                            viewModel.decrementShoppingListQuantity(entry.id)
+                                        } label: {
+                                            Image(systemName: "minus.circle")
+                                        }
+                                        .buttonStyle(.plain)
+                                        Text("\(entry.quantity)")
+                                            .frame(minWidth: 16)
+                                        Button {
+                                            viewModel.incrementShoppingListQuantity(entry.id)
+                                        } label: {
+                                            Image(systemName: "plus.circle")
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .swipeActions(edge: .trailing) {
+                                        Button(role: .destructive) {
+                                            viewModel.deleteShoppingListEntry(entry.id)
+                                        } label: {
+                                            Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -71,6 +92,13 @@ struct ShoppingListView: View {
                         .fontWeight(.semibold)
                 }
             }
+        }
+    }
+
+    private var groupedEntries: [(category: String?, entries: [ShoppingListEntry])] {
+        let grouped = Dictionary(grouping: viewModel.shoppingList, by: { $0.category })
+        return grouped.keys.sorted { ($0 ?? "\u{FFFF}") < ($1 ?? "\u{FFFF}") }.map { key in
+            (category: key, entries: grouped[key] ?? [])
         }
     }
 

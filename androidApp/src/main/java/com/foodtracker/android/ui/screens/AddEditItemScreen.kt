@@ -20,9 +20,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,7 +66,6 @@ import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.daysRemainingLabel
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.AppSettings
-import com.foodtracker.model.ItemStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.util.DateUtils
 import kotlinx.datetime.Instant
@@ -81,6 +82,7 @@ fun AddEditItemScreen(
     prefillBrand: String?,
     prefillImageUrl: String?,
     prefillExpiryDate: LocalDate?,
+    prefillCategory: String?,
     settings: AppSettings,
     onNavigateBack: () -> Unit,
     onSaveItem: (PantryItem) -> Unit,
@@ -107,6 +109,12 @@ fun AddEditItemScreen(
     }
     var storageLocation by remember {
         mutableStateOf(initialItem?.storageLocation ?: settings.defaultStorageLocation)
+    }
+    var category by remember {
+        mutableStateOf(initialItem?.category ?: prefillCategory ?: "")
+    }
+    var quantity by remember {
+        mutableStateOf(initialItem?.quantity ?: 1)
     }
     var notes by remember {
         mutableStateOf(initialItem?.notes ?: "")
@@ -334,6 +342,54 @@ fun AddEditItemScreen(
                 }
             }
 
+            // Category Field
+            OutlinedTextField(
+                value = category,
+                onValueChange = { category = it },
+                label = { Text(stringResource(R.string.category_label)) },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // Quantity Stepper
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.quantity_label),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = { if (quantity > 1) quantity -= 1 },
+                    enabled = quantity > 1
+                ) {
+                    Icon(
+                        Icons.Default.Remove,
+                        contentDescription = stringResource(R.string.quantity_decrease_content_description)
+                    )
+                }
+                Text(
+                    text = quantity.toString(),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.width(24.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+                IconButton(onClick = { quantity += 1 }) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = stringResource(R.string.quantity_increase_content_description)
+                    )
+                }
+            }
+
             // Essential toggle
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -382,7 +438,8 @@ fun AddEditItemScreen(
                             expiryDate = expiryDate,
                             addedDate = initialItem?.addedDate ?: today,
                             storageLocation = storageLocation,
-                            status = initialItem?.status ?: ItemStatus.ACTIVE,
+                            category = category.trim().ifBlank { null },
+                            quantity = quantity,
                             notes = notes.trim().ifBlank { null },
                             essential = essential
                         )

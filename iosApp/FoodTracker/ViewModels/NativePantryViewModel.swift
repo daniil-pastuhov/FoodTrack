@@ -29,6 +29,7 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var items: [PantryItem] = []
     @Published public var searchQuery: String = ""
     @Published public var selectedLocation: String? = nil
+    @Published public var selectedCategory: String? = nil
     @Published public var selectedFilter: NativeStatusFilter = .all
     @Published public var isLookingUpBarcode: Bool = false
     @Published public var scannedProduct: ProductInfo? = nil
@@ -52,6 +53,7 @@ public class NativePantryViewModel: ObservableObject {
         modelContext = ModelContext(modelContainer)
         loadItems()
         loadShoppingList()
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
     }
 
     private var expiringSoonDays: Int { SettingsStore.shared.settings.expiringSoonDays }
@@ -69,6 +71,7 @@ public class NativePantryViewModel: ObservableObject {
     public var filteredItems: [PantryItem] {
         items.filter { item in
             let matchesLocation = selectedLocation == nil || item.storageLocation == selectedLocation
+            let matchesCategory = selectedCategory == nil || item.category == selectedCategory
 
             let matchesStatus: Bool
             switch selectedFilter {
@@ -86,8 +89,27 @@ public class NativePantryViewModel: ObservableObject {
                 item.name.localizedCaseInsensitiveContains(searchQuery) ||
                 (item.brand?.localizedCaseInsensitiveContains(searchQuery) == true)
 
-            return matchesLocation && matchesStatus && matchesQuery
-        }.sorted { $0.expiryDate < $1.expiryDate }
+            return matchesLocation && matchesCategory && matchesStatus && matchesQuery
+        }.sorted(by: sortComparator(for: SettingsStore.shared.settings.sortOption))
+    }
+
+    /// Distinct categories present on current items, derived rather than a fixed settings
+    /// list (unlike storage locations, there's no user-edited category list).
+    public var availableCategories: [String] {
+        Array(Set(items.compactMap { $0.category })).sorted()
+    }
+
+    private func sortComparator(for option: SortOption) -> (PantryItem, PantryItem) -> Bool {
+        switch option {
+        case .expiryDate:
+            return { $0.expiryDate < $1.expiryDate }
+        case .name:
+            return { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .dateAdded:
+            return { $0.addedDate > $1.addedDate }
+        case .storageLocation:
+            return { $0.storageLocation.localizedCaseInsensitiveCompare($1.storageLocation) == .orderedAscending }
+        }
     }
 
     public var expiredCount: Int {
@@ -104,6 +126,7 @@ public class NativePantryViewModel: ObservableObject {
 
     public var hasActiveFilters: Bool {
         selectedLocation != nil ||
+            selectedCategory != nil ||
             selectedFilter != .all ||
             !searchQuery.trimmingCharacters(in: .whitespaces).isEmpty
     }
@@ -177,6 +200,7 @@ public class NativePantryViewModel: ObservableObject {
         }
 
         IOSNotificationManager.shared.scheduleNotification(for: item)
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
         clearScanState()
     }
 
@@ -190,16 +214,30 @@ public class NativePantryViewModel: ObservableObject {
         }
         items.removeAll { $0.id == id }
         IOSNotificationManager.shared.cancelNotification(for: id)
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
 
         if let deletedItem, deletedItem.essential {
-            addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode)
+            addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode, category: deletedItem.category)
+        }
+    }
+
+    /// Decrements one unit of an item; once the last unit is used it is removed the same way
+    /// `deleteItem` removes a whole item (essential items get re-added to the shopping list).
+    public func decrementQuantity(_ id: String) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        if item.quantity <= 1 {
+            deleteItem(id)
+        } else {
+            var updated = item
+            updated.quantity -= 1
+            saveItem(updated)
         }
     }
 
     public func addManualShoppingListEntry(_ productName: String) {
         let trimmed = productName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        addShoppingListEntryIfAbsent(name: trimmed, barcode: nil)
+        addShoppingListEntryIfAbsent(name: trimmed, barcode: nil, category: nil)
     }
 
     public func deleteShoppingListEntry(_ id: String) {
@@ -208,6 +246,26 @@ public class NativePantryViewModel: ObservableObject {
             modelContext.delete(existing)
             try? modelContext.save()
         }
+        loadShoppingList()
+    }
+
+    public func incrementShoppingListQuantity(_ id: String) {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+        var updated = existing.asEntry
+        updated.quantity += 1
+        existing.update(from: updated)
+        try? modelContext.save()
+        loadShoppingList()
+    }
+
+    public func decrementShoppingListQuantity(_ id: String) {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
+        guard let existing = try? modelContext.fetch(descriptor).first, existing.quantity > 1 else { return }
+        var updated = existing.asEntry
+        updated.quantity -= 1
+        existing.update(from: updated)
+        try? modelContext.save()
         loadShoppingList()
     }
 
@@ -220,7 +278,7 @@ public class NativePantryViewModel: ObservableObject {
         }
     }
 
-    private func addShoppingListEntryIfAbsent(name: String, barcode: String?) {
+    private func addShoppingListEntryIfAbsent(name: String, barcode: String?, category: String?) {
         let existing: ShoppingListEntryRecord?
         if let barcode {
             let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.barcode == barcode })
@@ -234,7 +292,7 @@ public class NativePantryViewModel: ObservableObject {
         }
         guard existing == nil else { return }
 
-        modelContext.insert(ShoppingListEntryRecord(from: ShoppingListEntry(productName: name, barcode: barcode)))
+        modelContext.insert(ShoppingListEntryRecord(from: ShoppingListEntry(productName: name, barcode: barcode, category: category)))
         try? modelContext.save()
         loadShoppingList()
     }

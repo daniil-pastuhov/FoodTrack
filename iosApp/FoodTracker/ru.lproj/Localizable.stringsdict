@@ -62,5 +62,25 @@
             <string>истекает через %2$d дня. Не забудьте съесть или заморозить его!</string>
         </dict>
     </dict>
+    <key>notif_digest_body_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d продукт истекает в течение следующих 7 дней</string>
+            <key>few</key>
+            <string>%d продукта истекают в течение следующих 7 дней</string>
+            <key>many</key>
+            <string>%d продуктов истекают в течение следующих 7 дней</string>
+            <key>other</key>
+            <string>%d продукта истекают в течение следующих 7 дней</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

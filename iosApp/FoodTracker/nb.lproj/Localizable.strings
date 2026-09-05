@@ -5,11 +5,19 @@
 "metric_fresh" = "Fersk";
 
 "location_filter_all" = "Alle";
+"category_filter_all" = "Alle kategorier";
 
 "status_filter_all" = "Alle";
 "status_filter_expiring_soon" = "Utløper snart";
 "status_filter_expired" = "Utløpt";
 "status_filter_fresh" = "Fersk";
+
+"sort_button" = "Sorter";
+"sort_sheet_title" = "Sorter etter";
+"sort_option_expiry_date" = "Utløpsdato";
+"sort_option_name" = "Navn";
+"sort_option_date_added" = "Dato lagt til";
+"sort_option_storage_location" = "Oppbevaringssted";
 
 "empty_state_title" = "Ingen varer funnet";
 "empty_state_subtitle" = "Skann en strekkode eller trykk på «Legg til i matskapet» for å registrere varer.";
@@ -50,6 +58,11 @@
 "section_storage" = "Oppbevaring";
 "location_picker_label" = "Sted";
 
+"category_label" = "Kategori (valgfritt)";
+"quantity_label" = "Antall";
+"quantity_format" = "×%d";
+"use_one_button" = "Bruk én";
+
 "section_notes" = "Notater";
 "notes_field_placeholder" = "Valgfrie notater (f.eks. åpnet, fryserdør)";
 
@@ -67,6 +80,7 @@
 "shopping_list_empty_title" = "Handlelisten er tom";
 "shopping_list_empty_subtitle" = "Nødvendige varer du fjerner fra matskapet, dukker opp her.";
 "shopping_list_check_off" = "Kryss av";
+"shopping_list_uncategorized" = "Annet";
 
 "manual_entry_button" = "Manuelt";
 "scanner_mode_picker_label" = "Skannemodus";
@@ -90,6 +104,7 @@
 "reticle_hint_barcode" = "Plasser produktets strekkode innenfor rammen";
 "reticle_hint_date_ocr" = "Rett kameraet mot den trykte utløpsdatoen";
 "reticle_hint_photo" = "Plasser varen midt i bildet for å ta et bilde";
+"torch_toggle_button" = "Slå av/på lommelykt";
 
 "expires_today" = "Utløper i dag";
 "expires_tomorrow" = "Utløper i morgen";
@@ -99,6 +114,8 @@
 
 "expiry_date_found_format" = "Utløpsdato funnet: %@";
 "notif_body_today_format" = "%@ utløper i dag. Husk å spise eller fryse det!";
+"notif_action_remove" = "Fjern";
+"notif_digest_title" = "Utløper denne uken";
 
 "settings_title" = "Innstillinger";
 "settings_section_notifications" = "Varsler";

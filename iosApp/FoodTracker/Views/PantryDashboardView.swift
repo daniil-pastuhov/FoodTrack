@@ -18,6 +18,7 @@ public struct PantryDashboardView: View {
     @State private var prefillBrand: String? = nil
     @State private var prefillImageUrl: String? = nil
     @State private var prefillDate: Date? = nil
+    @State private var prefillCategory: String? = nil
 
     public init() {}
 
@@ -73,6 +74,7 @@ public struct PantryDashboardView: View {
                             prefillBrand = nil
                             prefillImageUrl = nil
                             prefillDate = nil
+                            prefillCategory = nil
                             showAddEdit = true
                         }) {
                             Label(L10n.addItemTitle, systemImage: "plus.circle.fill")
@@ -109,7 +111,11 @@ public struct PantryDashboardView: View {
                                     .foregroundColor(selectedItemIDs.contains(item.id) ? .accentColor : .secondary)
                                     .font(.system(size: 20))
                             }
-                            ItemRowView(item: item, expiringSoonDays: settingsStore.settings.expiringSoonDays)
+                            ItemRowView(
+                                item: item,
+                                expiringSoonDays: settingsStore.settings.expiringSoonDays,
+                                onDecrement: isSelecting ? nil : { viewModel.decrementQuantity(item.id) }
+                            )
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -201,13 +207,14 @@ public struct PantryDashboardView: View {
                 }
             }
             .sheet(isPresented: $showScanner) {
-                ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date in
+                ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category in
                     selectedItem = nil
                     prefillBarcode = barcode
                     prefillName = name
                     prefillBrand = brand
                     prefillImageUrl = imageUrl
                     prefillDate = date
+                    prefillCategory = category
                     showAddEdit = true
                 }
             }
@@ -219,7 +226,8 @@ public struct PantryDashboardView: View {
                     prefillName: prefillName,
                     prefillBrand: prefillBrand,
                     prefillImageUrl: prefillImageUrl,
-                    prefillDate: prefillDate
+                    prefillDate: prefillDate,
+                    prefillCategory: prefillCategory
                 )
             }
             .sheet(isPresented: $showSettings) {
@@ -299,6 +307,26 @@ private struct FilterSheetView: View {
                 }
                 .padding(.top, 8)
 
+                // Category Filter Chips — derived from categories present on current items
+                // rather than a fixed settings list, since there's no user-edited category list.
+                if !viewModel.availableCategories.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            LocationChip(title: L10n.categoryFilterAll, isSelected: viewModel.selectedCategory == nil) {
+                                viewModel.selectedCategory = nil
+                            }
+                            ForEach(viewModel.availableCategories, id: \.self) { category in
+                                LocationChip(title: category, isSelected: viewModel.selectedCategory == category) {
+                                    viewModel.selectedCategory = category
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 4)
+                    }
+                    .padding(.top, 8)
+                }
+
                 // Status Filter Chips (Fresh is intentionally not included — it's only
                 // reachable via the Fresh metric card on the dashboard)
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -313,6 +341,27 @@ private struct FilterSheetView: View {
                     .padding(.vertical, 4)
                 }
                 .padding(.top, 8)
+
+                // Sort Order
+                Text(L10n.sortSheetTitle)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(SortOption.allCases) { option in
+                            LocationChip(title: option.localizedTitle, isSelected: settingsStore.settings.sortOption == option) {
+                                var newSettings = settingsStore.settings
+                                newSettings.sortOption = option
+                                settingsStore.save(newSettings)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                }
+                .padding(.top, 4)
 
                 Spacer()
             }

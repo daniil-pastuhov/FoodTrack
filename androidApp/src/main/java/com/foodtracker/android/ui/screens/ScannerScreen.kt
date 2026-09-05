@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -72,7 +73,7 @@ import java.io.File
 fun ScannerScreen(
     stateHolder: PantryStateHolder,
     onNavigateBack: () -> Unit,
-    onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?) -> Unit,
+    onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?, category: String?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
@@ -81,6 +82,8 @@ fun ScannerScreen(
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCapturingPhoto by remember { mutableStateOf(false) }
     var capturedPhotoUri by remember { mutableStateOf<String?>(null) }
+    var torchEnabled by remember { mutableStateOf(false) }
+    var torchAvailable by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         // Live Camera Stream
@@ -92,7 +95,9 @@ fun ScannerScreen(
             onDateFound = { date ->
                 stateHolder.onDateOcrDetected(date)
             },
-            onImageCaptureReady = { imageCapture = it }
+            onImageCaptureReady = { imageCapture = it },
+            torchEnabled = torchEnabled,
+            onTorchAvailabilityChanged = { torchAvailable = it }
         )
 
         // Top Controls: Back button & Mode Chips
@@ -117,10 +122,25 @@ fun ScannerScreen(
                         tint = Color.White
                     )
                 }
+                if (torchAvailable) {
+                    IconButton(
+                        onClick = { torchEnabled = !torchEnabled },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = if (torchEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                            contentDescription = stringResource(R.string.torch_toggle_content_description),
+                            tint = Color.White
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Spacer(modifier = Modifier.weight(1f))
                 OutlinedButton(
                     onClick = {
-                        onProceedToAddItem(null, null, null, null, state.detectedDate)
+                        onProceedToAddItem(null, null, null, null, state.detectedDate, null)
                     },
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = Color.Black.copy(alpha = 0.5f),
@@ -264,7 +284,13 @@ fun ScannerScreen(
                         val capture = imageCapture
                         if (capture == null || isCapturingPhoto) return@IconButton
                         isCapturingPhoto = true
-                        val photoFile = File(context.cacheDir, "product_photo_${System.currentTimeMillis()}.jpg")
+                        // filesDir (not cacheDir): cache can be reclaimed by the OS at any time
+                        // and is excluded from Auto Backup, which would silently orphan a saved
+                        // item's imageUrl — filesDir persists and is included in the default
+                        // Auto Backup rules `android:allowBackup="true"` enables, matching iOS's
+                        // equivalent choice of Application Support over Caches for the same photos.
+                        val photosDir = File(context.filesDir, "product_photos").apply { mkdirs() }
+                        val photoFile = File(photosDir, "product_photo_${System.currentTimeMillis()}.jpg")
                         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
                         capture.takePicture(
                             outputOptions,
@@ -379,7 +405,8 @@ fun ScannerScreen(
                                         product?.name,
                                         product?.brand,
                                         capturedPhotoUri,
-                                        state.detectedDate
+                                        state.detectedDate,
+                                        product?.category
                                     )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
@@ -445,7 +472,8 @@ fun ScannerScreen(
                                         product.name,
                                         product.brand,
                                         product.imageUrl,
-                                        state.detectedDate
+                                        state.detectedDate,
+                                        product.category
                                     )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
@@ -500,7 +528,8 @@ fun ScannerScreen(
                                         null,
                                         null,
                                         null,
-                                        state.detectedDate
+                                        state.detectedDate,
+                                        null
                                     )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
