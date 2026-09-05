@@ -10,7 +10,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
-/** Refreshes both home-screen widgets promptly on pantry/shopping-list changes, instead of
+/** Refreshes all home-screen widgets promptly on pantry/shopping-list changes, instead of
  *  waiting for the OS's own (30-minute-floor) `updatePeriodMillis` cadence. Collects the same
  *  repository flows `PantryStateHolder` observes, so every save/delete/decrement that reaches
  *  the database — from any screen — updates the widgets without each call site needing to
@@ -25,11 +25,13 @@ class WidgetUpdater(
         coroutineScope.launch {
             pantryRepository.getItemsFlow().collectLatest {
                 ExpiryWidget().updateAll(context)
+                OverviewWidget().updateAll(context)
             }
         }
         coroutineScope.launch {
             shoppingListRepository.getEntriesFlow().collectLatest {
                 ShoppingListWidget().updateAll(context)
+                OverviewWidget().updateAll(context)
             }
         }
     }

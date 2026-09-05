@@ -183,6 +183,9 @@
     <string name="widget_shopping_list_title">Handleliste</string>
     <string name="widget_shopping_list_empty">Handlelisten din er tom</string>
 
+    <string name="widget_overview_label">Matskapoversikt</string>
+    <string name="widget_overview_description">Viser hva som er utløpt eller snart utløper, etterfulgt av handlelisten din</string>
+
     <string name="settings_section_data">Data</string>
     <string name="settings_clear_data_button">Tøm alle data i matskapet</string>
     <string name="clear_data_dialog_title">Tømme alle data i matskapet?</string>

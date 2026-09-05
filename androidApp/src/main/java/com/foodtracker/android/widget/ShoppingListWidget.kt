@@ -59,7 +59,7 @@ class ShoppingListWidgetReceiver : GlanceAppWidgetReceiver() {
 /** Opens straight to the Shopping List screen, including when [MainActivity] is already
  *  running — SINGLE_TOP + CLEAR_TOP route the intent through `onNewIntent` on the existing
  *  instance instead of leaving it wherever the user last left it. */
-private fun openShoppingListIntent(context: Context): Intent =
+internal fun openShoppingListIntent(context: Context): Intent =
     Intent(context, MainActivity::class.java).apply {
         putExtra(MainActivity.EXTRA_OPEN_SHOPPING_LIST, true)
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -96,12 +96,7 @@ private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
                     Column {
                         ShoppingListRow(entry)
                         if (index != visibleEntries.lastIndex) {
-                            Spacer(
-                                modifier = GlanceModifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(ColorProvider(R.color.widget_divider))
-                            )
+                            WidgetRowDivider()
                         }
                     }
                 }
@@ -111,7 +106,7 @@ private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
 }
 
 @Composable
-private fun ShoppingListRow(entry: ShoppingListEntry) {
+internal fun ShoppingListRow(entry: ShoppingListEntry) {
     val context = LocalContext.current
     Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp)) {
         Column {

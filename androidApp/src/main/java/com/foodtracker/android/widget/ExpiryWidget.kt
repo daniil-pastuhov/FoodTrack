@@ -94,12 +94,7 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
                     Column {
                         ExpiryRow(item, today)
                         if (index != visibleItems.lastIndex) {
-                            Spacer(
-                                modifier = GlanceModifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(ColorProvider(R.color.widget_divider))
-                            )
+                            WidgetRowDivider()
                         }
                     }
                 }
@@ -109,7 +104,7 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
 }
 
 @Composable
-private fun ExpiryRow(item: PantryItem, today: LocalDate) {
+internal fun ExpiryRow(item: PantryItem, today: LocalDate) {
     val context = LocalContext.current
     val statusColor = if (item.daysRemaining(today) < 0) {
         ColorProvider(R.color.widget_status_expired)
