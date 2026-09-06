@@ -237,6 +237,14 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
                         let formatter = DateFormatter()
                         formatter.dateFormat = format
                         formatter.locale = Locale(identifier: "en_US_POSIX")
+                        if format.contains("yy") && !format.contains("yyyy") {
+                            // en_US_POSIX parses two-digit years literally (e.g. "26" -> year 26 AD)
+                            // instead of inferring a century, unlike locale-aware formatters. Pin the
+                            // pivot so every 00-99 value maps to 2000-2099, the only plausible range
+                            // for a scanned grocery expiry date.
+                            formatter.twoDigitStartDate = Calendar(identifier: .gregorian)
+                                .date(from: DateComponents(year: 2000, month: 1, day: 1))
+                        }
                         if let parsed = formatter.date(from: matchedStr) {
                             if monthYearOnlyFormats.contains(format) {
                                 return lastDayOfMonth(containing: parsed)
