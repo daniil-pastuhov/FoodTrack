@@ -1,5 +1,6 @@
 package com.foodtracker.android.ui.components
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -49,6 +50,7 @@ fun ExpiryBadge(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(bg)
+            .animateContentSize()
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Icon(

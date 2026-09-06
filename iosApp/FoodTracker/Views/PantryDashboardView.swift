@@ -58,6 +58,7 @@ public struct PantryDashboardView: View {
                             viewModel.toggleMetricFilter(.fresh)
                         }
                     }
+                    .animation(.easeInOut(duration: 0.2), value: viewModel.selectedFilter)
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 6)
@@ -82,6 +83,7 @@ public struct PantryDashboardView: View {
                                 .font(.headline)
                         }
                     }
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
                 // Items List
@@ -104,6 +106,7 @@ public struct PantryDashboardView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 } else {
                     ForEach(viewModel.filteredItems) { item in
                         HStack(spacing: 10) {
@@ -111,6 +114,8 @@ public struct PantryDashboardView: View {
                                 Image(systemName: selectedItemIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
                                     .foregroundColor(selectedItemIDs.contains(item.id) ? .accentColor : .secondary)
                                     .font(.system(size: 20))
+                                    .contentTransition(.symbolEffect(.replace))
+                                    .transition(.scale.combined(with: .opacity))
                             }
                             ItemRowView(
                                 item: item,
@@ -119,17 +124,20 @@ public struct PantryDashboardView: View {
                             )
                         }
                         .contentShape(Rectangle())
+                        .animation(.easeInOut(duration: 0.2), value: isSelecting)
                         .onTapGesture {
                             if isSelecting {
-                                toggleSelection(item.id)
+                                withAnimation(.easeInOut(duration: 0.2)) { toggleSelection(item.id) }
                             } else {
                                 selectedItem = item
                                 showAddEdit = true
                             }
                         }
                         .onLongPressGesture {
-                            isSelecting = true
-                            selectedItemIDs.insert(item.id)
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isSelecting = true
+                                selectedItemIDs.insert(item.id)
+                            }
                         }
                         .swipeActions(edge: .trailing) {
                             if !isSelecting {
@@ -143,14 +151,18 @@ public struct PantryDashboardView: View {
                     }
                 }
             }
+            .animation(.default, value: viewModel.filteredItems)
+            .animation(.easeInOut(duration: 0.2), value: isSelecting)
             .listStyle(.insetGrouped)
             .navigationTitle(isSelecting ? L10n.selectionCount(selectedItemIDs.count) : L10n.appName)
             .toolbar {
                 if isSelecting {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: {
-                            isSelecting = false
-                            selectedItemIDs.removeAll()
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isSelecting = false
+                                selectedItemIDs.removeAll()
+                            }
                         }) {
                             Text(L10n.exitSelectionButton)
                         }
@@ -185,12 +197,15 @@ public struct PantryDashboardView: View {
                                 if !viewModel.shoppingList.isEmpty {
                                     Text("\(viewModel.shoppingList.count)")
                                         .font(.system(size: 10, weight: .bold))
+                                        .contentTransition(.numericText())
                                         .foregroundColor(.white)
                                         .padding(4)
                                         .background(Circle().fill(Color.accentColor))
                                         .offset(x: 10, y: -10)
+                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
+                            .animation(.easeInOut(duration: 0.2), value: viewModel.shoppingList.count)
                         }
                         .accessibilityLabel(L10n.shoppingListButton)
                     }
@@ -199,12 +214,13 @@ public struct PantryDashboardView: View {
                             Image(systemName: viewModel.hasActiveFilters
                                 ? "line.3.horizontal.decrease.circle.fill"
                                 : "line.3.horizontal.decrease.circle")
+                                .contentTransition(.symbolEffect(.replace))
                         }
                         .accessibilityLabel(L10n.filtersButton)
                     }
                     ToolbarItem(placement: .navigationBarLeading) {
                         Menu {
-                            Button(action: { isSelecting = true }) {
+                            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isSelecting = true } }) {
                                 Label(L10n.selectItemsButton, systemImage: "checkmark.circle")
                             }
                             Button(action: { showSettings = true }) {
@@ -411,6 +427,8 @@ private struct MetricBadge: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(color)
+                    .contentTransition(.numericText(value: Double(count)))
+                    .animation(.easeInOut(duration: 0.2), value: count)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(10)
@@ -420,6 +438,7 @@ private struct MetricBadge: View {
                     .stroke(color, lineWidth: isSelected ? 2 : 0)
             )
             .cornerRadius(10)
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
         .buttonStyle(.plain)
     }
@@ -440,6 +459,7 @@ private struct LocationChip: View {
                 .background(isSelected ? Color.accentColor : Color(.secondarySystemFill))
                 .foregroundColor(isSelected ? .white : .primary)
                 .cornerRadius(14)
+                .animation(.easeInOut(duration: 0.15), value: isSelected)
         }
         .buttonStyle(.plain)
     }

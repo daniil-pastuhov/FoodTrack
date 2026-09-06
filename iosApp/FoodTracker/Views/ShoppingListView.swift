@@ -70,11 +70,13 @@ struct ShoppingListView: View {
                                         .clipShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
+                                .transition(.scale.combined(with: .opacity))
                             }
                         }
                         .padding(.horizontal, 16)
                     }
                     .padding(.bottom, 8)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
                 }
 
                 if viewModel.shoppingList.isEmpty {
@@ -94,6 +96,7 @@ struct ShoppingListView: View {
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 } else {
                     List {
                         ForEach(groupedEntries, id: \.category) { group in
@@ -131,6 +134,8 @@ struct ShoppingListView: View {
                                         .buttonStyle(.plain)
                                         Text("\(entry.quantity)")
                                             .frame(minWidth: 16)
+                                            .contentTransition(.numericText())
+                                            .animation(.easeInOut(duration: 0.2), value: entry.quantity)
                                         Button {
                                             viewModel.incrementShoppingListQuantity(entry.id)
                                         } label: {
@@ -162,8 +167,12 @@ struct ShoppingListView: View {
                     }
                     .listStyle(.plain)
                     .environment(\.editMode, .constant(.active))
+                    .animation(.default, value: viewModel.shoppingList)
+                    .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.2), value: suggestions)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.shoppingList.isEmpty)
             .navigationTitle(L10n.shoppingListTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

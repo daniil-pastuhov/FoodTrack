@@ -1,5 +1,17 @@
 package com.foodtracker.android.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -167,7 +179,11 @@ fun ShoppingListScreen(
                 }
             }
 
-            if (suggestions.isNotEmpty()) {
+            AnimatedVisibility(
+                visible = suggestions.isNotEmpty(),
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -181,13 +197,20 @@ fun ShoppingListScreen(
                                 stateHolder.addManualShoppingListEntry(suggestion)
                                 newEntryText = ""
                             },
-                            label = { Text(suggestion) }
+                            label = { Text(suggestion) },
+                            modifier = Modifier.animateItem()
                         )
                     }
                 }
             }
 
-            if (state.shoppingList.isEmpty()) {
+            AnimatedContent(
+                targetState = state.shoppingList.isEmpty(),
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
+                modifier = Modifier.fillMaxSize(),
+                label = "shoppingListContent"
+            ) { isEmpty ->
+            if (isEmpty) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -272,7 +295,9 @@ fun ShoppingListScreen(
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = TextSecondary,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp)
+                                    modifier = Modifier
+                                        .animateItem()
+                                        .padding(top = 8.dp, bottom = 2.dp)
                                 )
                             }
                             is ShoppingListFlatRow.Item -> {
@@ -293,7 +318,8 @@ fun ShoppingListScreen(
                                         onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) },
                                         onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
                                         onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) },
-                                        onScan = { onScanEntry(entry) }
+                                        onScan = { onScanEntry(entry) },
+                                        modifier = Modifier.animateItem()
                                     )
                                 }
                             }
@@ -301,6 +327,7 @@ fun ShoppingListScreen(
                     }
                     item { Spacer(modifier = Modifier.height(8.dp)) }
                 }
+            }
             }
         }
     }
@@ -322,14 +349,19 @@ private fun ShoppingListRow(
     onCheckOff: () -> Unit,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
-    onScan: () -> Unit
+    onScan: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
+    val containerColor by animateColorAsState(
+        targetValue = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
+        label = "shoppingRowContainerColor"
+    )
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-        ),
-        modifier = Modifier.fillMaxWidth()
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize()
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -377,12 +409,25 @@ private fun ShoppingListRow(
                     modifier = Modifier.size(16.dp)
                 )
             }
-            Text(
-                text = entry.quantity.toString(),
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.width(20.dp)
-            )
+            AnimatedContent(
+                targetState = entry.quantity,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (fadeIn() + slideInVertically { it }) togetherWith (fadeOut() + slideOutVertically { -it })
+                    } else {
+                        (fadeIn() + slideInVertically { -it }) togetherWith (fadeOut() + slideOutVertically { it })
+                    }
+                },
+                modifier = Modifier.width(20.dp),
+                label = "shoppingRowQuantity"
+            ) { quantity ->
+                Text(
+                    text = quantity.toString(),
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp)) {
                 Icon(
                     imageVector = Icons.Default.Add,

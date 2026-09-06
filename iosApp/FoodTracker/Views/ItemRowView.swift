@@ -22,11 +22,12 @@ public struct ItemRowView: View {
                 .frame(width: 54, height: 54)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             } else if let imageUrl = item.imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
+                AsyncImage(url: url, transaction: Transaction(animation: .easeInOut(duration: 0.25))) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable()
                             .aspectRatio(contentMode: .fill)
+                            .transition(.opacity)
                     default:
                         placeholderImage
                     }
@@ -89,10 +90,13 @@ public struct ItemRowView: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
+                        .contentTransition(.numericText())
+                        .animation(.easeInOut(duration: 0.2), value: item.quantity)
                 }
             }
         }
         .padding(.vertical, 4)
+        .animation(.easeInOut(duration: 0.2), value: item.daysRemainingFormatted)
     }
 
     private var placeholderImage: some View {

@@ -113,6 +113,8 @@ public struct AddEditItemView: View {
                             Spacer()
                             Text("\(quantity)")
                                 .foregroundColor(.secondary)
+                                .contentTransition(.numericText())
+                                .animation(.easeInOut(duration: 0.2), value: quantity)
                         }
                     }
                 }
@@ -201,9 +203,10 @@ public struct AddEditItemView: View {
                     placeholderIcon
                 }
             } else {
-                AsyncImage(url: url) { phase in
+                AsyncImage(url: url, transaction: Transaction(animation: .easeInOut(duration: 0.25))) { phase in
                     if case .success(let image) = phase {
                         image.resizable().aspectRatio(contentMode: .fill)
+                            .transition(.opacity)
                     } else {
                         placeholderIcon
                     }

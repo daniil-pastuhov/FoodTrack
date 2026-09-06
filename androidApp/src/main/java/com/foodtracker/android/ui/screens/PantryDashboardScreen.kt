@@ -2,6 +2,22 @@ package com.foodtracker.android.ui.screens
 
 import android.content.Intent
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -152,48 +168,61 @@ fun PantryDashboardScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    if (selectionMode) {
-                        Text(
-                            text = stringResource(R.string.selection_count_format, selectedIds.size),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                contentAlignment = Alignment.Center,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(BrandPrimary)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Fastfood,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = stringResource(R.string.app_name),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Text(
-                                    text = stringResource(R.string.app_subtitle),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = TextSecondary
-                                )
+                    AnimatedContent(
+                        targetState = selectionMode,
+                        transitionSpec = {
+                            (fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 }) togetherWith
+                                (fadeOut(tween(120)) + slideOutVertically(tween(120)) { -it / 3 })
+                        },
+                        label = "topBarTitle"
+                    ) { inSelectionMode ->
+                        if (inSelectionMode) {
+                            Text(
+                                text = stringResource(R.string.selection_count_format, selectedIds.size),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(BrandPrimary)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fastfood,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = stringResource(R.string.app_name),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = stringResource(R.string.app_subtitle),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = TextSecondary
+                                    )
+                                }
                             }
                         }
                     }
                 },
                 navigationIcon = {
-                    if (selectionMode) {
+                    AnimatedVisibility(
+                        visible = selectionMode,
+                        enter = fadeIn() + scaleIn(),
+                        exit = fadeOut() + scaleOut()
+                    ) {
                         IconButton(onClick = { selectedIds = emptySet() }) {
                             Icon(
                                 imageVector = Icons.Default.Close,
@@ -203,55 +232,57 @@ fun PantryDashboardScreen(
                     }
                 },
                 actions = {
-                    if (selectionMode) {
-                        IconButton(onClick = { showShareDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.RestaurantMenu,
-                                contentDescription = stringResource(R.string.action_get_recipe_ideas)
-                            )
-                        }
-                    } else {
-                        IconButton(onClick = onNavigateToCalendar) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = stringResource(R.string.calendar_content_description)
-                            )
-                        }
-                        IconButton(onClick = onNavigateToShoppingList) {
-                            BadgedBox(
-                                badge = {
-                                    if (state.shoppingList.isNotEmpty()) {
-                                        Badge(containerColor = BrandPrimary) {
-                                            Text(state.shoppingList.size.toString())
+                    AnimatedContent(
+                        targetState = selectionMode,
+                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                        label = "topBarActions"
+                    ) { inSelectionMode ->
+                        if (inSelectionMode) {
+                            IconButton(onClick = { showShareDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.RestaurantMenu,
+                                    contentDescription = stringResource(R.string.action_get_recipe_ideas)
+                                )
+                            }
+                        } else {
+                            Row {
+                                IconButton(onClick = onNavigateToCalendar) {
+                                    Icon(
+                                        imageVector = Icons.Default.CalendarMonth,
+                                        contentDescription = stringResource(R.string.calendar_content_description)
+                                    )
+                                }
+                                IconButton(onClick = onNavigateToShoppingList) {
+                                    BadgedBox(
+                                        badge = {
+                                            AnimatedCountBadge(count = state.shoppingList.size)
                                         }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ShoppingCart,
+                                            contentDescription = stringResource(R.string.shopping_list_content_description)
+                                        )
                                     }
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ShoppingCart,
-                                    contentDescription = stringResource(R.string.shopping_list_content_description)
-                                )
-                            }
-                        }
-                        IconButton(onClick = { showFilterSheet = true }) {
-                            BadgedBox(
-                                badge = {
-                                    if (filtersActive) {
-                                        Badge(containerColor = BrandPrimary)
+                                IconButton(onClick = { showFilterSheet = true }) {
+                                    BadgedBox(
+                                        badge = {
+                                            AnimatedDotBadge(visible = filtersActive)
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Tune,
+                                            contentDescription = stringResource(R.string.filter_content_description)
+                                        )
                                     }
                                 }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Tune,
-                                    contentDescription = stringResource(R.string.filter_content_description)
-                                )
+                                IconButton(onClick = onNavigateToSettings) {
+                                    Icon(
+                                        imageVector = Icons.Default.Settings,
+                                        contentDescription = stringResource(R.string.settings_content_description)
+                                    )
+                                }
                             }
-                        }
-                        IconButton(onClick = onNavigateToSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.settings_content_description)
-                            )
                         }
                     }
                 },
@@ -261,7 +292,11 @@ fun PantryDashboardScreen(
             )
         },
         floatingActionButton = {
-            if (!selectionMode) {
+            AnimatedVisibility(
+                visible = !selectionMode,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
                 FloatingActionButton(
                     onClick = onNavigateToScanner,
                     containerColor = BrandPrimary,
@@ -328,7 +363,11 @@ fun PantryDashboardScreen(
                 )
             }
 
-            if (!selectionMode) {
+            AnimatedVisibility(
+                visible = !selectionMode,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
                 Card(
                     onClick = { onNavigateToAddEdit(null) },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -356,68 +395,81 @@ fun PantryDashboardScreen(
             }
 
             // List of Items
-            if (state.isLoading) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    CircularProgressIndicator(color = BrandPrimary)
-                }
-            } else if (state.filteredItems.isEmpty()) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Fastfood,
-                            contentDescription = null,
-                            tint = TextSecondary.copy(alpha = 0.4f),
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = stringResource(R.string.empty_state_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
-                        )
-                        Text(
-                            text = stringResource(R.string.empty_state_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary.copy(alpha = 0.7f),
-                            modifier = Modifier.padding(horizontal = 24.dp)
-                        )
+            val dashboardContentKey = when {
+                state.isLoading -> "loading"
+                state.filteredItems.isEmpty() -> "empty"
+                else -> "grid"
+            }
+            AnimatedContent(
+                targetState = dashboardContentKey,
+                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
+                modifier = Modifier.fillMaxSize(),
+                label = "dashboardContent"
+            ) { contentKey ->
+                when (contentKey) {
+                    "loading" -> Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        CircularProgressIndicator(color = BrandPrimary)
                     }
-                }
-            } else {
-                // Adaptive: 1 column on phones, more columns as width allows (tablets,
-                // landscape, foldables) — driven by available width, not a device check.
-                // 340dp keeps room for image + expiry badge + location chip + menu button
-                // on one line even for long day counts ("624 days expired") — below that,
-                // the info row wraps and the grid stretches every card in the row to match.
-                LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 340.dp),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    gridItems(state.filteredItems, key = { it.id }) { item ->
-                        ItemCard(
-                            item = item,
-                            onDelete = { onDeleteItem(item.id) },
-                            onDecrement = { onDecrementQuantity(item.id) },
-                            onClick = {
-                                if (selectionMode) toggleSelected(item.id) else onNavigateToAddEdit(item)
-                            },
-                            onLongClick = { toggleSelected(item.id) },
-                            selectionMode = selectionMode,
-                            selected = item.id in selectedIds,
-                            expiringSoonDays = state.settings.expiringSoonDays
-                        )
+                    "empty" -> Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp)
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Fastfood,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.4f),
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = stringResource(R.string.empty_state_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
+                            )
+                            Text(
+                                text = stringResource(R.string.empty_state_subtitle),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary.copy(alpha = 0.7f),
+                                modifier = Modifier.padding(horizontal = 24.dp)
+                            )
+                        }
+                    }
+                    else -> {
+                        // Adaptive: 1 column on phones, more columns as width allows (tablets,
+                        // landscape, foldables) — driven by available width, not a device check.
+                        // 340dp keeps room for image + expiry badge + location chip + menu button
+                        // on one line even for long day counts ("624 days expired") — below that,
+                        // the info row wraps and the grid stretches every card in the row to match.
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 340.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            gridItems(state.filteredItems, key = { it.id }) { item ->
+                                ItemCard(
+                                    item = item,
+                                    onDelete = { onDeleteItem(item.id) },
+                                    onDecrement = { onDecrementQuantity(item.id) },
+                                    onClick = {
+                                        if (selectionMode) toggleSelected(item.id) else onNavigateToAddEdit(item)
+                                    },
+                                    onLongClick = { toggleSelected(item.id) },
+                                    selectionMode = selectionMode,
+                                    selected = item.id in selectedIds,
+                                    expiringSoonDays = state.settings.expiringSoonDays,
+                                    modifier = Modifier.animateItem()
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -561,7 +613,11 @@ private fun FilterSheetContent(
         // Category Filter Chips — derived from categories present on current items rather
         // than a fixed settings list, since (unlike storage locations) there's no user-edited
         // category list.
-        if (categories.isNotEmpty()) {
+        AnimatedVisibility(
+            visible = categories.isNotEmpty(),
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -671,6 +727,38 @@ private fun FilterSheetContent(
 }
 
 @Composable
+private fun AnimatedCountBadge(count: Int) {
+    AnimatedVisibility(
+        visible = count > 0,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut()
+    ) {
+        Badge(containerColor = BrandPrimary) {
+            AnimatedContent(
+                targetState = count,
+                transitionSpec = {
+                    (fadeIn() + slideInVertically { it }) togetherWith (fadeOut() + slideOutVertically { -it })
+                },
+                label = "countBadgeValue"
+            ) { animatedCount ->
+                Text(animatedCount.toString())
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnimatedDotBadge(visible: Boolean) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(),
+        exit = fadeOut() + scaleOut()
+    ) {
+        Badge(containerColor = BrandPrimary)
+    }
+}
+
+@Composable
 private fun MetricCard(
     title: String,
     count: Int,
@@ -681,15 +769,17 @@ private fun MetricCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val containerColor by animateColorAsState(
+        targetValue = if (selected) bgColor else bgColor.copy(alpha = 0.55f),
+        label = "metricCardContainerColor"
+    )
+    val borderWidth by animateDpAsState(targetValue = if (selected) 2.dp else 0.dp, label = "metricCardBorderWidth")
+
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (selected) bgColor else bgColor.copy(alpha = 0.55f)
-        ),
-        modifier = modifier.then(
-            if (selected) Modifier.border(2.dp, color, RoundedCornerShape(12.dp)) else Modifier
-        )
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        modifier = modifier.border(borderWidth, color, RoundedCornerShape(12.dp))
     ) {
         Column(
             modifier = Modifier.padding(10.dp)
@@ -716,12 +806,26 @@ private fun MetricCard(
                 )
             }
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = count.toString(),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+            AnimatedContent(
+                targetState = count,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (fadeIn(tween(180)) + slideInVertically(tween(180)) { it }) togetherWith
+                            (fadeOut(tween(180)) + slideOutVertically(tween(180)) { -it })
+                    } else {
+                        (fadeIn(tween(180)) + slideInVertically(tween(180)) { -it }) togetherWith
+                            (fadeOut(tween(180)) + slideOutVertically(tween(180)) { it })
+                    }
+                },
+                label = "metricCardCount"
+            ) { animatedCount ->
+                Text(
+                    text = animatedCount.toString(),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = color
+                )
+            }
         }
     }
 }

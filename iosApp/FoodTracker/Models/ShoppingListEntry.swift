@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ShoppingListEntry: Identifiable, Codable {
+public struct ShoppingListEntry: Identifiable, Codable, Equatable {
     public let id: String
     public var productName: String
     public var barcode: String?

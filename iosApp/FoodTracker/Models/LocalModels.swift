@@ -8,7 +8,7 @@ public enum ExpiryStatus: String, Codable {
     case fresh = "Fresh"
 }
 
-public struct PantryItem: Identifiable, Codable {
+public struct PantryItem: Identifiable, Codable, Equatable {
     public let id: String
     public var name: String
     public var brand: String?
