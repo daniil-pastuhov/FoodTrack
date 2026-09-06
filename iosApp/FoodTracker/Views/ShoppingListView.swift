@@ -126,17 +126,6 @@ struct ShoppingListView: View {
                                         }
                                         Spacer()
                                         Button {
-                                            scanningEntry = entry
-                                            isScanningForNewEntry = false
-                                            viewModel.beginScanForShoppingListEntry(entry.id)
-                                            showScanner = true
-                                        } label: {
-                                            Image(systemName: "barcode.viewfinder")
-                                                .font(.title2)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .accessibilityLabel(L10n.shoppingListScan)
-                                        Button {
                                             if entry.quantity <= 1 {
                                                 viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
                                             } else {

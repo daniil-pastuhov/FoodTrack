@@ -242,13 +242,6 @@ class MainActivity : ComponentActivity() {
                         isScanningForNewShoppingListEntry = false
                         onNavigateToScanner()
                     }
-                    val onScanShoppingListEntry: (ShoppingListEntry) -> Unit = { entry ->
-                        scanReturnScreen = AppScreen.SHOPPING_LIST
-                        scanningShoppingListEntry = entry
-                        isScanningForNewShoppingListEntry = false
-                        stateHolder.beginScanForShoppingListEntry(entry.id)
-                        onNavigateToScanner()
-                    }
                     val onScanNewShoppingListEntry: () -> Unit = {
                         scanReturnScreen = AppScreen.SHOPPING_LIST
                         scanningShoppingListEntry = null
@@ -514,7 +507,6 @@ class MainActivity : ComponentActivity() {
                                         AppScreen.SHOPPING_LIST -> {
                                             ShoppingListScreen(
                                                 stateHolder = stateHolder,
-                                                onScanEntry = onScanShoppingListEntry,
                                                 onScanNewEntry = onScanNewShoppingListEntry,
                                                 onAddEntryManually = onAddShoppingListEntryManually,
                                                 onCheckOffEntry = onCheckOffShoppingListEntryHandler,

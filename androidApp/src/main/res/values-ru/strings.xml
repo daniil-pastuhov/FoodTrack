@@ -93,7 +93,6 @@
     <string name="shopping_list_content_description">Список покупок</string>
     <string name="shopping_list_add_placeholder">Добавить продукт…</string>
     <string name="shopping_list_add_button">Добавить</string>
-    <string name="shopping_list_check_off_content_description">Отметить</string>
     <string name="shopping_list_scan_content_description">Сканировать продукт</string>    <string name="shopping_list_empty_title">Список покупок пуст</string>
     <string name="shopping_list_empty_subtitle">Обязательные продукты, удалённые из кладовой, появятся здесь.</string>
     <string name="shopping_list_uncategorized">Другое</string>

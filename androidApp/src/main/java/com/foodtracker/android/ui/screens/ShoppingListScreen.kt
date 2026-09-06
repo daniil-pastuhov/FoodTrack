@@ -12,6 +12,8 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,7 +37,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
@@ -53,10 +55,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,8 +73,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -94,7 +101,6 @@ private const val MAX_NAME_SUGGESTIONS = 5
 @Composable
 fun ShoppingListScreen(
     stateHolder: PantryStateHolder,
-    onScanEntry: (ShoppingListEntry) -> Unit,
     onScanNewEntry: () -> Unit,
     onAddEntryManually: (ShoppingListEntry) -> Unit,
     onCheckOffEntry: (String) -> Unit = { stateHolder.deleteShoppingListEntry(it) },
@@ -354,7 +360,6 @@ fun ShoppingListScreen(
                                         onCheckOff = { onCheckOffEntry(entry.id) },
                                         onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
                                         onDecrement = { onDecrementEntry(entry.id) },
-                                        onScan = { onScanEntry(entry) },
                                         onClick = { onAddEntryManually(entry) },
                                         modifier = Modifier.animateItem()
                                     )
@@ -378,6 +383,7 @@ private sealed class ShoppingListFlatRow {
     data class Item(val entry: ShoppingListEntry) : ShoppingListFlatRow()
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ShoppingListRow(
     entry: ShoppingListEntry,
@@ -386,7 +392,6 @@ private fun ShoppingListRow(
     onCheckOff: () -> Unit,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
-    onScan: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -394,95 +399,121 @@ private fun ShoppingListRow(
         targetValue = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
         label = "shoppingRowContainerColor"
     )
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        modifier = modifier
-            .fillMaxWidth()
-            .animateContentSize()
-            .clickable(onClick = onClick)
+    // Swipe (either direction, since there's only the one action) checks the entry off the
+    // list — mirrors ItemCard's swipe-to-dismiss pattern, replacing the row's old dedicated
+    // check-off button.
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value != SwipeToDismissBoxValue.Settled) {
+                onCheckOff()
+            }
+            true
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        backgroundContent = { ShoppingListSwipeBackground() }
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = containerColor),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .animateContentSize()
+                .clickable(onClick = onClick)
         ) {
-            Icon(
-                imageVector = Icons.Default.DragHandle,
-                contentDescription = stringResource(R.string.shopping_list_drag_handle_content_description),
-                tint = TextSecondary,
-                modifier = dragHandleModifier
-                    .padding(end = 8.dp)
-                    .size(20.dp)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = entry.productName,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DragHandle,
+                    contentDescription = stringResource(R.string.shopping_list_drag_handle_content_description),
+                    tint = TextSecondary,
+                    modifier = dragHandleModifier
+                        .padding(end = 8.dp)
+                        .size(20.dp)
                 )
-                val barcode = entry.barcode
-                if (!barcode.isNullOrBlank()) {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.barcode_format, barcode),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        text = entry.productName,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val barcode = entry.barcode
+                    if (!barcode.isNullOrBlank()) {
+                        Text(
+                            text = stringResource(R.string.barcode_format, barcode),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                }
+                IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = stringResource(R.string.shopping_list_quantity_decrease_content_description),
+                        tint = TextSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                AnimatedContent(
+                    targetState = entry.quantity,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (fadeIn() + slideInVertically { it }) togetherWith (fadeOut() + slideOutVertically { -it })
+                        } else {
+                            (fadeIn() + slideInVertically { -it }) togetherWith (fadeOut() + slideOutVertically { it })
+                        }
+                    },
+                    modifier = Modifier.width(20.dp),
+                    label = "shoppingRowQuantity"
+                ) { quantity ->
+                    Text(
+                        text = quantity.toString(),
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = stringResource(R.string.shopping_list_quantity_increase_content_description),
+                        tint = TextSecondary,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
-            IconButton(onClick = onScan, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Default.QrCodeScanner,
-                    contentDescription = stringResource(R.string.shopping_list_scan_content_description),
-                    tint = BrandPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            IconButton(onClick = onDecrement, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Remove,
-                    contentDescription = stringResource(R.string.shopping_list_quantity_decrease_content_description),
-                    tint = TextSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-            AnimatedContent(
-                targetState = entry.quantity,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        (fadeIn() + slideInVertically { it }) togetherWith (fadeOut() + slideOutVertically { -it })
-                    } else {
-                        (fadeIn() + slideInVertically { -it }) togetherWith (fadeOut() + slideOutVertically { it })
-                    }
-                },
-                modifier = Modifier.width(20.dp),
-                label = "shoppingRowQuantity"
-            ) { quantity ->
-                Text(
-                    text = quantity.toString(),
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            IconButton(onClick = onIncrement, modifier = Modifier.size(32.dp)) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = stringResource(R.string.shopping_list_quantity_increase_content_description),
-                    tint = TextSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-            IconButton(onClick = onCheckOff) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircleOutline,
-                    contentDescription = stringResource(R.string.shopping_list_check_off_content_description),
-                    tint = BrandPrimary
-                )
-            }
         }
+    }
+}
+
+/** The red delete panel revealed behind a [ShoppingListRow] as it's swiped in either direction —
+ *  checking an item off removes it from the list, same as [ItemCard]'s swipe-to-delete, so it
+ *  gets the same destructive color. Unlike [ItemCard]'s two-directional background, there's only
+ *  the one action here, so the same panel fills the whole row regardless of swipe direction. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShoppingListSwipeBackground() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.error)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Default.DeleteOutline,
+            contentDescription = null,
+            tint = Color.White
+        )
     }
 }
 
