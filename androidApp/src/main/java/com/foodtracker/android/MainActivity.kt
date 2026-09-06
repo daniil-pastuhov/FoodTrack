@@ -343,6 +343,15 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    val onMoveToShoppingListHandler: (String) -> Unit = { id ->
+                        stateHolder.moveToShoppingList(id) { removedItem ->
+                            com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
+                            showUndoRemovalSnackbar(removedItem.name, true) {
+                                stateHolder.restoreItem(removedItem, removedFromShoppingList = true)
+                                com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, removedItem)
+                            }
+                        }
+                    }
                     val onCheckOffShoppingListEntryHandler: (String) -> Unit = { id ->
                         stateHolder.deleteShoppingListEntry(id) { removedEntry ->
                             showUndoRemovalSnackbar(removedEntry.productName, false) {
@@ -395,6 +404,7 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToAddEdit = {},
                                 onDeleteItem = onDeleteItemHandler,
                                 onDecrementQuantity = onDecrementQuantityHandler,
+                                onMoveToShoppingList = onMoveToShoppingListHandler,
                                 gridState = dashboardGridState
                             )
                         }
@@ -455,6 +465,7 @@ class MainActivity : ComponentActivity() {
                                                 onNavigateToAddEdit = onNavigateToAddEdit,
                                                 onDeleteItem = onDeleteItemHandler,
                                                 onDecrementQuantity = onDecrementQuantityHandler,
+                                                onMoveToShoppingList = onMoveToShoppingListHandler,
                                                 gridState = dashboardGridState
                                             )
                                         }

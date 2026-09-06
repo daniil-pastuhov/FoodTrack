@@ -121,6 +121,7 @@ fun PantryDashboardScreen(
     onNavigateToAddEdit: (PantryItem?) -> Unit,
     onDeleteItem: (String) -> Unit,
     onDecrementQuantity: (String) -> Unit,
+    onMoveToShoppingList: (String) -> Unit,
     modifier: Modifier = Modifier,
     gridState: LazyGridState = rememberLazyGridState()
 ) {
@@ -432,6 +433,7 @@ fun PantryDashboardScreen(
                                     item = item,
                                     onDelete = { onDeleteItem(item.id) },
                                     onDecrement = { onDecrementQuantity(item.id) },
+                                    onMoveToShoppingList = { onMoveToShoppingList(item.id) },
                                     onClick = {
                                         if (selectionMode) toggleSelected(item.id) else onNavigateToAddEdit(item)
                                     },

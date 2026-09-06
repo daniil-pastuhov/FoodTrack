@@ -38,7 +38,6 @@
     <string name="empty_state_subtitle">Tap \'Scan Item\' to scan a barcode or add your groceries.</string>
 
     <string name="back_content_description">Back</string>
-    <string name="options_content_description">Options</string>
 
     <string name="edit_item_title">Edit Item</string>
     <string name="add_item_title">Add to Pantry</string>

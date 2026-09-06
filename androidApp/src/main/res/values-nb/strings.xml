@@ -33,7 +33,6 @@
     <string name="empty_state_subtitle">Trykk på «Skann vare» for å skanne en strekkode, eller legg til varer manuelt.</string>
 
     <string name="back_content_description">Tilbake</string>
-    <string name="options_content_description">Alternativer</string>
 
     <string name="edit_item_title">Rediger vare</string>
     <string name="add_item_title">Legg til i matskapet</string>

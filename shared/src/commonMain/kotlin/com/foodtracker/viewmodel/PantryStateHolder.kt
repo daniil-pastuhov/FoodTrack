@@ -393,6 +393,23 @@ class PantryStateHolder(
         }
     }
 
+    /** Explicit "move to shopping list" action (the Home screen's leading/right swipe action):
+     *  removes the item from the pantry and adds it to the shopping list unconditionally,
+     *  regardless of its [PantryItem.essential] flag — unlike [decrementQuantity], this is a
+     *  deliberate user choice rather than an automatic essential-item safeguard.
+     *  [onItemRemoved] receives the removed item's last known state, so callers can offer an
+     *  undo (see [restoreItem], passing removedFromShoppingList = true). */
+    fun moveToShoppingList(id: String, onItemRemoved: (PantryItem) -> Unit = {}) {
+        coroutineScope.launch {
+            val item = repository.getItem(id)
+            repository.deleteItem(id)
+            if (item != null) {
+                addToShoppingListIfAbsent(item.name, item.barcode, item.category)
+                onItemRemoved(item)
+            }
+        }
+    }
+
     /** Reverses a [deleteItem]/[decrementQuantity] removal by putting [item] straight back
      *  (its id is preserved, so this is an upsert onto the same row rather than a new item).
      *  Pass [removedFromShoppingList] = true only when reversing a [decrementQuantity] full

@@ -33,7 +33,6 @@
     <string name="empty_state_subtitle">Нажмите «Сканировать», чтобы отсканировать штрихкод, или добавьте продукты вручную.</string>
 
     <string name="back_content_description">Назад</string>
-    <string name="options_content_description">Опции</string>
 
     <string name="edit_item_title">Изменить продукт</string>
     <string name="add_item_title">Добавить в кладовую</string>
