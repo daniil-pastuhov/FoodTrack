@@ -32,6 +32,13 @@
 "action_get_recipe_ideas" = "Get recipe ideas";
 "recipe_prompt_intro" = "I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:";
 "recipe_prompt_item_format" = "%@ (%@)";
+"recipe_prompt_other_items_intro" = "I also have these other items at home, in case any of them are useful too:";
+"recipe_prompt_other_items_omitted" = "(+%d more items not shown)";
+"share_recipe_dialog_title" = "Get recipe ideas";
+"share_recipe_include_other_items_title" = "Include other pantry items";
+"share_recipe_include_other_items_subtitle" = "Optional — lets the AI suggest recipes using more of what you already have";
+"share_recipe_share_button" = "Share";
+"share_recipe_cancel_button" = "Cancel";
 
 "search_placeholder" = "Search products or brands...";
 "scan_button" = "Scan";

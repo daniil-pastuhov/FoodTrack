@@ -32,6 +32,13 @@
 "action_get_recipe_ideas" = "Få oppskriftsforslag";
 "recipe_prompt_intro" = "Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:";
 "recipe_prompt_item_format" = "%@ (%@)";
+"recipe_prompt_other_items_intro" = "Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:";
+"recipe_prompt_other_items_omitted" = "(+%d flere varer vises ikke)";
+"share_recipe_dialog_title" = "Få oppskriftsforslag";
+"share_recipe_include_other_items_title" = "Inkluder andre varer i matskapet";
+"share_recipe_include_other_items_subtitle" = "Valgfritt – lar AI-en foreslå oppskrifter med mer av det du allerede har";
+"share_recipe_share_button" = "Del";
+"share_recipe_cancel_button" = "Avbryt";
 
 "search_placeholder" = "Søk etter produkter eller merker...";
 "scan_button" = "Skann";

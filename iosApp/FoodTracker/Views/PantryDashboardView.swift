@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 public struct PantryDashboardView: View {
     @ObservedObject var viewModel: NativePantryViewModel
@@ -14,6 +15,11 @@ public struct PantryDashboardView: View {
     @State private var showFilters: Bool = false
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
+    @State private var showShareDialog: Bool = false
+    @State private var includeOtherItemsInShare: Bool = false
+    @State private var shareAfterDialogDismiss: Bool = false
+    @State private var showActivitySheet: Bool = false
+    @State private var shareText: String = ""
 
     public init(
         viewModel: NativePantryViewModel,
@@ -162,7 +168,7 @@ public struct PantryDashboardView: View {
                         }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        ShareLink(item: recipePromptText) {
+                        Button(action: { showShareDialog = true }) {
                             Image(systemName: "fork.knife.circle")
                         }
                         .disabled(selectedItemIDs.isEmpty)
@@ -184,12 +190,42 @@ public struct PantryDashboardView: View {
                 FilterSheetView(viewModel: viewModel, settingsStore: settingsStore)
                     .presentationDetents([.medium])
             }
+            // `onDismiss` (rather than triggering `showActivitySheet` directly from `onShare`)
+            // waits for this sheet's dismissal animation to finish before the next sheet
+            // presents — presenting two sheets back-to-back in the same action is unreliable.
+            .sheet(isPresented: $showShareDialog, onDismiss: {
+                if shareAfterDialogDismiss {
+                    shareAfterDialogDismiss = false
+                    performShare()
+                }
+            }) {
+                ShareRecipeDialog(
+                    includeOtherItems: $includeOtherItemsInShare,
+                    onCancel: { showShareDialog = false },
+                    onShare: {
+                        shareAfterDialogDismiss = true
+                        showShareDialog = false
+                    }
+                )
+                .presentationDetents([.height(220)])
+            }
+            .sheet(isPresented: $showActivitySheet) {
+                ActivityView(activityItems: [shareText])
+            }
         }
     }
 
-    private var recipePromptText: String {
+    private func performShare() {
         let selectedItems = viewModel.items.filter { selectedItemIDs.contains($0.id) }
-        return NativePantryViewModel.recipePrompt(for: selectedItems)
+        guard !selectedItems.isEmpty else { return }
+        let otherItems = includeOtherItemsInShare
+            ? viewModel.items.filter { !selectedItemIDs.contains($0.id) }
+            : []
+        shareText = NativePantryViewModel.recipePrompt(for: selectedItems, otherItems: otherItems)
+        showActivitySheet = true
+        selectedItemIDs = []
+        isSelecting = false
+        includeOtherItemsInShare = false
     }
 
     private func toggleSelection(_ id: String) {
@@ -372,4 +408,51 @@ private struct LocationChip: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+/// Mirrors the Android "Get recipe ideas" dialog: lets the user opt in to including the rest
+/// of their pantry (as extra ingredient names only) before the share sheet opens, since a plain
+/// `ShareLink` can't host a toggle.
+private struct ShareRecipeDialog: View {
+    @Binding var includeOtherItems: Bool
+    let onCancel: () -> Void
+    let onShare: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(L10n.shareRecipeDialogTitle)
+                .font(.headline)
+
+            Toggle(isOn: $includeOtherItems) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.shareRecipeIncludeOtherItemsTitle)
+                        .font(.body)
+                    Text(L10n.shareRecipeIncludeOtherItemsSubtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+
+            HStack {
+                Spacer()
+                Button(L10n.shareRecipeCancelButton, action: onCancel)
+                Button(L10n.shareRecipeShareButton, action: onShare)
+                    .fontWeight(.semibold)
+            }
+        }
+        .padding(20)
+    }
+}
+
+/// Wraps `UIActivityViewController` so the share sheet can be triggered programmatically after
+/// `ShareRecipeDialog` is dismissed, rather than via `ShareLink`'s own tap gesture.
+private struct ActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

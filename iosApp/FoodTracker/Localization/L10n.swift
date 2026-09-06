@@ -33,6 +33,12 @@ public enum L10n {
     public static var moreOptionsButton: String { NSLocalizedString("more_options_button", comment: "") }
     public static var actionGetRecipeIdeas: String { NSLocalizedString("action_get_recipe_ideas", comment: "") }
     public static var recipePromptIntro: String { NSLocalizedString("recipe_prompt_intro", comment: "") }
+    public static var recipePromptOtherItemsIntro: String { NSLocalizedString("recipe_prompt_other_items_intro", comment: "") }
+    public static var shareRecipeDialogTitle: String { NSLocalizedString("share_recipe_dialog_title", comment: "") }
+    public static var shareRecipeIncludeOtherItemsTitle: String { NSLocalizedString("share_recipe_include_other_items_title", comment: "") }
+    public static var shareRecipeIncludeOtherItemsSubtitle: String { NSLocalizedString("share_recipe_include_other_items_subtitle", comment: "") }
+    public static var shareRecipeShareButton: String { NSLocalizedString("share_recipe_share_button", comment: "") }
+    public static var shareRecipeCancelButton: String { NSLocalizedString("share_recipe_cancel_button", comment: "") }
 
     public static func selectionCount(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("selection_count_format", comment: ""), count)
@@ -40,6 +46,10 @@ public enum L10n {
 
     public static func recipePromptItem(name: String, expiry: String) -> String {
         String(format: NSLocalizedString("recipe_prompt_item_format", comment: ""), name, expiry)
+    }
+
+    public static func recipePromptOtherItemsOmitted(_ count: Int) -> String {
+        String(format: NSLocalizedString("recipe_prompt_other_items_omitted", comment: ""), count)
     }
 
     public static var searchPlaceholder: String { NSLocalizedString("search_placeholder", comment: "") }

@@ -32,6 +32,13 @@
 "action_get_recipe_ideas" = "Идеи рецептов";
 "recipe_prompt_intro" = "У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:";
 "recipe_prompt_item_format" = "%@ (%@)";
+"recipe_prompt_other_items_intro" = "У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:";
+"recipe_prompt_other_items_omitted" = "(+ещё %d продуктов не показано)";
+"share_recipe_dialog_title" = "Идеи рецептов";
+"share_recipe_include_other_items_title" = "Включить остальные продукты";
+"share_recipe_include_other_items_subtitle" = "Необязательно — поможет ИИ предложить рецепты с учётом того, что у вас уже есть";
+"share_recipe_share_button" = "Поделиться";
+"share_recipe_cancel_button" = "Отмена";
 
 "search_placeholder" = "Поиск по названию или бренду...";
 "scan_button" = "Сканировать";
