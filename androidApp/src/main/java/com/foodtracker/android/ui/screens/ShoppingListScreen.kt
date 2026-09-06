@@ -12,6 +12,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -88,6 +89,7 @@ fun ShoppingListScreen(
     stateHolder: PantryStateHolder,
     onScanEntry: (ShoppingListEntry) -> Unit,
     onScanNewEntry: () -> Unit,
+    onAddEntryManually: (ShoppingListEntry) -> Unit,
     onCheckOffEntry: (String) -> Unit = { stateHolder.deleteShoppingListEntry(it) },
     onDecrementEntry: (String) -> Unit = { stateHolder.decrementShoppingListQuantity(it) },
     modifier: Modifier = Modifier
@@ -316,6 +318,7 @@ fun ShoppingListScreen(
                                         onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
                                         onDecrement = { onDecrementEntry(entry.id) },
                                         onScan = { onScanEntry(entry) },
+                                        onClick = { onAddEntryManually(entry) },
                                         modifier = Modifier.animateItem()
                                     )
                                 }
@@ -347,6 +350,7 @@ private fun ShoppingListRow(
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     onScan: () -> Unit,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val containerColor by animateColorAsState(
@@ -359,6 +363,7 @@ private fun ShoppingListRow(
         modifier = modifier
             .fillMaxWidth()
             .animateContentSize()
+            .clickable(onClick = onClick)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

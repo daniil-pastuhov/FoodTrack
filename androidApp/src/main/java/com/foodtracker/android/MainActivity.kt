@@ -250,6 +250,25 @@ class MainActivity : ComponentActivity() {
                         isScanningForNewShoppingListEntry = true
                         onNavigateToScanner()
                     }
+                    // Tapping a shopping list row (rather than its scan icon) skips the camera
+                    // entirely and goes straight to Add/Edit prefilled from the entry, for items
+                    // bought without a barcode to scan (produce, bakery, etc). Marking the entry
+                    // via beginScanForShoppingListEntry means saveItem still removes it from the
+                    // shopping list, same as the scan-to-complete path does.
+                    val onAddShoppingListEntryManually: (ShoppingListEntry) -> Unit = { entry ->
+                        scanReturnScreen = AppScreen.SHOPPING_LIST
+                        scanningShoppingListEntry = entry
+                        isScanningForNewShoppingListEntry = false
+                        stateHolder.beginScanForShoppingListEntry(entry.id)
+                        editingItem = null
+                        prefillBarcode = entry.barcode
+                        prefillName = entry.productName
+                        prefillBrand = null
+                        prefillImageUrl = null
+                        prefillExpiryDate = null
+                        prefillCategory = entry.category
+                        currentScreen = AppScreen.ADD_EDIT
+                    }
                     val onNavigateToAddEdit: (PantryItem?) -> Unit = { item ->
                         editingItem = item
                         prefillBarcode = null
@@ -438,6 +457,7 @@ class MainActivity : ComponentActivity() {
                                                 stateHolder = stateHolder,
                                                 onScanEntry = onScanShoppingListEntry,
                                                 onScanNewEntry = onScanNewShoppingListEntry,
+                                                onAddEntryManually = onAddShoppingListEntryManually,
                                                 onCheckOffEntry = onCheckOffShoppingListEntryHandler,
                                                 onDecrementEntry = onDecrementShoppingListQuantityHandler
                                             )
@@ -583,7 +603,17 @@ class MainActivity : ComponentActivity() {
                                         prefillExpiryDate = prefillExpiryDate,
                                         prefillCategory = prefillCategory,
                                         settings = uiState.settings,
-                                        onNavigateBack = { currentScreen = scanReturnScreen },
+                                        onNavigateBack = {
+                                            // Cancelling out of Add/Edit must clear any pending
+                                            // shopping-list-entry match (set by beginScanForShoppingListEntry
+                                            // when this screen was reached directly from a shopping
+                                            // list row, or via the scanner completing one) — otherwise
+                                            // it lingers and the next unrelated saveItem call deletes
+                                            // that entry as a side effect.
+                                            stateHolder.clearScanState()
+                                            scanningShoppingListEntry = null
+                                            currentScreen = scanReturnScreen
+                                        },
                                         onSaveItem = { item ->
                                             com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, item)
                                             stateHolder.saveItem(item)

@@ -162,6 +162,9 @@ struct ShoppingListView: View {
                                     }
                                     .padding(.vertical, 10)
                                     .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        addEntryManually(entry)
+                                    }
                                     .swipeActions(edge: .trailing) {
                                         Button(role: .destructive) {
                                             viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
@@ -323,6 +326,23 @@ struct ShoppingListView: View {
         return grouped.keys.sorted { ($0 ?? "\u{FFFF}") < ($1 ?? "\u{FFFF}") }.map { key in
             (category: key, entries: grouped[key] ?? [])
         }
+    }
+
+    /// Tapping a row (rather than its scan icon) skips the camera entirely and opens Add/Edit
+    /// prefilled from the entry, for items bought without a barcode to scan (produce, bakery,
+    /// etc). Marking the entry via `beginScanForShoppingListEntry` means saving still removes
+    /// it from the shopping list, same as the scan-to-complete path does.
+    private func addEntryManually(_ entry: ShoppingListEntry) {
+        scanningEntry = entry
+        isScanningForNewEntry = false
+        viewModel.beginScanForShoppingListEntry(entry.id)
+        prefillBarcode = entry.barcode
+        prefillName = entry.productName
+        prefillBrand = nil
+        prefillImageUrl = nil
+        prefillDate = nil
+        prefillCategory = entry.category
+        showAddEdit = true
     }
 
     private func submitNewEntry() {
