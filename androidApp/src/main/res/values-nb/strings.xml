@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FoodTracker</string>
+    <string name="app_name">Matvakt</string>
     <string name="app_subtitle">Sporing av matvarer og utløpsdatoer</string>
 
     <string name="scan_item">Skann vare</string>

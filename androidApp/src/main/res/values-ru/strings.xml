@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">FoodTracker</string>
+    <string name="app_name">Срокоед</string>
     <string name="app_subtitle">Учёт продуктов и сроков годности</string>
 
     <string name="scan_item">Сканировать</string>
