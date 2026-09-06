@@ -154,7 +154,7 @@ struct CalendarView: View {
                 }
                 .listStyle(.plain)
                 // Clears the floating pill nav bar that overlays this screen (see RootTabView).
-                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 100) }
+                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
             }
         }
     }

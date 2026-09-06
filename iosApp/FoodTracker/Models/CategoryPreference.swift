@@ -24,19 +24,25 @@ public struct CategoryPreference: Identifiable, Codable, Equatable {
     }
 }
 
+/// Sentinel `CategoryPreference.originName` standing in for products with no category assigned
+/// at all (`category == nil`) - the "Other" bucket - so it can be renamed, reordered, or
+/// disabled from Settings just like any real category.
+public let UNCATEGORIZED_ORIGIN = ""
+
 /// Resolves how `origin` should be shown to the user: a disabled category folds into "no
 /// category" (nil) everywhere, an origin with no preference yet (not auto-registered) shows
-/// as-is, and an enabled, known one shows its `CategoryPreference.displayName`.
+/// as-is, and an enabled, known one shows its `CategoryPreference.displayName`. `nil` (no
+/// category at all) resolves through the `UNCATEGORIZED_ORIGIN` sentinel the same way.
 func resolveCategoryDisplayName(_ origin: String?, _ preferences: [CategoryPreference]) -> String? {
-    guard let origin else { return nil }
-    guard let pref = preferences.first(where: { $0.originName == origin }) else { return origin }
+    let key = origin ?? UNCATEGORIZED_ORIGIN
+    guard let pref = preferences.first(where: { $0.originName == key }) else { return origin }
     return pref.enabled ? pref.displayName : nil
 }
 
 /// Sort key for ordering categories by their user-chosen position: a disabled or not-yet-known
 /// origin (including nil/uncategorized) always sorts last.
 func categoryPreferenceSortOrder(_ origin: String?, _ preferences: [CategoryPreference]) -> Double {
-    guard let origin else { return .greatestFiniteMagnitude }
-    guard let pref = preferences.first(where: { $0.originName == origin }) else { return .greatestFiniteMagnitude }
+    let key = origin ?? UNCATEGORIZED_ORIGIN
+    guard let pref = preferences.first(where: { $0.originName == key }) else { return .greatestFiniteMagnitude }
     return pref.enabled ? pref.sortOrder : .greatestFiniteMagnitude
 }

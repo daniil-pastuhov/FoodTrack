@@ -12,8 +12,8 @@ class RoomCategoryPreferenceRepository(private val dao: CategoryPreferenceDao) :
 
     override suspend fun getMaxSortOrder(): Double? = dao.getMaxSortOrder()
 
-    override suspend fun registerIfAbsent(originName: String, sortOrder: Double) =
-        dao.insertIfAbsent(CategoryPreferenceEntity(originName = originName, displayName = originName, sortOrder = sortOrder))
+    override suspend fun registerIfAbsent(originName: String, sortOrder: Double, displayName: String) =
+        dao.insertIfAbsent(CategoryPreferenceEntity(originName = originName, displayName = displayName, sortOrder = sortOrder))
 
     override suspend fun updateEntry(preference: CategoryPreference) = dao.upsert(preference.toEntity())
 }

@@ -382,7 +382,7 @@ fun SettingsScreen(
 
             // Clears the floating pill nav bar and scan/add buttons that overlay this screen
             // (see MainActivity).
-            Spacer(modifier = Modifier.height(140.dp))
+            Spacer(modifier = Modifier.height(160.dp))
         }
         }
     }

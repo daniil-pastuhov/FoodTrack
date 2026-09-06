@@ -109,7 +109,41 @@ public struct AddEditItemView: View {
                 }
 
                 Section {
-                    TextField(L10n.categoryLabel, text: $category)
+                    VStack(alignment: .leading, spacing: 8) {
+                        TextField(L10n.categoryLabel, text: $category)
+
+                        let suggestions = viewModel.categoryPreferences
+                            .map { $0.displayName }
+                            .filter {
+                                let current = category.trimmingCharacters(in: .whitespaces)
+                                return !current.isEmpty &&
+                                    $0.localizedCaseInsensitiveContains(current) &&
+                                    $0.localizedCaseInsensitiveCompare(current) != .orderedSame
+                            }
+
+                        if !suggestions.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(Array(Set(suggestions)).sorted().prefix(5), id: \.self) { suggestion in
+                                        Button(action: {
+                                            category = suggestion
+                                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                        }) {
+                                            Text(suggestion)
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 6)
+                                                .background(Color.accentColor.opacity(0.12))
+                                                .foregroundColor(.accentColor)
+                                                .cornerRadius(8)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                        }
+                    }
 
                     Stepper(value: $quantity, in: 1...99) {
                         HStack {

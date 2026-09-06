@@ -166,7 +166,7 @@ public struct PantryDashboardView: View {
             .listStyle(.insetGrouped)
             // Clears the floating pill nav bar and scan/add buttons that overlay this screen
             // (see RootTabView) so the last row can still scroll fully into view above them.
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 150) }
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
             // `.onScrollGeometryChange` needs iOS 18, so scroll direction is inferred from the
             // drag gesture instead — `.simultaneousGesture` lets it coexist with the List's own
             // scrolling and the row taps/long-presses/swipe actions above.

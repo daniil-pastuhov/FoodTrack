@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,6 +55,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,6 +65,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -100,7 +104,9 @@ fun AddEditItemScreen(
     onSaveItem: (PantryItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val state by stateHolder.uiState.collectAsState()
     val today = remember { DateUtils.today() }
+    val focusManager = LocalFocusManager.current
 
     var name by remember {
         mutableStateOf(initialItem?.name ?: prefillName ?: "")
@@ -133,6 +139,21 @@ fun AddEditItemScreen(
     }
     var essential by remember {
         mutableStateOf(initialItem?.essential ?: true)
+    }
+
+    val categorySuggestions = remember(category, state.categoryPreferences) {
+        if (category.isBlank()) {
+            emptyList()
+        } else {
+            state.categoryPreferences
+                .map { it.displayName }
+                .distinct()
+                .filter {
+                    it.contains(category, ignoreCase = true) &&
+                            !it.equals(category, ignoreCase = true)
+                }
+                .take(5)
+        }
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -416,14 +437,36 @@ fun AddEditItemScreen(
             }
 
             // Category Field
-            OutlinedTextField(
-                value = category,
-                onValueChange = { category = it },
-                label = { Text(stringResource(R.string.category_label)) },
-                singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = category,
+                    onValueChange = { category = it },
+                    label = { Text(stringResource(R.string.category_label)) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (categorySuggestions.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp)
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categorySuggestions.forEach { suggestion ->
+                            SuggestionChip(
+                                onClick = {
+                                    category = suggestion
+                                    focusManager.clearFocus()
+                                },
+                                label = { Text(suggestion) }
+                            )
+                        }
+                    }
+                }
+            }
 
             // Quantity Stepper
             Row(

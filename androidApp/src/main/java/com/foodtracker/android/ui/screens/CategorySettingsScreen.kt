@@ -1,6 +1,8 @@
 package com.foodtracker.android.ui.screens
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -26,6 +29,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -42,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -71,10 +76,17 @@ fun CategorySettingsScreen(
     val state by stateHolder.uiState.collectAsState()
     var editingOrigin by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf("") }
+    val focusManager = LocalFocusManager.current
 
-    val preferences = remember(state.categoryPreferences) { state.categoryPreferences.sortedBy { it.sortOrder } }
-    var localPreferences by remember { mutableStateOf(preferences) }
-    LaunchedEffect(preferences) { localPreferences = preferences }
+    val groupedPreferences = remember(state.categoryPreferences) {
+        state.categoryPreferences
+            .groupBy { it.displayName }
+            .values
+            .map { group -> group.minBy { it.sortOrder } }
+            .sortedBy { it.sortOrder }
+    }
+    var localPreferences by remember { mutableStateOf(groupedPreferences) }
+    LaunchedEffect(groupedPreferences) { localPreferences = groupedPreferences }
 
     val lazyListState = rememberLazyListState()
     val haptics = LocalHapticFeedback.current
@@ -98,16 +110,52 @@ fun CategorySettingsScreen(
     }
 
     editingOrigin?.let { origin ->
+        val categorySuggestions = remember(editingText, state.categoryPreferences) {
+            if (editingText.isBlank()) {
+                emptyList()
+            } else {
+                state.categoryPreferences
+                    .map { it.displayName }
+                    .distinct()
+                    .filter {
+                        it.contains(editingText, ignoreCase = true) &&
+                                !it.equals(editingText, ignoreCase = true)
+                    }
+                    .take(5)
+            }
+        }
         AlertDialog(
             onDismissRequest = { editingOrigin = null },
             title = { Text(stringResource(R.string.category_settings_rename_title)) },
             text = {
-                OutlinedTextField(
-                    value = editingText,
-                    onValueChange = { editingText = it },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = editingText,
+                        onValueChange = { editingText = it },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (categorySuggestions.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            categorySuggestions.forEach { suggestion ->
+                                SuggestionChip(
+                                    onClick = {
+                                        editingText = suggestion
+                                        focusManager.clearFocus()
+                                    },
+                                    label = { Text(suggestion) }
+                                )
+                            }
+                        }
+                    }
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -201,10 +249,18 @@ fun CategorySettingsScreen(
                         }
                     }
                 }
-                items(localPreferences, key = { it.originName }) { pref ->
-                    ReorderableItem(reorderableState, key = pref.originName) { isDragging ->
+                items(localPreferences, key = { it.displayName }) { pref ->
+                    ReorderableItem(reorderableState, key = pref.displayName) { isDragging ->
+                        val allOrigins = state.categoryPreferences
+                            .filter { it.displayName == pref.displayName }
+                            .map { it.originName }
+                            .filter { it != pref.displayName && it.isNotEmpty() }
+                            .sorted()
+                            .joinToString(", ")
+                        
                         CategoryPreferenceRow(
                             preference = pref,
+                            allOrigins = allOrigins,
                             isDragging = isDragging,
                             dragHandleModifier = Modifier.draggableHandle(
                                 onDragStarted = {
@@ -232,6 +288,7 @@ fun CategorySettingsScreen(
 @Composable
 private fun CategoryPreferenceRow(
     preference: CategoryPreference,
+    allOrigins: String,
     isDragging: Boolean,
     dragHandleModifier: Modifier,
     onToggleEnabled: (Boolean) -> Unit,
@@ -269,9 +326,9 @@ private fun CategoryPreferenceRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (preference.displayName != preference.originName) {
+                if (allOrigins.isNotEmpty()) {
                     Text(
-                        text = stringResource(R.string.category_settings_original_name_format, preference.originName),
+                        text = stringResource(R.string.category_settings_original_name_format, allOrigins),
                         style = MaterialTheme.typography.bodySmall,
                         color = TextSecondary,
                         maxLines = 1,

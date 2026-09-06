@@ -42,7 +42,10 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -72,6 +75,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
@@ -94,7 +98,9 @@ fun ShoppingListScreen(
     onAddEntryManually: (ShoppingListEntry) -> Unit,
     onCheckOffEntry: (String) -> Unit = { stateHolder.deleteShoppingListEntry(it) },
     onDecrementEntry: (String) -> Unit = { stateHolder.decrementShoppingListQuantity(it) },
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // See PantryDashboardScreen's parameter of the same name.
+    bottomOverlayClearance: Dp = 160.dp
 ) {
     val state by stateHolder.uiState.collectAsState()
     var newEntryText by remember { mutableStateOf("") }
@@ -238,7 +244,6 @@ fun ShoppingListScreen(
                     }
                 }
             } else {
-                val uncategorizedLabel = stringResource(R.string.shopping_list_uncategorized)
                 // Flattened so drag reorder has a single index space to work with; headers are
                 // never wrapped in a ReorderableItem, so they can't be dragged themselves, and a
                 // move is only accepted (see reorderableState below) when both ends share a
@@ -295,7 +300,7 @@ fun ShoppingListScreen(
                     modifier = Modifier.fillMaxSize(),
                     // Bottom padding clears the floating pill nav bar and scan/add buttons
                     // that overlay this screen (see MainActivity).
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 140.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomOverlayClearance),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(localRows, key = { row ->
@@ -306,15 +311,26 @@ fun ShoppingListScreen(
                     }) { row ->
                         when (row) {
                             is ShoppingListFlatRow.Header -> {
-                                Text(
-                                    text = row.category ?: uncategorizedLabel,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextSecondary,
-                                    modifier = Modifier
-                                        .animateItem()
-                                        .padding(top = 8.dp, bottom = 2.dp)
-                                )
+                                if (row.category != null) {
+                                    Text(
+                                        text = row.category,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextSecondary,
+                                        modifier = Modifier
+                                            .animateItem()
+                                            .padding(top = 8.dp, bottom = 2.dp)
+                                    )
+                                } else {
+                                    val isFirstRow = localRows.firstOrNull() == row
+                                    if (!isFirstRow) {
+                                        HorizontalDivider(
+                                            modifier = Modifier
+                                                .animateItem()
+                                                .padding(vertical = 8.dp), thickness = DividerDefaults.Thickness, color = MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                    }
+                                }
                             }
                             is ShoppingListFlatRow.Item -> {
                                 val entry = row.entry

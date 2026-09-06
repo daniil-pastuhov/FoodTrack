@@ -38,7 +38,7 @@ public struct SettingsView: View {
             .navigationTitle(L10n.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
             // Clears the floating pill nav bar that overlays this screen (see RootTabView).
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 100) }
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
             .confirmationDialog(
                 L10n.clearDataDialogTitle,
                 isPresented: $showClearConfirm,

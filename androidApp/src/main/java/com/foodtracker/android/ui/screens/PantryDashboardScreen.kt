@@ -98,6 +98,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
@@ -126,7 +127,11 @@ fun PantryDashboardScreen(
     onDecrementQuantity: (String) -> Unit,
     onMoveToShoppingList: (String) -> Unit,
     modifier: Modifier = Modifier,
-    gridState: LazyGridState = rememberLazyGridState()
+    gridState: LazyGridState = rememberLazyGridState(),
+    // Distance content must clear at the bottom so it can scroll out from under the floating
+    // pill nav bar and scan/add buttons (see MainActivity, which measures the overlay and
+    // computes this). Defaults to a rough guess for previews/standalone use.
+    bottomOverlayClearance: Dp = 160.dp
 ) {
     val state by stateHolder.uiState.collectAsState()
     val context = LocalContext.current
@@ -426,7 +431,7 @@ fun PantryDashboardScreen(
                             // Bottom padding clears the floating pill nav bar and scan/add
                             // buttons that overlay this screen (see MainActivity), so the last
                             // row can still scroll fully into view above them.
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 140.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomOverlayClearance),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.fillMaxSize()
@@ -528,10 +533,14 @@ fun PantryDashboardScreen(
                 storageLocations = state.settings.storageLocations,
                 selectedCategory = state.selectedCategory,
                 categories = remember(state.items, state.categoryPreferences) {
-                    state.items.mapNotNull { it.category }
+                    state.items.map { it.category }
+                        .mapNotNull { resolveCategoryDisplayName(it, state.categoryPreferences) }
                         .distinct()
-                        .filter { origin -> resolveCategoryDisplayName(origin, state.categoryPreferences) != null }
-                        .sortedWith(compareBy({ categoryPreferenceSortOrder(it, state.categoryPreferences) }, { it }))
+                        .sortedWith(compareBy({ displayName ->
+                            state.categoryPreferences
+                                .filter { it.displayName == displayName && it.enabled }
+                                .minOfOrNull { it.sortOrder } ?: Double.MAX_VALUE
+                        }, { it }))
                 },
                 categoryPreferences = state.categoryPreferences,
                 selectedStatusFilter = state.selectedStatusFilter,
@@ -644,7 +653,7 @@ private fun FilterSheetContent(
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { stateHolder.onCategorySelected(category) },
-                        label = { Text(resolveCategoryDisplayName(category, categoryPreferences) ?: category) },
+                        label = { Text(category) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
                             selectedLabelColor = BrandPrimary

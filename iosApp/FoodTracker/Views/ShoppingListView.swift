@@ -103,7 +103,7 @@ struct ShoppingListView: View {
                 } else {
                     List {
                         ForEach(groupedEntries, id: \.category) { group in
-                            Section(header: Text(group.category ?? L10n.shoppingListUncategorized)) {
+                            Section {
                                 ForEach(group.entries) { entry in
                                     HStack(spacing: 14) {
                                         // Decorative affordance only: the row itself is
@@ -187,12 +187,19 @@ struct ShoppingListView: View {
                                     let afterId = newIndex < reordered.count - 1 ? reordered[newIndex + 1].id : nil
                                     viewModel.moveShoppingListEntry(movedId, beforeId: beforeId, afterId: afterId)
                                 }
+                            } header: {
+                                if let category = group.category {
+                                    Text(category)
+                                } else if group.category != groupedEntries.first?.category {
+                                    Divider()
+                                        .padding(.vertical, 8)
+                                }
                             }
                         }
                     }
                     .listStyle(.plain)
                     // Clears the floating pill nav bar that overlays this screen (see RootTabView).
-                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 100) }
+                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
                     .animation(.default, value: viewModel.shoppingList)
                     .transition(.opacity)
                 }

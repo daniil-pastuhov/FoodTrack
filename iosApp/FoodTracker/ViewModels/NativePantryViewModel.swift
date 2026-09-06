@@ -111,12 +111,29 @@ public class NativePantryViewModel: ObservableObject {
 
     public init(modelContainer: ModelContainer = NativePantryViewModel.sharedModelContainer) {
         modelContext = ModelContext(modelContainer)
+        
+        // Ensure "Other" (uncategorized) sentinel is registered so it's always in Settings
+        registerSentinelCategoryIfNeeded()
+        
         loadCategoryPreferences()
         loadItems()
         loadShoppingList()
         backfillKnownProductNamesFromInventoryIfNeeded()
         loadKnownProductNames()
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
+    }
+
+    private func registerSentinelCategoryIfNeeded() {
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == UNCATEGORIZED_ORIGIN })
+        if (try? modelContext.fetch(descriptor).first) == nil {
+            modelContext.insert(CategoryPreferenceRecord(from: CategoryPreference(
+                originName: UNCATEGORIZED_ORIGIN,
+                displayName: L10n.shoppingListUncategorized,
+                sortOrder: .greatestFiniteMagnitude,
+                enabled: true
+            )))
+            try? modelContext.save()
+        }
     }
 
     private var expiringSoonDays: Int { SettingsStore.shared.settings.expiringSoonDays }
@@ -258,7 +275,12 @@ public class NativePantryViewModel: ObservableObject {
     public var filteredItems: [PantryItem] {
         items.filter { item in
             let matchesLocation = selectedLocation == nil || item.storageLocation == selectedLocation
-            let matchesCategory = selectedCategory == nil || item.category == selectedCategory
+            
+            // Category filter. Filter by the resolved display name, so that multiple origins
+            // renamed to the same name (or disabled categories folding into "Other") are
+            // treated as a single selectable group.
+            let itemDisplay = resolveCategoryDisplayName(item.category, categoryPreferences)
+            let matchesCategory = selectedCategory == nil || itemDisplay == selectedCategory
 
             let matchesStatus: Bool
             switch selectedFilter {
@@ -284,11 +306,20 @@ public class NativePantryViewModel: ObservableObject {
     /// settings list (unlike storage locations) but filtered/ordered per the user's category
     /// preferences (see `CategorySettingsView`) rather than shown alphabetically.
     public var availableCategories: [String] {
-        Array(Set(items.compactMap { $0.category }))
-            .filter { resolveCategoryDisplayName($0, categoryPreferences) != nil }
+        let displays = items.map { resolveCategoryDisplayName($0.category, categoryPreferences) }
+            .compactMap { $0 }
+        
+        return Array(Set(displays))
             .sorted { lhs, rhs in
-                let lhsOrder = categoryPreferenceSortOrder(lhs, categoryPreferences)
-                let rhsOrder = categoryPreferenceSortOrder(rhs, categoryPreferences)
+                let lhsOrder = categoryPreferences
+                    .filter { $0.displayName == lhs && $0.enabled }
+                    .map { $0.sortOrder }
+                    .min() ?? .greatestFiniteMagnitude
+                let rhsOrder = categoryPreferences
+                    .filter { $0.displayName == rhs && $0.enabled }
+                    .map { $0.sortOrder }
+                    .min() ?? .greatestFiniteMagnitude
+                
                 if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
                 return lhs < rhs
             }
@@ -717,9 +748,21 @@ public class NativePantryViewModel: ObservableObject {
     public func renameCategory(_ originName: String, newDisplayName: String) {
         let trimmed = newDisplayName.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
+        
         let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == originName })
-        guard let existing = try? modelContext.fetch(descriptor).first else { return }
-        existing.displayName = trimmed
+        guard let current = try? modelContext.fetch(descriptor).first else { return }
+        
+        // If we're renaming to an existing display name, sync the enabled state and sort order
+        // to effectively "merge" them in the UI.
+        let existingDescriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.displayName == trimmed })
+        let existing = try? modelContext.fetch(existingDescriptor).first
+        
+        current.displayName = trimmed
+        if let existing {
+            current.enabled = existing.enabled
+            current.sortOrder = existing.sortOrder
+        }
+        
         try? modelContext.save()
         loadCategoryPreferences()
     }
@@ -729,8 +772,17 @@ public class NativePantryViewModel: ObservableObject {
     /// that have it simply show as uncategorized, per `resolveCategoryDisplayName`.
     public func setCategoryEnabled(_ originName: String, enabled: Bool) {
         let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == originName })
-        guard let existing = try? modelContext.fetch(descriptor).first else { return }
-        existing.enabled = enabled
+        guard let target = try? modelContext.fetch(descriptor).first else { return }
+        
+        // Sync all origins sharing this display name so they enable/disable as a unit
+        let displayName = target.displayName
+        let allDescriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.displayName == displayName })
+        if let all = try? modelContext.fetch(allDescriptor) {
+            for record in all {
+                record.enabled = enabled
+            }
+        }
+        
         try? modelContext.save()
         loadCategoryPreferences()
     }
@@ -772,7 +824,15 @@ public class NativePantryViewModel: ObservableObject {
             newSortOrder = moved.sortOrder
         }
 
-        moved.sortOrder = newSortOrder
+        // Sync all origins sharing this display name so they reorder as a unit
+        let displayName = moved.displayName
+        let allDescriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.displayName == displayName })
+        if let all = try? modelContext.fetch(allDescriptor) {
+            for record in all {
+                record.sortOrder = newSortOrder
+            }
+        }
+        
         try? modelContext.save()
         loadCategoryPreferences()
     }

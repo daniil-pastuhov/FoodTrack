@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foodtracker.android.R
@@ -81,7 +82,9 @@ private val WIDE_LAYOUT_BREAKPOINT = 600.dp
 @Composable
 fun CalendarScreen(
     stateHolder: PantryStateHolder,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // See PantryDashboardScreen's parameter of the same name.
+    bottomOverlayClearance: Dp = 160.dp
 ) {
     val state by stateHolder.uiState.collectAsState()
     val today = remember { DateUtils.today() }
@@ -147,6 +150,7 @@ fun CalendarScreen(
                             items = grouped[selectedDay].orEmpty(),
                             today = today,
                             expiringSoonDays = state.settings.expiringSoonDays,
+                            bottomOverlayClearance = bottomOverlayClearance,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
@@ -171,6 +175,7 @@ fun CalendarScreen(
                             items = grouped[selectedDay].orEmpty(),
                             today = today,
                             expiringSoonDays = state.settings.expiringSoonDays,
+                            bottomOverlayClearance = bottomOverlayClearance,
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth()
@@ -306,7 +311,8 @@ private fun DayDetailSection(
     items: List<PantryItem>,
     today: LocalDate,
     expiringSoonDays: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    bottomOverlayClearance: Dp = 160.dp
 ) {
     Column(modifier = modifier) {
         Text(
@@ -327,7 +333,7 @@ private fun DayDetailSection(
             // overlay this screen (see MainActivity).
             LazyColumn(
                 modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(bottom = 140.dp)
+                contentPadding = PaddingValues(bottom = bottomOverlayClearance)
             ) {
                 items(items, key = { it.id }) { item ->
                     DayDetailRow(item = item, today = today, expiringSoonDays = expiringSoonDays)

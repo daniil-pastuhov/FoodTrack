@@ -1,6 +1,7 @@
 package com.foodtracker.android.di
 
 import androidx.room.Room
+import com.foodtracker.android.R
 import com.foodtracker.android.data.local.FoodTrackerDatabase
 import com.foodtracker.android.data.local.RoomCategoryPreferenceRepository
 import com.foodtracker.android.data.local.RoomLocalProductRepository
@@ -57,6 +58,7 @@ val appModule = module {
             productNameRepository = get(),
             localProductRepository = get(),
             categoryPreferenceRepository = get(),
+            uncategorizedLabel = androidContext().getString(R.string.shopping_list_uncategorized),
             openFoodFactsApi = get()
         )
     }

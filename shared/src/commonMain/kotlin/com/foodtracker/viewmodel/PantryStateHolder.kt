@@ -7,6 +7,9 @@ import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.SortOption
+import com.foodtracker.model.UNCATEGORIZED_ORIGIN
+import com.foodtracker.model.resolveCategoryDisplayName
+import com.foodtracker.model.resolveCategoryOrigin
 import com.foodtracker.parser.GS1BarcodeParser
 import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
@@ -73,6 +76,10 @@ class PantryStateHolder(
     private val productNameRepository: ProductNameRepository,
     private val localProductRepository: LocalProductRepository,
     private val categoryPreferenceRepository: CategoryPreferenceRepository,
+    /** Localized label for the "Other" bucket (see [UNCATEGORIZED_ORIGIN]) - seeded as that
+     *  sentinel category's initial display name the first time it's registered, so it reads
+     *  correctly in the device's language rather than a hardcoded English default. */
+    private val uncategorizedLabel: String,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
@@ -84,6 +91,9 @@ class PantryStateHolder(
         observeShoppingList()
         observeKnownProductNames()
         observeCategoryPreferences()
+        coroutineScope.launch {
+            categoryPreferenceRepository.registerIfAbsent(UNCATEGORIZED_ORIGIN, Double.MAX_VALUE, uncategorizedLabel)
+        }
     }
 
     private fun observeItems() {
@@ -93,6 +103,7 @@ class PantryStateHolder(
                 _uiState.update { current ->
                     val today = DateUtils.today()
                     val expiringSoonDays = current.settings.expiringSoonDays
+                    val prefs = current.categoryPreferences
 
                     val expiredCount = allItems.count { it.daysRemaining(today) < 0 }
                     val expiringSoonCount = allItems.count { it.daysRemaining(today) in 0..expiringSoonDays }
@@ -106,7 +117,8 @@ class PantryStateHolder(
                         current.searchQuery,
                         today,
                         expiringSoonDays,
-                        current.settings.sortOption
+                        current.settings.sortOption,
+                        prefs
                     )
 
                     current.copy(
@@ -170,14 +182,18 @@ class PantryStateHolder(
         query: String,
         today: LocalDate,
         expiringSoonDays: Int,
-        sortOption: SortOption
+        sortOption: SortOption,
+        preferences: List<CategoryPreference>
     ): List<PantryItem> {
         return items.filter { item ->
             // Location filter
             val matchesLoc = location == null || item.storageLocation == location
 
-            // Category filter
-            val matchesCategory = category == null || item.category == category
+            // Category filter. Filter by the resolved display name, so that multiple origins
+            // renamed to the same name (or disabled categories folding into "Other") are
+            // treated as a single selectable group.
+            val itemDisplay = resolveCategoryDisplayName(item.category, preferences)
+            val matchesCategory = category == null || itemDisplay == category
 
             // Status filter
             val matchesStatus = when (filter) {
@@ -225,7 +241,8 @@ class PantryStateHolder(
                     query,
                     today,
                     current.settings.expiringSoonDays,
-                    current.settings.sortOption
+                    current.settings.sortOption,
+                    current.categoryPreferences
                 )
             )
         }
@@ -244,7 +261,8 @@ class PantryStateHolder(
                     current.searchQuery,
                     today,
                     current.settings.expiringSoonDays,
-                    current.settings.sortOption
+                    current.settings.sortOption,
+                    current.categoryPreferences
                 )
             )
         }
@@ -263,7 +281,8 @@ class PantryStateHolder(
                     current.searchQuery,
                     today,
                     current.settings.expiringSoonDays,
-                    current.settings.sortOption
+                    current.settings.sortOption,
+                    current.categoryPreferences
                 )
             )
         }
@@ -282,7 +301,8 @@ class PantryStateHolder(
                     current.searchQuery,
                     today,
                     current.settings.expiringSoonDays,
-                    current.settings.sortOption
+                    current.settings.sortOption,
+                    current.categoryPreferences
                 )
             )
         }
@@ -297,6 +317,7 @@ class PantryStateHolder(
         _uiState.update { current ->
             val today = DateUtils.today()
             val expiringSoonDays = newSettings.expiringSoonDays
+            val prefs = current.categoryPreferences
 
             current.copy(
                 settings = newSettings,
@@ -311,7 +332,8 @@ class PantryStateHolder(
                     current.searchQuery,
                     today,
                     expiringSoonDays,
-                    newSettings.sortOption
+                    newSettings.sortOption,
+                    prefs
                 )
             )
         }
@@ -359,18 +381,25 @@ class PantryStateHolder(
     }
 
     fun saveItem(item: PantryItem) {
+        // A freehand-typed category (rather than one carried over untouched from a scan) may
+        // match an existing category's renamed display name (e.g. typing "test" when origin
+        // "test2" was already renamed to display as "test") - reuse that origin instead of
+        // fragmenting into a second, duplicate category. See resolveCategoryOrigin.
+        val resolvedItem = item.copy(
+            category = resolveCategoryOrigin(item.category, _uiState.value.categoryPreferences)
+        )
         coroutineScope.launch {
-            val isNewItem = repository.getItem(item.id) == null
-            repository.saveItem(item)
-            recordProductName(item.name)
-            item.barcode?.let { barcode ->
+            val isNewItem = repository.getItem(resolvedItem.id) == null
+            repository.saveItem(resolvedItem)
+            recordProductName(resolvedItem.name)
+            resolvedItem.barcode?.let { barcode ->
                 localProductRepository.saveProduct(
                     ProductInfo(
                         barcode = barcode,
-                        name = item.name,
-                        brand = item.brand,
-                        imageUrl = item.imageUrl,
-                        category = item.category
+                        name = resolvedItem.name,
+                        brand = resolvedItem.brand,
+                        imageUrl = resolvedItem.imageUrl,
+                        category = resolvedItem.category
                     )
                 )
             }
@@ -378,8 +407,8 @@ class PantryStateHolder(
                 val scanEntryId = _uiState.value.scanningShoppingListEntryId
                 if (scanEntryId != null) {
                     shoppingListRepository.deleteEntry(scanEntryId)
-                } else if (item.barcode != null) {
-                    shoppingListRepository.findByBarcode(item.barcode)?.let { match ->
+                } else if (resolvedItem.barcode != null) {
+                    shoppingListRepository.findByBarcode(resolvedItem.barcode)?.let { match ->
                         shoppingListRepository.deleteEntry(match.id)
                     }
                 }
@@ -579,9 +608,21 @@ class PantryStateHolder(
     fun renameCategory(originName: String, newDisplayName: String) {
         val trimmed = newDisplayName.trim()
         if (trimmed.isBlank()) return
-        val current = _uiState.value.categoryPreferences.find { it.originName == originName } ?: return
+        val prefs = _uiState.value.categoryPreferences
+        val current = prefs.find { it.originName == originName } ?: return
+        
+        // If we're renaming to an existing display name, sync the enabled state and sort order
+        // to effectively "merge" them in the UI.
+        val existing = prefs.find { it.displayName.equals(trimmed, ignoreCase = true) }
+        
         coroutineScope.launch {
-            categoryPreferenceRepository.updateEntry(current.copy(displayName = trimmed))
+            categoryPreferenceRepository.updateEntry(
+                current.copy(
+                    displayName = trimmed,
+                    enabled = existing?.enabled ?: current.enabled,
+                    sortOrder = existing?.sortOrder ?: current.sortOrder
+                )
+            )
         }
     }
 
@@ -589,9 +630,13 @@ class PantryStateHolder(
      *  hidden everywhere (filter chips, item badges, shopping list group headers) - products
      *  that have it simply show as uncategorized, per [resolveCategoryDisplayName]. */
     fun setCategoryEnabled(originName: String, enabled: Boolean) {
-        val current = _uiState.value.categoryPreferences.find { it.originName == originName } ?: return
+        val prefs = _uiState.value.categoryPreferences
+        val target = prefs.find { it.originName == originName } ?: return
         coroutineScope.launch {
-            categoryPreferenceRepository.updateEntry(current.copy(enabled = enabled))
+            // Sync all origins sharing this display name so they enable/disable as a unit
+            prefs.filter { it.displayName == target.displayName }.forEach {
+                categoryPreferenceRepository.updateEntry(it.copy(enabled = enabled))
+            }
         }
     }
 
@@ -623,7 +668,10 @@ class PantryStateHolder(
             else -> moved.sortOrder
         }
         coroutineScope.launch {
-            categoryPreferenceRepository.updateEntry(moved.copy(sortOrder = newSortOrder))
+            // Sync all origins sharing this display name so they reorder as a unit
+            list.filter { it.displayName == moved.displayName }.forEach {
+                categoryPreferenceRepository.updateEntry(it.copy(sortOrder = newSortOrder))
+            }
         }
     }
 

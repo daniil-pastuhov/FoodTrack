@@ -455,6 +455,23 @@ class MainActivity : ComponentActivity() {
                                 // short — each tab reserves its own bottom content padding to
                                 // keep its last row reachable above the overlay.
                                 Box(modifier = Modifier.fillMaxSize()) {
+                                    // The FAB stack's bottom offset is derived from the pill's
+                                    // actually-measured height (rather than a hardcoded guess)
+                                    // so the two never overlap regardless of font scale/density.
+                                    var pillBarHeightPx by remember { mutableFloatStateOf(0f) }
+                                    var fabStackHeightPx by remember { mutableFloatStateOf(0f) }
+                                    val density = androidx.compose.ui.platform.LocalDensity.current
+                                    // Same measured pieces the FAB stack positions itself with,
+                                    // reused as each tab's own bottom content padding so its last
+                                    // row/card can scroll clear of the overlay without guessing a
+                                    // magic dp value that's wrong for every font scale/density
+                                    // (and was, before this: both too small to avoid overlap on a
+                                    // long list and too large as dead space on a short one).
+                                    // Home also has the FABs floating above the pill, so it needs
+                                    // extra clearance the other tabs (pill only) don't.
+                                    val pillClearance = with(density) { pillBarHeightPx.toDp() } + 16.dp
+                                    val homeClearance = pillClearance + 24.dp + with(density) { fabStackHeightPx.toDp() }
+
                                     AnimatedContent(
                                         targetState = currentScreen,
                                         transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
@@ -469,11 +486,15 @@ class MainActivity : ComponentActivity() {
                                                 onDeleteItem = onDeleteItemHandler,
                                                 onDecrementQuantity = onDecrementQuantityHandler,
                                                 onMoveToShoppingList = onMoveToShoppingListHandler,
-                                                gridState = dashboardGridState
+                                                gridState = dashboardGridState,
+                                                bottomOverlayClearance = homeClearance
                                             )
                                         }
                                         AppScreen.CALENDAR -> {
-                                            CalendarScreen(stateHolder = stateHolder)
+                                            CalendarScreen(
+                                                stateHolder = stateHolder,
+                                                bottomOverlayClearance = pillClearance
+                                            )
                                         }
                                         AppScreen.SHOPPING_LIST -> {
                                             ShoppingListScreen(
@@ -482,7 +503,8 @@ class MainActivity : ComponentActivity() {
                                                 onScanNewEntry = onScanNewShoppingListEntry,
                                                 onAddEntryManually = onAddShoppingListEntryManually,
                                                 onCheckOffEntry = onCheckOffShoppingListEntryHandler,
-                                                onDecrementEntry = onDecrementShoppingListQuantityHandler
+                                                onDecrementEntry = onDecrementShoppingListQuantityHandler,
+                                                bottomOverlayClearance = pillClearance
                                             )
                                         }
                                         AppScreen.SETTINGS -> {
@@ -516,12 +538,6 @@ class MainActivity : ComponentActivity() {
                                     }
                                     }
 
-                                    // The FAB stack's bottom offset is derived from the pill's
-                                    // actually-measured height (rather than a hardcoded guess)
-                                    // so the two never overlap regardless of font scale/density.
-                                    var pillBarHeightPx by remember { mutableFloatStateOf(0f) }
-                                    val density = androidx.compose.ui.platform.LocalDensity.current
-
                                     Box(
                                         modifier = Modifier
                                             .align(Alignment.BottomCenter)
@@ -551,10 +567,12 @@ class MainActivity : ComponentActivity() {
                                         ScanAndAddFabs(
                                             onScan = onNavigateToScannerGlobal,
                                             onAdd = { onNavigateToAddEdit(null) },
-                                            modifier = Modifier.padding(
-                                                end = 16.dp,
-                                                bottom = with(density) { pillBarHeightPx.toDp() } + 24.dp
-                                            )
+                                            modifier = Modifier
+                                                .padding(
+                                                    end = 16.dp,
+                                                    bottom = with(density) { pillBarHeightPx.toDp() } + 24.dp
+                                                )
+                                                .onGloballyPositioned { fabStackHeightPx = it.size.height.toFloat() }
                                         )
                                     }
                                 }
