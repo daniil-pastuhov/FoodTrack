@@ -24,6 +24,8 @@
 "empty_state_subtitle" = "Scan a barcode or tap 'Add to Pantry' to track groceries.";
 
 "swipe_delete" = "Delete";
+"item_removed_toast_format" = "%@ removed";
+"undo_action" = "Undo";
 
 "selection_count_format" = "%d selected";
 "exit_selection_button" = "Cancel";

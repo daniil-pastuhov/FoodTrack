@@ -24,6 +24,8 @@
 "empty_state_subtitle" = "Skann en strekkode eller trykk på «Legg til i matskapet» for å registrere varer.";
 
 "swipe_delete" = "Slett";
+"item_removed_toast_format" = "%@ fjernet";
+"undo_action" = "Angre";
 
 "selection_count_format" = "%d valgt";
 "exit_selection_button" = "Avbryt";

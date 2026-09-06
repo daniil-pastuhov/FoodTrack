@@ -29,6 +29,11 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,7 +50,9 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import com.foodtracker.android.R
 import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CalendarScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
@@ -63,6 +71,7 @@ import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import org.koin.android.ext.android.inject
 
@@ -268,13 +277,34 @@ class MainActivity : ComponentActivity() {
                             BottomNavTab.SETTINGS -> AppScreen.SETTINGS
                         }
                     }
+                    // Snackbar offering to reverse a pantry removal — either a full delete or
+                    // a "-" tap that used up the last unit — since both are otherwise a single
+                    // tap that's easy to trigger by mistake.
+                    val snackbarHostState = remember { SnackbarHostState() }
+                    val snackbarScope = rememberCoroutineScope()
+                    val showUndoRemovalSnackbar: (PantryItem) -> Unit = { removedItem ->
+                        snackbarScope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = this@MainActivity.getString(R.string.item_removed_snackbar, removedItem.name),
+                                actionLabel = this@MainActivity.getString(R.string.undo_action),
+                                duration = SnackbarDuration.Long
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                stateHolder.restoreItem(removedItem)
+                                com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, removedItem)
+                            }
+                        }
+                    }
                     val onDeleteItemHandler: (String) -> Unit = { id ->
-                        com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, id)
-                        stateHolder.deleteItem(id)
+                        stateHolder.deleteItem(id) { removedItem ->
+                            com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
+                            showUndoRemovalSnackbar(removedItem)
+                        }
                     }
                     val onDecrementQuantityHandler: (String) -> Unit = { id ->
-                        stateHolder.decrementQuantity(id) {
-                            com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, id)
+                        stateHolder.decrementQuantity(id) { removedItem ->
+                            com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
+                            showUndoRemovalSnackbar(removedItem)
                         }
                     }
 
@@ -571,6 +601,19 @@ class MainActivity : ComponentActivity() {
                                     currentScreen = AppScreen.ADD_EDIT
                                 },
                                 onDismiss = { pendingShoppingListMatch = null }
+                            )
+                        }
+
+                        SnackbarHost(
+                            hostState = snackbarHostState,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .navigationBarsPadding()
+                                .padding(bottom = 88.dp)
+                        ) { data ->
+                            Snackbar(
+                                snackbarData = data,
+                                actionColor = MaterialTheme.colorScheme.primary
                             )
                         }
                     }

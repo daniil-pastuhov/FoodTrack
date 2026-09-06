@@ -12,6 +12,11 @@ public struct PantryDashboardView: View {
     /// downward scroll that scrolls the metrics row out of view, and bring them back on the
     /// way up — matching the large-title's own native collapse behavior.
     var onScrollingDownChanged: (Bool) -> Void
+    /// Fires with the removed item whenever the "-" button or swipe-to-delete fully removes
+    /// it from the pantry, so the root can offer it back through an undo toast — hosted at
+    /// the root (rather than here) so it renders above the floating nav bar/scan buttons that
+    /// overlay this screen, instead of underneath them.
+    var onItemRemoved: (PantryItem) -> Void
     @State private var showFilters: Bool = false
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
@@ -24,11 +29,13 @@ public struct PantryDashboardView: View {
     public init(
         viewModel: NativePantryViewModel,
         onEditItem: @escaping (PantryItem) -> Void,
-        onScrollingDownChanged: @escaping (Bool) -> Void = { _ in }
+        onScrollingDownChanged: @escaping (Bool) -> Void = { _ in },
+        onItemRemoved: @escaping (PantryItem) -> Void = { _ in }
     ) {
         self.viewModel = viewModel
         self.onEditItem = onEditItem
         self.onScrollingDownChanged = onScrollingDownChanged
+        self.onItemRemoved = onItemRemoved
     }
 
     public var body: some View {
@@ -109,7 +116,9 @@ public struct PantryDashboardView: View {
                             ItemRowView(
                                 item: item,
                                 expiringSoonDays: settingsStore.settings.expiringSoonDays,
-                                onDecrement: isSelecting ? nil : { viewModel.decrementQuantity(item.id) }
+                                onDecrement: isSelecting ? nil : {
+                                    viewModel.decrementQuantity(item.id, onItemRemoved: onItemRemoved)
+                                }
                             )
                         }
                         .contentShape(Rectangle())
@@ -130,7 +139,7 @@ public struct PantryDashboardView: View {
                         .swipeActions(edge: .trailing) {
                             if !isSelecting {
                                 Button(role: .destructive) {
-                                    viewModel.deleteItem(item.id)
+                                    viewModel.deleteItem(item.id, onItemRemoved: onItemRemoved)
                                 } label: {
                                     Label(L10n.swipeDelete, systemImage: "trash.fill")
                                 }

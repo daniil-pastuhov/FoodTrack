@@ -24,6 +24,8 @@
 "empty_state_subtitle" = "Отсканируйте штрихкод или нажмите «Добавить в кладовую», чтобы добавить продукты вручную.";
 
 "swipe_delete" = "Удалить";
+"item_removed_toast_format" = "%@ удалён";
+"undo_action" = "Отменить";
 
 "selection_count_format" = "Выбрано: %d";
 "exit_selection_button" = "Отмена";

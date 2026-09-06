@@ -83,6 +83,9 @@
     <string name="use_one_content_description">Bruk én</string>
     <string name="quantity_format">×%1$d</string>
 
+    <string name="item_removed_snackbar">%1$s fjernet</string>
+    <string name="undo_action">Angre</string>
+
     <string name="essential_item_label">Nødvendig vare</string>
     <string name="essential_item_description">Legges automatisk til handlelisten når varen fjernes fra matskapet</string>
 

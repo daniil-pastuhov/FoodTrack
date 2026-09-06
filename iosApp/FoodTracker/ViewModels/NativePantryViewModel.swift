@@ -330,7 +330,10 @@ public class NativePantryViewModel: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    public func deleteItem(_ id: String) {
+    /// `onItemRemoved` receives the deleted item's last known state, so callers can either
+    /// mirror side effects onto it (e.g. cancelling its scheduled notification) or hold onto
+    /// it to offer an undo (see `restoreItem`).
+    public func deleteItem(_ id: String, onItemRemoved: ((PantryItem) -> Void)? = nil) {
         let deletedItem = items.first(where: { $0.id == id })
 
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
@@ -342,23 +345,55 @@ public class NativePantryViewModel: ObservableObject {
         IOSNotificationManager.shared.cancelNotification(for: id)
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
 
-        if let deletedItem, deletedItem.essential {
-            addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode, category: deletedItem.category)
+        if let deletedItem {
+            onItemRemoved?(deletedItem)
+            if deletedItem.essential {
+                addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode, category: deletedItem.category)
+            }
         }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
     /// Decrements one unit of an item; once the last unit is used it is removed the same way
     /// `deleteItem` removes a whole item (essential items get re-added to the shopping list).
-    public func decrementQuantity(_ id: String) {
+    /// `onItemRemoved` fires only when that full removal happens, receiving the item's state
+    /// just before removal (quantity 1), so callers can offer an undo (see `restoreItem`).
+    public func decrementQuantity(_ id: String, onItemRemoved: ((PantryItem) -> Void)? = nil) {
         guard let item = items.first(where: { $0.id == id }) else { return }
         if item.quantity <= 1 {
-            deleteItem(id)
+            deleteItem(id, onItemRemoved: onItemRemoved)
         } else {
             var updated = item
             updated.quantity -= 1
             saveItem(updated)
         }
+    }
+
+    /// Reverses a `deleteItem`/`decrementQuantity` removal by putting `item` straight back
+    /// (its id is preserved, so this is an upsert onto the same row rather than a new item).
+    /// If the removal had re-added it to the shopping list as an essential item, that entry
+    /// is removed again so the item isn't listed as both in the pantry and needed.
+    public func restoreItem(_ item: PantryItem) {
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == item.id })
+        if let existingRecord = try? modelContext.fetch(descriptor).first {
+            existingRecord.update(from: item)
+        } else {
+            modelContext.insert(PantryItemRecord(from: item))
+        }
+        try? modelContext.save()
+        loadItems()
+
+        if item.essential {
+            if let barcode = item.barcode {
+                removeShoppingListEntry(matchingBarcode: barcode)
+            } else {
+                removeShoppingListEntry(matchingName: item.name)
+            }
+        }
+
+        IOSNotificationManager.shared.scheduleNotification(for: item)
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     public func addManualShoppingListEntry(_ productName: String) {
@@ -407,6 +442,18 @@ public class NativePantryViewModel: ObservableObject {
     private func removeShoppingListEntry(matchingBarcode barcode: String) {
         let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.barcode == barcode })
         if let existing = try? modelContext.fetch(descriptor).first {
+            modelContext.delete(existing)
+            try? modelContext.save()
+            loadShoppingList()
+        }
+    }
+
+    private func removeShoppingListEntry(matchingName name: String) {
+        let normalizedName = name.trimmingCharacters(in: .whitespaces).lowercased()
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>()
+        if let existing = ((try? modelContext.fetch(descriptor)) ?? []).first(where: {
+            $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == normalizedName
+        }) {
             modelContext.delete(existing)
             try? modelContext.save()
             loadShoppingList()

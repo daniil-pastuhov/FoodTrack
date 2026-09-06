@@ -83,6 +83,9 @@
     <string name="use_one_content_description">Использовать одну штуку</string>
     <string name="quantity_format">×%1$d</string>
 
+    <string name="item_removed_snackbar">%1$s удалён</string>
+    <string name="undo_action">Отменить</string>
+
     <string name="essential_item_label">Обязательный продукт</string>
     <string name="essential_item_description">Автоматически добавляется в список покупок при удалении из кладовой</string>
 

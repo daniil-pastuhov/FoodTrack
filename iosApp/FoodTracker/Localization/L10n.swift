@@ -27,6 +27,10 @@ public enum L10n {
     public static var emptyStateSubtitle: String { NSLocalizedString("empty_state_subtitle", comment: "") }
 
     public static var swipeDelete: String { NSLocalizedString("swipe_delete", comment: "") }
+    public static func itemRemovedToast(_ name: String) -> String {
+        String(format: NSLocalizedString("item_removed_toast_format", comment: ""), name)
+    }
+    public static var undoAction: String { NSLocalizedString("undo_action", comment: "") }
 
     public static var exitSelectionButton: String { NSLocalizedString("exit_selection_button", comment: "") }
     public static var selectItemsButton: String { NSLocalizedString("select_items_button", comment: "") }

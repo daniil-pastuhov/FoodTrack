@@ -88,6 +88,9 @@
     <string name="use_one_content_description">Use one</string>
     <string name="quantity_format">×%1$d</string>
 
+    <string name="item_removed_snackbar">%1$s removed</string>
+    <string name="undo_action">Undo</string>
+
     <string name="essential_item_label">Essential item</string>
     <string name="essential_item_description">Automatically add to your shopping list when removed from the pantry</string>
 

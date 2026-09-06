@@ -19,6 +19,12 @@ struct RootTabView: View {
     @State private var prefillImageUrl: String? = nil
     @State private var prefillDate: Date? = nil
     @State private var prefillCategory: String? = nil
+    /// The most recently removed item (via the dashboard's "-" button or swipe-to-delete),
+    /// offered back through an undo toast since either is a single tap/swipe that's easy to
+    /// trigger by mistake. Hosted here — rather than inside `PantryDashboardView` — so it
+    /// renders above the floating pill nav bar and scan/add buttons below, instead of
+    /// underneath them. Cleared automatically after a few seconds by the `.task(id:)` below.
+    @State private var undoItem: PantryItem? = nil
 
     var body: some View {
         // Full-size, edge-to-edge tab content with the pill nav bar and (Home-only) scan/add
@@ -33,7 +39,8 @@ struct RootTabView: View {
                     PantryDashboardView(
                         viewModel: viewModel,
                         onEditItem: { presentAddEdit(editing: $0) },
-                        onScrollingDownChanged: { isDashboardScrollingDown = $0 }
+                        onScrollingDownChanged: { isDashboardScrollingDown = $0 },
+                        onItemRemoved: { removed in withAnimation { undoItem = removed } }
                     )
                     .transition(.opacity)
                 case .calendar:
@@ -69,9 +76,28 @@ struct RootTabView: View {
                 }
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+
+            // Last in the ZStack (topmost), so it renders above the pill nav bar and the
+            // scan/add buttons above it rather than underneath them.
+            if let undoItem {
+                UndoToastView(itemName: undoItem.name) {
+                    viewModel.restoreItem(undoItem)
+                    self.undoItem = nil
+                }
+                .padding(.bottom, 200)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab == .home)
         .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
+        .animation(.easeInOut(duration: 0.25), value: undoItem?.id)
+        .task(id: undoItem?.id) {
+            guard undoItem != nil else { return }
+            try? await Task.sleep(for: .seconds(4))
+            if !Task.isCancelled {
+                withAnimation { undoItem = nil }
+            }
+        }
         .sheet(isPresented: $showScanner) {
             ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category in
                 editingItem = nil
@@ -117,5 +143,32 @@ struct RootTabView: View {
         prefillDate = nil
         prefillCategory = nil
         showAddEdit = true
+    }
+}
+
+private struct UndoToastView: View {
+    let itemName: String
+    let onUndo: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(L10n.itemRemovedToast(itemName))
+                .font(.subheadline)
+                .foregroundColor(.white)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Button(action: onUndo) {
+                Text(L10n.undoAction)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.accentColor)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.15)))
+        .padding(.horizontal, 16)
+        .shadow(radius: 6)
     }
 }
