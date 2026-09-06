@@ -102,16 +102,22 @@ struct ShoppingListView: View {
                         ForEach(groupedEntries, id: \.category) { group in
                             Section(header: Text(group.category ?? L10n.shoppingListUncategorized)) {
                                 ForEach(group.entries) { entry in
-                                    HStack {
-                                        // No .onDelete is attached, so this is only insurance
-                                        // against a stray delete affordance while edit mode is
-                                        // forced active below (for the reorder handle).
-                                        VStack(alignment: .leading, spacing: 2) {
+                                    HStack(spacing: 14) {
+                                        // Decorative affordance only: the row itself is
+                                        // reorderable by long-press-and-drag via .onMove below.
+                                        // The system's own grabber is not used because it needs
+                                        // edit mode, and edit mode suppresses .swipeActions.
+                                        Image(systemName: "line.3.horizontal")
+                                            .font(.title3)
+                                            .foregroundColor(.secondary)
+                                            .accessibilityHidden(true)
+
+                                        VStack(alignment: .leading, spacing: 4) {
                                             Text(entry.productName)
-                                                .font(.body)
+                                                .font(.title3)
                                             if let barcode = entry.barcode {
                                                 Text(barcode)
-                                                    .font(.caption)
+                                                    .font(.subheadline)
                                                     .foregroundColor(.secondary)
                                             }
                                         }
@@ -123,26 +129,36 @@ struct ShoppingListView: View {
                                             showScanner = true
                                         } label: {
                                             Image(systemName: "barcode.viewfinder")
+                                                .font(.title2)
                                         }
                                         .buttonStyle(.plain)
                                         .accessibilityLabel(L10n.shoppingListScan)
                                         Button {
-                                            viewModel.decrementShoppingListQuantity(entry.id)
+                                            if entry.quantity <= 1 {
+                                                viewModel.deleteShoppingListEntry(entry.id)
+                                            } else {
+                                                viewModel.decrementShoppingListQuantity(entry.id)
+                                            }
                                         } label: {
                                             Image(systemName: "minus.circle")
+                                                .font(.title2)
                                         }
                                         .buttonStyle(.plain)
                                         Text("\(entry.quantity)")
-                                            .frame(minWidth: 16)
+                                            .font(.title3)
+                                            .frame(minWidth: 24)
                                             .contentTransition(.numericText())
                                             .animation(.easeInOut(duration: 0.2), value: entry.quantity)
                                         Button {
                                             viewModel.incrementShoppingListQuantity(entry.id)
                                         } label: {
                                             Image(systemName: "plus.circle")
+                                                .font(.title2)
                                         }
                                         .buttonStyle(.plain)
                                     }
+                                    .padding(.vertical, 10)
+                                    .contentShape(Rectangle())
                                     .swipeActions(edge: .trailing) {
                                         Button(role: .destructive) {
                                             viewModel.deleteShoppingListEntry(entry.id)
@@ -150,6 +166,9 @@ struct ShoppingListView: View {
                                             Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
                                         }
                                     }
+                                    // No .onDelete is attached, so this is only insurance
+                                    // against a stray delete affordance appearing alongside
+                                    // the reorder support added by .onMove.
                                     .deleteDisabled(true)
                                 }
                                 .onMove { from, to in
@@ -166,7 +185,6 @@ struct ShoppingListView: View {
                         }
                     }
                     .listStyle(.plain)
-                    .environment(\.editMode, .constant(.active))
                     .animation(.default, value: viewModel.shoppingList)
                     .transition(.opacity)
                 }
