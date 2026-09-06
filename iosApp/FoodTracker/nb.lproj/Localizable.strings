@@ -24,13 +24,16 @@
 "empty_state_subtitle" = "Skann en strekkode eller trykk på «Legg til i matskapet» for å registrere varer.";
 
 "swipe_delete" = "Slett";
+"swipe_add_to_shopping_list" = "Til handleliste";
 "item_removed_toast_format" = "%@ fjernet";
+"item_added_to_shopping_list_toast_format" = "%@ lagt til på handlelisten";
 "undo_action" = "Angre";
 
 "selection_count_format" = "%d valgt";
 "exit_selection_button" = "Avbryt";
 "select_items_button" = "Velg";
 "more_options_button" = "Mer";
+"delete_selected_dialog_title" = "Slette valgte varer?";
 "action_get_recipe_ideas" = "Få oppskriftsforslag";
 "recipe_prompt_intro" = "Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:";
 "recipe_prompt_item_format" = "%@ (%@)";

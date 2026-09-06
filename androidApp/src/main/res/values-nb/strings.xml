@@ -84,6 +84,7 @@
     <string name="quantity_format">×%1$d</string>
 
     <string name="item_removed_snackbar">%1$s fjernet</string>
+    <string name="item_added_to_shopping_list_snackbar">%1$s lagt til på handlelisten</string>
     <string name="undo_action">Angre</string>
 
     <string name="essential_item_label">Nødvendig vare</string>
@@ -106,6 +107,7 @@
     <string name="selection_count_format">%1$d valgt</string>
     <string name="exit_selection_content_description">Avslutt utvalg</string>
     <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>
+    <string name="delete_selected_dialog_title">Slette valgte varer?</string>
     <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:</string>

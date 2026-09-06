@@ -41,10 +41,14 @@ struct RootTabView: View {
                         viewModel: viewModel,
                         onEditItem: { presentAddEdit(editing: $0) },
                         onScrollingDownChanged: { isDashboardScrollingDown = $0 },
-                        onItemRemoved: { removed in
+                        onItemRemoved: { removed, removedFromShoppingList in
                             withAnimation {
-                                pendingUndo = PendingUndo(id: removed.id, itemName: removed.name) {
-                                    viewModel.restoreItem(removed)
+                                pendingUndo = PendingUndo(
+                                    id: removed.id,
+                                    itemName: removed.name,
+                                    addedToShoppingList: removedFromShoppingList
+                                ) {
+                                    viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
                                 }
                             }
                         }
@@ -58,7 +62,11 @@ struct RootTabView: View {
                         viewModel: viewModel,
                         onItemRemoved: { removed in
                             withAnimation {
-                                pendingUndo = PendingUndo(id: removed.id, itemName: removed.productName) {
+                                pendingUndo = PendingUndo(
+                                    id: removed.id,
+                                    itemName: removed.productName,
+                                    addedToShoppingList: false
+                                ) {
                                     viewModel.restoreShoppingListEntry(removed)
                                 }
                             }
@@ -96,7 +104,7 @@ struct RootTabView: View {
             // Last in the ZStack (topmost), so it renders above the pill nav bar and the
             // scan/add buttons above it rather than underneath them.
             if let pendingUndo {
-                UndoToastView(itemName: pendingUndo.itemName) {
+                UndoToastView(itemName: pendingUndo.itemName, addedToShoppingList: pendingUndo.addedToShoppingList) {
                     pendingUndo.restore()
                     self.pendingUndo = nil
                 }
@@ -165,20 +173,24 @@ struct RootTabView: View {
 /// A pending undo offer, generic over what was removed (a `PantryItem` or a
 /// `ShoppingListEntry`) so `RootTabView` can host one toast for both. `id` identifies the
 /// specific removal (for `.task(id:)`'s auto-dismiss timer), `itemName` is what the toast
-/// displays, and `restore` puts the removed thing back when the user taps Undo.
+/// displays, `addedToShoppingList` picks which toast message to show (it left the pantry for
+/// the shopping list, not just "removed"), and `restore` puts the removed thing back when the
+/// user taps Undo.
 private struct PendingUndo {
     let id: String
     let itemName: String
+    let addedToShoppingList: Bool
     let restore: () -> Void
 }
 
 private struct UndoToastView: View {
     let itemName: String
+    let addedToShoppingList: Bool
     let onUndo: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(L10n.itemRemovedToast(itemName))
+            Text(addedToShoppingList ? L10n.itemAddedToShoppingListToast(itemName) : L10n.itemRemovedToast(itemName))
                 .font(.subheadline)
                 .foregroundColor(.white)
                 .lineLimit(1)

@@ -356,7 +356,9 @@ class PantryStateHolder(
         }
     }
 
-    /** [onItemRemoved] receives the deleted item's last known state, so callers can either
+    /** A plain delete: removes the item outright and never touches the shopping list, even for
+     *  an essential item — only [decrementQuantity] running an item down to zero does that.
+     *  [onItemRemoved] receives the deleted item's last known state, so callers can either
      *  mirror side effects onto it (e.g. cancelling its scheduled notification) or hold onto
      *  it to offer an undo (see [restoreItem]). */
     fun deleteItem(id: String, onItemRemoved: (PantryItem) -> Unit = {}) {
@@ -365,15 +367,13 @@ class PantryStateHolder(
             repository.deleteItem(id)
             if (item != null) {
                 onItemRemoved(item)
-                if (item.essential) {
-                    addToShoppingListIfAbsent(item.name, item.barcode, item.category)
-                }
             }
         }
     }
 
     /** Decrements one unit of an item; once the last unit is used it is removed the same way
-     *  [deleteItem] removes a whole item (essential items get re-added to the shopping list).
+     *  [deleteItem] removes a whole item, except an essential item is also re-added to the
+     *  shopping list here (a plain [deleteItem] never does that).
      *  [onItemRemoved] fires only when that full removal happens, receiving the item's state
      *  just before removal (quantity 1), so callers that mirror side effects onto a removed
      *  item (e.g. cancelling its scheduled notification) know not to do so for a plain
@@ -395,12 +395,14 @@ class PantryStateHolder(
 
     /** Reverses a [deleteItem]/[decrementQuantity] removal by putting [item] straight back
      *  (its id is preserved, so this is an upsert onto the same row rather than a new item).
-     *  If the removal had re-added it to the shopping list as an essential item, that entry
-     *  is removed again so the item isn't listed as both in the pantry and needed. */
-    fun restoreItem(item: PantryItem) {
+     *  Pass [removedFromShoppingList] = true only when reversing a [decrementQuantity] full
+     *  removal that added a shopping-list entry for it (i.e. the removed item was essential),
+     *  so that entry is undone too; a plain [deleteItem] never added one, so leave it false
+     *  there. */
+    fun restoreItem(item: PantryItem, removedFromShoppingList: Boolean = false) {
         coroutineScope.launch {
             repository.saveItem(item)
-            if (item.essential) {
+            if (removedFromShoppingList) {
                 val entry = if (item.barcode != null) {
                     shoppingListRepository.findByBarcode(item.barcode)
                 } else {

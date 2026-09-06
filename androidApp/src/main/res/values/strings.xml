@@ -89,6 +89,7 @@
     <string name="quantity_format">×%1$d</string>
 
     <string name="item_removed_snackbar">%1$s removed</string>
+    <string name="item_added_to_shopping_list_snackbar">%1$s added to shopping list</string>
     <string name="undo_action">Undo</string>
 
     <string name="essential_item_label">Essential item</string>
@@ -112,6 +113,7 @@
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
     <string name="action_get_recipe_ideas">Get recipe ideas</string>
+    <string name="delete_selected_dialog_title">Delete selected items?</string>
     <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">I also have these other items at home, in case any of them are useful too:</string>

@@ -84,6 +84,7 @@
     <string name="quantity_format">×%1$d</string>
 
     <string name="item_removed_snackbar">%1$s удалён</string>
+    <string name="item_added_to_shopping_list_snackbar">%1$s добавлен в список покупок</string>
     <string name="undo_action">Отменить</string>
 
     <string name="essential_item_label">Обязательный продукт</string>
@@ -106,6 +107,7 @@
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
     <string name="action_get_recipe_ideas">Идеи рецептов</string>
+    <string name="delete_selected_dialog_title">Удалить выбранные продукты?</string>
     <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:</string>

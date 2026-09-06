@@ -12,15 +12,17 @@ public struct PantryDashboardView: View {
     /// downward scroll that scrolls the metrics row out of view, and bring them back on the
     /// way up — matching the large-title's own native collapse behavior.
     var onScrollingDownChanged: (Bool) -> Void
-    /// Fires with the removed item whenever the "-" button or swipe-to-delete fully removes
-    /// it from the pantry, so the root can offer it back through an undo toast — hosted at
-    /// the root (rather than here) so it renders above the floating nav bar/scan buttons that
-    /// overlay this screen, instead of underneath them.
-    var onItemRemoved: (PantryItem) -> Void
+    /// Fires with the removed item whenever the "-" button, swipe-to-delete, or the "move to
+    /// shopping list" swipe action fully removes it from the pantry, plus whether that removal
+    /// added a shopping-list entry for it, so the root can offer it back through an undo toast
+    /// that reverses both — hosted at the root (rather than here) so it renders above the
+    /// floating nav bar/scan buttons that overlay this screen, instead of underneath them.
+    var onItemRemoved: (PantryItem, Bool) -> Void
     @State private var showFilters: Bool = false
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
     @State private var showShareDialog: Bool = false
+    @State private var showDeleteSelectedDialog: Bool = false
     @State private var includeOtherItemsInShare: Bool = false
     @State private var shareAfterDialogDismiss: Bool = false
     @State private var showActivitySheet: Bool = false
@@ -30,7 +32,7 @@ public struct PantryDashboardView: View {
         viewModel: NativePantryViewModel,
         onEditItem: @escaping (PantryItem) -> Void,
         onScrollingDownChanged: @escaping (Bool) -> Void = { _ in },
-        onItemRemoved: @escaping (PantryItem) -> Void = { _ in }
+        onItemRemoved: @escaping (PantryItem, Bool) -> Void = { _, _ in }
     ) {
         self.viewModel = viewModel
         self.onEditItem = onEditItem
@@ -145,6 +147,16 @@ public struct PantryDashboardView: View {
                                 }
                             }
                         }
+                        .swipeActions(edge: .leading) {
+                            if !isSelecting {
+                                Button {
+                                    viewModel.moveToShoppingList(item.id, onItemRemoved: onItemRemoved)
+                                } label: {
+                                    Label(L10n.swipeAddToShoppingList, systemImage: "cart.badge.plus")
+                                }
+                                .tint(.blue)
+                            }
+                        }
                     }
                 }
             }
@@ -182,6 +194,13 @@ public struct PantryDashboardView: View {
                         }
                         .disabled(selectedItemIDs.isEmpty)
                         .accessibilityLabel(L10n.actionGetRecipeIdeas)
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(role: .destructive, action: { showDeleteSelectedDialog = true }) {
+                            Image(systemName: "trash")
+                        }
+                        .disabled(selectedItemIDs.isEmpty)
+                        .accessibilityLabel(L10n.swipeDelete)
                     }
                 } else {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -221,7 +240,28 @@ public struct PantryDashboardView: View {
             .sheet(isPresented: $showActivitySheet) {
                 ActivityView(activityItems: [shareText])
             }
+            .confirmationDialog(
+                L10n.deleteSelectedDialogTitle,
+                isPresented: $showDeleteSelectedDialog,
+                titleVisibility: .visible
+            ) {
+                Button(L10n.swipeDelete, role: .destructive) {
+                    deleteSelectedItems()
+                }
+                Button(L10n.cancelButton, role: .cancel) {}
+            }
         }
+    }
+
+    private func deleteSelectedItems() {
+        // Goes through the same `deleteItem` the row's own swipe-to-delete uses, so each
+        // removal still fires `onItemRemoved` for its usual undo toast — there's no separate
+        // bulk-undo, just one toast per item.
+        for id in selectedItemIDs {
+            viewModel.deleteItem(id, onItemRemoved: onItemRemoved)
+        }
+        selectedItemIDs = []
+        isSelecting = false
     }
 
     private func performShare() {

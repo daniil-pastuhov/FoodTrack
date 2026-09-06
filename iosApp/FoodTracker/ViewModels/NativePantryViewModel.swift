@@ -394,10 +394,55 @@ public class NativePantryViewModel: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// `onItemRemoved` receives the deleted item's last known state, so callers can either
-    /// mirror side effects onto it (e.g. cancelling its scheduled notification) or hold onto
-    /// it to offer an undo (see `restoreItem`).
-    public func deleteItem(_ id: String, onItemRemoved: ((PantryItem) -> Void)? = nil) {
+    /// A plain delete: removes the item outright and never touches the shopping list, even for
+    /// an essential item — only `decrementQuantity` and `moveToShoppingList` do that.
+    /// `onItemRemoved` receives the deleted item's last known state and whether the removal
+    /// added a shopping-list entry for it (always false here), so callers can mirror side
+    /// effects onto it (e.g. cancelling its scheduled notification) and offer an undo that
+    /// knows whether to reverse a shopping-list add (see `restoreItem`).
+    public func deleteItem(_ id: String, onItemRemoved: ((PantryItem, Bool) -> Void)? = nil) {
+        removeItemRecord(id) { removed in onItemRemoved?(removed, false) }
+    }
+
+    /// Decrements one unit of an item; once the last unit is used it is removed the same way
+    /// `deleteItem` removes a whole item, except an essential item is also re-added to the
+    /// shopping list here (a plain `deleteItem` never does that).
+    /// `onItemRemoved` fires only when that full removal happens, receiving the item's state
+    /// just before removal (quantity 1) and whether it was re-added to the shopping list, so
+    /// callers can offer an undo that reverses both (see `restoreItem`).
+    public func decrementQuantity(_ id: String, onItemRemoved: ((PantryItem, Bool) -> Void)? = nil) {
+        guard let item = items.first(where: { $0.id == id }) else { return }
+        if item.quantity <= 1 {
+            removeItemRecord(id) { removed in
+                if removed.essential {
+                    self.addShoppingListEntryIfAbsent(name: removed.name, barcode: removed.barcode, category: removed.category)
+                }
+                onItemRemoved?(removed, removed.essential)
+            }
+        } else {
+            var updated = item
+            updated.quantity -= 1
+            saveItem(updated)
+        }
+    }
+
+    /// Explicit "move to shopping list" action (the Home screen's leading swipe action): removes
+    /// the item from the pantry and adds it to the shopping list unconditionally, regardless of
+    /// its `essential` flag — unlike `decrementQuantity`, this is a deliberate user choice rather
+    /// than an automatic essential-item safeguard. `onItemRemoved` fires with `true` for the
+    /// shopping-list flag so an undo (see `restoreItem`) reverses both the pantry removal and
+    /// the shopping-list add.
+    public func moveToShoppingList(_ id: String, onItemRemoved: ((PantryItem, Bool) -> Void)? = nil) {
+        removeItemRecord(id) { removed in
+            self.addShoppingListEntryIfAbsent(name: removed.name, barcode: removed.barcode, category: removed.category)
+            onItemRemoved?(removed, true)
+        }
+    }
+
+    /// Shared removal core behind `deleteItem`, `decrementQuantity`'s last-unit case, and
+    /// `moveToShoppingList`: deletes the SwiftData record, cancels the item's notification, and
+    /// reloads widgets. Never touches the shopping list itself — callers decide that.
+    private func removeItemRecord(_ id: String, onItemRemoved: ((PantryItem) -> Void)? = nil) {
         let deletedItem = items.first(where: { $0.id == id })
 
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
@@ -411,33 +456,17 @@ public class NativePantryViewModel: ObservableObject {
 
         if let deletedItem {
             onItemRemoved?(deletedItem)
-            if deletedItem.essential {
-                addShoppingListEntryIfAbsent(name: deletedItem.name, barcode: deletedItem.barcode, category: deletedItem.category)
-            }
         }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    /// Decrements one unit of an item; once the last unit is used it is removed the same way
-    /// `deleteItem` removes a whole item (essential items get re-added to the shopping list).
-    /// `onItemRemoved` fires only when that full removal happens, receiving the item's state
-    /// just before removal (quantity 1), so callers can offer an undo (see `restoreItem`).
-    public func decrementQuantity(_ id: String, onItemRemoved: ((PantryItem) -> Void)? = nil) {
-        guard let item = items.first(where: { $0.id == id }) else { return }
-        if item.quantity <= 1 {
-            deleteItem(id, onItemRemoved: onItemRemoved)
-        } else {
-            var updated = item
-            updated.quantity -= 1
-            saveItem(updated)
-        }
-    }
-
-    /// Reverses a `deleteItem`/`decrementQuantity` removal by putting `item` straight back
-    /// (its id is preserved, so this is an upsert onto the same row rather than a new item).
-    /// If the removal had re-added it to the shopping list as an essential item, that entry
-    /// is removed again so the item isn't listed as both in the pantry and needed.
-    public func restoreItem(_ item: PantryItem) {
+    /// Reverses a `deleteItem`/`decrementQuantity`/`moveToShoppingList` removal by putting `item`
+    /// straight back (its id is preserved, so this is an upsert onto the same row rather than a
+    /// new item). Pass `removedFromShoppingList: true` whenever the removal being reversed added
+    /// a shopping-list entry for it (per the `Bool` each of those methods hands its
+    /// `onItemRemoved` callback), so that entry is removed again; a plain `deleteItem` never
+    /// added one, so leave it false there.
+    public func restoreItem(_ item: PantryItem, removedFromShoppingList: Bool = false) {
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == item.id })
         if let existingRecord = try? modelContext.fetch(descriptor).first {
             existingRecord.update(from: item)
@@ -447,7 +476,7 @@ public class NativePantryViewModel: ObservableObject {
         try? modelContext.save()
         loadItems()
 
-        if item.essential {
+        if removedFromShoppingList {
             if let barcode = item.barcode {
                 removeShoppingListEntry(matchingBarcode: barcode)
             } else {

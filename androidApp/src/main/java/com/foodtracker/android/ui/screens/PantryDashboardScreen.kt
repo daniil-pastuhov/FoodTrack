@@ -45,6 +45,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.RestaurantMenu
@@ -127,6 +128,7 @@ fun PantryDashboardScreen(
     val context = LocalContext.current
     var showFilterSheet by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
+    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
     var includeOtherItemsInShare by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     val selectionMode = selectedIds.isNotEmpty()
@@ -179,6 +181,14 @@ fun PantryDashboardScreen(
         context.startActivity(Intent.createChooser(sendIntent, null))
         selectedIds = emptySet()
         includeOtherItemsInShare = false
+    }
+
+    fun deleteSelectedItems() {
+        // Goes through the same onDeleteItem the row's own delete menu item uses, so each
+        // removal still gets its usual undo snackbar and shopping-list-for-essentials handling
+        // — there's no separate bulk-undo, just one snackbar per item.
+        selectedIds.forEach(onDeleteItem)
+        selectedIds = emptySet()
     }
 
     BackHandler(enabled = selectionMode) {
@@ -272,11 +282,19 @@ fun PantryDashboardScreen(
                                 label = "topBarActions"
                             ) { inSelectionMode ->
                                 if (inSelectionMode) {
-                                    IconButton(onClick = { showShareDialog = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.RestaurantMenu,
-                                            contentDescription = stringResource(R.string.action_get_recipe_ideas)
-                                        )
+                                    Row {
+                                        IconButton(onClick = { showShareDialog = true }) {
+                                            Icon(
+                                                imageVector = Icons.Default.RestaurantMenu,
+                                                contentDescription = stringResource(R.string.action_get_recipe_ideas)
+                                            )
+                                        }
+                                        IconButton(onClick = { showDeleteSelectedDialog = true }) {
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = stringResource(R.string.delete)
+                                            )
+                                        }
                                     }
                                 } else {
                                     Row {
@@ -465,6 +483,26 @@ fun PantryDashboardScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showShareDialog = false }) {
+                    Text(stringResource(R.string.share_recipe_cancel_button))
+                }
+            }
+        )
+    }
+
+    if (showDeleteSelectedDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteSelectedDialog = false },
+            title = { Text(stringResource(R.string.delete_selected_dialog_title)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteSelectedDialog = false
+                    deleteSelectedItems()
+                }) {
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteSelectedDialog = false }) {
                     Text(stringResource(R.string.share_recipe_cancel_button))
                 }
             }
