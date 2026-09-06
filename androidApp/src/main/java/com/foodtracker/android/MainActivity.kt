@@ -20,8 +20,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -458,19 +461,31 @@ class MainActivity : ComponentActivity() {
                                     // The FAB stack's bottom offset is derived from the pill's
                                     // actually-measured height (rather than a hardcoded guess)
                                     // so the two never overlap regardless of font scale/density.
-                                    var pillBarHeightPx by remember { mutableFloatStateOf(0f) }
+                                    // Measured directly on the pill/FAB composables themselves
+                                    // (not on a Box wrapping them with navigationBarsPadding/
+                                    // margin modifiers) so each value is exactly that element's
+                                    // own size, with no ambiguity about whether surrounding
+                                    // padding is folded in — that ambiguity previously caused the
+                                    // nav bar inset to be counted twice and left a large dead gap
+                                    // under Home's last row.
+                                    var pillHeightPx by remember { mutableFloatStateOf(0f) }
                                     var fabStackHeightPx by remember { mutableFloatStateOf(0f) }
                                     val density = androidx.compose.ui.platform.LocalDensity.current
-                                    // Same measured pieces the FAB stack positions itself with,
-                                    // reused as each tab's own bottom content padding so its last
-                                    // row/card can scroll clear of the overlay without guessing a
-                                    // magic dp value that's wrong for every font scale/density
-                                    // (and was, before this: both too small to avoid overlap on a
-                                    // long list and too large as dead space on a short one).
-                                    // Home also has the FABs floating above the pill, so it needs
-                                    // extra clearance the other tabs (pill only) don't.
-                                    val pillClearance = with(density) { pillBarHeightPx.toDp() } + 16.dp
-                                    val homeClearance = pillClearance + 24.dp + with(density) { fabStackHeightPx.toDp() }
+                                    val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                                    val pillHeight = with(density) { pillHeightPx.toDp() }
+                                    val fabStackHeight = with(density) { fabStackHeightPx.toDp() }
+                                    // Mirrors the pill's own visual placement (navigationBarsPadding
+                                    // + this same 12dp bottom margin, see the Box below) plus a small
+                                    // breathing-room buffer above it.
+                                    val pillMarginBottom = 12.dp
+                                    val bufferAboveOverlay = 16.dp
+                                    val pillClearance = navBarInset + pillMarginBottom + pillHeight + bufferAboveOverlay
+                                    // Home also has the FABs floating above the pill (see their own
+                                    // 24dp gap above it below), so it needs extra clearance the
+                                    // other tabs (pill only) don't.
+                                    val fabGapAbovePill = 24.dp
+                                    val homeClearance = navBarInset + pillMarginBottom + pillHeight +
+                                        fabGapAbovePill + fabStackHeight + bufferAboveOverlay
 
                                     AnimatedContent(
                                         targetState = currentScreen,
@@ -531,7 +546,8 @@ class MainActivity : ComponentActivity() {
                                                     stateHolder.clearAllData()
                                                     currentScreen = AppScreen.DASHBOARD
                                                 },
-                                                onManageCategories = { currentScreen = AppScreen.CATEGORY_SETTINGS }
+                                                onManageCategories = { currentScreen = AppScreen.CATEGORY_SETTINGS },
+                                                bottomOverlayClearance = pillClearance
                                             )
                                         }
                                         else -> Unit
@@ -543,21 +559,17 @@ class MainActivity : ComponentActivity() {
                                             .align(Alignment.BottomCenter)
                                             .fillMaxWidth()
                                             .navigationBarsPadding()
-                                            .padding(bottom = 12.dp)
-                                            .onGloballyPositioned { pillBarHeightPx = it.size.height.toFloat() },
+                                            .padding(bottom = 12.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         AppBottomBar(
                                             selectedTab = currentTab,
                                             onTabSelected = onTabSelected,
-                                            shoppingListCount = uiState.shoppingList.size
+                                            shoppingListCount = uiState.shoppingList.size,
+                                            modifier = Modifier.onGloballyPositioned { pillHeightPx = it.size.height.toFloat() }
                                         )
                                     }
-                                    // Scan/Add are only meaningful from the pantry list, so they
-                                    // only show on Home — collapsing away on the same downward
-                                    // scroll gesture that collapses the dashboard's own header,
-                                    // and floating out entirely when navigating to another tab.
-                                    val fabsVisible = currentTab == BottomNavTab.HOME && dashboardGridState.isScrollingUp()
+                                    val fabsVisible = currentTab == BottomNavTab.HOME
                                     AnimatedVisibility(
                                         visible = fabsVisible,
                                         enter = fadeIn() + slideInVertically { it / 2 },
@@ -570,7 +582,7 @@ class MainActivity : ComponentActivity() {
                                             modifier = Modifier
                                                 .padding(
                                                     end = 16.dp,
-                                                    bottom = with(density) { pillBarHeightPx.toDp() } + 24.dp
+                                                    bottom = navBarInset + pillMarginBottom + pillHeight + fabGapAbovePill
                                                 )
                                                 .onGloballyPositioned { fabStackHeightPx = it.size.height.toFloat() }
                                         )

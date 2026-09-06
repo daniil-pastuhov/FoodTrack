@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
@@ -69,7 +71,9 @@ fun SettingsScreen(
     onSave: (AppSettings) -> Unit,
     onClearAllData: () -> Unit,
     onManageCategories: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // See PantryDashboardScreen's parameter of the same name.
+    bottomOverlayClearance: Dp = 160.dp
 ) {
     var draft by remember { mutableStateOf(settings) }
     var newLocationText by remember { mutableStateOf("") }
@@ -136,6 +140,9 @@ fun SettingsScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
+        // Bottom nav-bar inset is already baked into bottomOverlayClearance (see MainActivity),
+        // so the Scaffold must not reserve it a second time as innerPadding.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
@@ -382,7 +389,7 @@ fun SettingsScreen(
 
             // Clears the floating pill nav bar and scan/add buttons that overlay this screen
             // (see MainActivity).
-            Spacer(modifier = Modifier.height(160.dp))
+            Spacer(modifier = Modifier.height(bottomOverlayClearance))
         }
         }
     }

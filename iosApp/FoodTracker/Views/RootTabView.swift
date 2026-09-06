@@ -88,17 +88,18 @@ struct RootTabView: View {
             // floating out (fade + slide toward the corner they hover over) on every other tab,
             // and also collapsing on the same downward scroll that collapses the dashboard's
             // own metrics row, reappearing on the way back up.
-            // FABs should be always visible on iOS to match the user request.
-            HStack {
-                Spacer()
-                ScanAndAddButtons(
-                    onScan: { presentScanner() },
-                    onAdd: { presentAddEdit(editing: nil) }
-                )
-                .padding(.trailing, 16)
-                .padding(.bottom, 72)
+            if selectedTab == .home {
+                HStack {
+                    Spacer()
+                    ScanAndAddButtons(
+                        onScan: { presentScanner() },
+                        onAdd: { presentAddEdit(editing: nil) }
+                    )
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 72)
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
-            .transition(.move(edge: .trailing).combined(with: .opacity))
 
             // Last in the ZStack (topmost), so it renders above the pill nav bar and the
             // scan/add buttons above it rather than underneath them.

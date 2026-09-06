@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -159,10 +158,14 @@ fun ScanAndAddFabs(
 ) {
     // Scan is the more important, more frequently used action, so it gets the larger primary
     // button closest to the nav bar (easiest thumb reach); Add is the secondary button above it.
+    // No navigationBarsPadding() here: the caller (MainActivity) already lifts this stack clear
+    // of the system nav bar via its bottom padding, which is derived from the pill nav bar's
+    // height and already bakes in that inset — adding it again here would double-count it and
+    // inflate the measured stack height fed back into the tabs' bottom content clearance.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
-        modifier = modifier.navigationBarsPadding()
+        modifier = modifier
     ) {
         SmallFloatingActionButton(
             onClick = onAdd,
