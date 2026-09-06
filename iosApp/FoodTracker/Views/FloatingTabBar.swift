@@ -29,6 +29,10 @@ enum RootTab: CaseIterable {
 /// width, so the background shows through the margins around it (see its usage in `RootTabView`).
 struct FloatingTabBar: View {
     @Binding var selectedTab: RootTab
+    /// Count of distinct products on the shopping list, shown as a badge on that tab. Each
+    /// `ShoppingListEntry` already represents one product (it carries its own `quantity`
+    /// field), so this is simply `shoppingList.count`.
+    var shoppingListCount: Int = 0
 
     var body: some View {
         HStack(spacing: 2) {
@@ -37,8 +41,14 @@ struct FloatingTabBar: View {
                     selectedTab = tab
                 } label: {
                     VStack(spacing: 3) {
-                        Image(systemName: tab.systemImage)
-                            .font(.system(size: 20))
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: tab.systemImage)
+                                .font(.system(size: 20))
+                            if tab == .shoppingList && shoppingListCount > 0 {
+                                TabBadge(count: shoppingListCount)
+                                    .offset(x: 12, y: -6)
+                            }
+                        }
                         Text(tab.title)
                             .font(.system(size: 11, weight: selectedTab == tab ? .bold : .medium))
                     }
@@ -51,6 +61,11 @@ struct FloatingTabBar: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(
+                    tab == .shoppingList && shoppingListCount > 0
+                        ? "\(tab.title), \(shoppingListCount)"
+                        : tab.title
+                )
             }
         }
         .padding(.horizontal, 6)
@@ -61,6 +76,20 @@ struct FloatingTabBar: View {
                 .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
         )
         .animation(.easeInOut(duration: 0.15), value: selectedTab)
+    }
+}
+
+/// Small numbered pill anchored to the top-trailing corner of a tab icon.
+private struct TabBadge: View {
+    let count: Int
+
+    var body: some View {
+        Text(count > 99 ? "99+" : "\(count)")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 4)
+            .frame(minWidth: 15, minHeight: 15)
+            .background(Capsule().fill(Color.accentColor))
     }
 }
 

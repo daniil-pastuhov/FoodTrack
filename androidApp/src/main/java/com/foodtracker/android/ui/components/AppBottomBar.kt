@@ -20,6 +20,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -60,6 +62,7 @@ private data class BottomNavItem(
 fun AppBottomBar(
     selectedTab: BottomNavTab,
     onTabSelected: (BottomNavTab) -> Unit,
+    shoppingListCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
@@ -84,6 +87,10 @@ fun AppBottomBar(
                     icon = item.icon,
                     label = item.label,
                     selected = item.tab == selectedTab,
+                    // Count of distinct products on the shopping list, not total quantity —
+                    // each ShoppingListEntry already represents one product (see its `quantity`
+                    // field), so entries.size is the right count.
+                    badgeCount = if (item.tab == BottomNavTab.SHOPPING_LIST) shoppingListCount else 0,
                     onClick = { onTabSelected(item.tab) }
                 )
             }
@@ -96,6 +103,7 @@ private fun BottomNavItemView(
     icon: ImageVector,
     label: String,
     selected: Boolean,
+    badgeCount: Int = 0,
     onClick: () -> Unit
 ) {
     val contentColor by animateColorAsState(
@@ -120,7 +128,17 @@ private fun BottomNavItemView(
             )
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Icon(imageVector = icon, contentDescription = label, tint = contentColor, modifier = Modifier.height(22.dp))
+        BadgedBox(
+            badge = {
+                if (badgeCount > 0) {
+                    Badge(containerColor = BrandPrimary) {
+                        Text(badgeCount.toString())
+                    }
+                }
+            }
+        ) {
+            Icon(imageVector = icon, contentDescription = label, tint = contentColor, modifier = Modifier.height(22.dp))
+        }
         Spacer(modifier = Modifier.height(3.dp))
         Text(
             text = label,

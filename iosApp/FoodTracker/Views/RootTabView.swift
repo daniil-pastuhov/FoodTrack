@@ -50,7 +50,7 @@ struct RootTabView: View {
             .animation(.easeInOut(duration: 0.2), value: selectedTab)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            FloatingTabBar(selectedTab: $selectedTab)
+            FloatingTabBar(selectedTab: $selectedTab, shoppingListCount: viewModel.shoppingList.count)
                 .padding(.bottom, 8)
 
             // Scan/Add are only meaningful from the pantry list, so they only show on Home —

@@ -435,7 +435,8 @@ class MainActivity : ComponentActivity() {
                                     ) {
                                         AppBottomBar(
                                             selectedTab = currentTab,
-                                            onTabSelected = onTabSelected
+                                            onTabSelected = onTabSelected,
+                                            shoppingListCount = uiState.shoppingList.size
                                         )
                                     }
                                     // Scan/Add are only meaningful from the pantry list, so they
