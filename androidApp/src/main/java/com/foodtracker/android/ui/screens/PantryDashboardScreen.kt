@@ -36,8 +36,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -118,7 +120,8 @@ fun PantryDashboardScreen(
     onNavigateToShoppingList: () -> Unit,
     onDeleteItem: (String) -> Unit,
     onDecrementQuantity: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    gridState: LazyGridState = rememberLazyGridState()
 ) {
     val state by stateHolder.uiState.collectAsState()
     val context = LocalContext.current
@@ -448,6 +451,7 @@ fun PantryDashboardScreen(
                         // on one line even for long day counts ("624 days expired") — below that,
                         // the info row wraps and the grid stretches every card in the row to match.
                         LazyVerticalGrid(
+                            state = gridState,
                             columns = GridCells.Adaptive(minSize = 340.dp),
                             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),

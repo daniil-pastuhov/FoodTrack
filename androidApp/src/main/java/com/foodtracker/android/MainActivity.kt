@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -101,6 +102,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     var currentScreen by currentScreenState
+                    // Hoisted above the Dashboard so it survives navigating away to Add/Edit
+                    // and back — the Dashboard composable itself is torn down and rebuilt by
+                    // the `when` below, which would otherwise reset scroll position on return.
+                    val dashboardGridState = rememberLazyGridState()
                     var editingItem by remember { mutableStateOf<PantryItem?>(null) }
                     var prefillBarcode by remember { mutableStateOf<String?>(null) }
                     var prefillName by remember { mutableStateOf<String?>(null) }
@@ -262,7 +267,8 @@ class MainActivity : ComponentActivity() {
                                 onNavigateToCalendar = {},
                                 onNavigateToShoppingList = {},
                                 onDeleteItem = onDeleteItemHandler,
-                                onDecrementQuantity = onDecrementQuantityHandler
+                                onDecrementQuantity = onDecrementQuantityHandler,
+                                gridState = dashboardGridState
                             )
                         }
 
@@ -303,7 +309,8 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToCalendar = onNavigateToCalendarScreen,
                                         onNavigateToShoppingList = onNavigateToShoppingListScreen,
                                         onDeleteItem = onDeleteItemHandler,
-                                        onDecrementQuantity = onDecrementQuantityHandler
+                                        onDecrementQuantity = onDecrementQuantityHandler,
+                                        gridState = dashboardGridState
                                     )
                                 }
 
