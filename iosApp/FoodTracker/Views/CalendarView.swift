@@ -150,7 +150,7 @@ struct CalendarView: View {
                 Spacer()
             } else {
                 List(selectedDayItems) { item in
-                    ItemRowView(item: item, expiringSoonDays: settingsStore.settings.expiringSoonDays)
+                    ItemRowView(item: item, expiringSoonDays: settingsStore.settings.expiringSoonDays, categoryPreferences: viewModel.categoryPreferences)
                 }
                 .listStyle(.plain)
                 // Clears the floating pill nav bar that overlays this screen (see RootTabView).

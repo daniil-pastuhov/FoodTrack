@@ -2,11 +2,13 @@ package com.foodtracker.viewmodel
 
 import com.foodtracker.api.OpenFoodFactsApi
 import com.foodtracker.model.AppSettings
+import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.SortOption
 import com.foodtracker.parser.GS1BarcodeParser
+import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
@@ -58,7 +60,10 @@ data class PantryUiState(
     val scanningShoppingListEntryId: String? = null,
     // Shopping list
     val shoppingList: List<ShoppingListEntry> = emptyList(),
-    val knownProductNames: List<String> = emptyList()
+    val knownProductNames: List<String> = emptyList(),
+    // Category preferences: rename/reorder/enable state for each raw category value seen on a
+    // product, managed from Settings (see CategorySettingsScreen / CategoryPreferenceRepository).
+    val categoryPreferences: List<CategoryPreference> = emptyList()
 )
 
 class PantryStateHolder(
@@ -67,6 +72,7 @@ class PantryStateHolder(
     private val shoppingListRepository: ShoppingListRepository,
     private val productNameRepository: ProductNameRepository,
     private val localProductRepository: LocalProductRepository,
+    private val categoryPreferenceRepository: CategoryPreferenceRepository,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
@@ -77,11 +83,13 @@ class PantryStateHolder(
         observeItems()
         observeShoppingList()
         observeKnownProductNames()
+        observeCategoryPreferences()
     }
 
     private fun observeItems() {
         coroutineScope.launch {
             repository.getItemsFlow().collectLatest { allItems ->
+                registerCategories(allItems.mapNotNull { it.category })
                 _uiState.update { current ->
                     val today = DateUtils.today()
                     val expiringSoonDays = current.settings.expiringSoonDays
@@ -117,6 +125,7 @@ class PantryStateHolder(
     private fun observeShoppingList() {
         coroutineScope.launch {
             shoppingListRepository.getEntriesFlow().collectLatest { entries ->
+                registerCategories(entries.mapNotNull { it.category })
                 _uiState.update { it.copy(shoppingList = entries) }
             }
         }
@@ -127,6 +136,29 @@ class PantryStateHolder(
             productNameRepository.getKnownNamesFlow().collectLatest { names ->
                 _uiState.update { it.copy(knownProductNames = names) }
             }
+        }
+    }
+
+    private fun observeCategoryPreferences() {
+        coroutineScope.launch {
+            categoryPreferenceRepository.getPreferencesFlow().collectLatest { preferences ->
+                _uiState.update { it.copy(categoryPreferences = preferences) }
+            }
+        }
+    }
+
+    /** Auto-registers any category in [origins] not already known, so it shows up in Settings
+     *  (see CategorySettingsScreen) the first time a product carrying it is scanned or added,
+     *  without requiring the user to configure anything up front. Origins already known (per the
+     *  latest [PantryUiState.categoryPreferences]) are skipped without a DB write. */
+    private suspend fun registerCategories(origins: List<String>) {
+        val known = _uiState.value.categoryPreferences.map { it.originName }.toSet()
+        val newOrigins = origins.distinct().filterNot { it in known }
+        if (newOrigins.isEmpty()) return
+        var nextSortOrder = (categoryPreferenceRepository.getMaxSortOrder() ?: -1.0) + 1.0
+        newOrigins.forEach { origin ->
+            categoryPreferenceRepository.registerIfAbsent(origin, nextSortOrder)
+            nextSortOrder += 1.0
         }
     }
 
@@ -536,6 +568,62 @@ class PantryStateHolder(
         coroutineScope.launch {
             shoppingListRepository.updateEntry(moved.copy(sortOrder = newSortOrder))
             productNameRepository.recordSortOrder(moved.productName, newSortOrder)
+        }
+    }
+
+    /** Renames the category identified by [originName] (its raw, scanned value - see
+     *  [CategoryPreference.originName]) to [newDisplayName]. Applies retroactively everywhere
+     *  that category is shown, without touching the stored `category` field on any product,
+     *  since display always resolves through [CategoryPreference] (see
+     *  [resolveCategoryDisplayName]). */
+    fun renameCategory(originName: String, newDisplayName: String) {
+        val trimmed = newDisplayName.trim()
+        if (trimmed.isBlank()) return
+        val current = _uiState.value.categoryPreferences.find { it.originName == originName } ?: return
+        coroutineScope.launch {
+            categoryPreferenceRepository.updateEntry(current.copy(displayName = trimmed))
+        }
+    }
+
+    /** Enables or disables the category identified by [originName]. A disabled category is
+     *  hidden everywhere (filter chips, item badges, shopping list group headers) - products
+     *  that have it simply show as uncategorized, per [resolveCategoryDisplayName]. */
+    fun setCategoryEnabled(originName: String, enabled: Boolean) {
+        val current = _uiState.value.categoryPreferences.find { it.originName == originName } ?: return
+        coroutineScope.launch {
+            categoryPreferenceRepository.updateEntry(current.copy(enabled = enabled))
+        }
+    }
+
+    /** Bulk on/off switch for every category at once, so the user isn't forced to flip each
+     *  [setCategoryEnabled] toggle one by one. */
+    fun setAllCategoriesEnabled(enabled: Boolean) {
+        val all = _uiState.value.categoryPreferences
+        coroutineScope.launch {
+            all.forEach { pref ->
+                if (pref.enabled != enabled) {
+                    categoryPreferenceRepository.updateEntry(pref.copy(enabled = enabled))
+                }
+            }
+        }
+    }
+
+    /** Called after a drag-and-drop reorder of categories in Settings completes, mirroring
+     *  [moveShoppingListEntry]'s fractional sort-order scheme. [beforeOrigin]/[afterOrigin] are
+     *  the origin names now immediately above/below [movedOrigin] (null at a list boundary). */
+    fun moveCategoryPreference(movedOrigin: String, beforeOrigin: String?, afterOrigin: String?) {
+        val list = _uiState.value.categoryPreferences
+        val moved = list.find { it.originName == movedOrigin } ?: return
+        val beforeOrder = beforeOrigin?.let { origin -> list.find { it.originName == origin }?.sortOrder }
+        val afterOrder = afterOrigin?.let { origin -> list.find { it.originName == origin }?.sortOrder }
+        val newSortOrder = when {
+            beforeOrder != null && afterOrder != null -> (beforeOrder + afterOrder) / 2.0
+            beforeOrder != null -> beforeOrder + 1.0
+            afterOrder != null -> afterOrder - 1.0
+            else -> moved.sortOrder
+        }
+        coroutineScope.launch {
+            categoryPreferenceRepository.updateEntry(moved.copy(sortOrder = newSortOrder))
         }
     }
 

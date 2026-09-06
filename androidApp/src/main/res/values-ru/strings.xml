@@ -183,6 +183,19 @@
     <string name="settings_add_location_placeholder">Название нового места</string>
     <string name="settings_add_location">Добавить место</string>
 
+    <string name="settings_section_categories">Категории</string>
+    <string name="settings_categories_desc">Переименовывайте, сортируйте или скрывайте категории, обнаруженные у ваших продуктов</string>
+    <string name="settings_manage_categories_button">Управление категориями</string>
+
+    <string name="category_settings_title">Категории</string>
+    <string name="category_settings_description">Перетащите, чтобы изменить порядок. Нажмите на карандаш, чтобы переименовать категорию, или отключите её, чтобы скрыть везде.</string>
+    <string name="category_settings_toggle_all">Показать все категории</string>
+    <string name="category_settings_empty">Категории появятся здесь, как только у отсканированного или добавленного продукта появится категория</string>
+    <string name="category_settings_rename_title">Переименовать категорию</string>
+    <string name="category_settings_original_name_format">Изначально \"%1$s\"</string>
+    <string name="category_settings_drag_handle_content_description">Перетащите, чтобы изменить порядок</string>
+    <string name="category_settings_rename_content_description">Переименовать категорию</string>
+
     <string name="settings_section_appearance">Внешний вид</string>
     <string name="settings_theme_system">Системная</string>
     <string name="settings_theme_light">Светлая</string>

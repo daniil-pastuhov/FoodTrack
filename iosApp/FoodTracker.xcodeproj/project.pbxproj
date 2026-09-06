@@ -54,6 +54,11 @@
 		57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */; };
 		BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
+		8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883B4D1065B37C26A395EC3C /* CategoryPreference.swift */; };
+		CAE0941B5977A150D0673C1B /* CategoryPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883B4D1065B37C26A395EC3C /* CategoryPreference.swift */; };
+		333BD43AE5A4BDA48CD004F6 /* CategoryPreferenceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */; };
+		B60EA7804EAD089E4B949D10 /* CategoryPreferenceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */; };
+		625E9325BA2904F65F1624C1 /* CategorySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B102148F4E1D8FF58A6B369 /* CategorySettingsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -100,6 +105,9 @@
 		4BEE1DD74E5B2B66C9F038A7 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductNameRecord.swift; sourceTree = "<group>"; };
 		ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProductRecord.swift; sourceTree = "<group>"; };
+		883B4D1065B37C26A395EC3C /* CategoryPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPreference.swift; sourceTree = "<group>"; };
+		678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPreferenceRecord.swift; sourceTree = "<group>"; };
+		6B102148F4E1D8FF58A6B369 /* CategorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySettingsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -175,6 +183,7 @@
 				1BE66661843755F28FB1339C /* ScannerSheetView.swift */,
 				F44742679EBB5F68A83CFFCF /* PantryDashboardView.swift */,
 				E262F7E355D522F4D6D65C04 /* SettingsView.swift */,
+				6B102148F4E1D8FF58A6B369 /* CategorySettingsView.swift */,
 				AC075B1A147F418C9029095F /* CalendarView.swift */,
 				32F5E332BCAB482A98210E13 /* ShoppingListView.swift */,
 				D8F1D79299154F4BAEEB0B90 /* FloatingTabBar.swift */,
@@ -208,6 +217,8 @@
 				13AEE2C0BAD94D898F6896A2 /* ShoppingListEntryRecord.swift */,
 				78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */,
 				ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */,
+				883B4D1065B37C26A395EC3C /* CategoryPreference.swift */,
+				678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -415,6 +426,9 @@
 				BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */,
 				665A801EBE434BEE94B34280 /* FloatingTabBar.swift in Sources */,
 				B079A629A81449CB9E79EB97 /* RootTabView.swift in Sources */,
+				8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */,
+				333BD43AE5A4BDA48CD004F6 /* CategoryPreferenceRecord.swift in Sources */,
+				625E9325BA2904F65F1624C1 /* CategorySettingsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -438,6 +452,8 @@
 				4F7EFE3632E9624B6262E10E /* L10n.swift in Sources */,
 				57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */,
 				F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */,
+				CAE0941B5977A150D0673C1B /* CategoryPreference.swift in Sources */,
+				B60EA7804EAD089E4B949D10 /* CategoryPreferenceRecord.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

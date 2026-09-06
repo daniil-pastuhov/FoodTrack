@@ -77,6 +77,8 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.categoryPreferenceSortOrder
+import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.viewmodel.PantryStateHolder
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -240,9 +242,21 @@ fun ShoppingListScreen(
                 // Flattened so drag reorder has a single index space to work with; headers are
                 // never wrapped in a ReorderableItem, so they can't be dragged themselves, and a
                 // move is only accepted (see reorderableState below) when both ends share a
-                // category, which keeps drags from crossing into a different group.
-                val flatRows = remember(state.shoppingList) {
-                    val grouped = state.shoppingList.groupBy { it.category }.entries.sortedBy { it.key ?: "￿" }
+                // resolved category (a disabled category, or two origins renamed to the same
+                // name, fold into the same group here), which keeps drags from crossing into a
+                // different group. Groups are ordered by the user's category preference order
+                // (see CategorySettingsScreen), not alphabetically.
+                val flatRows = remember(state.shoppingList, state.categoryPreferences) {
+                    val prefs = state.categoryPreferences
+                    val grouped = state.shoppingList
+                        .groupBy { resolveCategoryDisplayName(it.category, prefs) }
+                        .entries
+                        .sortedWith(
+                            compareBy(
+                                { group -> group.value.minOf { entry -> categoryPreferenceSortOrder(entry.category, prefs) } },
+                                { it.key ?: "￿" }
+                            )
+                        )
                     buildList {
                         grouped.forEach { (category, entries) ->
                             add(ShoppingListFlatRow.Header(category))
@@ -258,7 +272,10 @@ fun ShoppingListScreen(
                 val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
                     val fromRow = localRows.getOrNull(from.index) as? ShoppingListFlatRow.Item
                     val toRow = localRows.getOrNull(to.index) as? ShoppingListFlatRow.Item
-                    if (fromRow != null && toRow != null && fromRow.entry.category == toRow.entry.category) {
+                    val sameGroup = fromRow != null && toRow != null &&
+                        resolveCategoryDisplayName(fromRow.entry.category, state.categoryPreferences) ==
+                        resolveCategoryDisplayName(toRow.entry.category, state.categoryPreferences)
+                    if (sameGroup) {
                         localRows = localRows.toMutableList().apply {
                             add(to.index, removeAt(from.index))
                         }

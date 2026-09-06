@@ -118,6 +118,7 @@ public struct PantryDashboardView: View {
                             ItemRowView(
                                 item: item,
                                 expiringSoonDays: settingsStore.settings.expiringSoonDays,
+                                categoryPreferences: viewModel.categoryPreferences,
                                 onDecrement: isSelecting ? nil : {
                                     viewModel.decrementQuantity(item.id, onItemRemoved: onItemRemoved)
                                 }
@@ -334,7 +335,8 @@ private struct FilterSheetView: View {
                 .padding(.top, 8)
 
                 // Category Filter Chips — derived from categories present on current items
-                // rather than a fixed settings list, since there's no user-edited category list.
+                // (filtered to enabled ones and ordered per user preference; see
+                // CategorySettingsView), rather than a fixed settings list.
                 if !viewModel.availableCategories.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
@@ -342,7 +344,7 @@ private struct FilterSheetView: View {
                                 viewModel.selectedCategory = nil
                             }
                             ForEach(viewModel.availableCategories, id: \.self) { category in
-                                LocationChip(title: category, isSelected: viewModel.selectedCategory == category) {
+                                LocationChip(title: viewModel.categoryLabel(for: category), isSelected: viewModel.selectedCategory == category) {
                                     viewModel.selectedCategory = category
                                 }
                             }

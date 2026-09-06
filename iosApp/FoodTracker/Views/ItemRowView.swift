@@ -4,6 +4,7 @@ import UIKit
 public struct ItemRowView: View {
     public let item: PantryItem
     public var expiringSoonDays: Int = 3
+    public var categoryPreferences: [CategoryPreference] = []
     public var onDecrement: (() -> Void)? = nil
 
     public var body: some View {
@@ -64,7 +65,7 @@ public struct ItemRowView: View {
                         .background(Color(.secondarySystemFill))
                         .cornerRadius(6)
 
-                    if let category = item.category, !category.isEmpty {
+                    if let category = resolveCategoryDisplayName(item.category, categoryPreferences), !category.isEmpty {
                         Text(category)
                             .font(.caption2)
                             .fontWeight(.medium)

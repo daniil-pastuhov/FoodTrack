@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Schedule
@@ -67,6 +68,7 @@ fun SettingsScreen(
     settings: AppSettings,
     onSave: (AppSettings) -> Unit,
     onClearAllData: () -> Unit,
+    onManageCategories: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var draft by remember { mutableStateOf(settings) }
@@ -319,6 +321,27 @@ fun SettingsScreen(
                     }) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.settings_add_location), tint = BrandPrimary)
                     }
+                }
+            }
+
+            // Categories
+            SettingsSectionCard(title = stringResource(R.string.settings_section_categories)) {
+                Text(
+                    text = stringResource(R.string.settings_categories_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable(onClick = onManageCategories)
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    Text(stringResource(R.string.settings_manage_categories_button), modifier = Modifier.weight(1f))
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
                 }
             }
 

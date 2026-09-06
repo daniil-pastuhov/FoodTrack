@@ -197,6 +197,19 @@
     <string name="settings_add_location_placeholder">New location name</string>
     <string name="settings_add_location">Add location</string>
 
+    <string name="settings_section_categories">Categories</string>
+    <string name="settings_categories_desc">Rename, reorder, or hide the categories detected from your products</string>
+    <string name="settings_manage_categories_button">Manage Categories</string>
+
+    <string name="category_settings_title">Categories</string>
+    <string name="category_settings_description">Drag to reorder. Tap the pencil to rename a category, or turn it off to hide it everywhere.</string>
+    <string name="category_settings_toggle_all">Show all categories</string>
+    <string name="category_settings_empty">Categories will appear here once a scanned or added product has one</string>
+    <string name="category_settings_rename_title">Rename category</string>
+    <string name="category_settings_original_name_format">Originally \"%1$s\"</string>
+    <string name="category_settings_drag_handle_content_description">Drag to reorder</string>
+    <string name="category_settings_rename_content_description">Rename category</string>
+
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>

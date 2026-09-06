@@ -31,6 +31,7 @@ public struct SettingsView: View {
                 notificationsSection
                 expiringSoonSection
                 locationsSection
+                categoriesSection
                 appearanceSection
                 dataSection
             }
@@ -159,6 +160,14 @@ public struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(newLocationText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        }
+    }
+
+    private var categoriesSection: some View {
+        Section(header: Text(L10n.settingsSectionCategories), footer: Text(L10n.settingsCategoriesDesc)) {
+            NavigationLink(L10n.settingsManageCategoriesButton) {
+                CategorySettingsView(viewModel: viewModel)
             }
         }
     }

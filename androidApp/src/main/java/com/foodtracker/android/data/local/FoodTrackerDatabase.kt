@@ -6,8 +6,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [PantryItemEntity::class, ShoppingListEntryEntity::class, ProductNameEntity::class, LocalProductEntity::class],
-    version = 7,
+    entities = [
+        PantryItemEntity::class,
+        ShoppingListEntryEntity::class,
+        ProductNameEntity::class,
+        LocalProductEntity::class,
+        CategoryPreferenceEntity::class
+    ],
+    version = 8,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -15,6 +21,7 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
     abstract fun shoppingListDao(): ShoppingListDao
     abstract fun productNameDao(): ProductNameDao
     abstract fun localProductDao(): LocalProductDao
+    abstract fun categoryPreferenceDao(): CategoryPreferenceDao
 
     companion object {
         const val DB_NAME = "foodtracker.db"
@@ -162,6 +169,45 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                     SELECT barcode, name, brand, imageUrl, category
                     FROM pantry_items
                     WHERE barcode IS NOT NULL
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // Adds per-category user preferences: a category can be renamed (its raw scanned value
+        // is kept as originName so a rename applies retroactively, including to future scans of
+        // the same product), reordered, or disabled (hidden everywhere without deleting the
+        // category from the products that have it). Backfilled from every distinct category
+        // already present on a pantry item or shopping list entry, ranked alphabetically, so
+        // existing categories show up in Settings immediately rather than only after being
+        // re-scanned.
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS category_preferences (
+                        originName TEXT NOT NULL PRIMARY KEY,
+                        displayName TEXT NOT NULL,
+                        sortOrder REAL NOT NULL DEFAULT 0,
+                        enabled INTEGER NOT NULL DEFAULT 1
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO category_preferences (originName, displayName, sortOrder, enabled)
+                    SELECT combined.category, combined.category,
+                        (SELECT COUNT(*) FROM (
+                            SELECT category FROM pantry_items WHERE category IS NOT NULL
+                            UNION
+                            SELECT category FROM shopping_list_entries WHERE category IS NOT NULL
+                        ) other WHERE other.category < combined.category),
+                        1
+                    FROM (
+                        SELECT category FROM pantry_items WHERE category IS NOT NULL
+                        UNION
+                        SELECT category FROM shopping_list_entries WHERE category IS NOT NULL
+                    ) combined
                     """.trimIndent()
                 )
             }

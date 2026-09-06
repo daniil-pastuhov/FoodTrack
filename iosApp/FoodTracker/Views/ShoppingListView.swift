@@ -321,9 +321,18 @@ struct ShoppingListView: View {
         }.prefix(5).map { $0 }
     }
 
+    // Groups are keyed by the *resolved* category (so a disabled category, or two origins
+    // renamed to the same name, fold into one group here) and ordered by the user's category
+    // preference order (see CategorySettingsView) rather than alphabetically.
     private var groupedEntries: [(category: String?, entries: [ShoppingListEntry])] {
-        let grouped = Dictionary(grouping: viewModel.shoppingList, by: { $0.category })
-        return grouped.keys.sorted { ($0 ?? "\u{FFFF}") < ($1 ?? "\u{FFFF}") }.map { key in
+        let preferences = viewModel.categoryPreferences
+        let grouped = Dictionary(grouping: viewModel.shoppingList, by: { resolveCategoryDisplayName($0.category, preferences) })
+        return grouped.keys.sorted { lhs, rhs in
+            let lhsOrder = grouped[lhs]?.map { categoryPreferenceSortOrder($0.category, preferences) }.min() ?? .greatestFiniteMagnitude
+            let rhsOrder = grouped[rhs]?.map { categoryPreferenceSortOrder($0.category, preferences) }.min() ?? .greatestFiniteMagnitude
+            if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+            return (lhs ?? "\u{FFFF}") < (rhs ?? "\u{FFFF}")
+        }.map { key in
             (category: key, entries: grouped[key] ?? [])
         }
     }

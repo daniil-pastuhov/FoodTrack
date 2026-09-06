@@ -109,8 +109,11 @@ import com.foodtracker.android.ui.theme.expiringStatusColors
 import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.buildRecipePrompt
+import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.SortOption
+import com.foodtracker.model.categoryPreferenceSortOrder
+import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.StatusFilter
 
@@ -431,6 +434,7 @@ fun PantryDashboardScreen(
                             gridItems(state.filteredItems, key = { it.id }) { item ->
                                 ItemCard(
                                     item = item,
+                                    categoryPreferences = state.categoryPreferences,
                                     onDelete = { onDeleteItem(item.id) },
                                     onDecrement = { onDecrementQuantity(item.id) },
                                     onMoveToShoppingList = { onMoveToShoppingList(item.id) },
@@ -523,7 +527,13 @@ fun PantryDashboardScreen(
                 selectedLocation = state.selectedLocation,
                 storageLocations = state.settings.storageLocations,
                 selectedCategory = state.selectedCategory,
-                categories = remember(state.items) { state.items.mapNotNull { it.category }.distinct().sorted() },
+                categories = remember(state.items, state.categoryPreferences) {
+                    state.items.mapNotNull { it.category }
+                        .distinct()
+                        .filter { origin -> resolveCategoryDisplayName(origin, state.categoryPreferences) != null }
+                        .sortedWith(compareBy({ categoryPreferenceSortOrder(it, state.categoryPreferences) }, { it }))
+                },
+                categoryPreferences = state.categoryPreferences,
                 selectedStatusFilter = state.selectedStatusFilter,
                 sortOption = state.settings.sortOption
             )
@@ -539,6 +549,7 @@ private fun FilterSheetContent(
     storageLocations: List<String>,
     selectedCategory: String?,
     categories: List<String>,
+    categoryPreferences: List<CategoryPreference>,
     selectedStatusFilter: StatusFilter,
     sortOption: SortOption
 ) {
@@ -605,9 +616,9 @@ private fun FilterSheetContent(
             }
         }
 
-        // Category Filter Chips — derived from categories present on current items rather
-        // than a fixed settings list, since (unlike storage locations) there's no user-edited
-        // category list.
+        // Category Filter Chips — derived from categories present on current items (filtered to
+        // enabled ones and ordered per user preference; see CategorySettingsScreen), rather than
+        // a fixed settings list the way storage locations are.
         AnimatedVisibility(
             visible = categories.isNotEmpty(),
             enter = fadeIn() + expandVertically(),
@@ -633,7 +644,7 @@ private fun FilterSheetContent(
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { stateHolder.onCategorySelected(category) },
-                        label = { Text(category) },
+                        label = { Text(resolveCategoryDisplayName(category, categoryPreferences) ?: category) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
                             selectedLabelColor = BrandPrimary

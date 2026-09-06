@@ -55,6 +55,7 @@ import androidx.core.content.ContextCompat
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CalendarScreen
+import com.foodtracker.android.ui.screens.CategorySettingsScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
@@ -80,6 +81,7 @@ enum class AppScreen {
     SCANNER,
     ADD_EDIT,
     SETTINGS,
+    CATEGORY_SETTINGS,
     CALENDAR,
     SHOPPING_LIST
 }
@@ -386,6 +388,7 @@ class MainActivity : ComponentActivity() {
                             when (currentScreen) {
                                 AppScreen.SCANNER -> navigateBackFromScanner()
                                 AppScreen.ADD_EDIT -> currentScreen = scanReturnScreen
+                                AppScreen.CATEGORY_SETTINGS -> currentScreen = AppScreen.SETTINGS
                                 AppScreen.SETTINGS, AppScreen.CALENDAR, AppScreen.SHOPPING_LIST -> navigateToDashboard()
                                 AppScreen.DASHBOARD -> Unit
                             }
@@ -505,7 +508,8 @@ class MainActivity : ComponentActivity() {
                                                     }
                                                     stateHolder.clearAllData()
                                                     currentScreen = AppScreen.DASHBOARD
-                                                }
+                                                },
+                                                onManageCategories = { currentScreen = AppScreen.CATEGORY_SETTINGS }
                                             )
                                         }
                                         else -> Unit
@@ -641,6 +645,13 @@ class MainActivity : ComponentActivity() {
                                             scanningShoppingListEntry = null
                                             currentScreen = scanReturnScreen
                                         }
+                                    )
+                                }
+
+                                AppScreen.CATEGORY_SETTINGS -> {
+                                    CategorySettingsScreen(
+                                        stateHolder = stateHolder,
+                                        onNavigateBack = { currentScreen = AppScreen.SETTINGS }
                                     )
                                 }
 

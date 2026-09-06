@@ -51,6 +51,9 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var scanningShoppingListEntryId: String? = nil
     /// Backs the shopping list's autosuggest — see `ProductNameRecord`.
     @Published public var knownProductNames: [String] = []
+    /// Rename/reorder/enable state for each raw category value seen on a product, managed from
+    /// Settings (see `CategorySettingsView` / `CategoryPreferenceRecord`).
+    @Published public var categoryPreferences: [CategoryPreference] = []
 
     private let modelContext: ModelContext
 
@@ -61,7 +64,13 @@ public class NativePantryViewModel: ObservableObject {
     /// `FoodTrackerWidgetExtension` — a separate process/sandbox — can open the exact same
     /// store via this same property.
     public nonisolated static let sharedModelContainer: ModelContainer = {
-        let schema = Schema([PantryItemRecord.self, ShoppingListEntryRecord.self, ProductNameRecord.self, LocalProductRecord.self])
+        let schema = Schema([
+            PantryItemRecord.self,
+            ShoppingListEntryRecord.self,
+            ProductNameRecord.self,
+            LocalProductRecord.self,
+            CategoryPreferenceRecord.self
+        ])
         guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
             fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see WIDGETS_TASK.md")
         }
@@ -102,6 +111,7 @@ public class NativePantryViewModel: ObservableObject {
 
     public init(modelContainer: ModelContainer = NativePantryViewModel.sharedModelContainer) {
         modelContext = ModelContext(modelContainer)
+        loadCategoryPreferences()
         loadItems()
         loadShoppingList()
         backfillKnownProductNamesFromInventoryIfNeeded()
@@ -114,6 +124,7 @@ public class NativePantryViewModel: ObservableObject {
     private func loadItems() {
         let descriptor = FetchDescriptor<PantryItemRecord>(sortBy: [SortDescriptor(\.expiryDate)])
         items = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asPantryItem }
+        registerCategories(items.compactMap { $0.category })
     }
 
     private func loadShoppingList() {
@@ -121,6 +132,36 @@ public class NativePantryViewModel: ObservableObject {
             sortBy: [SortDescriptor(\.sortOrder), SortDescriptor(\.addedDate, order: .reverse)]
         )
         shoppingList = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asEntry }
+        registerCategories(shoppingList.compactMap { $0.category })
+    }
+
+    private func loadCategoryPreferences() {
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(sortBy: [SortDescriptor(\.sortOrder)])
+        categoryPreferences = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asPreference }
+    }
+
+    /// Auto-registers any category in `origins` not already known, so it shows up in Settings
+    /// (see `CategorySettingsView`) the first time a product carrying it is scanned or added,
+    /// without requiring the user to configure anything up front. Origins already known (per the
+    /// latest `categoryPreferences`) are skipped without a DB write.
+    private func registerCategories(_ origins: [String]) {
+        let known = Set(categoryPreferences.map { $0.originName })
+        let newOrigins = Array(Set(origins)).filter { !known.contains($0) }
+        guard !newOrigins.isEmpty else { return }
+
+        var nextSortOrder = maxCategorySortOrder() + 1
+        for origin in newOrigins {
+            modelContext.insert(CategoryPreferenceRecord(from: CategoryPreference(originName: origin, displayName: origin, sortOrder: nextSortOrder)))
+            nextSortOrder += 1
+        }
+        try? modelContext.save()
+        loadCategoryPreferences()
+    }
+
+    private func maxCategorySortOrder() -> Double {
+        var descriptor = FetchDescriptor<CategoryPreferenceRecord>(sortBy: [SortDescriptor(\.sortOrder, order: .reverse)])
+        descriptor.fetchLimit = 1
+        return (try? modelContext.fetch(descriptor).first)?.sortOrder ?? -1
     }
 
     private func loadKnownProductNames() {
@@ -239,10 +280,24 @@ public class NativePantryViewModel: ObservableObject {
         }.sorted(by: sortComparator(for: SettingsStore.shared.settings.sortOption))
     }
 
-    /// Distinct categories present on current items, derived rather than a fixed settings
-    /// list (unlike storage locations, there's no user-edited category list).
+    /// Distinct, enabled categories present on current items, derived rather than a fixed
+    /// settings list (unlike storage locations) but filtered/ordered per the user's category
+    /// preferences (see `CategorySettingsView`) rather than shown alphabetically.
     public var availableCategories: [String] {
-        Array(Set(items.compactMap { $0.category })).sorted()
+        Array(Set(items.compactMap { $0.category }))
+            .filter { resolveCategoryDisplayName($0, categoryPreferences) != nil }
+            .sorted { lhs, rhs in
+                let lhsOrder = categoryPreferenceSortOrder(lhs, categoryPreferences)
+                let rhsOrder = categoryPreferenceSortOrder(rhs, categoryPreferences)
+                if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
+                return lhs < rhs
+            }
+    }
+
+    /// The label to show for a raw category value `origin` (e.g. a filter chip), resolved
+    /// through the user's category preferences.
+    public func categoryLabel(for origin: String) -> String {
+        resolveCategoryDisplayName(origin, categoryPreferences) ?? origin
     }
 
     // Ties need an explicit secondary key so the sort doesn't silently fall back to whatever
@@ -652,6 +707,74 @@ public class NativePantryViewModel: ObservableObject {
         try? modelContext.save()
         recordSortOrder(name: moved.productName, sortOrder: newSortOrder)
         loadShoppingList()
+    }
+
+    /// Renames the category identified by `originName` (its raw, scanned value - see
+    /// `CategoryPreference.originName`) to `newDisplayName`. Applies retroactively everywhere
+    /// that category is shown, without touching the stored `category` field on any product,
+    /// since display always resolves through `CategoryPreference` (see
+    /// `resolveCategoryDisplayName`).
+    public func renameCategory(_ originName: String, newDisplayName: String) {
+        let trimmed = newDisplayName.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == originName })
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+        existing.displayName = trimmed
+        try? modelContext.save()
+        loadCategoryPreferences()
+    }
+
+    /// Enables or disables the category identified by `originName`. A disabled category is
+    /// hidden everywhere (filter chips, item badges, shopping list group headers) - products
+    /// that have it simply show as uncategorized, per `resolveCategoryDisplayName`.
+    public func setCategoryEnabled(_ originName: String, enabled: Bool) {
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == originName })
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+        existing.enabled = enabled
+        try? modelContext.save()
+        loadCategoryPreferences()
+    }
+
+    /// Bulk on/off switch for every category at once, so the user isn't forced to flip each
+    /// `setCategoryEnabled` toggle one by one.
+    public func setAllCategoriesEnabled(_ enabled: Bool) {
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>()
+        guard let all = try? modelContext.fetch(descriptor) else { return }
+        for record in all { record.enabled = enabled }
+        try? modelContext.save()
+        loadCategoryPreferences()
+    }
+
+    /// Called after a drag-and-drop reorder of categories in Settings completes, mirroring
+    /// `moveShoppingListEntry`'s fractional sort-order scheme. `beforeOrigin`/`afterOrigin` are
+    /// the origin names now immediately above/below `movedOrigin` (nil at a list boundary).
+    public func moveCategoryPreference(_ movedOrigin: String, beforeOrigin: String?, afterOrigin: String?) {
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == movedOrigin })
+        guard let moved = try? modelContext.fetch(descriptor).first else { return }
+
+        let beforeOrder = beforeOrigin.flatMap { origin -> Double? in
+            let d = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == origin })
+            return (try? modelContext.fetch(d).first)?.sortOrder
+        }
+        let afterOrder = afterOrigin.flatMap { origin -> Double? in
+            let d = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == origin })
+            return (try? modelContext.fetch(d).first)?.sortOrder
+        }
+
+        let newSortOrder: Double
+        if let beforeOrder, let afterOrder {
+            newSortOrder = (beforeOrder + afterOrder) / 2
+        } else if let beforeOrder {
+            newSortOrder = beforeOrder + 1
+        } else if let afterOrder {
+            newSortOrder = afterOrder - 1
+        } else {
+            newSortOrder = moved.sortOrder
+        }
+
+        moved.sortOrder = newSortOrder
+        try? modelContext.save()
+        loadCategoryPreferences()
     }
 
     public func clearScanState() {

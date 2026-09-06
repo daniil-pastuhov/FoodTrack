@@ -85,7 +85,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_3_4,
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
-                FoodTrackerDatabase.MIGRATION_6_7
+                FoodTrackerDatabase.MIGRATION_6_7,
+                FoodTrackerDatabase.MIGRATION_7_8
             )
             .build()
 
@@ -164,7 +165,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_3_4,
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
-                FoodTrackerDatabase.MIGRATION_6_7
+                FoodTrackerDatabase.MIGRATION_6_7,
+                FoodTrackerDatabase.MIGRATION_7_8
             )
             .build()
 
@@ -252,7 +254,8 @@ class FoodTrackerMigrationTest {
             .addMigrations(
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
-                FoodTrackerDatabase.MIGRATION_6_7
+                FoodTrackerDatabase.MIGRATION_6_7,
+                FoodTrackerDatabase.MIGRATION_7_8
             )
             .build()
 
@@ -357,7 +360,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_5_6, FoodTrackerDatabase.MIGRATION_6_7)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_5_6, FoodTrackerDatabase.MIGRATION_6_7, FoodTrackerDatabase.MIGRATION_7_8)
             .build()
 
         val knownNames = db.productNameDao().getRecentNamesFlow().first()
@@ -451,7 +454,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_6_7)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_6_7, FoodTrackerDatabase.MIGRATION_7_8)
             .build()
 
         val cached = db.localProductDao().getByBarcode("0000001111111")

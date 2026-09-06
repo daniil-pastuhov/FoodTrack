@@ -175,6 +175,19 @@
     <string name="settings_add_location_placeholder">Navn på nytt sted</string>
     <string name="settings_add_location">Legg til sted</string>
 
+    <string name="settings_section_categories">Kategorier</string>
+    <string name="settings_categories_desc">Endre navn på, sorter eller skjul kategoriene som oppdages fra produktene dine</string>
+    <string name="settings_manage_categories_button">Administrer kategorier</string>
+
+    <string name="category_settings_title">Kategorier</string>
+    <string name="category_settings_description">Dra for å endre rekkefølge. Trykk på blyanten for å endre navn på en kategori, eller slå den av for å skjule den overalt.</string>
+    <string name="category_settings_toggle_all">Vis alle kategorier</string>
+    <string name="category_settings_empty">Kategorier vises her så snart et skannet eller lagt til produkt har en</string>
+    <string name="category_settings_rename_title">Endre navn på kategori</string>
+    <string name="category_settings_original_name_format">Opprinnelig \"%1$s\"</string>
+    <string name="category_settings_drag_handle_content_description">Dra for å endre rekkefølge</string>
+    <string name="category_settings_rename_content_description">Endre navn på kategori</string>
+
     <string name="settings_section_appearance">Utseende</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Lyst</string>

@@ -188,6 +188,20 @@ public enum L10n {
     public static var settingsAddLocation: String { NSLocalizedString("settings_add_location", comment: "") }
     public static var settingsSetDefaultLocation: String { NSLocalizedString("settings_set_default_location", comment: "") }
 
+    public static var settingsSectionCategories: String { NSLocalizedString("settings_section_categories", comment: "") }
+    public static var settingsCategoriesDesc: String { NSLocalizedString("settings_categories_desc", comment: "") }
+    public static var settingsManageCategoriesButton: String { NSLocalizedString("settings_manage_categories_button", comment: "") }
+
+    public static var categorySettingsTitle: String { NSLocalizedString("category_settings_title", comment: "") }
+    public static var categorySettingsDescription: String { NSLocalizedString("category_settings_description", comment: "") }
+    public static var categorySettingsToggleAll: String { NSLocalizedString("category_settings_toggle_all", comment: "") }
+    public static var categorySettingsEmpty: String { NSLocalizedString("category_settings_empty", comment: "") }
+    public static var categorySettingsRenameTitle: String { NSLocalizedString("category_settings_rename_title", comment: "") }
+    public static var categorySettingsRenameContentDescription: String { NSLocalizedString("category_settings_rename_content_description", comment: "") }
+    public static func categorySettingsOriginalNameFormat(_ name: String) -> String {
+        String(format: NSLocalizedString("category_settings_original_name_format", comment: ""), name)
+    }
+
     public static var settingsSectionAppearance: String { NSLocalizedString("settings_section_appearance", comment: "") }
     public static var settingsThemeSystem: String { NSLocalizedString("settings_theme_system", comment: "") }
     public static var settingsThemeLight: String { NSLocalizedString("settings_theme_light", comment: "") }

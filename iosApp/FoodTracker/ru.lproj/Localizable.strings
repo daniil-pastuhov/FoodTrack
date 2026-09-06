@@ -152,6 +152,18 @@
 "settings_add_location" = "Добавить место";
 "settings_set_default_location" = "Сделать по умолчанию";
 
+"settings_section_categories" = "Категории";
+"settings_categories_desc" = "Переименовывайте, сортируйте или скрывайте категории, обнаруженные у ваших продуктов";
+"settings_manage_categories_button" = "Управление категориями";
+
+"category_settings_title" = "Категории";
+"category_settings_description" = "Перетащите, чтобы изменить порядок. Нажмите на карандаш, чтобы переименовать категорию, или отключите её, чтобы скрыть везде.";
+"category_settings_toggle_all" = "Показать все категории";
+"category_settings_empty" = "Категории появятся здесь, как только у отсканированного или добавленного продукта появится категория";
+"category_settings_rename_title" = "Переименовать категорию";
+"category_settings_rename_content_description" = "Переименовать категорию";
+"category_settings_original_name_format" = "Изначально \"%@\"";
+
 "settings_section_appearance" = "Внешний вид";
 "settings_theme_system" = "Системная";
 "settings_theme_light" = "Светлая";

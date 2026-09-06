@@ -2,6 +2,7 @@ package com.foodtracker.android.di
 
 import androidx.room.Room
 import com.foodtracker.android.data.local.FoodTrackerDatabase
+import com.foodtracker.android.data.local.RoomCategoryPreferenceRepository
 import com.foodtracker.android.data.local.RoomLocalProductRepository
 import com.foodtracker.android.data.local.RoomPantryRepository
 import com.foodtracker.android.data.local.RoomProductNameRepository
@@ -9,6 +10,7 @@ import com.foodtracker.android.data.local.RoomShoppingListRepository
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
+import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
@@ -29,7 +31,8 @@ val appModule = module {
                 FoodTrackerDatabase.MIGRATION_3_4,
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
-                FoodTrackerDatabase.MIGRATION_6_7
+                FoodTrackerDatabase.MIGRATION_6_7,
+                FoodTrackerDatabase.MIGRATION_7_8
             )
             .build()
     }
@@ -37,10 +40,12 @@ val appModule = module {
     single { get<FoodTrackerDatabase>().shoppingListDao() }
     single { get<FoodTrackerDatabase>().productNameDao() }
     single { get<FoodTrackerDatabase>().localProductDao() }
+    single { get<FoodTrackerDatabase>().categoryPreferenceDao() }
     single<PantryRepository> { RoomPantryRepository(get()) }
     single<ShoppingListRepository> { RoomShoppingListRepository(get()) }
     single<ProductNameRepository> { RoomProductNameRepository(get()) }
     single<LocalProductRepository> { RoomLocalProductRepository(get()) }
+    single<CategoryPreferenceRepository> { RoomCategoryPreferenceRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
     single { OpenFoodFactsApi() }
     single { WidgetUpdater(androidContext(), get(), get()) }
@@ -51,6 +56,7 @@ val appModule = module {
             shoppingListRepository = get(),
             productNameRepository = get(),
             localProductRepository = get(),
+            categoryPreferenceRepository = get(),
             openFoodFactsApi = get()
         )
     }

@@ -64,7 +64,9 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandDark
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.util.DateUtils
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
@@ -76,6 +78,7 @@ fun ItemCard(
     onMoveToShoppingList: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    categoryPreferences: List<CategoryPreference> = emptyList(),
     expiringSoonDays: Int = 3,
     selectionMode: Boolean = false,
     selected: Boolean = false,
@@ -232,14 +235,17 @@ fun ItemCard(
                             }
                         }
 
-                        if (!item.category.isNullOrBlank()) {
+                        val displayCategory = remember(item.category, categoryPreferences) {
+                            resolveCategoryDisplayName(item.category, categoryPreferences)
+                        }
+                        if (!displayCategory.isNullOrBlank()) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
                                 color = MaterialTheme.colorScheme.surfaceVariant,
                                 modifier = Modifier.padding(vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = item.category!!,
+                                    text = displayCategory,
                                     fontSize = 11.sp,
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Medium,
