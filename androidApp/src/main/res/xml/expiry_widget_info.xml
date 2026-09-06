@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- No updatePeriodMillis: the widget is refreshed on-demand by WidgetUpdater whenever
-     pantry data changes, since the OS's own periodic update has a 30-minute floor. -->
+<!-- WidgetUpdater refreshes this widget on-demand whenever pantry data changes, which is
+     normally much faster than any updatePeriodMillis. But that refresh only runs while the
+     app process is alive, and Android routinely kills background processes (battery
+     optimization, OEM task killers, low memory) with no guarantee of ever restarting them
+     just because a widget is on screen. Without a periodic fallback, a widget whose process
+     died stays frozen on stale content forever, since nothing else ever calls updateAll()
+     for it again. android:updatePeriodMillis is set to the OS's own 30-minute floor purely
+     as a self-healing safety net for that case, not as the primary refresh mechanism. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="180dp"
     android:minHeight="110dp"
     android:targetCellWidth="3"
     android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:previewImage="@drawable/widget_preview_expiry"
     android:resizeMode="horizontal|vertical"
