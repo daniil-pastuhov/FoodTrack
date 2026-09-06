@@ -2,12 +2,14 @@ package com.foodtracker.android.di
 
 import androidx.room.Room
 import com.foodtracker.android.data.local.FoodTrackerDatabase
+import com.foodtracker.android.data.local.RoomLocalProductRepository
 import com.foodtracker.android.data.local.RoomPantryRepository
 import com.foodtracker.android.data.local.RoomProductNameRepository
 import com.foodtracker.android.data.local.RoomShoppingListRepository
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
+import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
@@ -26,16 +28,19 @@ val appModule = module {
                 FoodTrackerDatabase.MIGRATION_2_3,
                 FoodTrackerDatabase.MIGRATION_3_4,
                 FoodTrackerDatabase.MIGRATION_4_5,
-                FoodTrackerDatabase.MIGRATION_5_6
+                FoodTrackerDatabase.MIGRATION_5_6,
+                FoodTrackerDatabase.MIGRATION_6_7
             )
             .build()
     }
     single { get<FoodTrackerDatabase>().pantryDao() }
     single { get<FoodTrackerDatabase>().shoppingListDao() }
     single { get<FoodTrackerDatabase>().productNameDao() }
+    single { get<FoodTrackerDatabase>().localProductDao() }
     single<PantryRepository> { RoomPantryRepository(get()) }
     single<ShoppingListRepository> { RoomShoppingListRepository(get()) }
     single<ProductNameRepository> { RoomProductNameRepository(get()) }
+    single<LocalProductRepository> { RoomLocalProductRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
     single { OpenFoodFactsApi() }
     single { WidgetUpdater(androidContext(), get(), get()) }
@@ -45,6 +50,7 @@ val appModule = module {
             settingsRepository = get(),
             shoppingListRepository = get(),
             productNameRepository = get(),
+            localProductRepository = get(),
             openFoodFactsApi = get()
         )
     }

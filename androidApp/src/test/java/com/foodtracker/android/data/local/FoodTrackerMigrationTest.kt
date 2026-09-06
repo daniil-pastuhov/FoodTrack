@@ -84,7 +84,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_2_3,
                 FoodTrackerDatabase.MIGRATION_3_4,
                 FoodTrackerDatabase.MIGRATION_4_5,
-                FoodTrackerDatabase.MIGRATION_5_6
+                FoodTrackerDatabase.MIGRATION_5_6,
+                FoodTrackerDatabase.MIGRATION_6_7
             )
             .build()
 
@@ -162,7 +163,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_2_3,
                 FoodTrackerDatabase.MIGRATION_3_4,
                 FoodTrackerDatabase.MIGRATION_4_5,
-                FoodTrackerDatabase.MIGRATION_5_6
+                FoodTrackerDatabase.MIGRATION_5_6,
+                FoodTrackerDatabase.MIGRATION_6_7
             )
             .build()
 
@@ -247,7 +249,11 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_4_5, FoodTrackerDatabase.MIGRATION_5_6)
+            .addMigrations(
+                FoodTrackerDatabase.MIGRATION_4_5,
+                FoodTrackerDatabase.MIGRATION_5_6,
+                FoodTrackerDatabase.MIGRATION_6_7
+            )
             .build()
 
         val migrated = db.shoppingListDao().getAllFlow().first()
@@ -351,7 +357,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_5_6)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_5_6, FoodTrackerDatabase.MIGRATION_6_7)
             .build()
 
         val knownNames = db.productNameDao().getRecentNamesFlow().first()
@@ -362,6 +368,95 @@ class FoodTrackerMigrationTest {
             7.0,
             db.productNameDao().getSortOrder("eggs")
         )
+
+        db.close()
+    }
+
+    @Test
+    fun migrate6To7BackfillsLocalProductsFromInventory() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-6-7.db")
+        dbFile.delete()
+
+        // Build the version-6 schema by hand (no local_products table yet) and seed pantry
+        // items, including one with no barcode (must be skipped) and a duplicate barcode
+        // (INSERT OR IGNORE keeps the first row it sees).
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { db ->
+            db.execSQL(
+                """
+                CREATE TABLE pantry_items (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    barcode TEXT,
+                    imageUrl TEXT,
+                    expiryDateEpochDays INTEGER NOT NULL,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    storageLocation TEXT NOT NULL,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    notes TEXT,
+                    essential INTEGER NOT NULL DEFAULT 1
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE shopping_list_entries (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    productName TEXT NOT NULL,
+                    barcode TEXT,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    sortOrder REAL NOT NULL DEFAULT 0
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE known_product_names (
+                    normalizedName TEXT NOT NULL PRIMARY KEY,
+                    displayName TEXT NOT NULL,
+                    lastUsedAtEpochMillis INTEGER NOT NULL,
+                    sortOrder REAL DEFAULT NULL
+                )
+                """.trimIndent()
+            )
+            listOf(
+                Triple("item-1", "Custom Snack", "0000001111111"),
+                Triple("item-2", "No Barcode Item", null),
+                Triple("item-3", "Duplicate Barcode Item", "0000001111111")
+            ).forEach { (id, name, barcode) ->
+                db.insert(
+                    "pantry_items",
+                    null,
+                    ContentValues().apply {
+                        put("id", id)
+                        put("name", name)
+                        put("brand", null as String?)
+                        put("barcode", barcode)
+                        put("imageUrl", null as String?)
+                        put("expiryDateEpochDays", 20100)
+                        put("addedDateEpochDays", 20000)
+                        put("storageLocation", "Fridge")
+                        put("category", null as String?)
+                        put("quantity", 1)
+                        put("notes", null as String?)
+                        put("essential", 1)
+                    }
+                )
+            }
+            db.version = 6
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_6_7)
+            .build()
+
+        val cached = db.localProductDao().getByBarcode("0000001111111")
+        assertNotNull("pantry item with a barcode must be backfilled into the local cache", cached)
+        assertEquals("Custom Snack", cached!!.name)
 
         db.close()
     }

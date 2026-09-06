@@ -7,6 +7,7 @@ import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.SortOption
 import com.foodtracker.parser.GS1BarcodeParser
+import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
@@ -65,6 +66,7 @@ class PantryStateHolder(
     private val settingsRepository: SettingsRepository,
     private val shoppingListRepository: ShoppingListRepository,
     private val productNameRepository: ProductNameRepository,
+    private val localProductRepository: LocalProductRepository,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
@@ -300,7 +302,10 @@ class PantryStateHolder(
         }
 
         coroutineScope.launch {
-            val product = openFoodFactsApi.fetchProduct(barcode)
+            // A locally-cached product (whether it was previously found via the API or entered
+            // by hand for a barcode OFF didn't know) wins over the network, so a "custom"
+            // product from a past scan is recognized here instead of showing not-found again.
+            val product = localProductRepository.getByBarcode(barcode) ?: openFoodFactsApi.fetchProduct(barcode)
             _uiState.update {
                 it.copy(
                     scannedProduct = product,
@@ -326,6 +331,17 @@ class PantryStateHolder(
             val isNewItem = repository.getItem(item.id) == null
             repository.saveItem(item)
             recordProductName(item.name)
+            item.barcode?.let { barcode ->
+                localProductRepository.saveProduct(
+                    ProductInfo(
+                        barcode = barcode,
+                        name = item.name,
+                        brand = item.brand,
+                        imageUrl = item.imageUrl,
+                        category = item.category
+                    )
+                )
+            }
             if (isNewItem) {
                 val scanEntryId = _uiState.value.scanningShoppingListEntryId
                 if (scanEntryId != null) {

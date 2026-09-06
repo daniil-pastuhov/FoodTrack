@@ -52,6 +52,8 @@
 		FE7B16743512870CBA9C7C8D /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4BEE1DD74E5B2B66C9F038A7 /* AppRouter.swift */; };
 		715C6762ED0A73EC28B252A9 /* ProductNameRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */; };
 		57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */; };
+		BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
+		F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,6 +99,7 @@
 		3764E7EDFC9E09ED698D0134 /* FoodTrackerWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FoodTrackerWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4BEE1DD74E5B2B66C9F038A7 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductNameRecord.swift; sourceTree = "<group>"; };
+		ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProductRecord.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +207,7 @@
 				4F7119136C074AAB8D3B3F03 /* ShoppingListEntry.swift */,
 				13AEE2C0BAD94D898F6896A2 /* ShoppingListEntryRecord.swift */,
 				78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */,
+				ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -408,6 +412,7 @@
 				86790CDA9E81A2653D490787 /* AppGroup.swift in Sources */,
 				FE7B16743512870CBA9C7C8D /* AppRouter.swift in Sources */,
 				715C6762ED0A73EC28B252A9 /* ProductNameRecord.swift in Sources */,
+				BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */,
 				665A801EBE434BEE94B34280 /* FloatingTabBar.swift in Sources */,
 				B079A629A81449CB9E79EB97 /* RootTabView.swift in Sources */,
 			);
@@ -432,6 +437,7 @@
 				F8166323E71143B366864C13 /* SettingsStore.swift in Sources */,
 				4F7EFE3632E9624B6262E10E /* L10n.swift in Sources */,
 				57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */,
+				F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

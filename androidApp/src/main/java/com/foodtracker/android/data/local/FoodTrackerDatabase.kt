@@ -6,14 +6,15 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [PantryItemEntity::class, ShoppingListEntryEntity::class, ProductNameEntity::class],
-    version = 6,
+    entities = [PantryItemEntity::class, ShoppingListEntryEntity::class, ProductNameEntity::class, LocalProductEntity::class],
+    version = 7,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
     abstract fun pantryDao(): PantryDao
     abstract fun shoppingListDao(): ShoppingListDao
     abstract fun productNameDao(): ProductNameDao
+    abstract fun localProductDao(): LocalProductDao
 
     companion object {
         const val DB_NAME = "foodtracker.db"
@@ -131,6 +132,36 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                     SELECT LOWER(TRIM(name)), TRIM(name), MAX(addedDateEpochDays) * 86400000
                     FROM pantry_items
                     GROUP BY LOWER(TRIM(name))
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // Adds the local product cache: barcodes scanned/saved before (whether OFF had a
+        // record or the user filled one in by hand) are looked up here first on a future scan,
+        // working even for "custom" products the API has never heard of. Backfilled from every
+        // pantry item that already has a barcode, so already-owned items are recognized
+        // immediately rather than only after being re-scanned. INSERT OR IGNORE keeps the first
+        // (lowest rowid) row per barcode when duplicates exist.
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS local_products (
+                        barcode TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        brand TEXT,
+                        imageUrl TEXT,
+                        category TEXT
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO local_products (barcode, name, brand, imageUrl, category)
+                    SELECT barcode, name, brand, imageUrl, category
+                    FROM pantry_items
+                    WHERE barcode IS NOT NULL
                     """.trimIndent()
                 )
             }

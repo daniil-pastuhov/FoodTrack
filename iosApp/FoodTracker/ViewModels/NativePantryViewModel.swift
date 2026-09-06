@@ -61,7 +61,7 @@ public class NativePantryViewModel: ObservableObject {
     /// `FoodTrackerWidgetExtension` — a separate process/sandbox — can open the exact same
     /// store via this same property.
     public nonisolated static let sharedModelContainer: ModelContainer = {
-        let schema = Schema([PantryItemRecord.self, ShoppingListEntryRecord.self, ProductNameRecord.self])
+        let schema = Schema([PantryItemRecord.self, ShoppingListEntryRecord.self, ProductNameRecord.self, LocalProductRecord.self])
         guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
             fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see WIDGETS_TASK.md")
         }
@@ -169,6 +169,24 @@ public class NativePantryViewModel: ObservableObject {
         }
         try? modelContext.save()
         loadKnownProductNames()
+    }
+
+    /// Upserts a barcode's product details into the local cache (see `LocalProductRecord`) so a
+    /// later scan of the same barcode prefetches it here instead of hitting the network again —
+    /// this is what makes a once-manually-entered "custom" product recognized on a later scan.
+    private func saveLocalProduct(barcode: String, name: String, brand: String?, imageUrl: String?, category: String?) {
+        let trimmed = barcode.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.name = name
+            existing.brand = brand
+            existing.imageUrl = imageUrl
+            existing.category = category
+        } else {
+            modelContext.insert(LocalProductRecord(barcode: trimmed, name: name, brand: brand, imageUrl: imageUrl, category: category))
+        }
+        try? modelContext.save()
     }
 
     /// The manual shopping-list position last recorded for `name` via `recordSortOrder`, or nil
@@ -285,6 +303,24 @@ public class NativePantryViewModel: ObservableObject {
         isLookingUpBarcode = true
         scannedProduct = nil
 
+        // A locally-cached product (whether it was previously found via the API or entered by
+        // hand for a barcode OFF didn't know) wins over the network, so a "custom" product from
+        // a past scan is recognized here instead of showing not-found again.
+        let cacheDescriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == barcode })
+        if let cached = try? modelContext.fetch(cacheDescriptor).first {
+            scannedProduct = ProductInfo(
+                barcode: cached.barcode,
+                name: cached.name,
+                brand: cached.brand,
+                imageUrl: cached.imageUrl,
+                category: cached.category,
+                quantity: nil
+            )
+            productNotFoundBarcode = nil
+            isLookingUpBarcode = false
+            return
+        }
+
         Task {
             guard let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(barcode).json") else {
                 self.isLookingUpBarcode = false
@@ -340,6 +376,9 @@ public class NativePantryViewModel: ObservableObject {
         try? modelContext.save()
         loadItems()
         recordProductName(item.name)
+        if let barcode = item.barcode {
+            saveLocalProduct(barcode: barcode, name: item.name, brand: item.brand, imageUrl: item.imageUrl, category: item.category)
+        }
 
         if isNewItem {
             if let entryId = scanningShoppingListEntryId {
