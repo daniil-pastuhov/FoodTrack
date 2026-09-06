@@ -128,6 +128,26 @@ fun AddEditItemScreen(
 
     var showDatePicker by remember { mutableStateOf(false) }
 
+    fun saveItem() {
+        if (name.isNotBlank()) {
+            val item = PantryItem(
+                id = initialItem?.id ?: "item_${System.currentTimeMillis()}",
+                name = name.trim(),
+                brand = brand.trim().ifBlank { null },
+                barcode = barcode.trim().ifBlank { null },
+                imageUrl = imageUrl,
+                expiryDate = expiryDate,
+                addedDate = initialItem?.addedDate ?: today,
+                storageLocation = storageLocation,
+                category = category.trim().ifBlank { null },
+                quantity = quantity,
+                notes = notes.trim().ifBlank { null },
+                essential = essential
+            )
+            onSaveItem(item)
+        }
+    }
+
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
             initialSelectedDateMillis = Instant.fromEpochMilliseconds(
@@ -170,6 +190,17 @@ fun AddEditItemScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_content_description))
+                    }
+                },
+                actions = {
+                    IconButton(onClick = ::saveItem, enabled = name.isNotBlank()) {
+                        Icon(
+                            Icons.Default.Save,
+                            contentDescription = stringResource(
+                                if (initialItem != null) R.string.update_item_button else R.string.save_item_button
+                            ),
+                            tint = if (name.isNotBlank()) BrandPrimary else TextSecondary.copy(alpha = 0.4f)
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -433,25 +464,7 @@ fun AddEditItemScreen(
 
             // Save Button
             Button(
-                onClick = {
-                    if (name.isNotBlank()) {
-                        val item = PantryItem(
-                            id = initialItem?.id ?: "item_${System.currentTimeMillis()}",
-                            name = name.trim(),
-                            brand = brand.trim().ifBlank { null },
-                            barcode = barcode.trim().ifBlank { null },
-                            imageUrl = imageUrl,
-                            expiryDate = expiryDate,
-                            addedDate = initialItem?.addedDate ?: today,
-                            storageLocation = storageLocation,
-                            category = category.trim().ifBlank { null },
-                            quantity = quantity,
-                            notes = notes.trim().ifBlank { null },
-                            essential = essential
-                        )
-                        onSaveItem(item)
-                    }
-                },
+                onClick = ::saveItem,
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
                 shape = RoundedCornerShape(14.dp),

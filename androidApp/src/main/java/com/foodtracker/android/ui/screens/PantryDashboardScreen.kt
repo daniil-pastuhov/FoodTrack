@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -82,20 +83,29 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.components.ItemCard
 import com.foodtracker.android.ui.theme.BrandPrimary
@@ -135,6 +145,24 @@ fun PantryDashboardScreen(
             state.selectedStatusFilter != StatusFilter.ALL ||
             state.searchQuery.isNotBlank()
 
+    // Drives the collapsing header (TopBar + metric row + Add to Pantry): 0f is fully
+    // expanded, -headerNaturalHeightPx is fully collapsed. Consumed eagerly in onPreScroll
+    // (not on post-scroll/at list boundaries) so the header reacts to any upward drag
+    // immediately, from anywhere in the list, rather than only once the list hits its top.
+    var headerOffsetPx by remember { mutableFloatStateOf(0f) }
+    var headerNaturalHeightPx by remember { mutableFloatStateOf(0f) }
+    val headerNestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (headerNaturalHeightPx <= 0f) return Offset.Zero
+                val newOffset = (headerOffsetPx + available.y).coerceIn(-headerNaturalHeightPx, 0f)
+                val consumed = newOffset - headerOffsetPx
+                headerOffsetPx = newOffset
+                return Offset(0f, consumed)
+            }
+        }
+    }
+
     fun toggleMetricFilter(filter: StatusFilter) {
         stateHolder.onStatusFilterSelected(
             if (state.selectedStatusFilter == filter) StatusFilter.ALL else filter
@@ -168,132 +196,7 @@ fun PantryDashboardScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    AnimatedContent(
-                        targetState = selectionMode,
-                        transitionSpec = {
-                            (fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 }) togetherWith
-                                (fadeOut(tween(120)) + slideOutVertically(tween(120)) { -it / 3 })
-                        },
-                        label = "topBarTitle"
-                    ) { inSelectionMode ->
-                        if (inSelectionMode) {
-                            Text(
-                                text = stringResource(R.string.selection_count_format, selectedIds.size),
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        } else {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(BrandPrimary)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Fastfood,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = stringResource(R.string.app_name),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.app_subtitle),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-                        }
-                    }
-                },
-                navigationIcon = {
-                    AnimatedVisibility(
-                        visible = selectionMode,
-                        enter = fadeIn() + scaleIn(),
-                        exit = fadeOut() + scaleOut()
-                    ) {
-                        IconButton(onClick = { selectedIds = emptySet() }) {
-                            Icon(
-                                imageVector = Icons.Default.Close,
-                                contentDescription = stringResource(R.string.exit_selection_content_description)
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    AnimatedContent(
-                        targetState = selectionMode,
-                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                        label = "topBarActions"
-                    ) { inSelectionMode ->
-                        if (inSelectionMode) {
-                            IconButton(onClick = { showShareDialog = true }) {
-                                Icon(
-                                    imageVector = Icons.Default.RestaurantMenu,
-                                    contentDescription = stringResource(R.string.action_get_recipe_ideas)
-                                )
-                            }
-                        } else {
-                            Row {
-                                IconButton(onClick = onNavigateToCalendar) {
-                                    Icon(
-                                        imageVector = Icons.Default.CalendarMonth,
-                                        contentDescription = stringResource(R.string.calendar_content_description)
-                                    )
-                                }
-                                IconButton(onClick = onNavigateToShoppingList) {
-                                    BadgedBox(
-                                        badge = {
-                                            AnimatedCountBadge(count = state.shoppingList.size)
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ShoppingCart,
-                                            contentDescription = stringResource(R.string.shopping_list_content_description)
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = { showFilterSheet = true }) {
-                                    BadgedBox(
-                                        badge = {
-                                            AnimatedDotBadge(visible = filtersActive)
-                                        }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Tune,
-                                            contentDescription = stringResource(R.string.filter_content_description)
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = onNavigateToSettings) {
-                                    Icon(
-                                        imageVector = Icons.Default.Settings,
-                                        contentDescription = stringResource(R.string.settings_content_description)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
-                )
-            )
-        },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             AnimatedVisibility(
                 visible = !selectionMode,
@@ -323,76 +226,209 @@ fun PantryDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .nestedScroll(headerNestedScrollConnection)
         ) {
-            // Urgency Metrics Row — also acts as the primary status filter
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            CollapsingHeader(
+                heightOffsetPx = headerOffsetPx,
+                onNaturalHeightMeasured = { headerNaturalHeightPx = it }
             ) {
-                val expiredColors = expiredStatusColors()
-                MetricCard(
-                    title = stringResource(R.string.metric_expired),
-                    count = state.expiredCount,
-                    color = expiredColors.foreground,
-                    bgColor = expiredColors.background,
-                    icon = Icons.Default.Error,
-                    selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
-                    onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
-                    modifier = Modifier.weight(1f)
-                )
-                val expiringColors = expiringStatusColors()
-                MetricCard(
-                    title = stringResource(R.string.metric_soon),
-                    count = state.expiringSoonCount,
-                    color = expiringColors.foreground,
-                    bgColor = expiringColors.background,
-                    icon = Icons.Default.Warning,
-                    selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
-                    onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
-                    modifier = Modifier.weight(1f)
-                )
-                val freshColors = freshStatusColors()
-                MetricCard(
-                    title = stringResource(R.string.metric_fresh),
-                    count = state.freshCount,
-                    color = freshColors.foreground,
-                    bgColor = freshColors.background,
-                    icon = Icons.Default.Schedule,
-                    selected = state.selectedStatusFilter == StatusFilter.FRESH,
-                    onClick = { toggleMetricFilter(StatusFilter.FRESH) },
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                Column {
+                    TopAppBar(
+                        title = {
+                            AnimatedContent(
+                                targetState = selectionMode,
+                                transitionSpec = {
+                                    (fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 }) togetherWith
+                                        (fadeOut(tween(120)) + slideOutVertically(tween(120)) { -it / 3 })
+                                },
+                                label = "topBarTitle"
+                            ) { inSelectionMode ->
+                                if (inSelectionMode) {
+                                    Text(
+                                        text = stringResource(R.string.selection_count_format, selectedIds.size),
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                } else {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            contentAlignment = Alignment.Center,
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(BrandPrimary)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Fastfood,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column {
+                                            Text(
+                                                text = stringResource(R.string.app_name),
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = stringResource(R.string.app_subtitle),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = TextSecondary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        navigationIcon = {
+                            AnimatedVisibility(
+                                visible = selectionMode,
+                                enter = fadeIn() + scaleIn(),
+                                exit = fadeOut() + scaleOut()
+                            ) {
+                                IconButton(onClick = { selectedIds = emptySet() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = stringResource(R.string.exit_selection_content_description)
+                                    )
+                                }
+                            }
+                        },
+                        actions = {
+                            AnimatedContent(
+                                targetState = selectionMode,
+                                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                                label = "topBarActions"
+                            ) { inSelectionMode ->
+                                if (inSelectionMode) {
+                                    IconButton(onClick = { showShareDialog = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.RestaurantMenu,
+                                            contentDescription = stringResource(R.string.action_get_recipe_ideas)
+                                        )
+                                    }
+                                } else {
+                                    Row {
+                                        IconButton(onClick = onNavigateToCalendar) {
+                                            Icon(
+                                                imageVector = Icons.Default.CalendarMonth,
+                                                contentDescription = stringResource(R.string.calendar_content_description)
+                                            )
+                                        }
+                                        IconButton(onClick = onNavigateToShoppingList) {
+                                            BadgedBox(
+                                                badge = {
+                                                    AnimatedCountBadge(count = state.shoppingList.size)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.ShoppingCart,
+                                                    contentDescription = stringResource(R.string.shopping_list_content_description)
+                                                )
+                                            }
+                                        }
+                                        IconButton(onClick = { showFilterSheet = true }) {
+                                            BadgedBox(
+                                                badge = {
+                                                    AnimatedDotBadge(visible = filtersActive)
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Tune,
+                                                    contentDescription = stringResource(R.string.filter_content_description)
+                                                )
+                                            }
+                                        }
+                                        IconButton(onClick = onNavigateToSettings) {
+                                            Icon(
+                                                imageVector = Icons.Default.Settings,
+                                                contentDescription = stringResource(R.string.settings_content_description)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.background
+                        )
+                    )
 
-            AnimatedVisibility(
-                visible = !selectionMode,
-                enter = fadeIn() + expandVertically(),
-                exit = fadeOut() + shrinkVertically()
-            ) {
-                Card(
-                    onClick = { onNavigateToAddEdit(null) },
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                ) {
+                    // Urgency Metrics Row — also acts as the primary status filter
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AddCircle,
-                            contentDescription = null,
-                            tint = BrandPrimary
+                        val expiredColors = expiredStatusColors()
+                        MetricCard(
+                            title = stringResource(R.string.metric_expired),
+                            count = state.expiredCount,
+                            color = expiredColors.foreground,
+                            bgColor = expiredColors.background,
+                            icon = Icons.Default.Error,
+                            selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
+                            onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
+                            modifier = Modifier.weight(1f)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = stringResource(R.string.add_item_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                        val expiringColors = expiringStatusColors()
+                        MetricCard(
+                            title = stringResource(R.string.metric_soon),
+                            count = state.expiringSoonCount,
+                            color = expiringColors.foreground,
+                            bgColor = expiringColors.background,
+                            icon = Icons.Default.Warning,
+                            selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
+                            onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
+                            modifier = Modifier.weight(1f)
                         )
+                        val freshColors = freshStatusColors()
+                        MetricCard(
+                            title = stringResource(R.string.metric_fresh),
+                            count = state.freshCount,
+                            color = freshColors.foreground,
+                            bgColor = freshColors.background,
+                            icon = Icons.Default.Schedule,
+                            selected = state.selectedStatusFilter == StatusFilter.FRESH,
+                            onClick = { toggleMetricFilter(StatusFilter.FRESH) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    AnimatedVisibility(
+                        visible = !selectionMode,
+                        enter = fadeIn() + expandVertically(),
+                        exit = fadeOut() + shrinkVertically()
+                    ) {
+                        Card(
+                            onClick = { onNavigateToAddEdit(null) },
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AddCircle,
+                                    contentDescription = null,
+                                    tint = BrandPrimary
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = stringResource(R.string.add_item_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -759,6 +795,26 @@ private fun AnimatedDotBadge(visible: Boolean) {
         exit = fadeOut() + scaleOut()
     ) {
         Badge(containerColor = BrandPrimary)
+    }
+}
+
+// Clamps content height to naturalHeight + heightOffsetPx and translates it up by the same
+// amount, so it looks like it's scrolling away underneath the top edge as heightOffsetPx
+// (driven by a nested scroll connection) goes from 0 to -naturalHeight.
+@Composable
+private fun CollapsingHeader(
+    heightOffsetPx: Float,
+    onNaturalHeightMeasured: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Layout(content = content, modifier = modifier.clipToBounds()) { measurables, constraints ->
+        val placeable = measurables.first().measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
+        onNaturalHeightMeasured(placeable.height.toFloat())
+        val height = (placeable.height + heightOffsetPx).roundToInt().coerceIn(0, placeable.height)
+        layout(placeable.width, height) {
+            placeable.placeRelative(0, heightOffsetPx.roundToInt())
+        }
     }
 }
 
