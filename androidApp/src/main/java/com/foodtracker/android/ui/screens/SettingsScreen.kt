@@ -17,7 +17,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
@@ -66,7 +65,6 @@ import com.foodtracker.model.AppTheme
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
-    onNavigateBack: () -> Unit,
     onSave: (AppSettings) -> Unit,
     onClearAllData: () -> Unit,
     modifier: Modifier = Modifier
@@ -133,11 +131,6 @@ fun SettingsScreen(
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title), fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_content_description))
-                    }
-                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         },
@@ -364,7 +357,9 @@ fun SettingsScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Clears the floating pill nav bar and scan/add buttons that overlay this screen
+            // (see MainActivity).
+            Spacer(modifier = Modifier.height(140.dp))
         }
         }
     }

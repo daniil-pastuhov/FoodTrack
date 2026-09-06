@@ -1,4 +1,5 @@
 "app_name" = "FoodTracker";
+"nav_home" = "Home";
 
 "metric_expired" = "Expired";
 "metric_expiring_soon" = "Expiring Soon";

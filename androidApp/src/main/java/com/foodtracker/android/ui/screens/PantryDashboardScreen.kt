@@ -44,17 +44,12 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.RestaurantMenu
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Warning
@@ -68,7 +63,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -123,11 +117,7 @@ import com.foodtracker.viewmodel.StatusFilter
 @Composable
 fun PantryDashboardScreen(
     stateHolder: PantryStateHolder,
-    onNavigateToScanner: () -> Unit,
     onNavigateToAddEdit: (PantryItem?) -> Unit,
-    onNavigateToSettings: () -> Unit,
-    onNavigateToCalendar: () -> Unit,
-    onNavigateToShoppingList: () -> Unit,
     onDeleteItem: (String) -> Unit,
     onDecrementQuantity: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -197,29 +187,6 @@ fun PantryDashboardScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            AnimatedVisibility(
-                visible = !selectionMode,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut()
-            ) {
-                FloatingActionButton(
-                    onClick = onNavigateToScanner,
-                    containerColor = BrandPrimary,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    ) {
-                        Icon(Icons.Default.QrCodeScanner, contentDescription = stringResource(R.string.scan_content_description))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = stringResource(R.string.scan_item), fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
@@ -313,24 +280,6 @@ fun PantryDashboardScreen(
                                     }
                                 } else {
                                     Row {
-                                        IconButton(onClick = onNavigateToCalendar) {
-                                            Icon(
-                                                imageVector = Icons.Default.CalendarMonth,
-                                                contentDescription = stringResource(R.string.calendar_content_description)
-                                            )
-                                        }
-                                        IconButton(onClick = onNavigateToShoppingList) {
-                                            BadgedBox(
-                                                badge = {
-                                                    AnimatedCountBadge(count = state.shoppingList.size)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.ShoppingCart,
-                                                    contentDescription = stringResource(R.string.shopping_list_content_description)
-                                                )
-                                            }
-                                        }
                                         IconButton(onClick = { showFilterSheet = true }) {
                                             BadgedBox(
                                                 badge = {
@@ -342,12 +291,6 @@ fun PantryDashboardScreen(
                                                     contentDescription = stringResource(R.string.filter_content_description)
                                                 )
                                             }
-                                        }
-                                        IconButton(onClick = onNavigateToSettings) {
-                                            Icon(
-                                                imageVector = Icons.Default.Settings,
-                                                contentDescription = stringResource(R.string.settings_content_description)
-                                            )
                                         }
                                     }
                                 }
@@ -398,37 +341,6 @@ fun PantryDashboardScreen(
                             onClick = { toggleMetricFilter(StatusFilter.FRESH) },
                             modifier = Modifier.weight(1f)
                         )
-                    }
-
-                    AnimatedVisibility(
-                        visible = !selectionMode,
-                        enter = fadeIn() + expandVertically(),
-                        exit = fadeOut() + shrinkVertically()
-                    ) {
-                        Card(
-                            onClick = { onNavigateToAddEdit(null) },
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AddCircle,
-                                    contentDescription = null,
-                                    tint = BrandPrimary
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Text(
-                                    text = stringResource(R.string.add_item_title),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
                     }
                 }
             }
@@ -489,7 +401,10 @@ fun PantryDashboardScreen(
                         LazyVerticalGrid(
                             state = gridState,
                             columns = GridCells.Adaptive(minSize = 340.dp),
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 96.dp),
+                            // Bottom padding clears the floating pill nav bar and scan/add
+                            // buttons that overlay this screen (see MainActivity), so the last
+                            // row can still scroll fully into view above them.
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 140.dp),
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.fillMaxSize()
@@ -761,27 +676,6 @@ private fun FilterSheetContent(
                         selectedLabelColor = BrandPrimary
                     )
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnimatedCountBadge(count: Int) {
-    AnimatedVisibility(
-        visible = count > 0,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut()
-    ) {
-        Badge(containerColor = BrandPrimary) {
-            AnimatedContent(
-                targetState = count,
-                transitionSpec = {
-                    (fadeIn() + slideInVertically { it }) togetherWith (fadeOut() + slideOutVertically { -it })
-                },
-                label = "countBadgeValue"
-            ) { animatedCount ->
-                Text(animatedCount.toString())
             }
         }
     }

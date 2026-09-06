@@ -33,7 +33,6 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -87,7 +86,6 @@ private const val MAX_NAME_SUGGESTIONS = 5
 @Composable
 fun ShoppingListScreen(
     stateHolder: PantryStateHolder,
-    onNavigateBack: () -> Unit,
     onScanEntry: (ShoppingListEntry) -> Unit,
     onScanNewEntry: () -> Unit,
     modifier: Modifier = Modifier
@@ -130,11 +128,6 @@ fun ShoppingListScreen(
                         text = stringResource(R.string.shopping_list_title),
                         fontWeight = FontWeight.Bold
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_content_description))
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -279,7 +272,9 @@ fun ShoppingListScreen(
                 LazyColumn(
                     state = lazyListState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                    // Bottom padding clears the floating pill nav bar and scan/add buttons
+                    // that overlay this screen (see MainActivity).
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 140.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(localRows, key = { row ->

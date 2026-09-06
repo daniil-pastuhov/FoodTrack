@@ -1,4 +1,5 @@
 "app_name" = "FoodTracker";
+"nav_home" = "Главная";
 
 "metric_expired" = "Просрочено";
 "metric_expiring_soon" = "Скоро истекают";

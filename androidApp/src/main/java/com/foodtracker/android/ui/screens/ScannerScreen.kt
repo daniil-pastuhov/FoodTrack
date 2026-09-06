@@ -108,6 +108,7 @@ fun ScannerScreen(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 IconButton(
@@ -135,7 +136,6 @@ fun ScannerScreen(
                             tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 OutlinedButton(

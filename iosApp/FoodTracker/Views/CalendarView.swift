@@ -28,7 +28,6 @@ private func monthGrid(for month: Date) -> [CalendarDay] {
 struct CalendarView: View {
     @ObservedObject var viewModel: NativePantryViewModel
     @ObservedObject private var settingsStore = SettingsStore.shared
-    @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var displayedMonth: Date = Date()
@@ -65,12 +64,6 @@ struct CalendarView: View {
             }
             .navigationTitle(L10n.calendarTitle)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(L10n.doneButton) { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
         }
     }
 
@@ -122,6 +115,8 @@ struct CalendarView: View {
                     ItemRowView(item: item, expiringSoonDays: settingsStore.settings.expiringSoonDays)
                 }
                 .listStyle(.plain)
+                // Clears the floating pill nav bar that overlays this screen (see RootTabView).
+                .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 100) }
             }
         }
     }

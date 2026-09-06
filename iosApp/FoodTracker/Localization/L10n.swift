@@ -2,6 +2,7 @@ import Foundation
 
 public enum L10n {
     public static var appName: String { NSLocalizedString("app_name", comment: "") }
+    public static var navHome: String { NSLocalizedString("nav_home", comment: "") }
 
     public static var metricExpired: String { NSLocalizedString("metric_expired", comment: "") }
     public static var metricExpiringSoon: String { NSLocalizedString("metric_expiring_soon", comment: "") }

@@ -6,7 +6,7 @@ struct FoodTrackerApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PantryDashboardView()
+            RootTabView()
                 .tint(Color(red: 13/255, green: 148/255, blue: 136/255)) // Teal Brand color
                 .preferredColorScheme(settingsStore.settings.theme.colorScheme)
                 .onAppear {

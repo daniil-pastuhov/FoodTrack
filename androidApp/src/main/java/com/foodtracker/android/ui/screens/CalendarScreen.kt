@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -23,7 +24,6 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Fastfood
@@ -77,7 +77,6 @@ private val WIDE_LAYOUT_BREAKPOINT = 600.dp
 @Composable
 fun CalendarScreen(
     stateHolder: PantryStateHolder,
-    onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
@@ -97,11 +96,6 @@ fun CalendarScreen(
                         text = formatMonthYear(displayedMonth),
                         fontWeight = FontWeight.Bold
                     )
-                },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back_content_description))
-                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -254,7 +248,12 @@ private fun DayDetailSection(
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
         } else {
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
+            // Bottom padding clears the floating pill nav bar and scan/add buttons that
+            // overlay this screen (see MainActivity).
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 140.dp)
+            ) {
                 items(items, key = { it.id }) { item ->
                     DayDetailRow(item = item, today = today, expiringSoonDays = expiringSoonDays)
                 }

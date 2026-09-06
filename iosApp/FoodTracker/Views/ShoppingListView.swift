@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ShoppingListView: View {
     @ObservedObject var viewModel: NativePantryViewModel
-    @Environment(\.dismiss) private var dismiss
     @State private var newEntryText: String = ""
     @State private var showScanner: Bool = false
     @State private var showAddEdit: Bool = false
@@ -185,6 +184,8 @@ struct ShoppingListView: View {
                         }
                     }
                     .listStyle(.plain)
+                    // Clears the floating pill nav bar that overlays this screen (see RootTabView).
+                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 100) }
                     .animation(.default, value: viewModel.shoppingList)
                     .transition(.opacity)
                 }
@@ -193,12 +194,6 @@ struct ShoppingListView: View {
             .animation(.easeInOut(duration: 0.25), value: viewModel.shoppingList.isEmpty)
             .navigationTitle(L10n.shoppingListTitle)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(L10n.doneButton) { dismiss() }
-                        .fontWeight(.semibold)
-                }
-            }
             .sheet(isPresented: $showScanner, onDismiss: {
                 // Covers the scanner's own "x" cancel button, which dismisses without ever
                 // calling the completion closure below. Skipped when the scan is instead

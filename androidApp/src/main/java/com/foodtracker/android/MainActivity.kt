@@ -10,22 +10,38 @@ import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -36,6 +52,9 @@ import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
 import com.foodtracker.android.ui.screens.ShoppingListScreen
 import com.foodtracker.android.ui.screens.ShoppingListMatchDialog
+import com.foodtracker.android.ui.components.AppBottomBar
+import com.foodtracker.android.ui.components.BottomNavTab
+import com.foodtracker.android.ui.components.ScanAndAddFabs
 import com.foodtracker.android.ui.theme.FoodTrackerTheme
 import com.foodtracker.match.ShoppingListMatchResult
 import com.foodtracker.match.ShoppingListMatcher
@@ -54,6 +73,28 @@ enum class AppScreen {
     SETTINGS,
     CALENDAR,
     SHOPPING_LIST
+}
+
+/** True while the list is scrolling up (or at rest) and false while actively scrolling down,
+ *  by comparing each recomposition's first-visible-item position against the last one seen.
+ *  Drives the scan/add FAB's collapse — it hides on the same downward scroll gesture that
+ *  collapses the dashboard's header, and reappears on the same upward scroll that expands it. */
+@Composable
+private fun LazyGridState.isScrollingUp(): Boolean {
+    var previousIndex by remember(this) { mutableStateOf(firstVisibleItemIndex) }
+    var previousScrollOffset by remember(this) { mutableStateOf(firstVisibleItemScrollOffset) }
+    return remember(this) {
+        derivedStateOf {
+            val scrollingUp = if (previousIndex != firstVisibleItemIndex) {
+                previousIndex > firstVisibleItemIndex
+            } else {
+                previousScrollOffset >= firstVisibleItemScrollOffset
+            }
+            previousIndex = firstVisibleItemIndex
+            previousScrollOffset = firstVisibleItemScrollOffset
+            scrollingUp
+        }
+    }.value
 }
 
 /** Holds a generic shopping-list scan's resolved result plus its ranked candidate entries
@@ -178,8 +219,11 @@ class MainActivity : ComponentActivity() {
                             cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
                         }
                     }
-                    val onNavigateToScannerFromDashboard: () -> Unit = {
-                        scanReturnScreen = AppScreen.DASHBOARD
+                    // Invoked from the global floating "scan" button, reachable from any of the
+                    // four bottom-nav tabs, so it returns to whichever tab it was opened from
+                    // rather than always landing back on the Dashboard.
+                    val onNavigateToScannerGlobal: () -> Unit = {
+                        scanReturnScreen = currentScreen
                         scanningShoppingListEntry = null
                         isScanningForNewShoppingListEntry = false
                         onNavigateToScanner()
@@ -205,17 +249,24 @@ class MainActivity : ComponentActivity() {
                         prefillImageUrl = null
                         prefillExpiryDate = null
                         prefillCategory = null
-                        scanReturnScreen = AppScreen.DASHBOARD
+                        scanReturnScreen = currentScreen
                         currentScreen = AppScreen.ADD_EDIT
                     }
-                    val onNavigateToSettingsScreen: () -> Unit = {
-                        currentScreen = AppScreen.SETTINGS
+                    // Maps the four bottom-nav tabs onto AppScreen and back, for the shared
+                    // outer Scaffold that hosts the floating pill nav bar below.
+                    val currentTab = when (currentScreen) {
+                        AppScreen.CALENDAR -> BottomNavTab.CALENDAR
+                        AppScreen.SHOPPING_LIST -> BottomNavTab.SHOPPING_LIST
+                        AppScreen.SETTINGS -> BottomNavTab.SETTINGS
+                        else -> BottomNavTab.HOME
                     }
-                    val onNavigateToCalendarScreen: () -> Unit = {
-                        currentScreen = AppScreen.CALENDAR
-                    }
-                    val onNavigateToShoppingListScreen: () -> Unit = {
-                        currentScreen = AppScreen.SHOPPING_LIST
+                    val onTabSelected: (BottomNavTab) -> Unit = { tab ->
+                        currentScreen = when (tab) {
+                            BottomNavTab.HOME -> AppScreen.DASHBOARD
+                            BottomNavTab.CALENDAR -> AppScreen.CALENDAR
+                            BottomNavTab.SHOPPING_LIST -> AppScreen.SHOPPING_LIST
+                            BottomNavTab.SETTINGS -> AppScreen.SETTINGS
+                        }
                     }
                     val onDeleteItemHandler: (String) -> Unit = { id ->
                         com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, id)
@@ -261,11 +312,7 @@ class MainActivity : ComponentActivity() {
                         if (inPredictiveBack && currentScreen != AppScreen.DASHBOARD) {
                             PantryDashboardScreen(
                                 stateHolder = stateHolder,
-                                onNavigateToScanner = {},
                                 onNavigateToAddEdit = {},
-                                onNavigateToSettings = {},
-                                onNavigateToCalendar = {},
-                                onNavigateToShoppingList = {},
                                 onDeleteItem = onDeleteItemHandler,
                                 onDecrementQuantity = onDecrementQuantityHandler,
                                 gridState = dashboardGridState
@@ -299,37 +346,121 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                         ) {
+                            val tabScreens = setOf(
+                                AppScreen.DASHBOARD,
+                                AppScreen.CALENDAR,
+                                AppScreen.SHOPPING_LIST,
+                                AppScreen.SETTINGS
+                            )
+                            if (currentScreen in tabScreens) {
+                                // Shared chrome for the four peer tabs: a floating pill nav bar
+                                // plus the scan/add-item round buttons, both reachable from any
+                                // tab. Unlike a Scaffold bottomBar/FAB (which reserve layout
+                                // space and push content up above them), this overlays the bar
+                                // and buttons on top of full-size, edge-to-edge tab content, so
+                                // the product list scrolls underneath them rather than stopping
+                                // short — each tab reserves its own bottom content padding to
+                                // keep its last row reachable above the overlay.
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    AnimatedContent(
+                                        targetState = currentScreen,
+                                        transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
+                                        modifier = Modifier.fillMaxSize(),
+                                        label = "tabContent"
+                                    ) { screen ->
+                                    when (screen) {
+                                        AppScreen.DASHBOARD -> {
+                                            PantryDashboardScreen(
+                                                stateHolder = stateHolder,
+                                                onNavigateToAddEdit = onNavigateToAddEdit,
+                                                onDeleteItem = onDeleteItemHandler,
+                                                onDecrementQuantity = onDecrementQuantityHandler,
+                                                gridState = dashboardGridState
+                                            )
+                                        }
+                                        AppScreen.CALENDAR -> {
+                                            CalendarScreen(stateHolder = stateHolder)
+                                        }
+                                        AppScreen.SHOPPING_LIST -> {
+                                            ShoppingListScreen(
+                                                stateHolder = stateHolder,
+                                                onScanEntry = onScanShoppingListEntry,
+                                                onScanNewEntry = onScanNewShoppingListEntry
+                                            )
+                                        }
+                                        AppScreen.SETTINGS -> {
+                                            SettingsScreen(
+                                                settings = uiState.settings,
+                                                onSave = { newSettings ->
+                                                    val notificationsChanged = newSettings.notifications != uiState.settings.notifications
+                                                    stateHolder.updateSettings(newSettings)
+                                                    if (notificationsChanged) {
+                                                        com.foodtracker.android.notification.NotificationHelper.rescheduleAll(
+                                                            this@MainActivity,
+                                                            stateHolder.uiState.value.items
+                                                        )
+                                                        com.foodtracker.android.notification.NotificationHelper.scheduleDigest(
+                                                            this@MainActivity,
+                                                            newSettings.notifications
+                                                        )
+                                                    }
+                                                },
+                                                onClearAllData = {
+                                                    stateHolder.uiState.value.items.forEach { item ->
+                                                        com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, item.id)
+                                                    }
+                                                    stateHolder.clearAllData()
+                                                    currentScreen = AppScreen.DASHBOARD
+                                                }
+                                            )
+                                        }
+                                        else -> Unit
+                                    }
+                                    }
+
+                                    // The FAB stack's bottom offset is derived from the pill's
+                                    // actually-measured height (rather than a hardcoded guess)
+                                    // so the two never overlap regardless of font scale/density.
+                                    var pillBarHeightPx by remember { mutableFloatStateOf(0f) }
+                                    val density = androidx.compose.ui.platform.LocalDensity.current
+
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomCenter)
+                                            .fillMaxWidth()
+                                            .navigationBarsPadding()
+                                            .padding(bottom = 12.dp)
+                                            .onGloballyPositioned { pillBarHeightPx = it.size.height.toFloat() },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        AppBottomBar(
+                                            selectedTab = currentTab,
+                                            onTabSelected = onTabSelected
+                                        )
+                                    }
+                                    // Scan/Add are only meaningful from the pantry list, so they
+                                    // only show on Home — collapsing away on the same downward
+                                    // scroll gesture that collapses the dashboard's own header,
+                                    // and floating out entirely when navigating to another tab.
+                                    val fabsVisible = currentTab == BottomNavTab.HOME && dashboardGridState.isScrollingUp()
+                                    AnimatedVisibility(
+                                        visible = fabsVisible,
+                                        enter = fadeIn() + slideInVertically { it / 2 },
+                                        exit = fadeOut() + slideOutVertically { it / 2 },
+                                        modifier = Modifier.align(Alignment.BottomEnd)
+                                    ) {
+                                        ScanAndAddFabs(
+                                            onScan = onNavigateToScannerGlobal,
+                                            onAdd = { onNavigateToAddEdit(null) },
+                                            modifier = Modifier.padding(
+                                                end = 16.dp,
+                                                bottom = with(density) { pillBarHeightPx.toDp() } + 24.dp
+                                            )
+                                        )
+                                    }
+                                }
+                            } else {
                             when (currentScreen) {
-                                AppScreen.DASHBOARD -> {
-                                    PantryDashboardScreen(
-                                        stateHolder = stateHolder,
-                                        onNavigateToScanner = onNavigateToScannerFromDashboard,
-                                        onNavigateToAddEdit = onNavigateToAddEdit,
-                                        onNavigateToSettings = onNavigateToSettingsScreen,
-                                        onNavigateToCalendar = onNavigateToCalendarScreen,
-                                        onNavigateToShoppingList = onNavigateToShoppingListScreen,
-                                        onDeleteItem = onDeleteItemHandler,
-                                        onDecrementQuantity = onDecrementQuantityHandler,
-                                        gridState = dashboardGridState
-                                    )
-                                }
-
-                                AppScreen.CALENDAR -> {
-                                    CalendarScreen(
-                                        stateHolder = stateHolder,
-                                        onNavigateBack = navigateToDashboard
-                                    )
-                                }
-
-                                AppScreen.SHOPPING_LIST -> {
-                                    ShoppingListScreen(
-                                        stateHolder = stateHolder,
-                                        onNavigateBack = navigateToDashboard,
-                                        onScanEntry = onScanShoppingListEntry,
-                                        onScanNewEntry = onScanNewShoppingListEntry
-                                    )
-                                }
-
                                 AppScreen.SCANNER -> {
                                     ScannerScreen(
                                         stateHolder = stateHolder,
@@ -407,33 +538,8 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
-                                AppScreen.SETTINGS -> {
-                                    SettingsScreen(
-                                        settings = uiState.settings,
-                                        onNavigateBack = navigateToDashboard,
-                                        onSave = { newSettings ->
-                                            val notificationsChanged = newSettings.notifications != uiState.settings.notifications
-                                            stateHolder.updateSettings(newSettings)
-                                            if (notificationsChanged) {
-                                                com.foodtracker.android.notification.NotificationHelper.rescheduleAll(
-                                                    this@MainActivity,
-                                                    stateHolder.uiState.value.items
-                                                )
-                                                com.foodtracker.android.notification.NotificationHelper.scheduleDigest(
-                                                    this@MainActivity,
-                                                    newSettings.notifications
-                                                )
-                                            }
-                                        },
-                                        onClearAllData = {
-                                            stateHolder.uiState.value.items.forEach { item ->
-                                                com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, item.id)
-                                            }
-                                            stateHolder.clearAllData()
-                                            currentScreen = AppScreen.DASHBOARD
-                                        }
-                                    )
-                                }
+                                else -> Unit
+                            }
                             }
                         }
 

@@ -1,27 +1,29 @@
 import SwiftUI
 
 public struct PantryDashboardView: View {
-    @StateObject private var viewModel = NativePantryViewModel()
+    @ObservedObject var viewModel: NativePantryViewModel
     @ObservedObject private var settingsStore = SettingsStore.shared
-    @ObservedObject private var router = AppRouter.shared
-    @State private var showScanner: Bool = false
-    @State private var showAddEdit: Bool = false
-    @State private var showSettings: Bool = false
+    /// Row tap notifies the root (`RootTabView`) to open the shared Add/Edit sheet, since
+    /// scanning and adding/editing are handled globally now rather than by this tab itself
+    /// — see `FloatingTabBar`/`ScanAndAddButtons`.
+    var onEditItem: (PantryItem) -> Void
+    /// Reports scroll direction so the root can collapse the scan/add buttons on the same
+    /// downward scroll that scrolls the metrics row out of view, and bring them back on the
+    /// way up — matching the large-title's own native collapse behavior.
+    var onScrollingDownChanged: (Bool) -> Void
     @State private var showFilters: Bool = false
-    @State private var showCalendar: Bool = false
-    @State private var showShoppingList: Bool = false
-    @State private var selectedItem: PantryItem? = nil
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
 
-    @State private var prefillBarcode: String? = nil
-    @State private var prefillName: String? = nil
-    @State private var prefillBrand: String? = nil
-    @State private var prefillImageUrl: String? = nil
-    @State private var prefillDate: Date? = nil
-    @State private var prefillCategory: String? = nil
-
-    public init() {}
+    public init(
+        viewModel: NativePantryViewModel,
+        onEditItem: @escaping (PantryItem) -> Void,
+        onScrollingDownChanged: @escaping (Bool) -> Void = { _ in }
+    ) {
+        self.viewModel = viewModel
+        self.onEditItem = onEditItem
+        self.onScrollingDownChanged = onScrollingDownChanged
+    }
 
     public var body: some View {
         NavigationStack {
@@ -67,25 +69,6 @@ public struct PantryDashboardView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
 
-                if !isSelecting {
-                    Section {
-                        Button(action: {
-                            selectedItem = nil
-                            prefillBarcode = nil
-                            prefillName = nil
-                            prefillBrand = nil
-                            prefillImageUrl = nil
-                            prefillDate = nil
-                            prefillCategory = nil
-                            showAddEdit = true
-                        }) {
-                            Label(L10n.addItemTitle, systemImage: "plus.circle.fill")
-                                .font(.headline)
-                        }
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-                }
-
                 // Items List
                 if viewModel.filteredItems.isEmpty {
                     VStack(spacing: 12) {
@@ -129,8 +112,7 @@ public struct PantryDashboardView: View {
                             if isSelecting {
                                 withAnimation(.easeInOut(duration: 0.2)) { toggleSelection(item.id) }
                             } else {
-                                selectedItem = item
-                                showAddEdit = true
+                                onEditItem(item)
                             }
                         }
                         .onLongPressGesture {
@@ -154,6 +136,18 @@ public struct PantryDashboardView: View {
             .animation(.default, value: viewModel.filteredItems)
             .animation(.easeInOut(duration: 0.2), value: isSelecting)
             .listStyle(.insetGrouped)
+            // Clears the floating pill nav bar and scan/add buttons that overlay this screen
+            // (see RootTabView) so the last row can still scroll fully into view above them.
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 150) }
+            // `.onScrollGeometryChange` needs iOS 18, so scroll direction is inferred from the
+            // drag gesture instead — `.simultaneousGesture` lets it coexist with the List's own
+            // scrolling and the row taps/long-presses/swipe actions above.
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 8)
+                    .onChanged { value in
+                        onScrollingDownChanged(value.translation.height < 0)
+                    }
+            )
             .navigationTitle(isSelecting ? L10n.selectionCount(selectedItemIDs.count) : L10n.appName)
             .toolbar {
                 if isSelecting {
@@ -176,40 +170,6 @@ public struct PantryDashboardView: View {
                     }
                 } else {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: { showScanner = true }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "barcode.viewfinder")
-                                Text(L10n.scanButton)
-                            }
-                            .fontWeight(.semibold)
-                        }
-                    }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: { showCalendar = true }) {
-                            Image(systemName: "calendar")
-                        }
-                        .accessibilityLabel(L10n.calendarButton)
-                    }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: { showShoppingList = true }) {
-                            ZStack(alignment: .topTrailing) {
-                                Image(systemName: "cart")
-                                if !viewModel.shoppingList.isEmpty {
-                                    Text("\(viewModel.shoppingList.count)")
-                                        .font(.system(size: 10, weight: .bold))
-                                        .contentTransition(.numericText())
-                                        .foregroundColor(.white)
-                                        .padding(4)
-                                        .background(Circle().fill(Color.accentColor))
-                                        .offset(x: 10, y: -10)
-                                        .transition(.scale.combined(with: .opacity))
-                                }
-                            }
-                            .animation(.easeInOut(duration: 0.2), value: viewModel.shoppingList.count)
-                        }
-                        .accessibilityLabel(L10n.shoppingListButton)
-                    }
-                    ToolbarItem(placement: .navigationBarLeading) {
                         Button(action: { showFilters = true }) {
                             Image(systemName: viewModel.hasActiveFilters
                                 ? "line.3.horizontal.decrease.circle.fill"
@@ -218,62 +178,11 @@ public struct PantryDashboardView: View {
                         }
                         .accessibilityLabel(L10n.filtersButton)
                     }
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Menu {
-                            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isSelecting = true } }) {
-                                Label(L10n.selectItemsButton, systemImage: "checkmark.circle")
-                            }
-                            Button(action: { showSettings = true }) {
-                                Label(L10n.settingsTitle, systemImage: "gearshape")
-                            }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                        .accessibilityLabel(L10n.moreOptionsButton)
-                    }
                 }
-            }
-            .sheet(isPresented: $showScanner) {
-                ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category in
-                    selectedItem = nil
-                    prefillBarcode = barcode
-                    prefillName = name
-                    prefillBrand = brand
-                    prefillImageUrl = imageUrl
-                    prefillDate = date
-                    prefillCategory = category
-                    showAddEdit = true
-                }
-            }
-            .sheet(isPresented: $showAddEdit) {
-                AddEditItemView(
-                    viewModel: viewModel,
-                    editingItem: selectedItem,
-                    prefillBarcode: prefillBarcode,
-                    prefillName: prefillName,
-                    prefillBrand: prefillBrand,
-                    prefillImageUrl: prefillImageUrl,
-                    prefillDate: prefillDate,
-                    prefillCategory: prefillCategory
-                )
-            }
-            .sheet(isPresented: $showSettings) {
-                SettingsView(viewModel: viewModel)
             }
             .sheet(isPresented: $showFilters) {
                 FilterSheetView(viewModel: viewModel, settingsStore: settingsStore)
                     .presentationDetents([.medium])
-            }
-            .sheet(isPresented: $showCalendar) {
-                CalendarView(viewModel: viewModel)
-            }
-            .sheet(isPresented: $showShoppingList) {
-                ShoppingListView(viewModel: viewModel)
-            }
-            .onChange(of: router.openShoppingList) { _, shouldOpen in
-                guard shouldOpen else { return }
-                showShoppingList = true
-                router.openShoppingList = false
             }
         }
     }

@@ -1,17 +1,20 @@
 import SwiftUI
 
 public struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: NativePantryViewModel
     @ObservedObject private var store = SettingsStore.shared
+    /// Called after "Clear All Data" is confirmed, so the root can switch back to the Home
+    /// tab — mirroring the Android app's return-to-dashboard behavior after a clear.
+    var onDataCleared: () -> Void
 
     @State private var newLocationText: String = ""
     @State private var editingLocation: String? = nil
     @State private var editingLocationText: String = ""
     @State private var showClearConfirm: Bool = false
 
-    public init(viewModel: NativePantryViewModel) {
+    public init(viewModel: NativePantryViewModel, onDataCleared: @escaping () -> Void = {}) {
         self.viewModel = viewModel
+        self.onDataCleared = onDataCleared
     }
 
     private var settings: AppSettings { store.settings }
@@ -33,12 +36,8 @@ public struct SettingsView: View {
             }
             .navigationTitle(L10n.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.saveButton) { dismiss() }
-                        .fontWeight(.bold)
-                }
-            }
+            // Clears the floating pill nav bar that overlays this screen (see RootTabView).
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 100) }
             .confirmationDialog(
                 L10n.clearDataDialogTitle,
                 isPresented: $showClearConfirm,
@@ -46,7 +45,7 @@ public struct SettingsView: View {
             ) {
                 Button(L10n.clearDataConfirm, role: .destructive) {
                     viewModel.clearAllData()
-                    dismiss()
+                    onDataCleared()
                 }
                 Button(L10n.cancelButton, role: .cancel) {}
             } message: {
