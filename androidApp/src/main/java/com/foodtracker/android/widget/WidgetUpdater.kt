@@ -24,15 +24,28 @@ class WidgetUpdater(
     fun start() {
         coroutineScope.launch {
             pantryRepository.getItemsFlow().collectLatest {
-                ExpiryWidget().updateAll(context)
-                OverviewWidget().updateAll(context)
+                // A single failed updateAll() must not throw out of collectLatest: an
+                // uncaught exception here would cancel this whole coroutine (SupervisorJob
+                // only isolates it from the other launch, it doesn't restart it), leaving the
+                // widget stuck on Glance's initial loading layout forever since no
+                // updatePeriodMillis exists to retry it.
+                refreshWidget { ExpiryWidget().updateAll(context) }
+                refreshWidget { OverviewWidget().updateAll(context) }
             }
         }
         coroutineScope.launch {
             shoppingListRepository.getEntriesFlow().collectLatest {
-                ShoppingListWidget().updateAll(context)
-                OverviewWidget().updateAll(context)
+                refreshWidget { ShoppingListWidget().updateAll(context) }
+                refreshWidget { OverviewWidget().updateAll(context) }
             }
+        }
+    }
+
+    private suspend fun refreshWidget(update: suspend () -> Unit) {
+        try {
+            update()
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 }
