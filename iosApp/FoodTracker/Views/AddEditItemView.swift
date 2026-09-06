@@ -24,6 +24,10 @@ public struct AddEditItemView: View {
     @State private var quantity: Int = 1
     @State private var notes: String = ""
     @State private var essential: Bool = true
+    // Embedded scan flow: presents ScannerSheetView on top of this form instead of navigating
+    // away, so fields already typed here (quantity, notes, storage location, essential)
+    // survive a scan rather than being lost to a fresh screen instance.
+    @State private var showScanner: Bool = false
 
     public init(
         viewModel: NativePantryViewModel,
@@ -141,6 +145,12 @@ public struct AddEditItemView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.cancelButton) { dismiss() }
                 }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showScanner = true }) {
+                        Image(systemName: "camera")
+                    }
+                    .accessibilityLabel(L10n.scanButton)
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(L10n.saveButton) {
                         let item = PantryItem(
@@ -186,6 +196,17 @@ public struct AddEditItemView: View {
                     if let date = prefillDate {
                         expiryDate = date
                     }
+                }
+            }
+            .sheet(isPresented: $showScanner) {
+                ScannerSheetView(viewModel: viewModel, showManualEntryShortcut: false) { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedDate, scannedCategory in
+                    if let scannedBarcode { barcode = scannedBarcode }
+                    if let scannedName { name = scannedName }
+                    if let scannedBrand { brand = scannedBrand }
+                    if let scannedImageUrl { imageUrl = scannedImageUrl }
+                    if let scannedDate { expiryDate = scannedDate }
+                    if let scannedCategory { category = scannedCategory }
+                    viewModel.clearScanState()
                 }
             }
         }

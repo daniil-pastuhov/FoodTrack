@@ -74,6 +74,10 @@ fun ScannerScreen(
     stateHolder: PantryStateHolder,
     onNavigateBack: () -> Unit,
     onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?, category: String?) -> Unit,
+    // Hidden when this screen is embedded inside Add/Edit (see AddEditItemScreen's scan
+    // button): "skip to manual entry" makes no sense there since manual entry is already
+    // the screen underneath, and dismissing would otherwise discard fields already typed.
+    showManualEntryShortcut: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
@@ -137,20 +141,22 @@ fun ScannerScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.weight(1f))
-                OutlinedButton(
-                    onClick = {
-                        onProceedToAddItem(null, null, null, null, state.detectedDate, null)
-                    },
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        containerColor = Color.Black.copy(alpha = 0.5f),
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(stringResource(R.string.manual_entry_button), fontSize = 12.sp)
+                if (showManualEntryShortcut) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = {
+                            onProceedToAddItem(null, null, null, null, state.detectedDate, null)
+                        },
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color.Black.copy(alpha = 0.5f),
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.manual_entry_button), fontSize = 12.sp)
+                    }
                 }
             }
 

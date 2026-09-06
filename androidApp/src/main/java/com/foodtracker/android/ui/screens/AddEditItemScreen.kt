@@ -1,5 +1,10 @@
 package com.foodtracker.android.ui.screens
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
@@ -60,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.foodtracker.android.R
@@ -70,6 +77,7 @@ import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.PantryItem
 import com.foodtracker.util.DateUtils
+import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -79,6 +87,7 @@ import kotlin.time.Instant
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalTime::class)
 @Composable
 fun AddEditItemScreen(
+    stateHolder: PantryStateHolder,
     initialItem: PantryItem?,
     prefillBarcode: String?,
     prefillName: String?,
@@ -127,6 +136,26 @@ fun AddEditItemScreen(
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
+
+    // Embedded scan flow: reuses ScannerScreen as a full-screen overlay on top of this form
+    // instead of navigating away, so fields already typed here (quantity, notes, storage
+    // location, essential) survive a scan rather than being lost to a fresh screen instance.
+    var showScanner by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) showScanner = true
+    }
+    val onScanButtonClick = {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            showScanner = true
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
 
     fun saveItem() {
         if (name.isNotBlank()) {
@@ -178,6 +207,7 @@ fun AddEditItemScreen(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -193,6 +223,12 @@ fun AddEditItemScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onScanButtonClick) {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = stringResource(R.string.scan_content_description)
+                        )
+                    }
                     IconButton(onClick = ::saveItem, enabled = name.isNotBlank()) {
                         Icon(
                             Icons.Default.Save,
@@ -482,6 +518,36 @@ fun AddEditItemScreen(
             }
         }
         }
+    }
+
+    // Intercepts the system back gesture/button while the scan overlay is open so it closes
+    // just the overlay rather than falling through to the outer navigation's predictive-back
+    // handler, which would otherwise discard this whole Add/Edit screen instead.
+    BackHandler(enabled = showScanner) {
+        stateHolder.clearScanState()
+        showScanner = false
+    }
+
+    if (showScanner) {
+        ScannerScreen(
+            stateHolder = stateHolder,
+            onNavigateBack = {
+                stateHolder.clearScanState()
+                showScanner = false
+            },
+            onProceedToAddItem = { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedExpiryDate, scannedCategory ->
+                scannedBarcode?.let { barcode = it }
+                scannedName?.let { name = it }
+                scannedBrand?.let { brand = it }
+                scannedImageUrl?.let { imageUrl = it }
+                scannedExpiryDate?.let { expiryDate = it }
+                scannedCategory?.let { category = it }
+                stateHolder.clearScanState()
+                showScanner = false
+            },
+            showManualEntryShortcut = false
+        )
+    }
     }
 }
 

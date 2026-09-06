@@ -595,6 +595,7 @@ class MainActivity : ComponentActivity() {
 
                                 AppScreen.ADD_EDIT -> {
                                     AddEditItemScreen(
+                                        stateHolder = stateHolder,
                                         initialItem = editingItem,
                                         prefillBarcode = prefillBarcode,
                                         prefillName = prefillName,

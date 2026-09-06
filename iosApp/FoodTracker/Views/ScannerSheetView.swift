@@ -14,12 +14,18 @@ public struct ScannerSheetView: View {
     @State private var torchEnabled: Bool = false
 
     var onProceedToAdd: (String?, String?, String?, String?, Date?, String?) -> Void
+    // Hidden when this sheet is presented from within Add/Edit (see AddEditItemView's scan
+    // button): "skip to manual entry" makes no sense there since manual entry is already the
+    // screen underneath, and dismissing would otherwise discard fields already typed.
+    var showManualEntryShortcut: Bool
 
     public init(
         viewModel: NativePantryViewModel,
+        showManualEntryShortcut: Bool = true,
         onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?) -> Void
     ) {
         self.viewModel = viewModel
+        self.showManualEntryShortcut = showManualEntryShortcut
         self.onProceedToAdd = onProceedToAdd
     }
 
@@ -73,21 +79,23 @@ public struct ScannerSheetView: View {
                         .accessibilityLabel(L10n.torchToggleButton)
                     }
 
-                    Button(action: {
-                        onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil)
-                        dismiss()
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "square.and.pencil")
-                            Text(L10n.manualEntryButton)
+                    if showManualEntryShortcut {
+                        Button(action: {
+                            onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil)
+                            dismiss()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.and.pencil")
+                                Text(L10n.manualEntryButton)
+                            }
+                            .font(.footnote)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(20)
                         }
-                        .font(.footnote)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(20)
                     }
                 }
                 .padding(.horizontal, 16)
