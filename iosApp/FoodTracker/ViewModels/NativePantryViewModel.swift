@@ -219,16 +219,32 @@ public class NativePantryViewModel: ObservableObject {
         Array(Set(items.compactMap { $0.category })).sorted()
     }
 
+    // Ties need an explicit secondary key so the sort doesn't silently fall back to whatever
+    // order `items` happened to arrive in (see the same fix in PantryStateHolder.kt).
     private func sortComparator(for option: SortOption) -> (PantryItem, PantryItem) -> Bool {
         switch option {
         case .expiryDate:
-            return { $0.expiryDate < $1.expiryDate }
+            return { lhs, rhs in
+                if lhs.expiryDate != rhs.expiryDate { return lhs.expiryDate < rhs.expiryDate }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
         case .name:
-            return { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+            return { lhs, rhs in
+                let cmp = lhs.name.localizedCaseInsensitiveCompare(rhs.name)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+                return lhs.addedDate > rhs.addedDate
+            }
         case .dateAdded:
-            return { $0.addedDate > $1.addedDate }
+            return { lhs, rhs in
+                if lhs.addedDate != rhs.addedDate { return lhs.addedDate > rhs.addedDate }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
         case .storageLocation:
-            return { $0.storageLocation.localizedCaseInsensitiveCompare($1.storageLocation) == .orderedAscending }
+            return { lhs, rhs in
+                let cmp = lhs.storageLocation.localizedCaseInsensitiveCompare(rhs.storageLocation)
+                if cmp != .orderedSame { return cmp == .orderedAscending }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
         }
     }
 

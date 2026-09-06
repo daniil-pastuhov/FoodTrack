@@ -162,11 +162,20 @@ class PantryStateHolder(
         }.sortedWith(sortComparator(sortOption))
     }
 
+    // Ties always need an explicit secondary key: `items` arrives from the repository in a
+    // fixed order (expiry date ascending), and List.sortedWith is stable, so any comparator
+    // that can tie - most visibly DATE_ADDED, since addedDate is day-granularity and several
+    // items are commonly added on the same day - would otherwise silently fall back to that
+    // upstream order instead of a sort tied to the chosen option.
     private fun sortComparator(option: SortOption): Comparator<PantryItem> = when (option) {
-        SortOption.EXPIRY_DATE -> compareBy { it.expiryDate.toEpochDays() }
-        SortOption.NAME -> compareBy { it.name.lowercase() }
-        SortOption.DATE_ADDED -> compareByDescending { it.addedDate.toEpochDays() }
-        SortOption.STORAGE_LOCATION -> compareBy { it.storageLocation.lowercase() }
+        SortOption.EXPIRY_DATE -> compareBy<PantryItem> { it.expiryDate.toEpochDays() }
+            .thenBy { it.name.lowercase() }
+        SortOption.NAME -> compareBy<PantryItem> { it.name.lowercase() }
+            .thenByDescending { it.addedDate.toEpochDays() }
+        SortOption.DATE_ADDED -> compareByDescending<PantryItem> { it.addedDate.toEpochDays() }
+            .thenBy { it.name.lowercase() }
+        SortOption.STORAGE_LOCATION -> compareBy<PantryItem> { it.storageLocation.lowercase() }
+            .thenBy { it.name.lowercase() }
     }
 
     fun onSearchQueryChanged(query: String) {
