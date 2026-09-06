@@ -150,6 +150,9 @@
     <string name="calendar_previous_month">Forrige måned</string>
     <string name="calendar_next_month">Neste måned</string>
     <string name="calendar_no_items_for_day">Ingen varer utløper denne dagen</string>
+    <string name="calendar_summary_expired">%1$d utløpt</string>
+    <string name="calendar_summary_expiring_soon">%1$d utløper snart</string>
+    <string name="calendar_summary_all_fresh">Alle varer er ferske</string>
 
     <string name="settings_section_notifications">Varsler</string>
     <string name="settings_notifications_enabled">Utløpspåminnelser</string>

@@ -43,6 +43,9 @@
 "calendar_button" = "Calendar";
 "calendar_title" = "Calendar";
 "calendar_no_items_for_day" = "No items expiring on this day";
+"calendar_summary_expired" = "%d expired";
+"calendar_summary_expiring_soon" = "%d expiring soon";
+"calendar_summary_all_fresh" = "All items fresh";
 
 "section_product_details" = "Product Details";
 "product_name_label" = "Product Name *";

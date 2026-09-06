@@ -43,6 +43,9 @@
 "calendar_button" = "Календарь";
 "calendar_title" = "Календарь";
 "calendar_no_items_for_day" = "В этот день ничего не истекает";
+"calendar_summary_expired" = "%d просрочено";
+"calendar_summary_expiring_soon" = "%d скоро истекает";
+"calendar_summary_all_fresh" = "Все продукты свежие";
 
 "section_product_details" = "Информация о продукте";
 "product_name_label" = "Название продукта *";

@@ -52,6 +52,13 @@ public enum L10n {
     public static var calendarButton: String { NSLocalizedString("calendar_button", comment: "") }
     public static var calendarTitle: String { NSLocalizedString("calendar_title", comment: "") }
     public static var calendarNoItemsForDay: String { NSLocalizedString("calendar_no_items_for_day", comment: "") }
+    public static var calendarAllFresh: String { NSLocalizedString("calendar_summary_all_fresh", comment: "") }
+    public static func calendarSummaryExpired(_ count: Int) -> String {
+        String(format: NSLocalizedString("calendar_summary_expired", comment: ""), count)
+    }
+    public static func calendarSummaryExpiringSoon(_ count: Int) -> String {
+        String(format: NSLocalizedString("calendar_summary_expiring_soon", comment: ""), count)
+    }
 
     public static var sectionProductDetails: String { NSLocalizedString("section_product_details", comment: "") }
     public static var productNameLabel: String { NSLocalizedString("product_name_label", comment: "") }

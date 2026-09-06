@@ -43,6 +43,9 @@
 "calendar_button" = "Kalender";
 "calendar_title" = "Kalender";
 "calendar_no_items_for_day" = "Ingen varer utløper denne dagen";
+"calendar_summary_expired" = "%d utløpt";
+"calendar_summary_expiring_soon" = "%d utløper snart";
+"calendar_summary_all_fresh" = "Alle varer er ferske";
 
 "section_product_details" = "Produktdetaljer";
 "product_name_label" = "Produktnavn *";

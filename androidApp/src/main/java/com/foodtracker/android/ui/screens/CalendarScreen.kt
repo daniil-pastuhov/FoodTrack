@@ -54,6 +54,10 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.components.ExpiryBadge
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.android.ui.theme.expiredStatusColors
+import com.foodtracker.android.ui.theme.expiringStatusColors
+import com.foodtracker.android.ui.theme.freshStatusColors
+import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.android.util.formatMonthYear
 import com.foodtracker.android.util.formatLocalDate
@@ -102,67 +106,135 @@ fun CalendarScreen(
         },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
-        BoxWithConstraints(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            val isWideLayout = maxWidth >= WIDE_LAYOUT_BREAKPOINT
+            CalendarSummaryRow(
+                expiredCount = state.expiredCount,
+                expiringSoonCount = state.expiringSoonCount
+            )
+            BoxWithConstraints(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                val isWideLayout = maxWidth >= WIDE_LAYOUT_BREAKPOINT
 
-            if (isWideLayout) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    CalendarGridSection(
-                        displayedMonth = displayedMonth,
-                        today = today,
-                        grouped = grouped,
-                        selectedDay = selectedDay,
-                        onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
-                        onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
-                        onSelectDay = { selectedDay = it },
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    )
-                    Divider(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(1.dp)
-                    )
-                    DayDetailSection(
-                        selectedDay = selectedDay,
-                        items = grouped[selectedDay].orEmpty(),
-                        today = today,
-                        expiringSoonDays = state.settings.expiringSoonDays,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                    )
-                }
-            } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    CalendarGridSection(
-                        displayedMonth = displayedMonth,
-                        today = today,
-                        grouped = grouped,
-                        selectedDay = selectedDay,
-                        onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
-                        onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
-                        onSelectDay = { selectedDay = it },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Divider()
-                    DayDetailSection(
-                        selectedDay = selectedDay,
-                        items = grouped[selectedDay].orEmpty(),
-                        today = today,
-                        expiringSoonDays = state.settings.expiringSoonDays,
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
-                    )
+                if (isWideLayout) {
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        CalendarGridSection(
+                            displayedMonth = displayedMonth,
+                            today = today,
+                            grouped = grouped,
+                            selectedDay = selectedDay,
+                            expiringSoonDays = state.settings.expiringSoonDays,
+                            onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
+                            onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
+                            onSelectDay = { selectedDay = it },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                        )
+                        Divider(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(1.dp)
+                        )
+                        DayDetailSection(
+                            selectedDay = selectedDay,
+                            items = grouped[selectedDay].orEmpty(),
+                            today = today,
+                            expiringSoonDays = state.settings.expiringSoonDays,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                        )
+                    }
+                } else {
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        CalendarGridSection(
+                            displayedMonth = displayedMonth,
+                            today = today,
+                            grouped = grouped,
+                            selectedDay = selectedDay,
+                            expiringSoonDays = state.settings.expiringSoonDays,
+                            onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
+                            onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
+                            onSelectDay = { selectedDay = it },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Divider()
+                        DayDetailSection(
+                            selectedDay = selectedDay,
+                            items = grouped[selectedDay].orEmpty(),
+                            today = today,
+                            expiringSoonDays = state.settings.expiringSoonDays,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * Pantry-wide urgency summary (not scoped to the displayed month) so it stays meaningful
+ * while paging through past/future months, matching the counts shown on the dashboard.
+ */
+@Composable
+private fun CalendarSummaryRow(
+    expiredCount: Int,
+    expiringSoonCount: Int,
+    modifier: Modifier = Modifier
+) {
+    if (expiredCount == 0 && expiringSoonCount == 0) {
+        Text(
+            text = stringResource(R.string.calendar_summary_all_fresh),
+            style = MaterialTheme.typography.bodySmall,
+            color = TextSecondary,
+            modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+        )
+        return
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        if (expiredCount > 0) {
+            CalendarSummaryChip(
+                text = stringResource(R.string.calendar_summary_expired, expiredCount),
+                color = expiredStatusColors().foreground
+            )
+        }
+        if (expiringSoonCount > 0) {
+            CalendarSummaryChip(
+                text = stringResource(R.string.calendar_summary_expiring_soon, expiringSoonCount),
+                color = expiringStatusColors().foreground
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarSummaryChip(text: String, color: androidx.compose.ui.graphics.Color) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -172,6 +244,7 @@ private fun CalendarGridSection(
     today: LocalDate,
     grouped: Map<LocalDate, List<PantryItem>>,
     selectedDay: LocalDate,
+    expiringSoonDays: Int,
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDay: (LocalDate) -> Unit,
@@ -217,7 +290,9 @@ private fun CalendarGridSection(
                     day = day,
                     isToday = day.date == today,
                     isSelected = day.date == selectedDay,
-                    itemCount = grouped[day.date]?.size ?: 0,
+                    items = grouped[day.date].orEmpty(),
+                    today = today,
+                    expiringSoonDays = expiringSoonDays,
                     onClick = { onSelectDay(day.date) }
                 )
             }
@@ -267,10 +342,12 @@ private fun CalendarDayCell(
     day: CalendarDay,
     isToday: Boolean,
     isSelected: Boolean,
-    itemCount: Int,
+    items: List<PantryItem>,
+    today: LocalDate,
+    expiringSoonDays: Int,
     onClick: () -> Unit
 ) {
-    val hasItems = itemCount > 0
+    val indicatorColor = dayIndicatorColor(items, today, expiringSoonDays)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -307,15 +384,31 @@ private fun CalendarDayCell(
             modifier = Modifier
                 .size(5.dp)
                 .then(
-                    if (hasItems) {
+                    if (indicatorColor != null) {
                         Modifier
                             .clip(CircleShape)
-                            .background(BrandPrimary)
+                            .background(indicatorColor)
                     } else {
                         Modifier
                     }
                 )
         )
+    }
+}
+
+/** Color of a day's dot reflects the most urgent item expiring that day, if any. */
+@Composable
+private fun dayIndicatorColor(
+    items: List<PantryItem>,
+    today: LocalDate,
+    expiringSoonDays: Int
+): androidx.compose.ui.graphics.Color? {
+    if (items.isEmpty()) return null
+    val statuses = items.map { it.expiryStatus(today, expiringSoonDays) }
+    return when {
+        ExpiryStatus.EXPIRED in statuses -> expiredStatusColors().foreground
+        ExpiryStatus.EXPIRING_TODAY in statuses || ExpiryStatus.EXPIRING_SOON in statuses -> expiringStatusColors().foreground
+        else -> freshStatusColors().foreground
     }
 }
 

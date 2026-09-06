@@ -172,6 +172,9 @@
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
     <string name="calendar_no_items_for_day">No items expiring on this day</string>
+    <string name="calendar_summary_expired">%1$d expired</string>
+    <string name="calendar_summary_expiring_soon">%1$d expiring soon</string>
+    <string name="calendar_summary_all_fresh">All items fresh</string>
 
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Expiry reminders</string>

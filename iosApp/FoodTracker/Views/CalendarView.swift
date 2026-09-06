@@ -43,7 +43,9 @@ struct CalendarView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            VStack(spacing: 0) {
+                summaryRow
+                Divider()
                 // Regular width (iPad, landscape on larger phones) puts the day list beside the
                 // grid; compact width (most iPhones in portrait) stacks it below instead.
                 if horizontalSizeClass == .regular {
@@ -67,6 +69,41 @@ struct CalendarView: View {
         }
     }
 
+    /// Pantry-wide urgency summary (not scoped to the displayed month) so it stays meaningful
+    /// while paging through past/future months, matching `NativePantryViewModel`'s counts.
+    private var summaryRow: some View {
+        Group {
+            if viewModel.expiredCount == 0 && viewModel.expiringSoonCount == 0 {
+                Text(L10n.calendarAllFresh)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } else {
+                HStack(spacing: 16) {
+                    if viewModel.expiredCount > 0 {
+                        summaryChip(text: L10n.calendarSummaryExpired(viewModel.expiredCount), color: .red)
+                    }
+                    if viewModel.expiringSoonCount > 0 {
+                        summaryChip(text: L10n.calendarSummaryExpiringSoon(viewModel.expiringSoonCount), color: .orange)
+                    }
+                    Spacer()
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func summaryChip(text: String, color: Color) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(text)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+        }
+    }
+
     private var calendarSection: some View {
         VStack(spacing: 0) {
             monthHeader
@@ -83,7 +120,8 @@ struct CalendarView: View {
                     let dayItems = groupedItems[Calendar.current.startOfDay(for: day.date)] ?? []
                     CalendarDayCell(
                         day: day,
-                        itemCount: dayItems.count,
+                        items: dayItems,
+                        expiringSoonDays: settingsStore.settings.expiringSoonDays,
                         isSelected: Calendar.current.isDate(day.date, inSameDayAs: selectedDay)
                     )
                     .contentShape(Rectangle())
@@ -163,11 +201,20 @@ struct CalendarView: View {
 
 private struct CalendarDayCell: View {
     let day: CalendarDay
-    let itemCount: Int
+    let items: [PantryItem]
+    let expiringSoonDays: Int
     let isSelected: Bool
 
     private var isToday: Bool { Calendar.current.isDateInToday(day.date) }
-    private var hasItems: Bool { itemCount > 0 }
+
+    /// Dot color reflects the most urgent item expiring that day, if any.
+    private var indicatorColor: Color? {
+        guard !items.isEmpty else { return nil }
+        let statuses = items.map { $0.expiryStatus(expiringSoonDays: expiringSoonDays) }
+        if statuses.contains(.expired) { return .red }
+        if statuses.contains(.expiringToday) || statuses.contains(.expiringSoon) { return .orange }
+        return .green
+    }
 
     var body: some View {
         VStack(spacing: 3) {
@@ -180,7 +227,7 @@ private struct CalendarDayCell: View {
                 .clipShape(Circle())
 
             Circle()
-                .fill(hasItems ? Color.accentColor : Color.clear)
+                .fill(indicatorColor ?? Color.clear)
                 .frame(width: 5, height: 5)
         }
         .frame(maxWidth: .infinity, minHeight: 44)

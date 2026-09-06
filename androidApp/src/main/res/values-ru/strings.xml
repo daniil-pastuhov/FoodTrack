@@ -158,6 +158,9 @@
     <string name="calendar_previous_month">Предыдущий месяц</string>
     <string name="calendar_next_month">Следующий месяц</string>
     <string name="calendar_no_items_for_day">В этот день ничего не истекает</string>
+    <string name="calendar_summary_expired">%1$d просрочено</string>
+    <string name="calendar_summary_expiring_soon">%1$d скоро истекает</string>
+    <string name="calendar_summary_all_fresh">Все продукты свежие</string>
 
     <string name="settings_section_notifications">Уведомления</string>
     <string name="settings_notifications_enabled">Напоминания о сроке годности</string>
