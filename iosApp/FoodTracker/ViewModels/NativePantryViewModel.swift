@@ -25,6 +25,14 @@ public enum NativeStatusFilter: String, CaseIterable, Identifiable {
     }
 }
 
+// Open Food Facts sometimes returns tag-style categories with a language prefix, e.g. "en:Milk".
+func stripLanguagePrefix(_ raw: String) -> String {
+    guard let colonIndex = raw.firstIndex(of: ":") else { return raw }
+    let prefix = raw[raw.startIndex..<colonIndex]
+    guard (1...3).contains(prefix.count), prefix.allSatisfy({ $0.isLetter }) else { return raw }
+    return raw[raw.index(after: colonIndex)...].trimmingCharacters(in: .whitespaces)
+}
+
 @MainActor
 public class NativePantryViewModel: ObservableObject {
     @Published public var items: [PantryItem] = []
@@ -295,7 +303,8 @@ public class NativePantryViewModel: ObservableObject {
                     let name = product["product_name"] as? String ?? "Product \(barcode)"
                     let brand = product["brands"] as? String
                     let image = product["image_front_url"] as? String
-                    let category = (product["categories"] as? String)?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces)
+                    let rawCategory = (product["categories"] as? String)?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces)
+                    let category = rawCategory.map(stripLanguagePrefix)
                     let quantity = product["quantity"] as? String
 
                     self.scannedProduct = ProductInfo(

@@ -29,6 +29,17 @@ internal data class OffProduct(
     val quantity: String? = null
 )
 
+// Open Food Facts sometimes returns tag-style categories with a language prefix, e.g. "en:Milk".
+internal fun stripLanguagePrefix(raw: String): String {
+    val colonIndex = raw.indexOf(':')
+    val prefix = raw.substring(0, colonIndex.coerceAtLeast(0))
+    return if (colonIndex in 1..3 && prefix.all { it.isLetter() }) {
+        raw.substring(colonIndex + 1).trim()
+    } else {
+        raw
+    }
+}
+
 class OpenFoodFactsApi(
     private val httpClient: HttpClient = createDefaultClient()
 ) {
@@ -50,7 +61,7 @@ class OpenFoodFactsApi(
                     name = name,
                     brand = prod.brands?.takeIf { it.isNotBlank() },
                     imageUrl = prod.imageFrontUrl?.takeIf { it.isNotBlank() },
-                    category = prod.categories?.split(",")?.firstOrNull()?.trim(),
+                    category = prod.categories?.split(",")?.firstOrNull()?.trim()?.let(::stripLanguagePrefix),
                     quantity = prod.quantity?.takeIf { it.isNotBlank() }
                 )
             } else {
