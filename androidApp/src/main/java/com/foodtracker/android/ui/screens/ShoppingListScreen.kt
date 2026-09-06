@@ -88,6 +88,8 @@ fun ShoppingListScreen(
     stateHolder: PantryStateHolder,
     onScanEntry: (ShoppingListEntry) -> Unit,
     onScanNewEntry: () -> Unit,
+    onCheckOffEntry: (String) -> Unit = { stateHolder.deleteShoppingListEntry(it) },
+    onDecrementEntry: (String) -> Unit = { stateHolder.decrementShoppingListQuantity(it) },
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsState()
@@ -310,9 +312,9 @@ fun ShoppingListScreen(
                                                 commitReorder(entry.id)
                                             }
                                         ),
-                                        onCheckOff = { stateHolder.deleteShoppingListEntry(entry.id) },
+                                        onCheckOff = { onCheckOffEntry(entry.id) },
                                         onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
-                                        onDecrement = { stateHolder.decrementShoppingListQuantity(entry.id) },
+                                        onDecrement = { onDecrementEntry(entry.id) },
                                         onScan = { onScanEntry(entry) },
                                         modifier = Modifier.animateItem()
                                     )

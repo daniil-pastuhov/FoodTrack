@@ -277,34 +277,56 @@ class MainActivity : ComponentActivity() {
                             BottomNavTab.SETTINGS -> AppScreen.SETTINGS
                         }
                     }
-                    // Snackbar offering to reverse a pantry removal — either a full delete or
-                    // a "-" tap that used up the last unit — since both are otherwise a single
-                    // tap that's easy to trigger by mistake.
+                    // Snackbar offering to reverse a removal — a full delete, a "-" tap that
+                    // used up the last unit, or checking a shopping list entry off — since all
+                    // of these are otherwise a single tap that's easy to trigger by mistake.
+                    // Takes the removed thing's display name plus an undo action rather than
+                    // the item itself, so it works for both pantry items and shopping list
+                    // entries.
                     val snackbarHostState = remember { SnackbarHostState() }
                     val snackbarScope = rememberCoroutineScope()
-                    val showUndoRemovalSnackbar: (PantryItem) -> Unit = { removedItem ->
+                    val showUndoRemovalSnackbar: (String, () -> Unit) -> Unit = { removedName, onUndo ->
                         snackbarScope.launch {
                             val result = snackbarHostState.showSnackbar(
-                                message = this@MainActivity.getString(R.string.item_removed_snackbar, removedItem.name),
+                                message = this@MainActivity.getString(R.string.item_removed_snackbar, removedName),
                                 actionLabel = this@MainActivity.getString(R.string.undo_action),
                                 duration = SnackbarDuration.Long
                             )
                             if (result == SnackbarResult.ActionPerformed) {
-                                stateHolder.restoreItem(removedItem)
-                                com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, removedItem)
+                                onUndo()
                             }
                         }
                     }
                     val onDeleteItemHandler: (String) -> Unit = { id ->
                         stateHolder.deleteItem(id) { removedItem ->
                             com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
-                            showUndoRemovalSnackbar(removedItem)
+                            showUndoRemovalSnackbar(removedItem.name) {
+                                stateHolder.restoreItem(removedItem)
+                                com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, removedItem)
+                            }
                         }
                     }
                     val onDecrementQuantityHandler: (String) -> Unit = { id ->
                         stateHolder.decrementQuantity(id) { removedItem ->
                             com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
-                            showUndoRemovalSnackbar(removedItem)
+                            showUndoRemovalSnackbar(removedItem.name) {
+                                stateHolder.restoreItem(removedItem)
+                                com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, removedItem)
+                            }
+                        }
+                    }
+                    val onCheckOffShoppingListEntryHandler: (String) -> Unit = { id ->
+                        stateHolder.deleteShoppingListEntry(id) { removedEntry ->
+                            showUndoRemovalSnackbar(removedEntry.productName) {
+                                stateHolder.restoreShoppingListEntry(removedEntry)
+                            }
+                        }
+                    }
+                    val onDecrementShoppingListQuantityHandler: (String) -> Unit = { id ->
+                        stateHolder.decrementShoppingListQuantity(id) { removedEntry ->
+                            showUndoRemovalSnackbar(removedEntry.productName) {
+                                stateHolder.restoreShoppingListEntry(removedEntry)
+                            }
                         }
                     }
 
@@ -415,7 +437,9 @@ class MainActivity : ComponentActivity() {
                                             ShoppingListScreen(
                                                 stateHolder = stateHolder,
                                                 onScanEntry = onScanShoppingListEntry,
-                                                onScanNewEntry = onScanNewShoppingListEntry
+                                                onScanNewEntry = onScanNewShoppingListEntry,
+                                                onCheckOffEntry = onCheckOffShoppingListEntryHandler,
+                                                onDecrementEntry = onDecrementShoppingListQuantityHandler
                                             )
                                         }
                                         AppScreen.SETTINGS -> {

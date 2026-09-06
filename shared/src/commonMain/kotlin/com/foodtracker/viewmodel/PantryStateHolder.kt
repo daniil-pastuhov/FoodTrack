@@ -401,10 +401,14 @@ class PantryStateHolder(
         _uiState.update { it.copy(scanningShoppingListEntryId = id) }
     }
 
-    fun deleteShoppingListEntry(id: String) {
+    /** [onItemRemoved] receives the deleted entry's last known state, so callers can hold onto
+     *  it to offer an undo (see [restoreShoppingListEntry]). */
+    fun deleteShoppingListEntry(id: String, onItemRemoved: (ShoppingListEntry) -> Unit = {}) {
+        val entry = _uiState.value.shoppingList.find { it.id == id }
         coroutineScope.launch {
             shoppingListRepository.deleteEntry(id)
         }
+        entry?.let(onItemRemoved)
     }
 
     fun incrementShoppingListQuantity(id: String) {
@@ -414,11 +418,31 @@ class PantryStateHolder(
         }
     }
 
-    fun decrementShoppingListQuantity(id: String) {
+    /** Decrements one unit of a shopping list entry's needed quantity; once the last unit is
+     *  decremented the whole entry is removed the same way [deleteShoppingListEntry] does.
+     *  [onItemRemoved] fires only when that full removal happens, receiving the entry's state
+     *  just before removal (quantity 1), so callers can offer an undo (see
+     *  [restoreShoppingListEntry]). */
+    fun decrementShoppingListQuantity(id: String, onItemRemoved: (ShoppingListEntry) -> Unit = {}) {
         val entry = _uiState.value.shoppingList.find { it.id == id } ?: return
-        if (entry.quantity <= 1) return
+        if (entry.quantity <= 1) {
+            coroutineScope.launch {
+                shoppingListRepository.deleteEntry(id)
+            }
+            onItemRemoved(entry)
+        } else {
+            coroutineScope.launch {
+                shoppingListRepository.updateEntry(entry.copy(quantity = entry.quantity - 1))
+            }
+        }
+    }
+
+    /** Reverses a [deleteShoppingListEntry]/[decrementShoppingListQuantity] removal by putting
+     *  [entry] straight back onto the shopping list (its id is preserved, so this is an upsert
+     *  onto the same row rather than a new entry). */
+    fun restoreShoppingListEntry(entry: ShoppingListEntry) {
         coroutineScope.launch {
-            shoppingListRepository.updateEntry(entry.copy(quantity = entry.quantity - 1))
+            shoppingListRepository.addEntry(entry)
         }
     }
 
