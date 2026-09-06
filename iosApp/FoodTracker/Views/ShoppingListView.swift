@@ -2,6 +2,10 @@ import SwiftUI
 
 struct ShoppingListView: View {
     @ObservedObject var viewModel: NativePantryViewModel
+    /// Fires with the removed entry whenever the "-" button or the swipe "check off" action
+    /// fully removes it from the shopping list, so the root can offer it back through an undo
+    /// toast — hosted at the root (see `RootTabView`), matching `PantryDashboardView`.
+    var onItemRemoved: (ShoppingListEntry) -> Void = { _ in }
     @State private var newEntryText: String = ""
     @State private var showScanner: Bool = false
     @State private var showAddEdit: Bool = false
@@ -134,7 +138,7 @@ struct ShoppingListView: View {
                                         .accessibilityLabel(L10n.shoppingListScan)
                                         Button {
                                             if entry.quantity <= 1 {
-                                                viewModel.deleteShoppingListEntry(entry.id)
+                                                viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
                                             } else {
                                                 viewModel.decrementShoppingListQuantity(entry.id)
                                             }
@@ -160,7 +164,7 @@ struct ShoppingListView: View {
                                     .contentShape(Rectangle())
                                     .swipeActions(edge: .trailing) {
                                         Button(role: .destructive) {
-                                            viewModel.deleteShoppingListEntry(entry.id)
+                                            viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
                                         } label: {
                                             Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
                                         }

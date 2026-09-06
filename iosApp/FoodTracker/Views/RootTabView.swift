@@ -19,12 +19,13 @@ struct RootTabView: View {
     @State private var prefillImageUrl: String? = nil
     @State private var prefillDate: Date? = nil
     @State private var prefillCategory: String? = nil
-    /// The most recently removed item (via the dashboard's "-" button or swipe-to-delete),
-    /// offered back through an undo toast since either is a single tap/swipe that's easy to
-    /// trigger by mistake. Hosted here — rather than inside `PantryDashboardView` — so it
-    /// renders above the floating pill nav bar and scan/add buttons below, instead of
-    /// underneath them. Cleared automatically after a few seconds by the `.task(id:)` below.
-    @State private var undoItem: PantryItem? = nil
+    /// The most recently removed pantry item or shopping list entry (via a "-" button, swipe
+    /// action, or check-off), offered back through an undo toast since each of those is a
+    /// single tap/swipe that's easy to trigger by mistake. Hosted here — rather than inside
+    /// `PantryDashboardView`/`ShoppingListView` — so it renders above the floating pill nav bar
+    /// and scan/add buttons below, instead of underneath them. Cleared automatically after a
+    /// few seconds by the `.task(id:)` below.
+    @State private var pendingUndo: PendingUndo? = nil
 
     var body: some View {
         // Full-size, edge-to-edge tab content with the pill nav bar and (Home-only) scan/add
@@ -40,15 +41,30 @@ struct RootTabView: View {
                         viewModel: viewModel,
                         onEditItem: { presentAddEdit(editing: $0) },
                         onScrollingDownChanged: { isDashboardScrollingDown = $0 },
-                        onItemRemoved: { removed in withAnimation { undoItem = removed } }
+                        onItemRemoved: { removed in
+                            withAnimation {
+                                pendingUndo = PendingUndo(id: removed.id, itemName: removed.name) {
+                                    viewModel.restoreItem(removed)
+                                }
+                            }
+                        }
                     )
                     .transition(.opacity)
                 case .calendar:
                     CalendarView(viewModel: viewModel)
                         .transition(.opacity)
                 case .shoppingList:
-                    ShoppingListView(viewModel: viewModel)
-                        .transition(.opacity)
+                    ShoppingListView(
+                        viewModel: viewModel,
+                        onItemRemoved: { removed in
+                            withAnimation {
+                                pendingUndo = PendingUndo(id: removed.id, itemName: removed.productName) {
+                                    viewModel.restoreShoppingListEntry(removed)
+                                }
+                            }
+                        }
+                    )
+                    .transition(.opacity)
                 case .settings:
                     SettingsView(viewModel: viewModel, onDataCleared: { selectedTab = .home })
                         .transition(.opacity)
@@ -79,10 +95,10 @@ struct RootTabView: View {
 
             // Last in the ZStack (topmost), so it renders above the pill nav bar and the
             // scan/add buttons above it rather than underneath them.
-            if let undoItem {
-                UndoToastView(itemName: undoItem.name) {
-                    viewModel.restoreItem(undoItem)
-                    self.undoItem = nil
+            if let pendingUndo {
+                UndoToastView(itemName: pendingUndo.itemName) {
+                    pendingUndo.restore()
+                    self.pendingUndo = nil
                 }
                 .padding(.bottom, 200)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -90,12 +106,12 @@ struct RootTabView: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab == .home)
         .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
-        .animation(.easeInOut(duration: 0.25), value: undoItem?.id)
-        .task(id: undoItem?.id) {
-            guard undoItem != nil else { return }
+        .animation(.easeInOut(duration: 0.25), value: pendingUndo?.id)
+        .task(id: pendingUndo?.id) {
+            guard pendingUndo != nil else { return }
             try? await Task.sleep(for: .seconds(4))
             if !Task.isCancelled {
-                withAnimation { undoItem = nil }
+                withAnimation { pendingUndo = nil }
             }
         }
         .sheet(isPresented: $showScanner) {
@@ -144,6 +160,16 @@ struct RootTabView: View {
         prefillCategory = nil
         showAddEdit = true
     }
+}
+
+/// A pending undo offer, generic over what was removed (a `PantryItem` or a
+/// `ShoppingListEntry`) so `RootTabView` can host one toast for both. `id` identifies the
+/// specific removal (for `.task(id:)`'s auto-dismiss timer), `itemName` is what the toast
+/// displays, and `restore` puts the removed thing back when the user taps Undo.
+private struct PendingUndo {
+    let id: String
+    let itemName: String
+    let restore: () -> Void
 }
 
 private struct UndoToastView: View {

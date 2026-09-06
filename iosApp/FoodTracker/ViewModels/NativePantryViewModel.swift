@@ -407,13 +407,20 @@ public class NativePantryViewModel: ObservableObject {
         scanningShoppingListEntryId = id
     }
 
-    public func deleteShoppingListEntry(_ id: String) {
+    /// `onItemRemoved` receives the deleted entry's last known state, so callers can hold onto
+    /// it to offer an undo (see `restoreShoppingListEntry`).
+    public func deleteShoppingListEntry(_ id: String, onItemRemoved: ((ShoppingListEntry) -> Void)? = nil) {
         let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
-        if let existing = try? modelContext.fetch(descriptor).first {
+        let existing = try? modelContext.fetch(descriptor).first
+        let deletedEntry = existing?.asEntry
+        if let existing {
             modelContext.delete(existing)
             try? modelContext.save()
         }
         loadShoppingList()
+        if let deletedEntry {
+            onItemRemoved?(deletedEntry)
+        }
         WidgetCenter.shared.reloadAllTimelines()
     }
 
@@ -428,12 +435,36 @@ public class NativePantryViewModel: ObservableObject {
         WidgetCenter.shared.reloadAllTimelines()
     }
 
-    public func decrementShoppingListQuantity(_ id: String) {
+    /// Decrements one unit of a shopping list entry's needed quantity; once the last unit is
+    /// decremented the whole entry is removed the same way `deleteShoppingListEntry` does.
+    /// `onItemRemoved` fires only when that full removal happens, receiving the entry's state
+    /// just before removal (quantity 1), so callers can offer an undo (see
+    /// `restoreShoppingListEntry`).
+    public func decrementShoppingListQuantity(_ id: String, onItemRemoved: ((ShoppingListEntry) -> Void)? = nil) {
         let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == id })
-        guard let existing = try? modelContext.fetch(descriptor).first, existing.quantity > 1 else { return }
-        var updated = existing.asEntry
-        updated.quantity -= 1
-        existing.update(from: updated)
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+        if existing.quantity <= 1 {
+            deleteShoppingListEntry(id, onItemRemoved: onItemRemoved)
+        } else {
+            var updated = existing.asEntry
+            updated.quantity -= 1
+            existing.update(from: updated)
+            try? modelContext.save()
+            loadShoppingList()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
+    /// Reverses a `deleteShoppingListEntry`/`decrementShoppingListQuantity` removal by putting
+    /// `entry` straight back onto the shopping list (its id is preserved, so this is an upsert
+    /// onto the same row rather than a new entry).
+    public func restoreShoppingListEntry(_ entry: ShoppingListEntry) {
+        let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == entry.id })
+        if let existingRecord = try? modelContext.fetch(descriptor).first {
+            existingRecord.update(from: entry)
+        } else {
+            modelContext.insert(ShoppingListEntryRecord(from: entry))
+        }
         try? modelContext.save()
         loadShoppingList()
         WidgetCenter.shared.reloadAllTimelines()
