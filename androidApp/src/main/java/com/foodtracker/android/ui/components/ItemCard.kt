@@ -40,13 +40,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -92,27 +94,45 @@ fun ItemCard(
         targetValue = if (selected) BrandPrimary else Color.Transparent,
         label = "itemCardBorderColor"
     )
-    // Mirrors iOS's swipe-to-delete (left)/swipe-to-shopping-list (right) row actions. The
-    // callback fires as the swipe settles into that state, so there's no separate "confirm"
-    // step here — the item leaving `state.filteredItems` on the next recomposition is what
-    // makes the swipe-away feel permanent; an undo (snackbar) just brings a fresh card back
-    // in `Settled`.
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
+    // Mirrors iOS's swipe-to-delete (left)/swipe-to-shopping-list (right) row actions. There's no
+    // separate "confirm" step — the item leaving `state.filteredItems` once the swipe settles is
+    // what makes the swipe-away feel permanent, and an undo (snackbar) brings a fresh card back.
+    //
+    // Deliberately a plain `remember` rather than `rememberSwipeToDismissBoxState`: that factory
+    // is `rememberSaveable`-backed, and its saver persists `currentValue` under the LazyLayout
+    // item key. Since a lazy item's saved state outlives the item leaving the list, an undo that
+    // re-adds the same id used to restore the saved `EndToStart`/`StartToEnd` — the card came
+    // back already dismissed, rendering as nothing but the swipe background, and because
+    // SwipeToDismissBox disables gestures while `settledValue != Settled` it couldn't even be
+    // swiped back. Composition-scoped state always starts `Settled` on a fresh card.
+    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
+    val dismissState = remember {
+        SwipeToDismissBoxState(
+            initialValue = SwipeToDismissBoxValue.Settled,
+            positionalThreshold = positionalThreshold
+        )
+    }
+    // SwipeToDismissBox keys its dismissal effect on the `onDismiss` lambda, so this has to keep
+    // a stable identity: a new instance per recomposition would re-run that effect — and re-fire
+    // the delete — while the card is still settled in a dismissed direction.
+    val currentOnDelete by rememberUpdatedState(onDelete)
+    val currentOnMoveToShoppingList by rememberUpdatedState(onMoveToShoppingList)
+    val onDismiss = remember {
+        { value: SwipeToDismissBoxValue ->
             when (value) {
-                SwipeToDismissBoxValue.EndToStart -> onDelete()
-                SwipeToDismissBoxValue.StartToEnd -> onMoveToShoppingList()
+                SwipeToDismissBoxValue.EndToStart -> currentOnDelete()
+                SwipeToDismissBoxValue.StartToEnd -> currentOnMoveToShoppingList()
                 SwipeToDismissBoxValue.Settled -> {}
             }
-            true
         }
-    )
+    }
 
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
         enableDismissFromStartToEnd = !selectionMode,
         enableDismissFromEndToStart = !selectionMode,
+        onDismiss = onDismiss,
         backgroundContent = { SwipeActionBackground(dismissState.dismissDirection) }
     ) {
         Card(

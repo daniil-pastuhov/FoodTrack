@@ -56,18 +56,20 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxDefaults
+import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -401,19 +403,25 @@ private fun ShoppingListRow(
     )
     // Swipe (either direction, since there's only the one action) checks the entry off the
     // list — mirrors ItemCard's swipe-to-dismiss pattern, replacing the row's old dedicated
-    // check-off button.
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value != SwipeToDismissBoxValue.Settled) {
-                onCheckOff()
-            }
-            true
-        }
-    )
+    // check-off button. See ItemCard for why the state is a plain `remember` rather than
+    // `rememberSwipeToDismissBoxState`: the saveable-backed factory restores a swiped-away
+    // value under the lazy item key, so an undone entry came back stuck showing only the
+    // swipe background.
+    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
+    val dismissState = remember {
+        SwipeToDismissBoxState(
+            initialValue = SwipeToDismissBoxValue.Settled,
+            positionalThreshold = positionalThreshold
+        )
+    }
+    // Stable identity, since SwipeToDismissBox keys its dismissal effect on this lambda.
+    val currentOnCheckOff by rememberUpdatedState(onCheckOff)
+    val onDismiss = remember { { _: SwipeToDismissBoxValue -> currentOnCheckOff() } }
 
     SwipeToDismissBox(
         state = dismissState,
         modifier = modifier,
+        onDismiss = onDismiss,
         backgroundContent = { ShoppingListSwipeBackground() }
     ) {
         Card(
