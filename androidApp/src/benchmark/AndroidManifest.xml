@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- Lets the macrobenchmark's Perfetto capture see inside the app process. The
+             `isProfileable = true` build-type flag does not emit this element under AGP 9, and
+             without it FrameTimingMetric reports only frameCount — no frame durations — because
+             the app's own trace slices are never attributed. -->
+        <profileable
+            android:shell="true"
+            tools:targetApi="29" />
+
+        <!-- Benchmark-only dataset seeding hook. This source set is compiled into the
+             `benchmark` build type only, so neither the receiver nor this manifest entry
+             exists in a debug or release build. -->
+        <receiver
+            android:name="com.foodtracker.android.perf.PerfSeedReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.foodtracker.android.PERF_SEED" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

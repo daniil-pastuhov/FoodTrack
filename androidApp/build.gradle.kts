@@ -56,6 +56,22 @@ android {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
+        // Target build type for the :macrobenchmark module. Non-debuggable (a debuggable build
+        // measures nothing useful — the interpreter dominates) but `profileable`, so the
+        // benchmark can capture traces. Minification is deliberately OFF: the point of these
+        // benchmarks is to compare two revisions of *our* source, and R8's output shifts
+        // between builds enough to swamp that signal. Signed with the debug key so it installs
+        // without needing the git-ignored release keystore.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = false
+            isProfileable = true
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
     }
 
     buildFeatures {
@@ -73,10 +89,31 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        unitTests.all {
+            // Names the directory the JVM performance tests write their numbers into, so a
+            // "before" and an "after" run don't overwrite each other:
+            //   ./gradlew :androidApp:testDebugUnitTest -Pperf.label=baseline
+            it.systemProperty(
+                "perf.label",
+                providers.gradleProperty("perf.label").getOrElse("adhoc")
+            )
+        }
+    }
 }
 
 kotlin {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+}
+
+// Emits per-composable skippability and per-class stability reports. These are the static half
+// of the performance baseline (see perf/README.md): the "restartable but not skippable"
+// composable count and the "unstable class" count are exact and deterministic, unlike frame
+// timings, so they're what proves a stability fix actually landed.
+composeCompiler {
+    reportsDestination = layout.buildDirectory.dir("compose-reports")
+    metricsDestination = layout.buildDirectory.dir("compose-metrics")
 }
 
 dependencies {
@@ -121,6 +158,10 @@ dependencies {
 
     implementation(platform(libs.koin.bom))
     implementation(libs.koin.android)
+
+    // Required by :macrobenchmark — the macrobenchmark library drives profile compilation
+    // through ProfileInstaller in the *target* app process.
+    implementation(libs.androidx.profileinstaller)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
