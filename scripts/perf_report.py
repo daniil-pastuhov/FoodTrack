@@ -112,9 +112,27 @@ def main():
         section("JVM microbenchmarks (median, µs)")
         print(f"| Benchmark | Items | {before_label} | {after_label} | Change |")
         print("|---|--:|--:|--:|--:|")
-        for key in sorted(before.keys() & after.keys(), key=lambda k: (k[0], k[1])):
+        shared_keys = [k for k in (before.keys() & after.keys()) if not k[0].startswith("algorithm.")]
+        for key in sorted(shared_keys, key=lambda k: (k[0], k[1])):
             name, size = key
             b, a = before[key], after[key]
+            print(f"| `{name}` | {size} | {b:.1f} | {a:.1f} | {pct(b, a)} |")
+
+    # --- Algorithm (legacy vs current, within the "after" run) ---------------
+    algo = {k: v for k, v in after.items() if k[0].startswith("algorithm.")}
+    if algo:
+        section("Derivation algorithm: previous implementation vs current")
+        print("Both measured in the same JVM run on the same data, so this isolates the")
+        print("algorithm from the flow plumbing and from build-to-build variation.\n")
+        stems = sorted({(k[0].rsplit(".", 1)[0], k[1]) for k in algo})
+        print("| Operation | Items | previous | current | Change |")
+        print("|---|--:|--:|--:|--:|")
+        for stem, size in stems:
+            b = algo.get((f"{stem}.legacy", size))
+            a = algo.get((f"{stem}.current", size))
+            if b is None or a is None:
+                continue
+            name = stem.removeprefix("algorithm.")
             print(f"| `{name}` | {size} | {b:.1f} | {a:.1f} | {pct(b, a)} |")
 
     # --- Compose ------------------------------------------------------------

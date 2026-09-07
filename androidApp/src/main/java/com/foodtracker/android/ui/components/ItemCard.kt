@@ -66,29 +66,28 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandDark
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
-import com.foodtracker.model.CategoryPreference
-import com.foodtracker.model.PantryItem
-import com.foodtracker.model.resolveCategoryDisplayName
-import com.foodtracker.util.DateUtils
+import com.foodtracker.viewmodel.PantryRow
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun ItemCard(
-    item: PantryItem,
+    row: PantryRow,
     onDelete: () -> Unit,
     onDecrement: () -> Unit,
     onMoveToShoppingList: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    categoryPreferences: List<CategoryPreference> = emptyList(),
-    expiringSoonDays: Int = 3,
     selectionMode: Boolean = false,
     selected: Boolean = false,
     onLongClick: () -> Unit = {}
 ) {
-    val today = remember { DateUtils.today() }
-    val daysRemaining = item.daysRemaining(today)
-    val status = item.expiryStatus(today, expiringSoonDays)
+    // Everything this card displays is derived once per data change in PantryStateHolder rather
+    // than per card per recomposition here — days remaining, expiry status, and the resolved
+    // category name, which used to cost a linear scan over every CategoryPreference.
+    val item = row.item
+    val daysRemaining = row.daysRemaining
+    val status = row.status
+    val displayCategory = row.categoryDisplayName
     val borderWidth by animateDpAsState(targetValue = if (selected) 2.dp else 0.dp, label = "itemCardBorderWidth")
     val borderColor by animateColorAsState(
         targetValue = if (selected) BrandPrimary else Color.Transparent,
@@ -177,11 +176,18 @@ fun ItemCard(
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     if (!item.imageUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
+                        // Remembered per URL: an unremembered builder allocates a fresh
+                        // ImageRequest for every card on every recomposition, and a new request
+                        // instance also defeats Coil's own equality check on the model.
+                        val context = LocalContext.current
+                        val imageRequest = remember(context, item.imageUrl) {
+                            ImageRequest.Builder(context)
                                 .data(item.imageUrl)
                                 .crossfade(true)
-                                .build(),
+                                .build()
+                        }
+                        AsyncImage(
+                            model = imageRequest,
                             contentDescription = item.name,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.size(64.dp)
@@ -255,9 +261,6 @@ fun ItemCard(
                             }
                         }
 
-                        val displayCategory = remember(item.category, categoryPreferences) {
-                            resolveCategoryDisplayName(item.category, categoryPreferences)
-                        }
                         if (!displayCategory.isNullOrBlank()) {
                             Surface(
                                 shape = RoundedCornerShape(6.dp),

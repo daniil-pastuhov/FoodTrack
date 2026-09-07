@@ -114,6 +114,12 @@ kotlin {
 composeCompiler {
     reportsDestination = layout.buildDirectory.dir("compose-reports")
     metricsDestination = layout.buildDirectory.dir("compose-metrics")
+
+    // Declares the :shared and kotlinx-datetime types the compiler can't see as stable. See the
+    // file itself for why this is needed and why it is accurate rather than a shortcut.
+    stabilityConfigurationFiles.add(
+        layout.projectDirectory.file("compose_compiler_config.conf")
+    )
 }
 
 dependencies {

@@ -49,7 +49,8 @@ val appModule = module {
     single<CategoryPreferenceRepository> { RoomCategoryPreferenceRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
     single { OpenFoodFactsApi() }
-    single { WidgetUpdater(androidContext(), get(), get()) }
+    // Depends on PantryStateHolder rather than the repositories: see WidgetUpdater for why.
+    single { WidgetUpdater(androidContext(), get()) }
     single {
         PantryStateHolder(
             repository = get(),

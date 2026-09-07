@@ -39,8 +39,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +75,9 @@ import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import org.koin.android.ext.android.inject
 
 enum class AppScreen {
@@ -87,28 +88,6 @@ enum class AppScreen {
     CATEGORY_SETTINGS,
     CALENDAR,
     SHOPPING_LIST
-}
-
-/** True while the list is scrolling up (or at rest) and false while actively scrolling down,
- *  by comparing each recomposition's first-visible-item position against the last one seen.
- *  Drives the scan/add FAB's collapse — it hides on the same downward scroll gesture that
- *  collapses the dashboard's header, and reappears on the same upward scroll that expands it. */
-@Composable
-private fun LazyGridState.isScrollingUp(): Boolean {
-    var previousIndex by remember(this) { mutableStateOf(firstVisibleItemIndex) }
-    var previousScrollOffset by remember(this) { mutableStateOf(firstVisibleItemScrollOffset) }
-    return remember(this) {
-        derivedStateOf {
-            val scrollingUp = if (previousIndex != firstVisibleItemIndex) {
-                previousIndex > firstVisibleItemIndex
-            } else {
-                previousScrollOffset >= firstVisibleItemScrollOffset
-            }
-            previousIndex = firstVisibleItemIndex
-            previousScrollOffset = firstVisibleItemScrollOffset
-            scrollingUp
-        }
-    }.value
 }
 
 /** Holds a generic shopping-list scan's resolved result plus its ranked candidate entries
@@ -144,8 +123,20 @@ class MainActivity : ComponentActivity() {
         applyScreenFromIntent(intent)
 
         setContent {
-            val uiState by stateHolder.uiState.collectAsState()
-            val darkTheme = when (uiState.settings.theme) {
+            // Collect only the slices this root scope actually reads, rather than the whole
+            // PantryUiState. Reading the whole object here meant any change to any field —
+            // a scan message, isLookingUpBarcode, the item list — invalidated the entire
+            // content tree, including every screen below. Each screen already collects the
+            // state it needs for itself.
+            val settings by remember(stateHolder) {
+                stateHolder.uiState.map { it.settings }.distinctUntilChanged()
+            }.collectAsStateWithLifecycle(stateHolder.uiState.value.settings)
+
+            val shoppingListCount by remember(stateHolder) {
+                stateHolder.uiState.map { it.shoppingList.size }.distinctUntilChanged()
+            }.collectAsStateWithLifecycle(stateHolder.uiState.value.shoppingList.size)
+
+            val darkTheme = when (settings.theme) {
                 AppTheme.SYSTEM -> isSystemInDarkTheme()
                 AppTheme.LIGHT -> false
                 AppTheme.DARK -> true
@@ -210,7 +201,7 @@ class MainActivity : ComponentActivity() {
                         }
                         com.foodtracker.android.notification.NotificationHelper.scheduleDigest(
                             this@MainActivity,
-                            uiState.settings.notifications
+                            settings.notifications
                         )
                     }
 
@@ -516,9 +507,9 @@ class MainActivity : ComponentActivity() {
                                         }
                                         AppScreen.SETTINGS -> {
                                             SettingsScreen(
-                                                settings = uiState.settings,
+                                                settings = settings,
                                                 onSave = { newSettings ->
-                                                    val notificationsChanged = newSettings.notifications != uiState.settings.notifications
+                                                    val notificationsChanged = newSettings.notifications != settings.notifications
                                                     stateHolder.updateSettings(newSettings)
                                                     if (notificationsChanged) {
                                                         com.foodtracker.android.notification.NotificationHelper.rescheduleAll(
@@ -557,7 +548,7 @@ class MainActivity : ComponentActivity() {
                                         AppBottomBar(
                                             selectedTab = currentTab,
                                             onTabSelected = onTabSelected,
-                                            shoppingListCount = uiState.shoppingList.size,
+                                            shoppingListCount = shoppingListCount,
                                             modifier = Modifier.onGloballyPositioned { pillHeightPx = it.size.height.toFloat() }
                                         )
                                     }
@@ -589,7 +580,10 @@ class MainActivity : ComponentActivity() {
                                         onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category ->
                                             if (isScanningForNewShoppingListEntry) {
                                                 isScanningForNewShoppingListEntry = false
-                                                when (val result = ShoppingListMatcher.match(name, barcode, uiState.shoppingList)) {
+                                                // Read from the flow rather than composition state: this runs
+                                                // in a callback, so there is no reason to make the root scope
+                                                // a reader of the whole shopping list.
+                                                when (val result = ShoppingListMatcher.match(name, barcode, stateHolder.uiState.value.shoppingList)) {
                                                     is ShoppingListMatchResult.ExactBarcodeMatch -> {
                                                         stateHolder.beginScanForShoppingListEntry(result.entry.id)
                                                         editingItem = null
@@ -649,7 +643,7 @@ class MainActivity : ComponentActivity() {
                                         prefillImageUrl = prefillImageUrl,
                                         prefillExpiryDate = prefillExpiryDate,
                                         prefillCategory = prefillCategory,
-                                        settings = uiState.settings,
+                                        settings = settings,
                                         onNavigateBack = {
                                             // Cancelling out of Add/Edit must clear any pending
                                             // shopping-list-entry match (set by beginScanForShoppingListEntry

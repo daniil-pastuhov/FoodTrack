@@ -10,8 +10,9 @@
 #
 #   1. macrobenchmark  — real startup and frame timings on a connected device. Closest to what
 #                        a user feels, but the noisiest, especially on an emulator.
-#   2. JVM micro       — the state holder's filter/sort cost in isolation. Deterministic, but
-#                        blind to anything Compose does.
+#   2. JVM micro       — the state holder's filter/sort cost in isolation, plus a direct
+#                        legacy-vs-current comparison of the derivation algorithm itself.
+#                        Deterministic, but blind to anything Compose does.
 #   3. Compose report  — static per-composable skippability and per-class stability. Exact and
 #                        reproducible, but a proxy rather than a timing.
 #
@@ -41,7 +42,7 @@ SUPPRESS="EMULATOR,UNLOCKED,LOW-BATTERY"
 echo "==> [1/3] JVM microbenchmarks"
 rm -f "perf/raw/jvm-$LABEL.tsv"
 ./gradlew :androidApp:testDebugUnitTest \
-    --tests "*PantryStateHolderPerfTest*" \
+    --tests "*PerfTest*" \
     -Pperf.label="$LABEL" \
     --rerun-tasks --console=plain
 cp "perf/raw/jvm-$LABEL.tsv" "$OUT/jvm.tsv"

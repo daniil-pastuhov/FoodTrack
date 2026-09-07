@@ -102,9 +102,11 @@ class FakeCategoryPreferenceRepository(
                 CategoryPreference(originName, displayName, sortOrder)
         }
     }
-    override suspend fun updateEntry(preference: CategoryPreference) {
-        preferencesFlow.value = preferencesFlow.value.map {
-            if (it.originName == preference.originName) preference else it
-        }
+    override suspend fun updateEntry(preference: CategoryPreference) = updateEntries(listOf(preference))
+
+    override suspend fun updateEntries(preferences: List<CategoryPreference>) {
+        if (preferences.isEmpty()) return
+        val updates = preferences.associateBy { it.originName }
+        preferencesFlow.value = preferencesFlow.value.map { updates[it.originName] ?: it }
     }
 }

@@ -3,6 +3,7 @@ package com.foodtracker.android.perf
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.SortOption
 import com.foodtracker.perf.PerfDataset
+import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.StatusFilter
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +14,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * Records how expensive the pantry filter/sort pipeline is, at several list sizes.
@@ -58,7 +60,12 @@ class PantryStateHolderPerfTest {
             localProductRepository = products,
             categoryPreferenceRepository = categories,
             uncategorizedLabel = "Other",
-            coroutineScope = scope
+            coroutineScope = scope,
+            // The unconfined fixture also runs the derivation inline, so a measurement covers
+            // the work itself and not a hand-off to Dispatchers.Default. The other fixture
+            // keeps the production dispatcher, which is exactly what makes its interactions
+            // return immediately.
+            computationContext = if (unconfined) EmptyCoroutineContext else Dispatchers.Default
         )
 
         fun close() = scope.cancel()
@@ -193,8 +200,49 @@ class PantryStateHolderPerfTest {
 
             fixture.stateHolder.onSearchQueryChanged("")
             fixture.stateHolder.onSortOptionSelected(SortOption.NAME)
-            val names = state.value.filteredItems.map { it.name.lowercase() }
+            val names = state.value.filteredItems.map { it.item.name.lowercase() }
             assertEquals("NAME sort should order by lowercased name", names.sorted(), names)
+
+            // The derived rows must actually carry the values the UI stopped computing itself.
+            val row = state.value.filteredItems.first()
+            assertEquals(row.item.name.lowercase(), row.sortName)
+            assertEquals(row.item.daysRemaining(DateUtils.today()), row.daysRemaining)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    /**
+     * Category preferences are now an input to the derivation, so changing one re-derives the
+     * filtered list.
+     *
+     * Previously the preferences observer wrote `categoryPreferences` into the state without
+     * recomputing `filteredItems`, so with a category filter active — which matches on the
+     * *resolved display name* — renaming that category left the dashboard filtering against a
+     * name that no longer existed, showing an empty list until something else triggered a
+     * recompute.
+     */
+    @Test
+    fun renamingACategoryRefreshesTheActiveCategoryFilter() {
+        val fixture = Fixture(itemCount = 200, unconfined = true)
+        try {
+            val state = fixture.stateHolder.uiState
+            val original = "Perf Category 0"
+            fixture.stateHolder.onCategorySelected(original)
+            val matched = state.value.filteredItems.size
+            assertTrue("expected the seeded data to have items in '$original'", matched > 0)
+
+            fixture.stateHolder.renameCategory("perf-origin-0", "Renamed Bucket")
+
+            assertEquals(
+                "rows should carry the new display name",
+                "Renamed Bucket",
+                state.value.allRows.first { it.item.category == "perf-origin-0" }.categoryDisplayName
+            )
+            assertTrue(
+                "the renamed category should appear in the filter chips",
+                "Renamed Bucket" in state.value.availableCategories
+            )
         } finally {
             fixture.close()
         }
