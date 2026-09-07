@@ -76,7 +76,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -114,7 +114,6 @@ import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.SortOption
 import com.foodtracker.model.categoryPreferenceSortOrder
-import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.StatusFilter
 
@@ -133,7 +132,7 @@ fun PantryDashboardScreen(
     // computes this). Defaults to a rough guess for previews/standalone use.
     bottomOverlayClearance: Dp = 160.dp
 ) {
-    val state by stateHolder.uiState.collectAsState()
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showFilterSheet by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
@@ -215,7 +214,9 @@ fun PantryDashboardScreen(
                 .nestedScroll(headerNestedScrollConnection)
         ) {
             CollapsingHeader(
-                heightOffsetPx = headerOffsetPx,
+                // Deferred read — see CollapsingHeader. Passing `headerOffsetPx` directly would
+                // put the state read in this scope and recompose the whole screen per frame.
+                heightOffsetPx = { headerOffsetPx },
                 onNaturalHeightMeasured = { headerNaturalHeightPx = it }
             ) {
                 Column {
@@ -436,20 +437,18 @@ fun PantryDashboardScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            gridItems(state.filteredItems, key = { it.id }) { item ->
+                            gridItems(state.filteredItems, key = { it.id }) { row ->
                                 ItemCard(
-                                    item = item,
-                                    categoryPreferences = state.categoryPreferences,
-                                    onDelete = { onDeleteItem(item.id) },
-                                    onDecrement = { onDecrementQuantity(item.id) },
-                                    onMoveToShoppingList = { onMoveToShoppingList(item.id) },
+                                    row = row,
+                                    onDelete = { onDeleteItem(row.id) },
+                                    onDecrement = { onDecrementQuantity(row.id) },
+                                    onMoveToShoppingList = { onMoveToShoppingList(row.id) },
                                     onClick = {
-                                        if (selectionMode) toggleSelected(item.id) else onNavigateToAddEdit(item)
+                                        if (selectionMode) toggleSelected(row.id) else onNavigateToAddEdit(row.item)
                                     },
-                                    onLongClick = { toggleSelected(item.id) },
+                                    onLongClick = { toggleSelected(row.id) },
                                     selectionMode = selectionMode,
-                                    selected = item.id in selectedIds,
-                                    expiringSoonDays = state.settings.expiringSoonDays,
+                                    selected = row.id in selectedIds,
                                     modifier = Modifier.animateItem()
                                 )
                             }
@@ -532,17 +531,10 @@ fun PantryDashboardScreen(
                 selectedLocation = state.selectedLocation,
                 storageLocations = state.settings.storageLocations,
                 selectedCategory = state.selectedCategory,
-                categories = remember(state.items, state.categoryPreferences) {
-                    state.items.map { it.category }
-                        .mapNotNull { resolveCategoryDisplayName(it, state.categoryPreferences) }
-                        .distinct()
-                        .sortedWith(compareBy({ displayName ->
-                            state.categoryPreferences
-                                .filter { it.displayName == displayName && it.enabled }
-                                .minOfOrNull { it.sortOrder } ?: Double.MAX_VALUE
-                        }, { it }))
-                },
-                categoryPreferences = state.categoryPreferences,
+                // Derived in PantryStateHolder alongside the rest of the pantry state. The
+                // version that lived here rescanned every preference inside the sort
+                // comparator's selector, so the lookup ran on every comparison.
+                categories = state.availableCategories,
                 selectedStatusFilter = state.selectedStatusFilter,
                 sortOption = state.settings.sortOption
             )
@@ -558,7 +550,6 @@ private fun FilterSheetContent(
     storageLocations: List<String>,
     selectedCategory: String?,
     categories: List<String>,
-    categoryPreferences: List<CategoryPreference>,
     selectedStatusFilter: StatusFilter,
     sortOption: SortOption
 ) {
@@ -712,12 +703,20 @@ private fun FilterSheetContent(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
         )
-        val sortLabels = listOf(
-            SortOption.EXPIRY_DATE to stringResource(R.string.sort_option_expiry_date),
-            SortOption.NAME to stringResource(R.string.sort_option_name),
-            SortOption.DATE_ADDED to stringResource(R.string.sort_option_date_added),
-            SortOption.STORAGE_LOCATION to stringResource(R.string.sort_option_storage_location)
-        )
+        // Remembered rather than rebuilt: this list was allocated afresh on every
+        // recomposition of the sheet, including while a sort chip animates its selection.
+        val expiryLabel = stringResource(R.string.sort_option_expiry_date)
+        val nameLabel = stringResource(R.string.sort_option_name)
+        val dateAddedLabel = stringResource(R.string.sort_option_date_added)
+        val locationLabel = stringResource(R.string.sort_option_storage_location)
+        val sortLabels = remember(expiryLabel, nameLabel, dateAddedLabel, locationLabel) {
+            listOf(
+                SortOption.EXPIRY_DATE to expiryLabel,
+                SortOption.NAME to nameLabel,
+                SortOption.DATE_ADDED to dateAddedLabel,
+                SortOption.STORAGE_LOCATION to locationLabel
+            )
+        }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -755,9 +754,14 @@ private fun AnimatedDotBadge(visible: Boolean) {
 // Clamps content height to naturalHeight + heightOffsetPx and translates it up by the same
 // amount, so it looks like it's scrolling away underneath the top edge as heightOffsetPx
 // (driven by a nested scroll connection) goes from 0 to -naturalHeight.
+//
+// The offset arrives as a lambda rather than a value on purpose. Taken as a `Float`, the caller
+// has to read the offset state in its own composable scope, so every scroll frame invalidated
+// the entire dashboard — top bar, all three metric cards, and the grid's content lambda.
+// Reading it here, inside the measure block, means a scroll re-runs layout only.
 @Composable
 private fun CollapsingHeader(
-    heightOffsetPx: Float,
+    heightOffsetPx: () -> Float,
     onNaturalHeightMeasured: (Float) -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
@@ -765,9 +769,10 @@ private fun CollapsingHeader(
     Layout(content = content, modifier = modifier.clipToBounds()) { measurables, constraints ->
         val placeable = measurables.first().measure(constraints.copy(minHeight = 0, maxHeight = Constraints.Infinity))
         onNaturalHeightMeasured(placeable.height.toFloat())
-        val height = (placeable.height + heightOffsetPx).roundToInt().coerceIn(0, placeable.height)
+        val offset = heightOffsetPx()
+        val height = (placeable.height + offset).roundToInt().coerceIn(0, placeable.height)
         layout(placeable.width, height) {
-            placeable.placeRelative(0, heightOffsetPx.roundToInt())
+            placeable.placeRelative(0, offset.roundToInt())
         }
     }
 }

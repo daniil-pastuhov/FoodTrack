@@ -23,6 +23,26 @@ data class CategoryPreference(
  *  a non-blank trimmed string, so the empty string can never collide with one. */
 const val UNCATEGORIZED_ORIGIN = ""
 
+/**
+ * [CategoryPreference]s indexed by [CategoryPreference.originName].
+ *
+ * Resolving a category is a per-item operation done across the whole pantry, so doing it with a
+ * linear `find` over the preference list makes it O(items × preferences). Building this index
+ * once per preferences change and resolving through it makes each lookup O(1).
+ */
+class CategoryPreferenceIndex(val preferences: List<CategoryPreference>) {
+    private val byOrigin: Map<String, CategoryPreference> =
+        preferences.associateBy { it.originName }
+
+    operator fun get(origin: String?): CategoryPreference? = byOrigin[origin ?: UNCATEGORIZED_ORIGIN]
+
+    companion object {
+        val EMPTY = CategoryPreferenceIndex(emptyList())
+    }
+}
+
+fun List<CategoryPreference>.index(): CategoryPreferenceIndex = CategoryPreferenceIndex(this)
+
 /** Resolves how [origin] should be shown to the user: a disabled category folds into "no
  *  category" (null) everywhere, an origin with no preference yet (not auto-registered) shows
  *  as-is, and an enabled, known one shows its [CategoryPreference.displayName]. `null` (no
@@ -33,11 +53,24 @@ fun resolveCategoryDisplayName(origin: String?, preferences: List<CategoryPrefer
     return if (pref.enabled) pref.displayName else null
 }
 
+/** [resolveCategoryDisplayName] resolved through a prebuilt [CategoryPreferenceIndex]. Prefer
+ *  this wherever more than one item is being resolved against the same preferences. */
+fun resolveCategoryDisplayName(origin: String?, index: CategoryPreferenceIndex): String? {
+    val pref = index[origin] ?: return origin
+    return if (pref.enabled) pref.displayName else null
+}
+
 /** Sort key for ordering categories by their user-chosen position: a disabled or not-yet-known
  *  origin (including null/uncategorized) always sorts last. */
 fun categoryPreferenceSortOrder(origin: String?, preferences: List<CategoryPreference>): Double {
     val key = origin ?: UNCATEGORIZED_ORIGIN
     val pref = preferences.find { it.originName == key } ?: return Double.MAX_VALUE
+    return if (pref.enabled) pref.sortOrder else Double.MAX_VALUE
+}
+
+/** [categoryPreferenceSortOrder] resolved through a prebuilt [CategoryPreferenceIndex]. */
+fun categoryPreferenceSortOrder(origin: String?, index: CategoryPreferenceIndex): Double {
+    val pref = index[origin] ?: return Double.MAX_VALUE
     return if (pref.enabled) pref.sortOrder else Double.MAX_VALUE
 }
 

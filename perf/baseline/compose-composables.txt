@@ -1,0 +1,264 @@
+fun com.foodtracker.android.isScrollingUp(
+  stable <this>: LazyGridState
+): Boolean
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.camera.CameraPreviewView(
+  stable mode: CameraScanMode
+  stable onBarcodeFound: Function1<String, Unit>
+  stable onDateFound: Function1<LocalDate, Unit>
+  stable onImageCaptureReady: Function1<ImageCapture, Unit>? = @static <expression>
+  stable torchEnabled: Boolean = @static false
+  stable onTorchAvailabilityChanged: Function1<Boolean, Unit>? = @static <expression>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.components.AppBottomBar(
+  stable selectedTab: BottomNavTab
+  stable onTabSelected: Function1<BottomNavTab, Unit>
+  stable shoppingListCount: Int = @static 0
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.components.BottomNavItemView(
+  stable icon: ImageVector
+  stable label: String
+  stable selected: Boolean
+  stable badgeCount: Int = @static 0
+  stable onClick: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.components.ScanAndAddFabs(
+  stable onScan: Function0<Unit>
+  stable onAdd: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.components.ExpiryBadge(
+  stable daysRemaining: Int
+  stable status: ExpiryStatus
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.components.ItemCard(
+  unstable item: PantryItem
+  stable onDelete: Function0<Unit>
+  stable onDecrement: Function0<Unit>
+  stable onMoveToShoppingList: Function0<Unit>
+  stable onClick: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+  categoryPreferences: List<CategoryPreference>? = @static <expression>
+  stable expiringSoonDays: Int = @static 3
+  stable selectionMode: Boolean = @static false
+  stable selected: Boolean = @static false
+  stable onLongClick: Function0<Unit>? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.components.SwipeActionBackground(
+  stable direction: SwipeToDismissBoxValue
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.AddEditItemScreen(
+  unstable stateHolder: PantryStateHolder
+  unstable initialItem: PantryItem?
+  stable prefillBarcode: String?
+  stable prefillName: String?
+  stable prefillBrand: String?
+  stable prefillImageUrl: String?
+  unstable prefillExpiryDate: LocalDate?
+  stable prefillCategory: String?
+  unstable settings: AppSettings
+  stable onNavigateBack: Function0<Unit>
+  stable onSaveItem: Function1<PantryItem, Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.QuickDateChip(
+  stable label: String
+  stable onClick: Function0<Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CalendarScreen(
+  unstable stateHolder: PantryStateHolder
+  stable modifier: Modifier? = @static <expression>
+  stable bottomOverlayClearance: Dp = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CalendarSummaryRow(
+  stable expiredCount: Int
+  stable expiringSoonCount: Int
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CalendarSummaryChip(
+  stable text: String
+  stable color: Color
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CalendarGridSection(
+  unstable displayedMonth: LocalDate
+  unstable today: LocalDate
+  grouped: Map<LocalDate, List<PantryItem>>
+  unstable selectedDay: LocalDate
+  stable expiringSoonDays: Int
+  stable onPrevMonth: Function0<Unit>
+  stable onNextMonth: Function0<Unit>
+  stable onSelectDay: Function1<LocalDate, Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.DayDetailSection(
+  unstable selectedDay: LocalDate
+  items: List<PantryItem>
+  unstable today: LocalDate
+  stable expiringSoonDays: Int
+  stable modifier: Modifier? = @static <expression>
+  stable bottomOverlayClearance: Dp = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CalendarDayCell(
+  unstable day: CalendarDay
+  stable isToday: Boolean
+  stable isSelected: Boolean
+  items: List<PantryItem>
+  unstable today: LocalDate
+  stable expiringSoonDays: Int
+  stable onClick: Function0<Unit>
+)
+fun com.foodtracker.android.ui.screens.dayIndicatorColor(
+  items: List<PantryItem>
+  unstable today: LocalDate
+  stable expiringSoonDays: Int
+): Color?
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.DayDetailRow(
+  unstable item: PantryItem
+  unstable today: LocalDate
+  stable expiringSoonDays: Int
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CategorySettingsScreen(
+  unstable stateHolder: PantryStateHolder
+  stable onNavigateBack: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.CategoryPreferenceRow(
+  unstable preference: CategoryPreference
+  stable allOrigins: String
+  stable isDragging: Boolean
+  stable dragHandleModifier: Modifier
+  stable onToggleEnabled: Function1<Boolean, Unit>
+  stable onRenameClick: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.PantryDashboardScreen(
+  unstable stateHolder: PantryStateHolder
+  stable onNavigateToAddEdit: Function1<PantryItem?, Unit>
+  stable onDeleteItem: Function1<String, Unit>
+  stable onDecrementQuantity: Function1<String, Unit>
+  stable onMoveToShoppingList: Function1<String, Unit>
+  stable modifier: Modifier? = @static <expression>
+  stable gridState: LazyGridState? = @dynamic <expression>
+  stable bottomOverlayClearance: Dp = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.FilterSheetContent(
+  unstable stateHolder: PantryStateHolder
+  stable searchQuery: String
+  stable selectedLocation: String?
+  storageLocations: List<String>
+  stable selectedCategory: String?
+  categories: List<String>
+  unused categoryPreferences: List<CategoryPreference>
+  stable selectedStatusFilter: StatusFilter
+  stable sortOption: SortOption
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.AnimatedDotBadge(
+  stable visible: Boolean
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun com.foodtracker.android.ui.screens.CollapsingHeader(
+  stable heightOffsetPx: Float
+  stable onNaturalHeightMeasured: Function1<Float, Unit>
+  stable modifier: Modifier? = @static <expression>
+  stable content: Function2<Composer, Int, Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.MetricCard(
+  stable title: String
+  stable count: Int
+  stable color: Color
+  stable bgColor: Color
+  stable icon: ImageVector
+  stable selected: Boolean
+  stable onClick: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.ScannerScreen(
+  unstable stateHolder: PantryStateHolder
+  stable onNavigateBack: Function0<Unit>
+  stable onProceedToAddItem: Function6<@[ParameterName(name = 'barcode')] String?, @[ParameterName(name = 'productName')] String?, @[ParameterName(name = 'brand')] String?, @[ParameterName(name = 'imageUrl')] String?, @[ParameterName(name = 'expiryDate')] LocalDate?, @[ParameterName(name = 'category')] String?, Unit>
+  stable showManualEntryShortcut: Boolean = @static true
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.SettingsScreen(
+  unstable settings: AppSettings
+  stable onSave: Function1<AppSettings, Unit>
+  stable onClearAllData: Function0<Unit>
+  stable onManageCategories: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+  stable bottomOverlayClearance: Dp = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable, [androidx.compose.ui.UiComposable]]") fun com.foodtracker.android.ui.screens.SettingsSectionCard(
+  stable title: String
+  stable content: Function2<Composer, Int, Unit>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.ShoppingListScreen(
+  unstable stateHolder: PantryStateHolder
+  stable onScanNewEntry: Function0<Unit>
+  stable onAddEntryManually: Function1<ShoppingListEntry, Unit>
+  stable onCheckOffEntry: Function1<String, Unit>? = @dynamic <expression>
+  stable onDecrementEntry: Function1<String, Unit>? = @dynamic <expression>
+  stable modifier: Modifier? = @static <expression>
+  stable bottomOverlayClearance: Dp = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.ShoppingListRow(
+  unstable entry: ShoppingListEntry
+  stable isDragging: Boolean
+  stable dragHandleModifier: Modifier
+  stable onCheckOff: Function0<Unit>
+  stable onIncrement: Function0<Unit>
+  stable onDecrement: Function0<Unit>
+  stable onClick: Function0<Unit>
+  stable modifier: Modifier? = @static <expression>
+)
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.ShoppingListSwipeBackground()
+restartable skippable scheme("[androidx.compose.ui.UiComposable]") fun com.foodtracker.android.ui.screens.ShoppingListMatchDialog(
+  candidates: List<ShoppingListEntry>
+  stable onCandidateSelected: Function1<ShoppingListEntry, Unit>
+  stable onNoneOfThese: Function0<Unit>
+  stable onDismiss: Function0<Unit>
+)
+fun com.foodtracker.android.ui.theme.freshStatusColors()
+fun com.foodtracker.android.ui.theme.expiringStatusColors()
+fun com.foodtracker.android.ui.theme.expiredStatusColors()
+restartable skippable scheme("[0, [0]]") fun com.foodtracker.android.ui.theme.FoodTrackerTheme(
+  stable darkTheme: Boolean = @dynamic <expression>
+  stable content: Function2<Composer, Int, Unit>
+)
+fun com.foodtracker.android.util.formatLocalDate(
+  unstable date: LocalDate
+  stable style: FormatStyle? = @static <expression>
+): String
+fun com.foodtracker.android.util.formatMonthYear(
+  unstable date: LocalDate
+): String
+fun com.foodtracker.android.util.daysRemainingLabel(
+  stable days: Int
+): String
+restartable skippable fun com.foodtracker.android.widget.ExpiryWidgetContent(
+  items: List<PantryItem>
+  unstable today: LocalDate
+)
+restartable skippable fun com.foodtracker.android.widget.ExpiryRow(
+  unstable item: PantryItem
+  unstable today: LocalDate
+)
+restartable skippable fun com.foodtracker.android.widget.OverviewWidgetContent(
+  rows: List<OverviewRow>
+  unstable today: LocalDate
+)
+restartable skippable fun com.foodtracker.android.widget.OverviewRowContent(
+  row: OverviewRow
+  unstable today: LocalDate
+)
+restartable skippable fun com.foodtracker.android.widget.ShoppingListWidgetContent(
+  entries: List<ShoppingListEntry>
+)
+restartable skippable fun com.foodtracker.android.widget.ShoppingListRow(
+  unstable entry: ShoppingListEntry
+)
+restartable skippable fun com.foodtracker.android.widget.WidgetRowDivider()
+restartable skippable fun com.foodtracker.android.widget.WidgetSectionHeader(
+  stable title: String
+  stable modifier: GlanceModifier? = @static <expression>
+)

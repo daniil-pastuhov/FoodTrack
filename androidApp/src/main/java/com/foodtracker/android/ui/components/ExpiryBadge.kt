@@ -15,9 +15,11 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -43,7 +45,11 @@ fun ExpiryBadge(
     val bg = colors.background
     val textColor = colors.foreground
 
-    val label = daysRemainingLabel(daysRemaining)
+    // Resolving this label goes through Resources.getQuantityString, which is a real lookup —
+    // and this badge renders on every card in the grid and every row in the calendar's day
+    // list. It only depends on the day count, so it's remembered on that.
+    val resources = LocalContext.current.resources
+    val label = remember(resources, daysRemaining) { daysRemainingLabel(resources, daysRemaining) }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

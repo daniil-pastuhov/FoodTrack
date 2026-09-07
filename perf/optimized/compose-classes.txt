@@ -1,0 +1,203 @@
+unstable class com.foodtracker.android.data.local.CategoryPreferenceDao_Impl {
+  unstable val __db: RoomDatabase
+  unstable val __insertAdapterOfCategoryPreferenceEntity: EntityInsertAdapter<CategoryPreferenceEntity>
+  unstable val __upsertAdapterOfCategoryPreferenceEntity: EntityUpsertAdapter<CategoryPreferenceEntity>
+  <runtime stability> = Unstable
+}
+runtime class com.foodtracker.android.data.local.FoodTrackerDatabase_Impl {
+  runtime val _pantryDao: Lazy<PantryDao>
+  runtime val _shoppingListDao: Lazy<ShoppingListDao>
+  runtime val _productNameDao: Lazy<ProductNameDao>
+  runtime val _localProductDao: Lazy<LocalProductDao>
+  runtime val _categoryPreferenceDao: Lazy<CategoryPreferenceDao>
+  <runtime stability> = Runtime(FoodTrackerDatabase)
+}
+unstable class com.foodtracker.android.data.local.LocalProductDao_Impl {
+  unstable val __db: RoomDatabase
+  unstable val __upsertAdapterOfLocalProductEntity: EntityUpsertAdapter<LocalProductEntity>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.data.local.PantryDao_Impl {
+  unstable val __db: RoomDatabase
+  unstable val __upsertAdapterOfPantryItemEntity: EntityUpsertAdapter<PantryItemEntity>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.data.local.ProductNameDao_Impl {
+  unstable val __db: RoomDatabase
+  unstable val __upsertAdapterOfProductNameEntity: EntityUpsertAdapter<ProductNameEntity>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.data.local.ShoppingListDao_Impl {
+  unstable val __db: RoomDatabase
+  unstable val __upsertAdapterOfShoppingListEntryEntity: EntityUpsertAdapter<ShoppingListEntryEntity>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.perf.PerfSeedReceiver {
+  runtime val database$delegate: Lazy<FoodTrackerDatabase>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.FoodTrackerApp {
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.MainActivity {
+  runtime val stateHolder$delegate: Lazy<PantryStateHolder>
+  stable val currentScreenState: MutableState<AppScreen>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.camera.BarcodeAnalyzer {
+  stable val onBarcodeFound: Function1<String, Unit>
+  unstable val options: BarcodeScannerOptions
+  unstable val scanner: BarcodeScanner
+  stable var lastScannedBarcode: String?
+  stable var lastScanTimestamp: Long
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.camera.TextOcrAnalyzer {
+  stable val onDateDetected: Function1<DateOcrResult, Unit>
+  unstable val recognizer: TextRecognizer
+  stable var lastEmittedDate: String?
+  stable var lastDetectionTimestamp: Long
+  <runtime stability> = Unstable
+}
+stable class com.foodtracker.android.data.local.CategoryPreferenceEntity {
+  stable val originName: String
+  stable val displayName: String
+  stable val sortOrder: Double
+  stable val enabled: Boolean
+  <runtime stability> = Stable
+}
+unstable class com.foodtracker.android.data.local.FoodTrackerDatabase {
+  <runtime stability> = Unstable
+}
+stable class com.foodtracker.android.data.local.LocalProductEntity {
+  stable val barcode: String
+  stable val name: String
+  stable val brand: String?
+  stable val imageUrl: String?
+  stable val category: String?
+  <runtime stability> = Stable
+}
+stable class com.foodtracker.android.data.local.PantryItemEntity {
+  stable val id: String
+  stable val name: String
+  stable val brand: String?
+  stable val barcode: String?
+  stable val imageUrl: String?
+  stable val expiryDateEpochDays: Int
+  stable val addedDateEpochDays: Int
+  stable val storageLocation: String
+  stable val category: String?
+  stable val quantity: Int
+  stable val notes: String?
+  stable val essential: Boolean
+  <runtime stability> = Stable
+}
+stable class com.foodtracker.android.data.local.ProductNameEntity {
+  stable val normalizedName: String
+  stable val displayName: String
+  stable val lastUsedAtEpochMillis: Long
+  stable val sortOrder: Double?
+  <runtime stability> = Stable
+}
+runtime class com.foodtracker.android.data.local.RoomCategoryPreferenceRepository {
+  runtime val dao: CategoryPreferenceDao
+  <runtime stability> = Uncertain(CategoryPreferenceDao)
+}
+runtime class com.foodtracker.android.data.local.RoomLocalProductRepository {
+  runtime val dao: LocalProductDao
+  <runtime stability> = Uncertain(LocalProductDao)
+}
+runtime class com.foodtracker.android.data.local.RoomPantryRepository {
+  runtime val dao: PantryDao
+  <runtime stability> = Uncertain(PantryDao)
+}
+runtime class com.foodtracker.android.data.local.RoomProductNameRepository {
+  runtime val dao: ProductNameDao
+  <runtime stability> = Uncertain(ProductNameDao)
+}
+runtime class com.foodtracker.android.data.local.RoomShoppingListRepository {
+  runtime val dao: ShoppingListDao
+  <runtime stability> = Uncertain(ShoppingListDao)
+}
+stable class com.foodtracker.android.data.local.ShoppingListEntryEntity {
+  stable val id: String
+  stable val productName: String
+  stable val barcode: String?
+  stable val category: String?
+  stable val quantity: Int
+  stable val addedDateEpochDays: Int
+  stable val sortOrder: Double
+  <runtime stability> = Stable
+}
+unstable class com.foodtracker.android.notification.DigestNotificationReceiver {
+  runtime val repository$delegate: Lazy<PantryRepository>
+  <runtime stability> = Unstable
+}
+unstable class com.foodtracker.android.notification.ExpiryNotificationReceiver {
+  runtime val stateHolder$delegate: Lazy<PantryStateHolder>
+  <runtime stability> = Unstable
+}
+stable class com.foodtracker.android.notification.NotificationHelper {
+  stable val CHANNEL_ID: String
+  stable val DIGEST_REQUEST_CODE: Int
+  <runtime stability> = Stable
+}
+unstable class com.foodtracker.android.settings.AndroidSettingsRepository {
+  unstable val prefs: @[FlexibleNullability] SharedPreferences?
+  <runtime stability> = Unstable
+}
+stable class com.foodtracker.android.ui.theme.ExpiryStatusColors {
+  stable val foreground: Color
+  stable val background: Color
+  <runtime stability> = Stable
+}
+runtime class com.foodtracker.android.widget.ExpiryWidget {
+  runtime val pantryRepository$delegate: Lazy<PantryRepository>
+  runtime val settingsRepository$delegate: Lazy<SettingsRepository>
+  <runtime stability> = Runtime(GlanceAppWidget)
+}
+runtime class com.foodtracker.android.widget.ExpiryWidgetReceiver {
+  runtime val glanceAppWidget: GlanceAppWidget
+  <runtime stability> = Runtime(GlanceAppWidgetReceiver),Runtime(GlanceAppWidget)
+}
+stable class com.foodtracker.android.widget.OverviewRow.Header {
+  stable val section: OverviewSection
+  stable val title: String
+  <runtime stability> = Stable
+}
+stable class com.foodtracker.android.widget.OverviewRow.Empty {
+  stable val message: String
+  <runtime stability> = Stable
+}
+stable class com.foodtracker.android.widget.OverviewRow.ExpiryItem {
+  stable val item: PantryItem
+  <runtime stability> = Stable
+}
+stable class com.foodtracker.android.widget.OverviewRow.ShoppingItem {
+  stable val entry: ShoppingListEntry
+  <runtime stability> = Stable
+}
+runtime class com.foodtracker.android.widget.OverviewWidget {
+  runtime val pantryRepository$delegate: Lazy<PantryRepository>
+  runtime val settingsRepository$delegate: Lazy<SettingsRepository>
+  runtime val shoppingListRepository$delegate: Lazy<ShoppingListRepository>
+  <runtime stability> = Runtime(GlanceAppWidget)
+}
+runtime class com.foodtracker.android.widget.OverviewWidgetReceiver {
+  runtime val glanceAppWidget: GlanceAppWidget
+  <runtime stability> = Runtime(GlanceAppWidgetReceiver),Runtime(GlanceAppWidget)
+}
+runtime class com.foodtracker.android.widget.ShoppingListWidget {
+  runtime val shoppingListRepository$delegate: Lazy<ShoppingListRepository>
+  <runtime stability> = Runtime(GlanceAppWidget)
+}
+runtime class com.foodtracker.android.widget.ShoppingListWidgetReceiver {
+  runtime val glanceAppWidget: GlanceAppWidget
+  <runtime stability> = Runtime(GlanceAppWidgetReceiver),Runtime(GlanceAppWidget)
+}
+unstable class com.foodtracker.android.widget.WidgetUpdater {
+  unstable val context: Context
+  stable val stateHolder: PantryStateHolder
+  runtime val coroutineScope: CoroutineScope
+  <runtime stability> = Unstable
+}

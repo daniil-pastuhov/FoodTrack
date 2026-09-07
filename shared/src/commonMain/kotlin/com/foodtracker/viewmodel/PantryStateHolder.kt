@@ -3,6 +3,7 @@ package com.foodtracker.viewmodel
 import com.foodtracker.api.OpenFoodFactsApi
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.CategoryPreference
+import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShoppingListEntry
@@ -24,10 +25,17 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
+import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
@@ -39,9 +47,34 @@ enum class StatusFilter {
     FRESH
 }
 
+/**
+ * The dashboard's filter selection, held separately from [PantryUiState] so that changing it is
+ * a cheap flow write from the UI thread rather than a filter+sort run inside the click handler.
+ * The actual list is derived from this downstream, on a background dispatcher.
+ */
+data class FilterCriteria(
+    val location: String? = null,
+    val category: String? = null,
+    val status: StatusFilter = StatusFilter.ALL,
+    val query: String = ""
+)
+
 data class PantryUiState(
     val items: List<PantryItem> = emptyList(),
-    val filteredItems: List<PantryItem> = emptyList(),
+    /** All items as UI rows, with expiry/status/category already derived. Used by the Calendar,
+     *  which needs the full set rather than the dashboard's filtered subset. */
+    val allRows: List<PantryRow> = emptyList(),
+    val filteredItems: List<PantryRow> = emptyList(),
+    /** All rows grouped by expiry date, for the Calendar. Derived here rather than in
+     *  composition so paging between months doesn't regroup the whole pantry. */
+    val itemsByExpiryDate: Map<LocalDate, List<PantryRow>> = emptyMap(),
+    /** The single most urgent status among the items expiring on each date, for the Calendar's
+     *  day indicator dots. Previously recomputed per day cell, per recomposition, by mapping
+     *  that day's items to a throwaway status list. */
+    val statusByExpiryDate: Map<LocalDate, ExpiryStatus> = emptyMap(),
+    /** Distinct resolved category names present on the current items, in the user's configured
+     *  category order — the dashboard's category filter chips. */
+    val availableCategories: List<String> = emptyList(),
     val selectedLocation: String? = null,
     val selectedCategory: String? = null,
     val selectedStatusFilter: StatusFilter = StatusFilter.ALL,
@@ -63,10 +96,16 @@ data class PantryUiState(
     val scanningShoppingListEntryId: String? = null,
     // Shopping list
     val shoppingList: List<ShoppingListEntry> = emptyList(),
+    /** The shopping list flattened into category-grouped rows with headers, ready to render.
+     *  Grouping used to happen in composition on every emission. */
+    val shoppingRows: List<ShoppingRow> = emptyList(),
     val knownProductNames: List<String> = emptyList(),
     // Category preferences: rename/reorder/enable state for each raw category value seen on a
     // product, managed from Settings (see CategorySettingsScreen / CategoryPreferenceRepository).
-    val categoryPreferences: List<CategoryPreference> = emptyList()
+    val categoryPreferences: List<CategoryPreference> = emptyList(),
+    /** One row per user-visible category for the Settings screen, with the origins merged onto
+     *  each display name already resolved into a subtitle string. */
+    val categoryRows: List<CategoryRow> = emptyList()
 )
 
 class PantryStateHolder(
@@ -81,65 +120,145 @@ class PantryStateHolder(
      *  correctly in the device's language rather than a hardcoded English default. */
     private val uncategorizedLabel: String,
     private val openFoodFactsApi: OpenFoodFactsApi = OpenFoodFactsApi(),
-    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
+    /** Where the pantry/shopping derivation runs (see [observeDerivedPantry]). Injectable so a
+     *  test can pass [kotlin.coroutines.EmptyCoroutineContext] and have the derivation run
+     *  inline on the calling thread, which is the only way to measure its cost without also
+     *  measuring a thread hand-off. */
+    private val computationContext: CoroutineContext = Dispatchers.Default
 ) {
-    private val _uiState = MutableStateFlow(PantryUiState(settings = settingsRepository.getSettings()))
+    // Read once. getSettings() is a synchronous SharedPreferences read plus a JSON decode, and
+    // it happens while the DI graph is being built — i.e. on the main thread during startup.
+    private val initialSettings = settingsRepository.getSettings()
+
+    private val _uiState = MutableStateFlow(PantryUiState(settings = initialSettings))
     val uiState: StateFlow<PantryUiState> = _uiState.asStateFlow()
 
+    /** Dashboard filter selection. Writing this is all a click handler has to do; the filtered
+     *  list is derived downstream, off the UI thread. */
+    private val criteria = MutableStateFlow(FilterCriteria())
+
+    /** Settings mirrored as a flow so the derivation below re-runs when they change, without
+     *  every settings write having to recompute the list itself. */
+    private val settingsState = MutableStateFlow(initialSettings)
+
+    /** Category preferences, shared by the pantry derivation and the shopping list derivation so
+     *  the underlying Room query runs once rather than once per consumer. */
+    private val preferencesState = MutableStateFlow(emptyList<CategoryPreference>())
+
+    /**
+     * Everything derived from the pantry that does **not** depend on the dashboard's filter
+     * selection: the per-item rows, the three counters, the calendar groupings and the category
+     * chips. These are a pure function of (items, category preferences, settings).
+     *
+     * Kept in its own `combine` so that changing a filter doesn't re-run any of it. Folding
+     * `criteria` into this stage — which an earlier version of this did — means every filter tap
+     * and every keystroke rebuilds all N rows, regroups the whole pantry by expiry date and
+     * recollects the category list, none of which the filter can affect. Measured on 5000 items
+     * that made a filter change several times more expensive than the synchronous version it
+     * replaced, even though it had moved off the UI thread.
+     *
+     * Must stay declared above `init`: Kotlin runs property initializers and init blocks in
+     * declaration order, so `observeDerivedPantry()` would otherwise read this while it is still
+     * null, and the resulting failure is silent — the coroutine dies under the SupervisorJob and
+     * the pantry simply never loads.
+     */
+    private val basePantry: Flow<PantryDerivation.Base> =
+        combine(
+            repository.getItemsFlow(),
+            preferencesState,
+            // Only this one setting affects anything in Base. Depending on the whole AppSettings
+            // would rebuild every row whenever an unrelated setting changed — the sort option in
+            // particular, which affects only the filter stage below.
+            settingsState.map { it.expiringSoonDays }.distinctUntilChanged()
+        ) { items, preferences, expiringSoonDays ->
+            PantryDerivation.deriveBase(items, preferences, expiringSoonDays)
+        }.flowOn(computationContext)
+
     init {
-        observeItems()
+        observeCategoryPreferences()
+        observeDerivedPantry()
         observeShoppingList()
         observeKnownProductNames()
-        observeCategoryPreferences()
+        observeSettingsPersistence()
         coroutineScope.launch {
             categoryPreferenceRepository.registerIfAbsent(UNCATEGORIZED_ORIGIN, Double.MAX_VALUE, uncategorizedLabel)
         }
     }
 
-    private fun observeItems() {
+    /**
+     * The single place the pantry's derived state is produced.
+     *
+     * Two things follow from this shape, and both are the point of the change:
+     *  - `flowOn(computationContext)` puts the derivation on a background dispatcher. It used to
+     *    run synchronously inside the click/`onValueChange` handler that triggered it, i.e. on
+     *    the UI thread, once per keystroke while searching.
+     *  - Category preferences are an input, so renaming or disabling a category now refreshes the
+     *    filtered list. Previously the preferences observer updated `categoryPreferences` without
+     *    recomputing `filteredItems`, leaving a display-name-based category filter stale.
+     *
+     * The result is computed *before* `_uiState.update`, not inside it: `update` is a CAS retry
+     * loop, and with several observers writing the same state a filter+sort placed inside it can
+     * run more than once per emission.
+     */
+    private fun observeDerivedPantry() {
         coroutineScope.launch {
-            repository.getItemsFlow().collectLatest { allItems ->
-                registerCategories(allItems.mapNotNull { it.category })
-                _uiState.update { current ->
-                    val today = DateUtils.today()
-                    val expiringSoonDays = current.settings.expiringSoonDays
-                    val prefs = current.categoryPreferences
-
-                    val expiredCount = allItems.count { it.daysRemaining(today) < 0 }
-                    val expiringSoonCount = allItems.count { it.daysRemaining(today) in 0..expiringSoonDays }
-                    val freshCount = allItems.count { it.daysRemaining(today) > expiringSoonDays }
-
-                    val filtered = computeFiltered(
-                        allItems,
-                        current.selectedLocation,
-                        current.selectedCategory,
-                        current.selectedStatusFilter,
-                        current.searchQuery,
-                        today,
-                        expiringSoonDays,
-                        current.settings.sortOption,
-                        prefs
-                    )
-
-                    current.copy(
-                        items = allItems,
-                        filteredItems = filtered,
-                        isLoading = false,
-                        expiredCount = expiredCount,
-                        expiringSoonCount = expiringSoonCount,
-                        freshCount = freshCount
-                    )
-                }
+            // Only this last stage re-runs when a filter changes, and all it does is filter and
+            // sort an already-derived list of rows using precomputed fields.
+            combine(
+                basePantry,
+                criteria,
+                settingsState.map { it.sortOption }.distinctUntilChanged()
+            ) { base, filter, sortOption ->
+                Triple(
+                    base,
+                    filter,
+                    PantryDerivation.filterAndSort(base.allRows, filter, base.expiringSoonDays, sortOption)
+                )
             }
+                .flowOn(computationContext)
+                .collect { (base, filter, filtered) ->
+                    registerCategories(base.items.mapNotNull { it.category })
+                    _uiState.update { current ->
+                        current.copy(
+                            items = base.items,
+                            allRows = base.allRows,
+                            filteredItems = filtered,
+                            itemsByExpiryDate = base.itemsByExpiryDate,
+                            statusByExpiryDate = base.statusByExpiryDate,
+                            availableCategories = base.availableCategories,
+                            expiredCount = base.expiredCount,
+                            expiringSoonCount = base.expiringSoonCount,
+                            freshCount = base.freshCount,
+                            // The selected filter is published here, together with the list it
+                            // produced, so a filter tap causes exactly one state emission and
+                            // therefore one recomposition. Echoing the selection into _uiState
+                            // from the setter as well — which an earlier version did, for
+                            // immediate chip feedback — made every tap emit twice, and measurably
+                            // doubled the P90 frame time on the filter-interaction benchmark.
+                            selectedLocation = filter.location,
+                            selectedCategory = filter.category,
+                            selectedStatusFilter = filter.status,
+                            isLoading = false
+                        )
+                    }
+                }
         }
     }
 
     private fun observeShoppingList() {
         coroutineScope.launch {
-            shoppingListRepository.getEntriesFlow().collectLatest { entries ->
-                registerCategories(entries.mapNotNull { it.category })
-                _uiState.update { it.copy(shoppingList = entries) }
+            combine(
+                shoppingListRepository.getEntriesFlow(),
+                preferencesState
+            ) { entries, preferences ->
+                entries to PantryDerivation.buildShoppingRows(entries, preferences)
             }
+                .flowOn(computationContext)
+                .collect { (entries, rows) ->
+                    registerCategories(entries.mapNotNull { it.category })
+                    _uiState.update { it.copy(shoppingList = entries, shoppingRows = rows) }
+                }
         }
     }
 
@@ -154,7 +273,9 @@ class PantryStateHolder(
     private fun observeCategoryPreferences() {
         coroutineScope.launch {
             categoryPreferenceRepository.getPreferencesFlow().collectLatest { preferences ->
-                _uiState.update { it.copy(categoryPreferences = preferences) }
+                preferencesState.value = preferences
+                val rows = PantryDerivation.buildCategoryRows(preferences)
+                _uiState.update { it.copy(categoryPreferences = preferences, categoryRows = rows) }
             }
         }
     }
@@ -164,7 +285,10 @@ class PantryStateHolder(
      *  without requiring the user to configure anything up front. Origins already known (per the
      *  latest [PantryUiState.categoryPreferences]) are skipped without a DB write. */
     private suspend fun registerCategories(origins: List<String>) {
-        val known = _uiState.value.categoryPreferences.map { it.originName }.toSet()
+        // Read from preferencesState rather than _uiState: it is written first in
+        // observeCategoryPreferences, so it can't lag behind the preferences this derivation
+        // just ran with and cause a redundant re-registration.
+        val known = preferencesState.value.map { it.originName }.toSet()
         val newOrigins = origins.distinct().filterNot { it in known }
         if (newOrigins.isEmpty()) return
         var nextSortOrder = (categoryPreferenceRepository.getMaxSortOrder() ?: -1.0) + 1.0
@@ -174,138 +298,31 @@ class PantryStateHolder(
         }
     }
 
-    private fun computeFiltered(
-        items: List<PantryItem>,
-        location: String?,
-        category: String?,
-        filter: StatusFilter,
-        query: String,
-        today: LocalDate,
-        expiringSoonDays: Int,
-        sortOption: SortOption,
-        preferences: List<CategoryPreference>
-    ): List<PantryItem> {
-        return items.filter { item ->
-            // Location filter
-            val matchesLoc = location == null || item.storageLocation == location
+    // The four filter setters below are now just flow writes: the list is re-derived downstream
+    // on a background dispatcher (see observeDerivedPantry). Each of these used to run a full
+    // filter + sort synchronously on the caller's thread, which is the UI thread — for the
+    // search field, once per keystroke.
 
-            // Category filter. Filter by the resolved display name, so that multiple origins
-            // renamed to the same name (or disabled categories folding into "Other") are
-            // treated as a single selectable group.
-            val itemDisplay = resolveCategoryDisplayName(item.category, preferences)
-            val matchesCategory = category == null || itemDisplay == category
-
-            // Status filter
-            val matchesStatus = when (filter) {
-                StatusFilter.ALL -> true
-                StatusFilter.EXPIRING_SOON -> item.daysRemaining(today) in 0..expiringSoonDays
-                StatusFilter.EXPIRED -> item.daysRemaining(today) < 0
-                StatusFilter.FRESH -> item.daysRemaining(today) > expiringSoonDays
-            }
-
-            // Search query
-            val matchesQuery = query.isBlank() ||
-                    item.name.contains(query, ignoreCase = true) ||
-                    (item.brand?.contains(query, ignoreCase = true) == true)
-
-            matchesLoc && matchesCategory && matchesStatus && matchesQuery
-        }.sortedWith(sortComparator(sortOption))
-    }
-
-    // Ties always need an explicit secondary key: `items` arrives from the repository in a
-    // fixed order (expiry date ascending), and List.sortedWith is stable, so any comparator
-    // that can tie - most visibly DATE_ADDED, since addedDate is day-granularity and several
-    // items are commonly added on the same day - would otherwise silently fall back to that
-    // upstream order instead of a sort tied to the chosen option.
-    private fun sortComparator(option: SortOption): Comparator<PantryItem> = when (option) {
-        SortOption.EXPIRY_DATE -> compareBy<PantryItem> { it.expiryDate.toEpochDays() }
-            .thenBy { it.name.lowercase() }
-        SortOption.NAME -> compareBy<PantryItem> { it.name.lowercase() }
-            .thenByDescending { it.addedDate.toEpochDays() }
-        SortOption.DATE_ADDED -> compareByDescending<PantryItem> { it.addedDate.toEpochDays() }
-            .thenBy { it.name.lowercase() }
-        SortOption.STORAGE_LOCATION -> compareBy<PantryItem> { it.storageLocation.lowercase() }
-            .thenBy { it.name.lowercase() }
-    }
-
+    /**
+     * [searchQuery] is the exception to publishing the selection from the derivation: it is the
+     * value of a text field, so it has to update on the same frame as the keystroke or typing
+     * visibly lags and drops characters. The list it produces still arrives separately.
+     */
     fun onSearchQueryChanged(query: String) {
-        _uiState.update { current ->
-            val today = DateUtils.today()
-            current.copy(
-                searchQuery = query,
-                filteredItems = computeFiltered(
-                    current.items,
-                    current.selectedLocation,
-                    current.selectedCategory,
-                    current.selectedStatusFilter,
-                    query,
-                    today,
-                    current.settings.expiringSoonDays,
-                    current.settings.sortOption,
-                    current.categoryPreferences
-                )
-            )
-        }
+        _uiState.update { it.copy(searchQuery = query) }
+        criteria.update { it.copy(query = query) }
     }
 
     fun onLocationSelected(location: String?) {
-        _uiState.update { current ->
-            val today = DateUtils.today()
-            current.copy(
-                selectedLocation = location,
-                filteredItems = computeFiltered(
-                    current.items,
-                    location,
-                    current.selectedCategory,
-                    current.selectedStatusFilter,
-                    current.searchQuery,
-                    today,
-                    current.settings.expiringSoonDays,
-                    current.settings.sortOption,
-                    current.categoryPreferences
-                )
-            )
-        }
+        criteria.update { it.copy(location = location) }
     }
 
     fun onCategorySelected(category: String?) {
-        _uiState.update { current ->
-            val today = DateUtils.today()
-            current.copy(
-                selectedCategory = category,
-                filteredItems = computeFiltered(
-                    current.items,
-                    current.selectedLocation,
-                    category,
-                    current.selectedStatusFilter,
-                    current.searchQuery,
-                    today,
-                    current.settings.expiringSoonDays,
-                    current.settings.sortOption,
-                    current.categoryPreferences
-                )
-            )
-        }
+        criteria.update { it.copy(category = category) }
     }
 
     fun onStatusFilterSelected(filter: StatusFilter) {
-        _uiState.update { current ->
-            val today = DateUtils.today()
-            current.copy(
-                selectedStatusFilter = filter,
-                filteredItems = computeFiltered(
-                    current.items,
-                    current.selectedLocation,
-                    current.selectedCategory,
-                    filter,
-                    current.searchQuery,
-                    today,
-                    current.settings.expiringSoonDays,
-                    current.settings.sortOption,
-                    current.categoryPreferences
-                )
-            )
-        }
+        criteria.update { it.copy(status = filter) }
     }
 
     fun onSortOptionSelected(option: SortOption) {
@@ -313,31 +330,30 @@ class PantryStateHolder(
     }
 
     fun updateSettings(newSettings: AppSettings) {
-        settingsRepository.saveSettings(newSettings)
-        _uiState.update { current ->
-            val today = DateUtils.today()
-            val expiringSoonDays = newSettings.expiringSoonDays
-            val prefs = current.categoryPreferences
+        // Feeding the derivation re-runs the counters and the filtered list off the UI thread,
+        // which is what recomputed them inline here before. Persistence happens in
+        // observeSettingsPersistence, driven by this same flow.
+        settingsState.value = newSettings
+        _uiState.update { it.copy(settings = newSettings) }
+    }
 
-            current.copy(
-                settings = newSettings,
-                expiredCount = current.items.count { it.daysRemaining(today) < 0 },
-                expiringSoonCount = current.items.count { it.daysRemaining(today) in 0..expiringSoonDays },
-                freshCount = current.items.count { it.daysRemaining(today) > expiringSoonDays },
-                filteredItems = computeFiltered(
-                    current.items,
-                    current.selectedLocation,
-                    current.selectedCategory,
-                    current.selectedStatusFilter,
-                    current.searchQuery,
-                    today,
-                    expiringSoonDays,
-                    newSettings.sortOption,
-                    prefs
-                )
-            )
+    /**
+     * Persists settings off the caller's thread. `saveSettings` is a JSON encode plus a
+     * SharedPreferences write, and it used to run synchronously inside `updateSettings` — that
+     * is, on the UI thread, before anything else happened.
+     *
+     * Driven by collecting [settingsState] rather than by a `launch` per call, because separate
+     * coroutines could interleave and persist two rapid changes out of order, leaving the stored
+     * settings disagreeing with what the user last chose. A flow collector is inherently ordered.
+     */
+    private fun observeSettingsPersistence() {
+        coroutineScope.launch {
+            settingsState
+                .drop(1) // The initial value came *from* the repository; writing it back is a no-op.
+                .collect { settingsRepository.saveSettings(it) }
         }
     }
+
 
     fun clearAllData() {
         coroutineScope.launch {
@@ -633,10 +649,13 @@ class PantryStateHolder(
         val prefs = _uiState.value.categoryPreferences
         val target = prefs.find { it.originName == originName } ?: return
         coroutineScope.launch {
-            // Sync all origins sharing this display name so they enable/disable as a unit
-            prefs.filter { it.displayName == target.displayName }.forEach {
-                categoryPreferenceRepository.updateEntry(it.copy(enabled = enabled))
-            }
+            // Sync all origins sharing this display name so they enable/disable as a unit, in a
+            // single batched write — one write per origin means one flow re-emission per origin,
+            // each re-running the whole downstream derivation.
+            categoryPreferenceRepository.updateEntries(
+                prefs.filter { it.displayName == target.displayName }
+                    .map { it.copy(enabled = enabled) }
+            )
         }
     }
 
@@ -645,11 +664,11 @@ class PantryStateHolder(
     fun setAllCategoriesEnabled(enabled: Boolean) {
         val all = _uiState.value.categoryPreferences
         coroutineScope.launch {
-            all.forEach { pref ->
-                if (pref.enabled != enabled) {
-                    categoryPreferenceRepository.updateEntry(pref.copy(enabled = enabled))
-                }
-            }
+            // One batched write rather than one per category: this is the worst case for the
+            // per-row version, since it can touch every preference at once.
+            categoryPreferenceRepository.updateEntries(
+                all.filter { it.enabled != enabled }.map { it.copy(enabled = enabled) }
+            )
         }
     }
 
@@ -668,10 +687,11 @@ class PantryStateHolder(
             else -> moved.sortOrder
         }
         coroutineScope.launch {
-            // Sync all origins sharing this display name so they reorder as a unit
-            list.filter { it.displayName == moved.displayName }.forEach {
-                categoryPreferenceRepository.updateEntry(it.copy(sortOrder = newSortOrder))
-            }
+            // Sync all origins sharing this display name so they reorder as a unit, batched.
+            categoryPreferenceRepository.updateEntries(
+                list.filter { it.displayName == moved.displayName }
+                    .map { it.copy(sortOrder = newSortOrder) }
+            )
         }
     }
 

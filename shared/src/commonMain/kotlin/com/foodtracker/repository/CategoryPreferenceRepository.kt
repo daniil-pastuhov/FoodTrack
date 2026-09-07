@@ -14,4 +14,10 @@ interface CategoryPreferenceRepository {
     suspend fun registerIfAbsent(originName: String, sortOrder: Double, displayName: String = originName)
 
     suspend fun updateEntry(preference: CategoryPreference)
+
+    /** Writes several preferences at once. Toggling a category, and especially the "all
+     *  categories" switch, updates every origin sharing a display name — as individual writes
+     *  that is one transaction and one flow re-emission per preference, each of which re-runs
+     *  the whole downstream derivation. */
+    suspend fun updateEntries(preferences: List<CategoryPreference>)
 }

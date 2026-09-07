@@ -55,7 +55,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -104,7 +104,7 @@ fun AddEditItemScreen(
     onSaveItem: (PantryItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val state by stateHolder.uiState.collectAsState()
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val today = remember { DateUtils.today() }
     val focusManager = LocalFocusManager.current
 

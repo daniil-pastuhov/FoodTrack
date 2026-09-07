@@ -2,13 +2,21 @@ package com.foodtracker.android.data.local
 
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.repository.ShoppingListRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 
 class RoomShoppingListRepository(private val dao: ShoppingListDao) : ShoppingListRepository {
 
+    /** Mapped off the collector's thread and deduplicated, and left cold, for the same reasons
+     *  as [RoomPantryRepository.getItemsFlow]. */
     override fun getEntriesFlow(): Flow<List<ShoppingListEntry>> =
-        dao.getAllFlow().map { entities -> entities.map { it.toDomain() } }
+        dao.getAllFlow()
+            .map { rows -> rows.map { it.toDomain() } }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.IO)
 
     override suspend fun findByBarcode(barcode: String): ShoppingListEntry? =
         dao.findByBarcode(barcode)?.toDomain()

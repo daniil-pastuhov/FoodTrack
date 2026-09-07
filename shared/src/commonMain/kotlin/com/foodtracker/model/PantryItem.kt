@@ -1,5 +1,6 @@
 package com.foodtracker.model
 
+import com.foodtracker.util.DateUtils
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
@@ -31,26 +32,16 @@ data class PantryItem(
         return ExpiryStatus.compute(daysRemaining(today), expiringSoonDays)
     }
 
-    @OptIn(kotlin.time.ExperimentalTime::class)
     val isExpired: Boolean
         get() = daysRemaining(currentSystemDate()) < 0
 
     companion object {
-        @OptIn(kotlin.time.ExperimentalTime::class)
-        fun currentSystemDate(): LocalDate {
-            val instant = kotlin.time.Clock.System.now()
-            val tz = kotlinx.datetime.TimeZone.currentSystemDefault()
-            return kotlin.time.Instant.fromEpochMilliseconds(instant.toEpochMilliseconds())
-                .let {
-                    // Extract local date using kotlinx.datetime
-                    kotlin.time.Clock.System.now()
-                }
-                .let {
-                    val localDateTime = kotlin.time.Clock.System.now()
-                    // Safe conversion to LocalDate
-                    val epochDays = (instant.toEpochMilliseconds() / (1000 * 60 * 60 * 24)).toInt()
-                    LocalDate.fromEpochDays(epochDays)
-                }
-        }
+        /** Today in the device's own time zone.
+         *
+         *  This used to hand-roll the conversion through a chain of `let`s that read
+         *  `Clock.System.now()` four times and then divided epoch millis by a fixed 86_400_000,
+         *  which silently answered in UTC rather than the local zone. [DateUtils.today] does the
+         *  same job correctly, in one call, and is what the rest of the codebase already uses. */
+        fun currentSystemDate(): LocalDate = DateUtils.today()
     }
 }

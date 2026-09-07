@@ -22,4 +22,9 @@ interface CategoryPreferenceDao {
 
     @Upsert
     suspend fun upsert(entity: CategoryPreferenceEntity)
+
+    /** Room runs a multi-entity @Upsert inside a single transaction, so the invalidation
+     *  tracker fires once for the whole batch rather than once per row. */
+    @Upsert
+    suspend fun upsertAll(entities: List<CategoryPreferenceEntity>)
 }

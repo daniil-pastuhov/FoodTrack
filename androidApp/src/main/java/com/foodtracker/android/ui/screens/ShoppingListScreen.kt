@@ -65,7 +65,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -91,9 +91,8 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
-import com.foodtracker.model.categoryPreferenceSortOrder
-import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.viewmodel.PantryStateHolder
+import com.foodtracker.viewmodel.ShoppingRow
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -111,7 +110,7 @@ fun ShoppingListScreen(
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
 ) {
-    val state by stateHolder.uiState.collectAsState()
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
     var newEntryText by remember { mutableStateOf("") }
     val inputFocusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -263,35 +262,23 @@ fun ShoppingListScreen(
                 // name, fold into the same group here), which keeps drags from crossing into a
                 // different group. Groups are ordered by the user's category preference order
                 // (see CategorySettingsScreen), not alphabetically.
-                val flatRows = remember(state.shoppingList, state.categoryPreferences) {
-                    val prefs = state.categoryPreferences
-                    val grouped = state.shoppingList
-                        .groupBy { resolveCategoryDisplayName(it.category, prefs) }
-                        .entries
-                        .sortedWith(
-                            compareBy(
-                                { group -> group.value.minOf { entry -> categoryPreferenceSortOrder(entry.category, prefs) } },
-                                { it.key ?: "￿" }
-                            )
-                        )
-                    buildList {
-                        grouped.forEach { (category, entries) ->
-                            add(ShoppingListFlatRow.Header(category))
-                            entries.forEach { add(ShoppingListFlatRow.Item(it)) }
-                        }
-                    }
-                }
+                // Grouping, category-name resolution and ordering are all derived once per
+                // data change in PantryStateHolder. Done here they re-ran on every emission,
+                // resolving each entry's category with a linear scan over every preference and
+                // re-evaluating each group's order key inside the sort comparator.
+                val flatRows = state.shoppingRows
                 var localRows by remember { mutableStateOf(flatRows) }
                 LaunchedEffect(flatRows) { localRows = flatRows }
 
                 val lazyListState = rememberLazyListState()
                 val haptics = LocalHapticFeedback.current
                 val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-                    val fromRow = localRows.getOrNull(from.index) as? ShoppingListFlatRow.Item
-                    val toRow = localRows.getOrNull(to.index) as? ShoppingListFlatRow.Item
+                    val fromRow = localRows.getOrNull(from.index) as? ShoppingRow.Item
+                    val toRow = localRows.getOrNull(to.index) as? ShoppingRow.Item
+                    // Field comparison: the resolved name is carried on the row. This ran two
+                    // linear preference scans per drag-move event, i.e. per frame of a drag.
                     val sameGroup = fromRow != null && toRow != null &&
-                        resolveCategoryDisplayName(fromRow.entry.category, state.categoryPreferences) ==
-                        resolveCategoryDisplayName(toRow.entry.category, state.categoryPreferences)
+                        fromRow.categoryDisplayName == toRow.categoryDisplayName
                     if (sameGroup) {
                         localRows = localRows.toMutableList().apply {
                             add(to.index, removeAt(from.index))
@@ -300,10 +287,10 @@ fun ShoppingListScreen(
                 }
 
                 fun commitReorder(movedId: String) {
-                    val index = localRows.indexOfFirst { it is ShoppingListFlatRow.Item && it.entry.id == movedId }
+                    val index = localRows.indexOfFirst { it is ShoppingRow.Item && it.entry.id == movedId }
                     if (index == -1) return
-                    val beforeId = (localRows.getOrNull(index - 1) as? ShoppingListFlatRow.Item)?.entry?.id
-                    val afterId = (localRows.getOrNull(index + 1) as? ShoppingListFlatRow.Item)?.entry?.id
+                    val beforeId = (localRows.getOrNull(index - 1) as? ShoppingRow.Item)?.entry?.id
+                    val afterId = (localRows.getOrNull(index + 1) as? ShoppingRow.Item)?.entry?.id
                     stateHolder.moveShoppingListEntry(movedId, beforeId, afterId)
                 }
 
@@ -315,17 +302,15 @@ fun ShoppingListScreen(
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomOverlayClearance),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(localRows, key = { row ->
+                    items(localRows, key = { it.key }) { row ->
                         when (row) {
-                            is ShoppingListFlatRow.Header -> "header_${row.category ?: "uncategorized"}"
-                            is ShoppingListFlatRow.Item -> row.entry.id
-                        }
-                    }) { row ->
-                        when (row) {
-                            is ShoppingListFlatRow.Header -> {
-                                if (row.category != null) {
+                            is ShoppingRow.Header -> {
+                                // Bound to a local: ShoppingRow now lives in :shared, and a
+                                // public property from another module can't be smart-cast.
+                                val category = row.category
+                                if (category != null) {
                                     Text(
-                                        text = row.category,
+                                        text = category,
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = TextSecondary,
@@ -344,7 +329,7 @@ fun ShoppingListScreen(
                                     }
                                 }
                             }
-                            is ShoppingListFlatRow.Item -> {
+                            is ShoppingRow.Item -> {
                                 val entry = row.entry
                                 ReorderableItem(reorderableState, key = entry.id) { isDragging ->
                                     ShoppingListRow(
@@ -375,14 +360,6 @@ fun ShoppingListScreen(
             }
         }
     }
-}
-
-/** A row in the flattened, groupable-by-category shopping list rendered by [ShoppingListScreen]:
- *  either a category header (never draggable) or a shopping list item (draggable within its
- *  own category group only). */
-private sealed class ShoppingListFlatRow {
-    data class Header(val category: String?) : ShoppingListFlatRow()
-    data class Item(val entry: ShoppingListEntry) : ShoppingListFlatRow()
 }
 
 @OptIn(ExperimentalFoundationApi::class)

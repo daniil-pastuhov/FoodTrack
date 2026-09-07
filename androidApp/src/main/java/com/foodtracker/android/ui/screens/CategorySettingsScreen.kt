@@ -38,7 +38,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -73,18 +73,16 @@ fun CategorySettingsScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val state by stateHolder.uiState.collectAsState()
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
     var editingOrigin by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
-    val groupedPreferences = remember(state.categoryPreferences) {
-        state.categoryPreferences
-            .groupBy { it.displayName }
-            .values
-            .map { group -> group.minBy { it.sortOrder } }
-            .sortedBy { it.sortOrder }
-    }
+    // Grouping, and the merged-origins subtitle for each row, are derived once per preferences
+    // change in PantryStateHolder. The subtitle in particular used to be built inside the
+    // LazyColumn item body, so every visible row re-scanned, re-sorted and re-joined the whole
+    // preference list on every recomposition — including on every frame of a drag.
+    val groupedPreferences = state.categoryRows
     var localPreferences by remember { mutableStateOf(groupedPreferences) }
     LaunchedEffect(groupedPreferences) { localPreferences = groupedPreferences }
 
@@ -102,10 +100,10 @@ fun CategorySettingsScreen(
     }
 
     fun commitReorder(movedOrigin: String) {
-        val index = localPreferences.indexOfFirst { it.originName == movedOrigin }
+        val index = localPreferences.indexOfFirst { it.preference.originName == movedOrigin }
         if (index == -1) return
-        val beforeOrigin = localPreferences.getOrNull(index - 1)?.originName
-        val afterOrigin = localPreferences.getOrNull(index + 1)?.originName
+        val beforeOrigin = localPreferences.getOrNull(index - 1)?.preference?.originName
+        val afterOrigin = localPreferences.getOrNull(index + 1)?.preference?.originName
         stateHolder.moveCategoryPreference(movedOrigin, beforeOrigin, afterOrigin)
     }
 
@@ -222,7 +220,7 @@ fun CategorySettingsScreen(
                     )
                 }
                 item {
-                    val allEnabled = localPreferences.all { it.enabled }
+                    val allEnabled = localPreferences.all { it.preference.enabled }
                     Card(
                         shape = RoundedCornerShape(14.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -249,18 +247,12 @@ fun CategorySettingsScreen(
                         }
                     }
                 }
-                items(localPreferences, key = { it.displayName }) { pref ->
+                items(localPreferences, key = { it.preference.displayName }) { row ->
+                    val pref = row.preference
                     ReorderableItem(reorderableState, key = pref.displayName) { isDragging ->
-                        val allOrigins = state.categoryPreferences
-                            .filter { it.displayName == pref.displayName }
-                            .map { it.originName }
-                            .filter { it != pref.displayName && it.isNotEmpty() }
-                            .sorted()
-                            .joinToString(", ")
-                        
                         CategoryPreferenceRow(
                             preference = pref,
-                            allOrigins = allOrigins,
+                            allOrigins = row.mergedOrigins,
                             isDragging = isDragging,
                             dragHandleModifier = Modifier.draggableHandle(
                                 onDragStarted = {

@@ -38,7 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,8 +65,8 @@ import com.foodtracker.android.util.formatMonthYear
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.util.CalendarDay
 import com.foodtracker.util.DateUtils
-import com.foodtracker.util.groupItemsByExpiryDate
 import com.foodtracker.util.monthGrid
+import com.foodtracker.viewmodel.PantryRow
 import com.foodtracker.viewmodel.PantryStateHolder
 import java.time.format.FormatStyle
 import kotlinx.datetime.DatePeriod
@@ -87,14 +87,17 @@ fun CalendarScreen(
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
 ) {
-    val state by stateHolder.uiState.collectAsState()
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val today = remember { DateUtils.today() }
     var displayedMonth by remember { mutableStateOf(today) }
     var selectedDay by remember { mutableStateOf(today) }
 
-    val grouped = remember(state.items) {
-        groupItemsByExpiryDate(state.items)
-    }
+    // Grouping by expiry date, and reducing each day's items to its single most urgent status,
+    // are both derived once per data change in PantryStateHolder. The grouping used to be
+    // recomputed here, and the per-day status was rebuilt inside every one of the 42 day cells,
+    // on every recomposition.
+    val grouped = state.itemsByExpiryDate
+    val statusByDate = state.statusByExpiryDate
 
     Scaffold(
         topBar = {
@@ -135,8 +138,8 @@ fun CalendarScreen(
                             displayedMonth = displayedMonth,
                             today = today,
                             grouped = grouped,
+                            statusByDate = statusByDate,
                             selectedDay = selectedDay,
-                            expiringSoonDays = state.settings.expiringSoonDays,
                             onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
                             onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
                             onSelectDay = { selectedDay = it },
@@ -152,8 +155,6 @@ fun CalendarScreen(
                         DayDetailSection(
                             selectedDay = selectedDay,
                             items = grouped[selectedDay].orEmpty(),
-                            today = today,
-                            expiringSoonDays = state.settings.expiringSoonDays,
                             bottomOverlayClearance = bottomOverlayClearance,
                             modifier = Modifier
                                 .weight(1f)
@@ -166,8 +167,8 @@ fun CalendarScreen(
                             displayedMonth = displayedMonth,
                             today = today,
                             grouped = grouped,
+                            statusByDate = statusByDate,
                             selectedDay = selectedDay,
-                            expiringSoonDays = state.settings.expiringSoonDays,
                             onPrevMonth = { displayedMonth = displayedMonth.minus(DatePeriod(months = 1)) },
                             onNextMonth = { displayedMonth = displayedMonth.plus(DatePeriod(months = 1)) },
                             onSelectDay = { selectedDay = it },
@@ -177,8 +178,6 @@ fun CalendarScreen(
                         DayDetailSection(
                             selectedDay = selectedDay,
                             items = grouped[selectedDay].orEmpty(),
-                            today = today,
-                            expiringSoonDays = state.settings.expiringSoonDays,
                             bottomOverlayClearance = bottomOverlayClearance,
                             modifier = Modifier
                                 .weight(1f)
@@ -251,9 +250,9 @@ private fun CalendarSummaryChip(text: String, color: androidx.compose.ui.graphic
 private fun CalendarGridSection(
     displayedMonth: LocalDate,
     today: LocalDate,
-    grouped: Map<LocalDate, List<PantryItem>>,
+    grouped: Map<LocalDate, List<PantryRow>>,
+    statusByDate: Map<LocalDate, ExpiryStatus>,
     selectedDay: LocalDate,
-    expiringSoonDays: Int,
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onSelectDay: (LocalDate) -> Unit,
@@ -275,6 +274,11 @@ private fun CalendarGridSection(
             }
         }
 
+        // Remembered on the month: monthGrid allocates 42 CalendarDay + 42 LocalDate objects,
+        // and it was being rebuilt on every recomposition of this grid — as was a 42-element
+        // set of String keys, since the key lambda called LocalDate.toString().
+        val days = remember(displayedMonth) { monthGrid(displayedMonth) }
+
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
             modifier = Modifier.fillMaxWidth()
@@ -294,14 +298,13 @@ private fun CalendarGridSection(
                     )
                 }
             }
-            gridItems(monthGrid(displayedMonth), key = { it.date.toString() }) { day ->
+            gridItems(days, key = { it.date.toEpochDays() }) { day ->
                 CalendarDayCell(
                     day = day,
                     isToday = day.date == today,
                     isSelected = day.date == selectedDay,
-                    items = grouped[day.date].orEmpty(),
-                    today = today,
-                    expiringSoonDays = expiringSoonDays,
+                    hasItems = grouped[day.date] != null,
+                    status = statusByDate[day.date],
                     onClick = { onSelectDay(day.date) }
                 )
             }
@@ -312,9 +315,7 @@ private fun CalendarGridSection(
 @Composable
 private fun DayDetailSection(
     selectedDay: LocalDate,
-    items: List<PantryItem>,
-    today: LocalDate,
-    expiringSoonDays: Int,
+    items: List<PantryRow>,
     modifier: Modifier = Modifier,
     bottomOverlayClearance: Dp = 160.dp
 ) {
@@ -339,8 +340,8 @@ private fun DayDetailSection(
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(bottom = bottomOverlayClearance)
             ) {
-                items(items, key = { it.id }) { item ->
-                    DayDetailRow(item = item, today = today, expiringSoonDays = expiringSoonDays)
+                items(items, key = { it.id }) { row ->
+                    DayDetailRow(row = row)
                 }
             }
         }
@@ -352,12 +353,11 @@ private fun CalendarDayCell(
     day: CalendarDay,
     isToday: Boolean,
     isSelected: Boolean,
-    items: List<PantryItem>,
-    today: LocalDate,
-    expiringSoonDays: Int,
+    hasItems: Boolean,
+    status: ExpiryStatus?,
     onClick: () -> Unit
 ) {
-    val indicatorColor = dayIndicatorColor(items, today, expiringSoonDays)
+    val indicatorColor = if (hasItems) dayIndicatorColor(status) else null
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -406,24 +406,23 @@ private fun CalendarDayCell(
     }
 }
 
-/** Color of a day's dot reflects the most urgent item expiring that day, if any. */
+/** Color of a day's dot reflects the most urgent item expiring that day, if any.
+ *
+ *  [status] is that most-urgent status, already reduced in PantryStateHolder. This used to take
+ *  the day's whole item list and allocate a status list from it to scan three times — per cell,
+ *  per recomposition, across all 42 cells. */
 @Composable
-private fun dayIndicatorColor(
-    items: List<PantryItem>,
-    today: LocalDate,
-    expiringSoonDays: Int
-): androidx.compose.ui.graphics.Color? {
-    if (items.isEmpty()) return null
-    val statuses = items.map { it.expiryStatus(today, expiringSoonDays) }
-    return when {
-        ExpiryStatus.EXPIRED in statuses -> expiredStatusColors().foreground
-        ExpiryStatus.EXPIRING_TODAY in statuses || ExpiryStatus.EXPIRING_SOON in statuses -> expiringStatusColors().foreground
-        else -> freshStatusColors().foreground
+private fun dayIndicatorColor(status: ExpiryStatus?): androidx.compose.ui.graphics.Color? =
+    when (status) {
+        null -> null
+        ExpiryStatus.EXPIRED -> expiredStatusColors().foreground
+        ExpiryStatus.EXPIRING_TODAY, ExpiryStatus.EXPIRING_SOON -> expiringStatusColors().foreground
+        ExpiryStatus.FRESH -> freshStatusColors().foreground
     }
-}
 
 @Composable
-private fun DayDetailRow(item: PantryItem, today: LocalDate, expiringSoonDays: Int) {
+private fun DayDetailRow(row: PantryRow) {
+    val item = row.item
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -455,10 +454,8 @@ private fun DayDetailRow(item: PantryItem, today: LocalDate, expiringSoonDays: I
             }
         }
         Spacer(modifier = Modifier.width(8.dp))
-        ExpiryBadge(
-            daysRemaining = item.daysRemaining(today),
-            status = item.expiryStatus(today, expiringSoonDays)
-        )
+        // Both values already derived in PantryStateHolder.
+        ExpiryBadge(daysRemaining = row.daysRemaining, status = row.status)
     }
 }
 
