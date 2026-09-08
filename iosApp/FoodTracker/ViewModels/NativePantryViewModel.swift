@@ -175,8 +175,16 @@ public class NativePantryViewModel: ObservableObject {
         loadCategoryPreferences()
     }
 
+    /// Highest sort order in use, **excluding** the `UNCATEGORIZED_ORIGIN` sentinel. That one is
+    /// parked at `.greatestFiniteMagnitude` so the "Other" bucket sorts last, and counting it
+    /// here would make the next order `greatestFiniteMagnitude + 1` — which in Double arithmetic
+    /// is `greatestFiniteMagnitude` again, so every newly registered category would land on that
+    /// same order and the list would have no order left to drag rows around in.
     private func maxCategorySortOrder() -> Double {
-        var descriptor = FetchDescriptor<CategoryPreferenceRecord>(sortBy: [SortDescriptor(\.sortOrder, order: .reverse)])
+        var descriptor = FetchDescriptor<CategoryPreferenceRecord>(
+            predicate: #Predicate { $0.originName != UNCATEGORIZED_ORIGIN },
+            sortBy: [SortDescriptor(\.sortOrder, order: .reverse)]
+        )
         descriptor.fetchLimit = 1
         return (try? modelContext.fetch(descriptor).first)?.sortOrder ?? -1
     }
@@ -797,42 +805,37 @@ public class NativePantryViewModel: ObservableObject {
         loadCategoryPreferences()
     }
 
-    /// Called after a drag-and-drop reorder of categories in Settings completes, mirroring
-    /// `moveShoppingListEntry`'s fractional sort-order scheme. `beforeOrigin`/`afterOrigin` are
-    /// the origin names now immediately above/below `movedOrigin` (nil at a list boundary).
-    public func moveCategoryPreference(_ movedOrigin: String, beforeOrigin: String?, afterOrigin: String?) {
-        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == movedOrigin })
-        guard let moved = try? modelContext.fetch(descriptor).first else { return }
+    /// Called after a drag-and-drop reorder of categories in Settings completes.
+    /// `orderedOrigins` is the origin name of one row per visible category (see
+    /// `CategorySettingsView.groupedPreferences`), in the order the user now sees them; the whole
+    /// list is renumbered to match.
+    ///
+    /// Deliberately *not* `moveShoppingListEntry`'s scheme of giving the moved row a fractional
+    /// order between its two neighbours. The "Other" bucket is registered at
+    /// `.greatestFiniteMagnitude` so it always sorts last (see `registerSentinelCategoryIfNeeded`),
+    /// and `greatestFiniteMagnitude + 1` is still `greatestFiniteMagnitude` — so dropping a row
+    /// below "Other" persisted the sort order it already had. Nothing changed on disk, and the row
+    /// snapped back to its old place the next time the list was read. Renumbering has no such
+    /// degenerate case, and it also repairs any ties already stored.
+    public func reorderCategoryPreferences(_ orderedOrigins: [String]) {
+        guard let all = try? modelContext.fetch(FetchDescriptor<CategoryPreferenceRecord>()) else { return }
 
-        let beforeOrder = beforeOrigin.flatMap { origin -> Double? in
-            let d = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == origin })
-            return (try? modelContext.fetch(d).first)?.sortOrder
-        }
-        let afterOrder = afterOrigin.flatMap { origin -> Double? in
-            let d = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == origin })
-            return (try? modelContext.fetch(d).first)?.sortOrder
-        }
-
-        let newSortOrder: Double
-        if let beforeOrder, let afterOrder {
-            newSortOrder = (beforeOrder + afterOrder) / 2
-        } else if let beforeOrder {
-            newSortOrder = beforeOrder + 1
-        } else if let afterOrder {
-            newSortOrder = afterOrder - 1
-        } else {
-            newSortOrder = moved.sortOrder
+        // Rows are grouped by display name, so every origin merged onto one row moves as a unit.
+        var orderByDisplayName: [String: Double] = [:]
+        for (index, origin) in orderedOrigins.enumerated() {
+            guard let displayName = all.first(where: { $0.originName == origin })?.displayName else { continue }
+            orderByDisplayName[displayName] = Double(index)
         }
 
-        // Sync all origins sharing this display name so they reorder as a unit
-        let displayName = moved.displayName
-        let allDescriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.displayName == displayName })
-        if let all = try? modelContext.fetch(allDescriptor) {
-            for record in all {
-                record.sortOrder = newSortOrder
-            }
+        var changed = false
+        for record in all {
+            guard let newSortOrder = orderByDisplayName[record.displayName],
+                  record.sortOrder != newSortOrder else { continue }
+            record.sortOrder = newSortOrder
+            changed = true
         }
-        
+        guard changed else { return }
+
         try? modelContext.save()
         loadCategoryPreferences()
     }

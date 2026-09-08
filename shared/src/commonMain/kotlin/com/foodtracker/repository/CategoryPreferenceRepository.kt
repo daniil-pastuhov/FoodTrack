@@ -5,6 +5,12 @@ import kotlinx.coroutines.flow.Flow
 
 interface CategoryPreferenceRepository {
     fun getPreferencesFlow(): Flow<List<CategoryPreference>>
+
+    /** Highest sort order in use, **excluding** the [UNCATEGORIZED_ORIGIN] sentinel. That one is
+     *  parked at [Double.MAX_VALUE] so the "Other" bucket sorts last, and counting it here would
+     *  make the next order `MAX_VALUE + 1.0` — which in Double arithmetic is `MAX_VALUE` again,
+     *  so every newly registered category would land on that same order and the list would fall
+     *  back to ordering by display name. */
     suspend fun getMaxSortOrder(): Double?
 
     /** No-op if [originName] is already known - used to auto-register a category the first

@@ -3,6 +3,7 @@ package com.foodtracker.android.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.foodtracker.model.CategoryPreference
+import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -90,5 +91,23 @@ class CategoryPreferenceDaoTest {
         repo.updateEntry(CategoryPreference(originName = "b", displayName = "B", sortOrder = 7.0))
 
         assertEquals(7.0, repo.getMaxSortOrder())
+    }
+
+    @Test
+    fun testGetMaxSortOrderIgnoresTheUncategorizedSentinel() = runTest {
+        // The "Other" bucket is parked at Double.MAX_VALUE so it sorts last. Counting it would
+        // make the next registered category MAX_VALUE + 1.0 == MAX_VALUE, i.e. every category
+        // sharing one sort order.
+        repo.registerIfAbsent(UNCATEGORIZED_ORIGIN, Double.MAX_VALUE, "Other")
+        repo.updateEntry(CategoryPreference(originName = "a", displayName = "A", sortOrder = 2.0))
+
+        assertEquals(2.0, repo.getMaxSortOrder())
+    }
+
+    @Test
+    fun testGetMaxSortOrderIsNullWhenOnlyTheSentinelExists() = runTest {
+        repo.registerIfAbsent(UNCATEGORIZED_ORIGIN, Double.MAX_VALUE, "Other")
+
+        assertNull(repo.getMaxSortOrder())
     }
 }

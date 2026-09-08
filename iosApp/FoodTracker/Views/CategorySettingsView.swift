@@ -18,7 +18,12 @@ struct CategorySettingsView: View {
             // Represent the group by the record with the lowest sort order (or the sentinel)
             let representative = group.min { $0.sortOrder < $1.sortOrder } ?? first
             return representative
-        }.sorted { $0.sortOrder < $1.sortOrder }
+        }
+        // Display name breaks a sortOrder tie (as Android's ORDER BY does), so rows can't shuffle
+        // between launches: `Dictionary(grouping:)` above has no defined iteration order and
+        // `sorted(by:)` is not stable. Ties are only possible on a database written before
+        // reordering renumbered the list, but that is exactly the state an existing install is in.
+        .sorted { ($0.sortOrder, $0.displayName) < ($1.sortOrder, $1.displayName) }
     }
 
     private var allEnabled: Bool {
@@ -157,13 +162,10 @@ struct CategorySettingsView: View {
     }
 
     private func moveCategories(from source: IndexSet, to destination: Int) {
-        guard let sourceIndex = source.first else { return }
-        let movedOrigin = groupedPreferences[sourceIndex].originName
         var reordered = groupedPreferences
         reordered.move(fromOffsets: source, toOffset: destination)
-        guard let newIndex = reordered.firstIndex(where: { $0.originName == movedOrigin }) else { return }
-        let beforeOrigin = newIndex > 0 ? reordered[newIndex - 1].originName : nil
-        let afterOrigin = newIndex < reordered.count - 1 ? reordered[newIndex + 1].originName : nil
-        viewModel.moveCategoryPreference(movedOrigin, beforeOrigin: beforeOrigin, afterOrigin: afterOrigin)
+        // The whole visible order is what gets persisted, not just where the dragged row landed
+        // relative to its neighbours - see NativePantryViewModel.reorderCategoryPreferences.
+        viewModel.reorderCategoryPreferences(reordered.map { $0.originName })
     }
 }

@@ -99,12 +99,10 @@ fun CategorySettingsScreen(
         }
     }
 
-    fun commitReorder(movedOrigin: String) {
-        val index = localPreferences.indexOfFirst { it.preference.originName == movedOrigin }
-        if (index == -1) return
-        val beforeOrigin = localPreferences.getOrNull(index - 1)?.preference?.originName
-        val afterOrigin = localPreferences.getOrNull(index + 1)?.preference?.originName
-        stateHolder.moveCategoryPreference(movedOrigin, beforeOrigin, afterOrigin)
+    // The whole visible order is what gets persisted, not just where the dragged row landed
+    // relative to its neighbours — see PantryStateHolder.reorderCategoryPreferences.
+    fun commitReorder() {
+        stateHolder.reorderCategoryPreferences(localPreferences.map { it.preference.originName })
     }
 
     editingOrigin?.let { origin ->
@@ -260,7 +258,7 @@ fun CategorySettingsScreen(
                                 },
                                 onDragStopped = {
                                     haptics.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                    commitReorder(pref.originName)
+                                    commitReorder()
                                 }
                             ),
                             onToggleEnabled = { stateHolder.setCategoryEnabled(pref.originName, it) },

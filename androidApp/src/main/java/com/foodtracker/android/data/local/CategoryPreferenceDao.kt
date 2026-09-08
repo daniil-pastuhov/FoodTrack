@@ -12,8 +12,10 @@ interface CategoryPreferenceDao {
     @Query("SELECT * FROM category_preferences ORDER BY sortOrder ASC, displayName ASC")
     fun getAllFlow(): Flow<List<CategoryPreferenceEntity>>
 
-    @Query("SELECT MAX(sortOrder) FROM category_preferences")
-    suspend fun getMaxSortOrder(): Double?
+    /** [excludedOrigin] is the uncategorized sentinel — see
+     *  `CategoryPreferenceRepository.getMaxSortOrder` for why it must not be counted. */
+    @Query("SELECT MAX(sortOrder) FROM category_preferences WHERE originName != :excludedOrigin")
+    suspend fun getMaxSortOrder(excludedOrigin: String): Double?
 
     // IGNORE means an origin category that's already known keeps its existing row (name/order/
     // enabled untouched) rather than being reset back to its raw scanned value.

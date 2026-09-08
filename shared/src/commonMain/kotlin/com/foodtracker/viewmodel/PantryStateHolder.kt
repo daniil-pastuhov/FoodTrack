@@ -672,27 +672,34 @@ class PantryStateHolder(
         }
     }
 
-    /** Called after a drag-and-drop reorder of categories in Settings completes, mirroring
-     *  [moveShoppingListEntry]'s fractional sort-order scheme. [beforeOrigin]/[afterOrigin] are
-     *  the origin names now immediately above/below [movedOrigin] (null at a list boundary). */
-    fun moveCategoryPreference(movedOrigin: String, beforeOrigin: String?, afterOrigin: String?) {
+    /**
+     * Called after a drag-and-drop reorder of categories in Settings completes.
+     * [orderedOrigins] is the origin name of one row per visible category (see
+     * [PantryDerivation.buildCategoryRows]), in the order the user now sees them; the whole list
+     * is renumbered to match, in one batched write.
+     *
+     * Deliberately *not* [moveShoppingListEntry]'s scheme of giving the moved row a fractional
+     * order between its two neighbours. The "Other" bucket is registered at [Double.MAX_VALUE] so
+     * it always sorts last (see `init`), and `MAX_VALUE + 1.0` is still `MAX_VALUE` — so dropping
+     * a row below "Other" persisted the sort order it already had. Nothing changed on disk, and
+     * the row snapped back to its old place (the `sortOrder`-tied fallback ordering by display
+     * name) as soon as the screen re-read the preferences. Renumbering has no such degenerate
+     * case, and it also repairs any ties already stored.
+     */
+    fun reorderCategoryPreferences(orderedOrigins: List<String>) {
         val list = _uiState.value.categoryPreferences
-        val moved = list.find { it.originName == movedOrigin } ?: return
-        val beforeOrder = beforeOrigin?.let { origin -> list.find { it.originName == origin }?.sortOrder }
-        val afterOrder = afterOrigin?.let { origin -> list.find { it.originName == origin }?.sortOrder }
-        val newSortOrder = when {
-            beforeOrder != null && afterOrder != null -> (beforeOrder + afterOrder) / 2.0
-            beforeOrder != null -> beforeOrder + 1.0
-            afterOrder != null -> afterOrder - 1.0
-            else -> moved.sortOrder
+        // Rows are grouped by display name, so every origin merged onto one row moves as a unit.
+        val orderByDisplayName = HashMap<String, Double>(orderedOrigins.size)
+        orderedOrigins.forEachIndexed { index, origin ->
+            val displayName = list.find { it.originName == origin }?.displayName ?: return@forEachIndexed
+            orderByDisplayName[displayName] = index.toDouble()
         }
-        coroutineScope.launch {
-            // Sync all origins sharing this display name so they reorder as a unit, batched.
-            categoryPreferenceRepository.updateEntries(
-                list.filter { it.displayName == moved.displayName }
-                    .map { it.copy(sortOrder = newSortOrder) }
-            )
+        val updated = list.mapNotNull { preference ->
+            val newSortOrder = orderByDisplayName[preference.displayName] ?: return@mapNotNull null
+            if (preference.sortOrder == newSortOrder) null else preference.copy(sortOrder = newSortOrder)
         }
+        if (updated.isEmpty()) return
+        coroutineScope.launch { categoryPreferenceRepository.updateEntries(updated) }
     }
 
     /** Records [name] as a known product name for the shopping list's autosuggest.

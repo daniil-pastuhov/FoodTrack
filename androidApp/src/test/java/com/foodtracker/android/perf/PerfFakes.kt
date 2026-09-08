@@ -5,6 +5,7 @@ import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
@@ -95,7 +96,11 @@ class FakeCategoryPreferenceRepository(
 ) : CategoryPreferenceRepository {
     val preferencesFlow = MutableStateFlow(preferences)
     override fun getPreferencesFlow(): Flow<List<CategoryPreference>> = preferencesFlow
-    override suspend fun getMaxSortOrder(): Double? = preferencesFlow.value.maxOfOrNull { it.sortOrder }
+    // Excludes the uncategorized sentinel, like the Room implementation does — see
+    // CategoryPreferenceRepository.getMaxSortOrder.
+    override suspend fun getMaxSortOrder(): Double? =
+        preferencesFlow.value.filterNot { it.originName == UNCATEGORIZED_ORIGIN }
+            .maxOfOrNull { it.sortOrder }
     override suspend fun registerIfAbsent(originName: String, sortOrder: Double, displayName: String) {
         if (preferencesFlow.value.none { it.originName == originName }) {
             preferencesFlow.value = preferencesFlow.value +

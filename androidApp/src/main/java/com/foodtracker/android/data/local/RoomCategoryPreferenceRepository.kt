@@ -1,6 +1,7 @@
 package com.foodtracker.android.data.local
 
 import com.foodtracker.model.CategoryPreference
+import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.repository.CategoryPreferenceRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -19,7 +20,7 @@ class RoomCategoryPreferenceRepository(private val dao: CategoryPreferenceDao) :
             .distinctUntilChanged()
             .flowOn(Dispatchers.IO)
 
-    override suspend fun getMaxSortOrder(): Double? = dao.getMaxSortOrder()
+    override suspend fun getMaxSortOrder(): Double? = dao.getMaxSortOrder(UNCATEGORIZED_ORIGIN)
 
     override suspend fun registerIfAbsent(originName: String, sortOrder: Double, displayName: String) =
         dao.insertIfAbsent(CategoryPreferenceEntity(originName = originName, displayName = displayName, sortOrder = sortOrder))
