@@ -10,36 +10,11 @@ public struct ItemRowView: View {
     public var body: some View {
         HStack(spacing: 12) {
             // Product image
-            if let imageUrl = item.imageUrl, let url = URL(string: imageUrl), url.isFileURL {
-                Group {
-                    if let uiImage = UIImage(contentsOfFile: url.path) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } else {
-                        placeholderImage
-                    }
-                }
-                .frame(width: 54, height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            } else if let imageUrl = item.imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url, transaction: Transaction(animation: .easeInOut(duration: 0.25))) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .transition(.opacity)
-                    default:
-                        placeholderImage
-                    }
-                }
-                .frame(width: 54, height: 54)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            } else {
+            ProductImageView(reference: item.imageUrl) {
                 placeholderImage
-                    .frame(width: 54, height: 54)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+            .frame(width: 54, height: 54)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
 
             // Info
             VStack(alignment: .leading, spacing: 4) {

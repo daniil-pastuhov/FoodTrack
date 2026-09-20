@@ -299,15 +299,8 @@ extension CameraScannerViewController: AVCapturePhotoCaptureDelegate {
             return
         }
 
-        let photosDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("ProductPhotos", isDirectory: true)
-
         do {
-            try FileManager.default.createDirectory(at: photosDir, withIntermediateDirectories: true)
-            let fileURL = photosDir
-                .appendingPathComponent("product_photo_\(Int(Date().timeIntervalSince1970 * 1000)).jpg")
-            try thumbnailData.write(to: fileURL)
-            photoCaptureCompletion?(fileURL)
+            photoCaptureCompletion?(try ProductPhotoStore.save(jpegData: thumbnailData))
         } catch {
             print("Failed to write captured photo to disk: \(error.localizedDescription)")
             photoCaptureCompletion?(nil)

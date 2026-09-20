@@ -254,7 +254,7 @@ public struct ScannerSheetView: View {
                                         viewModel.scannedProduct?.barcode ?? viewModel.productNotFoundBarcode,
                                         viewModel.scannedProduct?.name,
                                         viewModel.scannedProduct?.brand,
-                                        photoURL.absoluteString,
+                                        ProductPhotoStore.reference(for: photoURL),
                                         viewModel.detectedDate,
                                         viewModel.scannedProduct?.category
                                     )
@@ -271,10 +271,8 @@ public struct ScannerSheetView: View {
                             }
                         } else if let product = viewModel.scannedProduct {
                             HStack(spacing: 12) {
-                                if let imgUrl = product.imageUrl, let url = URL(string: imgUrl) {
-                                    AsyncImage(url: url) { image in
-                                        image.resizable().aspectRatio(contentMode: .fill)
-                                    } placeholder: {
+                                if let imgUrl = product.imageUrl, !imgUrl.isEmpty {
+                                    ProductImageView(reference: imgUrl) {
                                         Color.gray.opacity(0.3)
                                     }
                                     .frame(width: 50, height: 50)

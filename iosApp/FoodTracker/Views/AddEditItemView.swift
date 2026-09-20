@@ -252,28 +252,8 @@ public struct AddEditItemView: View {
         }
     }
 
-    @ViewBuilder
     private var imagePreviewContent: some View {
-        if let imageUrl = imageUrl, let url = URL(string: imageUrl) {
-            if url.isFileURL {
-                if let uiImage = UIImage(contentsOfFile: url.path) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    placeholderIcon
-                }
-            } else {
-                AsyncImage(url: url, transaction: Transaction(animation: .easeInOut(duration: 0.25))) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().aspectRatio(contentMode: .fill)
-                            .transition(.opacity)
-                    } else {
-                        placeholderIcon
-                    }
-                }
-            }
-        } else {
+        ProductImageView(reference: imageUrl) {
             placeholderIcon
         }
     }
