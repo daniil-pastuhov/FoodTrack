@@ -126,7 +126,7 @@ fun AddEditItemScreen(
         )
     }
     var storageLocation by remember {
-        mutableStateOf(initialItem?.storageLocation ?: settings.defaultStorageLocation)
+        mutableStateOf(initialItem?.storageLocation ?: settings.storageLocationForNewItem())
     }
     var category by remember {
         mutableStateOf(initialItem?.category ?: prefillCategory ?: "")

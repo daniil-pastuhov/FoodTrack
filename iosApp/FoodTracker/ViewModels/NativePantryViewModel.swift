@@ -458,6 +458,18 @@ public class NativePantryViewModel: ObservableObject {
         }
     }
 
+    /// Records `location` as the one to pre-select for the next new item (see
+    /// `AppSettings.storageLocationForNewItem`). Only new items count: editing an old item's
+    /// location says nothing about where the next scan is going. Skipped while the feature is
+    /// off so the stored value doesn't silently change underneath a user who disabled it.
+    private func rememberStorageLocation(_ location: String) {
+        let store = SettingsStore.shared
+        var settings = store.settings
+        guard settings.rememberLastStorageLocation, settings.lastUsedStorageLocation != location else { return }
+        settings.lastUsedStorageLocation = location
+        store.save(settings)
+    }
+
     public func saveItem(_ item: PantryItem) {
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == item.id })
         let existingRecord = try? modelContext.fetch(descriptor).first
@@ -475,6 +487,7 @@ public class NativePantryViewModel: ObservableObject {
         }
 
         if isNewItem {
+            rememberStorageLocation(item.storageLocation)
             if let entryId = scanningShoppingListEntryId {
                 deleteShoppingListEntry(entryId)
             } else if let barcode = item.barcode {

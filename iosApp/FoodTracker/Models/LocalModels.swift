@@ -147,6 +147,14 @@ public struct AppSettings: Codable, Equatable {
     public var expiringSoonDays: Int
     public var storageLocations: [String]
     public var defaultStorageLocation: String
+    /// When on, a new item starts out in the storage location the previous new item was saved
+    /// to (see `lastUsedStorageLocation`) rather than in `defaultStorageLocation`, so a batch
+    /// of scans that all go into the freezer only needs the location picked once.
+    public var rememberLastStorageLocation: Bool
+    /// Storage location of the most recently added item. Only consulted while
+    /// `rememberLastStorageLocation` is on; kept up to date by the view model on every new
+    /// item save, and cleared when its location is deleted in Settings.
+    public var lastUsedStorageLocation: String?
     public var theme: AppTheme
     public var sortOption: SortOption
 
@@ -155,6 +163,8 @@ public struct AppSettings: Codable, Equatable {
         expiringSoonDays: Int = 3,
         storageLocations: [String] = ["Fridge", "Freezer", "Pantry"],
         defaultStorageLocation: String = "Pantry",
+        rememberLastStorageLocation: Bool = true,
+        lastUsedStorageLocation: String? = nil,
         theme: AppTheme = .system,
         sortOption: SortOption = .expiryDate
     ) {
@@ -162,8 +172,22 @@ public struct AppSettings: Codable, Equatable {
         self.expiringSoonDays = expiringSoonDays
         self.storageLocations = storageLocations
         self.defaultStorageLocation = defaultStorageLocation
+        self.rememberLastStorageLocation = rememberLastStorageLocation
+        self.lastUsedStorageLocation = lastUsedStorageLocation
         self.theme = theme
         self.sortOption = sortOption
+    }
+
+    /// The storage location a freshly created item should be pre-filled with. Falls back to
+    /// `defaultStorageLocation` when the remembered one is off, unset, or no longer one of
+    /// `storageLocations`.
+    public var storageLocationForNewItem: String {
+        if rememberLastStorageLocation,
+           let last = lastUsedStorageLocation,
+           storageLocations.contains(last) {
+            return last
+        }
+        return defaultStorageLocation
     }
 
     // Custom decoding so settings saved before `sortOption` existed still decode instead of
@@ -175,6 +199,8 @@ public struct AppSettings: Codable, Equatable {
         expiringSoonDays = try container.decode(Int.self, forKey: .expiringSoonDays)
         storageLocations = try container.decode([String].self, forKey: .storageLocations)
         defaultStorageLocation = try container.decode(String.self, forKey: .defaultStorageLocation)
+        rememberLastStorageLocation = try container.decodeIfPresent(Bool.self, forKey: .rememberLastStorageLocation) ?? true
+        lastUsedStorageLocation = try container.decodeIfPresent(String.self, forKey: .lastUsedStorageLocation)
         theme = try container.decode(AppTheme.self, forKey: .theme)
         sortOption = try container.decodeIfPresent(SortOption.self, forKey: .sortOption) ?? .expiryDate
     }

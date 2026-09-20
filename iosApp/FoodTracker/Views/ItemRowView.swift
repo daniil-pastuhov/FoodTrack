@@ -45,7 +45,7 @@ public struct ItemRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(.headline)
-                    .lineLimit(1)
+                    .lineLimit(2)
 
                 if let brand = item.brand, !brand.isEmpty {
                     Text(brand)
@@ -54,30 +54,19 @@ public struct ItemRowView: View {
                         .lineLimit(1)
                 }
 
-                HStack(spacing: 6) {
+                // Chips flow onto a new row when they don't fit instead of an HStack
+                // squeezing each one into multi-line text.
+                FlowLayout(spacing: 6) {
                     badgeView
 
-                    Text(item.storageLocation)
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(.secondarySystemFill))
-                        .cornerRadius(6)
+                    chip(item.storageLocation)
 
                     if let category = resolveCategoryDisplayName(item.category, categoryPreferences), !category.isEmpty {
-                        Text(category)
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color(.secondarySystemFill))
-                            .cornerRadius(6)
+                        chip(category)
                     }
                 }
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if let onDecrement {
                 HStack(spacing: 4) {
@@ -94,6 +83,7 @@ public struct ItemRowView: View {
                         .contentTransition(.numericText())
                         .animation(.easeInOut(duration: 0.2), value: item.quantity)
                 }
+                .fixedSize()
             }
         }
         .padding(.vertical, 4)
@@ -109,6 +99,18 @@ public struct ItemRowView: View {
         }
     }
 
+    private func chip(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2)
+            .fontWeight(.medium)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Color(.secondarySystemFill))
+            .cornerRadius(6)
+    }
+
     private var badgeView: some View {
         let (bg, fg, icon) = statusColorsAndIcon(for: item.expiryStatus(expiringSoonDays: expiringSoonDays))
         return HStack(spacing: 4) {
@@ -117,7 +119,9 @@ public struct ItemRowView: View {
             Text(item.daysRemainingFormatted)
                 .font(.caption2)
                 .fontWeight(.semibold)
+                .lineLimit(1)
         }
+        .fixedSize()
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(bg)

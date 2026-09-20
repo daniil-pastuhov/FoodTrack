@@ -407,6 +407,7 @@ class PantryStateHolder(
         coroutineScope.launch {
             val isNewItem = repository.getItem(resolvedItem.id) == null
             repository.saveItem(resolvedItem)
+            if (isNewItem) rememberStorageLocation(resolvedItem.storageLocation)
             recordProductName(resolvedItem.name)
             resolvedItem.barcode?.let { barcode ->
                 localProductRepository.saveProduct(
@@ -700,6 +701,17 @@ class PantryStateHolder(
         }
         if (updated.isEmpty()) return
         coroutineScope.launch { categoryPreferenceRepository.updateEntries(updated) }
+    }
+
+    /** Records [location] as the one to pre-select for the next new item (see
+     *  [AppSettings.storageLocationForNewItem]). Only new items count: editing an old item's
+     *  location says nothing about where the next scan is going. Skipped while the feature is
+     *  off so the stored value doesn't silently change underneath a user who disabled it. */
+    private fun rememberStorageLocation(location: String) {
+        val settings = _uiState.value.settings
+        if (settings.rememberLastStorageLocation && settings.lastUsedStorageLocation != location) {
+            updateSettings(settings.copy(lastUsedStorageLocation = location))
+        }
     }
 
     /** Records [name] as a known product name for the shopping list's autosuggest.

@@ -148,6 +148,8 @@
 
 "settings_section_locations" = "Storage Locations";
 "settings_locations_desc" = "Tap the star to set the default for new items";
+"settings_remember_last_location" = "Remember last storage location";
+"settings_remember_last_location_desc" = "New items start in the storage location you picked last time";
 "settings_add_location_placeholder" = "New location name";
 "settings_add_location" = "Add location";
 "settings_set_default_location" = "Set as default";

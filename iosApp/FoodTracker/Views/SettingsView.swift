@@ -117,6 +117,18 @@ public struct SettingsView: View {
 
     private var locationsSection: some View {
         Section(header: Text(L10n.settingsSectionLocations), footer: Text(L10n.settingsLocationsDesc)) {
+            Toggle(isOn: Binding(
+                get: { settings.rememberLastStorageLocation },
+                set: { newValue in update { $0.rememberLastStorageLocation = newValue } }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.settingsRememberLastLocation)
+                    Text(L10n.settingsRememberLastLocationDesc)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            }
+
             ForEach(settings.storageLocations, id: \.self) { location in
                 HStack {
                     if editingLocation == location {
@@ -212,6 +224,9 @@ public struct SettingsView: View {
                 if current.defaultStorageLocation == oldName {
                     current.defaultStorageLocation = newName
                 }
+                if current.lastUsedStorageLocation == oldName {
+                    current.lastUsedStorageLocation = newName
+                }
             }
         }
         editingLocation = nil
@@ -227,10 +242,14 @@ public struct SettingsView: View {
     private func deleteLocations(at offsets: IndexSet) {
         guard settings.storageLocations.count - offsets.count >= 1 else { return }
         let removedDefault = offsets.contains { settings.storageLocations[$0] == settings.defaultStorageLocation }
+        let removedLastUsed = offsets.contains { settings.storageLocations[$0] == settings.lastUsedStorageLocation }
         update { current in
             current.storageLocations.remove(atOffsets: offsets)
             if removedDefault {
                 current.defaultStorageLocation = current.storageLocations.first ?? current.defaultStorageLocation
+            }
+            if removedLastUsed {
+                current.lastUsedStorageLocation = nil
             }
         }
     }

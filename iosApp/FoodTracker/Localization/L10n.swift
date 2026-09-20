@@ -184,6 +184,8 @@ public enum L10n {
 
     public static var settingsSectionLocations: String { NSLocalizedString("settings_section_locations", comment: "") }
     public static var settingsLocationsDesc: String { NSLocalizedString("settings_locations_desc", comment: "") }
+    public static var settingsRememberLastLocation: String { NSLocalizedString("settings_remember_last_location", comment: "") }
+    public static var settingsRememberLastLocationDesc: String { NSLocalizedString("settings_remember_last_location_desc", comment: "") }
     public static var settingsAddLocationPlaceholder: String { NSLocalizedString("settings_add_location_placeholder", comment: "") }
     public static var settingsAddLocation: String { NSLocalizedString("settings_add_location", comment: "") }
     public static var settingsSetDefaultLocation: String { NSLocalizedString("settings_set_default_location", comment: "") }

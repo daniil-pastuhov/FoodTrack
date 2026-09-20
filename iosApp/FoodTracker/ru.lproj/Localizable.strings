@@ -148,6 +148,8 @@
 
 "settings_section_locations" = "Места хранения";
 "settings_locations_desc" = "Нажмите на звёздочку, чтобы задать место по умолчанию для новых продуктов";
+"settings_remember_last_location" = "Запоминать последнее место хранения";
+"settings_remember_last_location_desc" = "Новые продукты получают место хранения, выбранное в прошлый раз";
 "settings_add_location_placeholder" = "Название нового места";
 "settings_add_location" = "Добавить место";
 "settings_set_default_location" = "Сделать по умолчанию";

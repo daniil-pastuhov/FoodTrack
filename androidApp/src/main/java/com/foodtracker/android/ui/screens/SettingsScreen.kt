@@ -243,6 +243,24 @@ fun SettingsScreen(
 
             // Storage locations
             SettingsSectionCard(title = stringResource(R.string.settings_section_locations)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_remember_last_location))
+                        Text(
+                            text = stringResource(R.string.settings_remember_last_location_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = draft.rememberLastStorageLocation,
+                        onCheckedChange = { persist(draft.copy(rememberLastStorageLocation = it)) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
                 Text(
                     text = stringResource(R.string.settings_locations_desc),
                     style = MaterialTheme.typography.bodySmall,
@@ -270,7 +288,14 @@ fun SettingsScreen(
                                 if (newName.isNotBlank() && !draft.storageLocations.contains(newName)) {
                                     val updatedLocations = draft.storageLocations.map { if (it == location) newName else it }
                                     val updatedDefault = if (draft.defaultStorageLocation == location) newName else draft.defaultStorageLocation
-                                    persist(draft.copy(storageLocations = updatedLocations, defaultStorageLocation = updatedDefault))
+                                    val updatedLastUsed = if (draft.lastUsedStorageLocation == location) newName else draft.lastUsedStorageLocation
+                                    persist(
+                                        draft.copy(
+                                            storageLocations = updatedLocations,
+                                            defaultStorageLocation = updatedDefault,
+                                            lastUsedStorageLocation = updatedLastUsed
+                                        )
+                                    )
                                 }
                                 editingLocation = null
                             }) {
@@ -295,7 +320,14 @@ fun SettingsScreen(
                                 onClick = {
                                     val remaining = draft.storageLocations.filterNot { it == location }
                                     val updatedDefault = if (draft.defaultStorageLocation == location) remaining.first() else draft.defaultStorageLocation
-                                    persist(draft.copy(storageLocations = remaining, defaultStorageLocation = updatedDefault))
+                                    val updatedLastUsed = draft.lastUsedStorageLocation.takeUnless { it == location }
+                                    persist(
+                                        draft.copy(
+                                            storageLocations = remaining,
+                                            defaultStorageLocation = updatedDefault,
+                                            lastUsedStorageLocation = updatedLastUsed
+                                        )
+                                    )
                                 },
                                 enabled = draft.storageLocations.size > 1
                             ) {
