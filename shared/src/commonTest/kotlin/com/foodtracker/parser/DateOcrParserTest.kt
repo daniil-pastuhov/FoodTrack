@@ -4,6 +4,7 @@ import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class DateOcrParserTest {
 
@@ -94,5 +95,24 @@ class DateOcrParserTest {
         val result = DateOcrParser.parseBestDate(lines, referenceYear = 2026)
         assertNotNull(result)
         assertEquals(LocalDate(2026, 10, 31), result.date)
+    }
+
+    @Test
+    fun testAcceptsDateTenYearsAhead() {
+        val result = DateOcrParser.parseBestDate(listOf("EXP 24.11.2036"), referenceYear = 2026)
+        assertNotNull(result)
+        assertEquals(LocalDate(2036, 11, 24), result.date)
+    }
+
+    @Test
+    fun testRejectsDateMoreThanTenYearsAhead() {
+        assertNull(DateOcrParser.parseBestDate(listOf("EXP 24.11.2037"), referenceYear = 2026))
+        assertNull(DateOcrParser.parseBestDate(listOf("EXP 11/37"), referenceYear = 2026))
+    }
+
+    @Test
+    fun testRejectsDateMoreThanTenYearsAgo() {
+        assertNull(DateOcrParser.parseBestDate(listOf("EXP 24.11.2015"), referenceYear = 2026))
+        assertNotNull(DateOcrParser.parseBestDate(listOf("EXP 24.11.2016"), referenceYear = 2026))
     }
 }

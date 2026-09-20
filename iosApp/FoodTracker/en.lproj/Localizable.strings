@@ -65,6 +65,7 @@
 "barcode_word" = "Barcode";
 
 "section_expiration_date" = "Expiration Date";
+"expiry_date_implausible_warning_format" = "This date is more than %d years from today. Please double-check the year.";
 "expiry_picker_label" = "Best Before / Expiry";
 "quick_date_3_days" = "+3 Days";
 "quick_date_1_week" = "+1 Wk";

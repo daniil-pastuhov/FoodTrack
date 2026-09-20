@@ -77,6 +77,21 @@ public struct PantryItem: Identifiable, Codable, Equatable {
     }
 }
 
+/// Swift port of `shared`'s `DateUtils.MAX_PLAUSIBLE_EXPIRY_YEARS` / `isPlausibleExpiryDate`:
+/// how far from the current year an expiry date can be before it is almost certainly a
+/// mis-read (e.g. "27" taken as year 27 AD) or a lot number. The OCR scanner drops candidates
+/// outside this window; the add/edit form warns about them.
+public enum ExpiryDatePlausibility {
+    public static let maxYearsFromToday = 10
+
+    public static func isPlausible(_ date: Date, today: Date = Date()) -> Bool {
+        let calendar = Calendar(identifier: .gregorian)
+        let currentYear = calendar.component(.year, from: today)
+        let year = calendar.component(.year, from: date)
+        return ((currentYear - maxYearsFromToday)...(currentYear + maxYearsFromToday)).contains(year)
+    }
+}
+
 public struct ProductInfo: Codable {
     public let barcode: String
     public let name: String

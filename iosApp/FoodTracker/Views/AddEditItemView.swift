@@ -90,6 +90,15 @@ public struct AddEditItemView: View {
                         .frame(maxWidth: .infinity)
                         .clipped()
 
+                    if !ExpiryDatePlausibility.isPlausible(expiryDate) {
+                        Label(
+                            L10n.expiryDateImplausibleWarning(maxYears: ExpiryDatePlausibility.maxYearsFromToday),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.red)
+                    }
+
                     // Quick offset buttons
                     HStack(spacing: 8) {
                         QuickOffsetButton(title: L10n.quickDate3Days, days: 3, expiryDate: $expiryDate)

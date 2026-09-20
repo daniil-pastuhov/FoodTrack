@@ -65,6 +65,7 @@
 "barcode_word" = "Strekkode";
 
 "section_expiration_date" = "Utløpsdato";
+"expiry_date_implausible_warning_format" = "Denne datoen er mer enn %d år fra i dag. Dobbeltsjekk året.";
 "expiry_picker_label" = "Best før / utløper";
 "quick_date_3_days" = "+3 dager";
 "quick_date_1_week" = "+1 uke";

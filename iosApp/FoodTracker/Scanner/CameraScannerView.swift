@@ -245,7 +245,11 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
                             formatter.twoDigitStartDate = Calendar(identifier: .gregorian)
                                 .date(from: DateComponents(year: 2000, month: 1, day: 1))
                         }
-                        if let parsed = formatter.date(from: matchedStr) {
+                        // ICU is lenient about digit count, so a "yyyy" format happily parses
+                        // "29.07.27" as year 27 AD (and it is tried before the "yy" variant that
+                        // applies the century pivot). Reject implausible years so the match
+                        // falls through to the next format instead of storing a bogus date.
+                        if let parsed = formatter.date(from: matchedStr), ExpiryDatePlausibility.isPlausible(parsed) {
                             if monthYearOnlyFormats.contains(format) {
                                 return lastDayOfMonth(containing: parsed)
                             }

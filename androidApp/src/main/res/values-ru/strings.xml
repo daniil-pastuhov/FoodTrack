@@ -41,6 +41,7 @@
     <string name="product_name_label">Название продукта *</string>
     <string name="brand_label">Бренд / производитель</string>
     <string name="expiry_section_title">Срок годности / годен до</string>
+    <string name="expiry_date_implausible_warning">Эта дата отстоит от сегодняшней более чем на %1$d лет. Проверьте год.</string>
     <string name="quick_date_3_days">+3 дня</string>
     <string name="quick_date_1_week">+1 неделя</string>
     <string name="quick_date_2_weeks">+2 недели</string>

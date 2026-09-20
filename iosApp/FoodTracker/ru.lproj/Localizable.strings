@@ -65,6 +65,7 @@
 "barcode_word" = "Штрихкод";
 
 "section_expiration_date" = "Срок годности";
+"expiry_date_implausible_warning_format" = "Эта дата отстоит от сегодняшней более чем на %d лет. Проверьте год.";
 "expiry_picker_label" = "Годен до";
 "quick_date_3_days" = "+3 дня";
 "quick_date_1_week" = "+1 нед.";

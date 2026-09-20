@@ -85,6 +85,10 @@ public enum L10n {
     public static var barcodeWord: String { NSLocalizedString("barcode_word", comment: "") }
 
     public static var sectionExpirationDate: String { NSLocalizedString("section_expiration_date", comment: "") }
+    public static func expiryDateImplausibleWarning(maxYears: Int) -> String {
+        let format = NSLocalizedString("expiry_date_implausible_warning_format", comment: "")
+        return String.localizedStringWithFormat(format, maxYears)
+    }
     public static var expiryPickerLabel: String { NSLocalizedString("expiry_picker_label", comment: "") }
     public static var quickDate3Days: String { NSLocalizedString("quick_date_3_days", comment: "") }
     public static var quickDate1Week: String { NSLocalizedString("quick_date_1_week", comment: "") }

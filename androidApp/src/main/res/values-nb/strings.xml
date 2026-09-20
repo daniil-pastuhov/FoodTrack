@@ -41,6 +41,7 @@
     <string name="product_name_label">Produktnavn *</string>
     <string name="brand_label">Merke / produsent</string>
     <string name="expiry_section_title">Best før / utløpsdato</string>
+    <string name="expiry_date_implausible_warning">Denne datoen er mer enn %1$d år fra i dag. Dobbeltsjekk året.</string>
     <string name="quick_date_3_days">+3 dager</string>
     <string name="quick_date_1_week">+1 uke</string>
     <string name="quick_date_2_weeks">+2 uker</string>

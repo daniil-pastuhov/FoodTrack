@@ -46,6 +46,7 @@
     <string name="product_name_label">Product Name *</string>
     <string name="brand_label">Brand / Manufacturer</string>
     <string name="expiry_section_title">Best Before / Expiration Date</string>
+    <string name="expiry_date_implausible_warning">This date is more than %1$d years from today. Please double-check the year.</string>
     <string name="quick_date_3_days">+3 Days</string>
     <string name="quick_date_1_week">+1 Week</string>
     <string name="quick_date_2_weeks">+2 Weeks</string>

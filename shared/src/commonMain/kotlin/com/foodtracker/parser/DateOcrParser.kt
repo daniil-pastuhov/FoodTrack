@@ -1,5 +1,6 @@
 package com.foodtracker.parser
 
+import com.foodtracker.util.DateUtils
 import kotlinx.datetime.LocalDate
 
 data class DateOcrResult(
@@ -33,7 +34,7 @@ object DateOcrParser {
     /**
      * Parses a list of recognized text lines from OCR and returns the highest confidence expiration date found.
      */
-    fun parseBestDate(lines: List<String>, referenceYear: Int = 2026): DateOcrResult? {
+    fun parseBestDate(lines: List<String>, referenceYear: Int = DateUtils.today().year): DateOcrResult? {
         val candidates = mutableListOf<DateOcrResult>()
 
         for (lineIndex in lines.indices) {
@@ -133,7 +134,7 @@ object DateOcrParser {
             val yRaw = match.groupValues[2].toIntOrNull() ?: continue
             val y = normalizeYear(yRaw, referenceYear) ?: continue
 
-            if (m in 1..12 && y in (referenceYear - 2)..(referenceYear + 10)) {
+            if (m in 1..12 && DateUtils.isPlausibleExpiryYear(y, referenceYear)) {
                 val lastDay = daysInMonth(y, m)
                 // Slightly lower confidence because of no day specified
                 val conf = if (hasKeywordNearby) 0.85f else 0.55f
@@ -159,8 +160,8 @@ object DateOcrParser {
     }
 
     private fun isValidDate(year: Int, month: Int, day: Int, referenceYear: Int): Boolean {
-        // Expiration dates should be somewhat plausible (from 1 year ago to 8 years in future)
-        if (year !in (referenceYear - 1)..(referenceYear + 8)) return false
+        // Expiration dates should be somewhat plausible (within ±MAX_PLAUSIBLE_EXPIRY_YEARS of now)
+        if (!DateUtils.isPlausibleExpiryYear(year, referenceYear)) return false
         if (month !in 1..12) return false
         if (day !in 1..daysInMonth(year, month)) return false
         return true
