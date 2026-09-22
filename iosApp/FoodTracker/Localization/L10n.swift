@@ -90,6 +90,22 @@ public enum L10n {
         return String.localizedStringWithFormat(format, maxYears)
     }
     public static var expiryPickerLabel: String { NSLocalizedString("expiry_picker_label", comment: "") }
+    /// Caption under the expiry field when the date was pre-filled from the shelf life this
+    /// barcode was given last time - see `ShelfLife`.
+    public static func expirySuggestionRemembered(days: Int) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("expiry_suggestion_remembered_format", comment: ""),
+            days
+        )
+    }
+    /// Caption under the expiry field when the date came from the category's configured default.
+    public static func expirySuggestionCategory(_ category: String, days: Int) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("expiry_suggestion_category_format", comment: ""),
+            category,
+            days
+        )
+    }
     public static var quickDate3Days: String { NSLocalizedString("quick_date_3_days", comment: "") }
     public static var quickDate1Week: String { NSLocalizedString("quick_date_1_week", comment: "") }
     public static var quickDate2Weeks: String { NSLocalizedString("quick_date_2_weeks", comment: "") }
@@ -204,6 +220,18 @@ public enum L10n {
     public static var categorySettingsEmpty: String { NSLocalizedString("category_settings_empty", comment: "") }
     public static var categorySettingsRenameTitle: String { NSLocalizedString("category_settings_rename_title", comment: "") }
     public static var categorySettingsRenameContentDescription: String { NSLocalizedString("category_settings_rename_content_description", comment: "") }
+    public static var categorySettingsShelfLifeNone: String { NSLocalizedString("category_settings_shelf_life_none", comment: "") }
+    public static var categorySettingsShelfLifeContentDescription: String { NSLocalizedString("category_settings_shelf_life_content_description", comment: "") }
+    public static var categorySettingsShelfLifeDialogTitle: String { NSLocalizedString("category_settings_shelf_life_dialog_title", comment: "") }
+    public static var categorySettingsShelfLifeDialogMessage: String { NSLocalizedString("category_settings_shelf_life_dialog_message", comment: "") }
+    public static var categorySettingsShelfLifeFieldLabel: String { NSLocalizedString("category_settings_shelf_life_field_label", comment: "") }
+    public static var categorySettingsShelfLifeClear: String { NSLocalizedString("category_settings_shelf_life_clear", comment: "") }
+    public static func categorySettingsShelfLifeDaysFormat(_ days: Int) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("category_settings_shelf_life_days_format", comment: ""),
+            days
+        )
+    }
     public static func categorySettingsOriginalNameFormat(_ name: String) -> String {
         String(format: NSLocalizedString("category_settings_original_name_format", comment: ""), name)
     }

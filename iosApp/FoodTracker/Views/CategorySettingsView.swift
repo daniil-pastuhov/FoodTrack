@@ -9,6 +9,8 @@ struct CategorySettingsView: View {
     @ObservedObject var viewModel: NativePantryViewModel
     @State private var editingOrigin: String?
     @State private var editingText: String = ""
+    @State private var shelfLifeOrigin: String?
+    @State private var shelfLifeText: String = ""
 
     private var groupedPreferences: [CategoryPreference] {
         let all = viewModel.categoryPreferences
@@ -69,6 +71,27 @@ struct CategorySettingsView: View {
                                 }
                             }
                             Spacer()
+                            // Shows the configured default shelf life, or invites setting one.
+                            // Text rather than an icon so the current value is readable at a
+                            // glance - it's the only per-category setting with a value worth
+                            // showing on the row.
+                            Button {
+                                shelfLifeOrigin = pref.originName
+                                shelfLifeText = pref.defaultShelfLifeDays.map(String.init) ?? ""
+                            } label: {
+                                if let days = pref.defaultShelfLifeDays {
+                                    Text(L10n.categorySettingsShelfLifeDaysFormat(days))
+                                        .font(.caption)
+                                        .foregroundColor(.accentColor)
+                                } else {
+                                    Text(L10n.categorySettingsShelfLifeNone)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(L10n.categorySettingsShelfLifeContentDescription)
+
                             Button {
                                 editingOrigin = pref.originName
                                 editingText = pref.displayName
@@ -158,6 +181,53 @@ struct CategorySettingsView: View {
                 }
             }
             .presentationDetents([.height(200)])
+        }
+        .sheet(isPresented: Binding(
+            get: { shelfLifeOrigin != nil },
+            set: { if !$0 { shelfLifeOrigin = nil } }
+        )) {
+            NavigationStack {
+                Form {
+                    Section {
+                        TextField(L10n.categorySettingsShelfLifeFieldLabel, text: $shelfLifeText)
+                            // Digits only: the value is a day count, and letting anything else
+                            // in just means the save button silently does nothing.
+                            .keyboardType(.numberPad)
+                            .onChange(of: shelfLifeText) { _, newValue in
+                                let digits = String(newValue.filter { $0.isNumber }.prefix(4))
+                                if digits != newValue { shelfLifeText = digits }
+                            }
+                    } footer: {
+                        Text(L10n.categorySettingsShelfLifeDialogMessage)
+                    }
+
+                    Section {
+                        Button(L10n.categorySettingsShelfLifeClear, role: .destructive) {
+                            if let origin = shelfLifeOrigin {
+                                viewModel.setCategoryDefaultShelfLife(origin, days: nil)
+                            }
+                            shelfLifeOrigin = nil
+                        }
+                    }
+                }
+                .navigationTitle(L10n.categorySettingsShelfLifeDialogTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(L10n.cancelButton) { shelfLifeOrigin = nil }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L10n.saveButton) {
+                            if let origin = shelfLifeOrigin {
+                                viewModel.setCategoryDefaultShelfLife(origin, days: Int(shelfLifeText))
+                            }
+                            shelfLifeOrigin = nil
+                        }
+                        .fontWeight(.bold)
+                    }
+                }
+            }
+            .presentationDetents([.medium])
         }
     }
 

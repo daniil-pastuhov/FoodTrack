@@ -70,6 +70,7 @@ import com.foodtracker.match.ShoppingListMatchResult
 import com.foodtracker.match.ShoppingListMatcher
 import com.foodtracker.model.AppTheme
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CancellationException
@@ -100,6 +101,7 @@ private data class PendingShoppingListMatch(
     val imageUrl: String?,
     val expiryDate: LocalDate?,
     val category: String?,
+    val suggestedExpiry: ShelfLifeSuggestion?,
     val candidates: List<ShoppingListEntry>
 )
 
@@ -159,6 +161,11 @@ class MainActivity : ComponentActivity() {
                     var prefillImageUrl by remember { mutableStateOf<String?>(null) }
                     var prefillExpiryDate by remember { mutableStateOf<LocalDate?>(null) }
                     var prefillCategory by remember { mutableStateOf<String?>(null) }
+                    // Expiry to start a new item from when the scan produced no date of its
+                    // own — the shelf life this barcode was last given, or its category's
+                    // default. Reset alongside the other prefills so a suggestion from one scan
+                    // can't leak into the next, unrelated Add/Edit.
+                    var prefillSuggestion by remember { mutableStateOf<ShelfLifeSuggestion?>(null) }
                     // Set when the scanner was launched from a specific shopping list row,
                     // so a product-not-found result can still prefill the name/category the
                     // user already typed there, instead of leaving Add/Edit blank.
@@ -256,6 +263,7 @@ class MainActivity : ComponentActivity() {
                         prefillImageUrl = null
                         prefillExpiryDate = null
                         prefillCategory = entry.category
+                        prefillSuggestion = null
                         currentScreen = AppScreen.ADD_EDIT
                     }
                     val onNavigateToAddEdit: (PantryItem?) -> Unit = { item ->
@@ -266,6 +274,7 @@ class MainActivity : ComponentActivity() {
                         prefillImageUrl = null
                         prefillExpiryDate = null
                         prefillCategory = null
+                        prefillSuggestion = null
                         scanReturnScreen = currentScreen
                         currentScreen = AppScreen.ADD_EDIT
                     }
@@ -577,7 +586,7 @@ class MainActivity : ComponentActivity() {
                                     ScannerScreen(
                                         stateHolder = stateHolder,
                                         onNavigateBack = navigateBackFromScanner,
-                                        onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category ->
+                                        onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category, suggestedExpiry ->
                                             if (isScanningForNewShoppingListEntry) {
                                                 isScanningForNewShoppingListEntry = false
                                                 // Read from the flow rather than composition state: this runs
@@ -593,6 +602,7 @@ class MainActivity : ComponentActivity() {
                                                         prefillImageUrl = imageUrl
                                                         prefillExpiryDate = expiryDate
                                                         prefillCategory = category ?: result.entry.category
+                                                        prefillSuggestion = suggestedExpiry
                                                         currentScreen = AppScreen.ADD_EDIT
                                                     }
                                                     is ShoppingListMatchResult.Suggestions -> {
@@ -603,6 +613,7 @@ class MainActivity : ComponentActivity() {
                                                             imageUrl = imageUrl,
                                                             expiryDate = expiryDate,
                                                             category = category,
+                                                            suggestedExpiry = suggestedExpiry,
                                                             candidates = result.candidates
                                                         )
                                                         currentScreen = scanReturnScreen
@@ -615,6 +626,7 @@ class MainActivity : ComponentActivity() {
                                                         prefillImageUrl = imageUrl
                                                         prefillExpiryDate = expiryDate
                                                         prefillCategory = category
+                                                        prefillSuggestion = suggestedExpiry
                                                         currentScreen = AppScreen.ADD_EDIT
                                                     }
                                                 }
@@ -627,6 +639,7 @@ class MainActivity : ComponentActivity() {
                                                 prefillImageUrl = imageUrl
                                                 prefillExpiryDate = expiryDate
                                                 prefillCategory = category ?: fallbackEntry?.category
+                                                prefillSuggestion = suggestedExpiry
                                                 currentScreen = AppScreen.ADD_EDIT
                                             }
                                         }
@@ -643,6 +656,7 @@ class MainActivity : ComponentActivity() {
                                         prefillImageUrl = prefillImageUrl,
                                         prefillExpiryDate = prefillExpiryDate,
                                         prefillCategory = prefillCategory,
+                                        prefillSuggestion = prefillSuggestion,
                                         settings = settings,
                                         onNavigateBack = {
                                             // Cancelling out of Add/Edit must clear any pending
@@ -688,6 +702,7 @@ class MainActivity : ComponentActivity() {
                                     prefillImageUrl = pending.imageUrl
                                     prefillExpiryDate = pending.expiryDate
                                     prefillCategory = pending.category ?: chosen.category
+                                    prefillSuggestion = pending.suggestedExpiry
                                     pendingShoppingListMatch = null
                                     currentScreen = AppScreen.ADD_EDIT
                                 },
@@ -699,6 +714,7 @@ class MainActivity : ComponentActivity() {
                                     prefillImageUrl = pending.imageUrl
                                     prefillExpiryDate = pending.expiryDate
                                     prefillCategory = pending.category
+                                    prefillSuggestion = pending.suggestedExpiry
                                     pendingShoppingListMatch = null
                                     currentScreen = AppScreen.ADD_EDIT
                                 },

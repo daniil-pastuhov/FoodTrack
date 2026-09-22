@@ -13,14 +13,25 @@ public struct CategoryPreference: Identifiable, Codable, Equatable {
     public var displayName: String
     public var sortOrder: Double
     public var enabled: Bool
+    /// Shelf life, in days, to pre-fill on a new item in this category whose barcode has no
+    /// remembered shelf life of its own - see `ShelfLife.suggest`. Nil means no default has
+    /// been configured, which is the state every category starts in.
+    public var defaultShelfLifeDays: Int?
 
     public var id: String { originName }
 
-    public init(originName: String, displayName: String, sortOrder: Double = 0, enabled: Bool = true) {
+    public init(
+        originName: String,
+        displayName: String,
+        sortOrder: Double = 0,
+        enabled: Bool = true,
+        defaultShelfLifeDays: Int? = nil
+    ) {
         self.originName = originName
         self.displayName = displayName
         self.sortOrder = sortOrder
         self.enabled = enabled
+        self.defaultShelfLifeDays = defaultShelfLifeDays
     }
 }
 

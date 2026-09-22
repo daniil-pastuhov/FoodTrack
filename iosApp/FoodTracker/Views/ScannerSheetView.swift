@@ -13,7 +13,7 @@ public struct ScannerSheetView: View {
     @State private var photoCaptureFailed: Bool = false
     @State private var torchEnabled: Bool = false
 
-    var onProceedToAdd: (String?, String?, String?, String?, Date?, String?) -> Void
+    var onProceedToAdd: (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
     // Hidden when this sheet is presented from within Add/Edit (see AddEditItemView's scan
     // button): "skip to manual entry" makes no sense there since manual entry is already the
     // screen underneath, and dismissing would otherwise discard fields already typed.
@@ -22,7 +22,7 @@ public struct ScannerSheetView: View {
     public init(
         viewModel: NativePantryViewModel,
         showManualEntryShortcut: Bool = true,
-        onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?) -> Void
+        onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
     ) {
         self.viewModel = viewModel
         self.showManualEntryShortcut = showManualEntryShortcut
@@ -81,7 +81,7 @@ public struct ScannerSheetView: View {
 
                     if showManualEntryShortcut {
                         Button(action: {
-                            onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil)
+                            onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil, viewModel.suggestedExpiry)
                             dismiss()
                         }) {
                             HStack(spacing: 4) {
@@ -256,7 +256,8 @@ public struct ScannerSheetView: View {
                                         viewModel.scannedProduct?.brand,
                                         ProductPhotoStore.reference(for: photoURL),
                                         viewModel.detectedDate,
-                                        viewModel.scannedProduct?.category
+                                        viewModel.scannedProduct?.category,
+                                        viewModel.suggestedExpiry
                                     )
                                     dismiss()
                                 }) {
@@ -313,7 +314,8 @@ public struct ScannerSheetView: View {
                                         product.brand,
                                         product.imageUrl,
                                         viewModel.detectedDate,
-                                        product.category
+                                        product.category,
+                                        viewModel.suggestedExpiry
                                     )
                                     dismiss()
                                 }) {
@@ -355,7 +357,7 @@ public struct ScannerSheetView: View {
                                 }
 
                                 Button(action: {
-                                    onProceedToAdd(notFoundBarcode, nil, nil, nil, viewModel.detectedDate, nil)
+                                    onProceedToAdd(notFoundBarcode, nil, nil, nil, viewModel.detectedDate, nil, viewModel.suggestedExpiry)
                                     dismiss()
                                 }) {
                                     Text(L10n.continueButton)

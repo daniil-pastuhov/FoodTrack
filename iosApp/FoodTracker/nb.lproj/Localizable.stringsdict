@@ -66,5 +66,53 @@
             <string>%d varer utløper de neste 7 dagene</string>
         </dict>
     </dict>
+    <key>expiry_suggestion_remembered_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Som sist · %d dag</string>
+            <key>other</key>
+            <string>Som sist · %d dager</string>
+        </dict>
+    </dict>
+    <key>expiry_suggestion_category_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>Standard for %1$@ · %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d dag</string>
+            <key>other</key>
+            <string>%d dager</string>
+        </dict>
+    </dict>
+    <key>category_settings_shelf_life_days_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d d</string>
+            <key>other</key>
+            <string>%d d</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

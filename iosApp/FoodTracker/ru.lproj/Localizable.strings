@@ -186,3 +186,10 @@
 "widget_shopping_list_empty" = "Ваш список покупок пуст";
 "widget_overview_title" = "Обзор кладовой";
 "widget_overview_description" = "Показывает просроченные и скоро истекающие продукты, а затем список покупок";
+
+"category_settings_shelf_life_none" = "Задать срок";
+"category_settings_shelf_life_content_description" = "Задать стандартный срок годности";
+"category_settings_shelf_life_dialog_title" = "Стандартный срок годности";
+"category_settings_shelf_life_dialog_message" = "Новые товары этой категории получат столько дней до истечения срока — если у штрихкода ещё нет запомненного срока и дата не была считана с упаковки.";
+"category_settings_shelf_life_field_label" = "Дней";
+"category_settings_shelf_life_clear" = "Очистить";

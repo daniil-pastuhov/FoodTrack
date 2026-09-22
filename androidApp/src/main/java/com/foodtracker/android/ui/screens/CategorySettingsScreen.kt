@@ -6,8 +6,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -48,11 +51,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
@@ -76,6 +84,8 @@ fun CategorySettingsScreen(
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     var editingOrigin by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf("") }
+    var shelfLifeOrigin by remember { mutableStateOf<String?>(null) }
+    var shelfLifeText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
     // Grouping, and the merged-origins subtitle for each row, are derived once per preferences
@@ -164,6 +174,56 @@ fun CategorySettingsScreen(
             dismissButton = {
                 TextButton(onClick = { editingOrigin = null }) {
                     Text(stringResource(R.string.date_picker_cancel))
+                }
+            }
+        )
+    }
+
+    shelfLifeOrigin?.let { origin ->
+        AlertDialog(
+            onDismissRequest = { shelfLifeOrigin = null },
+            title = { Text(stringResource(R.string.category_settings_shelf_life_dialog_title)) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = stringResource(R.string.category_settings_shelf_life_dialog_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = shelfLifeText,
+                        // Digits only: the value is a day count, and letting anything else in
+                        // just means the confirm button silently does nothing.
+                        onValueChange = { input ->
+                            shelfLifeText = input.filter { it.isDigit() }.take(4)
+                        },
+                        label = { Text(stringResource(R.string.category_settings_shelf_life_field_label)) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    stateHolder.setCategoryDefaultShelfLife(origin, shelfLifeText.toIntOrNull())
+                    shelfLifeOrigin = null
+                }) {
+                    Text(stringResource(R.string.settings_confirm_rename), color = BrandPrimary)
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = {
+                        stateHolder.setCategoryDefaultShelfLife(origin, null)
+                        shelfLifeOrigin = null
+                    }) {
+                        Text(stringResource(R.string.category_settings_shelf_life_clear))
+                    }
+                    TextButton(onClick = { shelfLifeOrigin = null }) {
+                        Text(stringResource(R.string.date_picker_cancel))
+                    }
                 }
             }
         )
@@ -266,6 +326,10 @@ fun CategorySettingsScreen(
                                 editingOrigin = pref.originName
                                 editingText = pref.displayName
                             },
+                            onShelfLifeClick = {
+                                shelfLifeOrigin = pref.originName
+                                shelfLifeText = pref.defaultShelfLifeDays?.toString() ?: ""
+                            },
                             modifier = Modifier.animateItem().padding(bottom = 8.dp)
                         )
                     }
@@ -283,6 +347,7 @@ private fun CategoryPreferenceRow(
     dragHandleModifier: Modifier,
     onToggleEnabled: (Boolean) -> Unit,
     onRenameClick: () -> Unit,
+    onShelfLifeClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val containerColor by animateColorAsState(
@@ -325,6 +390,27 @@ private fun CategoryPreferenceRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+            }
+            // Shows the configured default shelf life, or invites setting one. A text button
+            // rather than an icon so the current value is readable at a glance without opening
+            // the dialog - it's the only per-category setting with a value worth showing.
+            val shelfLifeLabel = stringResource(R.string.category_settings_shelf_life_content_description)
+            TextButton(
+                onClick = onShelfLifeClick,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                modifier = Modifier.semantics { contentDescription = shelfLifeLabel }
+            ) {
+                val days = preference.defaultShelfLifeDays
+                Text(
+                    text = if (days != null) {
+                        pluralStringResource(R.plurals.category_settings_shelf_life_days_format, days, days)
+                    } else {
+                        stringResource(R.string.category_settings_shelf_life_none)
+                    },
+                    fontSize = 12.sp,
+                    color = if (days != null) BrandPrimary else TextSecondary,
+                    maxLines = 1
+                )
             }
             IconButton(onClick = onRenameClick) {
                 Icon(

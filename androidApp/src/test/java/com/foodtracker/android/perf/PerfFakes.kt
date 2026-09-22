@@ -85,9 +85,25 @@ class FakeProductNameRepository : ProductNameRepository {
 
 class FakeLocalProductRepository : LocalProductRepository {
     private val products = mutableMapOf<String, ProductInfo>()
+    val shelfLives = mutableMapOf<String, Int>()
+
+    /** Non-suspending seeding, so a test can arrange a cached product without a coroutine. */
+    fun seed(product: ProductInfo) {
+        products[product.barcode] = product
+    }
+
     override suspend fun getByBarcode(barcode: String): ProductInfo? = products[barcode]
     override suspend fun saveProduct(product: ProductInfo) {
         products[product.barcode] = product
+    }
+
+    override suspend fun getShelfLifeDays(barcode: String): Int? = shelfLives[barcode]
+
+    /** Mirrors the Room implementation's contract: only an already-cached barcode records a
+     *  shelf life, so a test that skips saveProduct sees the same no-op the real DAO's
+     *  targeted UPDATE performs. */
+    override suspend fun recordShelfLifeDays(barcode: String, days: Int) {
+        if (products.containsKey(barcode)) shelfLives[barcode] = days
     }
 }
 

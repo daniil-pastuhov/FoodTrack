@@ -41,6 +41,12 @@
     <string name="product_name_label">Produktnavn *</string>
     <string name="brand_label">Merke / produsent</string>
     <string name="expiry_section_title">Best før / utløpsdato</string>
+    <string name="expiry_suggestion_remembered">Som sist · %1$s</string>
+    <string name="expiry_suggestion_category">Standard for %1$s · %2$s</string>
+    <plurals name="expiry_suggestion_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dager</item>
+    </plurals>
     <string name="expiry_date_implausible_warning">Denne datoen er mer enn %1$d år fra i dag. Dobbeltsjekk året.</string>
     <string name="quick_date_3_days">+3 dager</string>
     <string name="quick_date_1_week">+1 uke</string>
@@ -188,6 +194,16 @@
     <string name="category_settings_rename_title">Endre navn på kategori</string>
     <string name="category_settings_original_name_format">Opprinnelig \"%1$s\"</string>
     <string name="category_settings_drag_handle_content_description">Dra for å endre rekkefølge</string>
+    <string name="category_settings_shelf_life_none">Angi holdbarhet</string>
+    <string name="category_settings_shelf_life_content_description">Angi standard holdbarhet</string>
+    <string name="category_settings_shelf_life_dialog_title">Standard holdbarhet</string>
+    <string name="category_settings_shelf_life_dialog_message">Nye varer i denne kategorien starter med så mange dager igjen, med mindre strekkoden allerede har en husket holdbarhet eller en dato ble lest av emballasjen.</string>
+    <string name="category_settings_shelf_life_field_label">Dager</string>
+    <string name="category_settings_shelf_life_clear">Fjern</string>
+    <plurals name="category_settings_shelf_life_days_format">
+        <item quantity="one">%1$d d</item>
+        <item quantity="other">%1$d d</item>
+    </plurals>
     <string name="category_settings_rename_content_description">Endre navn på kategori</string>
 
     <string name="settings_section_appearance">Utseende</string>

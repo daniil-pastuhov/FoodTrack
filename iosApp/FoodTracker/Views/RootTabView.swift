@@ -19,6 +19,9 @@ struct RootTabView: View {
     @State private var prefillImageUrl: String? = nil
     @State private var prefillDate: Date? = nil
     @State private var prefillCategory: String? = nil
+    /// Expiry to start a new item from when the scan produced no date of its own - the
+    /// shelf life this barcode was last given, or its category's default.
+    @State private var prefillSuggestion: ShelfLifeSuggestion? = nil
     /// The most recently removed pantry item or shopping list entry (via a "-" button, swipe
     /// action, or check-off), offered back through an undo toast since each of those is a
     /// single tap/swipe that's easy to trigger by mistake. Hosted here — rather than inside
@@ -123,7 +126,7 @@ struct RootTabView: View {
             }
         }
         .sheet(isPresented: $showScanner) {
-            ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category in
+            ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category, suggestion in
                 editingItem = nil
                 prefillBarcode = barcode
                 prefillName = name
@@ -131,6 +134,7 @@ struct RootTabView: View {
                 prefillImageUrl = imageUrl
                 prefillDate = date
                 prefillCategory = category
+                prefillSuggestion = suggestion
                 showAddEdit = true
             }
         }
@@ -143,7 +147,8 @@ struct RootTabView: View {
                 prefillBrand: prefillBrand,
                 prefillImageUrl: prefillImageUrl,
                 prefillDate: prefillDate,
-                prefillCategory: prefillCategory
+                prefillCategory: prefillCategory,
+                prefillSuggestion: prefillSuggestion
             )
         }
         .onChange(of: router.openShoppingList) { _, shouldOpen in

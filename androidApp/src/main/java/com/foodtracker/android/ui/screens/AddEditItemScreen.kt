@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CameraAlt
@@ -67,6 +68,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -81,6 +83,8 @@ import com.foodtracker.android.util.daysRemainingLabel
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.ShelfLifeSource
+import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
@@ -100,6 +104,9 @@ fun AddEditItemScreen(
     prefillImageUrl: String?,
     prefillExpiryDate: LocalDate?,
     prefillCategory: String?,
+    /** Expiry to start a *new* item from when the scan produced no date of its own, plus where
+     *  it came from so the form can say so - see [ShelfLifeSuggestion]. */
+    prefillSuggestion: ShelfLifeSuggestion?,
     settings: AppSettings,
     onNavigateBack: () -> Unit,
     onSaveItem: (PantryItem) -> Unit,
@@ -123,8 +130,28 @@ fun AddEditItemScreen(
     }
     var expiryDate by remember {
         mutableStateOf(
-            initialItem?.expiryDate ?: prefillExpiryDate ?: LocalDate.fromEpochDays(today.toEpochDays() + 7)
+            initialItem?.expiryDate
+                ?: prefillExpiryDate
+                ?: prefillSuggestion?.date
+                ?: LocalDate.fromEpochDays(today.toEpochDays() + 7)
         )
+    }
+    // The caption explaining where a suggested date came from is shown only until the user
+    // touches the date - once they've picked one themselves, saying "same as last time" would
+    // be describing a value that is no longer on screen. Editing an existing item never counts
+    // as a suggestion in the first place.
+    var dateWasEdited by remember { mutableStateOf(false) }
+    // A suggestion produced by the embedded scan overlay below, which supersedes whatever this
+    // screen was opened with.
+    var overlaySuggestion by remember { mutableStateOf<ShelfLifeSuggestion?>(null) }
+    val activeSuggestion = when {
+        // Editing an existing item: the date shown is the item's own, not a guess.
+        initialItem != null -> null
+        dateWasEdited -> null
+        overlaySuggestion != null -> overlaySuggestion?.takeIf { it.isInformative }
+        // A real date was handed in (scanned, or carried from a shopping list entry).
+        prefillExpiryDate != null -> null
+        else -> prefillSuggestion?.takeIf { it.isInformative }
     }
     var storageLocation by remember {
         mutableStateOf(initialItem?.storageLocation ?: settings.storageLocationForNewItem())
@@ -213,6 +240,7 @@ fun AddEditItemScreen(
                         val localDate = Instant.fromEpochMilliseconds(millis)
                             .toLocalDateTime(TimeZone.UTC).date
                         expiryDate = localDate
+                        dateWasEdited = true
                     }
                     showDatePicker = false
                 }) {
@@ -390,6 +418,40 @@ fun AddEditItemScreen(
                         )
                     }
 
+                    if (activeSuggestion != null) {
+                        val dayCount = activeSuggestion.days ?: 0
+                        val spanLabel = pluralStringResource(
+                            R.plurals.expiry_suggestion_days,
+                            dayCount,
+                            dayCount
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = BrandPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = when (activeSuggestion.source) {
+                                    ShelfLifeSource.CATEGORY_DEFAULT -> stringResource(
+                                        R.string.expiry_suggestion_category,
+                                        category.ifBlank { stringResource(R.string.shopping_list_uncategorized) },
+                                        spanLabel
+                                    )
+                                    else -> stringResource(R.string.expiry_suggestion_remembered, spanLabel)
+                                },
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+
                     // A year this far off is almost always a mis-read (e.g. "27" taken as year
                     // 27 AD) or a lot number, so say so instead of quietly saving it.
                     if (!DateUtils.isPlausibleExpiryDate(expiryDate, today)) {
@@ -430,15 +492,19 @@ fun AddEditItemScreen(
                     ) {
                         QuickDateChip(label = stringResource(R.string.quick_date_3_days)) {
                             expiryDate = LocalDate.fromEpochDays(today.toEpochDays() + 3)
+                            dateWasEdited = true
                         }
                         QuickDateChip(label = stringResource(R.string.quick_date_1_week)) {
                             expiryDate = LocalDate.fromEpochDays(today.toEpochDays() + 7)
+                            dateWasEdited = true
                         }
                         QuickDateChip(label = stringResource(R.string.quick_date_2_weeks)) {
                             expiryDate = LocalDate.fromEpochDays(today.toEpochDays() + 14)
+                            dateWasEdited = true
                         }
                         QuickDateChip(label = stringResource(R.string.quick_date_1_month)) {
                             expiryDate = LocalDate.fromEpochDays(today.toEpochDays() + 30)
+                            dateWasEdited = true
                         }
                     }
                 }
@@ -610,13 +676,21 @@ fun AddEditItemScreen(
                 stateHolder.clearScanState()
                 showScanner = false
             },
-            onProceedToAddItem = { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedExpiryDate, scannedCategory ->
+            onProceedToAddItem = { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedExpiryDate, scannedCategory, scannedSuggestion ->
                 scannedBarcode?.let { barcode = it }
                 scannedName?.let { name = it }
                 scannedBrand?.let { brand = it }
                 scannedImageUrl?.let { imageUrl = it }
-                scannedExpiryDate?.let { expiryDate = it }
                 scannedCategory?.let { category = it }
+                // A date read off the packaging wins; otherwise fall back to what this barcode
+                // (or its category) suggests. Either way this is the scan's answer rather than
+                // the user's, so it does not count as an edit and the caption stays visible.
+                val resolvedDate = scannedExpiryDate ?: scannedSuggestion?.date
+                if (resolvedDate != null) {
+                    expiryDate = resolvedDate
+                    dateWasEdited = false
+                }
+                overlaySuggestion = scannedSuggestion.takeIf { scannedExpiryDate == null }
                 stateHolder.clearScanState()
                 showScanner = false
             },

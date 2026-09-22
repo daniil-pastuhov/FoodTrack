@@ -6,6 +6,8 @@ import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
+import com.foodtracker.model.ShelfLife
+import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.SortOption
 import com.foodtracker.model.UNCATEGORIZED_ORIGIN
@@ -88,6 +90,10 @@ data class PantryUiState(
     val scannedProduct: ProductInfo? = null,
     val productNotFoundBarcode: String? = null,
     val detectedDate: LocalDate? = null,
+    /** Expiry date to pre-fill on the item this scan produces, and where it came from - a
+     *  date read off the packaging, the shelf life this barcode was given last time, or its
+     *  category's configured default. See [ShelfLife.suggest]. */
+    val suggestedExpiry: ShelfLifeSuggestion? = null,
     val isLookingUpBarcode: Boolean = false,
     val scanMessage: String? = null,
     /** Set while the scan flow was launched from a specific shopping list row (rather than
@@ -376,10 +382,16 @@ class PantryStateHolder(
             // by hand for a barcode OFF didn't know) wins over the network, so a "custom"
             // product from a past scan is recognized here instead of showing not-found again.
             val product = localProductRepository.getByBarcode(barcode) ?: openFoodFactsApi.fetchProduct(barcode)
+            val suggestion = suggestExpiry(
+                detectedDate = gs1Date ?: _uiState.value.detectedDate,
+                barcode = barcode,
+                category = product?.category
+            )
             _uiState.update {
                 it.copy(
                     scannedProduct = product,
                     productNotFoundBarcode = if (product == null) barcode else null,
+                    suggestedExpiry = suggestion,
                     isLookingUpBarcode = false,
                     scanMessage = if (product != null) "Found ${product.name}" else "Product not in database - enter name"
                 )
@@ -387,10 +399,45 @@ class PantryStateHolder(
         }
     }
 
+    /**
+     * Resolves the expiry date to pre-fill for a scanned product: the date read off the
+     * packaging if there was one, else the shelf life this exact barcode was last given, else
+     * the default configured for its category.
+     *
+     * The category default is read from [preferencesState] rather than re-queried - it is the
+     * same list the derivation already collects, so this costs nothing. The category is
+     * resolved through [resolveCategoryOrigin] first because a product's raw category may have
+     * been renamed, and the default hangs off the origin.
+     */
+    private suspend fun suggestExpiry(
+        detectedDate: LocalDate?,
+        barcode: String?,
+        category: String?
+    ): ShelfLifeSuggestion {
+        val rememberedDays = if (detectedDate == null && barcode != null) {
+            localProductRepository.getShelfLifeDays(barcode)
+        } else {
+            null
+        }
+        val preferences = preferencesState.value
+        val origin = resolveCategoryOrigin(category, preferences)
+        val categoryDefaultDays = preferences.find { it.originName == origin }?.defaultShelfLifeDays
+        return ShelfLife.suggest(
+            today = DateUtils.today(),
+            detectedDate = detectedDate,
+            rememberedDays = rememberedDays,
+            categoryDefaultDays = categoryDefaultDays
+        )
+    }
+
     fun onDateOcrDetected(date: LocalDate) {
         _uiState.update {
             it.copy(
                 detectedDate = date,
+                // A date read off the packaging outranks any remembered/category guess already
+                // published by an earlier barcode scan in the same session, so replace it
+                // rather than letting the stale suggestion win at pre-fill time.
+                suggestedExpiry = ShelfLife.suggest(today = DateUtils.today(), detectedDate = date),
                 scanMessage = "Detected Expiry Date: $date"
             )
         }
@@ -419,6 +466,10 @@ class PantryStateHolder(
                         category = resolvedItem.category
                     )
                 )
+                // Must run after saveProduct: recordShelfLifeDays deliberately only updates an
+                // existing cache row (so it can't clobber the cached name/brand/image), and
+                // saveProduct is what guarantees that row exists.
+                if (isNewItem) rememberShelfLife(barcode, resolvedItem)
             }
             if (isNewItem) {
                 val scanEntryId = _uiState.value.scanningShoppingListEntryId
@@ -660,6 +711,23 @@ class PantryStateHolder(
         }
     }
 
+    /** Sets the shelf life, in days, pre-filled on a new item in the category identified by
+     *  [originName] when its barcode has no remembered shelf life of its own. Null clears the
+     *  default. Like [setCategoryEnabled], every origin sharing this category's display name is
+     *  updated as a unit and in one batched write, since merged categories are a single row to
+     *  the user. */
+    fun setCategoryDefaultShelfLife(originName: String, days: Int?) {
+        val prefs = _uiState.value.categoryPreferences
+        val target = prefs.find { it.originName == originName } ?: return
+        val sanitized = days?.coerceIn(0, ShelfLife.MAX_LEARNABLE_DAYS)
+        coroutineScope.launch {
+            categoryPreferenceRepository.updateEntries(
+                prefs.filter { it.displayName == target.displayName && it.defaultShelfLifeDays != sanitized }
+                    .map { it.copy(defaultShelfLifeDays = sanitized) }
+            )
+        }
+    }
+
     /** Bulk on/off switch for every category at once, so the user isn't forced to flip each
      *  [setCategoryEnabled] toggle one by one. */
     fun setAllCategoriesEnabled(enabled: Boolean) {
@@ -714,6 +782,16 @@ class PantryStateHolder(
         }
     }
 
+    /** Learns how long [item]'s product keeps, so a future scan of the same barcode pre-fills
+     *  its expiry date (see [suggestExpiry]). Only new items teach the cache: editing an old
+     *  item's date says nothing about how long a *fresh* one lasts, which is the same rule
+     *  [rememberStorageLocation] follows. An implausible span is skipped rather than stored -
+     *  see [ShelfLife.learnableShelfLife]. */
+    private suspend fun rememberShelfLife(barcode: String, item: PantryItem) {
+        val days = ShelfLife.learnableShelfLife(item.addedDate, item.expiryDate) ?: return
+        localProductRepository.recordShelfLifeDays(barcode, days)
+    }
+
     /** Records [name] as a known product name for the shopping list's autosuggest.
      *  Persisted separately from shopping list entries themselves (see [ProductNameRepository])
      *  so the suggestion survives an entry being checked off or deleted. */
@@ -727,6 +805,7 @@ class PantryStateHolder(
                 scannedProduct = null,
                 productNotFoundBarcode = null,
                 detectedDate = null,
+                suggestedExpiry = null,
                 isLookingUpBarcode = false,
                 scanMessage = null,
                 scanningShoppingListEntryId = null

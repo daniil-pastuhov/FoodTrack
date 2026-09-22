@@ -13,12 +13,43 @@ public struct AddEditItemView: View {
     var prefillImageUrl: String?
     var prefillDate: Date?
     var prefillCategory: String?
+    /// Expiry to start a *new* item from when the scan produced no date of its own, plus where
+    /// it came from so the form can say so - see `ShelfLifeSuggestion`.
+    var prefillSuggestion: ShelfLifeSuggestion?
 
     @State private var name: String = ""
     @State private var brand: String = ""
     @State private var barcode: String = ""
     @State private var imageUrl: String? = nil
     @State private var expiryDate: Date = Calendar.current.date(byAdding: .day, value: 7, to: Date())!
+    /// A suggestion produced by the embedded scan sheet below, which supersedes whatever this
+    /// screen was opened with.
+    @State private var overlaySuggestion: ShelfLifeSuggestion?
+
+    /// The suggestion to caption the date field with, or nil when there is nothing to explain.
+    ///
+    /// Derived from whether `expiryDate` still *is* the suggested date rather than from an
+    /// "edited" flag: on iOS the date is a `DatePicker` binding, and its `onChange` fires for
+    /// programmatic assignments (the `onAppear` prefill included) just as it does for the user
+    /// spinning the wheel, so a flag set there could not tell the two apart. Comparing values
+    /// needs no such distinction - the caption disappears exactly when the date it describes
+    /// stops being what's on screen, however it changed.
+    private var activeSuggestion: ShelfLifeSuggestion? {
+        // Editing an existing item: the date shown is the item's own, not a guess.
+        guard editingItem == nil else { return nil }
+        let candidate: ShelfLifeSuggestion?
+        if let overlaySuggestion {
+            candidate = overlaySuggestion
+        } else if prefillDate != nil {
+            // A real date was handed in (scanned, or carried from a shopping list entry).
+            candidate = nil
+        } else {
+            candidate = prefillSuggestion
+        }
+        guard let candidate, candidate.isInformative else { return nil }
+        guard Calendar.current.isDate(expiryDate, inSameDayAs: candidate.date) else { return nil }
+        return candidate
+    }
     @State private var storageLocation: String = "Pantry"
     @State private var category: String = ""
     @State private var quantity: Int = 1
@@ -37,7 +68,8 @@ public struct AddEditItemView: View {
         prefillBrand: String? = nil,
         prefillImageUrl: String? = nil,
         prefillDate: Date? = nil,
-        prefillCategory: String? = nil
+        prefillCategory: String? = nil,
+        prefillSuggestion: ShelfLifeSuggestion? = nil
     ) {
         self.viewModel = viewModel
         self.editingItem = editingItem
@@ -47,6 +79,7 @@ public struct AddEditItemView: View {
         self.prefillImageUrl = prefillImageUrl
         self.prefillDate = prefillDate
         self.prefillCategory = prefillCategory
+        self.prefillSuggestion = prefillSuggestion
     }
 
     public var body: some View {
@@ -89,6 +122,24 @@ public struct AddEditItemView: View {
                         .labelsHidden()
                         .frame(maxWidth: .infinity)
                         .clipped()
+
+                    if let suggestion = activeSuggestion, let days = suggestion.days {
+                        Label {
+                            Text(
+                                suggestion.source == .categoryDefault
+                                    ? L10n.expirySuggestionCategory(
+                                        category.isEmpty ? L10n.shoppingListUncategorized : category,
+                                        days: days
+                                      )
+                                    : L10n.expirySuggestionRemembered(days: days)
+                            )
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                        } icon: {
+                            Image(systemName: "sparkles")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
 
                     if !ExpiryDatePlausibility.isPlausible(expiryDate) {
                         Label(
@@ -244,17 +295,26 @@ public struct AddEditItemView: View {
                     category = prefillCategory ?? ""
                     if let date = prefillDate {
                         expiryDate = date
+                    } else if let suggested = prefillSuggestion?.date {
+                        expiryDate = suggested
                     }
                 }
             }
             .sheet(isPresented: $showScanner) {
-                ScannerSheetView(viewModel: viewModel, showManualEntryShortcut: false) { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedDate, scannedCategory in
+                ScannerSheetView(viewModel: viewModel, showManualEntryShortcut: false) { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedDate, scannedCategory, scannedSuggestion in
                     if let scannedBarcode { barcode = scannedBarcode }
                     if let scannedName { name = scannedName }
                     if let scannedBrand { brand = scannedBrand }
                     if let scannedImageUrl { imageUrl = scannedImageUrl }
-                    if let scannedDate { expiryDate = scannedDate }
                     if let scannedCategory { category = scannedCategory }
+                    // A date read off the packaging wins; otherwise fall back to what this
+                    // barcode (or its category) suggests. Either way this is the scan's answer
+                    // rather than the user's, so it does not count as an edit and the caption
+                    // stays visible.
+                    if let resolved = scannedDate ?? scannedSuggestion?.date {
+                        expiryDate = resolved
+                    }
+                    overlaySuggestion = scannedDate == nil ? scannedSuggestion : nil
                     viewModel.clearScanState()
                 }
             }

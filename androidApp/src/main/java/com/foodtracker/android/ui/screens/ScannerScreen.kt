@@ -65,6 +65,7 @@ import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
+import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
 import java.io.File
@@ -73,7 +74,7 @@ import java.io.File
 fun ScannerScreen(
     stateHolder: PantryStateHolder,
     onNavigateBack: () -> Unit,
-    onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?, category: String?) -> Unit,
+    onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?, category: String?, suggestedExpiry: ShelfLifeSuggestion?) -> Unit,
     // Hidden when this screen is embedded inside Add/Edit (see AddEditItemScreen's scan
     // button): "skip to manual entry" makes no sense there since manual entry is already
     // the screen underneath, and dismissing would otherwise discard fields already typed.
@@ -145,7 +146,7 @@ fun ScannerScreen(
                     Spacer(modifier = Modifier.weight(1f))
                     OutlinedButton(
                         onClick = {
-                            onProceedToAddItem(null, null, null, null, state.detectedDate, null)
+                            onProceedToAddItem(null, null, null, null, state.detectedDate, null, state.suggestedExpiry)
                         },
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.Black.copy(alpha = 0.5f),
@@ -412,7 +413,8 @@ fun ScannerScreen(
                                         product?.brand,
                                         capturedPhotoUri,
                                         state.detectedDate,
-                                        product?.category
+                                        product?.category,
+                                        state.suggestedExpiry
                                     )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
@@ -479,7 +481,8 @@ fun ScannerScreen(
                                         product.brand,
                                         product.imageUrl,
                                         state.detectedDate,
-                                        product.category
+                                        product.category,
+                                        state.suggestedExpiry
                                     )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
@@ -535,7 +538,8 @@ fun ScannerScreen(
                                         null,
                                         null,
                                         state.detectedDate,
-                                        null
+                                        null,
+                                        state.suggestedExpiry
                                     )
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),

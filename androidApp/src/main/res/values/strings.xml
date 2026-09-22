@@ -46,6 +46,12 @@
     <string name="product_name_label">Product Name *</string>
     <string name="brand_label">Brand / Manufacturer</string>
     <string name="expiry_section_title">Best Before / Expiration Date</string>
+    <string name="expiry_suggestion_remembered">Same as last time · %1$s</string>
+    <string name="expiry_suggestion_category">%1$s default · %2$s</string>
+    <plurals name="expiry_suggestion_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
     <string name="expiry_date_implausible_warning">This date is more than %1$d years from today. Please double-check the year.</string>
     <string name="quick_date_3_days">+3 Days</string>
     <string name="quick_date_1_week">+1 Week</string>
@@ -210,6 +216,16 @@
     <string name="category_settings_rename_title">Rename category</string>
     <string name="category_settings_original_name_format">Originally \"%1$s\"</string>
     <string name="category_settings_drag_handle_content_description">Drag to reorder</string>
+    <string name="category_settings_shelf_life_none">Set shelf life</string>
+    <string name="category_settings_shelf_life_content_description">Set default shelf life</string>
+    <string name="category_settings_shelf_life_dialog_title">Default shelf life</string>
+    <string name="category_settings_shelf_life_dialog_message">New items in this category start with this many days until they expire, unless the barcode already has a remembered shelf life or a date was read off the packaging.</string>
+    <string name="category_settings_shelf_life_field_label">Days</string>
+    <string name="category_settings_shelf_life_clear">Clear</string>
+    <plurals name="category_settings_shelf_life_days_format">
+        <item quantity="one">%1$d d</item>
+        <item quantity="other">%1$d d</item>
+    </plurals>
     <string name="category_settings_rename_content_description">Rename category</string>
 
     <string name="settings_section_appearance">Appearance</string>

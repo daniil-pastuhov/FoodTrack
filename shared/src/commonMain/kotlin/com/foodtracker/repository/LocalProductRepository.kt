@@ -9,4 +9,16 @@ import com.foodtracker.model.ProductInfo
 interface LocalProductRepository {
     suspend fun getByBarcode(barcode: String): ProductInfo?
     suspend fun saveProduct(product: ProductInfo)
+
+    /** The shelf life, in days, this barcode was last given (see [recordShelfLifeDays]), or
+     *  null if it has never been added or the span wasn't worth learning. Used to pre-fill the
+     *  expiry date on a re-scan. */
+    suspend fun getShelfLifeDays(barcode: String): Int?
+
+    /** Records how long this barcode's product keeps, learned from an item the user just
+     *  added. Deliberately narrower than [saveProduct]: it must leave the cached
+     *  name/brand/image/category alone, since the caller may know the shelf life without
+     *  holding a full, current [ProductInfo]. A barcode with no cached product yet is a
+     *  no-op - [saveProduct] always runs first on the save path that calls this. */
+    suspend fun recordShelfLifeDays(barcode: String, days: Int)
 }

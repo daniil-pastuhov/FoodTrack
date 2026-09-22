@@ -41,6 +41,14 @@
     <string name="product_name_label">Название продукта *</string>
     <string name="brand_label">Бренд / производитель</string>
     <string name="expiry_section_title">Срок годности / годен до</string>
+    <string name="expiry_suggestion_remembered">Как в прошлый раз · %1$s</string>
+    <string name="expiry_suggestion_category">Стандарт для «%1$s» · %2$s</string>
+    <plurals name="expiry_suggestion_days">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
     <string name="expiry_date_implausible_warning">Эта дата отстоит от сегодняшней более чем на %1$d лет. Проверьте год.</string>
     <string name="quick_date_3_days">+3 дня</string>
     <string name="quick_date_1_week">+1 неделя</string>
@@ -196,6 +204,18 @@
     <string name="category_settings_rename_title">Переименовать категорию</string>
     <string name="category_settings_original_name_format">Изначально \"%1$s\"</string>
     <string name="category_settings_drag_handle_content_description">Перетащите, чтобы изменить порядок</string>
+    <string name="category_settings_shelf_life_none">Задать срок</string>
+    <string name="category_settings_shelf_life_content_description">Задать стандартный срок годности</string>
+    <string name="category_settings_shelf_life_dialog_title">Стандартный срок годности</string>
+    <string name="category_settings_shelf_life_dialog_message">Новые товары этой категории получат столько дней до истечения срока — если у штрихкода ещё нет запомненного срока и дата не была считана с упаковки.</string>
+    <string name="category_settings_shelf_life_field_label">Дней</string>
+    <string name="category_settings_shelf_life_clear">Очистить</string>
+    <plurals name="category_settings_shelf_life_days_format">
+        <item quantity="one">%1$d д</item>
+        <item quantity="few">%1$d д</item>
+        <item quantity="many">%1$d д</item>
+        <item quantity="other">%1$d д</item>
+    </plurals>
     <string name="category_settings_rename_content_description">Переименовать категорию</string>
 
     <string name="settings_section_appearance">Внешний вид</string>

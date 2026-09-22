@@ -17,6 +17,9 @@ struct ShoppingListView: View {
     @State private var prefillImageUrl: String?
     @State private var prefillDate: Date?
     @State private var prefillCategory: String?
+    /// Expiry to start a new item from when the scan produced no date of its own - the
+    /// shelf life this barcode was last given, or its category's default.
+    @State private var prefillSuggestion: ShelfLifeSuggestion?
     @State private var showDidYouMeanDialog: Bool = false
     @State private var pendingMatchCandidates: [ShoppingListEntry] = []
     @State private var pendingMatchBarcode: String?
@@ -25,6 +28,7 @@ struct ShoppingListView: View {
     @State private var pendingMatchImageUrl: String?
     @State private var pendingMatchDate: Date?
     @State private var pendingMatchCategory: String?
+    @State private var pendingMatchSuggestion: ShelfLifeSuggestion?
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -210,7 +214,7 @@ struct ShoppingListView: View {
                     viewModel.clearScanState()
                 }
             }) {
-                ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category in
+                ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category, suggestion in
                     if isScanningForNewEntry {
                         isScanningForNewEntry = false
                         switch ShoppingListMatcher.match(scannedName: name, scannedBarcode: barcode, shoppingList: viewModel.shoppingList) {
@@ -222,6 +226,7 @@ struct ShoppingListView: View {
                             prefillImageUrl = imageUrl
                             prefillDate = date
                             prefillCategory = category ?? entry.category
+                            prefillSuggestion = suggestion
                             showAddEdit = true
                         case .suggestions(let candidates):
                             pendingMatchCandidates = candidates
@@ -231,6 +236,7 @@ struct ShoppingListView: View {
                             pendingMatchImageUrl = imageUrl
                             pendingMatchDate = date
                             pendingMatchCategory = category
+                            pendingMatchSuggestion = suggestion
                             showDidYouMeanDialog = true
                         case .noMatch:
                             prefillBarcode = barcode
@@ -239,6 +245,7 @@ struct ShoppingListView: View {
                             prefillImageUrl = imageUrl
                             prefillDate = date
                             prefillCategory = category
+                            prefillSuggestion = suggestion
                             showAddEdit = true
                         }
                     } else {
@@ -248,6 +255,7 @@ struct ShoppingListView: View {
                         prefillImageUrl = imageUrl
                         prefillDate = date
                         prefillCategory = category ?? scanningEntry?.category
+                        prefillSuggestion = suggestion
                         showAddEdit = true
                     }
                 }
@@ -263,7 +271,8 @@ struct ShoppingListView: View {
                     prefillBrand: prefillBrand,
                     prefillImageUrl: prefillImageUrl,
                     prefillDate: prefillDate,
-                    prefillCategory: prefillCategory
+                    prefillCategory: prefillCategory,
+                    prefillSuggestion: prefillSuggestion
                 )
             }
             .confirmationDialog(
@@ -280,6 +289,7 @@ struct ShoppingListView: View {
                         prefillImageUrl = pendingMatchImageUrl
                         prefillDate = pendingMatchDate
                         prefillCategory = pendingMatchCategory ?? candidate.category
+                        prefillSuggestion = pendingMatchSuggestion
                         showAddEdit = true
                     }
                 }
@@ -290,6 +300,7 @@ struct ShoppingListView: View {
                     prefillImageUrl = pendingMatchImageUrl
                     prefillDate = pendingMatchDate
                     prefillCategory = pendingMatchCategory
+                    prefillSuggestion = pendingMatchSuggestion
                     showAddEdit = true
                 }
                 Button(L10n.cancelButton, role: .cancel) {

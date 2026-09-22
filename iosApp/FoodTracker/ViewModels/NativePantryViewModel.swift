@@ -44,6 +44,10 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var scannedProduct: ProductInfo? = nil
     @Published public var productNotFoundBarcode: String? = nil
     @Published public var detectedDate: Date? = nil
+    /// Expiry date to pre-fill on the item this scan produces, and where it came from - a date
+    /// read off the packaging, the shelf life this barcode was given last time, or its
+    /// category's configured default. See `ShelfLife.suggest`.
+    @Published public var suggestedExpiry: ShelfLifeSuggestion? = nil
     @Published public var shoppingList: [ShoppingListEntry] = []
     /// Set while the scan flow was launched from a specific shopping list row (rather than
     /// the dashboard's general scan button), so `saveItem` knows to remove that exact entry
@@ -119,6 +123,7 @@ public class NativePantryViewModel: ObservableObject {
         loadItems()
         loadShoppingList()
         backfillKnownProductNamesFromInventoryIfNeeded()
+        backfillShelfLivesFromInventoryIfNeeded()
         loadKnownProductNames()
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
     }
@@ -245,6 +250,9 @@ public class NativePantryViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
         let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
         if let existing = try? modelContext.fetch(descriptor).first {
+            // Deliberately leaves shelfLifeDays alone: it is learned from what the user chose,
+            // not carried on the Open Food Facts response this re-caches from, so overwriting
+            // it here would forget the suggestion on every re-scan.
             existing.name = name
             existing.brand = brand
             existing.imageUrl = imageUrl
@@ -253,6 +261,86 @@ public class NativePantryViewModel: ObservableObject {
             modelContext.insert(LocalProductRecord(barcode: trimmed, name: name, brand: brand, imageUrl: imageUrl, category: category))
         }
         try? modelContext.save()
+    }
+
+    /// Resolves the expiry date to pre-fill for a scanned product: the date read off the
+    /// packaging if there was one, else the shelf life this exact barcode was last given, else
+    /// the default configured for its category.
+    ///
+    /// The category is resolved through `resolveCategoryOrigin` first, because a product's raw
+    /// category may have been renamed and the default hangs off the origin. Mirrors
+    /// `PantryStateHolder.suggestExpiry` on Android.
+    private func resolveSuggestedExpiry(barcode: String?, category: String?) -> ShelfLifeSuggestion {
+        var rememberedDays: Int? = nil
+        if detectedDate == nil, let barcode {
+            let trimmed = barcode.trimmingCharacters(in: .whitespaces)
+            let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
+            rememberedDays = (try? modelContext.fetch(descriptor).first)?.shelfLifeDays
+        }
+        // Match the product's raw category against a preference by origin first, then by
+        // display name - a category the user renamed keeps its original origin on the product,
+        // while a freehand-typed one may only match what it was renamed *to*. Android does the
+        // same via `resolveCategoryOrigin`.
+        let trimmedCategory = category?.trimmingCharacters(in: .whitespaces)
+        let origin = (trimmedCategory?.isEmpty ?? true) ? UNCATEGORIZED_ORIGIN : trimmedCategory!
+        let preference = categoryPreferences.first { $0.originName == origin }
+            ?? categoryPreferences.first { $0.displayName.caseInsensitiveCompare(origin) == .orderedSame }
+        let categoryDefaultDays = preference?.defaultShelfLifeDays
+        return ShelfLife.suggest(
+            detectedDate: detectedDate,
+            rememberedDays: rememberedDays,
+            categoryDefaultDays: categoryDefaultDays
+        )
+    }
+
+    /// Learns how long `item`'s product keeps, so a future scan of the same barcode pre-fills
+    /// its expiry date (see `resolveSuggestedExpiry`). Only new items teach the cache: editing
+    /// an old item's date says nothing about how long a *fresh* one lasts, which is the same
+    /// rule `rememberStorageLocation` follows. An implausible span is skipped rather than
+    /// stored - see `ShelfLife.learnableShelfLife`.
+    ///
+    /// Must run after `saveLocalProduct`, which is what guarantees the row exists: this
+    /// deliberately only updates an already-cached barcode, so it can't leave behind a
+    /// half-populated, nameless product.
+    private func rememberShelfLife(barcode: String, item: PantryItem) {
+        guard let days = ShelfLife.learnableShelfLife(addedDate: item.addedDate, expiryDate: item.expiryDate) else { return }
+        let trimmed = barcode.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+        existing.shelfLifeDays = days
+        try? modelContext.save()
+    }
+
+    /// Android's counterpart is a one-time Room migration (MIGRATION_8_9); SwiftData has no
+    /// declarative migration mechanism here, so this UserDefaults flag is the equivalent
+    /// "runs exactly once" guard - the same pattern
+    /// `backfillKnownProductNamesFromInventoryIfNeeded` uses.
+    ///
+    /// Seeds each cached product's shelf life from the most recently added pantry item carrying
+    /// that barcode, so an existing user gets suggestions for products they already own
+    /// immediately rather than only after adding each one again. Spans
+    /// `ShelfLife.learnableShelfLife` would reject are skipped, leaving the value nil rather
+    /// than seeding something the app would refuse to learn itself.
+    private func backfillShelfLivesFromInventoryIfNeeded() {
+        let flagKey = "didBackfillShelfLivesFromInventory_v1"
+        guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
+
+        var newestByBarcode: [String: PantryItem] = [:]
+        for item in items {
+            guard let barcode = item.barcode?.trimmingCharacters(in: .whitespaces), !barcode.isEmpty else { continue }
+            if let existing = newestByBarcode[barcode], existing.addedDate >= item.addedDate { continue }
+            newestByBarcode[barcode] = item
+        }
+
+        for (barcode, item) in newestByBarcode {
+            guard let days = ShelfLife.learnableShelfLife(addedDate: item.addedDate, expiryDate: item.expiryDate) else { continue }
+            let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == barcode })
+            guard let record = try? modelContext.fetch(descriptor).first, record.shelfLifeDays == nil else { continue }
+            record.shelfLifeDays = days
+        }
+        try? modelContext.save()
+        UserDefaults.standard.set(true, forKey: flagKey)
     }
 
     /// The manual shopping-list position last recorded for `name` via `recordSortOrder`, or nil
@@ -411,6 +499,7 @@ public class NativePantryViewModel: ObservableObject {
                 quantity: nil
             )
             productNotFoundBarcode = nil
+            suggestedExpiry = resolveSuggestedExpiry(barcode: barcode, category: cached.category)
             isLookingUpBarcode = false
             return
         }
@@ -446,13 +535,17 @@ public class NativePantryViewModel: ObservableObject {
                         quantity: quantity
                     )
                     self.productNotFoundBarcode = nil
+                    self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: category)
                 } else {
                     self.scannedProduct = nil
                     self.productNotFoundBarcode = barcode
+                    // Unknown product, but the barcode may still have been added by hand before.
+                    self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: nil)
                 }
             } catch {
                 self.scannedProduct = nil
                 self.productNotFoundBarcode = barcode
+                self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: nil)
             }
             self.isLookingUpBarcode = false
         }
@@ -484,6 +577,7 @@ public class NativePantryViewModel: ObservableObject {
         recordProductName(item.name)
         if let barcode = item.barcode {
             saveLocalProduct(barcode: barcode, name: item.name, brand: item.brand, imageUrl: item.imageUrl, category: item.category)
+            if isNewItem { rememberShelfLife(barcode: barcode, item: item) }
         }
 
         if isNewItem {
@@ -808,6 +902,27 @@ public class NativePantryViewModel: ObservableObject {
         loadCategoryPreferences()
     }
 
+    /// Sets the shelf life, in days, pre-filled on a new item in this category when its barcode
+    /// has no remembered shelf life of its own. Nil clears the default. Like
+    /// `setCategoryEnabled`, every origin sharing this category's display name is updated as a
+    /// unit, since merged categories are a single row to the user.
+    public func setCategoryDefaultShelfLife(_ originName: String, days: Int?) {
+        let descriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.originName == originName })
+        guard let target = try? modelContext.fetch(descriptor).first else { return }
+
+        let sanitized = days.map { min(max($0, 0), ShelfLife.maxLearnableDays) }
+        let displayName = target.displayName
+        let allDescriptor = FetchDescriptor<CategoryPreferenceRecord>(predicate: #Predicate { $0.displayName == displayName })
+        if let all = try? modelContext.fetch(allDescriptor) {
+            for record in all {
+                record.defaultShelfLifeDays = sanitized
+            }
+        }
+
+        try? modelContext.save()
+        loadCategoryPreferences()
+    }
+
     /// Bulk on/off switch for every category at once, so the user isn't forced to flip each
     /// `setCategoryEnabled` toggle one by one.
     public func setAllCategoriesEnabled(_ enabled: Bool) {
@@ -857,6 +972,7 @@ public class NativePantryViewModel: ObservableObject {
         scannedProduct = nil
         productNotFoundBarcode = nil
         detectedDate = nil
+        suggestedExpiry = nil
         isLookingUpBarcode = false
         scanningShoppingListEntryId = nil
     }

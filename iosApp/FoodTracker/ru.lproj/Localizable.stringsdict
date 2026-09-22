@@ -82,5 +82,65 @@
             <string>%d продукта истекают в течение следующих 7 дней</string>
         </dict>
     </dict>
+    <key>expiry_suggestion_remembered_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Как в прошлый раз · %d день</string>
+            <key>few</key>
+            <string>Как в прошлый раз · %d дня</string>
+            <key>many</key>
+            <string>Как в прошлый раз · %d дней</string>
+            <key>other</key>
+            <string>Как в прошлый раз · %d дня</string>
+        </dict>
+    </dict>
+    <key>expiry_suggestion_category_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>Стандарт для «%1$@» · %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d день</string>
+            <key>few</key>
+            <string>%d дня</string>
+            <key>many</key>
+            <string>%d дней</string>
+            <key>other</key>
+            <string>%d дня</string>
+        </dict>
+    </dict>
+    <key>category_settings_shelf_life_days_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d д</string>
+            <key>few</key>
+            <string>%d д</string>
+            <key>many</key>
+            <string>%d д</string>
+            <key>other</key>
+            <string>%d д</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

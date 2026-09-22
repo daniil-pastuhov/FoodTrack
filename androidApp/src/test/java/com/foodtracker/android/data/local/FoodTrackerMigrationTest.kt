@@ -9,6 +9,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -86,7 +87,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
-                FoodTrackerDatabase.MIGRATION_7_8
+                FoodTrackerDatabase.MIGRATION_7_8,
+                FoodTrackerDatabase.MIGRATION_8_9
             )
             .build()
 
@@ -166,7 +168,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
-                FoodTrackerDatabase.MIGRATION_7_8
+                FoodTrackerDatabase.MIGRATION_7_8,
+                FoodTrackerDatabase.MIGRATION_8_9
             )
             .build()
 
@@ -255,7 +258,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_4_5,
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
-                FoodTrackerDatabase.MIGRATION_7_8
+                FoodTrackerDatabase.MIGRATION_7_8,
+                FoodTrackerDatabase.MIGRATION_8_9
             )
             .build()
 
@@ -360,7 +364,12 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_5_6, FoodTrackerDatabase.MIGRATION_6_7, FoodTrackerDatabase.MIGRATION_7_8)
+            .addMigrations(
+                FoodTrackerDatabase.MIGRATION_5_6,
+                FoodTrackerDatabase.MIGRATION_6_7,
+                FoodTrackerDatabase.MIGRATION_7_8,
+                FoodTrackerDatabase.MIGRATION_8_9
+            )
             .build()
 
         val knownNames = db.productNameDao().getRecentNamesFlow().first()
@@ -454,12 +463,164 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_6_7, FoodTrackerDatabase.MIGRATION_7_8)
+            .addMigrations(
+                FoodTrackerDatabase.MIGRATION_6_7,
+                FoodTrackerDatabase.MIGRATION_7_8,
+                FoodTrackerDatabase.MIGRATION_8_9
+            )
             .build()
 
         val cached = db.localProductDao().getByBarcode("0000001111111")
         assertNotNull("pantry item with a barcode must be backfilled into the local cache", cached)
         assertEquals("Custom Snack", cached!!.name)
+
+        db.close()
+    }
+
+    @Test
+    fun migrate8To9BackfillsShelfLifeFromInventory() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-8-9.db")
+        dbFile.delete()
+
+        // Version-8 schema by hand, seeded so each barcode exercises one branch of the
+        // backfill's WHERE/ORDER BY: a plain one, one whose newest row is the value that must
+        // win, one whose only span is negative, and one whose only span is implausibly long.
+        SQLiteDatabase.openOrCreateDatabase(dbFile, null).use { db ->
+            db.execSQL(
+                """
+                CREATE TABLE pantry_items (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    barcode TEXT,
+                    imageUrl TEXT,
+                    expiryDateEpochDays INTEGER NOT NULL,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    storageLocation TEXT NOT NULL,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    notes TEXT,
+                    essential INTEGER NOT NULL DEFAULT 1
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE shopping_list_entries (
+                    id TEXT NOT NULL PRIMARY KEY,
+                    productName TEXT NOT NULL,
+                    barcode TEXT,
+                    category TEXT,
+                    quantity INTEGER NOT NULL DEFAULT 1,
+                    addedDateEpochDays INTEGER NOT NULL,
+                    sortOrder REAL NOT NULL DEFAULT 0
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE known_product_names (
+                    normalizedName TEXT NOT NULL PRIMARY KEY,
+                    displayName TEXT NOT NULL,
+                    lastUsedAtEpochMillis INTEGER NOT NULL,
+                    sortOrder REAL DEFAULT NULL
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE local_products (
+                    barcode TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    imageUrl TEXT,
+                    category TEXT
+                )
+                """.trimIndent()
+            )
+            db.execSQL(
+                """
+                CREATE TABLE category_preferences (
+                    originName TEXT NOT NULL PRIMARY KEY,
+                    displayName TEXT NOT NULL,
+                    sortOrder REAL NOT NULL DEFAULT 0,
+                    enabled INTEGER NOT NULL DEFAULT 1
+                )
+                """.trimIndent()
+            )
+
+            fun seedProduct(barcode: String) = db.insert(
+                "local_products",
+                null,
+                ContentValues().apply {
+                    put("barcode", barcode)
+                    put("name", "Product $barcode")
+                    put("brand", "Brand")
+                    put("imageUrl", "https://example.invalid/$barcode.png")
+                    put("category", "Dairy")
+                }
+            )
+
+            fun seedItem(id: String, barcode: String, addedDay: Int, expiryDay: Int) = db.insert(
+                "pantry_items",
+                null,
+                ContentValues().apply {
+                    put("id", id)
+                    put("name", "Item $id")
+                    put("brand", null as String?)
+                    put("barcode", barcode)
+                    put("imageUrl", null as String?)
+                    put("expiryDateEpochDays", expiryDay)
+                    put("addedDateEpochDays", addedDay)
+                    put("storageLocation", "Fridge")
+                    put("category", null as String?)
+                    put("quantity", 1)
+                    put("notes", null as String?)
+                    put("essential", 1)
+                }
+            )
+
+            listOf("1111", "2222", "3333", "4444", "5555").forEach(::seedProduct)
+            seedItem("a", "1111", addedDay = 20000, expiryDay = 20014)          // 14 days
+            seedItem("b", "2222", addedDay = 20000, expiryDay = 20030)          // older, 30 days
+            seedItem("c", "2222", addedDay = 20050, expiryDay = 20055)          // newest, 5 days
+            seedItem("d", "3333", addedDay = 20000, expiryDay = 19990)          // added expired
+            seedItem("e", "4444", addedDay = 20000, expiryDay = 20000 + 4000)   // implausible
+            // 5555 has no pantry item at all.
+            db.version = 8
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_8_9)
+            .build()
+        val dao = db.localProductDao()
+
+        assertEquals(
+            "a single past purchase must seed that barcode's shelf life",
+            14,
+            dao.getShelfLifeDays("1111")
+        )
+        assertEquals(
+            "the most recently added purchase wins over older ones",
+            5,
+            dao.getShelfLifeDays("2222")
+        )
+        assertNull(
+            "an item added already expired says nothing about a fresh one's shelf life",
+            dao.getShelfLifeDays("3333")
+        )
+        assertNull(
+            "an implausibly long span must not be seeded - the app would refuse to learn it",
+            dao.getShelfLifeDays("4444")
+        )
+        assertNull("a barcode never added has nothing to learn from", dao.getShelfLifeDays("5555"))
+
+        // The backfill must not disturb the cached product details it writes alongside.
+        val untouched = dao.getByBarcode("1111")
+        assertNotNull(untouched)
+        assertEquals("Product 1111", untouched!!.name)
+        assertEquals("Brand", untouched.brand)
 
         db.close()
     }

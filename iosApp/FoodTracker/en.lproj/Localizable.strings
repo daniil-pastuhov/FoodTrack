@@ -186,3 +186,10 @@
 "widget_shopping_list_empty" = "Your shopping list is empty";
 "widget_overview_title" = "Pantry Overview";
 "widget_overview_description" = "Shows what's expired or expiring soon, followed by your shopping list";
+
+"category_settings_shelf_life_none" = "Set shelf life";
+"category_settings_shelf_life_content_description" = "Set default shelf life";
+"category_settings_shelf_life_dialog_title" = "Default shelf life";
+"category_settings_shelf_life_dialog_message" = "New items in this category start with this many days until they expire, unless the barcode already has a remembered shelf life or a date was read off the packaging.";
+"category_settings_shelf_life_field_label" = "Days";
+"category_settings_shelf_life_clear" = "Clear";

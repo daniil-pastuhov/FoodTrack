@@ -11,12 +11,24 @@ final class LocalProductRecord {
     var brand: String?
     var imageUrl: String?
     var category: String?
+    /// Shelf life in days learned from the last time this barcode was added to the pantry, used
+    /// to pre-fill the expiry date on a re-scan. Nil until the product has been added once (or
+    /// when the observed span was implausible - see `ShelfLife.learnableShelfLife`).
+    var shelfLifeDays: Int?
 
-    init(barcode: String, name: String, brand: String? = nil, imageUrl: String? = nil, category: String? = nil) {
+    init(
+        barcode: String,
+        name: String,
+        brand: String? = nil,
+        imageUrl: String? = nil,
+        category: String? = nil,
+        shelfLifeDays: Int? = nil
+    ) {
         self.barcode = barcode
         self.name = name
         self.brand = brand
         self.imageUrl = imageUrl
         self.category = category
+        self.shelfLifeDays = shelfLifeDays
     }
 }

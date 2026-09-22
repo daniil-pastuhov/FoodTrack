@@ -14,7 +14,11 @@ data class CategoryPreference(
     val originName: String,
     val displayName: String,
     val sortOrder: Double = 0.0,
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    /** Shelf life, in days, to pre-fill on a new item in this category whose barcode has no
+     *  remembered shelf life of its own - see [com.foodtracker.model.ShelfLife.suggest]. Null
+     *  means no default has been configured, which is the state every category starts in. */
+    val defaultShelfLifeDays: Int? = null
 )
 
 /** Sentinel [CategoryPreference.originName] standing in for products with no category assigned

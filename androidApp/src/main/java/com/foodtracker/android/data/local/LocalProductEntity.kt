@@ -12,5 +12,9 @@ data class LocalProductEntity(
     val name: String,
     val brand: String?,
     val imageUrl: String?,
-    val category: String?
+    val category: String?,
+    /** Shelf life in days learned from the last time this barcode was added to the pantry, used
+     *  to pre-fill the expiry date on a re-scan. Null until the product has been added once (or
+     *  when the observed span was implausible - see `ShelfLife.learnableShelfLife`). */
+    val shelfLifeDays: Int? = null
 )

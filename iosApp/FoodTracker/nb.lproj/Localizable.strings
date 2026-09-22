@@ -186,3 +186,10 @@
 "widget_shopping_list_empty" = "Handlelisten din er tom";
 "widget_overview_title" = "Matskapoversikt";
 "widget_overview_description" = "Viser hva som er utløpt eller snart utløper, etterfulgt av handlelisten din";
+
+"category_settings_shelf_life_none" = "Angi holdbarhet";
+"category_settings_shelf_life_content_description" = "Angi standard holdbarhet";
+"category_settings_shelf_life_dialog_title" = "Standard holdbarhet";
+"category_settings_shelf_life_dialog_message" = "Nye varer i denne kategorien starter med så mange dager igjen, med mindre strekkoden allerede har en husket holdbarhet eller en dato ble lest av emballasjen.";
+"category_settings_shelf_life_field_label" = "Dager";
+"category_settings_shelf_life_clear" = "Fjern";

@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LocalProductEntity::class,
         CategoryPreferenceEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -208,6 +208,37 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                         UNION
                         SELECT category FROM shopping_list_entries WHERE category IS NOT NULL
                     ) combined
+                    """.trimIndent()
+                )
+            }
+        }
+
+        // Adds smart default expiry: a per-barcode shelf life learned from what the user chose
+        // last time, and a per-category fallback configured in Settings. Both feed
+        // `ShelfLife.suggest`, which pre-fills the expiry date on a scanned item.
+        //
+        // The per-barcode column is backfilled from the most recently added pantry item
+        // carrying that barcode, so an existing user gets suggestions for products they already
+        // own immediately rather than only after adding each one again. Spans that
+        // `ShelfLife.learnableShelfLife` would reject (negative, or longer than
+        // MAX_LEARNABLE_DAYS = 10 * 365) are excluded by the WHERE clause, which leaves the
+        // column null for that barcode rather than seeding a value the app would refuse to
+        // learn itself.
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE local_products ADD COLUMN shelfLifeDays INTEGER")
+                db.execSQL("ALTER TABLE category_preferences ADD COLUMN defaultShelfLifeDays INTEGER")
+                db.execSQL(
+                    """
+                    UPDATE local_products SET shelfLifeDays = (
+                        SELECT (p.expiryDateEpochDays - p.addedDateEpochDays)
+                        FROM pantry_items p
+                        WHERE p.barcode = local_products.barcode
+                          AND p.expiryDateEpochDays >= p.addedDateEpochDays
+                          AND (p.expiryDateEpochDays - p.addedDateEpochDays) <= 3650
+                        ORDER BY p.addedDateEpochDays DESC, p.rowid DESC
+                        LIMIT 1
+                    )
                     """.trimIndent()
                 )
             }
