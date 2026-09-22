@@ -5,6 +5,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -101,6 +102,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.lerp
 import kotlin.math.roundToInt
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.components.ItemCard
@@ -145,15 +147,27 @@ fun PantryDashboardScreen(
             state.selectedStatusFilter != StatusFilter.ALL ||
             state.searchQuery.isNotBlank()
 
-    // Drives the collapsing header (TopBar + metric row + Add to Pantry): 0f is fully
-    // expanded, -headerNaturalHeightPx is fully collapsed. Consumed eagerly in onPreScroll
-    // (not on post-scroll/at list boundaries) so the header reacts to any upward drag
-    // immediately, from anywhere in the list, rather than only once the list hits its top.
+    // Drives the collapsing header (TopBar + metric row): 0f is fully expanded,
+    // -(topBar + metrics) is fully collapsed. Consumed eagerly in onPreScroll (not on
+    // post-scroll/at list boundaries) so the header reacts to any upward drag immediately,
+    // from anywhere in the list, rather than only once the list hits its top.
+    //
+    // The TopBar and the metric row are two separate CollapsingHeaders driven by this one
+    // offset: normally they scroll away together (TopBar first, since it's on top), but in
+    // selection mode the TopBar is pinned so its share/delete actions stay reachable no matter
+    // how far down the list the user long-pressed. Only the metric row keeps collapsing then.
     var headerOffsetPx by remember { mutableFloatStateOf(0f) }
-    var headerNaturalHeightPx by remember { mutableFloatStateOf(0f) }
+    var topBarNaturalHeightPx by remember { mutableFloatStateOf(0f) }
+    var metricsNaturalHeightPx by remember { mutableFloatStateOf(0f) }
+    val topBarPinnedFraction by animateFloatAsState(
+        targetValue = if (selectionMode) 1f else 0f,
+        animationSpec = tween(200),
+        label = "topBarPinnedFraction"
+    )
     val headerNestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val headerNaturalHeightPx = topBarNaturalHeightPx + metricsNaturalHeightPx
                 if (headerNaturalHeightPx <= 0f) return Offset.Zero
                 val newOffset = (headerOffsetPx + available.y).coerceIn(-headerNaturalHeightPx, 0f)
                 val consumed = newOffset - headerOffsetPx
@@ -214,162 +228,167 @@ fun PantryDashboardScreen(
                 .nestedScroll(headerNestedScrollConnection)
         ) {
             CollapsingHeader(
-                // Deferred read — see CollapsingHeader. Passing `headerOffsetPx` directly would
+                // Deferred reads — see CollapsingHeader. Passing `headerOffsetPx` directly would
                 // put the state read in this scope and recompose the whole screen per frame.
-                heightOffsetPx = { headerOffsetPx },
-                onNaturalHeightMeasured = { headerNaturalHeightPx = it }
+                heightOffsetPx = {
+                    lerp(headerOffsetPx.coerceAtLeast(-topBarNaturalHeightPx), 0f, topBarPinnedFraction)
+                },
+                onNaturalHeightMeasured = { topBarNaturalHeightPx = it }
             ) {
-                Column {
-                    TopAppBar(
-                        title = {
-                            AnimatedContent(
-                                targetState = selectionMode,
-                                transitionSpec = {
-                                    (fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 }) togetherWith
-                                        (fadeOut(tween(120)) + slideOutVertically(tween(120)) { -it / 3 })
-                                },
-                                label = "topBarTitle"
-                            ) { inSelectionMode ->
-                                if (inSelectionMode) {
-                                    Text(
-                                        text = stringResource(R.string.selection_count_format, selectedIds.size),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                } else {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            contentAlignment = Alignment.Center,
-                                            modifier = Modifier
-                                                .size(36.dp)
-                                                .clip(CircleShape)
-                                                .background(BrandPrimary)
+                TopAppBar(
+                    title = {
+                        AnimatedContent(
+                            targetState = selectionMode,
+                            transitionSpec = {
+                                (fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 }) togetherWith
+                                    (fadeOut(tween(120)) + slideOutVertically(tween(120)) { -it / 3 })
+                            },
+                            label = "topBarTitle"
+                        ) { inSelectionMode ->
+                            if (inSelectionMode) {
+                                Text(
+                                    text = stringResource(R.string.selection_count_format, selectedIds.size),
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        contentAlignment = Alignment.Center,
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(BrandPrimary)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Fastfood,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = stringResource(R.string.app_name),
+                                            style = MaterialTheme.typography.titleLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = stringResource(R.string.app_subtitle),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    navigationIcon = {
+                        AnimatedVisibility(
+                            visible = selectionMode,
+                            enter = fadeIn() + scaleIn(),
+                            exit = fadeOut() + scaleOut()
+                        ) {
+                            IconButton(onClick = { selectedIds = emptySet() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.exit_selection_content_description)
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        AnimatedContent(
+                            targetState = selectionMode,
+                            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
+                            label = "topBarActions"
+                        ) { inSelectionMode ->
+                            if (inSelectionMode) {
+                                Row {
+                                    IconButton(onClick = { showShareDialog = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.RestaurantMenu,
+                                            contentDescription = stringResource(R.string.action_get_recipe_ideas)
+                                        )
+                                    }
+                                    IconButton(onClick = { showDeleteSelectedDialog = true }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = stringResource(R.string.delete)
+                                        )
+                                    }
+                                }
+                            } else {
+                                Row {
+                                    IconButton(onClick = { showFilterSheet = true }) {
+                                        BadgedBox(
+                                            badge = {
+                                                AnimatedDotBadge(visible = filtersActive)
+                                            }
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Fastfood,
-                                                contentDescription = null,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(10.dp))
-                                        Column {
-                                            Text(
-                                                text = stringResource(R.string.app_name),
-                                                style = MaterialTheme.typography.titleLarge,
-                                                fontWeight = FontWeight.Bold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                            Text(
-                                                text = stringResource(R.string.app_subtitle),
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = TextSecondary
+                                                imageVector = Icons.Default.Tune,
+                                                contentDescription = stringResource(R.string.filter_content_description)
                                             )
                                         }
                                     }
                                 }
                             }
-                        },
-                        navigationIcon = {
-                            AnimatedVisibility(
-                                visible = selectionMode,
-                                enter = fadeIn() + scaleIn(),
-                                exit = fadeOut() + scaleOut()
-                            ) {
-                                IconButton(onClick = { selectedIds = emptySet() }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Close,
-                                        contentDescription = stringResource(R.string.exit_selection_content_description)
-                                    )
-                                }
-                            }
-                        },
-                        actions = {
-                            AnimatedContent(
-                                targetState = selectionMode,
-                                transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                                label = "topBarActions"
-                            ) { inSelectionMode ->
-                                if (inSelectionMode) {
-                                    Row {
-                                        IconButton(onClick = { showShareDialog = true }) {
-                                            Icon(
-                                                imageVector = Icons.Default.RestaurantMenu,
-                                                contentDescription = stringResource(R.string.action_get_recipe_ideas)
-                                            )
-                                        }
-                                        IconButton(onClick = { showDeleteSelectedDialog = true }) {
-                                            Icon(
-                                                imageVector = Icons.Default.Delete,
-                                                contentDescription = stringResource(R.string.delete)
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    Row {
-                                        IconButton(onClick = { showFilterSheet = true }) {
-                                            BadgedBox(
-                                                badge = {
-                                                    AnimatedDotBadge(visible = filtersActive)
-                                                }
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Tune,
-                                                    contentDescription = stringResource(R.string.filter_content_description)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.background
-                        )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.background
                     )
+                )
+            }
 
-                    // Urgency Metrics Row — also acts as the primary status filter
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        val expiredColors = expiredStatusColors()
-                        MetricCard(
-                            title = stringResource(R.string.metric_expired),
-                            count = state.expiredCount,
-                            color = expiredColors.foreground,
-                            bgColor = expiredColors.background,
-                            icon = Icons.Default.Error,
-                            selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
-                            onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        val expiringColors = expiringStatusColors()
-                        MetricCard(
-                            title = stringResource(R.string.metric_soon),
-                            count = state.expiringSoonCount,
-                            color = expiringColors.foreground,
-                            bgColor = expiringColors.background,
-                            icon = Icons.Default.Warning,
-                            selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
-                            onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
-                            modifier = Modifier.weight(1f)
-                        )
-                        val freshColors = freshStatusColors()
-                        MetricCard(
-                            title = stringResource(R.string.metric_fresh),
-                            count = state.freshCount,
-                            color = freshColors.foreground,
-                            bgColor = freshColors.background,
-                            icon = Icons.Default.Schedule,
-                            selected = state.selectedStatusFilter == StatusFilter.FRESH,
-                            onClick = { toggleMetricFilter(StatusFilter.FRESH) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+            CollapsingHeader(
+                heightOffsetPx = { (headerOffsetPx + topBarNaturalHeightPx).coerceAtMost(0f) },
+                onNaturalHeightMeasured = { metricsNaturalHeightPx = it }
+            ) {
+                // Urgency Metrics Row — also acts as the primary status filter
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val expiredColors = expiredStatusColors()
+                    MetricCard(
+                        title = stringResource(R.string.metric_expired),
+                        count = state.expiredCount,
+                        color = expiredColors.foreground,
+                        bgColor = expiredColors.background,
+                        icon = Icons.Default.Error,
+                        selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
+                        onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    val expiringColors = expiringStatusColors()
+                    MetricCard(
+                        title = stringResource(R.string.metric_soon),
+                        count = state.expiringSoonCount,
+                        color = expiringColors.foreground,
+                        bgColor = expiringColors.background,
+                        icon = Icons.Default.Warning,
+                        selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
+                        onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    val freshColors = freshStatusColors()
+                    MetricCard(
+                        title = stringResource(R.string.metric_fresh),
+                        count = state.freshCount,
+                        color = freshColors.foreground,
+                        bgColor = freshColors.background,
+                        icon = Icons.Default.Schedule,
+                        selected = state.selectedStatusFilter == StatusFilter.FRESH,
+                        onClick = { toggleMetricFilter(StatusFilter.FRESH) },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 

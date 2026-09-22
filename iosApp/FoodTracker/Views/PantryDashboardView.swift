@@ -281,6 +281,11 @@ public struct PantryDashboardView: View {
     private func toggleSelection(_ id: String) {
         if selectedItemIDs.contains(id) {
             selectedItemIDs.remove(id)
+            // Deselecting the last item ends selection mode, same as tapping Cancel — an empty
+            // selection has nothing to share or delete, so there's no reason to stay in it.
+            if selectedItemIDs.isEmpty {
+                isSelecting = false
+            }
         } else {
             selectedItemIDs.insert(id)
         }
