@@ -32,7 +32,16 @@ enum class CameraScanMode {
      * form, for unpacking a whole shop. Uses the same analyzer as [BARCODE]; only what the
      * screen does with each result differs.
      */
-    BATCH
+    BATCH,
+
+    /**
+     * Photographs a till receipt and reads every product line off it in one pass, filling the
+     * same queue [BATCH] does.
+     *
+     * Runs no live analyzer, like [PHOTO]: a receipt has to be read from one stable,
+     * fully-framed still rather than from the stream. See `ReceiptTextRecognizer`.
+     */
+    RECEIPT
 }
 
 @Composable
@@ -78,7 +87,9 @@ fun CameraPreviewView(
                         onDateFound(result.date)
                     })
                 }
-                CameraScanMode.PHOTO -> {
+                // Both capture a still and process it afterwards, so neither wants a
+                // frame-by-frame analyzer running behind the preview.
+                CameraScanMode.PHOTO, CameraScanMode.RECEIPT -> {
                     imageAnalysis.clearAnalyzer()
                 }
             }

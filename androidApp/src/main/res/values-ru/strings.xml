@@ -139,6 +139,16 @@
     <string name="manual_entry_button">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
     <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список ниже</string>
+    <string name="scan_mode_receipt">Чек</string>
+    <string name="reticle_hint_receipt">Поместите чек целиком в кадр и нажмите, чтобы считать</string>
+    <string name="scan_receipt_button">Считать чек</string>
+    <string name="receipt_nothing_found">На чеке не найдено товаров — попробуйте снять чек целиком</string>
+    <plurals name="receipt_lines_added">
+        <item quantity="one">Добавлен %1$d товар из чека — проверьте ниже</item>
+        <item quantity="few">Добавлено %1$d товара из чека — проверьте ниже</item>
+        <item quantity="many">Добавлено %1$d товаров из чека — проверьте ниже</item>
+        <item quantity="other">Добавлено %1$d товара из чека — проверьте ниже</item>
+    </plurals>
     <string name="batch_queue_empty">Отсканируйте товар, чтобы начать список</string>
     <string name="batch_queue_remove_content_description">Убрать из списка</string>
     <string name="batch_queue_needs_date">Проверьте дату</string>

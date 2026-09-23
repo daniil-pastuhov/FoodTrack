@@ -16,6 +16,10 @@
 		B2E4D7A1C93F4E0A8D5B1C01 /* ProductImageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E4D7A1C93F4E0A8D5B1C02 /* ProductImageView.swift */; };
 		A1C0DE5501B24A7E9F3C0002 /* PantryDirectActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5501B24A7E9F3C0001 /* PantryDirectActions.swift */; };
 		A1C0DE5501B24A7E9F3C0003 /* PantryDirectActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5501B24A7E9F3C0001 /* PantryDirectActions.swift */; };
+		A1C0DE5501B24A7E9F3C0011 /* ReceiptParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5501B24A7E9F3C0010 /* ReceiptParser.swift */; };
+		A1C0DE5501B24A7E9F3C0013 /* NameSimilarity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5501B24A7E9F3C0012 /* NameSimilarity.swift */; };
+		A1C0DE5501B24A7E9F3C0014 /* ReceiptParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5501B24A7E9F3C0010 /* ReceiptParser.swift */; };
+		A1C0DE5501B24A7E9F3C0015 /* NameSimilarity.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C0DE5501B24A7E9F3C0012 /* NameSimilarity.swift */; };
 		B2E4D7A1C93F4E0A8D5B1C03 /* ProductPhotoStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2E4D7A1C93F4E0A8D5B1C04 /* ProductPhotoStore.swift */; };
 		85EDE3768E39D89D2CAFAEF6 /* IOSNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 165499911C0DB28731CAB638 /* IOSNotificationManager.swift */; };
 		8E34B7B4F2C156659A4B9A58 /* NativePantryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF38FF9038F5C71B8C07E1A /* NativePantryViewModel.swift */; };
@@ -98,6 +102,8 @@
 		A1F10C0B7E3D4C5F9B2A6D02 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
 		B2E4D7A1C93F4E0A8D5B1C02 /* ProductImageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageView.swift; sourceTree = "<group>"; };
 		A1C0DE5501B24A7E9F3C0001 /* PantryDirectActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PantryDirectActions.swift; sourceTree = "<group>"; };
+		A1C0DE5501B24A7E9F3C0010 /* ReceiptParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptParser.swift; sourceTree = "<group>"; };
+		A1C0DE5501B24A7E9F3C0012 /* NameSimilarity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameSimilarity.swift; sourceTree = "<group>"; };
 		B2E4D7A1C93F4E0A8D5B1C04 /* ProductPhotoStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductPhotoStore.swift; sourceTree = "<group>"; };
 		D97D056C16484CF5B57A0E6A /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/Localizable.strings; sourceTree = "<group>"; };
 		E3046EB556B04F519AA791E0 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.stringsdict; name = nb; path = nb.lproj/Localizable.stringsdict; sourceTree = "<group>"; };
@@ -322,6 +328,7 @@
 		C8572D1DAE71493E8D0E5A56 /* Parsers */ = {
 			isa = PBXGroup;
 			children = (
+				A1C0DE5501B24A7E9F3C0010 /* ReceiptParser.swift */,
 				7FD3E32DD4AA44818E5AFD19 /* GS1BarcodeParser.swift */,
 			);
 			path = Parsers;
@@ -330,6 +337,7 @@
 		9D4E1F2C3B5A6879788796A5 /* Matching */ = {
 			isa = PBXGroup;
 			children = (
+				A1C0DE5501B24A7E9F3C0012 /* NameSimilarity.swift */,
 				3E7B9F1C2A4D68507F8B9C1E /* ShoppingListMatcher.swift */,
 			);
 			path = Matching;
@@ -504,6 +512,8 @@
 				6A2C4E1B8D3F507A9C1E2B4D /* ShoppingListMatcher.swift in Sources */,
 				86790CDA9E81A2653D490787 /* AppGroup.swift in Sources */,
 				FE7B16743512870CBA9C7C8D /* AppRouter.swift in Sources */,
+				A1C0DE5501B24A7E9F3C0013 /* NameSimilarity.swift in Sources */,
+				A1C0DE5501B24A7E9F3C0011 /* ReceiptParser.swift in Sources */,
 				A1C0DE5501B24A7E9F3C0002 /* PantryDirectActions.swift in Sources */,
 				715C6762ED0A73EC28B252A9 /* ProductNameRecord.swift in Sources */,
 				BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */,
@@ -529,6 +539,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1AA724AE8CD0A4206E3125B /* FoodTrackerWidgetBundle.swift in Sources */,
+				A1C0DE5501B24A7E9F3C0015 /* NameSimilarity.swift in Sources */,
+				A1C0DE5501B24A7E9F3C0014 /* ReceiptParser.swift in Sources */,
 				A1C0DE5501B24A7E9F3C0003 /* PantryDirectActions.swift in Sources */,
 				85D1219C4107167D7E51C5B1 /* ExpiringItemsWidget.swift in Sources */,
 				CEBF5842F3D9AB3B5D3A66B7 /* ShoppingListWidget.swift in Sources */,

@@ -142,6 +142,14 @@
     <string name="manual_entry_button">Manual Entry</string>
     <string name="scan_mode_batch">Batch</string>
     <string name="reticle_hint_batch">Keep scanning — everything lands in the list below</string>
+    <string name="scan_mode_receipt">Receipt</string>
+    <string name="reticle_hint_receipt">Fit the whole receipt in frame, then tap to read it</string>
+    <string name="scan_receipt_button">Read receipt</string>
+    <string name="receipt_nothing_found">No products found on that receipt — try again with the whole receipt in frame</string>
+    <plurals name="receipt_lines_added">
+        <item quantity="one">Added %1$d item from the receipt — check it below</item>
+        <item quantity="other">Added %1$d items from the receipt — check them below</item>
+    </plurals>
     <string name="batch_queue_empty">Scan a product to start the list</string>
     <string name="batch_queue_remove_content_description">Remove from list</string>
     <string name="batch_queue_needs_date">Check date</string>

@@ -299,6 +299,10 @@
 
 "scan_mode_batch" = "Batch";
 "reticle_hint_batch" = "Keep scanning — everything lands in the list below";
+"scan_mode_receipt" = "Receipt";
+"reticle_hint_receipt" = "Fit the whole receipt in frame, then tap to read it";
+"scan_receipt_button" = "Read receipt";
+"receipt_nothing_found" = "No products found on that receipt — try again with the whole receipt in frame";
 "batch_queue_empty" = "Scan a product to start the list";
 "batch_queue_remove_content_description" = "Remove from list";
 "batch_queue_needs_date" = "Check date";

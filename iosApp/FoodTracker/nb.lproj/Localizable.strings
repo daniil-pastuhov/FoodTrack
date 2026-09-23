@@ -299,6 +299,10 @@
 
 "scan_mode_batch" = "Flere";
 "reticle_hint_batch" = "Fortsett å skanne — alt havner i listen under";
+"scan_mode_receipt" = "Kvittering";
+"reticle_hint_receipt" = "Få hele kvitteringen i bildet, og trykk for å lese den";
+"scan_receipt_button" = "Les kvittering";
+"receipt_nothing_found" = "Fant ingen varer på kvitteringen — prøv igjen med hele kvitteringen i bildet";
 "batch_queue_empty" = "Skann en vare for å starte listen";
 "batch_queue_remove_content_description" = "Fjern fra listen";
 "batch_queue_needs_date" = "Sjekk dato";

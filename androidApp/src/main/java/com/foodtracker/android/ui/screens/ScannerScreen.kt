@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -75,6 +76,7 @@ import com.foodtracker.android.R
 import com.foodtracker.android.camera.CameraPreviewView
 import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.camera.ProductImageLabeler
+import com.foodtracker.android.camera.ReceiptTextRecognizer
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
@@ -84,7 +86,11 @@ import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.viewmodel.BatchScanEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
+import kotlinx.coroutines.delay
 import java.io.File
+
+/** How long the receipt result banner stays up before clearing itself. */
+private const val RECEIPT_MESSAGE_VISIBLE_MILLIS = 3000L
 
 @Composable
 fun ScannerScreen(
@@ -109,6 +115,12 @@ fun ScannerScreen(
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCapturingPhoto by remember { mutableStateOf(false) }
     var capturedPhotoUri by remember { mutableStateOf<String?>(null) }
+    // Receipt capture is a one-shot read rather than a photo that is kept, so it needs its own
+    // in-flight flag: `isCapturingPhoto` covers only the shutter, while this also spans the OCR
+    // pass and the queue fill that follow it.
+    var isReadingReceipt by remember { mutableStateOf(false) }
+    var pendingReceiptUri by remember { mutableStateOf<String?>(null) }
+    var receiptMessage by remember { mutableStateOf<String?>(null) }
     var torchEnabled by remember { mutableStateOf(false) }
     var torchAvailable by remember { mutableStateOf(false) }
 
@@ -122,6 +134,24 @@ fun ScannerScreen(
         } else {
             stateHolder.onPhotoLabelingStarted()
             stateHolder.onPhotoLabelsDetected(ProductImageLabeler.suggestNames(context, uri))
+        }
+    }
+
+    // Reads a captured receipt once, off the capture callback, and turns its lines into queue
+    // rows. The file is deleted either way: it has served its purpose by here, and a photo of a
+    // receipt carries a card number and an address worth not leaving on disk.
+    LaunchedEffect(pendingReceiptUri) {
+        val uri = pendingReceiptUri ?: return@LaunchedEffect
+        val lines = ReceiptTextRecognizer.recognizeLines(context, uri)
+        runCatching { File(Uri.parse(uri).path!!).delete() }
+        stateHolder.enqueueReceiptLines(lines) { added ->
+            receiptMessage = if (added > 0) {
+                context.resources.getQuantityString(R.plurals.receipt_lines_added, added, added)
+            } else {
+                context.getString(R.string.receipt_nothing_found)
+            }
+            isReadingReceipt = false
+            pendingReceiptUri = null
         }
     }
 
@@ -211,7 +241,7 @@ fun ScannerScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Scanner Mode Selector. Horizontally scrollable: four chips no longer fit across
+            // Scanner Mode Selector. Horizontally scrollable: the chips no longer fit across
             // a narrow phone, and truncating the last one would hide a whole mode.
             Row(
                 horizontalArrangement = Arrangement.Center,
@@ -239,6 +269,21 @@ fun ScannerScreen(
                     onClick = { currentMode = CameraScanMode.BATCH },
                     label = { Text(stringResource(R.string.scan_mode_batch)) },
                     leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Black.copy(alpha = 0.6f),
+                        labelColor = Color.White,
+                        iconColor = Color.White,
+                        selectedContainerColor = BrandPrimary,
+                        selectedLabelColor = Color.White,
+                        selectedLeadingIconColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                FilterChip(
+                    selected = currentMode == CameraScanMode.RECEIPT,
+                    onClick = { currentMode = CameraScanMode.RECEIPT },
+                    label = { Text(stringResource(R.string.scan_mode_receipt)) },
+                    leadingIcon = { Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = Color.Black.copy(alpha = 0.6f),
                         labelColor = Color.White,
@@ -304,6 +349,7 @@ fun ScannerScreen(
                             CameraScanMode.DATE_OCR -> R.string.reticle_hint_date_ocr
                             CameraScanMode.PHOTO -> R.string.reticle_hint_photo
                             CameraScanMode.BATCH -> R.string.reticle_hint_batch
+                            CameraScanMode.RECEIPT -> R.string.reticle_hint_receipt
                         }
                     ),
                     color = Color.White.copy(alpha = 0.85f),
@@ -317,7 +363,7 @@ fun ScannerScreen(
         }
 
         // Batch queue panel: the review list that replaces stopping at a form per product.
-        if (currentMode == CameraScanMode.BATCH) {
+        if (currentMode == CameraScanMode.BATCH || currentMode == CameraScanMode.RECEIPT) {
             BatchQueuePanel(
                 entries = state.batchQueue,
                 onRemove = stateHolder::removeBatchEntry,
@@ -355,6 +401,83 @@ fun ScannerScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
+                }
+            }
+        }
+
+        // Receipt result banner. Transient and non-blocking: the queue panel below already
+        // shows what was added, so this only has to report the count — and, more usefully, the
+        // case where a photo yielded nothing at all.
+        receiptMessage?.let { message ->
+            LaunchedEffect(message) {
+                delay(RECEIPT_MESSAGE_VISIBLE_MILLIS)
+                receiptMessage = null
+            }
+            Box(
+                contentAlignment = Alignment.TopCenter,
+                modifier = Modifier.fillMaxSize().padding(top = 160.dp)
+            ) {
+                Text(
+                    text = message,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
+        }
+
+        // Shutter Button (Receipt mode). Separate from the photo shutter below: nothing is kept
+        // afterwards — the still is read once, turned into queue rows and deleted — so there is
+        // no captured-photo state to show or retake.
+        if (currentMode == CameraScanMode.RECEIPT) {
+            Box(
+                contentAlignment = Alignment.BottomCenter,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = if (state.batchQueue.isEmpty()) 48.dp else 260.dp)
+            ) {
+                IconButton(
+                    onClick = {
+                        val capture = imageCapture
+                        if (capture == null || isReadingReceipt) return@IconButton
+                        isReadingReceipt = true
+                        // cacheDir, unlike the product photos below: this image is read once and
+                        // never referenced again, so there is nothing to orphan by letting the
+                        // OS reclaim it.
+                        val receiptFile = File(context.cacheDir, "receipt_${System.currentTimeMillis()}.jpg")
+                        capture.takePicture(
+                            ImageCapture.OutputFileOptions.Builder(receiptFile).build(),
+                            ContextCompat.getMainExecutor(context),
+                            object : ImageCapture.OnImageSavedCallback {
+                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                    pendingReceiptUri = Uri.fromFile(receiptFile).toString()
+                                }
+
+                                override fun onError(exception: ImageCaptureException) {
+                                    isReadingReceipt = false
+                                }
+                            }
+                        )
+                    },
+                    enabled = !isReadingReceipt,
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(Color.White, CircleShape)
+                        .border(3.dp, BrandPrimary, CircleShape)
+                ) {
+                    if (isReadingReceipt) {
+                        CircularProgressIndicator(color = BrandPrimary, modifier = Modifier.size(28.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = stringResource(R.string.scan_receipt_button),
+                            tint = Color.Black,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
         }
@@ -418,7 +541,7 @@ fun ScannerScreen(
         }
 
         // Bottom Result Card (Barcode lookup result, OCR detection, or captured photo)
-        if (currentMode != CameraScanMode.BATCH &&
+        if (currentMode != CameraScanMode.BATCH && currentMode != CameraScanMode.RECEIPT &&
             (state.isLookingUpBarcode || state.scannedProduct != null ||
                 (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) || capturedPhotoUri != null)) {
             Card(

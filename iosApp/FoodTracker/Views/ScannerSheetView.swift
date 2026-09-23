@@ -11,6 +11,11 @@ public struct ScannerSheetView: View {
     @State private var isCapturingPhoto: Bool = false
     @State private var capturedPhotoURL: URL?
     @State private var photoCaptureFailed: Bool = false
+    // Receipt capture is a one-shot read rather than a photo that is kept, so it needs its own
+    // in-flight flag: `isCapturingPhoto` covers only the shutter, while this also spans the OCR
+    // pass and the queue fill that follow it.
+    @State private var isReadingReceipt: Bool = false
+    @State private var receiptMessage: String?
     @State private var torchEnabled: Bool = false
 
     var onProceedToAdd: (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
@@ -131,6 +136,7 @@ public struct ScannerSheetView: View {
                 Picker(L10n.scannerModePickerLabel, selection: $mode) {
                     Text(L10n.scanModeBarcode).tag(IOSCameraMode.barcode)
                     Text(L10n.scanModeBatch).tag(IOSCameraMode.batch)
+                    Text(L10n.scanModeReceipt).tag(IOSCameraMode.receipt)
                     Text(L10n.scanModeDateOcr).tag(IOSCameraMode.dateOcr)
                     Text(L10n.scanModePhoto).tag(IOSCameraMode.photo)
                 }
@@ -194,6 +200,69 @@ public struct ScannerSheetView: View {
                         .padding(.bottom, 8)
                 }
 
+                // Receipt result banner. Transient and non-blocking: the queue below already
+                // shows what was added, so this only has to report the count — and, more
+                // usefully, the case where a photo yielded nothing at all.
+                if let receiptMessage {
+                    Text(receiptMessage)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.72))
+                        .cornerRadius(20)
+                        .padding(.bottom, 8)
+                        .task(id: receiptMessage) {
+                            try? await Task.sleep(for: .seconds(3))
+                            self.receiptMessage = nil
+                        }
+                }
+
+                // Shutter Button (Receipt mode). Separate from the photo shutter below: nothing
+                // is kept afterwards — the still is read once, turned into queue rows and
+                // deleted — so there is no captured-photo state to show or retake.
+                if mode == .receipt {
+                    Button(action: {
+                        guard let controller = cameraController, !isReadingReceipt else { return }
+                        isReadingReceipt = true
+                        controller.capturePhoto { url in
+                            guard let url else {
+                                DispatchQueue.main.async { isReadingReceipt = false }
+                                return
+                            }
+                            CameraScannerViewController.recognizeReceiptLines(at: url) { lines in
+                                // The photo has served its purpose, and one of a receipt carries
+                                // a card number and an address worth not leaving on disk.
+                                try? FileManager.default.removeItem(at: url)
+                                let added = viewModel.enqueueReceiptLines(lines)
+                                receiptMessage = added > 0
+                                    ? L10n.receiptLinesAdded(added)
+                                    : L10n.receiptNothingFound
+                                isReadingReceipt = false
+                            }
+                        }
+                    }) {
+                        ZStack {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 72, height: 72)
+                                .overlay(Circle().stroke(Color.accentColor, lineWidth: 3))
+                            if isReadingReceipt {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                            } else {
+                                Image(systemName: "doc.text.viewfinder")
+                                    .font(.system(size: 26))
+                                    .foregroundColor(.black)
+                            }
+                        }
+                    }
+                    .disabled(isReadingReceipt)
+                    .accessibilityLabel(L10n.scanReceiptButton)
+                    .padding(.bottom, 24)
+                }
+
                 // Shutter Button (Photo mode, before a photo has been taken)
                 if mode == .photo && capturedPhotoURL == nil {
                     Button(action: {
@@ -228,7 +297,7 @@ public struct ScannerSheetView: View {
                 }
 
                 // Bottom Product Result Card
-                if mode == .batch {
+                if mode == .batch || mode == .receipt {
                     BatchQueuePanel(
                         entries: viewModel.batchQueue,
                         onRemove: { viewModel.removeBatchEntry($0) },
@@ -436,6 +505,8 @@ public struct ScannerSheetView: View {
         switch mode {
         case .batch:
             return L10n.reticleHintBatch
+        case .receipt:
+            return L10n.reticleHintReceipt
         case .barcode:
             return L10n.reticleHintBarcode
         case .dateOcr:

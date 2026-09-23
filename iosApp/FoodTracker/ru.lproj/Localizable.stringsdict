@@ -62,6 +62,26 @@
             <string>истекает через %2$d дня. Не забудьте съесть или заморозить его!</string>
         </dict>
     </dict>
+    <key>receipt_lines_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавлен %d товар из чека — проверьте ниже</string>
+            <key>few</key>
+            <string>Добавлено %d товара из чека — проверьте ниже</string>
+            <key>many</key>
+            <string>Добавлено %d товаров из чека — проверьте ниже</string>
+            <key>other</key>
+            <string>Добавлено %d товара из чека — проверьте ниже</string>
+        </dict>
+    </dict>
     <key>notif_digest_title_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

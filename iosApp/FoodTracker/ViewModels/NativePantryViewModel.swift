@@ -556,6 +556,9 @@ public class NativePantryViewModel: ObservableObject {
         let settings = SettingsStore.shared.settings
         batchQueue.append(
             BatchScanEntry(
+                // The barcode doubles as the row id for scanned rows, so re-scanning the same
+                // product keeps finding the same row. Receipt rows get a generated id instead.
+                id: barcode,
                 barcode: barcode,
                 name: barcode,
                 expiryDate: gs1Date ?? Date(),
@@ -579,7 +582,7 @@ public class NativePantryViewModel: ObservableObject {
             )
             // Re-find rather than closing over the index: the user may have edited or removed
             // this row while the lookup was in flight.
-            guard let index = batchQueue.firstIndex(where: { $0.barcode == barcode && $0.isLookingUp }) else { return }
+            guard let index = batchQueue.firstIndex(where: { $0.id == barcode && $0.isLookingUp }) else { return }
             batchQueue[index].name = product?.name ?? batchQueue[index].name
             batchQueue[index].brand = product?.brand
             batchQueue[index].imageUrl = product?.imageUrl
@@ -590,8 +593,8 @@ public class NativePantryViewModel: ObservableObject {
         }
     }
 
-    public func removeBatchEntry(_ barcode: String) {
-        batchQueue.removeAll { $0.barcode == barcode }
+    public func removeBatchEntry(_ id: String) {
+        batchQueue.removeAll { $0.id == id }
     }
 
     public func clearBatchQueue() {
@@ -657,6 +660,106 @@ public class NativePantryViewModel: ObservableObject {
         dismissDuplicate()
         WidgetCenter.shared.reloadAllTimelines()
         return record.asPantryItem
+    }
+
+    /// How close a receipt line's text must be to a known product before its details are
+    /// adopted. Higher than the shopping list's suggestion threshold, which feeds a dialog the
+    /// user answers; this one pre-fills a row silently. Mirrors `shared`'s
+    /// `RECEIPT_MATCH_THRESHOLD`.
+    private static let receiptMatchThreshold = 0.6
+
+    /// Turns the OCR'd text of a receipt into batch-queue rows, returning how many were added.
+    ///
+    /// Everything here is a *suggestion*: the rows land in the same queue barcode scanning
+    /// uses, where the user reviews, edits and commits them. Receipt text is heuristic in a way
+    /// a barcode is not (see `ReceiptParser`), so nothing is saved without that pass.
+    ///
+    /// A parsed name is matched against the products this device already knows — the
+    /// autosuggest names and the local product cache — with the same scorer the shopping list
+    /// matches with. A confident hit adopts that product's proper name, category and learned
+    /// shelf life, so a receipt's `MLK SEMI 2PT` becomes the milk the user has added before,
+    /// with its usual expiry already filled in. A miss keeps the receipt's own text.
+    ///
+    /// Rows are appended rather than merged: two lines both reading `APPLES` may well be two
+    /// separate purchases, and unlike a re-scanned barcode there's no identity to prove
+    /// otherwise.
+    ///
+    /// Mirrors `PantryStateHolder.enqueueReceiptLines`.
+    @discardableResult
+    public func enqueueReceiptLines(_ ocrLines: [String]) -> Int {
+        let parsed = ReceiptParser.parseLines(ocrLines)
+        guard !parsed.isEmpty else { return 0 }
+
+        let settings = SettingsStore.shared.settings
+        let cached = allCachedProducts()
+        let rows = parsed.map { line -> BatchScanEntry in
+            let match = matchReceiptLine(line, cached: cached)
+            let suggestion = ShelfLife.suggest(
+                detectedDate: nil,
+                rememberedDays: match?.barcode.flatMap { shelfLifeDays(for: $0) },
+                categoryDefaultDays: categoryDefaultShelfLife(for: match?.category)
+            )
+            return BatchScanEntry(
+                id: "receipt_\(UUID().uuidString)",
+                barcode: match?.barcode,
+                name: match?.name ?? line.name,
+                brand: match?.brand,
+                imageUrl: match?.imageUrl,
+                category: match?.category,
+                expiryDate: suggestion.date,
+                quantity: line.quantity,
+                storageLocation: settings.storageLocationForNewItem,
+                expirySource: suggestion.source
+            )
+        }
+        batchQueue.append(contentsOf: rows)
+        return rows.count
+    }
+
+    /// What a receipt line was resolved to, when it was resolved to anything.
+    ///
+    /// Not `ProductInfo`: that requires a barcode, and a line matched only against a remembered
+    /// name has none. Mirrors `shared`'s `ReceiptMatch`.
+    private struct ReceiptMatch {
+        let name: String
+        var barcode: String?
+        var brand: String?
+        var imageUrl: String?
+        var category: String?
+    }
+
+    /// The cached product a receipt line most likely refers to, or nil when nothing is close
+    /// enough. Falls back to the autosuggest names: those carry no barcode or category, but
+    /// adopting a name the user has typed before still beats keeping a till's abbreviation.
+    private func matchReceiptLine(_ line: ReceiptLine, cached: [ReceiptMatch]) -> ReceiptMatch? {
+        let best = cached
+            .map { ($0, NameSimilarity.score(line.name, $0.name)) }
+            .filter { $0.1 >= Self.receiptMatchThreshold }
+            .max { $0.1 < $1.1 }?
+            .0
+        if let best { return best }
+
+        guard let name = NameSimilarity.bestMatch(
+            line.name,
+            candidates: knownProductNames,
+            threshold: Self.receiptMatchThreshold
+        ) else {
+            return nil
+        }
+        return ReceiptMatch(name: name)
+    }
+
+    private func allCachedProducts() -> [ReceiptMatch] {
+        let descriptor = FetchDescriptor<LocalProductRecord>()
+        return ((try? modelContext.fetch(descriptor)) ?? []).map {
+            ReceiptMatch(
+                name: $0.name,
+                barcode: $0.barcode,
+                brand: $0.brand,
+                imageUrl: $0.imageUrl,
+                category: $0.category
+            )
+        }
     }
 
     private func cachedProduct(for barcode: String) -> ProductInfo? {

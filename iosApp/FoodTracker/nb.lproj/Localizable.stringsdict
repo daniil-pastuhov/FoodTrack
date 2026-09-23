@@ -50,6 +50,22 @@
             <string>utløper om %2$d dager. Husk å spise eller fryse det!</string>
         </dict>
     </dict>
+    <key>receipt_lines_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>La til %d vare fra kvitteringen — sjekk den under</string>
+            <key>other</key>
+            <string>La til %d varer fra kvitteringen — sjekk dem under</string>
+        </dict>
+    </dict>
     <key>notif_digest_title_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

@@ -211,6 +211,13 @@ public enum L10n {
     public static var reticleHintPhoto: String { NSLocalizedString("reticle_hint_photo", comment: "") }
     public static var scanModeBatch: String { NSLocalizedString("scan_mode_batch", comment: "") }
     public static var reticleHintBatch: String { NSLocalizedString("reticle_hint_batch", comment: "") }
+    public static var scanModeReceipt: String { NSLocalizedString("scan_mode_receipt", comment: "") }
+    public static var reticleHintReceipt: String { NSLocalizedString("reticle_hint_receipt", comment: "") }
+    public static var scanReceiptButton: String { NSLocalizedString("scan_receipt_button", comment: "") }
+    public static var receiptNothingFound: String { NSLocalizedString("receipt_nothing_found", comment: "") }
+    public static func receiptLinesAdded(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("receipt_lines_added", comment: ""), count)
+    }
     public static var batchQueueEmpty: String { NSLocalizedString("batch_queue_empty", comment: "") }
     public static var batchQueueRemoveContentDescription: String { NSLocalizedString("batch_queue_remove_content_description", comment: "") }
     public static var batchQueueNeedsDate: String { NSLocalizedString("batch_queue_needs_date", comment: "") }

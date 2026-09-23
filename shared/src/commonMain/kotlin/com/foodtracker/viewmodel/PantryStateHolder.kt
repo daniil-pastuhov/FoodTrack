@@ -20,7 +20,10 @@ import com.foodtracker.model.SortOption
 import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.model.resolveCategoryOrigin
+import com.foodtracker.match.NameSimilarity
 import com.foodtracker.parser.GS1BarcodeParser
+import com.foodtracker.parser.ReceiptLine
+import com.foodtracker.parser.ReceiptParser
 import com.foodtracker.recognition.FoodLabelSuggestion
 import com.foodtracker.share.ImportedShoppingEntry
 import com.foodtracker.share.ShoppingListShare
@@ -52,6 +55,20 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.ExperimentalTime
+
+/** How close a receipt line's text must be to a known product before its details are adopted.
+ *  Higher than `SHOPPING_MATCH_SUGGESTION_THRESHOLD`, which feeds a dialog the user answers;
+ *  this one pre-fills a row silently, so it should only fire when fairly sure. */
+private const val RECEIPT_MATCH_THRESHOLD = 0.6
+
+/** What a receipt line was resolved to, when it was resolved to anything. */
+private data class ReceiptMatch(
+    val name: String,
+    val barcode: String? = null,
+    val brand: String? = null,
+    val imageUrl: String? = null,
+    val category: String? = null
+)
 
 enum class StatusFilter {
     ALL,
@@ -578,6 +595,9 @@ class PantryStateHolder(
         val settings = _uiState.value.settings
         val gs1Date = GS1BarcodeParser.extractExpiryDate(barcode)
         val placeholder = BatchScanEntry(
+            // The barcode doubles as the row id for scanned rows, so re-scanning the same
+            // product keeps finding the same row. Receipt rows get a generated id instead.
+            id = barcode,
             barcode = barcode,
             name = barcode,
             expiryDate = gs1Date ?: DateUtils.today(),
@@ -599,7 +619,7 @@ class PantryStateHolder(
                     batchQueue = state.batchQueue.map { entry ->
                         // Re-read from state rather than closing over `placeholder`: the user
                         // may have edited or removed this row while the lookup was in flight.
-                        if (entry.barcode != barcode || !entry.isLookingUp) entry
+                        if (entry.id != barcode || !entry.isLookingUp) entry
                         else entry.copy(
                             name = product?.name ?: entry.name,
                             brand = product?.brand,
@@ -615,15 +635,103 @@ class PantryStateHolder(
         }
     }
 
-    fun updateBatchEntry(entry: BatchScanEntry) {
-        _uiState.update { state ->
-            state.copy(batchQueue = state.batchQueue.map { if (it.barcode == entry.barcode) entry else it })
+    /**
+     * Turns the OCR'd text of a receipt into batch-queue rows and reports how many were added.
+     *
+     * Everything here is a *suggestion*: the rows land in the same queue barcode scanning uses,
+     * where the user reviews, edits and commits them. Receipt text is heuristic in a way a
+     * barcode is not (see [ReceiptParser]), so nothing is saved without that pass.
+     *
+     * A parsed name is matched against the products this device already knows — the autosuggest
+     * names and the local product cache — using the same scorer the shopping list matches with.
+     * A confident hit adopts that product's proper name, category and learned shelf life, so a
+     * receipt's `MLK SEMI 2PT` becomes the milk the user has added before, with its usual expiry
+     * already filled in. A miss keeps the receipt's own text and the category default.
+     *
+     * Rows are appended rather than merged: two lines both reading `APPLES` may well be two
+     * separate purchases, and unlike a re-scanned barcode there's no identity to prove otherwise.
+     */
+    fun enqueueReceiptLines(ocrLines: List<String>, onComplete: (added: Int) -> Unit = {}) {
+        val parsed = ReceiptParser.parseLines(ocrLines)
+        if (parsed.isEmpty()) {
+            onComplete(0)
+            return
+        }
+        coroutineScope.launch {
+            val settings = _uiState.value.settings
+            val cached = localProductRepository.getAll()
+            val knownNames = productNameRepository.getKnownNamesFlow().first()
+            val rows = parsed.map { line ->
+                val match = matchReceiptLine(line, cached, knownNames)
+                val suggestion = suggestExpiry(
+                    detectedDate = null,
+                    barcode = match?.barcode,
+                    category = match?.category
+                )
+                BatchScanEntry(
+                    id = newReceiptRowId(),
+                    barcode = match?.barcode,
+                    name = match?.name ?: line.name,
+                    brand = match?.brand,
+                    imageUrl = match?.imageUrl,
+                    category = match?.category,
+                    expiryDate = suggestion.date,
+                    quantity = line.quantity,
+                    storageLocation = settings.storageLocationForNewItem(),
+                    expirySource = suggestion.source
+                )
+            }
+            _uiState.update { it.copy(batchQueue = it.batchQueue + rows) }
+            onComplete(rows.size)
         }
     }
 
-    fun removeBatchEntry(barcode: String) {
+    /**
+     * The cached product a receipt line most likely refers to, or null when nothing is close
+     * enough.
+     *
+     * Falls back to the autosuggest names when no cached product matches: those carry no
+     * barcode or category, but adopting a name the user has typed before still beats keeping a
+     * till's abbreviation. The threshold is deliberately higher than the shopping list's
+     * suggestion threshold — that one feeds a "did you mean?" dialog the user answers, while
+     * this silently pre-fills a row, so it should only fire when it is fairly sure.
+     */
+    private fun matchReceiptLine(
+        line: ReceiptLine,
+        cached: List<CachedProduct>,
+        knownNames: List<String>
+    ): ReceiptMatch? {
+        val bestCached = cached
+            .map { it to NameSimilarity.score(line.name, it.name) }
+            .filter { it.second >= RECEIPT_MATCH_THRESHOLD }
+            .maxByOrNull { it.second }
+            ?.first
+        if (bestCached != null) {
+            return ReceiptMatch(
+                name = bestCached.name,
+                barcode = bestCached.barcode,
+                brand = bestCached.brand,
+                imageUrl = bestCached.imageUrl,
+                category = bestCached.category
+            )
+        }
+        val bestName = NameSimilarity.bestMatch(line.name, knownNames, RECEIPT_MATCH_THRESHOLD)
+        return bestName?.let { ReceiptMatch(name = it) }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun newReceiptRowId(): String =
+        "receipt_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt()}"
+
+    fun updateBatchEntry(entry: BatchScanEntry) {
         _uiState.update { state ->
-            state.copy(batchQueue = state.batchQueue.filterNot { it.barcode == barcode })
+            state.copy(batchQueue = state.batchQueue.map { if (it.id == entry.id) entry else it })
+        }
+    }
+
+    fun removeBatchEntry(id: String) {
+        _uiState.update { state ->
+            state.copy(batchQueue = state.batchQueue.filterNot { it.id == id })
         }
     }
 

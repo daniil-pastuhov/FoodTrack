@@ -80,7 +80,10 @@ data class CategoryRow(
  * network answers.
  */
 data class BatchScanEntry(
-    val barcode: String,
+    /** Row identity, independent of [barcode] — a receipt-scanned row has no barcode at all
+     *  (see `ReceiptParser`), so the queue can't key on one. */
+    val id: String,
+    val barcode: String? = null,
     val name: String,
     val brand: String? = null,
     val imageUrl: String? = null,
@@ -92,10 +95,6 @@ data class BatchScanEntry(
     val expirySource: ShelfLifeSource,
     val isLookingUp: Boolean = false
 ) {
-    /** The barcode is the identity: the queue holds at most one row per product, and scanning
-     *  the same one again bumps its quantity rather than adding a second row. */
-    val id: String get() = barcode
-
     /** True when nothing better than the fallback was known, so the user should look at it. */
     val needsAttention: Boolean
         get() = expirySource == ShelfLifeSource.FALLBACK

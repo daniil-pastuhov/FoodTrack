@@ -137,6 +137,14 @@
     <string name="manual_entry_button">Manuell registrering</string>
     <string name="scan_mode_batch">Flere</string>
     <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen under</string>
+    <string name="scan_mode_receipt">Kvittering</string>
+    <string name="reticle_hint_receipt">Få hele kvitteringen i bildet, og trykk for å lese den</string>
+    <string name="scan_receipt_button">Les kvittering</string>
+    <string name="receipt_nothing_found">Fant ingen varer på kvitteringen — prøv igjen med hele kvitteringen i bildet</string>
+    <plurals name="receipt_lines_added">
+        <item quantity="one">La til %1$d vare fra kvitteringen — sjekk den under</item>
+        <item quantity="other">La til %1$d varer fra kvitteringen — sjekk dem under</item>
+    </plurals>
     <string name="batch_queue_empty">Skann en vare for å starte listen</string>
     <string name="batch_queue_remove_content_description">Fjern fra listen</string>
     <string name="batch_queue_needs_date">Sjekk dato</string>
