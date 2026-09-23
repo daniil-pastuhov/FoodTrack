@@ -324,3 +324,11 @@
 "settings_allergens_desc" = "Varsle meg når en skannet vare oppgir en av disse. Sammenligningen er romslig, så den kan flagge nesten-treff.";
 "settings_add_allergen_placeholder" = "f.eks. melk, gluten, nøtter";
 "settings_add_allergen" = "Legg til";
+
+"settings_section_stores" = "Handlepåminnelser";
+"settings_store_reminders_enabled" = "Minn meg på nær en butikk";
+"settings_store_reminders_desc" = "Viser handlelisten når du stopper ved en lagret butikk. Bruker posisjonen din i bakgrunnen; ingenting forlater telefonen.";
+"settings_add_store_placeholder" = "Navn på butikken";
+"settings_add_store" = "Lagre posisjonen min";
+"settings_store_location_failed" = "Fant ikke posisjonen din. Sjekk posisjonstillatelsen og prøv igjen utendørs.";
+"store_reminder_title_named_format" = "Du er på %@";

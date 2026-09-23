@@ -43,7 +43,17 @@ data class AppSettings(
     val sortOption: SortOption = SortOption.EXPIRY_DATE,
     /** Allergens the user wants to be warned about when a scanned product lists them. Empty by
      *  default: this is a safety feature for the people who need it, not a nag for everyone. */
-    val allergens: Set<String> = emptySet()
+    val allergens: Set<String> = emptySet(),
+    /** Shops to remind the user of their shopping list near. See [StorePlace]. */
+    val stores: List<StorePlace> = emptyList(),
+    /**
+     * Whether those reminders are armed.
+     *
+     * Off by default, and deliberately separate from [stores] being non-empty: this is the
+     * switch that gates asking for background location, which is the most intrusive permission
+     * the app requests. Nothing about it should happen without the user turning it on first.
+     */
+    val storeRemindersEnabled: Boolean = false
 ) {
     /** The storage location a freshly created item should be pre-filled with. Falls back to
      *  [defaultStorageLocation] when the remembered one is off, unset, or no longer one of

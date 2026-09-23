@@ -66,6 +66,38 @@
             <string>La til %d varer fra kvitteringen — sjekk dem under</string>
         </dict>
     </dict>
+    <key>store_reminder_title_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d ting å kjøpe</string>
+            <key>other</key>
+            <string>%d ting å kjøpe</string>
+        </dict>
+    </dict>
+    <key>store_reminder_more_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>+%d til</string>
+            <key>other</key>
+            <string>+%d til</string>
+        </dict>
+    </dict>
     <key>notif_digest_title_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

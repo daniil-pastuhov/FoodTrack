@@ -324,3 +324,11 @@
 "settings_allergens_desc" = "Предупреждать, когда отсканированный товар содержит один из них. Сопоставление нестрогое, поэтому возможны ложные срабатывания.";
 "settings_add_allergen_placeholder" = "напр. молоко, глютен, орехи";
 "settings_add_allergen" = "Добавить";
+
+"settings_section_stores" = "Напоминания о покупках";
+"settings_store_reminders_enabled" = "Напоминать рядом с магазином";
+"settings_store_reminders_desc" = "Показывает список покупок, когда вы останавливаетесь у сохранённого магазина. Использует геопозицию в фоне; данные не покидают телефон.";
+"settings_add_store_placeholder" = "Название магазина";
+"settings_add_store" = "Сохранить текущее место";
+"settings_store_location_failed" = "Не удалось определить местоположение. Проверьте разрешение и попробуйте на улице.";
+"store_reminder_title_named_format" = "Вы в «%@»";

@@ -393,4 +393,22 @@
     <string name="clear_data_dialog_title">Tømme alle data i matskapet?</string>
     <string name="clear_data_dialog_message">Dette fjerner alle varer fra matskapet og avbryter alle ventende utløpspåminnelser. Dette kan ikke angres.</string>
     <string name="clear_data_confirm">Tøm data</string>
+    <string name="settings_section_stores">Handlepåminnelser</string>
+    <string name="settings_store_reminders_enabled">Minn meg på nær en butikk</string>
+    <string name="settings_store_reminders_desc">Viser handlelisten når du stopper ved en lagret butikk. Bruker posisjonen din i bakgrunnen; ingenting forlater telefonen.</string>
+    <string name="settings_add_store_placeholder">Navn på butikken</string>
+    <string name="settings_add_store">Lagre posisjonen min</string>
+    <string name="settings_remove_store_content_description">Fjern butikk</string>
+    <string name="settings_store_location_failed">Fant ikke posisjonen din. Sjekk posisjonstillatelsen og prøv igjen utendørs.</string>
+    <string name="store_reminder_channel_name">Handlepåminnelser</string>
+    <string name="store_reminder_channel_desc">Handlelisten din, når du er i en butikk du har lagret</string>
+    <string name="store_reminder_title_named_format">Du er på %1$s</string>
+    <plurals name="store_reminder_title_format">
+        <item quantity="one">%1$d ting å kjøpe</item>
+        <item quantity="other">%1$d ting å kjøpe</item>
+    </plurals>
+    <plurals name="store_reminder_more_format">
+        <item quantity="one">+%1$d til</item>
+        <item quantity="other">+%1$d til</item>
+    </plurals>
 </resources>

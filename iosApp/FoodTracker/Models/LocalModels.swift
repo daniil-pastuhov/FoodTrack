@@ -176,6 +176,38 @@ public enum SortOption: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// A shop the user wants to be reminded of their shopping list near.
+///
+/// Stored in `AppSettings` rather than SwiftData: there are only ever one or two of these, they
+/// are settings rather than content, and keeping them here means the feature needs no schema
+/// migration. Mirrors `shared`'s `com.foodtracker.model.StorePlace`.
+public struct StorePlace: Codable, Equatable, Identifiable {
+    public static let defaultRadiusMeters = 150.0
+
+    public var id: String
+    public var label: String
+    public var latitude: Double
+    public var longitude: Double
+    /// How close counts as "at the shop". Smaller than the default and the reminder is
+    /// unreliable — a phone's position indoors and among buildings is routinely off by that
+    /// much. Much larger and it fires while merely driving past.
+    public var radiusMeters: Double
+
+    public init(
+        id: String,
+        label: String,
+        latitude: Double,
+        longitude: Double,
+        radiusMeters: Double = StorePlace.defaultRadiusMeters
+    ) {
+        self.id = id
+        self.label = label
+        self.latitude = latitude
+        self.longitude = longitude
+        self.radiusMeters = radiusMeters
+    }
+}
+
 public struct AppSettings: Codable, Equatable {
     public var notifications: NotificationSettings
     public var expiringSoonDays: Int
@@ -194,6 +226,12 @@ public struct AppSettings: Codable, Equatable {
     /// Allergens the user wants to be warned about when a scanned product lists them. Empty by
     /// default: this is a safety feature for the people who need it, not a nag for everyone.
     public var allergens: Set<String>
+    /// Shops to remind the user of their shopping list near. See `StorePlace`.
+    public var stores: [StorePlace]
+    /// Whether those reminders are armed. Off by default, and deliberately separate from
+    /// `stores` being non-empty: this is the switch that gates asking for background location,
+    /// the most intrusive permission the app requests.
+    public var storeRemindersEnabled: Bool
 
     public init(
         notifications: NotificationSettings = NotificationSettings(),
@@ -204,7 +242,9 @@ public struct AppSettings: Codable, Equatable {
         lastUsedStorageLocation: String? = nil,
         theme: AppTheme = .system,
         sortOption: SortOption = .expiryDate,
-        allergens: Set<String> = []
+        allergens: Set<String> = [],
+        stores: [StorePlace] = [],
+        storeRemindersEnabled: Bool = false
     ) {
         self.notifications = notifications
         self.expiringSoonDays = expiringSoonDays
@@ -215,6 +255,8 @@ public struct AppSettings: Codable, Equatable {
         self.theme = theme
         self.sortOption = sortOption
         self.allergens = allergens
+        self.stores = stores
+        self.storeRemindersEnabled = storeRemindersEnabled
     }
 
     /// The storage location a freshly created item should be pre-filled with. Falls back to
@@ -245,5 +287,7 @@ public struct AppSettings: Codable, Equatable {
         // decodeIfPresent: settings stored before this feature existed have no such key, and
         // failing the whole decode would reset every other setting with it.
         allergens = try container.decodeIfPresent(Set<String>.self, forKey: .allergens) ?? []
+        stores = try container.decodeIfPresent([StorePlace].self, forKey: .stores) ?? []
+        storeRemindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .storeRemindersEnabled) ?? false
     }
 }

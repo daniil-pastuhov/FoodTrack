@@ -13,6 +13,10 @@ struct FoodTrackerApp: App {
                 .preferredColorScheme(settingsStore.settings.theme.colorScheme)
                 .onAppear {
                     IOSNotificationManager.shared.requestAuthorization()
+                    // Re-asserted on every start rather than only when Settings changes: region
+                    // monitoring is an OS-level registration that outlives the process, and
+                    // permission can be revoked from Settings between runs.
+                    StoreGeofenceManager.shared.sync(settings: settingsStore.settings)
                 }
                 .onOpenURL { url in
                     AppRouter.shared.handle(url)

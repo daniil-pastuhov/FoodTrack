@@ -419,4 +419,26 @@
     <string name="clear_data_dialog_title">Очистить все данные кладовой?</string>
     <string name="clear_data_dialog_message">Это удалит все продукты из кладовой и отменит все ожидающие напоминания о сроке годности. Это действие необратимо.</string>
     <string name="clear_data_confirm">Очистить данные</string>
+    <string name="settings_section_stores">Напоминания о покупках</string>
+    <string name="settings_store_reminders_enabled">Напоминать рядом с магазином</string>
+    <string name="settings_store_reminders_desc">Показывает список покупок, когда вы останавливаетесь у сохранённого магазина. Использует геопозицию в фоне; данные не покидают телефон.</string>
+    <string name="settings_add_store_placeholder">Название магазина</string>
+    <string name="settings_add_store">Сохранить текущее место</string>
+    <string name="settings_remove_store_content_description">Удалить магазин</string>
+    <string name="settings_store_location_failed">Не удалось определить местоположение. Проверьте разрешение и попробуйте на улице.</string>
+    <string name="store_reminder_channel_name">Напоминания о покупках</string>
+    <string name="store_reminder_channel_desc">Список покупок, когда вы в сохранённом магазине</string>
+    <string name="store_reminder_title_named_format">Вы в «%1$s»</string>
+    <plurals name="store_reminder_title_format">
+        <item quantity="one">%1$d товар в списке</item>
+        <item quantity="few">%1$d товара в списке</item>
+        <item quantity="many">%1$d товаров в списке</item>
+        <item quantity="other">%1$d товара в списке</item>
+    </plurals>
+    <plurals name="store_reminder_more_format">
+        <item quantity="one">и ещё %1$d</item>
+        <item quantity="few">и ещё %1$d</item>
+        <item quantity="many">и ещё %1$d</item>
+        <item quantity="other">и ещё %1$d</item>
+    </plurals>
 </resources>

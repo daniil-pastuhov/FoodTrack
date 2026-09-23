@@ -283,6 +283,25 @@ public enum L10n {
     }
     public static var notifActionRecipeIdeas: String { NSLocalizedString("notif_action_recipe_ideas", comment: "") }
 
+    public static var settingsSectionStores: String { NSLocalizedString("settings_section_stores", comment: "") }
+    public static var settingsStoreRemindersEnabled: String { NSLocalizedString("settings_store_reminders_enabled", comment: "") }
+    public static var settingsStoreRemindersDesc: String { NSLocalizedString("settings_store_reminders_desc", comment: "") }
+    public static var settingsAddStorePlaceholder: String { NSLocalizedString("settings_add_store_placeholder", comment: "") }
+    public static var settingsAddStore: String { NSLocalizedString("settings_add_store", comment: "") }
+    public static var settingsStoreLocationFailed: String { NSLocalizedString("settings_store_location_failed", comment: "") }
+    public static func storeReminderTitleNamed(_ storeLabel: String) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("store_reminder_title_named_format", comment: ""),
+            storeLabel
+        )
+    }
+    public static func storeReminderTitle(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("store_reminder_title_format", comment: ""), count)
+    }
+    public static func storeReminderMore(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("store_reminder_more_format", comment: ""), count)
+    }
+
     public static var settingsTitle: String { NSLocalizedString("settings_title", comment: "") }
     public static var settingsSectionNotifications: String { NSLocalizedString("settings_section_notifications", comment: "") }
     public static var settingsNotificationsEnabled: String { NSLocalizedString("settings_notifications_enabled", comment: "") }

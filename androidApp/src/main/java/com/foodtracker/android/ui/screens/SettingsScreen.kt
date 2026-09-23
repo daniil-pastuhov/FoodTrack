@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -46,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -71,6 +73,7 @@ import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
+import com.foodtracker.model.StorePlace
 import com.foodtracker.model.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,6 +89,9 @@ fun SettingsScreen(
     onImportBackup: (Uri, RestoreMode) -> Unit,
     /** Default filename offered in the save dialog, stamped with today's date. */
     backupFileName: String,
+    /** Asks for location permission and, once granted, reports the device's current position so
+     *  it can be saved as a store. Null coordinates mean the user declined or no fix arrived. */
+    onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit = { _, onResolved -> onResolved(null, null) },
     modifier: Modifier = Modifier,
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
@@ -93,6 +99,9 @@ fun SettingsScreen(
     var draft by remember { mutableStateOf(settings) }
     var newLocationText by remember { mutableStateOf("") }
     var newAllergenText by remember { mutableStateOf("") }
+    var newStoreText by remember { mutableStateOf("") }
+    var isResolvingStoreLocation by remember { mutableStateOf(false) }
+    var storeLocationFailed by remember { mutableStateOf(false) }
     var editingLocation by remember { mutableStateOf<String?>(null) }
     var editingLocationText by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -477,6 +486,112 @@ fun SettingsScreen(
                             contentDescription = stringResource(R.string.settings_add_allergen),
                             tint = BrandPrimary
                         )
+                    }
+                }
+            }
+
+            // Store reminders
+            SettingsSectionCard(title = stringResource(R.string.settings_section_stores)) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(stringResource(R.string.settings_store_reminders_enabled))
+                        Text(
+                            text = stringResource(R.string.settings_store_reminders_desc),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                    Switch(
+                        checked = draft.storeRemindersEnabled,
+                        onCheckedChange = { persist(draft.copy(storeRemindersEnabled = it)) },
+                        colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary)
+                    )
+                }
+
+                // The stores themselves are only actionable once the reminders are armed, and
+                // showing the "use my location" button before then would ask for location
+                // permission for a feature the user hasn't switched on.
+                if (draft.storeRemindersEnabled) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    draft.stores.forEach { store ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                        ) {
+                            Text(store.label, modifier = Modifier.weight(1f))
+                            IconButton(onClick = {
+                                persist(draft.copy(stores = draft.stores.filterNot { it.id == store.id }))
+                            }) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.settings_remove_store_content_description),
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    if (storeLocationFailed) {
+                        Text(
+                            text = stringResource(R.string.settings_store_location_failed),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = newStoreText,
+                            onValueChange = { newStoreText = it },
+                            placeholder = { Text(stringResource(R.string.settings_add_store_placeholder)) },
+                            singleLine = true,
+                            enabled = !isResolvingStoreLocation,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(
+                            enabled = !isResolvingStoreLocation,
+                            onClick = {
+                                val label = newStoreText.trim()
+                                if (label.isBlank()) return@IconButton
+                                isResolvingStoreLocation = true
+                                storeLocationFailed = false
+                                onAddCurrentLocationAsStore(label) { latitude, longitude ->
+                                    isResolvingStoreLocation = false
+                                    if (latitude == null || longitude == null) {
+                                        storeLocationFailed = true
+                                        return@onAddCurrentLocationAsStore
+                                    }
+                                    persist(
+                                        draft.copy(
+                                            stores = draft.stores + StorePlace(
+                                                id = "store_${'$'}{System.currentTimeMillis()}",
+                                                label = label,
+                                                latitude = latitude,
+                                                longitude = longitude
+                                            )
+                                        )
+                                    )
+                                    newStoreText = ""
+                                }
+                            }
+                        ) {
+                            if (isResolvingStoreLocation) {
+                                CircularProgressIndicator(
+                                    color = BrandPrimary,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.MyLocation,
+                                    contentDescription = stringResource(R.string.settings_add_store),
+                                    tint = BrandPrimary
+                                )
+                            }
+                        }
                     }
                 }
             }

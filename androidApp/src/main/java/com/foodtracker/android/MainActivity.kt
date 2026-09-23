@@ -1,8 +1,10 @@
 package com.foodtracker.android
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.BackEventCompat
 import androidx.activity.ComponentActivity
@@ -53,6 +55,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CalendarScreen
@@ -65,6 +69,7 @@ import com.foodtracker.android.ui.screens.ShoppingListMatchDialog
 import com.foodtracker.android.ui.components.AppBottomBar
 import com.foodtracker.android.ui.components.BottomNavTab
 import com.foodtracker.android.ui.components.ScanAndAddFabs
+import com.foodtracker.android.location.StoreGeofenceManager
 import com.foodtracker.android.ui.theme.FoodTrackerTheme
 import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.match.ShoppingListMatchResult
@@ -127,9 +132,34 @@ class MainActivity : ComponentActivity() {
     // not just on a cold start.
     private val currentScreenState = mutableStateOf(AppScreen.DASHBOARD)
 
+    /** Held while the location permission dialog is up, so the Settings screen's spinner is
+     *  always answered — whichever way the user decides. */
+    private var pendingLocationResult: ((Double?, Double?) -> Unit)? = null
+
+    private val locationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { granted ->
+            val callback = pendingLocationResult ?: return@registerForActivityResult
+            pendingLocationResult = null
+            if (granted.values.any { it }) {
+                requestCurrentLocation(callback)
+            } else {
+                callback(null, null)
+            }
+        }
+
+    /** Escalation to "allow all the time", asked for only after a shop has been saved. Its
+     *  result needs no handling: the geofences are registered either way, and without it they
+     *  simply stop firing once the app is closed. */
+    private val backgroundLocationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyScreenFromIntent(intent)
+        // Re-asserted on every start rather than only when Settings changes: geofences are
+        // OS-level registrations that can be dropped underneath the app (a reboot clears them
+        // all), and permission can be revoked from system settings between runs.
+        StoreGeofenceManager.sync(this, stateHolder.uiState.value.settings)
 
         setContent {
             // Collect only the slices this root scope actually reads, rather than the whole
@@ -622,9 +652,15 @@ class MainActivity : ComponentActivity() {
                                         AppScreen.SETTINGS -> {
                                             SettingsScreen(
                                                 settings = settings,
+                                                onAddCurrentLocationAsStore = ::resolveCurrentLocation,
                                                 onSave = { newSettings ->
                                                     val notificationsChanged = newSettings.notifications != settings.notifications
+                                                    val storesChanged = newSettings.stores != settings.stores ||
+                                                            newSettings.storeRemindersEnabled != settings.storeRemindersEnabled
                                                     stateHolder.updateSettings(newSettings)
+                                                    if (storesChanged) {
+                                                        StoreGeofenceManager.sync(this@MainActivity, newSettings)
+                                                    }
                                                     if (notificationsChanged) {
                                                         com.foodtracker.android.notification.NotificationHelper.rescheduleAll(
                                                             this@MainActivity,
@@ -902,6 +938,67 @@ class MainActivity : ComponentActivity() {
         val items = stateHolder.uiState.value.items.filter { it.id in requested }
         shareRecipePrompt(this, items)
         return true
+    }
+
+    /**
+     * Resolves the device's current position so Settings can save it as a store, asking for
+     * location permission first if it hasn't been granted.
+     *
+     * Asks for **while-in-use** only. Background location is what makes the geofence fire with
+     * the app closed, but requesting it up front is the single most common cause of both a
+     * denial and a store-review rejection; it is escalated separately, once the user has the
+     * feature switched on and a shop saved (see [promptForBackgroundLocationIfNeeded]).
+     *
+     * [onResolved] is always called exactly once — with nulls when permission was refused or no
+     * fix arrived — so the Settings screen never leaves its spinner running.
+     */
+    private fun resolveCurrentLocation(
+        @Suppress("UNUSED_PARAMETER") label: String,
+        onResolved: (latitude: Double?, longitude: Double?) -> Unit
+    ) {
+        if (!StoreGeofenceManager.hasLocationPermission(this)) {
+            pendingLocationResult = onResolved
+            locationPermissionLauncher.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+            )
+            return
+        }
+        requestCurrentLocation(onResolved)
+    }
+
+    @SuppressLint("MissingPermission") // Callers check via StoreGeofenceManager.hasLocationPermission.
+    private fun requestCurrentLocation(onResolved: (Double?, Double?) -> Unit) {
+        // getCurrentLocation rather than lastLocation: the cached fix can be hours old and
+        // somewhere else entirely, and saving *that* as a shop would put the geofence in the
+        // wrong place with no sign anything went wrong.
+        LocationServices.getFusedLocationProviderClient(this)
+            .getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+            .addOnSuccessListener { location ->
+                if (location == null) {
+                    onResolved(null, null)
+                } else {
+                    onResolved(location.latitude, location.longitude)
+                    promptForBackgroundLocationIfNeeded()
+                }
+            }
+            .addOnFailureListener { onResolved(null, null) }
+    }
+
+    /**
+     * Asks for background location, but only after a shop has actually been saved — at which
+     * point the permission dialog's "Allow all the time" has an obvious purpose the user has
+     * just demonstrated wanting.
+     *
+     * Skipped below API 29, where background location isn't a separate grant.
+     */
+    private fun promptForBackgroundLocationIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.ACCESS_BACKGROUND_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
     }
 
     companion object {

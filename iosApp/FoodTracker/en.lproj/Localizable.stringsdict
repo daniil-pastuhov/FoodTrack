@@ -66,6 +66,38 @@
             <string>Added %d items from the receipt — check them below</string>
         </dict>
     </dict>
+    <key>store_reminder_title_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d thing to buy</string>
+            <key>other</key>
+            <string>%d things to buy</string>
+        </dict>
+    </dict>
+    <key>store_reminder_more_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>+%d more</string>
+            <key>other</key>
+            <string>+%d more</string>
+        </dict>
+    </dict>
     <key>notif_digest_title_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

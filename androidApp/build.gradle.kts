@@ -155,6 +155,8 @@ dependencies {
 
     implementation(libs.zxing.core)
 
+    implementation(libs.play.services.location)
+
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.datetime)
     implementation(libs.kotlinx.serialization.json)

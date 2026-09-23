@@ -415,4 +415,22 @@
     <string name="clear_data_dialog_title">Clear all pantry data?</string>
     <string name="clear_data_dialog_message">This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.</string>
     <string name="clear_data_confirm">Clear Data</string>
+    <string name="settings_section_stores">Shopping reminders</string>
+    <string name="settings_store_reminders_enabled">Remind me near a shop</string>
+    <string name="settings_store_reminders_desc">Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; nothing leaves your phone.</string>
+    <string name="settings_add_store_placeholder">Name this shop</string>
+    <string name="settings_add_store">Save my current location</string>
+    <string name="settings_remove_store_content_description">Remove shop</string>
+    <string name="settings_store_location_failed">Couldn\'t get your location. Check location permission and try again outdoors.</string>
+    <string name="store_reminder_channel_name">Shopping reminders</string>
+    <string name="store_reminder_channel_desc">Your shopping list, when you are at a shop you saved</string>
+    <string name="store_reminder_title_named_format">You\'re at %1$s</string>
+    <plurals name="store_reminder_title_format">
+        <item quantity="one">%1$d thing to buy</item>
+        <item quantity="other">%1$d things to buy</item>
+    </plurals>
+    <plurals name="store_reminder_more_format">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
 </resources>

@@ -20,6 +20,9 @@ public struct SettingsView: View {
     /// user then backed out of the picker.
     @State private var pendingImportURL: URL?
     @State private var backupMessage: String?
+    @State private var newStoreText: String = ""
+    @State private var isResolvingStoreLocation = false
+    @State private var storeLocationFailed = false
 
     public init(viewModel: NativePantryViewModel, onDataCleared: @escaping () -> Void = {}) {
         self.viewModel = viewModel
@@ -41,6 +44,7 @@ public struct SettingsView: View {
                 expiringSoonSection
                 locationsSection
                 allergensSection
+                storeRemindersSection
                 categoriesSection
                 appearanceSection
                 dataSection
@@ -317,6 +321,84 @@ public struct SettingsView: View {
             Text(L10n.settingsSectionAllergens)
         } footer: {
             Text(L10n.settingsAllergensDesc)
+        }
+    }
+
+    private var storeRemindersSection: some View {
+        Section {
+            Toggle(L10n.settingsStoreRemindersEnabled, isOn: Binding(
+                get: { settings.storeRemindersEnabled },
+                set: { enabled in
+                    update { $0.storeRemindersEnabled = enabled }
+                    if enabled {
+                        // While-in-use only at this point. "Always" is escalated once a shop has
+                        // actually been saved, where the dialog has an obvious purpose.
+                        StoreGeofenceManager.shared.requestWhenInUseAuthorization()
+                    }
+                    StoreGeofenceManager.shared.sync(settings: store.settings)
+                }
+            ))
+
+            // The stores themselves are only actionable once the reminders are armed, and
+            // showing "use my location" before then would ask for location permission for a
+            // feature the user hasn't switched on.
+            if settings.storeRemindersEnabled {
+                ForEach(settings.stores, id: \.id) { storePlace in
+                    Text(storePlace.label)
+                }
+                .onDelete { offsets in
+                    update { $0.stores.remove(atOffsets: offsets) }
+                    StoreGeofenceManager.shared.sync(settings: store.settings)
+                }
+
+                if storeLocationFailed {
+                    Text(L10n.settingsStoreLocationFailed)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
+                TextField(L10n.settingsAddStorePlaceholder, text: $newStoreText)
+                    .disabled(isResolvingStoreLocation)
+                HStack {
+                    Button(L10n.settingsAddStore) { saveCurrentLocationAsStore() }
+                        .disabled(isResolvingStoreLocation || newStoreText.trimmingCharacters(in: .whitespaces).isEmpty)
+                    if isResolvingStoreLocation {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+        } header: {
+            Text(L10n.settingsSectionStores)
+        } footer: {
+            Text(L10n.settingsStoreRemindersDesc)
+        }
+    }
+
+    private func saveCurrentLocationAsStore() {
+        let label = newStoreText.trimmingCharacters(in: .whitespaces)
+        guard !label.isEmpty else { return }
+        isResolvingStoreLocation = true
+        storeLocationFailed = false
+        StoreGeofenceManager.shared.resolveCurrentLocation { coordinate in
+            isResolvingStoreLocation = false
+            guard let coordinate else {
+                storeLocationFailed = true
+                return
+            }
+            update {
+                $0.stores.append(
+                    StorePlace(
+                        id: "store_\(UUID().uuidString)",
+                        label: label,
+                        latitude: coordinate.latitude,
+                        longitude: coordinate.longitude
+                    )
+                )
+            }
+            newStoreText = ""
+            StoreGeofenceManager.shared.sync(settings: store.settings)
+            StoreGeofenceManager.shared.requestAlwaysAuthorizationIfNeeded()
         }
     }
 

@@ -5,6 +5,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Store reminders only (see StoreGeofenceManager). Strictly opt-in: the feature ships off,
+         and the Settings screen asks for while-in-use first and only escalates to background
+         once the user has turned the toggle on and been told why. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
     <uses-feature
         android:name="android.hardware.camera"
@@ -40,6 +48,21 @@
         <receiver
             android:name=".notification.DigestNotificationReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".location.StoreGeofenceReceiver"
+            android:exported="false" />
+
+        <!-- Exported because only the system sends BOOT_COMPLETED; geofences do not survive a
+             reboot and must be re-registered. -->
+        <receiver
+            android:name=".location.BootCompletedReceiver"
+            android:exported="true"
+            android:directBootAware="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".widget.ExpiryWidgetReceiver"

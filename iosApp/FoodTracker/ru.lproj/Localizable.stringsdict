@@ -82,6 +82,46 @@
             <string>Добавлено %d товара из чека — проверьте ниже</string>
         </dict>
     </dict>
+    <key>store_reminder_title_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d товар в списке</string>
+            <key>few</key>
+            <string>%d товара в списке</string>
+            <key>many</key>
+            <string>%d товаров в списке</string>
+            <key>other</key>
+            <string>%d товара в списке</string>
+        </dict>
+    </dict>
+    <key>store_reminder_more_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>и ещё %d</string>
+            <key>few</key>
+            <string>и ещё %d</string>
+            <key>many</key>
+            <string>и ещё %d</string>
+            <key>other</key>
+            <string>и ещё %d</string>
+        </dict>
+    </dict>
     <key>notif_digest_title_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

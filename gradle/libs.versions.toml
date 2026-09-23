@@ -28,6 +28,7 @@ androidx-test-ext-junit = "1.3.0"
 profileinstaller = "1.4.1"
 kotlinx-collections-immutable = "0.5.2"
 zxing-core = "3.5.3"
+play-services-location = "21.3.0"
 
 [libraries]
 # KotlinX
@@ -73,6 +74,9 @@ zxing-core = { module = "com.google.zxing:core", version.ref = "zxing-core" }
 mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkit-barcode" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text" }
 mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkit-image-labeling" }
+
+# Geofencing for the "you are near a shop" shopping-list reminder (StoreGeofenceManager).
+play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 
 # Coil image loading
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

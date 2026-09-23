@@ -242,6 +242,17 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             return
         }
 
+        // The store reminder carries no item at all — tapping it just opens the shopping list.
+        if userInfo["openShoppingList"] as? Bool == true {
+            Task { @MainActor in
+                #if !WIDGET_EXTENSION
+                AppRouter.shared.destination = .shoppingList
+                #endif
+                completionHandler()
+            }
+            return
+        }
+
         guard let itemId = userInfo["itemId"] as? String else {
             completionHandler()
             return
