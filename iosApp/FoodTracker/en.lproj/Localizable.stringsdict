@@ -258,5 +258,21 @@
             <string>Added %d items</string>
         </dict>
     </dict>
+	<key>batch_discard_message_format</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@items@</string>
+		<key>items</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d item is queued and has not been added yet.</string>
+			<key>other</key>
+			<string>%d items are queued and have not been added yet.</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

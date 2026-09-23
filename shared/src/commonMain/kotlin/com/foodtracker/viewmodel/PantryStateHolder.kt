@@ -1257,7 +1257,16 @@ class PantryStateHolder(
         productNameRepository.recordName(name)
     }
 
-    fun clearScanState() {
+    /**
+     * Drops the result of the last single-item scan, without touching the two things that
+     * outlive one scan: the batch queue, and the shopping-list entry this scan is filling in.
+     *
+     * This is what switching scanner mode calls. A product card, an OCR'd date or a photo
+     * belongs to the mode that produced it, and leaving it published while the camera is doing
+     * something else is how a stale result ends up on screen under a mode that cannot have
+     * produced it. [clearScanState] is the stronger version, for leaving the scanner entirely.
+     */
+    fun clearScanResults() {
         _uiState.update {
             it.copy(
                 scannedProduct = null,
@@ -1269,9 +1278,22 @@ class PantryStateHolder(
                 duplicateOf = null,
                 allergenWarnings = emptyList(),
                 isLookingUpBarcode = false,
-                scanMessage = null,
-                scanningShoppingListEntryId = null
+                scanMessage = null
             )
         }
+    }
+
+    /**
+     * Drops the last scan's result *and* the shopping-list entry it was filling in, for when
+     * that scan is finished with - saving the item it produced, or leaving the scanner.
+     *
+     * Deliberately not the batch queue: [saveItem] calls this, and [commitBatchQueue] saves
+     * each row through [saveItem], so emptying the queue here would have it clear itself out
+     * from under its own loop. The queue is discarded by [clearBatchQueue], which the scanner
+     * calls when the user confirms leaving a queue uncommitted.
+     */
+    fun clearScanState() {
+        clearScanResults()
+        _uiState.update { it.copy(scanningShoppingListEntryId = null) }
     }
 }

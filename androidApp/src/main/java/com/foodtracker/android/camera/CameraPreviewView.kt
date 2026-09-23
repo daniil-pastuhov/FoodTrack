@@ -9,6 +9,7 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,46 +62,53 @@ fun CameraPreviewView(
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
     val imageCapture = remember { ImageCapture.Builder().build() }
     var camera by remember { mutableStateOf<Camera?>(null) }
+    // Kept so teardown can unbind without blocking on the provider future again.
+    var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+
+    // The analyzer thread belongs to this composable, not to the process: without this, every
+    // visit to the scanner left one behind. The use cases go too - they are bound to the host
+    // Activity's lifecycle, which outlives this composable, so closing the scanner (or the
+    // Add/Edit scan overlay) would otherwise leave the camera running behind the screen.
+    DisposableEffect(Unit) {
+        onDispose {
+            boundProvider?.unbindAll()
+            cameraExecutor.shutdown()
+        }
+    }
 
     LaunchedEffect(mode) {
         try {
             val cameraProvider = ProcessCameraProvider.getInstance(context).await()
+            boundProvider = cameraProvider
 
             val preview = Preview.Builder().build().also {
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            val imageAnalysis = ImageAnalysis.Builder()
-                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                .build()
+            fun analyzer(analyzer: ImageAnalysis.Analyzer): ImageAnalysis =
+                ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+                    .apply { setAnalyzer(cameraExecutor, analyzer) }
 
-            when (mode) {
+            val imageAnalysis = when (mode) {
                 // Batch shares the barcode analyzer verbatim; only what ScannerScreen does with
                 // each result differs (queue it, rather than stop and look it up).
-                CameraScanMode.BARCODE, CameraScanMode.BATCH -> {
-                    imageAnalysis.setAnalyzer(cameraExecutor, BarcodeAnalyzer { barcode ->
-                        onBarcodeFound(barcode)
-                    })
-                }
-                CameraScanMode.DATE_OCR -> {
-                    imageAnalysis.setAnalyzer(cameraExecutor, TextOcrAnalyzer { result ->
-                        onDateFound(result.date)
-                    })
-                }
+                CameraScanMode.BARCODE, CameraScanMode.BATCH ->
+                    analyzer(BarcodeAnalyzer { barcode -> onBarcodeFound(barcode) })
+                CameraScanMode.DATE_OCR ->
+                    analyzer(TextOcrAnalyzer { result -> onDateFound(result.date) })
                 // Both capture a still and process it afterwards, so neither wants a
-                // frame-by-frame analyzer running behind the preview.
-                CameraScanMode.PHOTO, CameraScanMode.RECEIPT -> {
-                    imageAnalysis.clearAnalyzer()
-                }
+                // frame-by-frame analyzer running behind the preview - and an ImageAnalysis
+                // bound with nothing attached still costs a stream, so don't bind one at all.
+                CameraScanMode.PHOTO, CameraScanMode.RECEIPT -> null
             }
 
             cameraProvider.unbindAll()
             val boundCamera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_BACK_CAMERA,
-                preview,
-                imageAnalysis,
-                imageCapture
+                *listOfNotNull(preview, imageAnalysis, imageCapture).toTypedArray()
             )
             camera = boundCamera
             onTorchAvailabilityChanged(boundCamera.cameraInfo.hasFlashUnit())

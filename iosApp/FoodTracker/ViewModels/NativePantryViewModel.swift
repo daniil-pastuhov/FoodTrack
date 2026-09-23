@@ -1363,7 +1363,14 @@ public class NativePantryViewModel: ObservableObject {
         loadCategoryPreferences()
     }
 
-    public func clearScanState() {
+    /// Drops the result of the last single-item scan, without touching the two things that
+    /// outlive one scan: the batch queue, and the shopping-list entry this scan is filling in.
+    ///
+    /// This is what switching scanner mode calls. A product card, an OCR'd date or a photo
+    /// belongs to the mode that produced it, and leaving it published while the camera is doing
+    /// something else is how a stale result ends up on screen under a mode that cannot have
+    /// produced it. `clearScanState` is the stronger version, for closing the scanner entirely.
+    public func clearScanResults() {
         scannedProduct = nil
         productNotFoundBarcode = nil
         detectedDate = nil
@@ -1373,6 +1380,17 @@ public class NativePantryViewModel: ObservableObject {
         duplicateOf = nil
         allergenWarnings = []
         isLookingUpBarcode = false
+    }
+
+    /// Drops the last scan's result *and* the shopping-list entry it was filling in, for when
+    /// that scan is finished with - saving the item it produced, or closing the scanner.
+    ///
+    /// Deliberately not the batch queue: `saveItem` calls this, and `commitBatchQueue` saves
+    /// each row through `saveItem`, so emptying the queue here would have it clear itself out
+    /// from under its own loop. The queue is discarded by `clearBatchQueue`, which the sheet
+    /// calls when the user confirms closing with a queue uncommitted.
+    public func clearScanState() {
+        clearScanResults()
         scanningShoppingListEntryId = nil
     }
 

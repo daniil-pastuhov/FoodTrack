@@ -5,17 +5,23 @@ public struct ScannerSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: NativePantryViewModel
 
-    @State private var mode: IOSCameraMode = .barcode
+    @State private var mode: IOSCameraMode
     @State private var showManualAdd: Bool = false
     @State private var cameraController: CameraScannerViewController?
     @State private var isCapturingPhoto: Bool = false
     @State private var capturedPhotoURL: URL?
+    // A captured photo lives in Application Support and only becomes a saved item's imageUrl if
+    // the user continues with it. Every other way out - retaking, switching mode, closing the
+    // sheet - has to delete the file, or it stays on disk referenced by nothing. This flag marks
+    // the one case that must not delete it.
+    @State private var photoHandedOff: Bool = false
     @State private var photoCaptureFailed: Bool = false
     // Receipt capture is a one-shot read rather than a photo that is kept, so it needs its own
     // in-flight flag: `isCapturingPhoto` covers only the shutter, while this also spans the OCR
     // pass and the queue fill that follow it.
     @State private var isReadingReceipt: Bool = false
-    @State private var receiptMessage: String?
+    @State private var transientMessage: String?
+    @State private var confirmDiscardQueue: Bool = false
     @State private var torchEnabled: Bool = false
 
     var onProceedToAdd: (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
@@ -25,23 +31,92 @@ public struct ScannerSheetView: View {
     var showManualEntryShortcut: Bool
     /// Called instead of the product lookup when the camera reads one of our own shared-list QR
     /// codes (see `ShoppingListShare.isPayload`), so scanning a friend's list imports it rather
-    /// than looking the payload up as if it were a product barcode.
-    var onShoppingListScanned: (String) -> Void
+    /// than looking the payload up as if it were a product barcode. Nil where the host cannot
+    /// import one; the sheet then says so rather than silently swallowing the scan.
+    var onShoppingListScanned: ((String) -> Void)?
     /// Reports how many items a batch commit added, so the host can surface a toast.
     var onBatchCommitted: (Int) -> Void
+    /// Which modes this host can actually complete. A mode whose result the host has nowhere to
+    /// put does not belong in the chip row - see AddEditItemView's call.
+    var enabledModes: [IOSCameraMode]
+    /// Whether to offer "add one to the one you already have" on a re-scan. Only hosts that
+    /// render `duplicateOf` should ask for it.
+    var checkDuplicates: Bool
 
     public init(
         viewModel: NativePantryViewModel,
         showManualEntryShortcut: Bool = true,
-        onShoppingListScanned: @escaping (String) -> Void = { _ in },
+        enabledModes: [IOSCameraMode] = ScannerSheetView.defaultModes,
+        checkDuplicates: Bool = true,
+        onShoppingListScanned: ((String) -> Void)? = nil,
         onBatchCommitted: @escaping (Int) -> Void = { _ in },
         onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
     ) {
         self.viewModel = viewModel
         self.showManualEntryShortcut = showManualEntryShortcut
+        self.enabledModes = enabledModes
+        self.checkDuplicates = checkDuplicates
         self.onShoppingListScanned = onShoppingListScanned
         self.onBatchCommitted = onBatchCommitted
         self.onProceedToAdd = onProceedToAdd
+        _mode = State(initialValue: enabledModes.first ?? .barcode)
+    }
+
+    /// Chip order for the mode row: the plain barcode scan first, the two "unpack a whole shop"
+    /// modes that extend it next, then the two single-item helpers.
+    public static let defaultModes: [IOSCameraMode] = [.barcode, .batch, .receipt, .dateOcr, .photo]
+
+    /// Batch and receipt fill one shared queue; every other mode produces a single result.
+    private var batchModeActive: Bool { mode == .batch || mode == .receipt }
+
+    /// A date on its own is a real result. Date OCR is a legitimate opening move - there may be
+    /// no barcode to scan, or the user may only want the date - and until this had a card of its
+    /// own the date could leave the sheet only through the Manual Entry shortcut, which the
+    /// Add/Edit host hides, making the mode a dead end there.
+    private var dateOnlyResult: Bool {
+        !batchModeActive && !viewModel.isLookingUpBarcode && viewModel.detectedDate != nil
+            && viewModel.scannedProduct == nil && viewModel.productNotFoundBarcode == nil
+            && capturedPhotoURL == nil
+    }
+
+    /// Deletes a captured photo the user is not going on with, so it does not sit in Application
+    /// Support referenced by nothing.
+    private func discardCapturedPhoto() {
+        if let url = capturedPhotoURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+        capturedPhotoURL = nil
+    }
+
+    /// Picking a mode from the chip row starts that mode clean. A result belongs to the mode
+    /// that produced it, and leaving a product card, an OCR'd date or a captured photo published
+    /// while the camera has moved on is how a stale result ends up on screen under a mode that
+    /// could not have produced it. The two in-card hand-offs below ("Scan Date", "Try Photo
+    /// Mode") assign `mode` directly instead, precisely because they *do* carry the scan
+    /// forward. The batch queue survives either way: it is dropped only on commit, or on close.
+    private func selectMode(_ target: IOSCameraMode) {
+        guard target != mode else { return }
+        discardCapturedPhoto()
+        photoHandedOff = false
+        photoCaptureFailed = false
+        viewModel.clearScanResults()
+        mode = target
+    }
+
+    /// An uncommitted queue does not outlive the sheet that shows it - otherwise its rows sit
+    /// in state nothing displays, to be committed later alongside an unrelated batch.
+    /// Discarding a shop's worth of scanning silently would be worse, so closing asks first.
+    private func requestDismiss() {
+        if viewModel.batchQueue.isEmpty {
+            dismiss()
+        } else {
+            confirmDiscardQueue = true
+        }
+    }
+
+    private func discardQueueAndDismiss() {
+        viewModel.clearBatchQueue()
+        dismiss()
     }
 
     public var body: some View {
@@ -54,6 +129,12 @@ public struct ScannerSheetView: View {
                     // they arrive on the same callback. Route ours away before the lookup, or
                     // the whole JSON payload would be sent to Open Food Facts as a barcode.
                     guard !ShoppingListShare.isPayload(barcode) else {
+                        guard let onShoppingListScanned else {
+                            // Say so rather than drop it: doing nothing is indistinguishable
+                            // from the camera having failed to read the code.
+                            transientMessage = L10n.shoppingListScanUnsupported
+                            return
+                        }
                         onShoppingListScanned(barcode)
                         dismiss()
                         return
@@ -66,10 +147,12 @@ public struct ScannerSheetView: View {
                         viewModel.detectedDate = gs1Date
                     }
                     viewModel.lookupBarcode(barcode)
-                    // Only the single-item flow asks: batch collapses repeats into one row's
-                    // quantity by itself, and prompting per scan is exactly the interruption
-                    // batch mode exists to avoid.
-                    viewModel.checkForDuplicate(barcode)
+                    // Only where the host renders the prompt, and only outside batch: batch
+                    // collapses repeats into one row's quantity by itself, and prompting per
+                    // scan is exactly the interruption batch mode exists to avoid.
+                    if checkDuplicates {
+                        viewModel.checkForDuplicate(barcode)
+                    }
                 },
                 onDateFound: { date in
                     viewModel.detectedDate = date
@@ -84,7 +167,7 @@ public struct ScannerSheetView: View {
             VStack {
                 // Top bar
                 HStack {
-                    Button(action: { dismiss() }) {
+                    Button(action: { requestDismiss() }) {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(.white)
@@ -110,7 +193,9 @@ public struct ScannerSheetView: View {
                         .accessibilityLabel(L10n.torchToggleButton)
                     }
 
-                    if showManualEntryShortcut {
+                    // Not in batch or receipt: leaving for the single-item form mid-queue
+                    // strands the rows already scanned on a sheet that no longer shows them.
+                    if showManualEntryShortcut && !batchModeActive {
                         Button(action: {
                             onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil, viewModel.suggestedExpiry)
                             dismiss()
@@ -132,21 +217,29 @@ public struct ScannerSheetView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 16)
 
-                // Mode Picker
-                Picker(L10n.scannerModePickerLabel, selection: $mode) {
-                    Text(L10n.scanModeBarcode).tag(IOSCameraMode.barcode)
-                    Text(L10n.scanModeBatch).tag(IOSCameraMode.batch)
-                    Text(L10n.scanModeReceipt).tag(IOSCameraMode.receipt)
-                    Text(L10n.scanModeDateOcr).tag(IOSCameraMode.dateOcr)
-                    Text(L10n.scanModePhoto).tag(IOSCameraMode.photo)
+                // Scanner mode selector. Wraps rather than compressing into a segmented
+                // control: every mode has to stay readable, and five segments squeeze
+                // "Receipt" and "Date OCR" down to truncated stubs on a narrow phone.
+                FlowLayout(spacing: 8) {
+                    ForEach(enabledModes, id: \.self) { candidate in
+                        ScanModeChip(
+                            mode: candidate,
+                            selected: candidate == mode,
+                            // A queue built in batch outlives a switch to another mode, where
+                            // the panel that shows it is hidden. Without this it is invisible.
+                            queuedCount: candidate == .batch ? viewModel.batchQueue.count : 0,
+                            onTap: { selectMode(candidate) }
+                        )
+                    }
                 }
-                .pickerStyle(.segmented)
-                .colorScheme(.dark) // always sits over the live (dark) camera feed, independent of app theme
-                .padding(.horizontal, 40)
+                .accessibilityLabel(L10n.scannerModePickerLabel)
+                .padding(.horizontal, 16)
                 .padding(.top, 8)
 
-                // Detected Expiry Date Chip
-                if let detectedDate = viewModel.detectedDate {
+                // Detected Expiry Date Chip. Suppressed when the date is the whole result: the
+                // card at the bottom is then showing the same date, with something to do
+                // about it.
+                if let detectedDate = viewModel.detectedDate, !dateOnlyResult {
                     let formatter = DateFormatter()
                     let _ = formatter.dateStyle = .medium
                     let dateStr = formatter.string(from: detectedDate)
@@ -172,10 +265,7 @@ public struct ScannerSheetView: View {
                 VStack(spacing: 12) {
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.accentColor, lineWidth: 2.5)
-                        .frame(
-                            width: (mode == .barcode || mode == .batch) ? 280 : 300,
-                            height: (mode == .barcode || mode == .batch) ? 160 : 120
-                        )
+                        .frame(width: reticleSize.width, height: reticleSize.height)
 
                     Text(guideText)
                         .font(.caption)
@@ -200,11 +290,11 @@ public struct ScannerSheetView: View {
                         .padding(.bottom, 8)
                 }
 
-                // Receipt result banner. Transient and non-blocking: the queue below already
-                // shows what was added, so this only has to report the count — and, more
-                // usefully, the case where a photo yielded nothing at all.
-                if let receiptMessage {
-                    Text(receiptMessage)
+                // Transient banner. Non-blocking: for a receipt the queue below already shows
+                // what was added, so this only has to report the count — and, more usefully,
+                // the cases where a scan produced nothing this sheet could act on.
+                if let transientMessage {
+                    Text(transientMessage)
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
@@ -213,9 +303,9 @@ public struct ScannerSheetView: View {
                         .background(Color.black.opacity(0.72))
                         .cornerRadius(20)
                         .padding(.bottom, 8)
-                        .task(id: receiptMessage) {
+                        .task(id: transientMessage) {
                             try? await Task.sleep(for: .seconds(3))
-                            self.receiptMessage = nil
+                            self.transientMessage = nil
                         }
                 }
 
@@ -236,7 +326,7 @@ public struct ScannerSheetView: View {
                                 // a card number and an address worth not leaving on disk.
                                 try? FileManager.default.removeItem(at: url)
                                 let added = viewModel.enqueueReceiptLines(lines)
-                                receiptMessage = added > 0
+                                transientMessage = added > 0
                                     ? L10n.receiptLinesAdded(added)
                                     : L10n.receiptNothingFound
                                 isReadingReceipt = false
@@ -297,7 +387,7 @@ public struct ScannerSheetView: View {
                 }
 
                 // Bottom Product Result Card
-                if mode == .batch || mode == .receipt {
+                if batchModeActive {
                     BatchQueuePanel(
                         entries: viewModel.batchQueue,
                         onRemove: { viewModel.removeBatchEntry($0) },
@@ -310,7 +400,7 @@ public struct ScannerSheetView: View {
                             }
                         }
                     )
-                } else if viewModel.isLookingUpBarcode || viewModel.scannedProduct != nil || (viewModel.productNotFoundBarcode != nil && mode != .photo) || capturedPhotoURL != nil {
+                } else if viewModel.isLookingUpBarcode || viewModel.scannedProduct != nil || (viewModel.productNotFoundBarcode != nil && mode != .photo) || capturedPhotoURL != nil || dateOnlyResult {
                     VStack(alignment: .leading, spacing: 12) {
                         if viewModel.isLookingUpBarcode {
                             HStack(spacing: 12) {
@@ -337,16 +427,23 @@ public struct ScannerSheetView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(L10n.photoCapturedTitle)
                                         .font(.headline)
-                                    Text(L10n.photoCapturedMessage)
+                                    // Name the product this photo is being attached to when
+                                    // there is one: this branch outranks the product branch
+                                    // below, so without it the card would show a photo and
+                                    // nothing about what was scanned.
+                                    Text(viewModel.scannedProduct?.name
+                                        ?? viewModel.productNotFoundBarcode
+                                        ?? L10n.photoCapturedMessage)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
+                                        .lineLimit(2)
                                 }
                                 Spacer()
                             }
 
                             HStack(spacing: 10) {
                                 Button(action: {
-                                    capturedPhotoURL = nil
+                                    discardCapturedPhoto()
                                 }) {
                                     HStack {
                                         Image(systemName: "camera")
@@ -359,6 +456,9 @@ public struct ScannerSheetView: View {
                                 }
 
                                 Button(action: {
+                                    // The saved item will point at this file, so it survives
+                                    // this sheet going away.
+                                    photoHandedOff = true
                                     onProceedToAdd(
                                         viewModel.scannedProduct?.barcode ?? viewModel.productNotFoundBarcode,
                                         viewModel.scannedProduct?.name,
@@ -404,6 +504,9 @@ public struct ScannerSheetView: View {
 
                             HStack(spacing: 10) {
                                 Button(action: {
+                                    // A hand-off, not a mode pick: this deliberately carries the
+                                    // product forward so the OCR'd date lands on it, which is
+                                    // why it sets `mode` instead of going through selectMode.
                                     mode = .dateOcr
                                 }) {
                                     HStack {
@@ -453,6 +556,10 @@ public struct ScannerSheetView: View {
 
                             HStack(spacing: 10) {
                                 Button(action: {
+                                    // Also a hand-off: the unrecognised barcode has to survive
+                                    // into photo mode so the photo is attached to it. Hence not
+                                    // selectMode, and hence the `mode != .photo` guard above,
+                                    // which hides this card once the hand-off has happened.
                                     mode = .photo
                                 }) {
                                     HStack {
@@ -467,6 +574,51 @@ public struct ScannerSheetView: View {
 
                                 Button(action: {
                                     onProceedToAdd(notFoundBarcode, nil, nil, nil, viewModel.detectedDate, nil, viewModel.suggestedExpiry)
+                                    dismiss()
+                                }) {
+                                    Text(L10n.continueButton)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(Color.accentColor)
+                                        .cornerRadius(10)
+                                }
+                            }
+                        } else if let date = viewModel.detectedDate {
+                            // Date-only: an OCR'd date with no product attached to it. The way
+                            // on is the same Add/Edit hand-off every other branch uses,
+                            // carrying the date and nothing else.
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "calendar.badge.checkmark")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(.green)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(L10n.dateCapturedTitle)
+                                        .font(.headline)
+                                    Text(date, style: .date)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                            }
+
+                            HStack(spacing: 10) {
+                                Button(action: {
+                                    viewModel.clearScanResults()
+                                }) {
+                                    HStack {
+                                        Image(systemName: "arrow.clockwise")
+                                        Text(L10n.scanAgainButton)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color(.secondarySystemFill))
+                                    .cornerRadius(10)
+                                }
+
+                                Button(action: {
+                                    onProceedToAdd(nil, nil, nil, nil, date, nil, viewModel.suggestedExpiry)
                                     dismiss()
                                 }) {
                                     Text(L10n.continueButton)
@@ -498,6 +650,32 @@ public struct ScannerSheetView: View {
             }
             viewModel.onPhotoLabelingStarted()
             viewModel.onPhotoLabelsDetected(await ProductImageLabeler.suggestNames(photoURL: url))
+        }
+        // Catches every remaining way out - the close button, the swipe-down dismiss, the host
+        // tearing the sheet down - for a photo that was taken but never continued with.
+        .onDisappear {
+            if !photoHandedOff, let url = capturedPhotoURL {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
+        // A swipe-down would otherwise close the sheet without going through the prompt below,
+        // taking the queue out of view but not out of state.
+        .interactiveDismissDisabled(!viewModel.batchQueue.isEmpty)
+        .alert(L10n.batchDiscardTitle, isPresented: $confirmDiscardQueue) {
+            Button(L10n.batchDiscardConfirm, role: .destructive) { discardQueueAndDismiss() }
+            Button(L10n.batchDiscardKeep, role: .cancel) { confirmDiscardQueue = false }
+        } message: {
+            Text(L10n.batchDiscardMessage(viewModel.batchQueue.count))
+        }
+    }
+
+    /// The barcode modes want a landscape box; a receipt is tall and narrow, and framing one
+    /// inside the landscape box is not what "fit the whole receipt in frame" is asking for.
+    private var reticleSize: CGSize {
+        switch mode {
+        case .barcode, .batch: return CGSize(width: 280, height: 160)
+        case .receipt: return CGSize(width: 240, height: 300)
+        case .dateOcr, .photo: return CGSize(width: 300, height: 120)
         }
     }
 
@@ -600,5 +778,59 @@ private struct BatchQueuePanel: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter.string(from: entry.expiryDate)
+    }
+}
+
+/// One mode chip. `queuedCount` hangs a count off the label when that mode is holding work the
+/// user cannot currently see — only batch has any, and only while its panel is hidden behind
+/// another mode.
+private struct ScanModeChip: View {
+    let mode: IOSCameraMode
+    let selected: Bool
+    let queuedCount: Int
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 6) {
+                Image(systemName: symbolName)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(queuedCount > 0 ? "\(label) (\(queuedCount))" : label)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(selected ? Color.accentColor : Color.black.opacity(0.6))
+            .clipShape(Capsule())
+            // An unselected chip's translucent black reads as nothing against a dark scene, so
+            // outline it - otherwise the other modes look like bare text rather than buttons.
+            .overlay(
+                Capsule().stroke(Color.white.opacity(selected ? 0 : 0.4), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+
+    private var label: String {
+        switch mode {
+        case .barcode: return L10n.scanModeBarcode
+        case .batch: return L10n.scanModeBatch
+        case .receipt: return L10n.scanModeReceipt
+        case .dateOcr: return L10n.scanModeDateOcr
+        case .photo: return L10n.scanModePhoto
+        }
+    }
+
+    private var symbolName: String {
+        switch mode {
+        case .barcode: return "qrcode.viewfinder"
+        case .batch: return "text.badge.plus"
+        case .receipt: return "doc.text.viewfinder"
+        case .dateOcr: return "text.viewfinder"
+        case .photo: return "camera.fill"
+        }
     }
 }

@@ -433,4 +433,15 @@
         <item quantity="one">+%1$d more</item>
         <item quantity="other">+%1$d more</item>
     </plurals>
+
+    <string name="date_captured_title">Expiry date read</string>
+    <string name="scan_again_button">Scan Again</string>
+    <string name="shopping_list_scan_unsupported">Open the scanner from your pantry to import a shared list</string>
+    <string name="batch_discard_title">Discard scanned items?</string>
+    <plurals name="batch_discard_message">
+        <item quantity="one">%1$d item is queued and has not been added yet.</item>
+        <item quantity="other">%1$d items are queued and have not been added yet.</item>
+    </plurals>
+    <string name="batch_discard_confirm">Discard</string>
+    <string name="batch_discard_keep">Keep scanning</string>
 </resources>

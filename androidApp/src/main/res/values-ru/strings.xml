@@ -441,4 +441,17 @@
         <item quantity="many">и ещё %1$d</item>
         <item quantity="other">и ещё %1$d</item>
     </plurals>
+
+    <string name="date_captured_title">Дата распознана</string>
+    <string name="scan_again_button">Сканировать снова</string>
+    <string name="shopping_list_scan_unsupported">Откройте сканер из списка запасов, чтобы импортировать общий список</string>
+    <string name="batch_discard_title">Удалить отсканированное?</string>
+    <plurals name="batch_discard_message">
+        <item quantity="one">%1$d товар в очереди ещё не добавлен.</item>
+        <item quantity="few">%1$d товара в очереди ещё не добавлены.</item>
+        <item quantity="many">%1$d товаров в очереди ещё не добавлены.</item>
+        <item quantity="other">%1$d товара в очереди ещё не добавлены.</item>
+    </plurals>
+    <string name="batch_discard_confirm">Удалить</string>
+    <string name="batch_discard_keep">Продолжить сканирование</string>
 </resources>

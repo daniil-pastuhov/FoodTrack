@@ -411,4 +411,15 @@
         <item quantity="one">+%1$d til</item>
         <item quantity="other">+%1$d til</item>
     </plurals>
+
+    <string name="date_captured_title">Dato lest av</string>
+    <string name="scan_again_button">Skann på nytt</string>
+    <string name="shopping_list_scan_unsupported">Åpne skanneren fra matskapet for å importere en delt liste</string>
+    <string name="batch_discard_title">Forkast skannede varer?</string>
+    <plurals name="batch_discard_message">
+        <item quantity="one">%1$d vare står i kø og er ikke lagt til ennå.</item>
+        <item quantity="other">%1$d varer står i kø og er ikke lagt til ennå.</item>
+    </plurals>
+    <string name="batch_discard_confirm">Forkast</string>
+    <string name="batch_discard_keep">Fortsett å skanne</string>
 </resources>

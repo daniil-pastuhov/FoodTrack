@@ -332,3 +332,11 @@
 "settings_add_store" = "Lagre posisjonen min";
 "settings_store_location_failed" = "Fant ikke posisjonen din. Sjekk posisjonstillatelsen og prøv igjen utendørs.";
 "store_reminder_title_named_format" = "Du er på %@";
+
+/* Scanner mode workflow */
+"date_captured_title" = "Dato lest av";
+"scan_again_button" = "Skann på nytt";
+"shopping_list_scan_unsupported" = "Åpne skanneren fra matskapet for å importere en delt liste";
+"batch_discard_title" = "Forkast skannede varer?";
+"batch_discard_confirm" = "Forkast";
+"batch_discard_keep" = "Fortsett å skanne";

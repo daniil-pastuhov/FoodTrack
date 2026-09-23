@@ -332,3 +332,11 @@
 "settings_add_store" = "Сохранить текущее место";
 "settings_store_location_failed" = "Не удалось определить местоположение. Проверьте разрешение и попробуйте на улице.";
 "store_reminder_title_named_format" = "Вы в «%@»";
+
+/* Scanner mode workflow */
+"date_captured_title" = "Дата распознана";
+"scan_again_button" = "Сканировать снова";
+"shopping_list_scan_unsupported" = "Откройте сканер из списка запасов, чтобы импортировать общий список";
+"batch_discard_title" = "Удалить отсканированное?";
+"batch_discard_confirm" = "Удалить";
+"batch_discard_keep" = "Продолжить сканирование";

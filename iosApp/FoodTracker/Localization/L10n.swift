@@ -238,6 +238,15 @@ public enum L10n {
     public static func batchAdded(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("batch_added_format", comment: ""), count)
     }
+    public static var dateCapturedTitle: String { NSLocalizedString("date_captured_title", comment: "") }
+    public static var scanAgainButton: String { NSLocalizedString("scan_again_button", comment: "") }
+    public static var shoppingListScanUnsupported: String { NSLocalizedString("shopping_list_scan_unsupported", comment: "") }
+    public static var batchDiscardTitle: String { NSLocalizedString("batch_discard_title", comment: "") }
+    public static var batchDiscardConfirm: String { NSLocalizedString("batch_discard_confirm", comment: "") }
+    public static var batchDiscardKeep: String { NSLocalizedString("batch_discard_keep", comment: "") }
+    public static func batchDiscardMessage(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("batch_discard_message_format", comment: ""), count)
+    }
     public static var torchToggleButton: String { NSLocalizedString("torch_toggle_button", comment: "") }
 
     public static var expiresToday: String { NSLocalizedString("expires_today", comment: "") }

@@ -78,6 +78,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.foodtracker.android.R
+import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.ui.components.ProductDetailSheet
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
@@ -813,7 +814,19 @@ fun AddEditItemScreen(
                 stateHolder.clearScanState()
                 showScanner = false
             },
-            showManualEntryShortcut = false
+            showManualEntryShortcut = false,
+            // Batch and Receipt commit straight to the pantry, bypassing the form this overlay
+            // is sitting on, and this host has no way to import a shared shopping list either.
+            // Offering a mode whose result lands nowhere is offering something that can't work.
+            enabledModes = listOf(
+                CameraScanMode.BARCODE,
+                CameraScanMode.DATE_OCR,
+                CameraScanMode.PHOTO
+            ),
+            // The "+1 to the one you already have" prompt belongs to the scan-first flow. Here
+            // the user is already filling in a specific item, and merging would navigate away
+            // and discard whatever they had typed.
+            checkDuplicates = false
         )
     }
     }

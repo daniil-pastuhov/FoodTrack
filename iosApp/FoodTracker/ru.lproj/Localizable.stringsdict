@@ -322,5 +322,25 @@
             <string>Добавлено %d товара</string>
         </dict>
     </dict>
+	<key>batch_discard_message_format</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@items@</string>
+		<key>items</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d товар в очереди ещё не добавлен.</string>
+			<key>few</key>
+			<string>%d товара в очереди ещё не добавлены.</string>
+			<key>many</key>
+			<string>%d товаров в очереди ещё не добавлены.</string>
+			<key>other</key>
+			<string>%d товара в очереди ещё не добавлены.</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

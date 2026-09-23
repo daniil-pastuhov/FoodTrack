@@ -5,11 +5,11 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,14 +30,17 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.TextFields
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -52,9 +55,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.activity.compose.BackHandler
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -62,6 +68,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -89,9 +97,22 @@ import kotlinx.datetime.LocalDate
 import kotlinx.coroutines.delay
 import java.io.File
 
-/** How long the receipt result banner stays up before clearing itself. */
-private const val RECEIPT_MESSAGE_VISIBLE_MILLIS = 3000L
+/** How long a transient scanner banner (receipt result, unsupported scan) stays up. */
+private const val SCANNER_MESSAGE_VISIBLE_MILLIS = 3000L
 
+/**
+ * Chip order for the mode row: the plain barcode scan first, the two "unpack a whole shop"
+ * modes that extend it next, then the two single-item helpers.
+ */
+val SCANNER_DEFAULT_MODES: List<CameraScanMode> = listOf(
+    CameraScanMode.BARCODE,
+    CameraScanMode.BATCH,
+    CameraScanMode.RECEIPT,
+    CameraScanMode.DATE_OCR,
+    CameraScanMode.PHOTO
+)
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ScannerScreen(
     stateHolder: PantryStateHolder,
@@ -99,30 +120,110 @@ fun ScannerScreen(
     onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?, category: String?, suggestedExpiry: ShelfLifeSuggestion?) -> Unit,
     /** Called instead of the product lookup when the camera reads one of our own shared-list QR
      *  codes (see [ShoppingListShare.isPayload]), so scanning a friend's list imports it rather
-     *  than looking the payload up as if it were a product barcode. */
-    onShoppingListScanned: (payload: String) -> Unit = {},
+     *  than looking the payload up as if it were a product barcode. Null where the host cannot
+     *  import one; the scanner then says so rather than silently swallowing the scan. */
+    onShoppingListScanned: ((payload: String) -> Unit)? = null,
     /** Reports how many items a batch commit added, so the host can surface a snackbar. */
     onBatchCommitted: (added: Int) -> Unit = {},
     // Hidden when this screen is embedded inside Add/Edit (see AddEditItemScreen's scan
     // button): "skip to manual entry" makes no sense there since manual entry is already
     // the screen underneath, and dismissing would otherwise discard fields already typed.
     showManualEntryShortcut: Boolean = true,
+    /** Which modes this host can actually complete. A mode whose result the host has nowhere
+     *  to put does not belong in the chip row - see AddEditItemScreen's call. */
+    enabledModes: List<CameraScanMode> = SCANNER_DEFAULT_MODES,
+    /** Whether to offer "add one to the one you already have" on a re-scan. Only hosts that
+     *  render `PantryUiState.duplicateOf` should ask for it. */
+    checkDuplicates: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
-    var currentMode by remember { mutableStateOf(CameraScanMode.BARCODE) }
+    var currentMode by remember { mutableStateOf(enabledModes.first()) }
     val context = LocalContext.current
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCapturingPhoto by remember { mutableStateOf(false) }
     var capturedPhotoUri by remember { mutableStateOf<String?>(null) }
+    // A captured photo is written to filesDir and only becomes a saved item's imageUrl if the
+    // user continues with it. Every other way out - retaking, switching mode, leaving the
+    // scanner - has to delete the file, or it stays on disk referenced by nothing. This flag
+    // marks the one case that must not delete it.
+    var photoHandedOff by remember { mutableStateOf(false) }
     // Receipt capture is a one-shot read rather than a photo that is kept, so it needs its own
     // in-flight flag: `isCapturingPhoto` covers only the shutter, while this also spans the OCR
     // pass and the queue fill that follow it.
     var isReadingReceipt by remember { mutableStateOf(false) }
     var pendingReceiptUri by remember { mutableStateOf<String?>(null) }
-    var receiptMessage by remember { mutableStateOf<String?>(null) }
+    var transientMessage by remember { mutableStateOf<String?>(null) }
+    var confirmDiscardQueue by remember { mutableStateOf(false) }
     var torchEnabled by remember { mutableStateOf(false) }
     var torchAvailable by remember { mutableStateOf(false) }
+    // Measured rather than guessed: the queue panel is as tall as its contents (empty header,
+    // or up to a scrolling list plus a commit button), and the receipt shutter has to sit clear
+    // of whichever it currently is.
+    var queuePanelHeightPx by remember { mutableFloatStateOf(0f) }
+    val queuePanelHeight = with(LocalDensity.current) { queuePanelHeightPx.toDp() }
+
+    fun deletePhotoFile(uri: String?) {
+        uri?.let { runCatching { File(Uri.parse(it).path!!).delete() } }
+    }
+
+    fun discardCapturedPhoto() {
+        deletePhotoFile(capturedPhotoUri)
+        capturedPhotoUri = null
+    }
+
+    // Batch and Receipt fill one shared queue; every other mode produces a single result.
+    val batchModeActive = currentMode == CameraScanMode.BATCH || currentMode == CameraScanMode.RECEIPT
+
+    // A date on its own is a real result. Date OCR is a legitimate opening move - there may be
+    // no barcode to scan, or the user may only want the date - and until this had a card of its
+    // own the date could leave the screen only through the Manual Entry shortcut, which the
+    // Add/Edit host hides, making the mode a dead end there.
+    val dateOnlyResult = !batchModeActive && !state.isLookingUpBarcode &&
+        state.detectedDate != null && state.scannedProduct == null &&
+        state.productNotFoundBarcode == null && capturedPhotoUri == null
+
+    // Picking a mode from the chip row starts that mode clean. A result belongs to the mode
+    // that produced it, and leaving a product card, an OCR'd date or a captured photo published
+    // while the camera has moved on is how a stale result ends up on screen under a mode that
+    // could not have produced it. The two in-card hand-offs below ("Scan Date", "Try Photo
+    // Mode") assign currentMode directly instead, precisely because they *do* carry the scan
+    // forward. The batch queue survives either way: it is dropped only on commit, or on leaving.
+    fun selectMode(target: CameraScanMode) {
+        if (target == currentMode) return
+        discardCapturedPhoto()
+        photoHandedOff = false
+        stateHolder.clearScanResults()
+        currentMode = target
+    }
+
+    // An uncommitted queue does not outlive the screen that shows it - otherwise its rows sit
+    // in state nothing displays, to be committed later alongside an unrelated batch. Discarding
+    // a shop's worth of scanning silently would be worse, so leaving asks first.
+    fun requestNavigateBack() {
+        if (state.batchQueue.isEmpty()) {
+            onNavigateBack()
+        } else {
+            confirmDiscardQueue = true
+        }
+    }
+
+    fun discardQueueAndLeave() {
+        stateHolder.clearBatchQueue()
+        onNavigateBack()
+    }
+
+    // The host's own predictive-back handler would otherwise leave the scanner without going
+    // through the prompt above, taking the queue out of view but not out of state.
+    BackHandler(enabled = state.batchQueue.isNotEmpty()) {
+        confirmDiscardQueue = true
+    }
+
+    // Catches every remaining way out - the host navigating away, the overlay closing - for a
+    // photo that was taken but never continued with.
+    DisposableEffect(Unit) {
+        onDispose { if (!photoHandedOff) deletePhotoFile(capturedPhotoUri) }
+    }
 
     // Classify the captured photo once, off the capture callback, so a barcode-less product
     // (produce, bakery) can suggest its own name. Keyed on the URI so retaking a photo
@@ -145,7 +246,7 @@ fun ScannerScreen(
         val lines = ReceiptTextRecognizer.recognizeLines(context, uri)
         runCatching { File(Uri.parse(uri).path!!).delete() }
         stateHolder.enqueueReceiptLines(lines) { added ->
-            receiptMessage = if (added > 0) {
+            transientMessage = if (added > 0) {
                 context.resources.getQuantityString(R.plurals.receipt_lines_added, added, added)
             } else {
                 context.getString(R.string.receipt_nothing_found)
@@ -160,19 +261,26 @@ fun ScannerScreen(
         CameraPreviewView(
             mode = currentMode,
             onBarcodeFound = { barcode ->
+                val importSharedList = onShoppingListScanned
                 // A shared shopping list is a QR code, and so is a product's DataMatrix/QR - they
                 // arrive on the same callback. Route ours away before the lookup, or the whole
                 // JSON payload would be sent to Open Food Facts as a barcode.
                 if (ShoppingListShare.isPayload(barcode)) {
-                    onShoppingListScanned(barcode)
+                    if (importSharedList != null) {
+                        importSharedList(barcode)
+                    } else {
+                        // Say so rather than drop it: doing nothing is indistinguishable from
+                        // the camera having failed to read the code.
+                        transientMessage = context.getString(R.string.shopping_list_scan_unsupported)
+                    }
                 } else if (currentMode == CameraScanMode.BATCH) {
                     stateHolder.enqueueBatchScan(barcode)
                 } else {
                     stateHolder.onBarcodeScanned(barcode)
-                    // Only the single-item flow asks: batch collapses repeats into one row's
-                    // quantity by itself, and prompting per scan is exactly the interruption
-                    // batch mode exists to avoid.
-                    stateHolder.checkForDuplicate(barcode)
+                    // Only where the host renders the prompt, and only outside batch: batch
+                    // collapses repeats into one row's quantity by itself, and prompting per
+                    // scan is exactly the interruption batch mode exists to avoid.
+                    if (checkDuplicates) stateHolder.checkForDuplicate(barcode)
                 }
             },
             onDateFound = { date ->
@@ -183,7 +291,9 @@ fun ScannerScreen(
             onTorchAvailabilityChanged = { torchAvailable = it }
         )
 
-        // Top Controls: Back button & Mode Chips
+        // Top Controls: back button, mode chips, and the two transient readouts. These sit in
+        // one flow rather than at fixed offsets because the chip row's height is no longer
+        // fixed - it wraps (see below), and hardcoded top paddings collided with a second line.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -195,7 +305,7 @@ fun ScannerScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 IconButton(
-                    onClick = onNavigateBack,
+                    onClick = { requestNavigateBack() },
                     modifier = Modifier
                         .size(40.dp)
                         .background(Color.Black.copy(alpha = 0.5f), CircleShape)
@@ -220,7 +330,9 @@ fun ScannerScreen(
                         )
                     }
                 }
-                if (showManualEntryShortcut) {
+                // Not in batch or receipt: leaving for the single-item form mid-queue strands
+                // the rows already scanned on a screen that no longer shows them.
+                if (showManualEntryShortcut && !batchModeActive) {
                     Spacer(modifier = Modifier.weight(1f))
                     OutlinedButton(
                         onClick = {
@@ -241,87 +353,69 @@ fun ScannerScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Scanner Mode Selector. Horizontally scrollable: the chips no longer fit across
-            // a narrow phone, and truncating the last one would hide a whole mode.
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
+            // Scanner Mode Selector. Wraps rather than scrolls: every mode has to be reachable
+            // without a swipe that nothing signposts, and five chips will not fit one line on a
+            // narrow phone or at a large font scale.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                FilterChip(
-                    selected = currentMode == CameraScanMode.BARCODE,
-                    onClick = { currentMode = CameraScanMode.BARCODE },
-                    label = { Text(stringResource(R.string.scan_mode_barcode)) },
-                    leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color.Black.copy(alpha = 0.6f),
-                        labelColor = Color.White,
-                        iconColor = Color.White,
-                        selectedContainerColor = BrandPrimary,
-                        selectedLabelColor = Color.White,
-                        selectedLeadingIconColor = Color.White
+                enabledModes.forEach { mode ->
+                    ScanModeChip(
+                        mode = mode,
+                        selected = currentMode == mode,
+                        // A queue built in Batch outlives a switch to another mode, where the
+                        // panel that shows it is hidden. Without this it is simply invisible.
+                        queuedCount = if (mode == CameraScanMode.BATCH) state.batchQueue.size else 0,
+                        onClick = { selectMode(mode) }
                     )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                FilterChip(
-                    selected = currentMode == CameraScanMode.BATCH,
-                    onClick = { currentMode = CameraScanMode.BATCH },
-                    label = { Text(stringResource(R.string.scan_mode_batch)) },
-                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color.Black.copy(alpha = 0.6f),
-                        labelColor = Color.White,
-                        iconColor = Color.White,
-                        selectedContainerColor = BrandPrimary,
-                        selectedLabelColor = Color.White,
-                        selectedLeadingIconColor = Color.White
+                }
+            }
+
+            // Floating Date Detected Chip. Suppressed when the date is the whole result: the
+            // card at the bottom is then showing the same date, with something to do about it.
+            val detectedDate = state.detectedDate
+            if (detectedDate != null && !dateOnlyResult) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(FreshGreen)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = stringResource(R.string.expiry_date_found_format, formatLocalDate(detectedDate)),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
                     )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                FilterChip(
-                    selected = currentMode == CameraScanMode.RECEIPT,
-                    onClick = { currentMode = CameraScanMode.RECEIPT },
-                    label = { Text(stringResource(R.string.scan_mode_receipt)) },
-                    leadingIcon = { Icon(Icons.Default.ReceiptLong, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color.Black.copy(alpha = 0.6f),
-                        labelColor = Color.White,
-                        iconColor = Color.White,
-                        selectedContainerColor = BrandPrimary,
-                        selectedLabelColor = Color.White,
-                        selectedLeadingIconColor = Color.White
-                    )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                FilterChip(
-                    selected = currentMode == CameraScanMode.DATE_OCR,
-                    onClick = { currentMode = CameraScanMode.DATE_OCR },
-                    label = { Text(stringResource(R.string.scan_mode_date_ocr)) },
-                    leadingIcon = { Icon(Icons.Default.TextFields, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color.Black.copy(alpha = 0.6f),
-                        labelColor = Color.White,
-                        iconColor = Color.White,
-                        selectedContainerColor = BrandPrimary,
-                        selectedLabelColor = Color.White,
-                        selectedLeadingIconColor = Color.White
-                    )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                FilterChip(
-                    selected = currentMode == CameraScanMode.PHOTO,
-                    onClick = { currentMode = CameraScanMode.PHOTO },
-                    label = { Text(stringResource(R.string.scan_mode_photo)) },
-                    leadingIcon = { Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        containerColor = Color.Black.copy(alpha = 0.6f),
-                        labelColor = Color.White,
-                        iconColor = Color.White,
-                        selectedContainerColor = BrandPrimary,
-                        selectedLabelColor = Color.White,
-                        selectedLeadingIconColor = Color.White
-                    )
+                }
+            }
+
+            // Transient banner. Non-blocking: for a receipt the queue panel below already shows
+            // what was added, so this only has to report the count - and, more usefully, the
+            // cases where a scan produced nothing this screen could act on.
+            transientMessage?.let { message ->
+                LaunchedEffect(message) {
+                    delay(SCANNER_MESSAGE_VISIBLE_MILLIS)
+                    transientMessage = null
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = message,
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 )
             }
         }
@@ -331,9 +425,13 @@ fun ScannerScreen(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-            val isBarcodeShaped = currentMode == CameraScanMode.BARCODE || currentMode == CameraScanMode.BATCH
-            val reticleWidth = if (isBarcodeShaped) 280.dp else 300.dp
-            val reticleHeight = if (isBarcodeShaped) 160.dp else 120.dp
+            val (reticleWidth, reticleHeight) = when (currentMode) {
+                CameraScanMode.BARCODE, CameraScanMode.BATCH -> 280.dp to 160.dp
+                // A receipt is tall and narrow. Framing one inside the landscape box the other
+                // modes use is not what "fit the whole receipt in frame" is asking for.
+                CameraScanMode.RECEIPT -> 240.dp to 300.dp
+                CameraScanMode.DATE_OCR, CameraScanMode.PHOTO -> 300.dp to 120.dp
+            }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
@@ -363,7 +461,7 @@ fun ScannerScreen(
         }
 
         // Batch queue panel: the review list that replaces stopping at a form per product.
-        if (currentMode == CameraScanMode.BATCH || currentMode == CameraScanMode.RECEIPT) {
+        if (batchModeActive) {
             BatchQueuePanel(
                 entries = state.batchQueue,
                 onRemove = stateHolder::removeBatchEntry,
@@ -373,60 +471,10 @@ fun ScannerScreen(
                         if (added > 0) onBatchCommitted(added)
                     }
                 },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
-        }
-
-        // Floating Date Detected Chip
-        val detectedDate = state.detectedDate
-        if (detectedDate != null) {
-            Box(
-                contentAlignment = Alignment.TopCenter,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 130.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(FreshGreen)
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.expiry_date_found_format, formatLocalDate(detectedDate)),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
-                    )
-                }
-            }
-        }
-
-        // Receipt result banner. Transient and non-blocking: the queue panel below already
-        // shows what was added, so this only has to report the count — and, more usefully, the
-        // case where a photo yielded nothing at all.
-        receiptMessage?.let { message ->
-            LaunchedEffect(message) {
-                delay(RECEIPT_MESSAGE_VISIBLE_MILLIS)
-                receiptMessage = null
-            }
-            Box(
-                contentAlignment = Alignment.TopCenter,
-                modifier = Modifier.fillMaxSize().padding(top = 160.dp)
-            ) {
-                Text(
-                    text = message,
-                    color = Color.White,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                )
-            }
+                    .align(Alignment.BottomCenter)
+                    .onGloballyPositioned { queuePanelHeightPx = it.size.height.toFloat() }
+            )
         }
 
         // Shutter Button (Receipt mode). Separate from the photo shutter below: nothing is kept
@@ -437,7 +485,7 @@ fun ScannerScreen(
                 contentAlignment = Alignment.BottomCenter,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = if (state.batchQueue.isEmpty()) 48.dp else 260.dp)
+                    .padding(bottom = queuePanelHeight + 24.dp)
             ) {
                 IconButton(
                     onClick = {
@@ -484,8 +532,10 @@ fun ScannerScreen(
 
         // Shutter Button (Photo mode, before a photo has been taken)
         if (currentMode == CameraScanMode.PHOTO && capturedPhotoUri == null) {
-            val resultCardShowing = state.isLookingUpBarcode || state.scannedProduct != null ||
-                (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO)
+            // Only the branches the card can actually show in photo mode: a not-found barcode
+            // is suppressed here (that is what "Try Photo Mode" hands off into), so asking
+            // about it again would be asking about a state this block has already excluded.
+            val resultCardShowing = state.isLookingUpBarcode || state.scannedProduct != null || dateOnlyResult
             Box(
                 contentAlignment = Alignment.BottomCenter,
                 modifier = Modifier
@@ -540,10 +590,12 @@ fun ScannerScreen(
             }
         }
 
-        // Bottom Result Card (Barcode lookup result, OCR detection, or captured photo)
-        if (currentMode != CameraScanMode.BATCH && currentMode != CameraScanMode.RECEIPT &&
+        // Bottom Result Card (barcode lookup result, captured photo, or an OCR'd date on its
+        // own). Never in batch or receipt mode: those review their results in the queue panel.
+        if (!batchModeActive &&
             (state.isLookingUpBarcode || state.scannedProduct != null ||
-                (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) || capturedPhotoUri != null)) {
+                (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) ||
+                capturedPhotoUri != null || dateOnlyResult)) {
             Card(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -589,10 +641,20 @@ fun ScannerScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
+                                // Name the product this photo is being attached to when there
+                                // is one: this branch outranks the product branch below, so
+                                // without it the card would show a photo and nothing about
+                                // what was scanned.
                                 Text(
-                                    text = stringResource(R.string.photo_captured_message),
+                                    text = product?.name
+                                        ?: state.productNotFoundBarcode?.let {
+                                            stringResource(R.string.barcode_format, it)
+                                        }
+                                        ?: stringResource(R.string.photo_captured_message),
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
+                                    color = Color.Gray,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
@@ -601,7 +663,7 @@ fun ScannerScreen(
 
                         Row(modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(
-                                onClick = { capturedPhotoUri = null },
+                                onClick = { discardCapturedPhoto() },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
@@ -614,6 +676,9 @@ fun ScannerScreen(
 
                             Button(
                                 onClick = {
+                                    // The saved item will point at this file, so it survives
+                                    // this screen going away.
+                                    photoHandedOff = true
                                     onProceedToAddItem(
                                         product?.barcode ?: state.productNotFoundBarcode,
                                         product?.name,
@@ -669,6 +734,9 @@ fun ScannerScreen(
 
                         Row(modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(
+                                // A hand-off, not a mode pick: this deliberately carries the
+                                // product forward so the OCR'd date lands on it, which is why
+                                // it assigns currentMode instead of going through selectMode.
                                 onClick = { currentMode = CameraScanMode.DATE_OCR },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
@@ -726,6 +794,10 @@ fun ScannerScreen(
 
                         Row(modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(
+                                // Also a hand-off: the unrecognised barcode has to survive into
+                                // photo mode so the photo is attached to it. Hence not
+                                // selectMode, and hence the `currentMode != PHOTO` guard above,
+                                // which hides this card once the hand-off has happened.
                                 onClick = { currentMode = CameraScanMode.PHOTO },
                                 modifier = Modifier.weight(1f),
                                 shape = RoundedCornerShape(12.dp)
@@ -756,13 +828,138 @@ fun ScannerScreen(
                                 Text(stringResource(R.string.continue_button))
                             }
                         }
+                    } else {
+                        // Date-only: an OCR'd date with no product attached to it. The way on
+                        // is the same Add/Edit hand-off every other branch uses, carrying the
+                        // date and nothing else.
+                        val date = state.detectedDate!!
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.EventAvailable,
+                                contentDescription = null,
+                                tint = FreshGreen,
+                                modifier = Modifier.size(28.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.date_captured_title),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = formatLocalDate(date),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedButton(
+                                onClick = { stateHolder.clearScanResults() },
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.scan_again_button))
+                            }
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            Button(
+                                onClick = {
+                                    onProceedToAddItem(null, null, null, null, date, null, state.suggestedExpiry)
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(stringResource(R.string.continue_button))
+                            }
+                        }
                     }
                 }
             }
         }
+
+        if (confirmDiscardQueue) {
+            AlertDialog(
+                onDismissRequest = { confirmDiscardQueue = false },
+                title = { Text(stringResource(R.string.batch_discard_title)) },
+                text = {
+                    Text(
+                        pluralStringResource(
+                            R.plurals.batch_discard_message,
+                            state.batchQueue.size,
+                            state.batchQueue.size
+                        )
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        confirmDiscardQueue = false
+                        discardQueueAndLeave()
+                    }) {
+                        Text(stringResource(R.string.batch_discard_confirm), color = BrandPrimary)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { confirmDiscardQueue = false }) {
+                        Text(stringResource(R.string.batch_discard_keep))
+                    }
+                }
+            )
+        }
     }
 }
 
+/**
+ * One mode chip. [queuedCount] hangs a count off the label when that mode is holding work the
+ * user cannot currently see — only Batch has any, and only while its panel is hidden behind
+ * another mode.
+ */
+@Composable
+private fun ScanModeChip(
+    mode: CameraScanMode,
+    selected: Boolean,
+    queuedCount: Int,
+    onClick: () -> Unit
+) {
+    val label = stringResource(
+        when (mode) {
+            CameraScanMode.BARCODE -> R.string.scan_mode_barcode
+            CameraScanMode.BATCH -> R.string.scan_mode_batch
+            CameraScanMode.RECEIPT -> R.string.scan_mode_receipt
+            CameraScanMode.DATE_OCR -> R.string.scan_mode_date_ocr
+            CameraScanMode.PHOTO -> R.string.scan_mode_photo
+        }
+    )
+    val icon = when (mode) {
+        CameraScanMode.BARCODE -> Icons.Default.QrCodeScanner
+        CameraScanMode.BATCH -> Icons.Default.PlaylistAdd
+        CameraScanMode.RECEIPT -> Icons.Default.ReceiptLong
+        CameraScanMode.DATE_OCR -> Icons.Default.TextFields
+        CameraScanMode.PHOTO -> Icons.Default.CameraAlt
+    }
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(if (queuedCount > 0) "$label ($queuedCount)" else label) },
+        leadingIcon = { Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp)) },
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = Color.Black.copy(alpha = 0.6f),
+            labelColor = Color.White,
+            iconColor = Color.White,
+            selectedContainerColor = BrandPrimary,
+            selectedLabelColor = Color.White,
+            selectedLeadingIconColor = Color.White
+        )
+    )
+}
 
 /**
  * The batch queue, docked over the live camera so scanning and reviewing happen on one screen.

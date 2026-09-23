@@ -258,5 +258,21 @@
             <string>La til %d varer</string>
         </dict>
     </dict>
+	<key>batch_discard_message_format</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@items@</string>
+		<key>items</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d vare står i kø og er ikke lagt til ennå.</string>
+			<key>other</key>
+			<string>%d varer står i kø og er ikke lagt til ennå.</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

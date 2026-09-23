@@ -332,3 +332,11 @@
 "settings_add_store" = "Save my current location";
 "settings_store_location_failed" = "Couldn't get your location. Check location permission and try again outdoors.";
 "store_reminder_title_named_format" = "You're at %@";
+
+/* Scanner mode workflow */
+"date_captured_title" = "Expiry date read";
+"scan_again_button" = "Scan Again";
+"shopping_list_scan_unsupported" = "Open the scanner from your pantry to import a shared list";
+"batch_discard_title" = "Discard scanned items?";
+"batch_discard_confirm" = "Discard";
+"batch_discard_keep" = "Keep scanning";

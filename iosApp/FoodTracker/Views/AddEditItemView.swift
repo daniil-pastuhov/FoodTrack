@@ -415,7 +415,19 @@ public struct AddEditItemView: View {
                 }
             }
             .sheet(isPresented: $showScanner) {
-                ScannerSheetView(viewModel: viewModel, showManualEntryShortcut: false) { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedDate, scannedCategory, scannedSuggestion in
+                ScannerSheetView(
+                    viewModel: viewModel,
+                    showManualEntryShortcut: false,
+                    // Batch and receipt commit straight to the pantry, bypassing the form this
+                    // sheet is sitting on, and this host has no way to import a shared shopping
+                    // list either. Offering a mode whose result lands nowhere is offering
+                    // something that can't work.
+                    enabledModes: [.barcode, .dateOcr, .photo],
+                    // The "+1 to the one you already have" prompt belongs to the scan-first
+                    // flow. Here the user is already filling in a specific item, and merging
+                    // would discard whatever they had typed.
+                    checkDuplicates: false
+                ) { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedDate, scannedCategory, scannedSuggestion in
                     if let scannedBarcode { barcode = scannedBarcode }
                     if let scannedName { name = scannedName }
                     if let scannedBrand { brand = scannedBrand }
