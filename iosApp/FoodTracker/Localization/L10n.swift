@@ -274,6 +274,23 @@ public enum L10n {
 
     public static var settingsSectionData: String { NSLocalizedString("settings_section_data", comment: "") }
     public static var settingsClearDataButton: String { NSLocalizedString("settings_clear_data_button", comment: "") }
+    public static var settingsBackupDesc: String { NSLocalizedString("settings_backup_desc", comment: "") }
+    public static var settingsExportBackupButton: String { NSLocalizedString("settings_export_backup_button", comment: "") }
+    public static var settingsImportBackupButton: String { NSLocalizedString("settings_import_backup_button", comment: "") }
+    public static var restoreModeMessage: String { NSLocalizedString("restore_mode_message", comment: "") }
+    public static var restoreModeMergeTitle: String { NSLocalizedString("restore_mode_merge_title", comment: "") }
+    public static var restoreModeReplaceTitle: String { NSLocalizedString("restore_mode_replace_title", comment: "") }
+    public static var backupExportSuccess: String { NSLocalizedString("backup_export_success", comment: "") }
+    public static var backupExportFailed: String { NSLocalizedString("backup_export_failed", comment: "") }
+    public static var backupImportMalformed: String { NSLocalizedString("backup_import_malformed", comment: "") }
+    public static var backupImportUnsupported: String { NSLocalizedString("backup_import_unsupported", comment: "") }
+    public static var backupImportEmpty: String { NSLocalizedString("backup_import_empty", comment: "") }
+    public static func backupImportSuccess(_ count: Int) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("backup_import_success_format", comment: ""),
+            count
+        )
+    }
     public static var clearDataDialogTitle: String { NSLocalizedString("clear_data_dialog_title", comment: "") }
     public static var clearDataDialogMessage: String { NSLocalizedString("clear_data_dialog_message", comment: "") }
     public static var clearDataConfirm: String { NSLocalizedString("clear_data_confirm", comment: "") }

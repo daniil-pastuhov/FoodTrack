@@ -1,5 +1,6 @@
 package com.foodtracker.repository
 
+import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.ProductInfo
 
 /** Caches product info keyed by barcode — both a successful Open Food Facts lookup and a
@@ -21,4 +22,13 @@ interface LocalProductRepository {
      *  holding a full, current [ProductInfo]. A barcode with no cached product yet is a
      *  no-op - [saveProduct] always runs first on the save path that calls this. */
     suspend fun recordShelfLifeDays(barcode: String, days: Int)
+
+    /** Every cached product, shelf lives included - the whole table, for a backup. */
+    suspend fun getAll(): List<CachedProduct>
+
+    /** Writes [products] wholesale, shelf lives included. Used when restoring a backup, which
+     *  is the only place a shelf life is set without an item having just been added. */
+    suspend fun saveAll(products: List<CachedProduct>)
+
+    suspend fun clearAll()
 }

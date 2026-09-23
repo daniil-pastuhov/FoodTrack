@@ -278,3 +278,15 @@
 "food_label_pizza" = "Pizza";
 "food_label_sandwich" = "Sandwich";
 "food_label_food" = "Mat";
+
+"settings_backup_desc" = "Matskapet ditt finnes bare på denne enheten. Eksporter en sikkerhetskopi for å ta vare på det, eller for å flytte det til en annen telefon. Bilder du har tatt ligger ikke i filen.";
+"settings_export_backup_button" = "Eksporter sikkerhetskopi";
+"settings_import_backup_button" = "Importer sikkerhetskopi";
+"restore_mode_message" = "Bilder du har tatt ligger ikke i filen, så gjenoppretting på en annen enhet viser disse varene uten bilde.";
+"restore_mode_merge_title" = "Legg til det som mangler";
+"restore_mode_replace_title" = "Erstatt alt";
+"backup_export_success" = "Sikkerhetskopi lagret";
+"backup_export_failed" = "Kunne ikke lagre sikkerhetskopien";
+"backup_import_malformed" = "Den filen er ikke en FoodTracker-sikkerhetskopi";
+"backup_import_unsupported" = "Den sikkerhetskopien er laget av en nyere versjon av appen";
+"backup_import_empty" = "Den sikkerhetskopien har ingenting å gjenopprette";

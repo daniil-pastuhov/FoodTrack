@@ -29,4 +29,7 @@ interface CategoryPreferenceDao {
      *  tracker fires once for the whole batch rather than once per row. */
     @Upsert
     suspend fun upsertAll(entities: List<CategoryPreferenceEntity>)
+
+    @Query("DELETE FROM category_preferences")
+    suspend fun clearAll()
 }

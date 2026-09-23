@@ -1,5 +1,6 @@
 package com.foodtracker.android.data.local
 
+import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.repository.LocalProductRepository
 
@@ -49,4 +50,35 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
         if (trimmed.isEmpty()) return
         dao.updateShelfLifeDays(trimmed, days)
     }
+
+    override suspend fun getAll(): List<CachedProduct> = dao.getAll().map {
+        CachedProduct(
+            barcode = it.barcode,
+            name = it.name,
+            brand = it.brand,
+            imageUrl = it.imageUrl,
+            category = it.category,
+            shelfLifeDays = it.shelfLifeDays
+        )
+    }
+
+    override suspend fun saveAll(products: List<CachedProduct>) {
+        if (products.isEmpty()) return
+        dao.upsertAll(
+            products.mapNotNull { product ->
+                val trimmed = product.barcode.trim()
+                if (trimmed.isEmpty()) return@mapNotNull null
+                LocalProductEntity(
+                    barcode = trimmed,
+                    name = product.name,
+                    brand = product.brand,
+                    imageUrl = product.imageUrl,
+                    category = product.category,
+                    shelfLifeDays = product.shelfLifeDays
+                )
+            }
+        )
+    }
+
+    override suspend fun clearAll() = dao.clearAll()
 }

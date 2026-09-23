@@ -26,4 +26,11 @@ interface CategoryPreferenceRepository {
      *  that is one transaction and one flow re-emission per preference, each of which re-runs
      *  the whole downstream derivation. */
     suspend fun updateEntries(preferences: List<CategoryPreference>)
+
+    /** Inserts or replaces [preferences] wholesale, for a backup restore. Unlike
+     *  [registerIfAbsent] this overwrites an existing row, since the backup's version of a
+     *  category is the one being restored. */
+    suspend fun upsertAll(preferences: List<CategoryPreference>)
+
+    suspend fun clearAll()
 }

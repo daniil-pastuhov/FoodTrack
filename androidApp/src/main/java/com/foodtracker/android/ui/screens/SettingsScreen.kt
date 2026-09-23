@@ -2,7 +2,11 @@ package com.foodtracker.android.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,6 +20,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -37,6 +43,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -61,6 +68,7 @@ import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.AppTheme
 
@@ -71,6 +79,12 @@ fun SettingsScreen(
     onSave: (AppSettings) -> Unit,
     onClearAllData: () -> Unit,
     onManageCategories: () -> Unit,
+    /** Writes a full backup to the document the user picked. */
+    onExportBackup: (Uri) -> Unit,
+    /** Restores from the document the user picked, in the chosen mode. */
+    onImportBackup: (Uri, RestoreMode) -> Unit,
+    /** Default filename offered in the save dialog, stamped with today's date. */
+    backupFileName: String,
     modifier: Modifier = Modifier,
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
@@ -81,6 +95,17 @@ fun SettingsScreen(
     var editingLocationText by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
     var showClearConfirm by remember { mutableStateOf(false) }
+    // Held between picking a file and choosing how to apply it: the mode question only makes
+    // sense once we know there is a file, and asking it first would strand the answer if the
+    // user then backed out of the picker.
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let(onExportBackup) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> pendingImportUri = uri }
 
     fun persist(updated: AppSettings) {
         draft = updated
@@ -109,6 +134,45 @@ fun SettingsScreen(
                 }
             },
             text = { TimePicker(state = timeState) }
+        )
+    }
+
+    pendingImportUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text(stringResource(R.string.settings_import_backup_button)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.restore_mode_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    RestoreModeRow(
+                        title = stringResource(R.string.restore_mode_merge_title),
+                        subtitle = stringResource(R.string.restore_mode_merge_subtitle),
+                        onClick = {
+                            pendingImportUri = null
+                            onImportBackup(uri, RestoreMode.MERGE)
+                        }
+                    )
+                    RestoreModeRow(
+                        title = stringResource(R.string.restore_mode_replace_title),
+                        subtitle = stringResource(R.string.restore_mode_replace_subtitle),
+                        destructive = true,
+                        onClick = {
+                            pendingImportUri = null
+                            onImportBackup(uri, RestoreMode.REPLACE)
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { pendingImportUri = null }) {
+                    Text(stringResource(R.string.date_picker_cancel))
+                }
+            }
         )
     }
 
@@ -409,6 +473,35 @@ fun SettingsScreen(
 
             // Data
             SettingsSectionCard(title = stringResource(R.string.settings_section_data)) {
+                Text(
+                    text = stringResource(R.string.settings_backup_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedButton(
+                    onClick = { exportLauncher.launch(backupFileName) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_export_backup_button), fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                    // Not "application/json": plenty of file providers hand a .json file back as
+                    // text/plain or application/octet-stream, and a strict filter greys out the
+                    // very backup the user is trying to pick. The parse is what validates it.
+                    onClick = { importLauncher.launch(arrayOf("*/*")) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_import_backup_button), fontWeight = FontWeight.SemiBold)
+                }
+                Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { showClearConfirm = true },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
@@ -442,5 +535,30 @@ private fun SettingsSectionCard(
             Spacer(modifier = Modifier.height(10.dp))
             content()
         }
+    }
+}
+
+/** One choice in the restore dialog. Replace is tinted as destructive because it is: it wipes
+ *  whatever is on the device before restoring. */
+@Composable
+private fun RestoreModeRow(
+    title: String,
+    subtitle: String,
+    destructive: Boolean = false,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp)
+    ) {
+        Text(
+            text = title,
+            fontWeight = FontWeight.SemiBold,
+            color = if (destructive) MaterialTheme.colorScheme.error else BrandPrimary
+        )
+        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
     }
 }

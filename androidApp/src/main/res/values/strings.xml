@@ -336,6 +336,23 @@
     <string name="widget_overview_label">Pantry Overview</string>
     <string name="widget_overview_description">Shows what\'s expired or expiring soon, followed by your shopping list</string>
 
+    <string name="settings_backup_desc">Your pantry lives only on this device. Export a backup file to keep it safe, or to move it to another phone.</string>
+    <string name="settings_export_backup_button">Export backup</string>
+    <string name="settings_import_backup_button">Import backup</string>
+    <string name="restore_mode_message">Photos you took aren\'t inside the file, so restoring onto a different device shows those items without their picture.</string>
+    <string name="restore_mode_merge_title">Add what\'s missing</string>
+    <string name="restore_mode_merge_subtitle">Keeps everything already here. Your settings stay as they are.</string>
+    <string name="restore_mode_replace_title">Replace everything</string>
+    <string name="restore_mode_replace_subtitle">Deletes what\'s on this device first, settings included.</string>
+    <string name="backup_export_success">Backup saved</string>
+    <string name="backup_export_failed">Couldn\'t save the backup</string>
+    <string name="backup_import_malformed">That file isn\'t a FoodTracker backup</string>
+    <string name="backup_import_unsupported">That backup was made by a newer version of the app</string>
+    <string name="backup_import_empty">That backup has nothing to restore</string>
+    <plurals name="backup_import_success">
+        <item quantity="one">Restored %1$d item</item>
+        <item quantity="other">Restored %1$d items</item>
+    </plurals>
     <string name="settings_clear_data_button">Clear All Pantry Data</string>
     <string name="clear_data_dialog_title">Clear all pantry data?</string>
     <string name="clear_data_dialog_message">This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.</string>

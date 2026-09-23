@@ -278,3 +278,15 @@
 "food_label_pizza" = "Pizza";
 "food_label_sandwich" = "Sandwich";
 "food_label_food" = "Food";
+
+"settings_backup_desc" = "Your pantry lives only on this device. Export a backup file to keep it safe, or to move it to another phone. Photos you took aren't inside the file.";
+"settings_export_backup_button" = "Export backup";
+"settings_import_backup_button" = "Import backup";
+"restore_mode_message" = "Photos you took aren't inside the file, so restoring onto a different device shows those items without their picture.";
+"restore_mode_merge_title" = "Add what's missing";
+"restore_mode_replace_title" = "Replace everything";
+"backup_export_success" = "Backup saved";
+"backup_export_failed" = "Couldn't save the backup";
+"backup_import_malformed" = "That file isn't a FoodTracker backup";
+"backup_import_unsupported" = "That backup was made by a newer version of the app";
+"backup_import_empty" = "That backup has nothing to restore";

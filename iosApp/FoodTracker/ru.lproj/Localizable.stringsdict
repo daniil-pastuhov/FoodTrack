@@ -162,5 +162,25 @@
             <string>Добавлено %d товара</string>
         </dict>
     </dict>
+    <key>backup_import_success_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Восстановлен %d товар</string>
+            <key>few</key>
+            <string>Восстановлено %d товара</string>
+            <key>many</key>
+            <string>Восстановлено %d товаров</string>
+            <key>other</key>
+            <string>Восстановлено %d товара</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

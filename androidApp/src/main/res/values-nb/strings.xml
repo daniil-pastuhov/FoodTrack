@@ -314,6 +314,23 @@
     <string name="widget_overview_description">Viser hva som er utløpt eller snart utløper, etterfulgt av handlelisten din</string>
 
     <string name="settings_section_data">Data</string>
+    <string name="settings_backup_desc">Matskapet ditt finnes bare på denne enheten. Eksporter en sikkerhetskopi for å ta vare på det, eller for å flytte det til en annen telefon.</string>
+    <string name="settings_export_backup_button">Eksporter sikkerhetskopi</string>
+    <string name="settings_import_backup_button">Importer sikkerhetskopi</string>
+    <string name="restore_mode_message">Bilder du har tatt ligger ikke i filen, så gjenoppretting på en annen enhet viser disse varene uten bilde.</string>
+    <string name="restore_mode_merge_title">Legg til det som mangler</string>
+    <string name="restore_mode_merge_subtitle">Beholder alt som allerede er her. Innstillingene dine forblir som de er.</string>
+    <string name="restore_mode_replace_title">Erstatt alt</string>
+    <string name="restore_mode_replace_subtitle">Sletter først det som er på denne enheten, inkludert innstillinger.</string>
+    <string name="backup_export_success">Sikkerhetskopi lagret</string>
+    <string name="backup_export_failed">Kunne ikke lagre sikkerhetskopien</string>
+    <string name="backup_import_malformed">Den filen er ikke en FoodTracker-sikkerhetskopi</string>
+    <string name="backup_import_unsupported">Den sikkerhetskopien er laget av en nyere versjon av appen</string>
+    <string name="backup_import_empty">Den sikkerhetskopien har ingenting å gjenopprette</string>
+    <plurals name="backup_import_success">
+        <item quantity="one">Gjenopprettet %1$d vare</item>
+        <item quantity="other">Gjenopprettet %1$d varer</item>
+    </plurals>
     <string name="settings_clear_data_button">Tøm alle data i matskapet</string>
     <string name="clear_data_dialog_title">Tømme alle data i matskapet?</string>
     <string name="clear_data_dialog_message">Dette fjerner alle varer fra matskapet og avbryter alle ventende utløpspåminnelser. Dette kan ikke angres.</string>

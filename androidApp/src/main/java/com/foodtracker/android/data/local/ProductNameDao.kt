@@ -20,4 +20,7 @@ interface ProductNameDao {
 
     @Upsert
     suspend fun upsert(entity: ProductNameEntity)
+
+    @Query("DELETE FROM known_product_names")
+    suspend fun clearAll()
 }

@@ -1052,6 +1052,145 @@ public class NativePantryViewModel: ObservableObject {
         scanningShoppingListEntryId = nil
     }
 
+    /// Builds a full backup of everything stored locally.
+    ///
+    /// Reads the store directly rather than the published arrays: those hold only what the
+    /// screens need (no product cache, no known-names list), and a backup that quietly omitted
+    /// them would restore a pantry that had forgotten every shelf life and autosuggest name the
+    /// user had built up.
+    public func exportBackup() -> BackupDocument {
+        let products = ((try? modelContext.fetch(FetchDescriptor<LocalProductRecord>())) ?? []).map {
+            CachedProduct(
+                barcode: $0.barcode,
+                name: $0.name,
+                brand: $0.brand,
+                imageUrl: $0.imageUrl,
+                category: $0.category,
+                shelfLifeDays: $0.shelfLifeDays
+            )
+        }
+        let names = ((try? modelContext.fetch(FetchDescriptor<ProductNameRecord>())) ?? []).map { $0.displayName }
+        return BackupDocument(
+            exportedAtEpochMillis: Int64(Date().timeIntervalSince1970 * 1000),
+            items: items,
+            shoppingList: shoppingList,
+            categoryPreferences: categoryPreferences,
+            products: products,
+            knownProductNames: names,
+            settings: SettingsStore.shared.settings
+        )
+    }
+
+    /// Restores `raw` according to `mode`.
+    ///
+    /// `.merge` adds only what is missing, matching pantry items and shopping entries by id so
+    /// re-importing the same file twice is a no-op rather than a way to double a pantry.
+    /// `.replace` clears local data first and also restores the backup's settings; merge
+    /// deliberately leaves settings alone, since those are the settings of the device the user is
+    /// holding rather than of the file they are importing.
+    public func restoreBackup(_ raw: String, mode: RestoreMode) -> (BackupReadResult, RestoreSummary) {
+        let result = BackupSerializer.decode(raw)
+        guard case .success(let document) = result else {
+            return (result, RestoreSummary())
+        }
+
+        if mode == .replace {
+            try? modelContext.delete(model: PantryItemRecord.self)
+            try? modelContext.delete(model: ShoppingListEntryRecord.self)
+            try? modelContext.delete(model: LocalProductRecord.self)
+            try? modelContext.delete(model: CategoryPreferenceRecord.self)
+            try? modelContext.delete(model: ProductNameRecord.self)
+            try? modelContext.save()
+        }
+
+        // Category preferences go back first: items and shopping entries reference categories by
+        // origin, and restoring those first would auto-register each origin with a default
+        // display name that the backup's own (possibly renamed) version would then overwrite.
+        let existingPreferences = (try? modelContext.fetch(FetchDescriptor<CategoryPreferenceRecord>())) ?? []
+        var preferenceByOrigin = Dictionary(
+            existingPreferences.map { ($0.originName, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for preference in document.categoryPreferences {
+            if let existing = preferenceByOrigin[preference.originName] {
+                existing.update(from: preference)
+            } else {
+                let record = CategoryPreferenceRecord(from: preference)
+                modelContext.insert(record)
+                preferenceByOrigin[preference.originName] = record
+            }
+        }
+
+        let existingItemIds = Set(((try? modelContext.fetch(FetchDescriptor<PantryItemRecord>())) ?? []).map { $0.id })
+        var itemsRestored = 0
+        for item in document.items {
+            if mode == .merge && existingItemIds.contains(item.id) { continue }
+            modelContext.insert(PantryItemRecord(from: item))
+            itemsRestored += 1
+        }
+
+        let existingEntryIds = Set(((try? modelContext.fetch(FetchDescriptor<ShoppingListEntryRecord>())) ?? []).map { $0.id })
+        var entriesRestored = 0
+        for entry in document.shoppingList {
+            if mode == .merge && existingEntryIds.contains(entry.id) { continue }
+            modelContext.insert(ShoppingListEntryRecord(from: entry))
+            entriesRestored += 1
+        }
+
+        let existingProducts = (try? modelContext.fetch(FetchDescriptor<LocalProductRecord>())) ?? []
+        var productByBarcode = Dictionary(
+            existingProducts.map { ($0.barcode, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for product in document.products {
+            let barcode = product.barcode.trimmingCharacters(in: .whitespaces)
+            guard !barcode.isEmpty else { continue }
+            if let existing = productByBarcode[barcode] {
+                existing.name = product.name
+                existing.brand = product.brand
+                existing.imageUrl = product.imageUrl
+                existing.category = product.category
+                existing.shelfLifeDays = product.shelfLifeDays
+            } else {
+                let record = LocalProductRecord(
+                    barcode: barcode,
+                    name: product.name,
+                    brand: product.brand,
+                    imageUrl: product.imageUrl,
+                    category: product.category,
+                    shelfLifeDays: product.shelfLifeDays
+                )
+                modelContext.insert(record)
+                productByBarcode[barcode] = record
+            }
+        }
+
+        try? modelContext.save()
+
+        for name in document.knownProductNames {
+            recordProductName(name)
+        }
+
+        if mode == .replace {
+            SettingsStore.shared.save(document.settings)
+        }
+
+        loadCategoryPreferences()
+        loadItems()
+        loadShoppingList()
+        loadKnownProductNames()
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
+        WidgetCenter.shared.reloadAllTimelines()
+
+        return (result, RestoreSummary(
+            itemsRestored: itemsRestored,
+            shoppingEntriesRestored: entriesRestored,
+            productsRestored: document.products.count,
+            categoriesRestored: document.categoryPreferences.count,
+            settingsRestored: mode == .replace
+        ))
+    }
+
     public func clearAllData() {
         try? modelContext.delete(model: PantryItemRecord.self)
         try? modelContext.save()

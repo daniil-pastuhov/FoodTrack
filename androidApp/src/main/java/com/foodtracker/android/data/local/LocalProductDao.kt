@@ -20,4 +20,15 @@ interface LocalProductDao {
      *  from partial data would overwrite them. A barcode with no cached row is a no-op. */
     @Query("UPDATE local_products SET shelfLifeDays = :days WHERE barcode = :barcode")
     suspend fun updateShelfLifeDays(barcode: String, days: Int)
+
+    @Query("SELECT * FROM local_products")
+    suspend fun getAll(): List<LocalProductEntity>
+
+    /** Room runs a multi-entity @Upsert in one transaction, so restoring a backup's whole
+     *  product cache fires the invalidation tracker once rather than once per row. */
+    @Upsert
+    suspend fun upsertAll(entities: List<LocalProductEntity>)
+
+    @Query("DELETE FROM local_products")
+    suspend fun clearAll()
 }

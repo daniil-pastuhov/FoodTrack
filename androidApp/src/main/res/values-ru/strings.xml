@@ -328,6 +328,25 @@
     <string name="widget_overview_description">Показывает просроченные и скоро истекающие продукты, а затем список покупок</string>
 
     <string name="settings_section_data">Данные</string>
+    <string name="settings_backup_desc">Ваши запасы хранятся только на этом устройстве. Экспортируйте резервную копию, чтобы сохранить их или перенести на другой телефон.</string>
+    <string name="settings_export_backup_button">Экспорт копии</string>
+    <string name="settings_import_backup_button">Импорт копии</string>
+    <string name="restore_mode_message">Сделанные вами фотографии не входят в файл, поэтому при восстановлении на другом устройстве эти товары будут без изображений.</string>
+    <string name="restore_mode_merge_title">Добавить недостающее</string>
+    <string name="restore_mode_merge_subtitle">Сохраняет всё, что уже здесь. Настройки останутся прежними.</string>
+    <string name="restore_mode_replace_title">Заменить всё</string>
+    <string name="restore_mode_replace_subtitle">Сначала удалит всё на этом устройстве, включая настройки.</string>
+    <string name="backup_export_success">Копия сохранена</string>
+    <string name="backup_export_failed">Не удалось сохранить копию</string>
+    <string name="backup_import_malformed">Этот файл не является резервной копией FoodTracker</string>
+    <string name="backup_import_unsupported">Эта копия создана более новой версией приложения</string>
+    <string name="backup_import_empty">В этой копии нечего восстанавливать</string>
+    <plurals name="backup_import_success">
+        <item quantity="one">Восстановлен %1$d товар</item>
+        <item quantity="few">Восстановлено %1$d товара</item>
+        <item quantity="many">Восстановлено %1$d товаров</item>
+        <item quantity="other">Восстановлено %1$d товара</item>
+    </plurals>
     <string name="settings_clear_data_button">Очистить все данные кладовой</string>
     <string name="clear_data_dialog_title">Очистить все данные кладовой?</string>
     <string name="clear_data_dialog_message">Это удалит все продукты из кладовой и отменит все ожидающие напоминания о сроке годности. Это действие необратимо.</string>

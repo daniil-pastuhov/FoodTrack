@@ -1,6 +1,7 @@
 package com.foodtracker.android.perf
 
 import com.foodtracker.model.AppSettings
+import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
@@ -81,6 +82,11 @@ class FakeProductNameRepository : ProductNameRepository {
     override suspend fun recordSortOrder(name: String, sortOrder: Double) {
         sortOrders[name] = sortOrder
     }
+
+    override suspend fun clearAll() {
+        namesFlow.value = emptyList()
+        sortOrders.clear()
+    }
 }
 
 class FakeLocalProductRepository : LocalProductRepository {
@@ -90,6 +96,11 @@ class FakeLocalProductRepository : LocalProductRepository {
     /** Non-suspending seeding, so a test can arrange a cached product without a coroutine. */
     fun seed(product: ProductInfo) {
         products[product.barcode] = product
+    }
+
+    /** Non-suspending seeding of a learned shelf life, for the same reason as [seed]. */
+    fun recordShelfLife(barcode: String, days: Int) {
+        shelfLives[barcode] = days
     }
 
     override suspend fun getByBarcode(barcode: String): ProductInfo? = products[barcode]
@@ -104,6 +115,29 @@ class FakeLocalProductRepository : LocalProductRepository {
      *  targeted UPDATE performs. */
     override suspend fun recordShelfLifeDays(barcode: String, days: Int) {
         if (products.containsKey(barcode)) shelfLives[barcode] = days
+    }
+
+    override suspend fun getAll(): List<CachedProduct> = products.values.map {
+        CachedProduct(
+            barcode = it.barcode,
+            name = it.name,
+            brand = it.brand,
+            imageUrl = it.imageUrl,
+            category = it.category,
+            shelfLifeDays = shelfLives[it.barcode]
+        )
+    }
+
+    override suspend fun saveAll(products: List<CachedProduct>) {
+        products.forEach { product ->
+            this.products[product.barcode] = product.toProductInfo()
+            product.shelfLifeDays?.let { shelfLives[product.barcode] = it }
+        }
+    }
+
+    override suspend fun clearAll() {
+        products.clear()
+        shelfLives.clear()
     }
 }
 
@@ -129,5 +163,17 @@ class FakeCategoryPreferenceRepository(
         if (preferences.isEmpty()) return
         val updates = preferences.associateBy { it.originName }
         preferencesFlow.value = preferencesFlow.value.map { updates[it.originName] ?: it }
+    }
+
+    override suspend fun upsertAll(preferences: List<CategoryPreference>) {
+        if (preferences.isEmpty()) return
+        val updates = preferences.associateBy { it.originName }
+        val existing = preferencesFlow.value.map { updates[it.originName] ?: it }
+        val existingOrigins = preferencesFlow.value.mapTo(HashSet()) { it.originName }
+        preferencesFlow.value = existing + preferences.filterNot { it.originName in existingOrigins }
+    }
+
+    override suspend fun clearAll() {
+        preferencesFlow.value = emptyList()
     }
 }

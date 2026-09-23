@@ -1,7 +1,13 @@
 package com.foodtracker.viewmodel
 
 import com.foodtracker.api.OpenFoodFactsApi
+import com.foodtracker.backup.BackupDocument
+import com.foodtracker.backup.BackupReadResult
+import com.foodtracker.backup.BackupSerializer
+import com.foodtracker.backup.RestoreMode
+import com.foodtracker.backup.RestoreSummary
 import com.foodtracker.model.AppSettings
+import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
@@ -34,6 +40,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
@@ -369,6 +376,103 @@ class PantryStateHolder(
         }
     }
 
+
+    /**
+     * Builds a full backup of everything stored locally and hands the JSON to [onReady].
+     *
+     * Reads the repositories directly rather than snapshotting [uiState]: the ui state holds
+     * only what the screens need (it has no product cache and no known-names list), and a backup
+     * that quietly omitted them would restore a pantry that had forgotten every shelf life and
+     * every autosuggest name the user had built up.
+     */
+    fun exportBackup(onReady: (json: String, document: BackupDocument) -> Unit) {
+        coroutineScope.launch {
+            val document = BackupDocument(
+                exportedAtEpochMillis = currentTimeMillis(),
+                items = repository.getItemsFlow().first(),
+                shoppingList = shoppingListRepository.getEntriesFlow().first(),
+                categoryPreferences = categoryPreferenceRepository.getPreferencesFlow().first(),
+                products = localProductRepository.getAll(),
+                knownProductNames = productNameRepository.getKnownNamesFlow().first(),
+                settings = settingsState.value
+            )
+            onReady(BackupSerializer.encode(document), document)
+        }
+    }
+
+    /**
+     * Restores [raw] according to [mode], reporting the outcome through [onComplete].
+     *
+     * [RestoreMode.MERGE] adds only what is missing, matching pantry items and shopping entries
+     * by id so re-importing the same file twice is a no-op rather than a way to double a pantry.
+     * [RestoreMode.REPLACE] clears local data first and also restores the backup's settings;
+     * merge deliberately leaves settings alone, since those are the settings of the device the
+     * user is holding rather than of the file they are importing.
+     */
+    fun restoreBackup(
+        raw: String,
+        mode: RestoreMode,
+        onComplete: (BackupReadResult, RestoreSummary) -> Unit
+    ) {
+        val result = BackupSerializer.decode(raw)
+        if (result !is BackupReadResult.Success) {
+            onComplete(result, RestoreSummary())
+            return
+        }
+        coroutineScope.launch {
+            onComplete(result, applyRestore(result.document, mode))
+        }
+    }
+
+    private suspend fun applyRestore(document: BackupDocument, mode: RestoreMode): RestoreSummary {
+        if (mode == RestoreMode.REPLACE) {
+            repository.clearAll()
+            shoppingListRepository.clearAll()
+            localProductRepository.clearAll()
+            categoryPreferenceRepository.clearAll()
+            productNameRepository.clearAll()
+        }
+
+        // Category preferences go back first: items and shopping entries reference categories by
+        // origin, and restoring those first would auto-register each origin with a default
+        // display name, which the backup's own (possibly renamed) version would then have to
+        // overwrite - churning the preferences table and re-running the derivation each time.
+        categoryPreferenceRepository.upsertAll(document.categoryPreferences)
+
+        val existingItemIds = repository.getItemsFlow().first().mapTo(HashSet()) { it.id }
+        var itemsRestored = 0
+        document.items.forEach { item ->
+            if (mode == RestoreMode.MERGE && item.id in existingItemIds) return@forEach
+            repository.saveItem(item)
+            itemsRestored++
+        }
+
+        val existingEntryIds = shoppingListRepository.getEntriesFlow().first().mapTo(HashSet()) { it.id }
+        var entriesRestored = 0
+        document.shoppingList.forEach { entry ->
+            if (mode == RestoreMode.MERGE && entry.id in existingEntryIds) return@forEach
+            shoppingListRepository.addEntry(entry)
+            entriesRestored++
+        }
+
+        localProductRepository.saveAll(document.products)
+        document.knownProductNames.forEach { productNameRepository.recordName(it) }
+
+        if (mode == RestoreMode.REPLACE) {
+            updateSettings(document.settings)
+        }
+
+        return RestoreSummary(
+            itemsRestored = itemsRestored,
+            shoppingEntriesRestored = entriesRestored,
+            productsRestored = document.products.size,
+            categoriesRestored = document.categoryPreferences.size,
+            settingsRestored = mode == RestoreMode.REPLACE
+        )
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun currentTimeMillis(): Long = Clock.System.now().toEpochMilliseconds()
 
     fun clearAllData() {
         coroutineScope.launch {

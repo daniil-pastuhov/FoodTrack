@@ -278,3 +278,15 @@
 "food_label_pizza" = "Пицца";
 "food_label_sandwich" = "Сэндвич";
 "food_label_food" = "Еда";
+
+"settings_backup_desc" = "Ваши запасы хранятся только на этом устройстве. Экспортируйте резервную копию, чтобы сохранить их или перенести на другой телефон. Сделанные вами фотографии не входят в файл.";
+"settings_export_backup_button" = "Экспорт копии";
+"settings_import_backup_button" = "Импорт копии";
+"restore_mode_message" = "Сделанные вами фотографии не входят в файл, поэтому при восстановлении на другом устройстве эти товары будут без изображений.";
+"restore_mode_merge_title" = "Добавить недостающее";
+"restore_mode_replace_title" = "Заменить всё";
+"backup_export_success" = "Копия сохранена";
+"backup_export_failed" = "Не удалось сохранить копию";
+"backup_import_malformed" = "Этот файл не является резервной копией FoodTracker";
+"backup_import_unsupported" = "Эта копия создана более новой версией приложения";
+"backup_import_empty" = "В этой копии нечего восстанавливать";

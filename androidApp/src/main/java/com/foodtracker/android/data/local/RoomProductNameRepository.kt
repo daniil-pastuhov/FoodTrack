@@ -44,4 +44,6 @@ class RoomProductNameRepository(private val dao: ProductNameDao) : ProductNameRe
             )
         }
     }
+
+    override suspend fun clearAll() = dao.clearAll()
 }

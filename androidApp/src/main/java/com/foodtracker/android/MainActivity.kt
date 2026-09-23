@@ -69,11 +69,17 @@ import com.foodtracker.android.ui.theme.FoodTrackerTheme
 import com.foodtracker.match.ShoppingListMatchResult
 import com.foodtracker.match.ShoppingListMatcher
 import com.foodtracker.model.AppTheme
+import com.foodtracker.backup.BackupReadResult
+import com.foodtracker.backup.BackupSerializer
+import com.foodtracker.backup.RestoreMode
+import com.foodtracker.util.DateUtils
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -339,6 +345,60 @@ class MainActivity : ComponentActivity() {
                             snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
                         }
                     }
+                    // Backup file I/O. Kept here rather than in SettingsScreen because it needs a
+                    // ContentResolver and a coroutine scope, and because the result has to reach
+                    // the same snackbar host everything else reports through.
+                    val onExportBackup: (android.net.Uri) -> Unit = { uri ->
+                        stateHolder.exportBackup { json, _ ->
+                            snackbarScope.launch(Dispatchers.IO) {
+                                val ok = try {
+                                    contentResolver.openOutputStream(uri)?.use { stream ->
+                                        stream.write(json.toByteArray())
+                                    } != null
+                                } catch (_: Exception) {
+                                    false
+                                }
+                                withContext(Dispatchers.Main) {
+                                    snackbarHostState.showSnackbar(
+                                        getString(if (ok) R.string.backup_export_success else R.string.backup_export_failed)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    val onImportBackup: (android.net.Uri, RestoreMode) -> Unit = { uri, mode ->
+                        snackbarScope.launch {
+                            val raw = withContext(Dispatchers.IO) {
+                                try {
+                                    contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                                } catch (_: Exception) {
+                                    null
+                                }
+                            }
+                            if (raw == null) {
+                                snackbarHostState.showSnackbar(getString(R.string.backup_import_malformed))
+                                return@launch
+                            }
+                            stateHolder.restoreBackup(raw, mode) { result, summary ->
+                                snackbarScope.launch {
+                                    val message = when {
+                                        result is BackupReadResult.Malformed ->
+                                            getString(R.string.backup_import_malformed)
+                                        result is BackupReadResult.UnsupportedVersion ->
+                                            getString(R.string.backup_import_unsupported)
+                                        summary.isEmpty -> getString(R.string.backup_import_empty)
+                                        else -> resources.getQuantityString(
+                                            R.plurals.backup_import_success,
+                                            summary.itemsRestored,
+                                            summary.itemsRestored
+                                        )
+                                    }
+                                    snackbarHostState.showSnackbar(message)
+                                }
+                            }
+                        }
+                    }
+
                     val onShoppingListPayloadScanned: (String) -> Unit = { payload ->
                         stateHolder.importShoppingList(payload, showImportResultSnackbar)
                         currentScreen = scanReturnScreen
@@ -561,6 +621,11 @@ class MainActivity : ComponentActivity() {
                                                     currentScreen = AppScreen.DASHBOARD
                                                 },
                                                 onManageCategories = { currentScreen = AppScreen.CATEGORY_SETTINGS },
+                                                onExportBackup = onExportBackup,
+                                                onImportBackup = onImportBackup,
+                                                backupFileName = BackupSerializer.suggestedFileName(
+                                                    DateUtils.today().toString()
+                                                ),
                                                 bottomOverlayClearance = pillClearance
                                             )
                                         }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 public struct SettingsView: View {
     @ObservedObject var viewModel: NativePantryViewModel
@@ -11,6 +12,13 @@ public struct SettingsView: View {
     @State private var editingLocation: String? = nil
     @State private var editingLocationText: String = ""
     @State private var showClearConfirm: Bool = false
+    @State private var showExporter = false
+    @State private var showImporter = false
+    /// Held between picking a file and choosing how to apply it: the mode question only makes
+    /// sense once we know there is a file, and asking it first would strand the answer if the
+    /// user then backed out of the picker.
+    @State private var pendingImportURL: URL?
+    @State private var backupMessage: String?
 
     public init(viewModel: NativePantryViewModel, onDataCleared: @escaping () -> Void = {}) {
         self.viewModel = viewModel
@@ -52,6 +60,85 @@ public struct SettingsView: View {
             } message: {
                 Text(L10n.clearDataDialogMessage)
             }
+            .fileExporter(
+                isPresented: $showExporter,
+                document: BackupFile(text: BackupSerializer.encode(viewModel.exportBackup())),
+                contentType: .json,
+                defaultFilename: BackupSerializer.suggestedFileName(
+                    isoDate: BackupDates.string(from: Date())
+                )
+            ) { result in
+                backupMessage = (try? result.get()) != nil
+                    ? L10n.backupExportSuccess
+                    : L10n.backupExportFailed
+            }
+            .fileImporter(
+                isPresented: $showImporter,
+                // Not restricted to .json: plenty of providers hand a .json file back as plain
+                // text or raw data, and a strict filter greys out the very backup the user is
+                // trying to pick. The parse is what validates it.
+                allowedContentTypes: [.json, .plainText, .data]
+            ) { result in
+                pendingImportURL = try? result.get()
+            }
+            .confirmationDialog(
+                L10n.settingsImportBackupButton,
+                isPresented: Binding(
+                    get: { pendingImportURL != nil },
+                    set: { if !$0 { pendingImportURL = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button(L10n.restoreModeMergeTitle) { applyImport(mode: .merge) }
+                Button(L10n.restoreModeReplaceTitle, role: .destructive) { applyImport(mode: .replace) }
+                Button(L10n.cancelButton, role: .cancel) { pendingImportURL = nil }
+            } message: {
+                Text(L10n.restoreModeMessage)
+            }
+            .overlay(alignment: .bottom) {
+                if let backupMessage {
+                    Text(backupMessage)
+                        .font(.footnote.weight(.medium))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.thinMaterial, in: Capsule())
+                        .padding(.bottom, 200)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: backupMessage)
+            .task(id: backupMessage) {
+                guard backupMessage != nil else { return }
+                try? await Task.sleep(for: .seconds(3))
+                if !Task.isCancelled { backupMessage = nil }
+            }
+        }
+    }
+
+    private func applyImport(mode: RestoreMode) {
+        guard let url = pendingImportURL else { return }
+        pendingImportURL = nil
+
+        // A document-picker URL is security-scoped: without this the read fails with a
+        // permission error even though the user just chose the file themselves.
+        let needsScope = url.startAccessingSecurityScopedResource()
+        defer { if needsScope { url.stopAccessingSecurityScopedResource() } }
+
+        guard let raw = try? String(contentsOf: url, encoding: .utf8) else {
+            backupMessage = L10n.backupImportMalformed
+            return
+        }
+        let (result, summary) = viewModel.restoreBackup(raw, mode: mode)
+        switch result {
+        case .malformed:
+            backupMessage = L10n.backupImportMalformed
+        case .unsupportedVersion:
+            backupMessage = L10n.backupImportUnsupported
+        case .success:
+            backupMessage = summary.isEmpty
+                ? L10n.backupImportEmpty
+                : L10n.backupImportSuccess(summary.itemsRestored)
         }
     }
 
@@ -200,12 +287,26 @@ public struct SettingsView: View {
     }
 
     private var dataSection: some View {
-        Section(header: Text(L10n.settingsSectionData)) {
+        Section {
+            Button {
+                showExporter = true
+            } label: {
+                Label(L10n.settingsExportBackupButton, systemImage: "square.and.arrow.up")
+            }
+            Button {
+                showImporter = true
+            } label: {
+                Label(L10n.settingsImportBackupButton, systemImage: "square.and.arrow.down")
+            }
             Button(role: .destructive) {
                 showClearConfirm = true
             } label: {
                 Text(L10n.settingsClearDataButton)
             }
+        } header: {
+            Text(L10n.settingsSectionData)
+        } footer: {
+            Text(L10n.settingsBackupDesc)
         }
     }
 
@@ -252,5 +353,24 @@ public struct SettingsView: View {
                 current.lastUsedStorageLocation = nil
             }
         }
+    }
+}
+
+/// Wraps the backup JSON for `fileExporter`, which needs a `FileDocument` rather than a string.
+private struct BackupFile: FileDocument {
+    static var readableContentTypes: [UTType] { [.json] }
+
+    let text: String
+
+    init(text: String) { self.text = text }
+
+    init(configuration: ReadConfiguration) throws {
+        // Export-only: the import side reads the picked URL directly (see applyImport), because
+        // it needs to report *why* a file was rejected rather than just failing to open.
+        text = ""
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(regularFileWithContents: Data(text.utf8))
     }
 }

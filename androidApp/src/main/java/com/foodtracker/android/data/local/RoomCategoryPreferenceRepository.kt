@@ -31,4 +31,11 @@ class RoomCategoryPreferenceRepository(private val dao: CategoryPreferenceDao) :
         if (preferences.isEmpty()) return
         dao.upsertAll(preferences.map { it.toEntity() })
     }
+
+    override suspend fun upsertAll(preferences: List<CategoryPreference>) {
+        if (preferences.isEmpty()) return
+        dao.upsertAll(preferences.map { it.toEntity() })
+    }
+
+    override suspend fun clearAll() = dao.clearAll()
 }

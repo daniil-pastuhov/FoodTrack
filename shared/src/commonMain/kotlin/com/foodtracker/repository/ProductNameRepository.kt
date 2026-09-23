@@ -14,4 +14,6 @@ interface ProductNameRepository {
      *  list at the position the user last dragged it to, rather than always appending. */
     suspend fun getSortOrder(name: String): Double?
     suspend fun recordSortOrder(name: String, sortOrder: Double)
+
+    suspend fun clearAll()
 }
