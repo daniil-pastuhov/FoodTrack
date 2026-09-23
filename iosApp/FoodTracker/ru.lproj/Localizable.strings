@@ -293,3 +293,16 @@
 
 "notif_action_used" = "Съедено";
 "notif_action_snooze" = "Завтра";
+
+"scan_mode_batch" = "Пакет";
+"reticle_hint_batch" = "Продолжайте сканировать — всё попадёт в список ниже";
+"batch_queue_empty" = "Отсканируйте товар, чтобы начать список";
+"batch_queue_remove_content_description" = "Убрать из списка";
+"batch_queue_needs_date" = "Проверьте дату";
+"batch_commit_button" = "Добавить все";
+"batch_clear_button" = "Очистить";
+"duplicate_dialog_title" = "Уже в запасах";
+"duplicate_dialog_message" = "У вас уже есть %@. Добавить ещё одну штуку или создать отдельную запись?";
+"duplicate_dialog_add_one" = "Добавить ещё одну";
+"duplicate_dialog_separate" = "Отдельно";
+"duplicate_added" = "%1$@ теперь %2$d";

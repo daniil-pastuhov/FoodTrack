@@ -22,16 +22,20 @@ public struct ScannerSheetView: View {
     /// codes (see `ShoppingListShare.isPayload`), so scanning a friend's list imports it rather
     /// than looking the payload up as if it were a product barcode.
     var onShoppingListScanned: (String) -> Void
+    /// Reports how many items a batch commit added, so the host can surface a toast.
+    var onBatchCommitted: (Int) -> Void
 
     public init(
         viewModel: NativePantryViewModel,
         showManualEntryShortcut: Bool = true,
         onShoppingListScanned: @escaping (String) -> Void = { _ in },
+        onBatchCommitted: @escaping (Int) -> Void = { _ in },
         onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
     ) {
         self.viewModel = viewModel
         self.showManualEntryShortcut = showManualEntryShortcut
         self.onShoppingListScanned = onShoppingListScanned
+        self.onBatchCommitted = onBatchCommitted
         self.onProceedToAdd = onProceedToAdd
     }
 
@@ -49,10 +53,18 @@ public struct ScannerSheetView: View {
                         dismiss()
                         return
                     }
+                    guard mode != .batch else {
+                        viewModel.enqueueBatchScan(barcode)
+                        return
+                    }
                     if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
                         viewModel.detectedDate = gs1Date
                     }
                     viewModel.lookupBarcode(barcode)
+                    // Only the single-item flow asks: batch collapses repeats into one row's
+                    // quantity by itself, and prompting per scan is exactly the interruption
+                    // batch mode exists to avoid.
+                    viewModel.checkForDuplicate(barcode)
                 },
                 onDateFound: { date in
                     viewModel.detectedDate = date
@@ -118,6 +130,7 @@ public struct ScannerSheetView: View {
                 // Mode Picker
                 Picker(L10n.scannerModePickerLabel, selection: $mode) {
                     Text(L10n.scanModeBarcode).tag(IOSCameraMode.barcode)
+                    Text(L10n.scanModeBatch).tag(IOSCameraMode.batch)
                     Text(L10n.scanModeDateOcr).tag(IOSCameraMode.dateOcr)
                     Text(L10n.scanModePhoto).tag(IOSCameraMode.photo)
                 }
@@ -154,8 +167,8 @@ public struct ScannerSheetView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(Color.accentColor, lineWidth: 2.5)
                         .frame(
-                            width: mode == .barcode ? 280 : 300,
-                            height: mode == .barcode ? 160 : 120
+                            width: (mode == .barcode || mode == .batch) ? 280 : 300,
+                            height: (mode == .barcode || mode == .batch) ? 160 : 120
                         )
 
                     Text(guideText)
@@ -215,7 +228,20 @@ public struct ScannerSheetView: View {
                 }
 
                 // Bottom Product Result Card
-                if viewModel.isLookingUpBarcode || viewModel.scannedProduct != nil || (viewModel.productNotFoundBarcode != nil && mode != .photo) || capturedPhotoURL != nil {
+                if mode == .batch {
+                    BatchQueuePanel(
+                        entries: viewModel.batchQueue,
+                        onRemove: { viewModel.removeBatchEntry($0) },
+                        onClear: { viewModel.clearBatchQueue() },
+                        onCommit: {
+                            let added = viewModel.commitBatchQueue()
+                            if added > 0 {
+                                onBatchCommitted(added)
+                                dismiss()
+                            }
+                        }
+                    )
+                } else if viewModel.isLookingUpBarcode || viewModel.scannedProduct != nil || (viewModel.productNotFoundBarcode != nil && mode != .photo) || capturedPhotoURL != nil {
                     VStack(alignment: .leading, spacing: 12) {
                         if viewModel.isLookingUpBarcode {
                             HStack(spacing: 12) {
@@ -408,6 +434,8 @@ public struct ScannerSheetView: View {
 
     private var guideText: String {
         switch mode {
+        case .batch:
+            return L10n.reticleHintBatch
         case .barcode:
             return L10n.reticleHintBarcode
         case .dateOcr:
@@ -415,5 +443,91 @@ public struct ScannerSheetView: View {
         case .photo:
             return L10n.reticleHintPhoto
         }
+    }
+}
+
+
+/// The batch queue, docked over the live camera so scanning and reviewing happen on one screen.
+///
+/// Rows appear the instant a barcode is read (see `NativePantryViewModel.enqueueBatchScan`) and
+/// fill in as their lookups land, so the list visibly keeps up with the scanning rather than
+/// lagging behind the network. Anything the app could not work out a date for is flagged rather
+/// than silently defaulted — that is the one thing worth stopping to check before committing.
+private struct BatchQueuePanel: View {
+    let entries: [BatchScanEntry]
+    let onRemove: (String) -> Void
+    let onClear: () -> Void
+    let onCommit: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text(entries.isEmpty ? L10n.batchQueueEmpty : L10n.batchQueueCount(entries.count))
+                    .font(.subheadline.weight(.semibold))
+                Spacer()
+                if !entries.isEmpty {
+                    Button(L10n.batchClearButton, action: onClear)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if !entries.isEmpty {
+                // Capped height so a long queue scrolls inside the panel rather than swallowing
+                // the camera preview it is docked over.
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(entries) { entry in
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.quantity > 1 ? "\(entry.name) ×\(entry.quantity)" : entry.name)
+                                        .lineLimit(1)
+                                    Text(subtitle(for: entry))
+                                        .font(.caption)
+                                        .foregroundStyle(
+                                            entry.needsAttention && !entry.isLookingUp ? Color.red : Color.secondary
+                                        )
+                                }
+                                Spacer()
+                                Button {
+                                    onRemove(entry.id)
+                                } label: {
+                                    Image(systemName: "xmark")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(L10n.batchQueueRemoveContentDescription)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 220)
+
+                Button(action: onCommit) {
+                    Text(L10n.batchCommitButton)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.accentColor)
+                        .cornerRadius(14)
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(.systemBackground))
+        .cornerRadius(20)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 24)
+    }
+
+    private func subtitle(for entry: BatchScanEntry) -> String {
+        if entry.isLookingUp { return L10n.lookingUpProduct }
+        if entry.needsAttention { return L10n.batchQueueNeedsDate }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: entry.expiryDate)
     }
 }

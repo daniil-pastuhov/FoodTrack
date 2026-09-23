@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -111,6 +112,9 @@ fun AddEditItemScreen(
     settings: AppSettings,
     onNavigateBack: () -> Unit,
     onSaveItem: (PantryItem) -> Unit,
+    /** Called instead of a save when the user chose to add a unit to an item they already have,
+     *  so the host can report it and leave this screen. */
+    onDuplicateMerged: (PantryItem) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
@@ -225,6 +229,39 @@ fun AddEditItemScreen(
             )
             onSaveItem(item)
         }
+    }
+
+    // Offered when the scan matched something already in the pantry. Adding a unit to the
+    // existing item is almost always what a re-scan of the same product means; creating a second
+    // row for it is the exception, so it is the secondary action rather than the default.
+    val duplicate = state.duplicateOf
+    if (duplicate != null && initialItem == null) {
+        AlertDialog(
+            onDismissRequest = { stateHolder.dismissDuplicate() },
+            title = { Text(stringResource(R.string.duplicate_dialog_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.duplicate_dialog_message,
+                        if (duplicate.quantity > 1) "${duplicate.name} ×${duplicate.quantity}" else duplicate.name
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    stateHolder.incrementQuantity(duplicate.id) { updated ->
+                        onDuplicateMerged(updated)
+                    }
+                }) {
+                    Text(stringResource(R.string.duplicate_dialog_add_one), color = BrandPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { stateHolder.dismissDuplicate() }) {
+                    Text(stringResource(R.string.duplicate_dialog_separate))
+                }
+            }
+        )
     }
 
     if (showDatePicker) {

@@ -135,6 +135,26 @@
     <string name="date_picker_cancel">Avbryt</string>
 
     <string name="manual_entry_button">Manuell registrering</string>
+    <string name="scan_mode_batch">Flere</string>
+    <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen under</string>
+    <string name="batch_queue_empty">Skann en vare for å starte listen</string>
+    <string name="batch_queue_remove_content_description">Fjern fra listen</string>
+    <string name="batch_queue_needs_date">Sjekk dato</string>
+    <string name="batch_commit_button">Legg til alle</string>
+    <string name="batch_clear_button">Tøm</string>
+    <plurals name="batch_queue_count">
+        <item quantity="one">%1$d vare i kø</item>
+        <item quantity="other">%1$d varer i kø</item>
+    </plurals>
+    <plurals name="batch_added_snackbar">
+        <item quantity="one">La til %1$d vare</item>
+        <item quantity="other">La til %1$d varer</item>
+    </plurals>
+    <string name="duplicate_dialog_title">Allerede i matskapet</string>
+    <string name="duplicate_dialog_message">Du har allerede %1$s. Legge til én til, eller opprette en egen oppføring?</string>
+    <string name="duplicate_dialog_add_one">Legg til én til</string>
+    <string name="duplicate_dialog_separate">Hold adskilt</string>
+    <string name="duplicate_added_snackbar">%1$s er nå %2$d</string>
     <string name="scan_mode_barcode">Strekkode</string>
     <string name="scan_mode_date_ocr">Datoskanning</string>
     <string name="scan_mode_photo">Bilde</string>

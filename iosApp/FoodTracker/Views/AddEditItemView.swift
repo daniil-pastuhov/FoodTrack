@@ -16,6 +16,9 @@ public struct AddEditItemView: View {
     /// Expiry to start a *new* item from when the scan produced no date of its own, plus where
     /// it came from so the form can say so - see `ShelfLifeSuggestion`.
     var prefillSuggestion: ShelfLifeSuggestion?
+    /// Called instead of a save when the user chose to add a unit to an item they already have,
+    /// so the host can report it.
+    var onDuplicateMerged: (PantryItem) -> Void = { _ in }
 
     @State private var name: String = ""
     @State private var brand: String = ""
@@ -69,7 +72,8 @@ public struct AddEditItemView: View {
         prefillImageUrl: String? = nil,
         prefillDate: Date? = nil,
         prefillCategory: String? = nil,
-        prefillSuggestion: ShelfLifeSuggestion? = nil
+        prefillSuggestion: ShelfLifeSuggestion? = nil,
+        onDuplicateMerged: @escaping (PantryItem) -> Void = { _ in }
     ) {
         self.viewModel = viewModel
         self.editingItem = editingItem
@@ -80,6 +84,7 @@ public struct AddEditItemView: View {
         self.prefillDate = prefillDate
         self.prefillCategory = prefillCategory
         self.prefillSuggestion = prefillSuggestion
+        self.onDuplicateMerged = onDuplicateMerged
     }
 
     public var body: some View {
@@ -337,6 +342,34 @@ public struct AddEditItemView: View {
                     } else if let suggested = prefillSuggestion?.date {
                         expiryDate = suggested
                     }
+                }
+            }
+            // Offered when the scan matched something already in the pantry. Adding a unit to
+            // the existing item is almost always what a re-scan of the same product means;
+            // creating a second row for it is the exception, so it is the secondary action.
+            .confirmationDialog(
+                L10n.duplicateDialogTitle,
+                isPresented: Binding(
+                    get: { editingItem == nil && viewModel.duplicateOf != nil },
+                    set: { if !$0 { viewModel.dismissDuplicate() } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button(L10n.duplicateDialogAddOne) {
+                    if let duplicate = viewModel.duplicateOf,
+                       let updated = viewModel.incrementQuantity(duplicate.id) {
+                        onDuplicateMerged(updated)
+                        dismiss()
+                    }
+                }
+                Button(L10n.duplicateDialogSeparate, role: .cancel) {
+                    viewModel.dismissDuplicate()
+                }
+            } message: {
+                if let duplicate = viewModel.duplicateOf {
+                    Text(L10n.duplicateDialogMessage(
+                        duplicate.quantity > 1 ? "\(duplicate.name) ×\(duplicate.quantity)" : duplicate.name
+                    ))
                 }
             }
             .sheet(isPresented: $showScanner) {

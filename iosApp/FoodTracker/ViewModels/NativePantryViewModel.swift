@@ -54,6 +54,11 @@ public class NativePantryViewModel: ObservableObject {
     /// True while that classification is running, so the form can say so rather than showing
     /// nothing and then popping chips in.
     @Published public var isLabelingPhoto: Bool = false
+    /// Products scanned in batch mode and waiting to be reviewed and committed together.
+    @Published public var batchQueue: [BatchScanEntry] = []
+    /// Set when a scanned barcode is already in the pantry, so the UI can offer to add a unit
+    /// to that item rather than create a second row for the same product.
+    @Published public var duplicateOf: PantryItem?
     @Published public var shoppingList: [ShoppingListEntry] = []
     /// Set while the scan flow was launched from a specific shopping list row (rather than
     /// the dashboard's general scan button), so `saveItem` knows to remove that exact entry
@@ -506,6 +511,182 @@ public class NativePantryViewModel: ObservableObject {
     public func clearPhotoLabels() {
         photoLabelSuggestions = []
         isLabelingPhoto = false
+    }
+
+    // MARK: - Batch scan
+
+    /// Queues `barcode` for the batch-add review list.
+    ///
+    /// Scanning a barcode already in the queue bumps its quantity instead of adding a second
+    /// row — that is what scanning four identical yoghurts in a row means, and it also absorbs
+    /// the camera re-reading a product that is simply still in frame.
+    ///
+    /// The row is published immediately, before the product lookup finishes, so the queue
+    /// visibly responds to each scan rather than lagging behind the network.
+    public func enqueueBatchScan(_ barcode: String) {
+        if let index = batchQueue.firstIndex(where: { $0.barcode == barcode }) {
+            batchQueue[index].quantity += 1
+            return
+        }
+
+        let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode)
+        let settings = SettingsStore.shared.settings
+        batchQueue.append(
+            BatchScanEntry(
+                barcode: barcode,
+                name: barcode,
+                expiryDate: gs1Date ?? Date(),
+                storageLocation: settings.storageLocationForNewItem,
+                expirySource: gs1Date != nil ? .detected : .fallback,
+                isLookingUp: true
+            )
+        )
+
+        Task {
+            // Split rather than `cached ?? await ...`: Swift won't allow an await to the right
+            // of a non-assignment operator.
+            var product = cachedProduct(for: barcode)
+            if product == nil {
+                product = await fetchProductFromApi(barcode)
+            }
+            let suggestion = ShelfLife.suggest(
+                detectedDate: gs1Date,
+                rememberedDays: gs1Date == nil ? shelfLifeDays(for: barcode) : nil,
+                categoryDefaultDays: categoryDefaultShelfLife(for: product?.category)
+            )
+            // Re-find rather than closing over the index: the user may have edited or removed
+            // this row while the lookup was in flight.
+            guard let index = batchQueue.firstIndex(where: { $0.barcode == barcode && $0.isLookingUp }) else { return }
+            batchQueue[index].name = product?.name ?? batchQueue[index].name
+            batchQueue[index].brand = product?.brand
+            batchQueue[index].imageUrl = product?.imageUrl
+            batchQueue[index].category = product?.category
+            batchQueue[index].expiryDate = suggestion.date
+            batchQueue[index].expirySource = suggestion.source
+            batchQueue[index].isLookingUp = false
+        }
+    }
+
+    public func removeBatchEntry(_ barcode: String) {
+        batchQueue.removeAll { $0.barcode == barcode }
+    }
+
+    public func clearBatchQueue() {
+        batchQueue = []
+    }
+
+    /// Saves everything in the queue and empties it, returning how many items were added.
+    ///
+    /// Each row goes through `saveItem`, so a batch add still learns shelf lives, caches
+    /// products and clears matching shopping list entries exactly as adding one by one would —
+    /// none of that is re-implemented here.
+    @discardableResult
+    public func commitBatchQueue() -> Int {
+        let queue = batchQueue
+        guard !queue.isEmpty else { return 0 }
+        for entry in queue {
+            saveItem(
+                PantryItem(
+                    name: entry.name,
+                    brand: entry.brand,
+                    barcode: entry.barcode,
+                    imageUrl: entry.imageUrl,
+                    expiryDate: entry.expiryDate,
+                    addedDate: Date(),
+                    storageLocation: entry.storageLocation,
+                    category: entry.category,
+                    quantity: entry.quantity
+                )
+            )
+        }
+        clearBatchQueue()
+        return queue.count
+    }
+
+    // MARK: - Duplicate detection
+
+    /// Records whether `barcode` is already in the pantry, so the UI can offer adding a unit to
+    /// that item instead of creating a second row for the same product. The soonest-expiring
+    /// match wins, so the offer lands on the one to use up next.
+    ///
+    /// Only the single-item scan flow asks: batch mode collapses repeats into one row's
+    /// quantity by itself, and asking per scan would be exactly the interruption batch mode
+    /// exists to avoid.
+    public func checkForDuplicate(_ barcode: String) {
+        duplicateOf = items
+            .filter { $0.barcode == barcode }
+            .min { $0.expiryDate < $1.expiryDate }
+    }
+
+    public func dismissDuplicate() {
+        duplicateOf = nil
+    }
+
+    /// Adds one unit to an existing item - the "+1 to the one you already have" answer to a
+    /// duplicate scan.
+    @discardableResult
+    public func incrementQuantity(_ id: String) -> PantryItem? {
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
+        guard let record = try? modelContext.fetch(descriptor).first else { return nil }
+        record.quantity += 1
+        try? modelContext.save()
+        loadItems()
+        dismissDuplicate()
+        WidgetCenter.shared.reloadAllTimelines()
+        return record.asPantryItem
+    }
+
+    private func cachedProduct(for barcode: String) -> ProductInfo? {
+        let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == barcode })
+        guard let cached = try? modelContext.fetch(descriptor).first else { return nil }
+        return ProductInfo(
+            barcode: cached.barcode,
+            name: cached.name,
+            brand: cached.brand,
+            imageUrl: cached.imageUrl,
+            category: cached.category,
+            quantity: nil
+        )
+    }
+
+    private func shelfLifeDays(for barcode: String) -> Int? {
+        let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == barcode })
+        return (try? modelContext.fetch(descriptor).first)?.shelfLifeDays
+    }
+
+    private func categoryDefaultShelfLife(for category: String?) -> Int? {
+        let trimmed = category?.trimmingCharacters(in: .whitespaces)
+        let origin = (trimmed?.isEmpty ?? true) ? UNCATEGORIZED_ORIGIN : trimmed!
+        let preference = categoryPreferences.first { $0.originName == origin }
+            ?? categoryPreferences.first { $0.displayName.caseInsensitiveCompare(origin) == .orderedSame }
+        return preference?.defaultShelfLifeDays
+    }
+
+    /// The Open Food Facts half of `lookupBarcode`, factored out so the batch queue can reuse it
+    /// without also driving the single-scan `scannedProduct` state.
+    private func fetchProductFromApi(_ barcode: String) async -> ProductInfo? {
+        guard let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(barcode).json") else {
+            return nil
+        }
+        var request = URLRequest(url: url)
+        request.setValue("FoodTracker-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let status = json["status"] as? Int, status == 1,
+              let product = json["product"] as? [String: Any] else {
+            return nil
+        }
+        let rawCategory = (product["categories"] as? String)?
+            .components(separatedBy: ",").first?
+            .trimmingCharacters(in: .whitespaces)
+        return ProductInfo(
+            barcode: barcode,
+            name: product["product_name"] as? String ?? "Product \(barcode)",
+            brand: product["brands"] as? String,
+            imageUrl: product["image_front_url"] as? String,
+            category: rawCategory.map(stripLanguagePrefix),
+            quantity: product["quantity"] as? String
+        )
     }
 
     public func lookupBarcode(_ barcode: String) {
@@ -1048,6 +1229,7 @@ public class NativePantryViewModel: ObservableObject {
         suggestedExpiry = nil
         photoLabelSuggestions = []
         isLabelingPhoto = false
+        duplicateOf = nil
         isLookingUpBarcode = false
         scanningShoppingListEntryId = nil
     }

@@ -156,6 +156,9 @@ struct RootTabView: View {
                     } else {
                         L10n.shoppingListImportNothing
                     }
+                },
+                onBatchCommitted: { added in
+                    importResult = L10n.batchAdded(added)
                 }
             ) { barcode, name, brand, imageUrl, date, category, suggestion in
                 editingItem = nil
@@ -179,7 +182,10 @@ struct RootTabView: View {
                 prefillImageUrl: prefillImageUrl,
                 prefillDate: prefillDate,
                 prefillCategory: prefillCategory,
-                prefillSuggestion: prefillSuggestion
+                prefillSuggestion: prefillSuggestion,
+                onDuplicateMerged: { updated in
+                    importResult = L10n.duplicateAdded(updated.name, updated.quantity)
+                }
             )
         }
         .onChange(of: router.destination) { _, destination in

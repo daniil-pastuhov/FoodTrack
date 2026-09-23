@@ -6,6 +6,10 @@ public enum IOSCameraMode {
     case barcode
     case dateOcr
     case photo
+    /// Keeps the camera live and queues each scanned product instead of stopping to fill in a
+    /// form, for unpacking a whole shop. Uses the same detection path as `barcode`; only what
+    /// the sheet does with each result differs.
+    case batch
 }
 
 public struct CameraScannerView: UIViewControllerRepresentable {
@@ -148,7 +152,7 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
 
     // MARK: - Barcode Delegate
     public func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
-        guard mode == .barcode else { return }
+        guard mode == .barcode || mode == .batch else { return }
 
         for metadata in metadataObjects {
             guard let readableObject = metadata as? AVMetadataMachineReadableCodeObject,

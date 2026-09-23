@@ -58,6 +58,8 @@
 		BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883B4D1065B37C26A395EC3C /* CategoryPreference.swift */; };
+		A1B2C3D40000000000000052 /* BatchScanEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000051 /* BatchScanEntry.swift */; };
+		A1B2C3D40000000000000053 /* BatchScanEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000051 /* BatchScanEntry.swift */; };
 		A1B2C3D40000000000000042 /* BackupDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000041 /* BackupDocument.swift */; };
 		A1B2C3D40000000000000043 /* BackupDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000041 /* BackupDocument.swift */; };
 		A1B2C3D40000000000000034 /* ProductImageLabeler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000033 /* ProductImageLabeler.swift */; };
@@ -105,6 +107,7 @@
 		13AEE2C0BAD94D898F6896A2 /* ShoppingListEntryRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListEntryRecord.swift; sourceTree = "<group>"; };
 		32F5E332BCAB482A98210E13 /* ShoppingListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListView.swift; sourceTree = "<group>"; };
 		7FD3E32DD4AA44818E5AFD19 /* GS1BarcodeParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GS1BarcodeParser.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000054 /* GS1BarcodeParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FD3E32DD4AA44818E5AFD19 /* GS1BarcodeParser.swift */; };
 		3E7B9F1C2A4D68507F8B9C1E /* ShoppingListMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListMatcher.swift; sourceTree = "<group>"; };
 		159A2BFDCB04E883857F16A7 /* AppGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroup.swift; sourceTree = "<group>"; };
 		197B4ABF5AB08BED3889ED45 /* FoodTracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FoodTracker.entitlements; sourceTree = "<group>"; };
@@ -120,6 +123,7 @@
 		78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductNameRecord.swift; sourceTree = "<group>"; };
 		ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProductRecord.swift; sourceTree = "<group>"; };
 		883B4D1065B37C26A395EC3C /* CategoryPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPreference.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000051 /* BatchScanEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchScanEntry.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000041 /* BackupDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupDocument.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000033 /* ProductImageLabeler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageLabeler.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000031 /* FoodLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLabels.swift; sourceTree = "<group>"; };
@@ -245,6 +249,7 @@
 				78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */,
 				ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */,
 				883B4D1065B37C26A395EC3C /* CategoryPreference.swift */,
+				A1B2C3D40000000000000051 /* BatchScanEntry.swift */,
 				A1B2C3D40000000000000001 /* ShelfLife.swift */,
 				678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */,
 			);
@@ -485,6 +490,7 @@
 				665A801EBE434BEE94B34280 /* FloatingTabBar.swift in Sources */,
 				B079A629A81449CB9E79EB97 /* RootTabView.swift in Sources */,
 				8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */,
+				A1B2C3D40000000000000052 /* BatchScanEntry.swift in Sources */,
 				A1B2C3D40000000000000042 /* BackupDocument.swift in Sources */,
 				A1B2C3D40000000000000034 /* ProductImageLabeler.swift in Sources */,
 				A1B2C3D40000000000000032 /* FoodLabels.swift in Sources */,
@@ -517,6 +523,8 @@
 				57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */,
 				F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */,
 				CAE0941B5977A150D0673C1B /* CategoryPreference.swift in Sources */,
+				A1B2C3D40000000000000054 /* GS1BarcodeParser.swift in Sources */,
+				A1B2C3D40000000000000053 /* BatchScanEntry.swift in Sources */,
 				A1B2C3D40000000000000043 /* BackupDocument.swift in Sources */,
 				A1B2C3D40000000000000035 /* FoodLabels.swift in Sources */,
 				A1B2C3D40000000000000012 /* ShoppingListShare.swift in Sources */,

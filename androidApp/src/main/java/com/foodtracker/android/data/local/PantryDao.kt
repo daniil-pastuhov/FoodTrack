@@ -13,6 +13,11 @@ interface PantryDao {
     @Query("SELECT * FROM pantry_items WHERE id = :id LIMIT 1")
     suspend fun getById(id: String): PantryItemEntity?
 
+    /** Soonest-expiring first, so a "+1 to what you already have" offer lands on the one the
+     *  user should use up next rather than an arbitrary row. */
+    @Query("SELECT * FROM pantry_items WHERE barcode = :barcode ORDER BY expiryDateEpochDays ASC")
+    suspend fun findByBarcode(barcode: String): List<PantryItemEntity>
+
     @Upsert
     suspend fun upsert(item: PantryItemEntity)
 

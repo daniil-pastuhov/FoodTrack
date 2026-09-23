@@ -28,6 +28,8 @@ class FakePantryRepository(items: List<PantryItem> = emptyList()) : PantryReposi
     val itemsFlow = MutableStateFlow(items)
     override fun getItemsFlow(): Flow<List<PantryItem>> = itemsFlow
     override suspend fun getItem(id: String): PantryItem? = itemsFlow.value.find { it.id == id }
+    override suspend fun findByBarcode(barcode: String): List<PantryItem> =
+        itemsFlow.value.filter { it.barcode == barcode }.sortedBy { it.expiryDate }
     override suspend fun saveItem(item: PantryItem) {
         itemsFlow.value = itemsFlow.value.filterNot { it.id == item.id } + item
     }

@@ -13,6 +13,7 @@ import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShelfLife
+import com.foodtracker.model.ShelfLifeSource
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.SortOption
@@ -107,6 +108,11 @@ data class PantryUiState(
     /** Names suggested for a photographed, barcode-less product by the on-device image
      *  classifier (see `FoodLabels`). Empty unless a photo was just captured. */
     val photoLabelSuggestions: List<FoodLabelSuggestion> = emptyList(),
+    /** Products scanned in batch mode and waiting to be reviewed and committed together. */
+    val batchQueue: List<BatchScanEntry> = emptyList(),
+    /** Set when a scanned barcode is already in the pantry, so the UI can offer to add a unit
+     *  to that item rather than create a second row for the same product. */
+    val duplicateOf: PantryItem? = null,
     /** True while that classification is running, so the form can say so rather than showing
      *  nothing and then popping chips in. */
     val isLabelingPhoto: Boolean = false,
@@ -541,6 +547,151 @@ class PantryStateHolder(
             rememberedDays = rememberedDays,
             categoryDefaultDays = categoryDefaultDays
         )
+    }
+
+    // ---- Batch scan -------------------------------------------------------------------
+
+    /**
+     * Queues [barcode] for the batch-add review list.
+     *
+     * Scanning a barcode already in the queue bumps its quantity instead of adding a second row
+     * — that is what scanning four identical yoghurts in a row means, and it also absorbs the
+     * camera re-reading a product that is simply still in frame.
+     *
+     * The row is published immediately, before the product lookup finishes, so the queue
+     * visibly responds to each scan rather than lagging behind the network.
+     */
+    fun enqueueBatchScan(barcode: String) {
+        val existing = _uiState.value.batchQueue.find { it.barcode == barcode }
+        if (existing != null) {
+            updateBatchEntry(existing.copy(quantity = existing.quantity + 1))
+            return
+        }
+
+        val settings = _uiState.value.settings
+        val gs1Date = GS1BarcodeParser.extractExpiryDate(barcode)
+        val placeholder = BatchScanEntry(
+            barcode = barcode,
+            name = barcode,
+            expiryDate = gs1Date ?: DateUtils.today(),
+            storageLocation = settings.storageLocationForNewItem(),
+            expirySource = if (gs1Date != null) ShelfLifeSource.DETECTED else ShelfLifeSource.FALLBACK,
+            isLookingUp = true
+        )
+        _uiState.update { it.copy(batchQueue = it.batchQueue + placeholder) }
+
+        coroutineScope.launch {
+            val product = localProductRepository.getByBarcode(barcode) ?: openFoodFactsApi.fetchProduct(barcode)
+            val suggestion = suggestExpiry(
+                detectedDate = gs1Date,
+                barcode = barcode,
+                category = product?.category
+            )
+            _uiState.update { state ->
+                state.copy(
+                    batchQueue = state.batchQueue.map { entry ->
+                        // Re-read from state rather than closing over `placeholder`: the user
+                        // may have edited or removed this row while the lookup was in flight.
+                        if (entry.barcode != barcode || !entry.isLookingUp) entry
+                        else entry.copy(
+                            name = product?.name ?: entry.name,
+                            brand = product?.brand,
+                            imageUrl = product?.imageUrl,
+                            category = product?.category,
+                            expiryDate = suggestion.date,
+                            expirySource = suggestion.source,
+                            isLookingUp = false
+                        )
+                    }
+                )
+            }
+        }
+    }
+
+    fun updateBatchEntry(entry: BatchScanEntry) {
+        _uiState.update { state ->
+            state.copy(batchQueue = state.batchQueue.map { if (it.barcode == entry.barcode) entry else it })
+        }
+    }
+
+    fun removeBatchEntry(barcode: String) {
+        _uiState.update { state ->
+            state.copy(batchQueue = state.batchQueue.filterNot { it.barcode == barcode })
+        }
+    }
+
+    fun clearBatchQueue() {
+        _uiState.update { it.copy(batchQueue = emptyList()) }
+    }
+
+    /**
+     * Saves everything in the queue and empties it, reporting how many items were added.
+     *
+     * Each row goes through [saveItem], so a batch add still learns shelf lives, caches
+     * products and clears matching shopping list entries exactly as adding one by one would —
+     * none of that is re-implemented here.
+     */
+    fun commitBatchQueue(onComplete: (added: Int) -> Unit = {}) {
+        val queue = _uiState.value.batchQueue
+        if (queue.isEmpty()) {
+            onComplete(0)
+            return
+        }
+        val today = DateUtils.today()
+        queue.forEach { entry ->
+            saveItem(
+                PantryItem(
+                    id = newItemId(),
+                    name = entry.name,
+                    brand = entry.brand,
+                    barcode = entry.barcode,
+                    imageUrl = entry.imageUrl,
+                    expiryDate = entry.expiryDate,
+                    addedDate = today,
+                    storageLocation = entry.storageLocation,
+                    category = entry.category,
+                    quantity = entry.quantity
+                )
+            )
+        }
+        clearBatchQueue()
+        onComplete(queue.size)
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun newItemId(): String = "item_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt()}"
+
+    // ---- Duplicate detection ----------------------------------------------------------
+
+    /**
+     * Records whether [barcode] is already in the pantry, so the UI can offer adding a unit to
+     * that item instead of creating a second row for the same product.
+     *
+     * Only the single-item scan flow asks: batch mode collapses repeats into one row's quantity
+     * by itself, and asking per scan would be exactly the interruption batch mode exists to
+     * avoid.
+     */
+    fun checkForDuplicate(barcode: String) {
+        coroutineScope.launch {
+            val existing = repository.findByBarcode(barcode).firstOrNull()
+            _uiState.update { it.copy(duplicateOf = existing) }
+        }
+    }
+
+    fun dismissDuplicate() {
+        _uiState.update { it.copy(duplicateOf = null) }
+    }
+
+    /** Adds one unit to an existing item - the "+1 to the one you already have" answer to a
+     *  duplicate scan. */
+    fun incrementQuantity(id: String, onUpdated: (PantryItem) -> Unit = {}) {
+        coroutineScope.launch {
+            val item = repository.getItem(id) ?: return@launch
+            val updated = item.copy(quantity = item.quantity + 1)
+            repository.saveItem(updated)
+            onUpdated(updated)
+        }
+        dismissDuplicate()
     }
 
     /** Publishes the result of classifying a captured product photo. Platform code does the
@@ -1000,6 +1151,7 @@ class PantryStateHolder(
                 suggestedExpiry = null,
                 photoLabelSuggestions = emptyList(),
                 isLabelingPhoto = false,
+                duplicateOf = null,
                 isLookingUpBarcode = false,
                 scanMessage = null,
                 scanningShoppingListEntryId = null

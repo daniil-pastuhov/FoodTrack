@@ -197,6 +197,28 @@ public enum L10n {
     public static var reticleHintBarcode: String { NSLocalizedString("reticle_hint_barcode", comment: "") }
     public static var reticleHintDateOcr: String { NSLocalizedString("reticle_hint_date_ocr", comment: "") }
     public static var reticleHintPhoto: String { NSLocalizedString("reticle_hint_photo", comment: "") }
+    public static var scanModeBatch: String { NSLocalizedString("scan_mode_batch", comment: "") }
+    public static var reticleHintBatch: String { NSLocalizedString("reticle_hint_batch", comment: "") }
+    public static var batchQueueEmpty: String { NSLocalizedString("batch_queue_empty", comment: "") }
+    public static var batchQueueRemoveContentDescription: String { NSLocalizedString("batch_queue_remove_content_description", comment: "") }
+    public static var batchQueueNeedsDate: String { NSLocalizedString("batch_queue_needs_date", comment: "") }
+    public static var batchCommitButton: String { NSLocalizedString("batch_commit_button", comment: "") }
+    public static var batchClearButton: String { NSLocalizedString("batch_clear_button", comment: "") }
+    public static var duplicateDialogTitle: String { NSLocalizedString("duplicate_dialog_title", comment: "") }
+    public static var duplicateDialogAddOne: String { NSLocalizedString("duplicate_dialog_add_one", comment: "") }
+    public static var duplicateDialogSeparate: String { NSLocalizedString("duplicate_dialog_separate", comment: "") }
+    public static func duplicateAdded(_ name: String, _ quantity: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("duplicate_added", comment: ""), name, quantity)
+    }
+    public static func duplicateDialogMessage(_ nameWithQuantity: String) -> String {
+        String(format: NSLocalizedString("duplicate_dialog_message", comment: ""), nameWithQuantity)
+    }
+    public static func batchQueueCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("batch_queue_count_format", comment: ""), count)
+    }
+    public static func batchAdded(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("batch_added_format", comment: ""), count)
+    }
     public static var torchToggleButton: String { NSLocalizedString("torch_toggle_button", comment: "") }
 
     public static var expiresToday: String { NSLocalizedString("expires_today", comment: "") }

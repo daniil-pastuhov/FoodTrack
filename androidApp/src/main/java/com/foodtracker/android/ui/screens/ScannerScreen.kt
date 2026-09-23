@@ -5,12 +5,16 @@ import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,6 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -27,6 +33,8 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material3.Button
@@ -40,6 +48,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,8 +62,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,6 +80,8 @@ import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.share.ShoppingListShare
+import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.viewmodel.BatchScanEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
 import java.io.File
@@ -82,6 +95,8 @@ fun ScannerScreen(
      *  codes (see [ShoppingListShare.isPayload]), so scanning a friend's list imports it rather
      *  than looking the payload up as if it were a product barcode. */
     onShoppingListScanned: (payload: String) -> Unit = {},
+    /** Reports how many items a batch commit added, so the host can surface a snackbar. */
+    onBatchCommitted: (added: Int) -> Unit = {},
     // Hidden when this screen is embedded inside Add/Edit (see AddEditItemScreen's scan
     // button): "skip to manual entry" makes no sense there since manual entry is already
     // the screen underneath, and dismissing would otherwise discard fields already typed.
@@ -120,8 +135,14 @@ fun ScannerScreen(
                 // JSON payload would be sent to Open Food Facts as a barcode.
                 if (ShoppingListShare.isPayload(barcode)) {
                     onShoppingListScanned(barcode)
+                } else if (currentMode == CameraScanMode.BATCH) {
+                    stateHolder.enqueueBatchScan(barcode)
                 } else {
                     stateHolder.onBarcodeScanned(barcode)
+                    // Only the single-item flow asks: batch collapses repeats into one row's
+                    // quantity by itself, and prompting per scan is exactly the interruption
+                    // batch mode exists to avoid.
+                    stateHolder.checkForDuplicate(barcode)
                 }
             },
             onDateFound = { date ->
@@ -190,16 +211,34 @@ fun ScannerScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Scanner Mode Selector
+            // Scanner Mode Selector. Horizontally scrollable: four chips no longer fit across
+            // a narrow phone, and truncating the last one would hide a whole mode.
             Row(
                 horizontalArrangement = Arrangement.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
             ) {
                 FilterChip(
                     selected = currentMode == CameraScanMode.BARCODE,
                     onClick = { currentMode = CameraScanMode.BARCODE },
                     label = { Text(stringResource(R.string.scan_mode_barcode)) },
                     leadingIcon = { Icon(Icons.Default.QrCodeScanner, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.Black.copy(alpha = 0.6f),
+                        labelColor = Color.White,
+                        iconColor = Color.White,
+                        selectedContainerColor = BrandPrimary,
+                        selectedLabelColor = Color.White,
+                        selectedLeadingIconColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                FilterChip(
+                    selected = currentMode == CameraScanMode.BATCH,
+                    onClick = { currentMode = CameraScanMode.BATCH },
+                    label = { Text(stringResource(R.string.scan_mode_batch)) },
+                    leadingIcon = { Icon(Icons.Default.PlaylistAdd, contentDescription = null, modifier = Modifier.size(16.dp)) },
                     colors = FilterChipDefaults.filterChipColors(
                         containerColor = Color.Black.copy(alpha = 0.6f),
                         labelColor = Color.White,
@@ -247,8 +286,9 @@ fun ScannerScreen(
             contentAlignment = Alignment.Center,
             modifier = Modifier.fillMaxSize()
         ) {
-            val reticleWidth = if (currentMode == CameraScanMode.BARCODE) 280.dp else 300.dp
-            val reticleHeight = if (currentMode == CameraScanMode.BARCODE) 160.dp else 120.dp
+            val isBarcodeShaped = currentMode == CameraScanMode.BARCODE || currentMode == CameraScanMode.BATCH
+            val reticleWidth = if (isBarcodeShaped) 280.dp else 300.dp
+            val reticleHeight = if (isBarcodeShaped) 160.dp else 120.dp
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
@@ -263,6 +303,7 @@ fun ScannerScreen(
                             CameraScanMode.BARCODE -> R.string.reticle_hint_barcode
                             CameraScanMode.DATE_OCR -> R.string.reticle_hint_date_ocr
                             CameraScanMode.PHOTO -> R.string.reticle_hint_photo
+                            CameraScanMode.BATCH -> R.string.reticle_hint_batch
                         }
                     ),
                     color = Color.White.copy(alpha = 0.85f),
@@ -273,6 +314,21 @@ fun ScannerScreen(
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
+        }
+
+        // Batch queue panel: the review list that replaces stopping at a form per product.
+        if (currentMode == CameraScanMode.BATCH) {
+            BatchQueuePanel(
+                entries = state.batchQueue,
+                onRemove = stateHolder::removeBatchEntry,
+                onClear = stateHolder::clearBatchQueue,
+                onCommit = {
+                    stateHolder.commitBatchQueue { added ->
+                        if (added > 0) onBatchCommitted(added)
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
 
         // Floating Date Detected Chip
@@ -362,8 +418,9 @@ fun ScannerScreen(
         }
 
         // Bottom Result Card (Barcode lookup result, OCR detection, or captured photo)
-        if (state.isLookingUpBarcode || state.scannedProduct != null ||
-            (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) || capturedPhotoUri != null) {
+        if (currentMode != CameraScanMode.BATCH &&
+            (state.isLookingUpBarcode || state.scannedProduct != null ||
+                (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) || capturedPhotoUri != null)) {
             Card(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -578,6 +635,102 @@ fun ScannerScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+
+/**
+ * The batch queue, docked over the live camera so scanning and reviewing happen on one screen.
+ *
+ * Rows appear the instant a barcode is read (see [PantryStateHolder.enqueueBatchScan]) and fill
+ * in as their lookups land, so the list visibly keeps up with the scanning rather than lagging
+ * behind the network. Anything the app could not work out a date for is flagged rather than
+ * silently defaulted — that is the one thing worth stopping to check before committing.
+ */
+@Composable
+private fun BatchQueuePanel(
+    entries: List<BatchScanEntry>,
+    onRemove: (String) -> Unit,
+    onClear: () -> Unit,
+    onCommit: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(MaterialTheme.colorScheme.surface)
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = if (entries.isEmpty()) {
+                    stringResource(R.string.batch_queue_empty)
+                } else {
+                    pluralStringResource(R.plurals.batch_queue_count, entries.size, entries.size)
+                },
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            if (entries.isNotEmpty()) {
+                TextButton(onClick = onClear) {
+                    Text(stringResource(R.string.batch_clear_button), color = TextSecondary)
+                }
+            }
+        }
+
+        if (entries.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            // Capped height so a long queue scrolls inside the panel rather than swallowing the
+            // camera preview it is docked over.
+            LazyColumn(modifier = Modifier.heightIn(max = 220.dp)) {
+                items(entries, key = { it.id }) { entry ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (entry.quantity > 1) "${entry.name} ×${entry.quantity}" else entry.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = when {
+                                    entry.isLookingUp -> stringResource(R.string.looking_up_product)
+                                    entry.needsAttention -> stringResource(R.string.batch_queue_needs_date)
+                                    else -> formatLocalDate(entry.expiryDate)
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (entry.needsAttention && !entry.isLookingUp) {
+                                    MaterialTheme.colorScheme.error
+                                } else {
+                                    TextSecondary
+                                }
+                            )
+                        }
+                        IconButton(onClick = { onRemove(entry.id) }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.batch_queue_remove_content_description),
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = onCommit,
+                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().height(48.dp)
+            ) {
+                Text(stringResource(R.string.batch_commit_button), fontWeight = FontWeight.Bold)
             }
         }
     }

@@ -293,3 +293,16 @@
 
 "notif_action_used" = "Brukt";
 "notif_action_snooze" = "I morgen";
+
+"scan_mode_batch" = "Flere";
+"reticle_hint_batch" = "Fortsett å skanne — alt havner i listen under";
+"batch_queue_empty" = "Skann en vare for å starte listen";
+"batch_queue_remove_content_description" = "Fjern fra listen";
+"batch_queue_needs_date" = "Sjekk dato";
+"batch_commit_button" = "Legg til alle";
+"batch_clear_button" = "Tøm";
+"duplicate_dialog_title" = "Allerede i matskapet";
+"duplicate_dialog_message" = "Du har allerede %@. Legge til én til, eller opprette en egen oppføring?";
+"duplicate_dialog_add_one" = "Legg til én til";
+"duplicate_dialog_separate" = "Hold adskilt";
+"duplicate_added" = "%1$@ er nå %2$d";

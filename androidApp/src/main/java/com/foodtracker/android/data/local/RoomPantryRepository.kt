@@ -31,6 +31,12 @@ class RoomPantryRepository(private val dao: PantryDao) : PantryRepository {
 
     override suspend fun getItem(id: String): PantryItem? = dao.getById(id)?.toDomain()
 
+    override suspend fun findByBarcode(barcode: String): List<PantryItem> {
+        val trimmed = barcode.trim()
+        if (trimmed.isEmpty()) return emptyList()
+        return dao.findByBarcode(trimmed).map { it.toDomain() }
+    }
+
     override suspend fun saveItem(item: PantryItem) = dao.upsert(item.toEntity())
 
     override suspend fun deleteItem(id: String) = dao.deleteById(id)

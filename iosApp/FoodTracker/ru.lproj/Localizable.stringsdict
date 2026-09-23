@@ -202,5 +202,45 @@
             <string>Ещё годен +%dд</string>
         </dict>
     </dict>
+    <key>batch_queue_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d товар в очереди</string>
+            <key>few</key>
+            <string>%d товара в очереди</string>
+            <key>many</key>
+            <string>%d товаров в очереди</string>
+            <key>other</key>
+            <string>%d товара в очереди</string>
+        </dict>
+    </dict>
+    <key>batch_added_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавлен %d товар</string>
+            <key>few</key>
+            <string>Добавлено %d товара</string>
+            <key>many</key>
+            <string>Добавлено %d товаров</string>
+            <key>other</key>
+            <string>Добавлено %d товара</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

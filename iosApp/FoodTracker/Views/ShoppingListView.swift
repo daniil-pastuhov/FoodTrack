@@ -362,7 +362,10 @@ struct ShoppingListView: View {
                     prefillImageUrl: prefillImageUrl,
                     prefillDate: prefillDate,
                     prefillCategory: prefillCategory,
-                    prefillSuggestion: prefillSuggestion
+                    prefillSuggestion: prefillSuggestion,
+                    onDuplicateMerged: { updated in
+                        importResult = L10n.duplicateAdded(updated.name, updated.quantity)
+                    }
                 )
             }
             .confirmationDialog(

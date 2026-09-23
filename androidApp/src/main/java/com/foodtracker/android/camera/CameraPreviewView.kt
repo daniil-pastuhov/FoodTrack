@@ -25,7 +25,14 @@ import java.util.concurrent.Executors
 enum class CameraScanMode {
     BARCODE,
     DATE_OCR,
-    PHOTO
+    PHOTO,
+
+    /**
+     * Keeps the camera live and queues each scanned product instead of stopping to fill in a
+     * form, for unpacking a whole shop. Uses the same analyzer as [BARCODE]; only what the
+     * screen does with each result differs.
+     */
+    BATCH
 }
 
 @Composable
@@ -59,7 +66,9 @@ fun CameraPreviewView(
                 .build()
 
             when (mode) {
-                CameraScanMode.BARCODE -> {
+                // Batch shares the barcode analyzer verbatim; only what ScannerScreen does with
+                // each result differs (queue it, rather than stop and look it up).
+                CameraScanMode.BARCODE, CameraScanMode.BATCH -> {
                     imageAnalysis.setAnalyzer(cameraExecutor, BarcodeAnalyzer { barcode ->
                         onBarcodeFound(barcode)
                     })

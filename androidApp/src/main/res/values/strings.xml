@@ -140,6 +140,26 @@
     <string name="date_picker_cancel">Cancel</string>
 
     <string name="manual_entry_button">Manual Entry</string>
+    <string name="scan_mode_batch">Batch</string>
+    <string name="reticle_hint_batch">Keep scanning — everything lands in the list below</string>
+    <string name="batch_queue_empty">Scan a product to start the list</string>
+    <string name="batch_queue_remove_content_description">Remove from list</string>
+    <string name="batch_queue_needs_date">Check date</string>
+    <string name="batch_commit_button">Add all</string>
+    <string name="batch_clear_button">Clear</string>
+    <plurals name="batch_queue_count">
+        <item quantity="one">%1$d item queued</item>
+        <item quantity="other">%1$d items queued</item>
+    </plurals>
+    <plurals name="batch_added_snackbar">
+        <item quantity="one">Added %1$d item</item>
+        <item quantity="other">Added %1$d items</item>
+    </plurals>
+    <string name="duplicate_dialog_title">Already in your pantry</string>
+    <string name="duplicate_dialog_message">You already have %1$s. Add one more to it, or create a separate entry?</string>
+    <string name="duplicate_dialog_add_one">Add one more</string>
+    <string name="duplicate_dialog_separate">Keep separate</string>
+    <string name="duplicate_added_snackbar">%1$s is now %2$d</string>
     <string name="scan_mode_barcode">Barcode</string>
     <string name="scan_mode_date_ocr">Date OCR</string>
     <string name="scan_mode_photo">Photo</string>

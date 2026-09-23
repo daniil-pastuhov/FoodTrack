@@ -3,7 +3,9 @@ package com.foodtracker.viewmodel
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.ShelfLifeSource
 import com.foodtracker.model.ShoppingListEntry
+import kotlinx.datetime.LocalDate
 
 /**
  * A pantry item with everything the UI needs already derived.
@@ -63,3 +65,38 @@ data class CategoryRow(
     val preference: CategoryPreference,
     val mergedOrigins: String
 )
+
+/**
+ * One product waiting in the scanner's batch queue: scanned and looked up, but not yet saved.
+ *
+ * Batch mode exists because unpacking a weekly shop is fifteen to thirty items, and the normal
+ * flow costs a full round trip through Add/Edit for each one. Here each scan is looked up and
+ * parked, and the whole queue is reviewed and committed at the end.
+ *
+ * [expiryDate] starts from whatever the scan could work out — a date read off the packaging, or
+ * the shelf life this barcode was last given (see `ShelfLife`) — so a queue of familiar products
+ * is often correct without the user touching any of it. [isLookingUp] is true while the product
+ * lookup is still in flight, so a row can appear immediately on the scan rather than after the
+ * network answers.
+ */
+data class BatchScanEntry(
+    val barcode: String,
+    val name: String,
+    val brand: String? = null,
+    val imageUrl: String? = null,
+    val category: String? = null,
+    val expiryDate: LocalDate,
+    val quantity: Int = 1,
+    val storageLocation: String,
+    /** Where [expiryDate] came from, so the review list can flag the rows that are guesses. */
+    val expirySource: ShelfLifeSource,
+    val isLookingUp: Boolean = false
+) {
+    /** The barcode is the identity: the queue holds at most one row per product, and scanning
+     *  the same one again bumps its quantity rather than adding a second row. */
+    val id: String get() = barcode
+
+    /** True when nothing better than the fallback was known, so the user should look at it. */
+    val needsAttention: Boolean
+        get() = expirySource == ShelfLifeSource.FALLBACK
+}

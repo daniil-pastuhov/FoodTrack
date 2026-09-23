@@ -162,5 +162,37 @@
             <string>Still good +%dd</string>
         </dict>
     </dict>
+    <key>batch_queue_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d item queued</string>
+            <key>other</key>
+            <string>%d items queued</string>
+        </dict>
+    </dict>
+    <key>batch_added_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Added %d item</string>
+            <key>other</key>
+            <string>Added %d items</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

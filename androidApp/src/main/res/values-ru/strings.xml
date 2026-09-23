@@ -137,6 +137,30 @@
     <string name="date_picker_cancel">Отмена</string>
 
     <string name="manual_entry_button">Ввести вручную</string>
+    <string name="scan_mode_batch">Пакет</string>
+    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список ниже</string>
+    <string name="batch_queue_empty">Отсканируйте товар, чтобы начать список</string>
+    <string name="batch_queue_remove_content_description">Убрать из списка</string>
+    <string name="batch_queue_needs_date">Проверьте дату</string>
+    <string name="batch_commit_button">Добавить все</string>
+    <string name="batch_clear_button">Очистить</string>
+    <plurals name="batch_queue_count">
+        <item quantity="one">%1$d товар в очереди</item>
+        <item quantity="few">%1$d товара в очереди</item>
+        <item quantity="many">%1$d товаров в очереди</item>
+        <item quantity="other">%1$d товара в очереди</item>
+    </plurals>
+    <plurals name="batch_added_snackbar">
+        <item quantity="one">Добавлен %1$d товар</item>
+        <item quantity="few">Добавлено %1$d товара</item>
+        <item quantity="many">Добавлено %1$d товаров</item>
+        <item quantity="other">Добавлено %1$d товара</item>
+    </plurals>
+    <string name="duplicate_dialog_title">Уже в запасах</string>
+    <string name="duplicate_dialog_message">У вас уже есть %1$s. Добавить ещё одну штуку или создать отдельную запись?</string>
+    <string name="duplicate_dialog_add_one">Добавить ещё одну</string>
+    <string name="duplicate_dialog_separate">Отдельно</string>
+    <string name="duplicate_added_snackbar">%1$s теперь %2$d</string>
     <string name="scan_mode_barcode">Штрихкод</string>
     <string name="scan_mode_date_ocr">Скан даты</string>
     <string name="scan_mode_photo">Фото</string>

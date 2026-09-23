@@ -399,6 +399,28 @@ class MainActivity : ComponentActivity() {
                         }
                     }
 
+                    val onBatchCommitted: (Int) -> Unit = { added ->
+                        snackbarScope.launch {
+                            snackbarHostState.showSnackbar(
+                                resources.getQuantityString(R.plurals.batch_added_snackbar, added, added)
+                            )
+                        }
+                        currentScreen = scanReturnScreen
+                    }
+                    val onDuplicateMerged: (PantryItem) -> Unit = { updated ->
+                        // The item's date hasn't changed, but its reminder was scheduled from a
+                        // state that no longer exists; rescheduling keeps it consistent with
+                        // every other write path.
+                        com.foodtracker.android.notification.NotificationHelper.scheduleNotification(this@MainActivity, updated)
+                        snackbarScope.launch {
+                            snackbarHostState.showSnackbar(
+                                getString(R.string.duplicate_added_snackbar, updated.name, updated.quantity)
+                            )
+                        }
+                        scanningShoppingListEntry = null
+                        currentScreen = scanReturnScreen
+                    }
+
                     val onShoppingListPayloadScanned: (String) -> Unit = { payload ->
                         stateHolder.importShoppingList(payload, showImportResultSnackbar)
                         currentScreen = scanReturnScreen
@@ -674,6 +696,7 @@ class MainActivity : ComponentActivity() {
                                         stateHolder = stateHolder,
                                         onNavigateBack = navigateBackFromScanner,
                                         onShoppingListScanned = onShoppingListPayloadScanned,
+                                        onBatchCommitted = onBatchCommitted,
                                         onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category, suggestedExpiry ->
                                             if (isScanningForNewShoppingListEntry) {
                                                 isScanningForNewShoppingListEntry = false
@@ -762,7 +785,8 @@ class MainActivity : ComponentActivity() {
                                             stateHolder.saveItem(item)
                                             scanningShoppingListEntry = null
                                             currentScreen = scanReturnScreen
-                                        }
+                                        },
+                                        onDuplicateMerged = onDuplicateMerged
                                     )
                                 }
 
