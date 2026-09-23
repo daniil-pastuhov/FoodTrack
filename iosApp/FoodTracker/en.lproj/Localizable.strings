@@ -134,7 +134,7 @@
 "notif_title_soon" = "Product Expiring Soon! ⚠️";
 
 "expiry_date_found_format" = "Found Expiry: %@";
-"notif_body_today_format" = "%@ expires today. Make sure to consume or freeze it!";
+"notif_body_today_format" = "%@ expires today. Make sure to consume it!";
 "notif_action_remove" = "Remove";
 "notif_digest_item_format" = "%1$@ — %2$@";
 "notif_action_recipe_ideas" = "Recipe ideas";

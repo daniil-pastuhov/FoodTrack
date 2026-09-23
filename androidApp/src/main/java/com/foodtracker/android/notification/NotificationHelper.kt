@@ -14,6 +14,7 @@ import com.foodtracker.model.PantryItem
 import com.foodtracker.notification.ExpiryNotificationCalculator
 import com.foodtracker.util.DateUtils
 import java.util.Calendar
+import kotlinx.datetime.LocalDate
 
 object NotificationHelper {
 
@@ -36,6 +37,33 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * The reminder's title and body for an item with [daysRemaining] days left *at the moment
+     * it fires* - which is not the same as today when the reminder is scheduled days ahead.
+     * Shared by [scheduleNotification] and [snoozeUntilTomorrow] so a snoozed reminder counts
+     * down with the item instead of repeating yesterday's wording.
+     */
+    private fun notificationCopy(
+        context: Context,
+        itemName: String,
+        brand: String?,
+        daysRemaining: Int
+    ): Pair<String, String> {
+        val nameWithBrand = if (!brand.isNullOrBlank()) "$itemName ($brand)" else itemName
+        return if (daysRemaining <= 0) {
+            context.getString(R.string.notif_title_today) to
+                context.getString(R.string.notif_body_today_format, nameWithBrand)
+        } else {
+            context.getString(R.string.notif_title_soon) to
+                context.resources.getQuantityString(
+                    R.plurals.notif_body_soon_format,
+                    daysRemaining,
+                    nameWithBrand,
+                    daysRemaining
+                )
+        }
+    }
+
     fun scheduleNotification(context: Context, item: PantryItem) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
         if (!notificationSettings.enabled) return
@@ -49,25 +77,12 @@ object NotificationHelper {
             minute = notificationSettings.minute
         ) ?: return
 
-        val nameWithBrand = if (!payload.brand.isNullOrBlank()) {
-            "${payload.itemName} (${payload.brand})"
-        } else {
-            payload.itemName
-        }
-        val title: String
-        val body: String
-        if (payload.expiresToday) {
-            title = context.getString(R.string.notif_title_today)
-            body = context.getString(R.string.notif_body_today_format, nameWithBrand)
-        } else {
-            title = context.getString(R.string.notif_title_soon)
-            body = context.resources.getQuantityString(
-                R.plurals.notif_body_soon_format,
-                payload.daysRemaining,
-                nameWithBrand,
-                payload.daysRemaining
-            )
-        }
+        val (title, body) = notificationCopy(
+            context,
+            payload.itemName,
+            payload.brand,
+            payload.daysRemaining
+        )
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
@@ -122,10 +137,26 @@ object NotificationHelper {
      * rolling offset would walk that reminder later every time they snoozed it. If tomorrow's
      * slot has somehow already passed, it falls back to a short delay rather than scheduling
      * into the past, which would fire immediately and defeat the snooze.
+     *
+     * [item] is the item as it stands now, used to re-word the reminder for tomorrow - an item
+     * snoozed on the day before it expires is expiring *today* when the snooze lands. When it
+     * can no longer be read (deleted in between), [fallbackTitle]/[fallbackBody] carry the
+     * previous wording through rather than dropping the reminder.
      */
-    fun snoozeUntilTomorrow(context: Context, itemId: String, title: String?, body: String?) {
+    fun snoozeUntilTomorrow(
+        context: Context,
+        itemId: String,
+        item: PantryItem?,
+        fallbackTitle: String?,
+        fallbackBody: String?
+    ) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+
+        val tomorrow = LocalDate.fromEpochDays(DateUtils.today().toEpochDays() + 1)
+        val copy = item?.let { notificationCopy(context, it.name, it.brand, it.daysRemaining(tomorrow)) }
+        val title = copy?.first ?: fallbackTitle
+        val body = copy?.second ?: fallbackBody
 
         val calendar = Calendar.getInstance().apply {
             add(Calendar.DAY_OF_YEAR, 1)

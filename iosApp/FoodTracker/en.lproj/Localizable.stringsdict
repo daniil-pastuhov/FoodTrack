@@ -45,9 +45,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>expires in %2$d day. Make sure to consume or freeze it!</string>
+            <string>expires in %2$d day. Make sure to consume it!</string>
             <key>other</key>
-            <string>expires in %2$d days. Make sure to consume or freeze it!</string>
+            <string>expires in %2$d days. Make sure to consume it!</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>

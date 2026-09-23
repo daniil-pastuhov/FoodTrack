@@ -29,6 +29,10 @@ class ExpiryNotificationCalculatorTest {
         assertEquals("Organic Valley", notification.brand)
         assertEquals(false, notification.expiresToday)
         assertEquals(LocalDate(2026, 9, 9), notification.triggerDate)
+        // Counted from the trigger date, not from today: the reminder fires the day before
+        // expiry, so that is what its copy has to describe - a week out when it was scheduled
+        // is not what the user reads six days later.
+        assertEquals(1, notification.daysRemaining)
         assertEquals(9, notification.triggerHour)
         assertEquals(0, notification.triggerMinute)
     }
@@ -45,9 +49,52 @@ class ExpiryNotificationCalculatorTest {
         val notification = ExpiryNotificationCalculator.calculateNotification(item, today)
         assertNotNull(notification)
         assertEquals(true, notification.expiresToday)
-        // The day-before window is in the past; NotificationHelper's "already passed"
-        // fallback fires this immediately rather than waiting for the trigger date.
-        assertEquals(LocalDate(2026, 9, 2), notification.triggerDate)
+        assertEquals(0, notification.daysRemaining)
+        // The day-before window is in the past, so the trigger date collapses to today;
+        // NotificationHelper's "already passed" fallback then fires it immediately.
+        assertEquals(today, notification.triggerDate)
+    }
+
+    @Test
+    fun testLongerLeadTimeCountsDownFromTheDayTheReminderFires() {
+        val item = PantryItem(
+            id = "item-456",
+            name = "Cheddar",
+            expiryDate = LocalDate(2026, 9, 30),
+            addedDate = today
+        )
+
+        val notification = ExpiryNotificationCalculator.calculateNotification(
+            item,
+            today,
+            leadDays = 3
+        )
+        assertNotNull(notification)
+        assertEquals(LocalDate(2026, 9, 27), notification.triggerDate)
+        assertEquals(3, notification.daysRemaining)
+        assertEquals(false, notification.expiresToday)
+    }
+
+    @Test
+    fun testLeadWindowAlreadyPassedDescribesTheItemAsOfToday() {
+        val item = PantryItem(
+            id = "item-321",
+            name = "Yoghurt",
+            expiryDate = LocalDate(2026, 9, 4), // tomorrow
+            addedDate = today
+        )
+
+        // A three-day lead on an item with one day left: the reminder date is in the past, so
+        // it fires now and must say "in 1 day", not "in 3 days".
+        val notification = ExpiryNotificationCalculator.calculateNotification(
+            item,
+            today,
+            leadDays = 3
+        )
+        assertNotNull(notification)
+        assertEquals(today, notification.triggerDate)
+        assertEquals(1, notification.daysRemaining)
+        assertEquals(false, notification.expiresToday)
     }
 
     @Test

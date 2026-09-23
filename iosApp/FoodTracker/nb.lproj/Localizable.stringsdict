@@ -45,9 +45,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>utløper om %2$d dag. Husk å spise eller fryse det!</string>
+            <string>utløper om %2$d dag. Husk å spise det!</string>
             <key>other</key>
-            <string>utløper om %2$d dager. Husk å spise eller fryse det!</string>
+            <string>utløper om %2$d dager. Husk å spise det!</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>

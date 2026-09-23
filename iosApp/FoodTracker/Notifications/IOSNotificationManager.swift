@@ -89,24 +89,6 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         // If the item already expired before today, do not schedule
         guard item.daysRemaining >= 0 else { return }
 
-        let content = UNMutableNotificationContent()
-        let brandSuffix = (item.brand?.isEmpty == false) ? " (\(item.brand!))" : ""
-
-        // If the item expires today, the lead-day reminder window has already passed
-        // (e.g. it was added the same day it expires) - fall back to an immediate "today"
-        // notification instead of silently missing the warning.
-        let nameWithBrand = "\(item.name)\(brandSuffix)"
-        if item.daysRemaining == 0 {
-            content.title = L10n.notifTitleToday
-            content.body = L10n.notifBodyToday(nameWithBrand)
-        } else {
-            content.title = L10n.notifTitleSoon
-            content.body = L10n.notifBodySoon(nameWithBrand, days: item.daysRemaining)
-        }
-        content.sound = .default
-        content.categoryIdentifier = Self.expiryCategoryIdentifier
-        content.userInfo = ["itemId": item.id]
-
         let calendar = Calendar.current
         guard let reminderDay = calendar.date(byAdding: .day, value: -notificationSettings.leadDays, to: item.expiryDate) else { return }
 
@@ -116,13 +98,28 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         triggerComponents.second = 0
 
         // UNCalendarNotificationTrigger never fires for a date/time already in the past, so if
-        // the 9 AM reminder slot has already gone by, fire almost immediately instead.
+        // the 9 AM reminder slot has already gone by - the item was added the same day it
+        // expires, or with less than leadDays to go - fire almost immediately instead of
+        // silently missing the warning.
         let trigger: UNNotificationTrigger
+        let daysRemainingAtTrigger: Int
         if let triggerDate = calendar.date(from: triggerComponents), triggerDate > Date() {
             trigger = UNCalendarNotificationTrigger(dateMatching: triggerComponents, repeats: false)
+            daysRemainingAtTrigger = Self.days(from: triggerDate, to: item.expiryDate) ?? item.daysRemaining
         } else {
             trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+            daysRemainingAtTrigger = item.daysRemaining
         }
+
+        // Written from the day the reminder actually fires, not from today: this content is
+        // fixed when the request is scheduled but read whenever it lands. An item five days out
+        // is reminded about the day before it expires, so it has to say "expires in 1 day".
+        let content = Self.expiryContent(
+            for: item.name,
+            brand: item.brand,
+            daysRemaining: daysRemainingAtTrigger,
+            itemId: item.id
+        )
 
         let request = UNNotificationRequest(identifier: item.id, content: content, trigger: trigger)
 
@@ -131,6 +128,42 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
                 print("Failed to schedule notification for \(item.name): \(error.localizedDescription)")
             }
         }
+    }
+
+    /// Builds the per-item reminder's content for an item that will have [daysRemaining] days
+    /// left *at the moment the notification fires*. Shared by the initial schedule and by
+    /// [snoozeUntilTomorrow] so a snoozed reminder reads as correctly as the original.
+    private nonisolated static func expiryContent(
+        for name: String,
+        brand: String?,
+        daysRemaining: Int,
+        itemId: String
+    ) -> UNMutableNotificationContent {
+        let content = UNMutableNotificationContent()
+        let brandSuffix = (brand?.isEmpty == false) ? " (\(brand!))" : ""
+        let nameWithBrand = "\(name)\(brandSuffix)"
+        if daysRemaining <= 0 {
+            content.title = L10n.notifTitleToday
+            content.body = L10n.notifBodyToday(nameWithBrand)
+        } else {
+            content.title = L10n.notifTitleSoon
+            content.body = L10n.notifBodySoon(nameWithBrand, days: daysRemaining)
+        }
+        content.sound = .default
+        content.categoryIdentifier = Self.expiryCategoryIdentifier
+        content.userInfo = ["itemId": itemId]
+        return content
+    }
+
+    /// Whole days between two instants, counted from the start of each day so a reminder at
+    /// 09:00 and an expiry date at midnight don't round down to one day fewer.
+    private nonisolated static func days(from: Date, to: Date) -> Int? {
+        let calendar = Calendar.current
+        return calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: from),
+            to: calendar.startOfDay(for: to)
+        ).day
     }
 
     public func cancelNotification(for itemId: String) {
@@ -317,19 +350,20 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
         guard let record = try? context.fetch(descriptor).first else { return }
 
-        var components = Calendar.current.dateComponents(
-            [.year, .month, .day],
-            from: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-        )
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: tomorrow)
         components.hour = notificationSettings.hour
         components.minute = notificationSettings.minute
 
-        let content = UNMutableNotificationContent()
-        content.title = record.expiryDate <= Date() ? L10n.notifTitleToday : L10n.notifTitleSoon
-        content.body = L10n.notifBodyToday(record.name)
-        content.sound = .default
-        content.categoryIdentifier = Self.expiryCategoryIdentifier
-        content.userInfo = ["itemId": itemId]
+        // Described as of tomorrow, when this fires - and via the same builder as the original
+        // reminder, so the snoozed copy keeps the brand and counts down instead of always
+        // claiming the item expires today.
+        let content = Self.expiryContent(
+            for: record.name,
+            brand: record.brand,
+            daysRemaining: Self.days(from: tomorrow, to: record.expiryDate) ?? 0,
+            itemId: itemId
+        )
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: itemId, content: content, trigger: trigger)

@@ -134,7 +134,7 @@
 "notif_title_soon" = "Продукт скоро истекает! ⚠️";
 
 "expiry_date_found_format" = "Найден срок годности: %@";
-"notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть или заморозить его!";
+"notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть его!";
 "notif_action_remove" = "Удалить";
 "notif_digest_item_format" = "%1$@ — %2$@";
 "notif_action_recipe_ideas" = "Идеи рецептов";

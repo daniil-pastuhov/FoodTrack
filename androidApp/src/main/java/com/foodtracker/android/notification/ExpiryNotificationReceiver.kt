@@ -10,6 +10,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
+import com.foodtracker.repository.PantryRepository
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import org.koin.core.component.inject
 class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
 
     private val stateHolder: PantryStateHolder by inject()
+    private val repository: PantryRepository by inject()
 
     override fun onReceive(context: Context, intent: Intent) {
         val itemId = intent.getStringExtra(EXTRA_ITEM_ID) ?: return
@@ -59,13 +61,23 @@ class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
             // Re-fires tomorrow at the same reminder time rather than dismissing: an item put
             // off today is exactly the one worth asking about again.
             ACTION_SNOOZE -> {
-                NotificationManagerCompat.from(context).cancel(itemId.hashCode())
-                NotificationHelper.snoozeUntilTomorrow(
-                    context = context,
-                    itemId = itemId,
-                    title = intent.getStringExtra(EXTRA_TITLE),
-                    body = intent.getStringExtra(EXTRA_BODY)
-                )
+                val pendingResult = goAsync()
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // Re-read the item so tomorrow's reminder is worded for tomorrow; the
+                        // extras are only the fallback for an item deleted in the meantime.
+                        NotificationHelper.snoozeUntilTomorrow(
+                            context = context,
+                            itemId = itemId,
+                            item = repository.getItem(itemId),
+                            fallbackTitle = intent.getStringExtra(EXTRA_TITLE),
+                            fallbackBody = intent.getStringExtra(EXTRA_BODY)
+                        )
+                    } finally {
+                        NotificationManagerCompat.from(context).cancel(itemId.hashCode())
+                        pendingResult.finish()
+                    }
+                }
                 return
             }
         }

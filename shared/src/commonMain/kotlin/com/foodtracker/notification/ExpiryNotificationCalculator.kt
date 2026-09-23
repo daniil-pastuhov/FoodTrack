@@ -18,23 +18,31 @@ object ExpiryNotificationCalculator {
         hour: Int = 9,
         minute: Int = 0
     ): NotificationPayload? {
-        val daysRemaining = item.daysRemaining(today)
-
         // If the item already expired before today, do not schedule
-        if (daysRemaining < 0) return null
+        if (item.daysRemaining(today) < 0) return null
 
         val reminderDate = LocalDate.fromEpochDays(item.expiryDate.toEpochDays() - leadDays)
 
-        // If the item expires today, the lead-day reminder window has already passed
-        // (e.g. it was added the same day it expires) - fall back to an immediate "today"
-        // notification instead of silently missing the warning.
+        // If the lead-day reminder window has already passed (e.g. the item was added the same
+        // day it expires, or with less than leadDays to go), fall back to firing today instead
+        // of silently missing the warning - the scheduler turns a trigger date whose time of
+        // day has gone by into an immediate alarm.
+        val triggerDate = if (reminderDate < today) today else reminderDate
+
+        // Counted from the day the reminder actually fires, not from today: the payload's copy
+        // is written now but read when the notification lands. An item five days out schedules
+        // its reminder for the day before it expires, so it has to say "expires in 1 day" -
+        // saying "in 5 days" would be describing a moment four days before the user sees it.
+        val daysRemainingAtTrigger =
+            (item.expiryDate.toEpochDays() - triggerDate.toEpochDays()).toInt()
+
         return NotificationPayload(
             id = item.id,
             itemName = item.name,
             brand = item.brand,
-            expiresToday = daysRemaining == 0,
-            daysRemaining = daysRemaining,
-            triggerDate = reminderDate,
+            expiresToday = daysRemainingAtTrigger == 0,
+            daysRemaining = daysRemainingAtTrigger,
+            triggerDate = triggerDate,
             triggerHour = hour,
             triggerMinute = minute
         )

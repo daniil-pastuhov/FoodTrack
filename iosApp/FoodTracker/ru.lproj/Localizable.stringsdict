@@ -53,13 +53,13 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>истекает через %2$d день. Не забудьте съесть или заморозить его!</string>
+            <string>истекает через %2$d день. Не забудьте съесть его!</string>
             <key>few</key>
-            <string>истекает через %2$d дня. Не забудьте съесть или заморозить его!</string>
+            <string>истекает через %2$d дня. Не забудьте съесть его!</string>
             <key>many</key>
-            <string>истекает через %2$d дней. Не забудьте съесть или заморозить его!</string>
+            <string>истекает через %2$d дней. Не забудьте съесть его!</string>
             <key>other</key>
-            <string>истекает через %2$d дня. Не забудьте съесть или заморозить его!</string>
+            <string>истекает через %2$d дня. Не забудьте съесть его!</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>
