@@ -14,6 +14,7 @@ import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.model.resolveCategoryOrigin
 import com.foodtracker.parser.GS1BarcodeParser
+import com.foodtracker.recognition.FoodLabelSuggestion
 import com.foodtracker.share.ImportedShoppingEntry
 import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.repository.CategoryPreferenceRepository
@@ -96,6 +97,12 @@ data class PantryUiState(
      *  date read off the packaging, the shelf life this barcode was given last time, or its
      *  category's configured default. See [ShelfLife.suggest]. */
     val suggestedExpiry: ShelfLifeSuggestion? = null,
+    /** Names suggested for a photographed, barcode-less product by the on-device image
+     *  classifier (see `FoodLabels`). Empty unless a photo was just captured. */
+    val photoLabelSuggestions: List<FoodLabelSuggestion> = emptyList(),
+    /** True while that classification is running, so the form can say so rather than showing
+     *  nothing and then popping chips in. */
+    val isLabelingPhoto: Boolean = false,
     val isLookingUpBarcode: Boolean = false,
     val scanMessage: String? = null,
     /** Set while the scan flow was launched from a specific shopping list row (rather than
@@ -430,6 +437,17 @@ class PantryStateHolder(
             rememberedDays = rememberedDays,
             categoryDefaultDays = categoryDefaultDays
         )
+    }
+
+    /** Publishes the result of classifying a captured product photo. Platform code does the
+     *  classification itself (it needs the device's ML runtime) and hands the filtered
+     *  suggestions here; see `FoodLabels.suggestionsFrom`. */
+    fun onPhotoLabelsDetected(suggestions: List<FoodLabelSuggestion>) {
+        _uiState.update { it.copy(photoLabelSuggestions = suggestions, isLabelingPhoto = false) }
+    }
+
+    fun onPhotoLabelingStarted() {
+        _uiState.update { it.copy(photoLabelSuggestions = emptyList(), isLabelingPhoto = true) }
     }
 
     fun onDateOcrDetected(date: LocalDate) {
@@ -853,6 +871,8 @@ class PantryStateHolder(
                 productNotFoundBarcode = null,
                 detectedDate = null,
                 suggestedExpiry = null,
+                photoLabelSuggestions = emptyList(),
+                isLabelingPhoto = false,
                 isLookingUpBarcode = false,
                 scanMessage = null,
                 scanningShoppingListEntryId = null

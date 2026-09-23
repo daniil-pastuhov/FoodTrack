@@ -58,6 +58,8 @@
 		BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883B4D1065B37C26A395EC3C /* CategoryPreference.swift */; };
+		A1B2C3D40000000000000034 /* ProductImageLabeler.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000033 /* ProductImageLabeler.swift */; };
+		A1B2C3D40000000000000032 /* FoodLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000031 /* FoodLabels.swift */; };
 		A1B2C3D40000000000000014 /* QrCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000013 /* QrCode.swift */; };
 		A1B2C3D40000000000000011 /* ShoppingListShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000010 /* ShoppingListShare.swift */; };
 		A1B2C3D40000000000000002 /* ShelfLife.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000001 /* ShelfLife.swift */; };
@@ -116,6 +118,9 @@
 		78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductNameRecord.swift; sourceTree = "<group>"; };
 		ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProductRecord.swift; sourceTree = "<group>"; };
 		883B4D1065B37C26A395EC3C /* CategoryPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPreference.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000033 /* ProductImageLabeler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageLabeler.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000031 /* FoodLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodLabels.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000035 /* FoodLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000031 /* FoodLabels.swift */; };
 		A1B2C3D40000000000000013 /* QrCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QrCode.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000010 /* ShoppingListShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListShare.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000012 /* ShoppingListShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000010 /* ShoppingListShare.swift */; };
@@ -152,6 +157,7 @@
 				C8572D1DAE71493E8D0E5A56 /* Parsers */,
 				9D4E1F2C3B5A6879788796A5 /* Matching */,
 				AD1F103AE47056858C6DCC46 /* Scanner */,
+				A1B2C3D40000000000000030 /* Recognition */,
 				A1B2C3D40000000000000020 /* Sharing */,
 				00676966D8FA67B56C8B4F74 /* Settings */,
 				DBD80D2A50945E688EF39B0B /* ViewModels */,
@@ -257,6 +263,15 @@
 				A1B2C3D40000000000000013 /* QrCode.swift */,
 			);
 			path = Sharing;
+			sourceTree = "<group>";
+		};
+		A1B2C3D40000000000000030 /* Recognition */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D40000000000000031 /* FoodLabels.swift */,
+				A1B2C3D40000000000000033 /* ProductImageLabeler.swift */,
+			);
+			path = Recognition;
 			sourceTree = "<group>";
 		};
 		AD1F103AE47056858C6DCC46 /* Scanner */ = {
@@ -458,6 +473,8 @@
 				665A801EBE434BEE94B34280 /* FloatingTabBar.swift in Sources */,
 				B079A629A81449CB9E79EB97 /* RootTabView.swift in Sources */,
 				8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */,
+				A1B2C3D40000000000000034 /* ProductImageLabeler.swift in Sources */,
+				A1B2C3D40000000000000032 /* FoodLabels.swift in Sources */,
 				A1B2C3D40000000000000014 /* QrCode.swift in Sources */,
 				A1B2C3D40000000000000011 /* ShoppingListShare.swift in Sources */,
 				A1B2C3D40000000000000002 /* ShelfLife.swift in Sources */,
@@ -487,6 +504,7 @@
 				57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */,
 				F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */,
 				CAE0941B5977A150D0673C1B /* CategoryPreference.swift in Sources */,
+				A1B2C3D40000000000000035 /* FoodLabels.swift in Sources */,
 				A1B2C3D40000000000000012 /* ShoppingListShare.swift in Sources */,
 				A1B2C3D40000000000000003 /* ShelfLife.swift in Sources */,
 				B60EA7804EAD089E4B949D10 /* CategoryPreferenceRecord.swift in Sources */,

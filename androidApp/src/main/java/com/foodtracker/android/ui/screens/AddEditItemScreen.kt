@@ -80,6 +80,7 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.daysRemainingLabel
+import com.foodtracker.android.util.foodLabelName
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.PantryItem
@@ -354,6 +355,40 @@ fun AddEditItemScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
+                    }
+                }
+            }
+
+            // Name suggestions from the on-device classifier, for a photographed product with no
+            // barcode to look up. Only offered while the name is still empty: once the user has
+            // typed something, replacing it from under them is worse than not helping.
+            if (name.isBlank() && (state.isLabelingPhoto || state.photoLabelSuggestions.isNotEmpty())) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = stringResource(
+                            if (state.isLabelingPhoto) R.string.photo_suggestions_analyzing
+                            else R.string.photo_suggestions_title
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                    if (!state.isLabelingPhoto) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            state.photoLabelSuggestions.forEach { suggestion ->
+                                val label = foodLabelName(context, suggestion) ?: return@forEach
+                                SuggestionChip(
+                                    onClick = {
+                                        name = label
+                                        // The classifier's category is coarse but real, and it
+                                        // is what lets the per-category default shelf life apply
+                                        // to an item with no barcode to remember one against.
+                                        if (category.isBlank()) category = suggestion.category
+                                        focusManager.clearFocus()
+                                    },
+                                    label = { Text(label) }
+                                )
+                            }
+                        }
                     }
                 }
             }

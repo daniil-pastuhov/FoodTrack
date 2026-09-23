@@ -42,6 +42,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -62,6 +63,7 @@ import coil.compose.AsyncImage
 import com.foodtracker.android.R
 import com.foodtracker.android.camera.CameraPreviewView
 import com.foodtracker.android.camera.CameraScanMode
+import com.foodtracker.android.camera.ProductImageLabeler
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
@@ -94,6 +96,19 @@ fun ScannerScreen(
     var capturedPhotoUri by remember { mutableStateOf<String?>(null) }
     var torchEnabled by remember { mutableStateOf(false) }
     var torchAvailable by remember { mutableStateOf(false) }
+
+    // Classify the captured photo once, off the capture callback, so a barcode-less product
+    // (produce, bakery) can suggest its own name. Keyed on the URI so retaking a photo
+    // reclassifies and cancelling one drops the previous suggestions.
+    LaunchedEffect(capturedPhotoUri) {
+        val uri = capturedPhotoUri
+        if (uri == null) {
+            stateHolder.onPhotoLabelsDetected(emptyList())
+        } else {
+            stateHolder.onPhotoLabelingStarted()
+            stateHolder.onPhotoLabelsDetected(ProductImageLabeler.suggestNames(context, uri))
+        }
+    }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
         // Live Camera Stream

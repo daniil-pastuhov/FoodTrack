@@ -393,6 +393,17 @@ public struct ScannerSheetView: View {
                 }
             }
         }
+        // Classify the captured photo once, so a barcode-less product (produce, bakery) can
+        // suggest its own name. Keyed on the URL so retaking a photo reclassifies and
+        // cancelling one drops the previous suggestions.
+        .task(id: capturedPhotoURL) {
+            guard let url = capturedPhotoURL else {
+                viewModel.clearPhotoLabels()
+                return
+            }
+            viewModel.onPhotoLabelingStarted()
+            viewModel.onPhotoLabelsDetected(await ProductImageLabeler.suggestNames(photoURL: url))
+        }
     }
 
     private var guideText: String {

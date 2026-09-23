@@ -151,6 +151,7 @@ dependencies {
 
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.mlkit.text.recognition)
+    implementation(libs.mlkit.image.labeling)
 
     implementation(libs.zxing.core)
 

@@ -99,6 +99,45 @@ public struct AddEditItemView: View {
                 .listRowSeparator(.hidden)
 
                 Section(header: Text(L10n.sectionProductDetails)) {
+                    // Name suggestions from the on-device classifier, for a photographed product
+                    // with no barcode to look up. Only offered while the name is still empty:
+                    // once the user has typed something, replacing it from under them is worse
+                    // than not helping.
+                    if name.isEmpty && (viewModel.isLabelingPhoto || !viewModel.photoLabelSuggestions.isEmpty) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(viewModel.isLabelingPhoto ? L10n.photoSuggestionsAnalyzing : L10n.photoSuggestionsTitle)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            if !viewModel.isLabelingPhoto {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(viewModel.photoLabelSuggestions) { suggestion in
+                                            if let label = L10n.foodLabelName(suggestion.key) {
+                                                Button {
+                                                    name = label
+                                                    // The classifier's category is coarse but
+                                                    // real, and it is what lets the per-category
+                                                    // default shelf life apply to an item with
+                                                    // no barcode to remember one against.
+                                                    if category.isEmpty { category = suggestion.category }
+                                                } label: {
+                                                    Text(label)
+                                                        .font(.caption)
+                                                        .fontWeight(.medium)
+                                                        .padding(.horizontal, 10)
+                                                        .padding(.vertical, 6)
+                                                        .background(Color.accentColor.opacity(0.12))
+                                                        .foregroundColor(.accentColor)
+                                                        .cornerRadius(8)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                     TextField(L10n.productNameLabel, text: $name)
                     TextField(L10n.brandLabel, text: $brand)
                     if !barcode.isEmpty {

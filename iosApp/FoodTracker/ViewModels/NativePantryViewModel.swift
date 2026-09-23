@@ -48,6 +48,12 @@ public class NativePantryViewModel: ObservableObject {
     /// read off the packaging, the shelf life this barcode was given last time, or its
     /// category's configured default. See `ShelfLife.suggest`.
     @Published public var suggestedExpiry: ShelfLifeSuggestion? = nil
+    /// Names suggested for a photographed, barcode-less product by the on-device image
+    /// classifier (see `FoodLabels`). Empty unless a photo was just captured.
+    @Published public var photoLabelSuggestions: [FoodLabelSuggestion] = []
+    /// True while that classification is running, so the form can say so rather than showing
+    /// nothing and then popping chips in.
+    @Published public var isLabelingPhoto: Bool = false
     @Published public var shoppingList: [ShoppingListEntry] = []
     /// Set while the scan flow was launched from a specific shopping list row (rather than
     /// the dashboard's general scan button), so `saveItem` knows to remove that exact entry
@@ -479,6 +485,27 @@ public class NativePantryViewModel: ObservableObject {
     /// back to `.all` (show everything), otherwise switches to the tapped filter.
     public func toggleMetricFilter(_ filter: NativeStatusFilter) {
         selectedFilter = selectedFilter == filter ? .all : filter
+    }
+
+    /// Publishes the result of classifying a captured product photo.
+    ///
+    /// The classification itself is done by the view (see `ScannerSheetView`), not here: this
+    /// type is compiled into the widget extension as well, and the widget has no business
+    /// linking Vision. Android splits it the same way - `ScannerScreen` calls the labeler and
+    /// hands the filtered suggestions to `onPhotoLabelsDetected`.
+    public func onPhotoLabelsDetected(_ suggestions: [FoodLabelSuggestion]) {
+        photoLabelSuggestions = suggestions
+        isLabelingPhoto = false
+    }
+
+    public func onPhotoLabelingStarted() {
+        photoLabelSuggestions = []
+        isLabelingPhoto = true
+    }
+
+    public func clearPhotoLabels() {
+        photoLabelSuggestions = []
+        isLabelingPhoto = false
     }
 
     public func lookupBarcode(_ barcode: String) {
@@ -1019,6 +1046,8 @@ public class NativePantryViewModel: ObservableObject {
         productNotFoundBarcode = nil
         detectedDate = nil
         suggestedExpiry = nil
+        photoLabelSuggestions = []
+        isLabelingPhoto = false
         isLookingUpBarcode = false
         scanningShoppingListEntryId = nil
     }

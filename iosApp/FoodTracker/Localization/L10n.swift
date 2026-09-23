@@ -140,6 +140,19 @@ public enum L10n {
     public static var shoppingListEmptySubtitle: String { NSLocalizedString("shopping_list_empty_subtitle", comment: "") }
     public static var shoppingListCheckOff: String { NSLocalizedString("shopping_list_check_off", comment: "") }
     public static var shoppingListUncategorized: String { NSLocalizedString("shopping_list_uncategorized", comment: "") }
+    public static var photoSuggestionsTitle: String { NSLocalizedString("photo_suggestions_title", comment: "") }
+    public static var photoSuggestionsAnalyzing: String { NSLocalizedString("photo_suggestions_analyzing", comment: "") }
+    /// The localized name for an image-classifier suggestion, or nil when the key has no string
+    /// yet - the caller should then skip the chip rather than show an empty one.
+    ///
+    /// `NSLocalizedString` needs a literal key for `genstrings`, so the keys are looked up
+    /// against the main bundle directly here; a key with no entry returns itself, which is how
+    /// a missing translation is detected rather than shown.
+    public static func foodLabelName(_ key: String) -> String? {
+        let resourceKey = "food_label_" + key
+        let value = Bundle.main.localizedString(forKey: resourceKey, value: resourceKey, table: nil)
+        return value == resourceKey ? nil : value
+    }
     public static var shoppingListShareContentDescription: String { NSLocalizedString("shopping_list_share_content_description", comment: "") }
     public static var shoppingListShareDialogTitle: String { NSLocalizedString("shopping_list_share_dialog_title", comment: "") }
     public static var shoppingListShareDialogMessage: String { NSLocalizedString("shopping_list_share_dialog_message", comment: "") }
