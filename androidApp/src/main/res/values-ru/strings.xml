@@ -284,13 +284,20 @@
     <string name="shortcut_shopping_list_short">Покупки</string>
     <string name="shortcut_shopping_list_long">Открыть список покупок</string>
     <string name="notif_action_remove">Удалить</string>
-    <string name="notif_digest_title">Истекают на этой неделе</string>
-    <plurals name="notif_digest_body_format">
-        <item quantity="one">%1$d продукт истекает в течение следующих 7 дней</item>
-        <item quantity="few">%1$d продукта истекают в течение следующих 7 дней</item>
-        <item quantity="many">%1$d продуктов истекают в течение следующих 7 дней</item>
-        <item quantity="other">%1$d продукта истекают в течение следующих 7 дней</item>
+    <plurals name="notif_digest_title_format">
+        <item quantity="one">%1$d продукт истекает на этой неделе</item>
+        <item quantity="few">%1$d продукта истекают на этой неделе</item>
+        <item quantity="many">%1$d продуктов истекают на этой неделе</item>
+        <item quantity="other">%1$d продукта истекают на этой неделе</item>
     </plurals>
+    <string name="notif_digest_item_format">%1$s — %2$s</string>
+    <plurals name="notif_digest_more_format">
+        <item quantity="one">и ещё %1$d</item>
+        <item quantity="few">и ещё %1$d</item>
+        <item quantity="many">и ещё %1$d</item>
+        <item quantity="other">и ещё %1$d</item>
+    </plurals>
+    <string name="notif_action_recipe_ideas">Идеи рецептов</string>
 
     <string name="settings_content_description">Настройки</string>
     <string name="settings_title">Настройки</string>

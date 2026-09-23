@@ -136,7 +136,8 @@
 "expiry_date_found_format" = "Utløpsdato funnet: %@";
 "notif_body_today_format" = "%@ utløper i dag. Husk å spise eller fryse det!";
 "notif_action_remove" = "Fjern";
-"notif_digest_title" = "Utløper denne uken";
+"notif_digest_item_format" = "%1$@ — %2$@";
+"notif_action_recipe_ideas" = "Oppskriftsforslag";
 
 "settings_title" = "Innstillinger";
 "settings_section_notifications" = "Varsler";

@@ -50,7 +50,7 @@
             <string>utløper om %2$d dager. Husk å spise eller fryse det!</string>
         </dict>
     </dict>
-    <key>notif_digest_body_format</key>
+    <key>notif_digest_title_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
         <string>%#@items@</string>
@@ -61,9 +61,25 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d vare utløper de neste 7 dagene</string>
+            <string>%d vare utløper denne uken</string>
             <key>other</key>
-            <string>%d varer utløper de neste 7 dagene</string>
+            <string>%d varer utløper denne uken</string>
+        </dict>
+    </dict>
+    <key>notif_digest_more_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>+%d til</string>
+            <key>other</key>
+            <string>+%d til</string>
         </dict>
     </dict>
     <key>expiry_suggestion_remembered_format</key>

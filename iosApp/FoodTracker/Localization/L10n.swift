@@ -261,10 +261,20 @@ public enum L10n {
             days
         )
     }
-    public static var notifDigestTitle: String { NSLocalizedString("notif_digest_title", comment: "") }
-    public static func notifDigestBody(_ count: Int) -> String {
-        String.localizedStringWithFormat(NSLocalizedString("notif_digest_body_format", comment: ""), count)
+    public static func notifDigestTitle(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("notif_digest_title_format", comment: ""), count)
     }
+    public static func notifDigestItem(name: String, expiry: String) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("notif_digest_item_format", comment: ""),
+            name,
+            expiry
+        )
+    }
+    public static func notifDigestMore(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("notif_digest_more_format", comment: ""), count)
+    }
+    public static var notifActionRecipeIdeas: String { NSLocalizedString("notif_action_recipe_ideas", comment: "") }
 
     public static var settingsTitle: String { NSLocalizedString("settings_title", comment: "") }
     public static var settingsSectionNotifications: String { NSLocalizedString("settings_section_notifications", comment: "") }

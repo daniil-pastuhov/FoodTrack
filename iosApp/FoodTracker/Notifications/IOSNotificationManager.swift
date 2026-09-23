@@ -12,6 +12,8 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     // concurrency, only a warning today).
     private nonisolated static let digestIdentifier = "com.foodtracker.digest"
     private nonisolated static let expiryCategoryIdentifier = "EXPIRY_CATEGORY"
+    private nonisolated static let digestCategoryIdentifier = "DIGEST_CATEGORY"
+    private nonisolated static let recipeActionIdentifier = "RECIPE_ACTION"
     private nonisolated static let removeActionIdentifier = "REMOVE_ACTION"
     private nonisolated static let usedActionIdentifier = "USED_ACTION"
     private nonisolated static let stillGoodActionIdentifier = "STILL_GOOD_ACTION"
@@ -58,7 +60,20 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             intentIdentifiers: [],
             options: []
         )
-        UNUserNotificationCenter.current().setNotificationCategories([expiryCategory])
+        // The digest names the items rather than only counting them, so it can offer to turn
+        // exactly those into a recipe prompt without the user opening the app first.
+        let recipeAction = UNNotificationAction(
+            identifier: Self.recipeActionIdentifier,
+            title: L10n.notifActionRecipeIdeas,
+            options: [.foreground]
+        )
+        let digestCategory = UNNotificationCategory(
+            identifier: Self.digestCategoryIdentifier,
+            actions: [recipeAction],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([expiryCategory, digestCategory])
 
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
             if let error = error {
@@ -136,8 +151,15 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         items.forEach { scheduleNotification(for: $0) }
     }
 
-    /// (Re)schedules the once-daily "N items expiring this week" digest for the next
-    /// occurrence of the configured reminder time, computed from the given items right now.
+    /// How far ahead the digest looks, and how many items it names before collapsing the rest
+    /// into "+N more". Three keeps the collapsed notification readable; the rest are still
+    /// included in the recipe prompt the action builds. Mirrors Android's
+    /// `DigestNotificationReceiver`.
+    private nonisolated static let digestWindowDays = 7
+    private nonisolated static let namedItemCount = 3
+
+    /// (Re)schedules the once-daily digest for the next occurrence of the configured reminder
+    /// time, naming the most urgent of the given items as of right now.
     ///
     /// Unlike Android's `DigestNotificationReceiver` (a `BroadcastReceiver` that recomputes the
     /// count fresh at the moment the alarm fires), a `UNNotificationRequest`'s content is fixed
@@ -146,21 +168,39 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     /// changes pantry data (`NativePantryViewModel.saveItem`/`deleteItem`/`decrementQuantity`)
     /// plus once at app launch, rather than relying on `repeats: true` with static content.
     /// The trade-off: if the app is never opened for more than a day, the last-scheduled
-    /// digest still fires (with a day-old count) but won't automatically roll forward to the
+    /// digest still fires (with day-old contents) but won't automatically roll forward to the
     /// day after that until the app runs again — acceptable for a local-only app with no
-    /// background refresh mechanism, since opening the app is how counts get corrected anyway.
+    /// background refresh mechanism, since opening the app is how it gets corrected anyway.
+    /// Naming items rather than counting them makes a stale digest more visibly stale, which
+    /// is a fair trade for a notification the user can otherwise do nothing with; the recipe
+    /// action re-resolves the ids against live data, so it never acts on a stale name.
     public func scheduleDigestNotification(items: [PantryItem]) {
         let notificationSettings = SettingsStore.shared.settings.notifications
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.digestIdentifier])
         guard notificationSettings.enabled else { return }
 
-        let expiringThisWeek = items.filter { $0.daysRemaining >= 0 && $0.daysRemaining <= 7 }.count
-        guard expiringThisWeek > 0 else { return }
+        let expiringThisWeek = items
+            .filter { $0.daysRemaining >= 0 && $0.daysRemaining <= Self.digestWindowDays }
+            .sorted { $0.daysRemaining < $1.daysRemaining }
+        guard !expiringThisWeek.isEmpty else { return }
+
+        // Naming the items rather than only counting them is the point of the digest: "3 items
+        // expiring this week" tells the user nothing they can act on without opening the app.
+        let named = expiringThisWeek.prefix(Self.namedItemCount)
+        var body = named
+            .map { L10n.notifDigestItem(name: $0.name, expiry: $0.daysRemainingFormatted) }
+            .joined(separator: "\n")
+        let remaining = expiringThisWeek.count - named.count
+        if remaining > 0 {
+            body += "\n" + L10n.notifDigestMore(remaining)
+        }
 
         let content = UNMutableNotificationContent()
-        content.title = L10n.notifDigestTitle
-        content.body = L10n.notifDigestBody(expiringThisWeek)
+        content.title = L10n.notifDigestTitle(expiringThisWeek.count)
+        content.body = body
         content.sound = .default
+        content.categoryIdentifier = Self.digestCategoryIdentifier
+        content.userInfo = ["digestItemIds": expiringThisWeek.map { $0.id }]
 
         var timeComponents = DateComponents()
         timeComponents.hour = notificationSettings.hour
@@ -187,11 +227,25 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        guard let itemId = response.notification.request.content.userInfo["itemId"] as? String else {
+        let userInfo = response.notification.request.content.userInfo
+        let action = response.actionIdentifier
+
+        // The digest carries a list of ids rather than a single `itemId`, so it is handled
+        // before the per-item guard below — that guard used to return first, which would leave
+        // the digest's action dead.
+        if action == Self.recipeActionIdentifier,
+           let digestItemIds = userInfo["digestItemIds"] as? [String] {
+            Task { @MainActor in
+                IOSNotificationManager.shareRecipePrompt(for: digestItemIds)
+                completionHandler()
+            }
+            return
+        }
+
+        guard let itemId = userInfo["itemId"] as? String else {
             completionHandler()
             return
         }
-        let action = response.actionIdentifier
         // All four act straight on SwiftData rather than through NativePantryViewModel: an
         // action can fire while no view (and so no view model instance) exists yet, e.g. right
         // after a cold launch from tapping it.
@@ -210,6 +264,31 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             }
             completionHandler()
         }
+    }
+
+    /// Builds a recipe prompt for the digest's items and hands it to the share sheet, via
+    /// `AppRouter` — a notification response has no view to present from itself.
+    ///
+    /// Reads the items back out of SwiftData rather than trusting names carried in the
+    /// notification: its content was fixed when it was scheduled (see
+    /// `scheduleDigestNotification`), so anything eaten since simply drops out of the prompt.
+    /// Nothing is presented when none of the ids still resolve.
+    ///
+    /// Compiled out of the widget extension, which shares this file for its direct-SwiftData
+    /// helpers but has no `AppRouter` (that is main-app-only, by design) and never handles a
+    /// notification response in the first place.
+    @MainActor
+    private static func shareRecipePrompt(for itemIds: [String]) {
+        #if !WIDGET_EXTENSION
+        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
+        let wanted = Set(itemIds)
+        let descriptor = FetchDescriptor<PantryItemRecord>()
+        let items = ((try? context.fetch(descriptor)) ?? [])
+            .filter { wanted.contains($0.id) }
+            .map { $0.asPantryItem }
+        guard !items.isEmpty else { return }
+        AppRouter.shared.pendingRecipeShare = NativePantryViewModel.recipePrompt(for: items)
+        #endif
     }
 
     /// Consumes one unit, mirroring `NativePantryViewModel.decrementQuantity`: an item with

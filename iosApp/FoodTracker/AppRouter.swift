@@ -31,6 +31,18 @@ public final class AppRouter: ObservableObject {
     /// and replayed once `RootTabView` appears.
     public var pendingLaunchDestination: AppDestination?
 
+    /// A recipe prompt waiting to be handed to the share sheet, set by the digest
+    /// notification's "Recipe ideas" action.
+    ///
+    /// Kept separate from `destination` because it is not a navigation request: the share sheet
+    /// goes up over whichever tab the user is already on. `RootTabView` observes it and clears
+    /// it once presented, so the same tap can't be replayed on the next view update.
+    ///
+    /// Unlike `destination` this needs no separate cold-launch stash: the notification response
+    /// is delivered to `UNUserNotificationCenterDelegate` only after the app is running, and
+    /// `RootTabView` is on screen by then.
+    @Published public var pendingRecipeShare: String?
+
     private init() {}
 
     public func handle(_ url: URL) {

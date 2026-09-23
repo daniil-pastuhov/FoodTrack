@@ -268,11 +268,16 @@
     <string name="shortcut_shopping_list_short">Handel</string>
     <string name="shortcut_shopping_list_long">Åpne handlelisten</string>
     <string name="notif_action_remove">Fjern</string>
-    <string name="notif_digest_title">Utløper denne uken</string>
-    <plurals name="notif_digest_body_format">
-        <item quantity="one">%1$d vare utløper de neste 7 dagene</item>
-        <item quantity="other">%1$d varer utløper de neste 7 dagene</item>
+    <plurals name="notif_digest_title_format">
+        <item quantity="one">%1$d vare utløper denne uken</item>
+        <item quantity="other">%1$d varer utløper denne uken</item>
     </plurals>
+    <string name="notif_digest_item_format">%1$s — %2$s</string>
+    <plurals name="notif_digest_more_format">
+        <item quantity="one">+%1$d til</item>
+        <item quantity="other">+%1$d til</item>
+    </plurals>
+    <string name="notif_action_recipe_ideas">Oppskriftsforslag</string>
 
     <string name="settings_content_description">Innstillinger</string>
     <string name="settings_title">Innstillinger</string>

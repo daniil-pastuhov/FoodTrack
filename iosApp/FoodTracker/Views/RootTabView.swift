@@ -188,6 +188,15 @@ struct RootTabView: View {
                 }
             )
         }
+        .sheet(isPresented: Binding(
+            get: { router.pendingRecipeShare != nil },
+            set: { if !$0 { router.pendingRecipeShare = nil } }
+        )) {
+            // Non-nil whenever the sheet is up, per the binding above; the fallback keeps this
+            // total rather than force-unwrapping during the dismiss animation, when SwiftUI can
+            // still re-evaluate the body after the prompt has been cleared.
+            ActivityView(activityItems: [router.pendingRecipeShare ?? ""])
+        }
         .onChange(of: router.destination) { _, destination in
             guard let destination else { return }
             apply(destination)

@@ -290,11 +290,16 @@
     <string name="shortcut_shopping_list_short">Shopping</string>
     <string name="shortcut_shopping_list_long">Open shopping list</string>
     <string name="notif_action_remove">Remove</string>
-    <string name="notif_digest_title">Expiring This Week</string>
-    <plurals name="notif_digest_body_format">
-        <item quantity="one">%1$d item expires in the next 7 days</item>
-        <item quantity="other">%1$d items expire in the next 7 days</item>
+    <plurals name="notif_digest_title_format">
+        <item quantity="one">%1$d item expiring this week</item>
+        <item quantity="other">%1$d items expiring this week</item>
     </plurals>
+    <string name="notif_digest_item_format">%1$s — %2$s</string>
+    <plurals name="notif_digest_more_format">
+        <item quantity="one">+%1$d more</item>
+        <item quantity="other">+%1$d more</item>
+    </plurals>
+    <string name="notif_action_recipe_ideas">Recipe ideas</string>
 
     <string name="settings_content_description">Settings</string>
     <string name="settings_title">Settings</string>

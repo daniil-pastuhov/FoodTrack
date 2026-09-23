@@ -503,7 +503,10 @@ private struct ShareRecipeDialog: View {
 
 /// Wraps `UIActivityViewController` so the share sheet can be triggered programmatically after
 /// `ShareRecipeDialog` is dismissed, rather than via `ShareLink`'s own tap gesture.
-private struct ActivityView: UIViewControllerRepresentable {
+///
+/// Internal rather than private because `RootTabView` presents the same sheet for the digest
+/// notification's "Recipe ideas" action, which arrives with no dashboard on screen.
+struct ActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
 
     func makeUIViewController(context: Context) -> UIActivityViewController {

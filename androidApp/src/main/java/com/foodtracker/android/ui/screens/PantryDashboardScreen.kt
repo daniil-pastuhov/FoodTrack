@@ -1,6 +1,5 @@
 package com.foodtracker.android.ui.screens
 
-import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -111,7 +110,7 @@ import com.foodtracker.android.ui.theme.expiredStatusColors
 import com.foodtracker.android.ui.theme.expiringStatusColors
 import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.ui.theme.TextSecondary
-import com.foodtracker.android.util.buildRecipePrompt
+import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.SortOption
@@ -187,7 +186,7 @@ fun PantryDashboardScreen(
         selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
     }
 
-    fun shareRecipePrompt(includeOtherItems: Boolean) {
+    fun shareSelectedRecipePrompt(includeOtherItems: Boolean) {
         val selectedItems = state.items.filter { it.id in selectedIds }
         if (selectedItems.isEmpty()) return
         val otherItems = if (includeOtherItems) {
@@ -195,12 +194,7 @@ fun PantryDashboardScreen(
         } else {
             emptyList()
         }
-        val prompt = buildRecipePrompt(context, selectedItems, otherItems)
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, prompt)
-        }
-        context.startActivity(Intent.createChooser(sendIntent, null))
+        shareRecipePrompt(context, selectedItems, otherItems)
         selectedIds = emptySet()
         includeOtherItemsInShare = false
     }
@@ -505,7 +499,7 @@ fun PantryDashboardScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showShareDialog = false
-                    shareRecipePrompt(includeOtherItemsInShare)
+                    shareSelectedRecipePrompt(includeOtherItemsInShare)
                 }) {
                     Text(stringResource(R.string.share_recipe_share_button), color = BrandPrimary)
                 }
