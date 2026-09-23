@@ -29,6 +29,11 @@ struct ShoppingListView: View {
     @State private var pendingMatchDate: Date?
     @State private var pendingMatchCategory: String?
     @State private var pendingMatchSuggestion: ShelfLifeSuggestion?
+    @State private var showShareSheet = false
+    @State private var showQrCode = false
+    @State private var showImportSheet = false
+    @State private var importText = ""
+    @State private var importResult: String?
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -201,6 +206,84 @@ struct ShoppingListView: View {
             .animation(.easeInOut(duration: 0.25), value: viewModel.shoppingList.isEmpty)
             .navigationTitle(L10n.shoppingListTitle)
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel(L10n.shoppingListShareContentDescription)
+                }
+            }
+            .confirmationDialog(
+                L10n.shoppingListShareDialogTitle,
+                isPresented: $showShareSheet,
+                titleVisibility: .visible
+            ) {
+                // Sharing an empty list would hand someone a title and nothing else.
+                if !viewModel.shoppingList.isEmpty {
+                    ShareLink(item: shareText()) {
+                        Text(L10n.shoppingListShareAsText)
+                    }
+                    Button(L10n.shoppingListShareAsQr) { showQrCode = true }
+                }
+                Button(L10n.shoppingListImport) { showImportSheet = true }
+                Button(L10n.cancelButton, role: .cancel) {}
+            } message: {
+                Text(L10n.shoppingListShareDialogMessage)
+            }
+            .sheet(isPresented: $showQrCode) {
+                ShoppingListQrSheet(payload: ShoppingListShare.toPayload(entries: viewModel.shoppingList))
+            }
+            .sheet(isPresented: $showImportSheet) {
+                NavigationStack {
+                    Form {
+                        Section {
+                            TextEditor(text: $importText)
+                                .frame(minHeight: 120)
+                        } header: {
+                            Text(L10n.shoppingListImportMessage)
+                        }
+                    }
+                    .navigationTitle(L10n.shoppingListImport)
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(L10n.cancelButton) {
+                                importText = ""
+                                showImportSheet = false
+                            }
+                        }
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(L10n.shoppingListImportConfirm) {
+                                applyImport(importText)
+                                importText = ""
+                                showImportSheet = false
+                            }
+                            .disabled(importText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .fontWeight(.bold)
+                        }
+                    }
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if let importResult {
+                    Text(importResult)
+                        .font(.footnote.weight(.medium))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.thinMaterial, in: Capsule())
+                        .padding(.bottom, 200)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: importResult)
+            .task(id: importResult) {
+                guard importResult != nil else { return }
+                try? await Task.sleep(for: .seconds(3))
+                if !Task.isCancelled { importResult = nil }
+            }
             .sheet(isPresented: $showScanner, onDismiss: {
                 // Covers the scanner's own "x" cancel button, which dismisses without ever
                 // calling the completion closure below. Skipped when the scan is instead
@@ -214,7 +297,14 @@ struct ShoppingListView: View {
                     viewModel.clearScanState()
                 }
             }) {
-                ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category, suggestion in
+                ScannerSheetView(
+                    viewModel: viewModel,
+                    onShoppingListScanned: { payload in
+                        isScanningForNewEntry = false
+                        scanningEntry = nil
+                        applyImport(payload)
+                    }
+                ) { barcode, name, brand, imageUrl, date, category, suggestion in
                     if isScanningForNewEntry {
                         isScanningForNewEntry = false
                         switch ShoppingListMatcher.match(scannedName: name, scannedBarcode: barcode, shoppingList: viewModel.shoppingList) {
@@ -331,6 +421,35 @@ struct ShoppingListView: View {
     // Groups are keyed by the *resolved* category (so a disabled category, or two origins
     // renamed to the same name, fold into one group here) and ordered by the user's category
     // preference order (see CategorySettingsView) rather than alphabetically.
+
+    /// The list as shareable text, with the same resolved (renamed, disabled-folded) category
+    /// names the on-screen list shows rather than the raw Open Food Facts values stored on each
+    /// entry.
+    private func shareText() -> String {
+        let preferences = viewModel.categoryPreferences
+        return ShoppingListShare.toText(
+            entries: viewModel.shoppingList,
+            title: L10n.shoppingListTitle,
+            uncategorizedLabel: L10n.shoppingListUncategorized,
+            categoryLabel: { resolveCategoryDisplayName($0, preferences) }
+        )
+    }
+
+    /// An import has three distinct outcomes worth telling apart: some entries were added, the
+    /// list was understood but everything on it was already here, or nothing parseable was found
+    /// at all. Collapsing the last two into one message would leave the user unsure whether the
+    /// import even worked.
+    private func applyImport(_ raw: String) {
+        let result = viewModel.importShoppingList(raw)
+        importResult = if result.added > 0 {
+            L10n.shoppingListImportAdded(result.added)
+        } else if result.found > 0 {
+            L10n.shoppingListImportAllPresent
+        } else {
+            L10n.shoppingListImportNothing
+        }
+    }
+
     private var groupedEntries: [(category: String?, entries: [ShoppingListEntry])] {
         let preferences = viewModel.categoryPreferences
         let grouped = Dictionary(grouping: viewModel.shoppingList, by: { resolveCategoryDisplayName($0.category, preferences) })
@@ -366,5 +485,53 @@ struct ShoppingListView: View {
         guard !trimmed.isEmpty else { return }
         viewModel.addManualShoppingListEntry(trimmed)
         newEntryText = ""
+    }
+}
+
+
+/// Shows the shopping list as a QR code for someone else to scan with their own scanner.
+private struct ShoppingListQrSheet: View {
+    let payload: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                if let image = generateQrImage(contents: payload) {
+                    Image(uiImage: image)
+                        .interpolation(.none)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: 260, maxHeight: 260)
+                        // The code is pure black-on-white, so it needs a light backing to stay
+                        // scannable in dark mode.
+                        .padding(12)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                    Text(L10n.shoppingListShareQrHint)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                } else {
+                    // A QR code has a hard capacity limit and the generator refuses rather than
+                    // truncating, so a long list simply can't be shared this way. Text has no
+                    // such limit, so point at it instead of showing a broken sheet.
+                    Text(L10n.shoppingListShareQrTooLarge)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                }
+                Spacer()
+            }
+            .padding(.top, 24)
+            .padding(.horizontal)
+            .navigationTitle(L10n.shoppingListShareAsQr)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(L10n.doneButton) { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
     }
 }

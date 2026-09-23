@@ -193,3 +193,16 @@
 "category_settings_shelf_life_dialog_message" = "Nye varer i denne kategorien starter med så mange dager igjen, med mindre strekkoden allerede har en husket holdbarhet eller en dato ble lest av emballasjen.";
 "category_settings_shelf_life_field_label" = "Dager";
 "category_settings_shelf_life_clear" = "Fjern";
+
+"shopping_list_share_content_description" = "Del eller importer liste";
+"shopping_list_share_dialog_title" = "Del liste";
+"shopping_list_share_dialog_message" = "Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din — ingenting erstattes.";
+"shopping_list_share_as_text" = "Del som tekst";
+"shopping_list_share_as_qr" = "Vis QR-kode";
+"shopping_list_share_qr_hint" = "Skann denne fra handlelisten på den andre telefonen.";
+"shopping_list_share_qr_too_large" = "Listen er for lang til å få plass i en QR-kode. Del den som tekst i stedet.";
+"shopping_list_import" = "Importer en liste";
+"shopping_list_import_message" = "Lim inn en liste noen har sendt deg, eller skann QR-koden deres fra skanneren.";
+"shopping_list_import_confirm" = "Importer";
+"shopping_list_import_all_present" = "Alt på den listen er allerede her";
+"shopping_list_import_nothing" = "Ingenting å importere derfra";

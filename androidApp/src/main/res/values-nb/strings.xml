@@ -100,7 +100,25 @@
     <string name="shopping_list_content_description">Handleliste</string>
     <string name="shopping_list_add_placeholder">Legg til en vare …</string>
     <string name="shopping_list_add_button">Legg til</string>
-    <string name="shopping_list_scan_content_description">Skann produkt</string>    <string name="shopping_list_empty_title">Handlelisten er tom</string>
+    <string name="shopping_list_scan_content_description">Skann produkt</string>    <string name="shopping_list_share_content_description">Del eller importer liste</string>
+    <string name="shopping_list_share_dialog_title">Del liste</string>
+    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din — ingenting erstattes.</string>
+    <string name="shopping_list_share_as_text">Del som tekst</string>
+    <string name="shopping_list_share_as_qr">Vis QR-kode</string>
+    <string name="shopping_list_share_qr_content_description">QR-kode med handlelisten</string>
+    <string name="shopping_list_share_qr_hint">Skann denne fra handlelisten på den andre telefonen.</string>
+    <string name="shopping_list_share_qr_too_large">Listen er for lang til å få plass i en QR-kode. Del den som tekst i stedet.</string>
+    <string name="shopping_list_import">Importer en liste</string>
+    <string name="shopping_list_import_message">Lim inn en liste noen har sendt deg, eller skann QR-koden deres fra skanneren.</string>
+    <string name="shopping_list_import_placeholder">Melk\nBrød (2)</string>
+    <string name="shopping_list_import_confirm">Importer</string>
+    <plurals name="shopping_list_import_added">
+        <item quantity="one">La til %1$d vare</item>
+        <item quantity="other">La til %1$d varer</item>
+    </plurals>
+    <string name="shopping_list_import_all_present">Alt på den listen er allerede her</string>
+    <string name="shopping_list_import_nothing">Ingenting å importere derfra</string>
+    <string name="shopping_list_empty_title">Handlelisten er tom</string>
     <string name="shopping_list_empty_subtitle">Nødvendige varer du fjerner fra matskapet, dukker opp her.</string>
     <string name="shopping_list_uncategorized">Annet</string>
     <string name="shopping_list_quantity_decrease_content_description">Reduser antall</string>

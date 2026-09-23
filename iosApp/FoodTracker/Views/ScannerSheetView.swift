@@ -18,14 +18,20 @@ public struct ScannerSheetView: View {
     // button): "skip to manual entry" makes no sense there since manual entry is already the
     // screen underneath, and dismissing would otherwise discard fields already typed.
     var showManualEntryShortcut: Bool
+    /// Called instead of the product lookup when the camera reads one of our own shared-list QR
+    /// codes (see `ShoppingListShare.isPayload`), so scanning a friend's list imports it rather
+    /// than looking the payload up as if it were a product barcode.
+    var onShoppingListScanned: (String) -> Void
 
     public init(
         viewModel: NativePantryViewModel,
         showManualEntryShortcut: Bool = true,
+        onShoppingListScanned: @escaping (String) -> Void = { _ in },
         onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
     ) {
         self.viewModel = viewModel
         self.showManualEntryShortcut = showManualEntryShortcut
+        self.onShoppingListScanned = onShoppingListScanned
         self.onProceedToAdd = onProceedToAdd
     }
 
@@ -35,6 +41,14 @@ public struct ScannerSheetView: View {
             CameraScannerView(
                 mode: mode,
                 onBarcodeFound: { barcode in
+                    // A shared shopping list is a QR code, and so is a product's DataMatrix/QR -
+                    // they arrive on the same callback. Route ours away before the lookup, or
+                    // the whole JSON payload would be sent to Open Food Facts as a barcode.
+                    guard !ShoppingListShare.isPayload(barcode) else {
+                        onShoppingListScanned(barcode)
+                        dismiss()
+                        return
+                    }
                     if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
                         viewModel.detectedDate = gs1Date
                     }

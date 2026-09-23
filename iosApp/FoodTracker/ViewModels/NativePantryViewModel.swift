@@ -697,6 +697,52 @@ public class NativePantryViewModel: ObservableObject {
         recordProductName(trimmed)
     }
 
+    /// Adds every entry in `raw` (a QR payload or pasted text - see `ShoppingListShare.parse`)
+    /// that isn't on the list already, and returns how many were added and how many were
+    /// understood.
+    ///
+    /// Merging rather than replacing: an import is someone else's copy of the list, not
+    /// necessarily a newer one, so silently dropping what's already here would lose whatever the
+    /// receiving user added since. Deduping goes through the same
+    /// `addShoppingListEntryIfAbsent` every other path uses, so an imported name that is already
+    /// present - however it got there - is skipped rather than duplicated.
+    ///
+    /// Each imported name is also recorded for the autosuggest, so a list received from someone
+    /// else teaches this device the same names typing them by hand would.
+    @discardableResult
+    public func importShoppingList(_ raw: String) -> (added: Int, found: Int) {
+        let parsed = ShoppingListShare.parse(raw)
+        guard !parsed.isEmpty else { return (0, 0) }
+
+        var added = 0
+        for entry in parsed {
+            let before = shoppingList.count
+            addShoppingListEntryIfAbsent(name: entry.productName, barcode: nil, category: entry.category)
+            guard shoppingList.count > before else { continue }
+            added += 1
+            recordProductName(entry.productName)
+            // Quantity is applied after the fact: addShoppingListEntryIfAbsent is the shared
+            // dedupe path and always creates a single unit, and teaching it about quantities
+            // would change behaviour for every other caller.
+            if entry.quantity > 1,
+               let created = shoppingList.first(where: {
+                   $0.productName.caseInsensitiveCompare(entry.productName) == .orderedSame
+               }) {
+                let createdId = created.id
+                let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == createdId })
+                if let record = try? modelContext.fetch(descriptor).first {
+                    record.quantity = entry.quantity
+                }
+            }
+        }
+        if added > 0 {
+            try? modelContext.save()
+            loadShoppingList()
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        return (added, parsed.count)
+    }
+
     public func beginScanForShoppingListEntry(_ id: String) {
         scanningShoppingListEntryId = id
     }

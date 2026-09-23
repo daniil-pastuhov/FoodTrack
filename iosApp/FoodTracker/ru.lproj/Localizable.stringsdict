@@ -142,5 +142,25 @@
             <string>%d д</string>
         </dict>
     </dict>
+    <key>shopping_list_import_added_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавлен %d товар</string>
+            <key>few</key>
+            <string>Добавлено %d товара</string>
+            <key>many</key>
+            <string>Добавлено %d товаров</string>
+            <key>other</key>
+            <string>Добавлено %d товара</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

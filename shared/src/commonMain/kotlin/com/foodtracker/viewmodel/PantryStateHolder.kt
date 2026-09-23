@@ -14,6 +14,8 @@ import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.model.resolveCategoryOrigin
 import com.foodtracker.parser.GS1BarcodeParser
+import com.foodtracker.share.ImportedShoppingEntry
+import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
@@ -566,6 +568,51 @@ class PantryStateHolder(
             addToShoppingListIfAbsent(trimmed, barcode = null, category = null)
             recordProductName(trimmed)
         }
+    }
+
+    /**
+     * Adds every entry in [raw] (a QR payload or pasted text - see [ShoppingListShare.parse])
+     * that isn't on the list already, and reports how many were added via [onComplete].
+     *
+     * Merging rather than replacing: an import is someone else's copy of the list, not
+     * necessarily a newer one, so silently dropping what's already here would lose whatever the
+     * receiving user added since. Deduping goes through the same
+     * [addToShoppingListIfAbsent] every other path uses, so an imported name that is already
+     * present - however it got there - is skipped rather than duplicated.
+     *
+     * Each imported name is also recorded for the autosuggest, so a list received from someone
+     * else teaches this device the same names typing them by hand would.
+     */
+    fun importShoppingList(raw: String, onComplete: (added: Int, found: Int) -> Unit = { _, _ -> }) {
+        val parsed = ShoppingListShare.parse(raw)
+        if (parsed.isEmpty()) {
+            onComplete(0, 0)
+            return
+        }
+        coroutineScope.launch {
+            var added = 0
+            parsed.forEach { entry ->
+                if (addImportedEntry(entry)) added++
+            }
+            onComplete(added, parsed.size)
+        }
+    }
+
+    /** Returns true when the entry was actually added (i.e. it wasn't already on the list). */
+    private suspend fun addImportedEntry(entry: ImportedShoppingEntry): Boolean {
+        val existing = shoppingListRepository.findByName(entry.productName)
+        if (existing != null) return false
+        addToShoppingListIfAbsent(entry.productName, barcode = null, category = entry.category)
+        recordProductName(entry.productName)
+        // Quantity is applied after the fact: addToShoppingListIfAbsent is the shared dedupe
+        // path and always creates a single unit, and teaching it about quantities would change
+        // behaviour for every other caller.
+        if (entry.quantity > 1) {
+            shoppingListRepository.findByName(entry.productName)?.let { created ->
+                shoppingListRepository.updateEntry(created.copy(quantity = entry.quantity))
+            }
+        }
+        return true
     }
 
     /** Marks [id] as the shopping list entry the in-progress scan flow is completing, so

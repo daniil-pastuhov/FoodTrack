@@ -140,6 +140,24 @@ public enum L10n {
     public static var shoppingListEmptySubtitle: String { NSLocalizedString("shopping_list_empty_subtitle", comment: "") }
     public static var shoppingListCheckOff: String { NSLocalizedString("shopping_list_check_off", comment: "") }
     public static var shoppingListUncategorized: String { NSLocalizedString("shopping_list_uncategorized", comment: "") }
+    public static var shoppingListShareContentDescription: String { NSLocalizedString("shopping_list_share_content_description", comment: "") }
+    public static var shoppingListShareDialogTitle: String { NSLocalizedString("shopping_list_share_dialog_title", comment: "") }
+    public static var shoppingListShareDialogMessage: String { NSLocalizedString("shopping_list_share_dialog_message", comment: "") }
+    public static var shoppingListShareAsText: String { NSLocalizedString("shopping_list_share_as_text", comment: "") }
+    public static var shoppingListShareAsQr: String { NSLocalizedString("shopping_list_share_as_qr", comment: "") }
+    public static var shoppingListShareQrHint: String { NSLocalizedString("shopping_list_share_qr_hint", comment: "") }
+    public static var shoppingListShareQrTooLarge: String { NSLocalizedString("shopping_list_share_qr_too_large", comment: "") }
+    public static var shoppingListImport: String { NSLocalizedString("shopping_list_import", comment: "") }
+    public static var shoppingListImportMessage: String { NSLocalizedString("shopping_list_import_message", comment: "") }
+    public static var shoppingListImportConfirm: String { NSLocalizedString("shopping_list_import_confirm", comment: "") }
+    public static var shoppingListImportAllPresent: String { NSLocalizedString("shopping_list_import_all_present", comment: "") }
+    public static var shoppingListImportNothing: String { NSLocalizedString("shopping_list_import_nothing", comment: "") }
+    public static func shoppingListImportAdded(_ count: Int) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("shopping_list_import_added_format", comment: ""),
+            count
+        )
+    }
     public static var shoppingListScan: String { NSLocalizedString("shopping_list_scan", comment: "") }
     public static var shoppingListDidYouMeanTitle: String { NSLocalizedString("shopping_list_did_you_mean_title", comment: "") }
     public static var shoppingListDidYouMeanNoneOfThese: String { NSLocalizedString("shopping_list_did_you_mean_none_of_these", comment: "") }

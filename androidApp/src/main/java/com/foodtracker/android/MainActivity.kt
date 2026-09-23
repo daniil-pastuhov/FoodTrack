@@ -323,6 +323,27 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    // An import has three distinct outcomes worth telling apart: some entries
+                    // were added, the list was understood but everything on it was already
+                    // here, or nothing parseable was found at all. Collapsing the last two into
+                    // one message would leave the user unsure whether the import even worked.
+                    val showImportResultSnackbar: (Int, Int) -> Unit = { added, found ->
+                        snackbarScope.launch {
+                            val message = when {
+                                added > 0 -> resources.getQuantityString(
+                                    R.plurals.shopping_list_import_added, added, added
+                                )
+                                found > 0 -> getString(R.string.shopping_list_import_all_present)
+                                else -> getString(R.string.shopping_list_import_nothing)
+                            }
+                            snackbarHostState.showSnackbar(message = message, duration = SnackbarDuration.Short)
+                        }
+                    }
+                    val onShoppingListPayloadScanned: (String) -> Unit = { payload ->
+                        stateHolder.importShoppingList(payload, showImportResultSnackbar)
+                        currentScreen = scanReturnScreen
+                    }
+
                     val onDeleteItemHandler: (String) -> Unit = { id ->
                         stateHolder.deleteItem(id) { removedItem ->
                             com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
@@ -511,6 +532,7 @@ class MainActivity : ComponentActivity() {
                                                 onAddEntryManually = onAddShoppingListEntryManually,
                                                 onCheckOffEntry = onCheckOffShoppingListEntryHandler,
                                                 onDecrementEntry = onDecrementShoppingListQuantityHandler,
+                                                onImportComplete = showImportResultSnackbar,
                                                 bottomOverlayClearance = pillClearance
                                             )
                                         }
@@ -586,6 +608,7 @@ class MainActivity : ComponentActivity() {
                                     ScannerScreen(
                                         stateHolder = stateHolder,
                                         onNavigateBack = navigateBackFromScanner,
+                                        onShoppingListScanned = onShoppingListPayloadScanned,
                                         onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category, suggestedExpiry ->
                                             if (isScanningForNewShoppingListEntry) {
                                                 isScanningForNewShoppingListEntry = false

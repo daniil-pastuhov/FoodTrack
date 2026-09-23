@@ -193,3 +193,16 @@
 "category_settings_shelf_life_dialog_message" = "New items in this category start with this many days until they expire, unless the barcode already has a remembered shelf life or a date was read off the packaging.";
 "category_settings_shelf_life_field_label" = "Days";
 "category_settings_shelf_life_clear" = "Clear";
+
+"shopping_list_share_content_description" = "Share or import list";
+"shopping_list_share_dialog_title" = "Share list";
+"shopping_list_share_dialog_message" = "Send your list to someone else, or bring one in. Imported items are added to your list — nothing is replaced.";
+"shopping_list_share_as_text" = "Share as text";
+"shopping_list_share_as_qr" = "Show QR code";
+"shopping_list_share_qr_hint" = "Scan this from the other phone's shopping list.";
+"shopping_list_share_qr_too_large" = "This list is too long to fit in a QR code. Share it as text instead.";
+"shopping_list_import" = "Import a list";
+"shopping_list_import_message" = "Paste a list someone sent you, or scan their QR code from the scanner.";
+"shopping_list_import_confirm" = "Import";
+"shopping_list_import_all_present" = "Everything on that list is already here";
+"shopping_list_import_nothing" = "Nothing to import from that";

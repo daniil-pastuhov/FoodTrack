@@ -66,6 +66,7 @@ import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.ShelfLifeSuggestion
+import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
 import java.io.File
@@ -75,6 +76,10 @@ fun ScannerScreen(
     stateHolder: PantryStateHolder,
     onNavigateBack: () -> Unit,
     onProceedToAddItem: (barcode: String?, productName: String?, brand: String?, imageUrl: String?, expiryDate: LocalDate?, category: String?, suggestedExpiry: ShelfLifeSuggestion?) -> Unit,
+    /** Called instead of the product lookup when the camera reads one of our own shared-list QR
+     *  codes (see [ShoppingListShare.isPayload]), so scanning a friend's list imports it rather
+     *  than looking the payload up as if it were a product barcode. */
+    onShoppingListScanned: (payload: String) -> Unit = {},
     // Hidden when this screen is embedded inside Add/Edit (see AddEditItemScreen's scan
     // button): "skip to manual entry" makes no sense there since manual entry is already
     // the screen underneath, and dismissing would otherwise discard fields already typed.
@@ -95,7 +100,14 @@ fun ScannerScreen(
         CameraPreviewView(
             mode = currentMode,
             onBarcodeFound = { barcode ->
-                stateHolder.onBarcodeScanned(barcode)
+                // A shared shopping list is a QR code, and so is a product's DataMatrix/QR - they
+                // arrive on the same callback. Route ours away before the lookup, or the whole
+                // JSON payload would be sent to Open Food Facts as a barcode.
+                if (ShoppingListShare.isPayload(barcode)) {
+                    onShoppingListScanned(barcode)
+                } else {
+                    stateHolder.onBarcodeScanned(barcode)
+                }
             },
             onDateFound = { date ->
                 stateHolder.onDateOcrDetected(date)

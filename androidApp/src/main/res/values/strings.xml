@@ -105,7 +105,25 @@
     <string name="shopping_list_content_description">Shopping list</string>
     <string name="shopping_list_add_placeholder">Add an item…</string>
     <string name="shopping_list_add_button">Add</string>
-    <string name="shopping_list_scan_content_description">Scan product</string>    <string name="shopping_list_empty_title">Your shopping list is empty</string>
+    <string name="shopping_list_scan_content_description">Scan product</string>    <string name="shopping_list_share_content_description">Share or import list</string>
+    <string name="shopping_list_share_dialog_title">Share list</string>
+    <string name="shopping_list_share_dialog_message">Send your list to someone else, or bring one in. Imported items are added to your list — nothing is replaced.</string>
+    <string name="shopping_list_share_as_text">Share as text</string>
+    <string name="shopping_list_share_as_qr">Show QR code</string>
+    <string name="shopping_list_share_qr_content_description">QR code containing the shopping list</string>
+    <string name="shopping_list_share_qr_hint">Scan this from the other phone\'s shopping list.</string>
+    <string name="shopping_list_share_qr_too_large">This list is too long to fit in a QR code. Share it as text instead.</string>
+    <string name="shopping_list_import">Import a list</string>
+    <string name="shopping_list_import_message">Paste a list someone sent you, or scan their QR code from the scanner.</string>
+    <string name="shopping_list_import_placeholder">Milk\nBread (2)</string>
+    <string name="shopping_list_import_confirm">Import</string>
+    <plurals name="shopping_list_import_added">
+        <item quantity="one">Added %1$d item</item>
+        <item quantity="other">Added %1$d items</item>
+    </plurals>
+    <string name="shopping_list_import_all_present">Everything on that list is already here</string>
+    <string name="shopping_list_import_nothing">Nothing to import from that</string>
+    <string name="shopping_list_empty_title">Your shopping list is empty</string>
     <string name="shopping_list_empty_subtitle">Essential items you remove from the pantry will show up here.</string>
     <string name="shopping_list_uncategorized">Other</string>
     <string name="shopping_list_quantity_decrease_content_description">Decrease quantity</string>

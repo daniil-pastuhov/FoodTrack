@@ -22,6 +22,9 @@ struct RootTabView: View {
     /// Expiry to start a new item from when the scan produced no date of its own - the
     /// shelf life this barcode was last given, or its category's default.
     @State private var prefillSuggestion: ShelfLifeSuggestion? = nil
+    /// Outcome of a shared-list QR scanned from the dashboard's scanner, shown as a
+    /// transient toast - this screen has no snackbar of its own.
+    @State private var importResult: String? = nil
     /// The most recently removed pantry item or shopping list entry (via a "-" button, swipe
     /// action, or check-off), offered back through an undo toast since each of those is a
     /// single tap/swipe that's easy to trigger by mistake. Hosted here — rather than inside
@@ -114,6 +117,16 @@ struct RootTabView: View {
                 .padding(.bottom, 200)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+
+            if let importResult {
+                Text(importResult)
+                    .font(.footnote.weight(.medium))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.bottom, 200)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab == .home)
         .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
@@ -125,8 +138,26 @@ struct RootTabView: View {
                 withAnimation { pendingUndo = nil }
             }
         }
+        .animation(.easeInOut(duration: 0.25), value: importResult)
+        .task(id: importResult) {
+            guard importResult != nil else { return }
+            try? await Task.sleep(for: .seconds(3))
+            if !Task.isCancelled { importResult = nil }
+        }
         .sheet(isPresented: $showScanner) {
-            ScannerSheetView(viewModel: viewModel) { barcode, name, brand, imageUrl, date, category, suggestion in
+            ScannerSheetView(
+                viewModel: viewModel,
+                onShoppingListScanned: { payload in
+                    let result = viewModel.importShoppingList(payload)
+                    importResult = if result.added > 0 {
+                        L10n.shoppingListImportAdded(result.added)
+                    } else if result.found > 0 {
+                        L10n.shoppingListImportAllPresent
+                    } else {
+                        L10n.shoppingListImportNothing
+                    }
+                }
+            ) { barcode, name, brand, imageUrl, date, category, suggestion in
                 editingItem = nil
                 prefillBarcode = barcode
                 prefillName = name

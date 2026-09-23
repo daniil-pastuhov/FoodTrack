@@ -193,3 +193,16 @@
 "category_settings_shelf_life_dialog_message" = "Новые товары этой категории получат столько дней до истечения срока — если у штрихкода ещё нет запомненного срока и дата не была считана с упаковки.";
 "category_settings_shelf_life_field_label" = "Дней";
 "category_settings_shelf_life_clear" = "Очистить";
+
+"shopping_list_share_content_description" = "Поделиться списком или импортировать";
+"shopping_list_share_dialog_title" = "Поделиться списком";
+"shopping_list_share_dialog_message" = "Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку — ничего не заменяется.";
+"shopping_list_share_as_text" = "Отправить текстом";
+"shopping_list_share_as_qr" = "Показать QR-код";
+"shopping_list_share_qr_hint" = "Отсканируйте его со списка покупок на другом телефоне.";
+"shopping_list_share_qr_too_large" = "Список слишком длинный для QR-кода. Отправьте его текстом.";
+"shopping_list_import" = "Импортировать список";
+"shopping_list_import_message" = "Вставьте список, который вам прислали, или отсканируйте QR-код через сканер.";
+"shopping_list_import_confirm" = "Импортировать";
+"shopping_list_import_all_present" = "Всё из этого списка уже здесь";
+"shopping_list_import_nothing" = "Оттуда нечего импортировать";

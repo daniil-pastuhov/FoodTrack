@@ -1,5 +1,6 @@
 package com.foodtracker.android.ui.screens
 
+import android.content.Intent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -13,6 +14,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +39,11 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -71,6 +76,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.Alignment
@@ -92,6 +99,8 @@ import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.viewmodel.PantryStateHolder
+import com.foodtracker.android.util.generateQrBitmap
+import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.viewmodel.ShoppingRow
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -106,6 +115,9 @@ fun ShoppingListScreen(
     onAddEntryManually: (ShoppingListEntry) -> Unit,
     onCheckOffEntry: (String) -> Unit = { stateHolder.deleteShoppingListEntry(it) },
     onDecrementEntry: (String) -> Unit = { stateHolder.decrementShoppingListQuantity(it) },
+    /** Reports the outcome of an import so the host can surface it as a snackbar - this screen
+     *  has no snackbar host of its own (see MainActivity). */
+    onImportComplete: (added: Int, found: Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
@@ -130,6 +142,36 @@ fun ShoppingListScreen(
         }
     }
 
+    var showShareSheet by remember { mutableStateOf(false) }
+    var showQrCode by remember { mutableStateOf(false) }
+    var showImportDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val uncategorizedLabel = stringResource(R.string.shopping_list_uncategorized)
+    val shareTitle = stringResource(R.string.shopping_list_title)
+
+    // Built from shoppingRows rather than shoppingList: each row already carries the resolved
+    // (renamed, disabled-folded) category name the on-screen list shows, so the shared text
+    // reads the same rather than exposing the raw Open Food Facts value stored on the entry.
+    fun buildShareText(): String {
+        val items = state.shoppingRows.filterIsInstance<ShoppingRow.Item>()
+        val labelByRawCategory = items.associate { it.entry.category to it.categoryDisplayName }
+        return ShoppingListShare.toText(
+            entries = items.map { it.entry },
+            title = shareTitle,
+            uncategorizedLabel = uncategorizedLabel,
+            categoryLabel = { raw -> labelByRawCategory[raw] }
+        )
+    }
+
+    fun shareAsText() {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, buildShareText())
+        }
+        context.startActivity(Intent.createChooser(sendIntent, null))
+        showShareSheet = false
+    }
+
     val suggestions = remember(newEntryText, state.knownProductNames) {
         if (newEntryText.isBlank()) {
             emptyList()
@@ -148,6 +190,14 @@ fun ShoppingListScreen(
                         text = stringResource(R.string.shopping_list_title),
                         fontWeight = FontWeight.Bold
                     )
+                },
+                actions = {
+                    IconButton(onClick = { showShareSheet = true }) {
+                        Icon(
+                            Icons.Default.IosShare,
+                            contentDescription = stringResource(R.string.shopping_list_share_content_description)
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
@@ -360,6 +410,145 @@ fun ShoppingListScreen(
             }
         }
     }
+
+    if (showShareSheet) {
+        val isEmpty = state.shoppingList.isEmpty()
+        AlertDialog(
+            onDismissRequest = { showShareSheet = false },
+            title = { Text(stringResource(R.string.shopping_list_share_dialog_title)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.shopping_list_share_dialog_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    // Sharing an empty list would hand someone a title and nothing else, so the
+                    // two export actions are disabled rather than hidden - the user still sees
+                    // that the feature exists.
+                    ShareActionRow(
+                        icon = Icons.Default.IosShare,
+                        label = stringResource(R.string.shopping_list_share_as_text),
+                        enabled = !isEmpty,
+                        onClick = ::shareAsText
+                    )
+                    ShareActionRow(
+                        icon = Icons.Default.QrCode2,
+                        label = stringResource(R.string.shopping_list_share_as_qr),
+                        enabled = !isEmpty,
+                        onClick = {
+                            showShareSheet = false
+                            showQrCode = true
+                        }
+                    )
+                    ShareActionRow(
+                        icon = Icons.Default.ContentPaste,
+                        label = stringResource(R.string.shopping_list_import),
+                        enabled = true,
+                        onClick = {
+                            showShareSheet = false
+                            showImportDialog = true
+                        }
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showShareSheet = false }) {
+                    Text(stringResource(R.string.share_recipe_cancel_button))
+                }
+            }
+        )
+    }
+
+    if (showQrCode) {
+        val payload = remember(state.shoppingList) {
+            ShoppingListShare.toPayload(state.shoppingRows.filterIsInstance<ShoppingRow.Item>().map { it.entry })
+        }
+        val qrBitmap = remember(payload) { generateQrBitmap(payload) }
+        AlertDialog(
+            onDismissRequest = { showQrCode = false },
+            title = { Text(stringResource(R.string.shopping_list_share_as_qr)) },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    if (qrBitmap != null) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = stringResource(R.string.shopping_list_share_qr_content_description),
+                            modifier = Modifier.size(240.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = stringResource(R.string.shopping_list_share_qr_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        // A QR code has a hard capacity limit and ZXing refuses rather than
+                        // truncating, so a long list simply can't be shared this way. Text has
+                        // no such limit, so point at it instead of showing a broken dialog.
+                        Text(
+                            text = stringResource(R.string.shopping_list_share_qr_too_large),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showQrCode = false }) {
+                    Text(stringResource(R.string.share_recipe_cancel_button))
+                }
+            }
+        )
+    }
+
+    if (showImportDialog) {
+        var importText by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = { Text(stringResource(R.string.shopping_list_import)) },
+            text = {
+                Column {
+                    Text(
+                        text = stringResource(R.string.shopping_list_import_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = importText,
+                        onValueChange = { importText = it },
+                        placeholder = { Text(stringResource(R.string.shopping_list_import_placeholder)) },
+                        minLines = 3,
+                        maxLines = 6,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val text = importText
+                        showImportDialog = false
+                        stateHolder.importShoppingList(text) { added, found ->
+                            onImportComplete(added, found)
+                        }
+                    },
+                    enabled = importText.isNotBlank()
+                ) {
+                    Text(stringResource(R.string.shopping_list_import_confirm), color = BrandPrimary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text(stringResource(R.string.share_recipe_cancel_button))
+                }
+            }
+        )
+    }
+
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -542,4 +731,31 @@ fun ShoppingListMatchDialog(
             }
         }
     )
+}
+
+/** One action row in the share sheet: an icon, a label, and nothing else. Disabled rows are
+ *  dimmed rather than removed so the user can see what sharing offers even on an empty list. */
+@Composable
+private fun ShareActionRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    val tint = if (enabled) BrandPrimary else TextSecondary.copy(alpha = 0.4f)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 12.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = label,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else TextSecondary.copy(alpha = 0.4f)
+        )
+    }
 }

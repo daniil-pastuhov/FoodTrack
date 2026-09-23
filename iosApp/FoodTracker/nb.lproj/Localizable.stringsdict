@@ -114,5 +114,21 @@
             <string>%d d</string>
         </dict>
     </dict>
+    <key>shopping_list_import_added_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>La til %d vare</string>
+            <key>other</key>
+            <string>La til %d varer</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

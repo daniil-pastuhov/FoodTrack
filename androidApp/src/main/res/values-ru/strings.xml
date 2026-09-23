@@ -102,7 +102,27 @@
     <string name="shopping_list_content_description">Список покупок</string>
     <string name="shopping_list_add_placeholder">Добавить продукт…</string>
     <string name="shopping_list_add_button">Добавить</string>
-    <string name="shopping_list_scan_content_description">Сканировать продукт</string>    <string name="shopping_list_empty_title">Список покупок пуст</string>
+    <string name="shopping_list_scan_content_description">Сканировать продукт</string>    <string name="shopping_list_share_content_description">Поделиться списком или импортировать</string>
+    <string name="shopping_list_share_dialog_title">Поделиться списком</string>
+    <string name="shopping_list_share_dialog_message">Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку — ничего не заменяется.</string>
+    <string name="shopping_list_share_as_text">Отправить текстом</string>
+    <string name="shopping_list_share_as_qr">Показать QR-код</string>
+    <string name="shopping_list_share_qr_content_description">QR-код со списком покупок</string>
+    <string name="shopping_list_share_qr_hint">Отсканируйте его со списка покупок на другом телефоне.</string>
+    <string name="shopping_list_share_qr_too_large">Список слишком длинный для QR-кода. Отправьте его текстом.</string>
+    <string name="shopping_list_import">Импортировать список</string>
+    <string name="shopping_list_import_message">Вставьте список, который вам прислали, или отсканируйте QR-код через сканер.</string>
+    <string name="shopping_list_import_placeholder">Молоко\nХлеб (2)</string>
+    <string name="shopping_list_import_confirm">Импортировать</string>
+    <plurals name="shopping_list_import_added">
+        <item quantity="one">Добавлен %1$d товар</item>
+        <item quantity="few">Добавлено %1$d товара</item>
+        <item quantity="many">Добавлено %1$d товаров</item>
+        <item quantity="other">Добавлено %1$d товара</item>
+    </plurals>
+    <string name="shopping_list_import_all_present">Всё из этого списка уже здесь</string>
+    <string name="shopping_list_import_nothing">Оттуда нечего импортировать</string>
+    <string name="shopping_list_empty_title">Список покупок пуст</string>
     <string name="shopping_list_empty_subtitle">Обязательные продукты, удалённые из кладовой, появятся здесь.</string>
     <string name="shopping_list_uncategorized">Другое</string>
     <string name="shopping_list_quantity_decrease_content_description">Уменьшить количество</string>
