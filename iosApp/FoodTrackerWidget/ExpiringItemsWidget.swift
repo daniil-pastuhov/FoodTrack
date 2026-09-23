@@ -55,13 +55,24 @@ struct ExpiringItemsWidgetView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(entry.items.prefix(4)) { item in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(item.name)
-                            .font(.subheadline)
-                            .lineLimit(1)
-                        Text(item.daysRemainingFormatted)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(item.name)
+                                .font(.subheadline)
+                                .lineLimit(1)
+                            Text(item.daysRemainingFormatted)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        // Consumes a unit in place, without opening the app — seeing that
+                        // something expires today and then having to go find it in the app is
+                        // most of the friction the widget exists to remove.
+                        Button(intent: ConsumeItemIntent(itemId: item.id)) {
+                            Image(systemName: "checkmark")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(L10n.widgetActionUsed)
                     }
                 }
             }

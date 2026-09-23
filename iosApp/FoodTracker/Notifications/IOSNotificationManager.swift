@@ -246,17 +246,17 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             completionHandler()
             return
         }
-        // All four act straight on SwiftData rather than through NativePantryViewModel: an
-        // action can fire while no view (and so no view model instance) exists yet, e.g. right
-        // after a cold launch from tapping it.
+        // All four act straight on SwiftData (see `PantryDirectActions`) rather than through
+        // NativePantryViewModel: an action can fire while no view (and so no view model
+        // instance) exists yet, e.g. right after a cold launch from tapping it.
         Task { @MainActor in
             switch action {
             case Self.removeActionIdentifier:
-                IOSNotificationManager.deleteItemDirectly(itemId)
+                PantryDirectActions.deleteItem(itemId)
             case Self.usedActionIdentifier:
-                IOSNotificationManager.useOneDirectly(itemId)
+                PantryDirectActions.useOne(itemId)
             case Self.stillGoodActionIdentifier:
-                IOSNotificationManager.extendExpiryDirectly(itemId, byDays: Self.stillGoodDays)
+                PantryDirectActions.extendExpiry(itemId, byDays: Self.stillGoodDays)
             case Self.snoozeActionIdentifier:
                 IOSNotificationManager.shared.snoozeUntilTomorrow(itemId: itemId)
             default:
@@ -291,41 +291,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         #endif
     }
 
-    /// Consumes one unit, mirroring `NativePantryViewModel.decrementQuantity`: an item with
-    /// more than one left stays in the pantry with one fewer, and only the last one being used
-    /// removes it (re-stocking an essential, which `deleteItemDirectly` already handles).
-    /// Deleting outright would silently lose the other units.
-    @MainActor
-    private static func useOneDirectly(_ itemId: String) {
-        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
-        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
-        guard let record = try? context.fetch(descriptor).first else { return }
-        guard record.quantity > 1 else {
-            deleteItemDirectly(itemId)
-            return
-        }
-        record.quantity -= 1
-        try? context.save()
-        WidgetCenter.shared.reloadAllTimelines()
-    }
 
-    /// Pushes the expiry out, for the "Still good" action. Counted from the item's *current*
-    /// expiry rather than from today, so tapping it on something that expired three days ago
-    /// doesn't quietly hand it a fresh window. Reschedules from the new date: this notification
-    /// has already fired, so without that the item would never warn again.
-    @MainActor
-    private static func extendExpiryDirectly(_ itemId: String, byDays days: Int) {
-        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
-        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
-        guard let record = try? context.fetch(descriptor).first,
-              let extended = Calendar.current.date(byAdding: .day, value: days, to: record.expiryDate) else {
-            return
-        }
-        record.expiryDate = extended
-        try? context.save()
-        shared.scheduleNotification(for: record.asPantryItem)
-        WidgetCenter.shared.reloadAllTimelines()
-    }
 
     /// Re-fires this item's reminder tomorrow at the configured reminder time.
     ///
@@ -360,42 +326,4 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         UNUserNotificationCenter.current().add(request)
     }
 
-    /// Deletes a pantry item straight from SwiftData, bypassing `NativePantryViewModel` — the
-    /// "Remove" notification action can fire while no dashboard view (and so no view model
-    /// instance) exists yet, e.g. right after a cold launch from tapping the action. Mirrors
-    /// `NativePantryViewModel.deleteItem`'s essential-item shopping-list-readd behavior.
-    @MainActor
-    private static func deleteItemDirectly(_ itemId: String) {
-        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
-        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
-        guard let record = try? context.fetch(descriptor).first else { return }
-        defer { WidgetCenter.shared.reloadAllTimelines() }
-
-        let wasEssential = record.essential
-        let name = record.name
-        let barcode = record.barcode
-        let category = record.category
-
-        context.delete(record)
-        try? context.save()
-        shared.cancelNotification(for: itemId)
-
-        guard wasEssential else { return }
-
-        let existing: ShoppingListEntryRecord?
-        if let barcode {
-            let shoppingDescriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.barcode == barcode })
-            existing = try? context.fetch(shoppingDescriptor).first
-        } else {
-            let normalizedName = name.trimmingCharacters(in: .whitespaces).lowercased()
-            let shoppingDescriptor = FetchDescriptor<ShoppingListEntryRecord>()
-            existing = ((try? context.fetch(shoppingDescriptor)) ?? []).first {
-                $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == normalizedName
-            }
-        }
-        guard existing == nil else { return }
-
-        context.insert(ShoppingListEntryRecord(from: ShoppingListEntry(productName: name, barcode: barcode, category: category)))
-        try? context.save()
-    }
 }

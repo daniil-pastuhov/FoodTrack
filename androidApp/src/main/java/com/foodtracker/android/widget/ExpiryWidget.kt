@@ -12,10 +12,12 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.Button
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -92,7 +94,7 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 itemsIndexed(visibleItems, itemId = { _, item -> item.id.hashCode().toLong() }) { index, item ->
                     Column {
-                        ExpiryRow(item, today)
+                        ExpiryRow(item, today, showAction = true)
                         if (index != visibleItems.lastIndex) {
                             WidgetRowDivider()
                         }
@@ -103,15 +105,25 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
     }
 }
 
+/**
+ * One expiry row.
+ *
+ * [showAction] adds the "Used one" button. Off by default because [OverviewWidget] renders this
+ * same row inside a dense two-section summary, where a button per row crowds out the content
+ * the summary exists to show; only the dedicated expiry widget opts in.
+ */
 @Composable
-internal fun ExpiryRow(item: PantryItem, today: LocalDate) {
+internal fun ExpiryRow(item: PantryItem, today: LocalDate, showAction: Boolean = false) {
     val context = LocalContext.current
     val statusColor = if (item.daysRemaining(today) < 0) {
         ColorProvider(R.color.widget_status_expired)
     } else {
         ColorProvider(R.color.widget_status_expiring)
     }
-    Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp)) {
+    Row(
+        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Column {
             Spacer(modifier = GlanceModifier.height(5.dp))
             Box(modifier = GlanceModifier.width(8.dp).height(8.dp).background(statusColor)) {}
@@ -127,6 +139,14 @@ internal fun ExpiryRow(item: PantryItem, today: LocalDate) {
                 text = expiryLabel(context, item, today),
                 maxLines = 1,
                 style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = statusColor)
+            )
+        }
+        if (showAction) {
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            Button(
+                text = context.getString(R.string.widget_action_used),
+                onClick = widgetRowAction<ConsumeItemAction>(item.id),
+                modifier = GlanceModifier.height(32.dp)
             )
         }
     }

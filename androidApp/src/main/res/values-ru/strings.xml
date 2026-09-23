@@ -379,6 +379,8 @@
     <string name="widget_shopping_list_description">Показывает ваш текущий список покупок</string>
     <string name="widget_shopping_list_title">Список покупок</string>
     <string name="widget_shopping_list_empty">Ваш список покупок пуст</string>
+    <string name="widget_action_used">Съел</string>
+    <string name="widget_action_bought">Куплено</string>
 
     <string name="widget_overview_label">Обзор кладовой</string>
     <string name="widget_overview_description">Показывает просроченные и скоро истекающие продукты, а затем список покупок</string>

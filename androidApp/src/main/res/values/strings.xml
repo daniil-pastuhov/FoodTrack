@@ -380,6 +380,8 @@
     <string name="widget_shopping_list_description">Shows your current shopping list</string>
     <string name="widget_shopping_list_title">Shopping List</string>
     <string name="widget_shopping_list_empty">Your shopping list is empty</string>
+    <string name="widget_action_used">Used one</string>
+    <string name="widget_action_bought">Bought</string>
 
     <string name="widget_overview_label">Pantry Overview</string>
     <string name="widget_overview_description">Shows what\'s expired or expiring soon, followed by your shopping list</string>

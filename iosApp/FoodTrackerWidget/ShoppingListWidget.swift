@@ -45,7 +45,7 @@ struct ShoppingListWidgetView: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(entry.entries.prefix(6)) { item in
-                    HStack {
+                    HStack(spacing: 6) {
                         Text(item.productName)
                             .font(.subheadline)
                             .lineLimit(1)
@@ -55,6 +55,13 @@ struct ShoppingListWidgetView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+                        // Ticks the entry off in the aisle, which is exactly where the widget
+                        // gets looked at and where opening the app is most annoying.
+                        Button(intent: TickOffShoppingEntryIntent(entryId: item.id)) {
+                            Image(systemName: "checkmark")
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(L10n.widgetActionBought)
                     }
                 }
             }

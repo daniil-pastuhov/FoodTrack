@@ -185,6 +185,8 @@
 "widget_shopping_list_title" = "Список покупок";
 "widget_shopping_list_description" = "Показывает ваш текущий список покупок";
 "widget_shopping_list_empty" = "Ваш список покупок пуст";
+"widget_action_used" = "Съел";
+"widget_action_bought" = "Куплено";
 "widget_overview_title" = "Обзор кладовой";
 "widget_overview_description" = "Показывает просроченные и скоро истекающие продукты, а затем список покупок";
 

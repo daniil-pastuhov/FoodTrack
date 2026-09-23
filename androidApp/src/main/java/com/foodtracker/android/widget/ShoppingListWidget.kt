@@ -12,10 +12,12 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
+import androidx.glance.Button
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
+import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -94,7 +96,7 @@ private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 itemsIndexed(visibleEntries, itemId = { _, entry -> entry.id.hashCode().toLong() }) { index, entry ->
                     Column {
-                        ShoppingListRow(entry)
+                        ShoppingListRow(entry, showAction = true)
                         if (index != visibleEntries.lastIndex) {
                             WidgetRowDivider()
                         }
@@ -105,10 +107,20 @@ private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
     }
 }
 
+/**
+ * One shopping-list row.
+ *
+ * [showAction] adds the "Bought" button. Off by default for the same reason as
+ * [ExpiryRow]'s: [OverviewWidget] reuses this row in a dense summary where a button per row
+ * would crowd out the content.
+ */
 @Composable
-internal fun ShoppingListRow(entry: ShoppingListEntry) {
+internal fun ShoppingListRow(entry: ShoppingListEntry, showAction: Boolean = false) {
     val context = LocalContext.current
-    Row(modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp)) {
+    Row(
+        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Column {
             Spacer(modifier = GlanceModifier.height(6.dp))
             Box(modifier = GlanceModifier.width(6.dp).height(6.dp).background(ColorProvider(R.color.notification_accent))) {}
@@ -124,6 +136,14 @@ internal fun ShoppingListRow(entry: ShoppingListEntry) {
             Text(
                 text = context.getString(R.string.quantity_format, entry.quantity),
                 style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background_muted))
+            )
+        }
+        if (showAction) {
+            Spacer(modifier = GlanceModifier.width(8.dp))
+            Button(
+                text = context.getString(R.string.widget_action_bought),
+                onClick = widgetRowAction<TickOffShoppingEntryAction>(entry.id),
+                modifier = GlanceModifier.height(32.dp)
             )
         }
     }

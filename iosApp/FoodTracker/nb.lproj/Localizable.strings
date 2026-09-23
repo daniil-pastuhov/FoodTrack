@@ -185,6 +185,8 @@
 "widget_shopping_list_title" = "Handleliste";
 "widget_shopping_list_description" = "Viser den gjeldende handlelisten din";
 "widget_shopping_list_empty" = "Handlelisten din er tom";
+"widget_action_used" = "Brukt én";
+"widget_action_bought" = "Kjøpt";
 "widget_overview_title" = "Matskapoversikt";
 "widget_overview_description" = "Viser hva som er utløpt eller snart utløper, etterfulgt av handlelisten din";
 
