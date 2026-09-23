@@ -78,6 +78,7 @@ import androidx.core.content.ContextCompat
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.components.ProductDetailSheet
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.daysRemainingLabel
@@ -190,6 +191,7 @@ fun AddEditItemScreen(
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
+    var showProductDetail by remember { mutableStateOf(false) }
 
     // Embedded scan flow: reuses ScannerScreen as a full-screen overlay on top of this form
     // instead of navigating away, so fields already typed here (quantity, notes, storage
@@ -261,6 +263,16 @@ fun AddEditItemScreen(
                     Text(stringResource(R.string.duplicate_dialog_separate))
                 }
             }
+        )
+    }
+
+    val detailNutrition = state.scannedProduct?.nutrition
+    if (showProductDetail && detailNutrition != null) {
+        ProductDetailSheet(
+            productName = name.ifBlank { stringResource(R.string.new_item_placeholder) },
+            nutrition = detailNutrition,
+            warnings = state.allergenWarnings,
+            onDismiss = { showProductDetail = false }
         )
     }
 
@@ -353,12 +365,17 @@ fun AddEditItemScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                val nutrition = state.scannedProduct?.nutrition
+                val hasDetail = nutrition != null && !nutrition.isEmpty
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .size(80.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant)
+                        // Only tappable when there is something to show: Open Food Facts is
+                        // crowd-sourced, so plenty of products have nothing beyond a name.
+                        .clickable(enabled = hasDetail) { showProductDetail = true }
                 ) {
                     if (!imageUrl.isNullOrBlank()) {
                         AsyncImage(
@@ -393,6 +410,36 @@ fun AddEditItemScreen(
                             color = TextSecondary
                         )
                     }
+                }
+            }
+
+            // Allergen warning, above everything else on the form: it is the one thing on this
+            // screen someone might need to act on before reading anything else.
+            if (state.allergenWarnings.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .clickable { showProductDetail = true }
+                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = stringResource(
+                            R.string.allergen_warning_format,
+                            state.allergenWarnings.joinToString(", ")
+                        ),
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 

@@ -306,3 +306,14 @@
 "duplicate_dialog_add_one" = "Добавить ещё одну";
 "duplicate_dialog_separate" = "Отдельно";
 "duplicate_added" = "%1$@ теперь %2$d";
+
+"product_detail_nutriscore" = "Nutri-Score";
+"product_detail_nova" = "NOVA";
+"product_detail_allergens" = "Аллергены";
+"product_detail_ingredients" = "Состав";
+"product_detail_content_description" = "Пищевая ценность и аллергены";
+"allergen_warning" = "Содержит: %@";
+"settings_section_allergens" = "Предупреждения об аллергенах";
+"settings_allergens_desc" = "Предупреждать, когда отсканированный товар содержит один из них. Сопоставление нестрогое, поэтому возможны ложные срабатывания.";
+"settings_add_allergen_placeholder" = "напр. молоко, глютен, орехи";
+"settings_add_allergen" = "Добавить";

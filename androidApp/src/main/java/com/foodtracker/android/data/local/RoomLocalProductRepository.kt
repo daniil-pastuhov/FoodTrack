@@ -1,6 +1,7 @@
 package com.foodtracker.android.data.local
 
 import com.foodtracker.model.CachedProduct
+import com.foodtracker.model.ProductNutrition
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.repository.LocalProductRepository
 
@@ -15,7 +16,8 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
                 name = it.name,
                 brand = it.brand,
                 imageUrl = it.imageUrl,
-                category = it.category
+                category = it.category,
+                nutrition = it.toNutrition()
             )
         }
     }
@@ -27,6 +29,12 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
         // upsert built from one would reset an already-learned value to null. Carry the stored
         // one across rather than letting a plain re-scan forget it.
         val existingShelfLife = dao.getShelfLifeDays(trimmed)
+        // A manually-entered product carries no nutrition, and neither does a lookup OFF has
+        // nothing for. Keep whatever a previous successful lookup cached rather than blanking
+        // it - losing a cached allergen list is the one outcome worth avoiding here.
+        val nutrition = product.nutrition.takeIf { !it.isEmpty }
+            ?: dao.getByBarcode(trimmed)?.toNutrition()
+            ?: ProductNutrition()
         dao.upsert(
             LocalProductEntity(
                 barcode = trimmed,
@@ -34,7 +42,11 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
                 brand = product.brand,
                 imageUrl = product.imageUrl,
                 category = product.category,
-                shelfLifeDays = existingShelfLife
+                shelfLifeDays = existingShelfLife,
+                nutriScore = nutrition.nutriScore,
+                novaGroup = nutrition.novaGroup,
+                allergens = nutrition.allergens.takeIf { it.isNotEmpty() }?.joinToString("\n"),
+                ingredients = nutrition.ingredients
             )
         )
     }
@@ -58,7 +70,8 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
             brand = it.brand,
             imageUrl = it.imageUrl,
             category = it.category,
-            shelfLifeDays = it.shelfLifeDays
+            shelfLifeDays = it.shelfLifeDays,
+            nutrition = it.toNutrition()
         )
     }
 
@@ -74,7 +87,11 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
                     brand = product.brand,
                     imageUrl = product.imageUrl,
                     category = product.category,
-                    shelfLifeDays = product.shelfLifeDays
+                    shelfLifeDays = product.shelfLifeDays,
+                    nutriScore = product.nutrition.nutriScore,
+                    novaGroup = product.nutrition.novaGroup,
+                    allergens = product.nutrition.allergens.takeIf { it.isNotEmpty() }?.joinToString("\n"),
+                    ingredients = product.nutrition.ingredients
                 )
             }
         )
@@ -82,3 +99,11 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
 
     override suspend fun clearAll() = dao.clearAll()
 }
+
+/** Splits the delimited allergen column back into a list. See [LocalProductEntity.allergens]. */
+private fun LocalProductEntity.toNutrition(): ProductNutrition = ProductNutrition(
+    nutriScore = nutriScore,
+    novaGroup = novaGroup,
+    allergens = allergens?.split('\n')?.filter { it.isNotBlank() }.orEmpty(),
+    ingredients = ingredients
+)

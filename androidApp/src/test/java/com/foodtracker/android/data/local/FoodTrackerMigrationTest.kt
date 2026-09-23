@@ -88,7 +88,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
-                FoodTrackerDatabase.MIGRATION_8_9
+                FoodTrackerDatabase.MIGRATION_8_9,
+                FoodTrackerDatabase.MIGRATION_9_10
             )
             .build()
 
@@ -169,7 +170,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
-                FoodTrackerDatabase.MIGRATION_8_9
+                FoodTrackerDatabase.MIGRATION_8_9,
+                FoodTrackerDatabase.MIGRATION_9_10
             )
             .build()
 
@@ -259,7 +261,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
-                FoodTrackerDatabase.MIGRATION_8_9
+                FoodTrackerDatabase.MIGRATION_8_9,
+                FoodTrackerDatabase.MIGRATION_9_10
             )
             .build()
 
@@ -368,7 +371,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_5_6,
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
-                FoodTrackerDatabase.MIGRATION_8_9
+                FoodTrackerDatabase.MIGRATION_8_9,
+                FoodTrackerDatabase.MIGRATION_9_10
             )
             .build()
 
@@ -466,7 +470,8 @@ class FoodTrackerMigrationTest {
             .addMigrations(
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
-                FoodTrackerDatabase.MIGRATION_8_9
+                FoodTrackerDatabase.MIGRATION_8_9,
+                FoodTrackerDatabase.MIGRATION_9_10
             )
             .build()
 
@@ -592,7 +597,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_8_9)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_8_9, FoodTrackerDatabase.MIGRATION_9_10)
             .build()
         val dao = db.localProductDao()
 

@@ -28,6 +28,7 @@ public struct AddEditItemView: View {
     /// A suggestion produced by the embedded scan sheet below, which supersedes whatever this
     /// screen was opened with.
     @State private var overlaySuggestion: ShelfLifeSuggestion?
+    @State private var showProductDetail = false
 
     /// The suggestion to caption the date field with, or nil when there is nothing to explain.
     ///
@@ -103,6 +104,23 @@ public struct AddEditItemView: View {
                 }
                 .listRowSeparator(.hidden)
 
+                // Allergen warning, above everything else on the form: it is the one thing on
+                // this screen someone might need to act on before reading anything else.
+                if !viewModel.allergenWarnings.isEmpty {
+                    Section {
+                        Button {
+                            showProductDetail = true
+                        } label: {
+                            Label(
+                                L10n.allergenWarning(viewModel.allergenWarnings.joined(separator: ", ")),
+                                systemImage: "exclamationmark.triangle.fill"
+                            )
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+
                 Section(header: Text(L10n.sectionProductDetails)) {
                     // Name suggestions from the on-device classifier, for a photographed product
                     // with no barcode to look up. Only offered while the name is still empty:
@@ -145,6 +163,21 @@ public struct AddEditItemView: View {
                     }
                     TextField(L10n.productNameLabel, text: $name)
                     TextField(L10n.brandLabel, text: $brand)
+                    // Only offered when there is something to show: Open Food Facts is
+                    // crowd-sourced, so plenty of products have nothing beyond a name.
+                    if let nutrition = viewModel.scannedProduct?.nutrition, !nutrition.isEmpty {
+                        Button {
+                            showProductDetail = true
+                        } label: {
+                            HStack {
+                                Label(L10n.productDetailContentDescription, systemImage: "info.circle")
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                     if !barcode.isEmpty {
                         HStack {
                             Text(L10n.barcodeWord)
@@ -370,6 +403,15 @@ public struct AddEditItemView: View {
                     Text(L10n.duplicateDialogMessage(
                         duplicate.quantity > 1 ? "\(duplicate.name) ×\(duplicate.quantity)" : duplicate.name
                     ))
+                }
+            }
+            .sheet(isPresented: $showProductDetail) {
+                if let nutrition = viewModel.scannedProduct?.nutrition {
+                    ProductDetailView(
+                        productName: name.isEmpty ? (viewModel.scannedProduct?.name ?? "") : name,
+                        nutrition: nutrition,
+                        warnings: viewModel.allergenWarnings
+                    )
                 }
             }
             .sheet(isPresented: $showScanner) {

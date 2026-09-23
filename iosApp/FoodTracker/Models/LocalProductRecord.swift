@@ -15,6 +15,32 @@ final class LocalProductRecord {
     /// to pre-fill the expiry date on a re-scan. Nil until the product has been added once (or
     /// when the observed span was implausible - see `ShelfLife.learnableShelfLife`).
     var shelfLifeDays: Int?
+    /// Nutri-Score letter as Open Food Facts reports it (a...e), or nil when unrated.
+    var nutriScore: String?
+    /// NOVA processing group, 1...4.
+    var novaGroup: Int?
+    /// Allergen names, newline-separated. A delimited property rather than a related model:
+    /// this is a disposable cache of someone else's data, always read whole and never queried
+    /// by allergen. Newline because an allergen name can legitimately contain a comma.
+    var allergens: String?
+    var ingredients: String?
+
+    /// Splits the delimited allergen property back into a list.
+    var nutrition: ProductNutrition {
+        ProductNutrition(
+            nutriScore: nutriScore,
+            novaGroup: novaGroup,
+            allergens: allergens?.components(separatedBy: "\n").filter { !$0.isEmpty } ?? [],
+            ingredients: ingredients
+        )
+    }
+
+    func apply(_ nutrition: ProductNutrition) {
+        nutriScore = nutrition.nutriScore
+        novaGroup = nutrition.novaGroup
+        allergens = nutrition.allergens.isEmpty ? nil : nutrition.allergens.joined(separator: "\n")
+        ingredients = nutrition.ingredients
+    }
 
     init(
         barcode: String,
@@ -22,7 +48,8 @@ final class LocalProductRecord {
         brand: String? = nil,
         imageUrl: String? = nil,
         category: String? = nil,
-        shelfLifeDays: Int? = nil
+        shelfLifeDays: Int? = nil,
+        nutrition: ProductNutrition = ProductNutrition()
     ) {
         self.barcode = barcode
         self.name = name
@@ -30,5 +57,9 @@ final class LocalProductRecord {
         self.imageUrl = imageUrl
         self.category = category
         self.shelfLifeDays = shelfLifeDays
+        self.nutriScore = nutrition.nutriScore
+        self.novaGroup = nutrition.novaGroup
+        self.allergens = nutrition.allergens.isEmpty ? nil : nutrition.allergens.joined(separator: "\n")
+        self.ingredients = nutrition.ingredients
     }
 }

@@ -349,6 +349,17 @@
     </plurals>
     <string name="category_settings_rename_content_description">Rename category</string>
 
+    <string name="product_detail_nutriscore">Nutri-Score</string>
+    <string name="product_detail_nova">NOVA</string>
+    <string name="product_detail_allergens">Allergens</string>
+    <string name="product_detail_ingredients">Ingredients</string>
+    <string name="product_detail_content_description">Nutrition and allergens</string>
+    <string name="allergen_warning_format">Contains: %1$s</string>
+    <string name="settings_section_allergens">Allergen warnings</string>
+    <string name="settings_allergens_desc">Warn me when a scanned product lists one of these. Matching is loose, so it may flag near misses.</string>
+    <string name="settings_add_allergen_placeholder">e.g. milk, gluten, nuts</string>
+    <string name="settings_add_allergen">Add</string>
+    <string name="settings_remove_allergen_content_description">Remove allergen</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Light</string>

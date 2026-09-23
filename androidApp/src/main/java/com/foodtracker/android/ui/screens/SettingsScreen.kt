@@ -23,6 +23,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
@@ -91,6 +92,7 @@ fun SettingsScreen(
 ) {
     var draft by remember { mutableStateOf(settings) }
     var newLocationText by remember { mutableStateOf("") }
+    var newAllergenText by remember { mutableStateOf("") }
     var editingLocation by remember { mutableStateOf<String?>(null) }
     var editingLocationText by remember { mutableStateOf("") }
     var showTimePicker by remember { mutableStateOf(false) }
@@ -423,6 +425,58 @@ fun SettingsScreen(
                         }
                     }) {
                         Icon(Icons.Default.Add, contentDescription = stringResource(R.string.settings_add_location), tint = BrandPrimary)
+                    }
+                }
+            }
+
+            // Allergen warnings. Empty by default — this is a safety feature for the people who
+            // need it, not a nag for everyone.
+            SettingsSectionCard(title = stringResource(R.string.settings_section_allergens)) {
+                Text(
+                    text = stringResource(R.string.settings_allergens_desc),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                draft.allergens.sorted().forEach { allergen ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)
+                    ) {
+                        Text(allergen, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { persist(draft.copy(allergens = draft.allergens - allergen)) }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.settings_remove_allergen_content_description),
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = newAllergenText,
+                        onValueChange = { newAllergenText = it },
+                        placeholder = { Text(stringResource(R.string.settings_add_allergen_placeholder)) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = {
+                        // Stored lowercased: matching is case-insensitive anyway, and this stops
+                        // "Milk" and "milk" reading as two different entries in the list.
+                        val entry = newAllergenText.trim().lowercase()
+                        if (entry.isNotBlank() && entry !in draft.allergens) {
+                            persist(draft.copy(allergens = draft.allergens + entry))
+                            newAllergenText = ""
+                        }
+                    }) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = stringResource(R.string.settings_add_allergen),
+                            tint = BrandPrimary
+                        )
                     }
                 }
             }

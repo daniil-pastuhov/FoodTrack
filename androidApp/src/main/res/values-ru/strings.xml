@@ -347,6 +347,17 @@
     </plurals>
     <string name="category_settings_rename_content_description">Переименовать категорию</string>
 
+    <string name="product_detail_nutriscore">Nutri-Score</string>
+    <string name="product_detail_nova">NOVA</string>
+    <string name="product_detail_allergens">Аллергены</string>
+    <string name="product_detail_ingredients">Состав</string>
+    <string name="product_detail_content_description">Пищевая ценность и аллергены</string>
+    <string name="allergen_warning_format">Содержит: %1$s</string>
+    <string name="settings_section_allergens">Предупреждения об аллергенах</string>
+    <string name="settings_allergens_desc">Предупреждать, когда отсканированный товар содержит один из них. Сопоставление нестрогое, поэтому возможны ложные срабатывания.</string>
+    <string name="settings_add_allergen_placeholder">напр. молоко, глютен, орехи</string>
+    <string name="settings_add_allergen">Добавить</string>
+    <string name="settings_remove_allergen_content_description">Убрать аллерген</string>
     <string name="settings_section_appearance">Внешний вид</string>
     <string name="settings_theme_system">Системная</string>
     <string name="settings_theme_light">Светлая</string>

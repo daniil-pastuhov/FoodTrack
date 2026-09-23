@@ -67,6 +67,18 @@ public enum L10n {
     public static var filtersSheetTitle: String { NSLocalizedString("filters_sheet_title", comment: "") }
     public static var filtersButton: String { NSLocalizedString("filters_button", comment: "") }
     public static var doneButton: String { NSLocalizedString("done_button", comment: "") }
+    public static var productDetailNutriScore: String { NSLocalizedString("product_detail_nutriscore", comment: "") }
+    public static var productDetailNova: String { NSLocalizedString("product_detail_nova", comment: "") }
+    public static var productDetailAllergens: String { NSLocalizedString("product_detail_allergens", comment: "") }
+    public static var productDetailIngredients: String { NSLocalizedString("product_detail_ingredients", comment: "") }
+    public static var productDetailContentDescription: String { NSLocalizedString("product_detail_content_description", comment: "") }
+    public static var settingsSectionAllergens: String { NSLocalizedString("settings_section_allergens", comment: "") }
+    public static var settingsAllergensDesc: String { NSLocalizedString("settings_allergens_desc", comment: "") }
+    public static var settingsAddAllergenPlaceholder: String { NSLocalizedString("settings_add_allergen_placeholder", comment: "") }
+    public static var settingsAddAllergen: String { NSLocalizedString("settings_add_allergen", comment: "") }
+    public static func allergenWarning(_ allergens: String) -> String {
+        String(format: NSLocalizedString("allergen_warning", comment: ""), allergens)
+    }
 
     public static var calendarButton: String { NSLocalizedString("calendar_button", comment: "") }
     public static var calendarTitle: String { NSLocalizedString("calendar_title", comment: "") }

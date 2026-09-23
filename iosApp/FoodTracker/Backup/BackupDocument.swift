@@ -132,6 +132,9 @@ public struct CachedProduct: Codable, Equatable {
     public var imageUrl: String?
     public var category: String?
     public var shelfLifeDays: Int?
+    /// Cached so an allergen warning doesn't depend on the network being up at the moment it
+    /// matters, and so a re-scan shows the same detail offline.
+    public var nutrition: ProductNutrition
 
     public init(
         barcode: String,
@@ -139,7 +142,8 @@ public struct CachedProduct: Codable, Equatable {
         brand: String? = nil,
         imageUrl: String? = nil,
         category: String? = nil,
-        shelfLifeDays: Int? = nil
+        shelfLifeDays: Int? = nil,
+        nutrition: ProductNutrition = ProductNutrition()
     ) {
         self.barcode = barcode
         self.name = name
@@ -147,6 +151,7 @@ public struct CachedProduct: Codable, Equatable {
         self.imageUrl = imageUrl
         self.category = category
         self.shelfLifeDays = shelfLifeDays
+        self.nutrition = nutrition
     }
 }
 

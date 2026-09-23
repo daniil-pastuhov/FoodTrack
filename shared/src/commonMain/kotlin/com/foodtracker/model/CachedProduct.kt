@@ -17,13 +17,17 @@ data class CachedProduct(
     val brand: String? = null,
     val imageUrl: String? = null,
     val category: String? = null,
-    val shelfLifeDays: Int? = null
+    val shelfLifeDays: Int? = null,
+    /** Cached so an allergen warning doesn't depend on the network being up at the moment it
+     *  matters, and so a re-scan shows the same detail offline. */
+    val nutrition: ProductNutrition = ProductNutrition()
 ) {
     fun toProductInfo(): ProductInfo = ProductInfo(
         barcode = barcode,
         name = name,
         brand = brand,
         imageUrl = imageUrl,
-        category = category
+        category = category,
+        nutrition = nutrition
     )
 }

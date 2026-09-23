@@ -327,6 +327,17 @@
     </plurals>
     <string name="category_settings_rename_content_description">Endre navn på kategori</string>
 
+    <string name="product_detail_nutriscore">Nutri-Score</string>
+    <string name="product_detail_nova">NOVA</string>
+    <string name="product_detail_allergens">Allergener</string>
+    <string name="product_detail_ingredients">Ingredienser</string>
+    <string name="product_detail_content_description">Næring og allergener</string>
+    <string name="allergen_warning_format">Inneholder: %1$s</string>
+    <string name="settings_section_allergens">Allergivarsler</string>
+    <string name="settings_allergens_desc">Varsle meg når en skannet vare oppgir en av disse. Sammenligningen er romslig, så den kan flagge nesten-treff.</string>
+    <string name="settings_add_allergen_placeholder">f.eks. melk, gluten, nøtter</string>
+    <string name="settings_add_allergen">Legg til</string>
+    <string name="settings_remove_allergen_content_description">Fjern allergen</string>
     <string name="settings_section_appearance">Utseende</string>
     <string name="settings_theme_system">System</string>
     <string name="settings_theme_light">Lyst</string>

@@ -99,6 +99,25 @@ public struct ProductInfo: Codable {
     public let imageUrl: String?
     public let category: String?
     public let quantity: String?
+    public var nutrition: ProductNutrition
+
+    public init(
+        barcode: String,
+        name: String,
+        brand: String? = nil,
+        imageUrl: String? = nil,
+        category: String? = nil,
+        quantity: String? = nil,
+        nutrition: ProductNutrition = ProductNutrition()
+    ) {
+        self.barcode = barcode
+        self.name = name
+        self.brand = brand
+        self.imageUrl = imageUrl
+        self.category = category
+        self.quantity = quantity
+        self.nutrition = nutrition
+    }
 }
 
 public struct NotificationSettings: Codable, Equatable {
@@ -172,6 +191,9 @@ public struct AppSettings: Codable, Equatable {
     public var lastUsedStorageLocation: String?
     public var theme: AppTheme
     public var sortOption: SortOption
+    /// Allergens the user wants to be warned about when a scanned product lists them. Empty by
+    /// default: this is a safety feature for the people who need it, not a nag for everyone.
+    public var allergens: Set<String>
 
     public init(
         notifications: NotificationSettings = NotificationSettings(),
@@ -181,7 +203,8 @@ public struct AppSettings: Codable, Equatable {
         rememberLastStorageLocation: Bool = true,
         lastUsedStorageLocation: String? = nil,
         theme: AppTheme = .system,
-        sortOption: SortOption = .expiryDate
+        sortOption: SortOption = .expiryDate,
+        allergens: Set<String> = []
     ) {
         self.notifications = notifications
         self.expiringSoonDays = expiringSoonDays
@@ -191,6 +214,7 @@ public struct AppSettings: Codable, Equatable {
         self.lastUsedStorageLocation = lastUsedStorageLocation
         self.theme = theme
         self.sortOption = sortOption
+        self.allergens = allergens
     }
 
     /// The storage location a freshly created item should be pre-filled with. Falls back to
@@ -218,5 +242,8 @@ public struct AppSettings: Codable, Equatable {
         lastUsedStorageLocation = try container.decodeIfPresent(String.self, forKey: .lastUsedStorageLocation)
         theme = try container.decode(AppTheme.self, forKey: .theme)
         sortOption = try container.decodeIfPresent(SortOption.self, forKey: .sortOption) ?? .expiryDate
+        // decodeIfPresent: settings stored before this feature existed have no such key, and
+        // failing the whole decode would reset every other setting with it.
+        allergens = try container.decodeIfPresent(Set<String>.self, forKey: .allergens) ?? []
     }
 }

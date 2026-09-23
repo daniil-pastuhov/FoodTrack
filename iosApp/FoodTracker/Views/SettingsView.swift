@@ -9,6 +9,7 @@ public struct SettingsView: View {
     var onDataCleared: () -> Void
 
     @State private var newLocationText: String = ""
+    @State private var newAllergenText: String = ""
     @State private var editingLocation: String? = nil
     @State private var editingLocationText: String = ""
     @State private var showClearConfirm: Bool = false
@@ -39,6 +40,7 @@ public struct SettingsView: View {
                 notificationsSection
                 expiringSoonSection
                 locationsSection
+                allergensSection
                 categoriesSection
                 appearanceSection
                 dataSection
@@ -283,6 +285,38 @@ public struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+        }
+    }
+
+    /// Allergen warnings. Empty by default — this is a safety feature for the people who need
+    /// it, not a nag for everyone.
+    private var allergensSection: some View {
+        Section {
+            ForEach(settings.allergens.sorted(), id: \.self) { allergen in
+                Text(allergen)
+            }
+            .onDelete { offsets in
+                let sorted = settings.allergens.sorted()
+                let removed = offsets.map { sorted[$0] }
+                update { $0.allergens.subtract(removed) }
+            }
+            HStack {
+                TextField(L10n.settingsAddAllergenPlaceholder, text: $newAllergenText)
+                    .textInputAutocapitalization(.never)
+                Button(L10n.settingsAddAllergen) {
+                    // Stored lowercased: matching is case-insensitive anyway, and this stops
+                    // "Milk" and "milk" reading as two different entries in the list.
+                    let entry = newAllergenText.trimmingCharacters(in: .whitespaces).lowercased()
+                    guard !entry.isEmpty else { return }
+                    update { $0.allergens.insert(entry) }
+                    newAllergenText = ""
+                }
+                .disabled(newAllergenText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+        } header: {
+            Text(L10n.settingsSectionAllergens)
+        } footer: {
+            Text(L10n.settingsAllergensDesc)
         }
     }
 

@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LocalProductEntity::class,
         CategoryPreferenceEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -241,6 +241,20 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+            }
+        }
+
+        // Caches the nutritional detail Open Food Facts already returned but the app discarded:
+        // Nutri-Score, NOVA group, allergens and ingredients. Cached rather than fetched on
+        // demand so an allergen warning doesn't depend on the network being up at the moment it
+        // matters. Nothing to backfill - these are columns no previous version ever had data
+        // for, and they fill in as products are re-scanned.
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE local_products ADD COLUMN nutriScore TEXT")
+                db.execSQL("ALTER TABLE local_products ADD COLUMN novaGroup INTEGER")
+                db.execSQL("ALTER TABLE local_products ADD COLUMN allergens TEXT")
+                db.execSQL("ALTER TABLE local_products ADD COLUMN ingredients TEXT")
             }
         }
     }

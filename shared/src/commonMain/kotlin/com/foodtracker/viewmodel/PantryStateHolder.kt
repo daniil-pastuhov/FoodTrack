@@ -113,6 +113,9 @@ data class PantryUiState(
     /** Set when a scanned barcode is already in the pantry, so the UI can offer to add a unit
      *  to that item rather than create a second row for the same product. */
     val duplicateOf: PantryItem? = null,
+    /** Allergens the scanned product lists that the user asked to be warned about. Empty unless
+     *  both sides have something to match. */
+    val allergenWarnings: List<String> = emptyList(),
     /** True while that classification is running, so the form can say so rather than showing
      *  nothing and then popping chips in. */
     val isLabelingPhoto: Boolean = false,
@@ -506,11 +509,15 @@ class PantryStateHolder(
                 barcode = barcode,
                 category = product?.category
             )
+            val warnings = product?.nutrition
+                ?.matchedAllergens(_uiState.value.settings.allergens)
+                .orEmpty()
             _uiState.update {
                 it.copy(
                     scannedProduct = product,
                     productNotFoundBarcode = if (product == null) barcode else null,
                     suggestedExpiry = suggestion,
+                    allergenWarnings = warnings,
                     isLookingUpBarcode = false,
                     scanMessage = if (product != null) "Found ${product.name}" else "Product not in database - enter name"
                 )
@@ -1152,6 +1159,7 @@ class PantryStateHolder(
                 photoLabelSuggestions = emptyList(),
                 isLabelingPhoto = false,
                 duplicateOf = null,
+                allergenWarnings = emptyList(),
                 isLookingUpBarcode = false,
                 scanMessage = null,
                 scanningShoppingListEntryId = null

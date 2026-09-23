@@ -306,3 +306,14 @@
 "duplicate_dialog_add_one" = "Legg til én til";
 "duplicate_dialog_separate" = "Hold adskilt";
 "duplicate_added" = "%1$@ er nå %2$d";
+
+"product_detail_nutriscore" = "Nutri-Score";
+"product_detail_nova" = "NOVA";
+"product_detail_allergens" = "Allergener";
+"product_detail_ingredients" = "Ingredienser";
+"product_detail_content_description" = "Næring og allergener";
+"allergen_warning" = "Inneholder: %@";
+"settings_section_allergens" = "Allergivarsler";
+"settings_allergens_desc" = "Varsle meg når en skannet vare oppgir en av disse. Sammenligningen er romslig, så den kan flagge nesten-treff.";
+"settings_add_allergen_placeholder" = "f.eks. melk, gluten, nøtter";
+"settings_add_allergen" = "Legg til";

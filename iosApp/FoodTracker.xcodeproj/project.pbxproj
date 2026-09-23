@@ -58,6 +58,9 @@
 		BA96430656B0D1BEFD428EFB /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */; };
 		8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */ = {isa = PBXBuildFile; fileRef = 883B4D1065B37C26A395EC3C /* CategoryPreference.swift */; };
+		A1B2C3D40000000000000065 /* ProductDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000064 /* ProductDetailView.swift */; };
+		A1B2C3D40000000000000062 /* ProductNutrition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000061 /* ProductNutrition.swift */; };
+		A1B2C3D40000000000000063 /* ProductNutrition.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000061 /* ProductNutrition.swift */; };
 		A1B2C3D40000000000000052 /* BatchScanEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000051 /* BatchScanEntry.swift */; };
 		A1B2C3D40000000000000053 /* BatchScanEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000051 /* BatchScanEntry.swift */; };
 		A1B2C3D40000000000000042 /* BackupDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000041 /* BackupDocument.swift */; };
@@ -123,6 +126,8 @@
 		78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductNameRecord.swift; sourceTree = "<group>"; };
 		ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProductRecord.swift; sourceTree = "<group>"; };
 		883B4D1065B37C26A395EC3C /* CategoryPreference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPreference.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000064 /* ProductDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductDetailView.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000061 /* ProductNutrition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductNutrition.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000051 /* BatchScanEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchScanEntry.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000041 /* BackupDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupDocument.swift; sourceTree = "<group>"; };
 		A1B2C3D40000000000000033 /* ProductImageLabeler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImageLabeler.swift; sourceTree = "<group>"; };
@@ -219,6 +224,7 @@
 				32F5E332BCAB482A98210E13 /* ShoppingListView.swift */,
 				D8F1D79299154F4BAEEB0B90 /* FloatingTabBar.swift */,
 				A726EFC379384BEA96DED5C8 /* RootTabView.swift */,
+				A1B2C3D40000000000000064 /* ProductDetailView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -249,6 +255,7 @@
 				78B409004C74E32E00BBEE7D /* ProductNameRecord.swift */,
 				ABF80867A4F6A35C5F4D8C30 /* LocalProductRecord.swift */,
 				883B4D1065B37C26A395EC3C /* CategoryPreference.swift */,
+				A1B2C3D40000000000000061 /* ProductNutrition.swift */,
 				A1B2C3D40000000000000051 /* BatchScanEntry.swift */,
 				A1B2C3D40000000000000001 /* ShelfLife.swift */,
 				678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */,
@@ -490,6 +497,8 @@
 				665A801EBE434BEE94B34280 /* FloatingTabBar.swift in Sources */,
 				B079A629A81449CB9E79EB97 /* RootTabView.swift in Sources */,
 				8BB65C70B88F5F08B7574522 /* CategoryPreference.swift in Sources */,
+				A1B2C3D40000000000000065 /* ProductDetailView.swift in Sources */,
+				A1B2C3D40000000000000062 /* ProductNutrition.swift in Sources */,
 				A1B2C3D40000000000000052 /* BatchScanEntry.swift in Sources */,
 				A1B2C3D40000000000000042 /* BackupDocument.swift in Sources */,
 				A1B2C3D40000000000000034 /* ProductImageLabeler.swift in Sources */,
@@ -523,6 +532,7 @@
 				57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */,
 				F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */,
 				CAE0941B5977A150D0673C1B /* CategoryPreference.swift in Sources */,
+				A1B2C3D40000000000000063 /* ProductNutrition.swift in Sources */,
 				A1B2C3D40000000000000054 /* GS1BarcodeParser.swift in Sources */,
 				A1B2C3D40000000000000053 /* BatchScanEntry.swift in Sources */,
 				A1B2C3D40000000000000043 /* BackupDocument.swift in Sources */,

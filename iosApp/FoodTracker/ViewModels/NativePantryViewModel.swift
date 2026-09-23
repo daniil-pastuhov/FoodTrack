@@ -59,6 +59,9 @@ public class NativePantryViewModel: ObservableObject {
     /// Set when a scanned barcode is already in the pantry, so the UI can offer to add a unit
     /// to that item rather than create a second row for the same product.
     @Published public var duplicateOf: PantryItem?
+    /// Allergens the scanned product lists that the user asked to be warned about. Empty unless
+    /// both sides have something to match.
+    @Published public var allergenWarnings: [String] = []
     @Published public var shoppingList: [ShoppingListEntry] = []
     /// Set while the scan flow was launched from a specific shopping list row (rather than
     /// the dashboard's general scan button), so `saveItem` knows to remove that exact entry
@@ -256,7 +259,14 @@ public class NativePantryViewModel: ObservableObject {
     /// Upserts a barcode's product details into the local cache (see `LocalProductRecord`) so a
     /// later scan of the same barcode prefetches it here instead of hitting the network again —
     /// this is what makes a once-manually-entered "custom" product recognized on a later scan.
-    private func saveLocalProduct(barcode: String, name: String, brand: String?, imageUrl: String?, category: String?) {
+    private func saveLocalProduct(
+        barcode: String,
+        name: String,
+        brand: String?,
+        imageUrl: String?,
+        category: String?,
+        nutrition: ProductNutrition = ProductNutrition()
+    ) {
         let trimmed = barcode.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
@@ -268,8 +278,21 @@ public class NativePantryViewModel: ObservableObject {
             existing.brand = brand
             existing.imageUrl = imageUrl
             existing.category = category
+            // A manually-entered product carries no nutrition, and neither does a lookup OFF
+            // has nothing for. Keep whatever a previous successful lookup cached rather than
+            // blanking it - losing a cached allergen list is the one outcome worth avoiding.
+            if !nutrition.isEmpty { existing.apply(nutrition) }
         } else {
-            modelContext.insert(LocalProductRecord(barcode: trimmed, name: name, brand: brand, imageUrl: imageUrl, category: category))
+            modelContext.insert(
+                LocalProductRecord(
+                    barcode: trimmed,
+                    name: name,
+                    brand: brand,
+                    imageUrl: imageUrl,
+                    category: category,
+                    nutrition: nutrition
+                )
+            )
         }
         try? modelContext.save()
     }
@@ -645,7 +668,8 @@ public class NativePantryViewModel: ObservableObject {
             brand: cached.brand,
             imageUrl: cached.imageUrl,
             category: cached.category,
-            quantity: nil
+            quantity: nil,
+            nutrition: cached.nutrition
         )
     }
 
@@ -685,7 +709,8 @@ public class NativePantryViewModel: ObservableObject {
             brand: product["brands"] as? String,
             imageUrl: product["image_front_url"] as? String,
             category: rawCategory.map(stripLanguagePrefix),
-            quantity: product["quantity"] as? String
+            quantity: product["quantity"] as? String,
+            nutrition: ProductNutrition.from(offProduct: product)
         )
     }
 
@@ -704,9 +729,11 @@ public class NativePantryViewModel: ObservableObject {
                 brand: cached.brand,
                 imageUrl: cached.imageUrl,
                 category: cached.category,
-                quantity: nil
+                quantity: nil,
+                nutrition: cached.nutrition
             )
             productNotFoundBarcode = nil
+            allergenWarnings = cached.nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
             suggestedExpiry = resolveSuggestedExpiry(barcode: barcode, category: cached.category)
             isLookingUpBarcode = false
             return
@@ -734,15 +761,18 @@ public class NativePantryViewModel: ObservableObject {
                     let category = rawCategory.map(stripLanguagePrefix)
                     let quantity = product["quantity"] as? String
 
+                    let nutrition = ProductNutrition.from(offProduct: product)
                     self.scannedProduct = ProductInfo(
                         barcode: barcode,
                         name: name,
                         brand: brand,
                         imageUrl: image,
                         category: category,
-                        quantity: quantity
+                        quantity: quantity,
+                        nutrition: nutrition
                     )
                     self.productNotFoundBarcode = nil
+                    self.allergenWarnings = nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
                     self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: category)
                 } else {
                     self.scannedProduct = nil
@@ -784,7 +814,15 @@ public class NativePantryViewModel: ObservableObject {
         loadItems()
         recordProductName(item.name)
         if let barcode = item.barcode {
-            saveLocalProduct(barcode: barcode, name: item.name, brand: item.brand, imageUrl: item.imageUrl, category: item.category)
+            saveLocalProduct(
+                barcode: barcode,
+                name: item.name,
+                brand: item.brand,
+                imageUrl: item.imageUrl,
+                category: item.category,
+                // Carried from the scan that produced this item, when there was one.
+                nutrition: scannedProduct?.barcode == barcode ? scannedProduct?.nutrition ?? ProductNutrition() : ProductNutrition()
+            )
             if isNewItem { rememberShelfLife(barcode: barcode, item: item) }
         }
 
@@ -1230,6 +1268,7 @@ public class NativePantryViewModel: ObservableObject {
         photoLabelSuggestions = []
         isLabelingPhoto = false
         duplicateOf = nil
+        allergenWarnings = []
         isLookingUpBarcode = false
         scanningShoppingListEntryId = nil
     }
@@ -1248,7 +1287,8 @@ public class NativePantryViewModel: ObservableObject {
                 brand: $0.brand,
                 imageUrl: $0.imageUrl,
                 category: $0.category,
-                shelfLifeDays: $0.shelfLifeDays
+                shelfLifeDays: $0.shelfLifeDays,
+                nutrition: $0.nutrition
             )
         }
         let names = ((try? modelContext.fetch(FetchDescriptor<ProductNameRecord>())) ?? []).map { $0.displayName }
@@ -1333,6 +1373,7 @@ public class NativePantryViewModel: ObservableObject {
                 existing.imageUrl = product.imageUrl
                 existing.category = product.category
                 existing.shelfLifeDays = product.shelfLifeDays
+                existing.apply(product.nutrition)
             } else {
                 let record = LocalProductRecord(
                     barcode: barcode,
@@ -1340,7 +1381,8 @@ public class NativePantryViewModel: ObservableObject {
                     brand: product.brand,
                     imageUrl: product.imageUrl,
                     category: product.category,
-                    shelfLifeDays: product.shelfLifeDays
+                    shelfLifeDays: product.shelfLifeDays,
+                    nutrition: product.nutrition
                 )
                 modelContext.insert(record)
                 productByBarcode[barcode] = record

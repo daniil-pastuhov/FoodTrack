@@ -306,3 +306,14 @@
 "duplicate_dialog_add_one" = "Add one more";
 "duplicate_dialog_separate" = "Keep separate";
 "duplicate_added" = "%1$@ is now %2$d";
+
+"product_detail_nutriscore" = "Nutri-Score";
+"product_detail_nova" = "NOVA";
+"product_detail_allergens" = "Allergens";
+"product_detail_ingredients" = "Ingredients";
+"product_detail_content_description" = "Nutrition and allergens";
+"allergen_warning" = "Contains: %@";
+"settings_section_allergens" = "Allergen warnings";
+"settings_allergens_desc" = "Warn me when a scanned product lists one of these. Matching is loose, so it may flag near misses.";
+"settings_add_allergen_placeholder" = "e.g. milk, gluten, nuts";
+"settings_add_allergen" = "Add";

@@ -1,6 +1,7 @@
 package com.foodtracker.api
 
 import com.foodtracker.model.ProductInfo
+import com.foodtracker.model.ProductNutrition
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -26,7 +27,15 @@ internal data class OffProduct(
     @SerialName("image_front_url")
     val imageFrontUrl: String? = null,
     val categories: String? = null,
-    val quantity: String? = null
+    val quantity: String? = null,
+    @SerialName("nutriscore_grade")
+    val nutriScoreGrade: String? = null,
+    @SerialName("nova_group")
+    val novaGroup: Int? = null,
+    @SerialName("allergens_tags")
+    val allergensTags: List<String>? = null,
+    @SerialName("ingredients_text")
+    val ingredientsText: String? = null
 )
 
 // Open Food Facts sometimes returns tag-style categories with a language prefix, e.g. "en:Milk".
@@ -39,6 +48,22 @@ internal fun stripLanguagePrefix(raw: String): String {
         raw
     }
 }
+
+/** OFF reports "not-applicable"/"unknown" for products it simply hasn't rated; those are absent
+ *  ratings rather than grades, and showing them as a badge would imply a judgement OFF never
+ *  made. */
+private val UNRATED_GRADES = setOf("not-applicable", "unknown", "")
+
+internal fun OffProduct.toNutrition(): ProductNutrition = ProductNutrition(
+    nutriScore = nutriScoreGrade?.trim()?.lowercase()?.takeIf { it !in UNRATED_GRADES },
+    novaGroup = novaGroup?.takeIf { it in 1..4 },
+    // Tags arrive language-prefixed ("en:milk"), the same shape categories do.
+    allergens = allergensTags.orEmpty()
+        .map { stripLanguagePrefix(it).trim() }
+        .filter { it.isNotEmpty() }
+        .distinct(),
+    ingredients = ingredientsText?.trim()?.takeIf { it.isNotEmpty() }
+)
 
 class OpenFoodFactsApi(
     private val httpClient: HttpClient = createDefaultClient()
@@ -62,7 +87,8 @@ class OpenFoodFactsApi(
                     brand = prod.brands?.takeIf { it.isNotBlank() },
                     imageUrl = prod.imageFrontUrl?.takeIf { it.isNotBlank() },
                     category = prod.categories?.split(",")?.firstOrNull()?.trim()?.let(::stripLanguagePrefix),
-                    quantity = prod.quantity?.takeIf { it.isNotBlank() }
+                    quantity = prod.quantity?.takeIf { it.isNotBlank() },
+                    nutrition = prod.toNutrition()
                 )
             } else {
                 null

@@ -40,7 +40,10 @@ data class AppSettings(
      *  item save, and cleared when its location is deleted in Settings. */
     val lastUsedStorageLocation: String? = null,
     val theme: AppTheme = AppTheme.SYSTEM,
-    val sortOption: SortOption = SortOption.EXPIRY_DATE
+    val sortOption: SortOption = SortOption.EXPIRY_DATE,
+    /** Allergens the user wants to be warned about when a scanned product lists them. Empty by
+     *  default: this is a safety feature for the people who need it, not a nag for everyone. */
+    val allergens: Set<String> = emptySet()
 ) {
     /** The storage location a freshly created item should be pre-filled with. Falls back to
      *  [defaultStorageLocation] when the remembered one is off, unset, or no longer one of
