@@ -245,6 +245,20 @@
     </plurals>
     <string name="notif_fallback_title">Уведомление о сроке годности</string>
     <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>
+    <string name="notif_action_used">Съедено</string>
+    <string name="notif_action_snooze">Завтра</string>
+    <plurals name="notif_action_still_good">
+        <item quantity="one">Ещё годен +%1$dд</item>
+        <item quantity="few">Ещё годен +%1$dд</item>
+        <item quantity="many">Ещё годен +%1$dд</item>
+        <item quantity="other">Ещё годен +%1$dд</item>
+    </plurals>
+    <string name="shortcut_scan_barcode_short">Сканер</string>
+    <string name="shortcut_scan_barcode_long">Сканировать штрихкод</string>
+    <string name="shortcut_add_item_short">Добавить</string>
+    <string name="shortcut_add_item_long">Добавить товар вручную</string>
+    <string name="shortcut_shopping_list_short">Покупки</string>
+    <string name="shortcut_shopping_list_long">Открыть список покупок</string>
     <string name="notif_action_remove">Удалить</string>
     <string name="notif_digest_title">Истекают на этой неделе</string>
     <plurals name="notif_digest_body_format">

@@ -182,10 +182,39 @@ struct RootTabView: View {
                 prefillSuggestion: prefillSuggestion
             )
         }
-        .onChange(of: router.openShoppingList) { _, shouldOpen in
-            guard shouldOpen else { return }
+        .onChange(of: router.destination) { _, destination in
+            guard let destination else { return }
+            apply(destination)
+            router.destination = nil
+        }
+        .onAppear {
+            // A quick action that launched the app cold arrives before any view exists to
+            // observe the router, so it waits here until there is one.
+            if let pending = router.pendingLaunchDestination {
+                router.pendingLaunchDestination = nil
+                apply(pending)
+            }
+        }
+    }
+
+    private func apply(_ destination: AppDestination) {
+        switch destination {
+        case .shoppingList:
             selectedTab = .shoppingList
-            router.openShoppingList = false
+        case .scanner:
+            selectedTab = .home
+            presentScanner()
+        case .addItem:
+            selectedTab = .home
+            editingItem = nil
+            prefillBarcode = nil
+            prefillName = nil
+            prefillBrand = nil
+            prefillImageUrl = nil
+            prefillDate = nil
+            prefillCategory = nil
+            prefillSuggestion = nil
+            showAddEdit = true
         }
     }
 

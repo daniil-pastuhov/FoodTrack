@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Long-press shortcuts on the launcher icon, for the three things the app is opened to do.
+  Each carries MainActivity.EXTRA_SHORTCUT, which applyScreenFromIntent routes; they are not
+  URI-schemed because nothing outside the app needs to link here.
+
+  targetPackage/targetClass are required on the inner intent even though it points at our own
+  activity — a shortcut intent is resolved by the launcher's process, not ours, so a bare
+  action would not find MainActivity.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="scan"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortcutShortLabel="@string/shortcut_scan_barcode_short"
+        android:shortcutLongLabel="@string/shortcut_scan_barcode_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.foodtracker.android"
+            android:targetClass="com.foodtracker.android.MainActivity">
+            <extra
+                android:name="com.foodtracker.android.EXTRA_SHORTCUT"
+                android:value="scan" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="add_item"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortcutShortLabel="@string/shortcut_add_item_short"
+        android:shortcutLongLabel="@string/shortcut_add_item_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.foodtracker.android"
+            android:targetClass="com.foodtracker.android.MainActivity">
+            <extra
+                android:name="com.foodtracker.android.EXTRA_SHORTCUT"
+                android:value="add_item" />
+        </intent>
+    </shortcut>
+
+    <shortcut
+        android:shortcutId="shopping_list"
+        android:enabled="true"
+        android:icon="@drawable/ic_notification"
+        android:shortcutShortLabel="@string/shortcut_shopping_list_short"
+        android:shortcutLongLabel="@string/shortcut_shopping_list_long">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="com.foodtracker.android"
+            android:targetClass="com.foodtracker.android.MainActivity">
+            <extra
+                android:name="com.foodtracker.android.EXTRA_SHORTCUT"
+                android:value="shopping_list" />
+        </intent>
+    </shortcut>
+</shortcuts>

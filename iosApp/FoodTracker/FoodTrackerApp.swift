@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct FoodTrackerApp: App {
+    // Exists only to catch home-screen quick actions, which SwiftUI's App has no hook for.
+    @UIApplicationDelegateAdaptor(QuickActionDelegate.self) private var quickActionDelegate
     @ObservedObject private var settingsStore = SettingsStore.shared
 
     var body: some Scene {

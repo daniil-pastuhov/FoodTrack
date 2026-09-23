@@ -13,6 +13,14 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     private nonisolated static let digestIdentifier = "com.foodtracker.digest"
     private nonisolated static let expiryCategoryIdentifier = "EXPIRY_CATEGORY"
     private nonisolated static let removeActionIdentifier = "REMOVE_ACTION"
+    private nonisolated static let usedActionIdentifier = "USED_ACTION"
+    private nonisolated static let stillGoodActionIdentifier = "STILL_GOOD_ACTION"
+    private nonisolated static let snoozeActionIdentifier = "SNOOZE_ACTION"
+
+    /// How far "Still good" pushes the expiry date out. Small on purpose: this is a nudge from
+    /// someone looking at the food, not a reassessment of its shelf life. Matches Android's
+    /// `ExpiryNotificationReceiver.STILL_GOOD_DAYS`.
+    public nonisolated static let stillGoodDays = 3
 
     private override init() {
         super.init()
@@ -21,6 +29,24 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     public func requestAuthorization() {
         UNUserNotificationCenter.current().delegate = self
 
+        // These cover what a user actually does at the moment the reminder fires. Until now
+        // the only choices were "Remove" or open the app, which fits none of the common
+        // outcomes: the food was eaten, it's still fine, or it's not a today problem.
+        let usedAction = UNNotificationAction(
+            identifier: Self.usedActionIdentifier,
+            title: L10n.notifActionUsed,
+            options: []
+        )
+        let stillGoodAction = UNNotificationAction(
+            identifier: Self.stillGoodActionIdentifier,
+            title: L10n.notifActionStillGood(Self.stillGoodDays),
+            options: []
+        )
+        let snoozeAction = UNNotificationAction(
+            identifier: Self.snoozeActionIdentifier,
+            title: L10n.notifActionSnooze,
+            options: []
+        )
         let removeAction = UNNotificationAction(
             identifier: Self.removeActionIdentifier,
             title: L10n.notifActionRemove,
@@ -28,7 +54,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         )
         let expiryCategory = UNNotificationCategory(
             identifier: Self.expiryCategoryIdentifier,
-            actions: [removeAction],
+            actions: [usedAction, stillGoodAction, snoozeAction, removeAction],
             intentIdentifiers: [],
             options: []
         )
@@ -161,15 +187,98 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
-        if response.actionIdentifier == Self.removeActionIdentifier,
-           let itemId = response.notification.request.content.userInfo["itemId"] as? String {
-            Task { @MainActor in
+        guard let itemId = response.notification.request.content.userInfo["itemId"] as? String else {
+            completionHandler()
+            return
+        }
+        let action = response.actionIdentifier
+        // All four act straight on SwiftData rather than through NativePantryViewModel: an
+        // action can fire while no view (and so no view model instance) exists yet, e.g. right
+        // after a cold launch from tapping it.
+        Task { @MainActor in
+            switch action {
+            case Self.removeActionIdentifier:
                 IOSNotificationManager.deleteItemDirectly(itemId)
-                completionHandler()
+            case Self.usedActionIdentifier:
+                IOSNotificationManager.useOneDirectly(itemId)
+            case Self.stillGoodActionIdentifier:
+                IOSNotificationManager.extendExpiryDirectly(itemId, byDays: Self.stillGoodDays)
+            case Self.snoozeActionIdentifier:
+                IOSNotificationManager.shared.snoozeUntilTomorrow(itemId: itemId)
+            default:
+                break
             }
-        } else {
             completionHandler()
         }
+    }
+
+    /// Consumes one unit, mirroring `NativePantryViewModel.decrementQuantity`: an item with
+    /// more than one left stays in the pantry with one fewer, and only the last one being used
+    /// removes it (re-stocking an essential, which `deleteItemDirectly` already handles).
+    /// Deleting outright would silently lose the other units.
+    @MainActor
+    private static func useOneDirectly(_ itemId: String) {
+        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
+        guard let record = try? context.fetch(descriptor).first else { return }
+        guard record.quantity > 1 else {
+            deleteItemDirectly(itemId)
+            return
+        }
+        record.quantity -= 1
+        try? context.save()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Pushes the expiry out, for the "Still good" action. Counted from the item's *current*
+    /// expiry rather than from today, so tapping it on something that expired three days ago
+    /// doesn't quietly hand it a fresh window. Reschedules from the new date: this notification
+    /// has already fired, so without that the item would never warn again.
+    @MainActor
+    private static func extendExpiryDirectly(_ itemId: String, byDays days: Int) {
+        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
+        guard let record = try? context.fetch(descriptor).first,
+              let extended = Calendar.current.date(byAdding: .day, value: days, to: record.expiryDate) else {
+            return
+        }
+        record.expiryDate = extended
+        try? context.save()
+        shared.scheduleNotification(for: record.asPantryItem)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Re-fires this item's reminder tomorrow at the configured reminder time.
+    ///
+    /// Deliberately not "in 24 hours": the user picked a time of day to be reminded, and a
+    /// rolling offset would walk that reminder later every time they snoozed it. Re-uses the
+    /// item's id as the request identifier, so the snooze replaces that item's pending
+    /// notification rather than leaving two to fire.
+    @MainActor
+    public func snoozeUntilTomorrow(itemId: String) {
+        let notificationSettings = SettingsStore.shared.settings.notifications
+        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
+        let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
+        guard let record = try? context.fetch(descriptor).first else { return }
+
+        var components = Calendar.current.dateComponents(
+            [.year, .month, .day],
+            from: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        )
+        components.hour = notificationSettings.hour
+        components.minute = notificationSettings.minute
+
+        let content = UNMutableNotificationContent()
+        content.title = record.expiryDate <= Date() ? L10n.notifTitleToday : L10n.notifTitleSoon
+        content.body = L10n.notifBodyToday(record.name)
+        content.sound = .default
+        content.categoryIdentifier = Self.expiryCategoryIdentifier
+        content.userInfo = ["itemId": itemId]
+
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        let request = UNNotificationRequest(identifier: itemId, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [itemId])
+        UNUserNotificationCenter.current().add(request)
     }
 
     /// Deletes a pantry item straight from SwiftData, bypassing `NativePantryViewModel` — the

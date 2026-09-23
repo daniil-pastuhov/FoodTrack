@@ -290,3 +290,6 @@
 "backup_import_malformed" = "Этот файл не является резервной копией FoodTracker";
 "backup_import_unsupported" = "Эта копия создана более новой версией приложения";
 "backup_import_empty" = "В этой копии нечего восстанавливать";
+
+"notif_action_used" = "Съедено";
+"notif_action_snooze" = "Завтра";

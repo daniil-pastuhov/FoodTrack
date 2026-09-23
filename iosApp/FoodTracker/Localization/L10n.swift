@@ -219,6 +219,14 @@ public enum L10n {
     }
 
     public static var notifActionRemove: String { NSLocalizedString("notif_action_remove", comment: "") }
+    public static var notifActionUsed: String { NSLocalizedString("notif_action_used", comment: "") }
+    public static var notifActionSnooze: String { NSLocalizedString("notif_action_snooze", comment: "") }
+    public static func notifActionStillGood(_ days: Int) -> String {
+        String.localizedStringWithFormat(
+            NSLocalizedString("notif_action_still_good_format", comment: ""),
+            days
+        )
+    }
     public static var notifDigestTitle: String { NSLocalizedString("notif_digest_title", comment: "") }
     public static func notifDigestBody(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("notif_digest_body_format", comment: ""), count)

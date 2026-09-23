@@ -115,6 +115,48 @@ object NotificationHelper {
         }
     }
 
+    /**
+     * Re-fires [itemId]'s reminder tomorrow at the configured reminder time.
+     *
+     * Deliberately not "in 24 hours": the user picked a time of day to be reminded, and a
+     * rolling offset would walk that reminder later every time they snoozed it. If tomorrow's
+     * slot has somehow already passed, it falls back to a short delay rather than scheduling
+     * into the past, which would fire immediately and defeat the snooze.
+     */
+    fun snoozeUntilTomorrow(context: Context, itemId: String, title: String?, body: String?) {
+        val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+
+        val calendar = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, notificationSettings.hour)
+            set(Calendar.MINUTE, notificationSettings.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val now = System.currentTimeMillis()
+        val triggerMillis = calendar.timeInMillis.takeIf { it > now } ?: (now + SNOOZE_FALLBACK_MILLIS)
+
+        val intent = Intent(context, ExpiryNotificationReceiver::class.java).apply {
+            putExtra(ExpiryNotificationReceiver.EXTRA_ITEM_ID, itemId)
+            putExtra(ExpiryNotificationReceiver.EXTRA_TITLE, title)
+            putExtra(ExpiryNotificationReceiver.EXTRA_BODY, body)
+        }
+        // Same request code as the original reminder, so a snooze replaces that item's pending
+        // alarm rather than leaving two to fire.
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            itemId.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        try {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerMillis, pendingIntent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     fun cancelNotification(context: Context, itemId: String) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
         val intent = Intent(context, ExpiryNotificationReceiver::class.java)
@@ -147,6 +189,9 @@ object NotificationHelper {
         items.forEach { cancelNotification(context, it.id) }
         items.forEach { scheduleNotification(context, it) }
     }
+
+    /** Used only if tomorrow's reminder slot has somehow already passed. */
+    private const val SNOOZE_FALLBACK_MILLIS = 60 * 60 * 1000L
 
     private const val DIGEST_REQUEST_CODE = -1000
 

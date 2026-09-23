@@ -235,6 +235,18 @@
     </plurals>
     <string name="notif_fallback_title">Varsel om utløpsdato</string>
     <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>
+    <string name="notif_action_used">Brukt</string>
+    <string name="notif_action_snooze">I morgen</string>
+    <plurals name="notif_action_still_good">
+        <item quantity="one">Fortsatt god +%1$dd</item>
+        <item quantity="other">Fortsatt god +%1$dd</item>
+    </plurals>
+    <string name="shortcut_scan_barcode_short">Skann</string>
+    <string name="shortcut_scan_barcode_long">Skann en strekkode</string>
+    <string name="shortcut_add_item_short">Legg til</string>
+    <string name="shortcut_add_item_long">Legg til en vare manuelt</string>
+    <string name="shortcut_shopping_list_short">Handel</string>
+    <string name="shortcut_shopping_list_long">Åpne handlelisten</string>
     <string name="notif_action_remove">Fjern</string>
     <string name="notif_digest_title">Utløper denne uken</string>
     <plurals name="notif_digest_body_format">

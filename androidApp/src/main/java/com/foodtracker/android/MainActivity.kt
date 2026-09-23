@@ -834,13 +834,31 @@ class MainActivity : ComponentActivity() {
         applyScreenFromIntent(intent)
     }
 
+    /**
+     * Routes an incoming intent to the screen it asks for: the widgets' tap targets, and the
+     * launcher shortcuts declared in `res/xml/shortcuts.xml`.
+     *
+     * Shortcuts arrive as an extra rather than a URI scheme because nothing outside the app
+     * needs to link here - a scheme would mean an exported, externally-addressable entry point
+     * for no benefit.
+     */
     private fun applyScreenFromIntent(intent: Intent) {
         if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING_LIST, false)) {
             currentScreenState.value = AppScreen.SHOPPING_LIST
+            return
+        }
+        when (intent.getStringExtra(EXTRA_SHORTCUT)) {
+            SHORTCUT_SCAN -> currentScreenState.value = AppScreen.SCANNER
+            SHORTCUT_ADD_ITEM -> currentScreenState.value = AppScreen.ADD_EDIT
+            SHORTCUT_SHOPPING_LIST -> currentScreenState.value = AppScreen.SHOPPING_LIST
         }
     }
 
     companion object {
         const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
+        const val EXTRA_SHORTCUT = "com.foodtracker.android.EXTRA_SHORTCUT"
+        const val SHORTCUT_SCAN = "scan"
+        const val SHORTCUT_ADD_ITEM = "add_item"
+        const val SHORTCUT_SHOPPING_LIST = "shopping_list"
     }
 }

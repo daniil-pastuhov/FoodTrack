@@ -257,6 +257,18 @@
     </plurals>
     <string name="notif_fallback_title">Food Expiration Alert</string>
     <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>
+    <string name="notif_action_used">Used it</string>
+    <string name="notif_action_snooze">Tomorrow</string>
+    <plurals name="notif_action_still_good">
+        <item quantity="one">Still good +%1$dd</item>
+        <item quantity="other">Still good +%1$dd</item>
+    </plurals>
+    <string name="shortcut_scan_barcode_short">Scan</string>
+    <string name="shortcut_scan_barcode_long">Scan a barcode</string>
+    <string name="shortcut_add_item_short">Add item</string>
+    <string name="shortcut_add_item_long">Add an item by hand</string>
+    <string name="shortcut_shopping_list_short">Shopping</string>
+    <string name="shortcut_shopping_list_long">Open shopping list</string>
     <string name="notif_action_remove">Remove</string>
     <string name="notif_digest_title">Expiring This Week</string>
     <plurals name="notif_digest_body_format">

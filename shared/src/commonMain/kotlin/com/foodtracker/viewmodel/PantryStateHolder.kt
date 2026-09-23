@@ -646,6 +646,29 @@ class PantryStateHolder(
         }
     }
 
+    /**
+     * Pushes [id]'s expiry date out by [days], for the notification's "Still good" action.
+     *
+     * Counted from the item's *current* expiry rather than from today, so tapping it on an item
+     * that expired three days ago doesn't quietly hand it a fresh week - the point is a small
+     * correction to a printed date by someone looking at the actual food, not a reset.
+     *
+     * [onUpdated] receives the saved item so the caller can reschedule its reminder; the
+     * notification that prompted this has already fired, and without a reschedule the item
+     * would never warn again.
+     */
+    fun extendExpiry(id: String, days: Int, onUpdated: (PantryItem) -> Unit = {}) {
+        if (days <= 0) return
+        coroutineScope.launch {
+            val item = repository.getItem(id) ?: return@launch
+            val extended = item.copy(
+                expiryDate = LocalDate.fromEpochDays(item.expiryDate.toEpochDays() + days)
+            )
+            repository.saveItem(extended)
+            onUpdated(extended)
+        }
+    }
+
     /** Explicit "move to shopping list" action (the Home screen's leading/right swipe action):
      *  removes the item from the pantry and adds it to the shopping list unconditionally,
      *  regardless of its [PantryItem.essential] flag — unlike [decrementQuantity], this is a

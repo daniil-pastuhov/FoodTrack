@@ -290,3 +290,6 @@
 "backup_import_malformed" = "That file isn't a FoodTracker backup";
 "backup_import_unsupported" = "That backup was made by a newer version of the app";
 "backup_import_empty" = "That backup has nothing to restore";
+
+"notif_action_used" = "Used it";
+"notif_action_snooze" = "Tomorrow";

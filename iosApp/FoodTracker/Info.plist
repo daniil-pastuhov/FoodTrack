@@ -35,6 +35,39 @@
 			</array>
 		</dict>
 	</array>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>scan</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Scan</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Scan a barcode</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeCapturePhoto</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>add-item</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Add item</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Add an item by hand</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAdd</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>shopping-list</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Shopping</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Open shopping list</string>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeTaskCompleted</string>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

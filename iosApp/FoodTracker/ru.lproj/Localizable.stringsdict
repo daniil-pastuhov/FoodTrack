@@ -182,5 +182,25 @@
             <string>Восстановлено %d товара</string>
         </dict>
     </dict>
+    <key>notif_action_still_good_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ещё годен +%dд</string>
+            <key>few</key>
+            <string>Ещё годен +%dд</string>
+            <key>many</key>
+            <string>Ещё годен +%dд</string>
+            <key>other</key>
+            <string>Ещё годен +%dд</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

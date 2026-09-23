@@ -290,3 +290,6 @@
 "backup_import_malformed" = "Den filen er ikke en FoodTracker-sikkerhetskopi";
 "backup_import_unsupported" = "Den sikkerhetskopien er laget av en nyere versjon av appen";
 "backup_import_empty" = "Den sikkerhetskopien har ingenting å gjenopprette";
+
+"notif_action_used" = "Brukt";
+"notif_action_snooze" = "I morgen";
