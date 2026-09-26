@@ -36,6 +36,7 @@ import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import kotlin.coroutines.CoroutineContext
@@ -506,6 +508,11 @@ class PantryStateHolder(
         }
     }
 
+    /** The single-item scan's in-flight lookups, cancelled by [clearScanResults] so a lookup
+     *  that finishes after the user has left the scanner cannot publish its result anyway. */
+    private var barcodeLookupJob: Job? = null
+    private var duplicateCheckJob: Job? = null
+
     fun onBarcodeScanned(barcode: String) {
         val gs1Date = GS1BarcodeParser.extractExpiryDate(barcode)
         _uiState.update {
@@ -516,7 +523,8 @@ class PantryStateHolder(
             )
         }
 
-        coroutineScope.launch {
+        barcodeLookupJob?.cancel()
+        barcodeLookupJob = coroutineScope.launch {
             // A locally-cached product (whether it was previously found via the API or entered
             // by hand for a barcode OFF didn't know) wins over the network, so a "custom"
             // product from a past scan is recognized here instead of showing not-found again.
@@ -529,7 +537,11 @@ class PantryStateHolder(
             val warnings = product?.nutrition
                 ?.matchedAllergens(_uiState.value.settings.allergens)
                 .orEmpty()
+            // Checked inside the update rather than before it: the lookup runs off the main
+            // thread, and clearScanResults cancels this job before it writes, so either this
+            // write sees the cancellation or the clear lands after it and wipes it.
             _uiState.update {
+                if (!isActive) return@update it
                 it.copy(
                     scannedProduct = product,
                     productNotFoundBarcode = if (product == null) barcode else null,
@@ -787,9 +799,10 @@ class PantryStateHolder(
      * avoid.
      */
     fun checkForDuplicate(barcode: String) {
-        coroutineScope.launch {
+        duplicateCheckJob?.cancel()
+        duplicateCheckJob = coroutineScope.launch {
             val existing = repository.findByBarcode(barcode).firstOrNull()
-            _uiState.update { it.copy(duplicateOf = existing) }
+            _uiState.update { if (isActive) it.copy(duplicateOf = existing) else it }
         }
     }
 
@@ -1267,6 +1280,8 @@ class PantryStateHolder(
      * produced it. [clearScanState] is the stronger version, for leaving the scanner entirely.
      */
     fun clearScanResults() {
+        barcodeLookupJob?.cancel()
+        duplicateCheckJob?.cancel()
         _uiState.update {
             it.copy(
                 scannedProduct = null,

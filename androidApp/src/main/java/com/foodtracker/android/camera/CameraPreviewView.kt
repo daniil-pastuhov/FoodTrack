@@ -14,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -64,6 +65,13 @@ fun CameraPreviewView(
     var camera by remember { mutableStateOf<Camera?>(null) }
     // Kept so teardown can unbind without blocking on the provider future again.
     var boundProvider by remember { mutableStateOf<ProcessCameraProvider?>(null) }
+    // ML Kit delivers each frame's result on the main thread some time after the frame was
+    // taken, so one can land after the scanner has closed or moved to another mode - and be
+    // published by a screen that has already cleared its scan state. Both are read on the main
+    // thread, as is onDispose, so checking them at delivery is enough.
+    val currentMode by rememberUpdatedState(mode)
+    var disposed by remember { mutableStateOf(false) }
+    fun deliverable(analyzerMode: CameraScanMode) = !disposed && currentMode == analyzerMode
 
     // The analyzer thread belongs to this composable, not to the process: without this, every
     // visit to the scanner left one behind. The use cases go too - they are bound to the host
@@ -71,6 +79,7 @@ fun CameraPreviewView(
     // Add/Edit scan overlay) would otherwise leave the camera running behind the screen.
     DisposableEffect(Unit) {
         onDispose {
+            disposed = true
             boundProvider?.unbindAll()
             cameraExecutor.shutdown()
         }
@@ -95,9 +104,9 @@ fun CameraPreviewView(
                 // Batch shares the barcode analyzer verbatim; only what ScannerScreen does with
                 // each result differs (queue it, rather than stop and look it up).
                 CameraScanMode.BARCODE, CameraScanMode.BATCH ->
-                    analyzer(BarcodeAnalyzer { barcode -> onBarcodeFound(barcode) })
+                    analyzer(BarcodeAnalyzer { barcode -> if (deliverable(mode)) onBarcodeFound(barcode) })
                 CameraScanMode.DATE_OCR ->
-                    analyzer(TextOcrAnalyzer { result -> onDateFound(result.date) })
+                    analyzer(TextOcrAnalyzer { result -> if (deliverable(mode)) onDateFound(result.date) })
                 // Both capture a still and process it afterwards, so neither wants a
                 // frame-by-frame analyzer running behind the preview - and an ImageAnalysis
                 // bound with nothing attached still costs a stream, so don't bind one at all.

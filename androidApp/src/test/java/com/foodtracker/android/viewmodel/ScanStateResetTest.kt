@@ -7,8 +7,10 @@ import com.foodtracker.android.perf.FakeProductNameRepository
 import com.foodtracker.android.perf.FakeSettingsRepository
 import com.foodtracker.android.perf.FakeShoppingListRepository
 import com.foodtracker.model.ProductInfo
+import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryStateHolder
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -32,16 +34,29 @@ import kotlin.coroutines.EmptyCoroutineContext
  */
 class ScanStateResetTest {
 
-    private class Fixture {
+    /** Holds every product lookup until [release], so a test can act while one is in flight. */
+    private class GatedLocalProductRepository(
+        private val delegate: FakeLocalProductRepository
+    ) : LocalProductRepository by delegate {
+        private val gate = CompletableDeferred<Unit>()
+        fun release() = gate.complete(Unit)
+        override suspend fun getByBarcode(barcode: String): ProductInfo? {
+            gate.await()
+            return delegate.getByBarcode(barcode)
+        }
+    }
+
+    private class Fixture(gateLookups: Boolean = false) {
         val pantry = FakePantryRepository(emptyList())
         val localProducts = FakeLocalProductRepository()
+        val gatedLocalProducts = if (gateLookups) GatedLocalProductRepository(localProducts) else null
         val scope = CoroutineScope(SupervisorJob() + UnconfinedTestDispatcher())
         val stateHolder = PantryStateHolder(
             repository = pantry,
             settingsRepository = FakeSettingsRepository(),
             shoppingListRepository = FakeShoppingListRepository(),
             productNameRepository = FakeProductNameRepository(),
-            localProductRepository = localProducts,
+            localProductRepository = gatedLocalProducts ?: localProducts,
             categoryPreferenceRepository = FakeCategoryPreferenceRepository(),
             uncategorizedLabel = "Other",
             coroutineScope = scope,
@@ -72,6 +87,28 @@ class ScanStateResetTest {
             assertNull("an OCR'd date must not survive a mode switch", fixture.state.detectedDate)
             assertNull(fixture.state.suggestedExpiry)
             assertEquals("the queue is not one scan's result", 1, fixture.state.batchQueue.size)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun testALookupFinishingAfterLeavingTheScannerDoesNotRepublishItsResult() {
+        // Leaving the scanner while a barcode is still being looked up must not have the
+        // product card - and a duplicate prompt - reappear once the lookup comes back.
+        val fixture = Fixture(gateLookups = true)
+        try {
+            fixture.localProducts.seed(ProductInfo(barcode = "111", name = "Milk"))
+            fixture.stateHolder.onBarcodeScanned("111")
+            assertTrue(fixture.state.isLookingUpBarcode)
+
+            fixture.stateHolder.clearScanState()
+            fixture.gatedLocalProducts!!.release()
+
+            assertNull("a lookup outliving the scanner must not publish", fixture.state.scannedProduct)
+            assertNull(fixture.state.productNotFoundBarcode)
+            assertNull(fixture.state.scanMessage)
+            assertTrue(!fixture.state.isLookingUpBarcode)
         } finally {
             fixture.close()
         }
