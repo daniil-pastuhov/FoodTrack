@@ -113,7 +113,6 @@
 "continue_button" = "Continue";
 
 "product_not_found_title" = "Product not found";
-"product_not_found_message" = "This barcode isn't in our database yet. Try Photo mode to snap a picture, or continue and enter the details yourself.";
 "switch_to_photo_button" = "Try Photo";
 
 "take_photo_button" = "Take photo";

@@ -185,7 +185,6 @@
     <string name="continue_button">Продолжить</string>
 
     <string name="product_not_found_title">Продукт не найден</string>
-    <string name="product_not_found_message">Этого штрихкода пока нет в базе данных. Попробуйте режим фото, чтобы сделать снимок, или продолжите и заполните данные вручную.</string>
     <string name="switch_to_photo_button">Режим фото</string>
 
     <string name="take_photo_button">Сделать фото</string>

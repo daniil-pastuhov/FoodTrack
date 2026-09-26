@@ -817,6 +817,13 @@ public class NativePantryViewModel: ObservableObject {
         )
     }
 
+    /// True while a single-item scan is on screen - its lookup still running, or its product
+    /// (or not-found notice) waiting on the user. The scanner ignores new barcodes until
+    /// `clearScanResults` lets it go ("Scan Again", or a mode switch).
+    public var isHoldingBarcodeResult: Bool {
+        isLookingUpBarcode || scannedProduct != nil || productNotFoundBarcode != nil
+    }
+
     public func lookupBarcode(_ barcode: String) {
         isLookingUpBarcode = true
         scannedProduct = nil

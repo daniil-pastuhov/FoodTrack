@@ -177,7 +177,6 @@
     <string name="continue_button">Fortsett</string>
 
     <string name="product_not_found_title">Fant ikke produktet</string>
-    <string name="product_not_found_message">Denne strekkoden finnes ikke i databasen ennå. Prøv bildemodus for å ta et bilde, eller fortsett og fyll inn detaljene selv.</string>
     <string name="switch_to_photo_button">Prøv bildemodus</string>
 
     <string name="take_photo_button">Ta bilde</string>

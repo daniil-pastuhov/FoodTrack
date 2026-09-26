@@ -113,7 +113,6 @@
 "continue_button" = "Fortsett";
 
 "product_not_found_title" = "Fant ikke produktet";
-"product_not_found_message" = "Denne strekkoden finnes ikke i databasen ennå. Prøv bildemodus for å ta et bilde, eller fortsett og fyll inn detaljene selv.";
 "switch_to_photo_button" = "Prøv bilde";
 
 "take_photo_button" = "Ta bilde";

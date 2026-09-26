@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
@@ -33,9 +34,9 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.QrCodeScanner
@@ -283,11 +284,13 @@ fun ScannerScreen(
                 } else if (currentMode == CameraScanMode.BATCH) {
                     stateHolder.enqueueBatchScan(barcode)
                 } else {
-                    stateHolder.onBarcodeScanned(barcode)
+                    val taken = stateHolder.onBarcodeScanned(barcode)
                     // Only where the host renders the prompt, and only outside batch: batch
                     // collapses repeats into one row's quantity by itself, and prompting per
-                    // scan is exactly the interruption batch mode exists to avoid.
-                    if (checkDuplicates) stateHolder.checkForDuplicate(barcode)
+                    // scan is exactly the interruption batch mode exists to avoid. Not for a
+                    // scan ignored because a result is already held, either - it would pin
+                    // another product's pantry row onto the card on screen.
+                    if (taken && checkDuplicates) stateHolder.checkForDuplicate(barcode)
                 }
             },
             onDateFound = { date ->
@@ -710,7 +713,7 @@ fun ScannerScreen(
                         // about the same scan.
                         val inPantry = state.duplicateOf
                             ?.takeIf { onUseOne != null && it.barcode == product.barcode }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(verticalAlignment = Alignment.Top) {
                             if (!product.imageUrl.isNullOrBlank()) {
                                 AsyncImage(
                                     model = product.imageUrl,
@@ -748,6 +751,7 @@ fun ScannerScreen(
                                     )
                                 }
                             }
+                            ScanAgainButton(onClick = { stateHolder.clearScanResults() })
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -801,29 +805,32 @@ fun ScannerScreen(
                             }
                         }
                     } else if (state.productNotFoundBarcode != null && currentMode != CameraScanMode.PHOTO) {
-                        Row(verticalAlignment = Alignment.Top) {
+                        // A notice, not an error: an unknown barcode is routine, and the two
+                        // buttons below already say what can be done about it.
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = Icons.Default.SearchOff,
+                                imageVector = Icons.Default.Info,
                                 contentDescription = null,
                                 tint = Color.Gray,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.product_not_found_title),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = stringResource(R.string.product_not_found_message),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    text = stringResource(R.string.barcode_format, state.productNotFoundBarcode!!),
+                                    fontSize = 11.sp,
                                     color = Color.Gray
                                 )
                             }
+                            ScanAgainButton(onClick = { stateHolder.clearScanResults() })
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
                         Row(modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(
@@ -955,6 +962,16 @@ fun ScannerScreen(
  * user cannot currently see — only Batch has any, and only while its panel is hidden behind
  * another mode.
  */
+/** Lets go of the single-item result on screen, so the camera takes the next barcode again. */
+@Composable
+private fun ScanAgainButton(onClick: () -> Unit) {
+    TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 8.dp)) {
+        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(stringResource(R.string.scan_again_button))
+    }
+}
+
 @Composable
 private fun ScanModeChip(
     mode: CameraScanMode,

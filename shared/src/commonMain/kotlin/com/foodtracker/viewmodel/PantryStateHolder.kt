@@ -513,7 +513,21 @@ class PantryStateHolder(
     private var barcodeLookupJob: Job? = null
     private var duplicateCheckJob: Job? = null
 
-    fun onBarcodeScanned(barcode: String) {
+    /**
+     * Starts the single-item lookup for [barcode] - unless a scan is already on screen, its
+     * lookup still running or its product (or not-found notice) waiting on the user. The camera
+     * keeps reading barcodes the whole time, so without this, nudging the phone towards the
+     * next product on the shelf would swap the card out from under the user. A held result is
+     * let go only by [clearScanResults] ("Scan Again", or a mode switch).
+     *
+     * @return whether the scan was taken, so the caller can skip its own follow-ups (the
+     *  duplicate check) for one that was ignored.
+     */
+    fun onBarcodeScanned(barcode: String): Boolean {
+        val held = _uiState.value
+        if (held.isLookingUpBarcode || held.scannedProduct != null || held.productNotFoundBarcode != null) {
+            return false
+        }
         val gs1Date = GS1BarcodeParser.extractExpiryDate(barcode)
         _uiState.update {
             it.copy(
@@ -552,6 +566,7 @@ class PantryStateHolder(
                 )
             }
         }
+        return true
     }
 
     /**

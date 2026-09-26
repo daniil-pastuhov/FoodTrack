@@ -197,7 +197,6 @@ public enum L10n {
     public static var continueButton: String { NSLocalizedString("continue_button", comment: "") }
 
     public static var productNotFoundTitle: String { NSLocalizedString("product_not_found_title", comment: "") }
-    public static var productNotFoundMessage: String { NSLocalizedString("product_not_found_message", comment: "") }
     public static var switchToPhotoButton: String { NSLocalizedString("switch_to_photo_button", comment: "") }
 
     public static var takePhotoButton: String { NSLocalizedString("take_photo_button", comment: "") }

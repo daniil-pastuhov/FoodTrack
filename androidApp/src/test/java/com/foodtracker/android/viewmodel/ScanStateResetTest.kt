@@ -17,6 +17,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.datetime.LocalDate
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -109,6 +110,44 @@ class ScanStateResetTest {
             assertNull(fixture.state.productNotFoundBarcode)
             assertNull(fixture.state.scanMessage)
             assertTrue(!fixture.state.isLookingUpBarcode)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun testAHeldResultIgnoresFurtherBarcodesUntilClearScanResults() {
+        // Moving the camera a little towards the next product on the shelf must not replace
+        // the card the user is looking at - found or not - until they ask to scan again.
+        val fixture = Fixture()
+        try {
+            fixture.localProducts.seed(ProductInfo(barcode = "111", name = "Milk"))
+            fixture.localProducts.seed(ProductInfo(barcode = "222", name = "Bread"))
+            assertTrue(fixture.stateHolder.onBarcodeScanned("111"))
+
+            assertFalse(fixture.stateHolder.onBarcodeScanned("222"))
+            assertEquals("Milk", fixture.state.scannedProduct?.name)
+
+            fixture.stateHolder.clearScanResults()
+            assertTrue(fixture.stateHolder.onBarcodeScanned("222"))
+            assertEquals("Bread", fixture.state.scannedProduct?.name)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun testALookupInFlightIgnoresFurtherBarcodes() {
+        val fixture = Fixture(gateLookups = true)
+        try {
+            fixture.localProducts.seed(ProductInfo(barcode = "111", name = "Milk"))
+            fixture.localProducts.seed(ProductInfo(barcode = "222", name = "Bread"))
+            fixture.stateHolder.onBarcodeScanned("111")
+
+            assertFalse(fixture.stateHolder.onBarcodeScanned("222"))
+            fixture.gatedLocalProducts!!.release()
+
+            assertEquals("Milk", fixture.state.scannedProduct?.name)
         } finally {
             fixture.close()
         }

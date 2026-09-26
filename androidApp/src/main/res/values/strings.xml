@@ -182,7 +182,6 @@
     <string name="continue_button">Continue</string>
 
     <string name="product_not_found_title">Product not found</string>
-    <string name="product_not_found_message">This barcode isn\'t in our database yet. Try Photo mode to snap a picture, or continue and enter the details yourself.</string>
     <string name="switch_to_photo_button">Try Photo Mode</string>
 
     <string name="take_photo_button">Take photo</string>

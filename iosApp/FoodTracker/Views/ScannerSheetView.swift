@@ -76,6 +76,14 @@ public struct ScannerSheetView: View {
     /// Batch and receipt fill one shared queue; every other mode produces a single result.
     private var batchModeActive: Bool { mode == .batch || mode == .receipt }
 
+    /// Lets go of the single-item result on screen, so the camera takes the next barcode again.
+    private var scanAgainButton: some View {
+        Button(action: { viewModel.clearScanResults() }) {
+            Label(L10n.scanAgainButton, systemImage: "arrow.clockwise")
+                .font(.subheadline)
+        }
+    }
+
     /// A date on its own is a real result. Date OCR is a legitimate opening move - there may be
     /// no barcode to scan, or the user may only want the date - and until this had a card of its
     /// own the date could leave the sheet only through the Manual Entry shortcut, which the
@@ -150,6 +158,10 @@ public struct ScannerSheetView: View {
                         viewModel.enqueueBatchScan(barcode)
                         return
                     }
+                    // The camera keeps reading barcodes while a result is on screen, so without
+                    // this, nudging the phone towards the next product on the shelf would swap
+                    // the card out from under the user. "Scan Again" lets the held one go.
+                    guard !viewModel.isHoldingBarcodeResult else { return }
                     if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
                         viewModel.detectedDate = gs1Date
                     }
@@ -518,6 +530,7 @@ public struct ScannerSheetView: View {
                                     }
                                 }
                                 Spacer()
+                                scanAgainButton
                             }
 
                             if let inPantry, let onUseOne {
@@ -576,17 +589,21 @@ public struct ScannerSheetView: View {
                                 }
                             }
                         } else if let notFoundBarcode = viewModel.productNotFoundBarcode, mode != .photo {
-                            HStack(alignment: .top, spacing: 12) {
-                                Image(systemName: "questionmark.circle")
-                                    .font(.system(size: 22))
+                            // A notice, not an error: an unknown barcode is routine, and the
+                            // two buttons below already say what can be done about it.
+                            HStack(spacing: 10) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 17))
                                     .foregroundColor(.secondary)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(L10n.productNotFoundTitle)
-                                        .font(.headline)
-                                    Text(L10n.productNotFoundMessage)
-                                        .font(.caption)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(notFoundBarcode)
+                                        .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
+                                Spacer()
+                                scanAgainButton
                             }
 
                             HStack(spacing: 10) {
