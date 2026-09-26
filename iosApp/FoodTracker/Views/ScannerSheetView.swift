@@ -42,12 +42,18 @@ public struct ScannerSheetView: View {
     /// Whether to offer "add one to the one you already have" on a re-scan. Only hosts that
     /// render `duplicateOf` should ask for it.
     var checkDuplicates: Bool
+    /// Takes one unit of the scanned product out of the pantry - the "I'm using this" answer to
+    /// scanning something already there. Needs `checkDuplicates`, since `duplicateOf` is what
+    /// says which pantry item it is; nil where the host has no use for it (Add/Edit, or a scan
+    /// that is filling in a shopping list entry).
+    var onUseOne: ((PantryItem) -> Void)?
 
     public init(
         viewModel: NativePantryViewModel,
         showManualEntryShortcut: Bool = true,
         enabledModes: [IOSCameraMode] = ScannerSheetView.defaultModes,
         checkDuplicates: Bool = true,
+        onUseOne: ((PantryItem) -> Void)? = nil,
         onShoppingListScanned: ((String) -> Void)? = nil,
         onBatchCommitted: @escaping (Int) -> Void = { _ in },
         onProceedToAdd: @escaping (String?, String?, String?, String?, Date?, String?, ShelfLifeSuggestion?) -> Void
@@ -56,6 +62,7 @@ public struct ScannerSheetView: View {
         self.showManualEntryShortcut = showManualEntryShortcut
         self.enabledModes = enabledModes
         self.checkDuplicates = checkDuplicates
+        self.onUseOne = onUseOne
         self.onShoppingListScanned = onShoppingListScanned
         self.onBatchCommitted = onBatchCommitted
         self.onProceedToAdd = onProceedToAdd
@@ -480,6 +487,12 @@ public struct ScannerSheetView: View {
                                 }
                             }
                         } else if let product = viewModel.scannedProduct {
+                            // duplicateOf is looked up alongside the product, not after it, so
+                            // it is checked against this product's barcode rather than trusted
+                            // to be about the same scan.
+                            let inPantry = viewModel.duplicateOf.flatMap { item in
+                                onUseOne != nil && item.barcode == product.barcode ? item : nil
+                            }
                             HStack(spacing: 12) {
                                 if let imgUrl = product.imageUrl, !imgUrl.isEmpty {
                                     ProductImageView(reference: imgUrl) {
@@ -498,8 +511,30 @@ public struct ScannerSheetView: View {
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
+                                    if let inPantry {
+                                        Text(L10n.inPantryCount(inPantry.quantity))
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundColor(.accentColor)
+                                    }
                                 }
                                 Spacer()
+                            }
+
+                            if let inPantry, let onUseOne {
+                                Button(action: {
+                                    onUseOne(inPantry)
+                                    viewModel.clearScanResults()
+                                    dismiss()
+                                }) {
+                                    HStack {
+                                        Image(systemName: "minus.circle")
+                                        Text(L10n.useOneButton)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color(.secondarySystemFill))
+                                    .cornerRadius(10)
+                                }
                             }
 
                             HStack(spacing: 10) {

@@ -229,6 +229,9 @@ public enum L10n {
     public static func duplicateAdded(_ name: String, _ quantity: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("duplicate_added", comment: ""), name, quantity)
     }
+    public static func inPantryCount(_ quantity: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("in_pantry_count", comment: ""), quantity)
+    }
     public static func duplicateDialogMessage(_ nameWithQuantity: String) -> String {
         String(format: NSLocalizedString("duplicate_dialog_message", comment: ""), nameWithQuantity)
     }

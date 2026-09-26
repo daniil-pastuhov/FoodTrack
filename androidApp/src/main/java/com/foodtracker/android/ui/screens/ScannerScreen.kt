@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Close
@@ -88,6 +89,7 @@ import com.foodtracker.android.camera.ReceiptTextRecognizer
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
+import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.android.ui.theme.TextSecondary
@@ -135,6 +137,11 @@ fun ScannerScreen(
     /** Whether to offer "add one to the one you already have" on a re-scan. Only hosts that
      *  render `PantryUiState.duplicateOf` should ask for it. */
     checkDuplicates: Boolean = true,
+    /** Takes one unit of the scanned product out of the pantry - the "I'm using this" answer to
+     *  scanning something already there. Needs [checkDuplicates], since `duplicateOf` is what
+     *  says which pantry item it is; null where the host has no use for it (Add/Edit, or a
+     *  scan that is filling in a shopping list entry). */
+    onUseOne: ((PantryItem) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
@@ -698,6 +705,11 @@ fun ScannerScreen(
                         }
                     } else if (state.scannedProduct != null) {
                         val product = state.scannedProduct!!
+                        // duplicateOf is looked up alongside the product, not after it, so it
+                        // is checked against this product's barcode rather than trusted to be
+                        // about the same scan.
+                        val inPantry = state.duplicateOf
+                            ?.takeIf { onUseOne != null && it.barcode == product.barcode }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (!product.imageUrl.isNullOrBlank()) {
                                 AsyncImage(
@@ -727,10 +739,31 @@ fun ScannerScreen(
                                     fontSize = 11.sp,
                                     color = Color.Gray
                                 )
+                                if (inPantry != null) {
+                                    Text(
+                                        text = stringResource(R.string.in_pantry_count, inPantry.quantity),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = BrandPrimary
+                                    )
+                                }
                             }
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        if (inPantry != null && onUseOne != null) {
+                            OutlinedButton(
+                                onClick = { onUseOne(inPantry) },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Icon(Icons.Default.RemoveCircleOutline, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.use_one_content_description))
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
 
                         Row(modifier = Modifier.fillMaxWidth()) {
                             OutlinedButton(

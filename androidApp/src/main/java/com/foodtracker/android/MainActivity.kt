@@ -475,6 +475,27 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
+                    // The scanner's "Use one": the last unit goes through the same removal as
+                    // the row's "-" button (essential items land on the shopping list, with an
+                    // undo), while any other unit gets its own undo, since leaving the scanner
+                    // gives no other sign that the count changed.
+                    val onUseOneHandler: (PantryItem) -> Unit = { item ->
+                        if (item.quantity <= 1) {
+                            onDecrementQuantityHandler(item.id)
+                        } else {
+                            stateHolder.decrementQuantity(item.id)
+                            snackbarScope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = getString(R.string.duplicate_added_snackbar, item.name, item.quantity - 1),
+                                    actionLabel = getString(R.string.undo_action),
+                                    duration = SnackbarDuration.Long
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    stateHolder.incrementQuantity(item.id)
+                                }
+                            }
+                        }
+                    }
                     val onMoveToShoppingListHandler: (String) -> Unit = { id ->
                         stateHolder.moveToShoppingList(id) { removedItem ->
                             com.foodtracker.android.notification.NotificationHelper.cancelNotification(this@MainActivity, removedItem.id)
@@ -734,6 +755,16 @@ class MainActivity : ComponentActivity() {
                                         onNavigateBack = navigateBackFromScanner,
                                         onShoppingListScanned = onShoppingListPayloadScanned,
                                         onBatchCommitted = onBatchCommitted,
+                                        // Not while the scan is filling in a shopping list entry:
+                                        // that scan is about buying the product, not using it.
+                                        onUseOne = if (isScanningForNewShoppingListEntry || scanningShoppingListEntry != null) {
+                                            null
+                                        } else {
+                                            { item ->
+                                                onUseOneHandler(item)
+                                                navigateBackFromScanner()
+                                            }
+                                        },
                                         onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category, suggestedExpiry ->
                                             if (isScanningForNewShoppingListEntry) {
                                                 isScanningForNewShoppingListEntry = false

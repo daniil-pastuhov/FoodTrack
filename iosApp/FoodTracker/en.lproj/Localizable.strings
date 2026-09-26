@@ -313,6 +313,7 @@
 "duplicate_dialog_add_one" = "Add one more";
 "duplicate_dialog_separate" = "Keep separate";
 "duplicate_added" = "%1$@ is now %2$d";
+"in_pantry_count" = "In your pantry: %d";
 
 "product_detail_nutriscore" = "Nutri-Score";
 "product_detail_nova" = "NOVA";

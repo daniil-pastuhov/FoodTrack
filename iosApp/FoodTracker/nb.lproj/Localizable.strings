@@ -313,6 +313,7 @@
 "duplicate_dialog_add_one" = "Legg til én til";
 "duplicate_dialog_separate" = "Hold adskilt";
 "duplicate_added" = "%1$@ er nå %2$d";
+"in_pantry_count" = "I matskapet: %d";
 
 "product_detail_nutriscore" = "Nutri-Score";
 "product_detail_nova" = "NOVA";

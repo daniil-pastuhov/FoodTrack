@@ -313,6 +313,7 @@
 "duplicate_dialog_add_one" = "Добавить ещё одну";
 "duplicate_dialog_separate" = "Отдельно";
 "duplicate_added" = "%1$@ теперь %2$d";
+"in_pantry_count" = "В запасах: %d";
 
 "product_detail_nutriscore" = "Nutri-Score";
 "product_detail_nova" = "NOVA";

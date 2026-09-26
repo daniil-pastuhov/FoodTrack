@@ -110,7 +110,7 @@ struct RootTabView: View {
             // Last in the ZStack (topmost), so it renders above the pill nav bar and the
             // scan/add buttons above it rather than underneath them.
             if let pendingUndo {
-                UndoToastView(itemName: pendingUndo.itemName, addedToShoppingList: pendingUndo.addedToShoppingList) {
+                UndoToastView(itemName: pendingUndo.itemName, addedToShoppingList: pendingUndo.addedToShoppingList, message: pendingUndo.message) {
                     pendingUndo.restore()
                     self.pendingUndo = nil
                 }
@@ -147,6 +147,7 @@ struct RootTabView: View {
         .sheet(isPresented: $showScanner) {
             ScannerSheetView(
                 viewModel: viewModel,
+                onUseOne: { item in useOne(item) },
                 onShoppingListScanned: { payload in
                     let result = viewModel.importShoppingList(payload)
                     importResult = if result.added > 0 {
@@ -233,6 +234,37 @@ struct RootTabView: View {
         }
     }
 
+    /// The scanner's "Use one": the last unit goes through the same removal as the row's "-"
+    /// button (essential items land on the shopping list, with an undo), while any other unit
+    /// gets its own undo, since closing the scanner gives no other sign that the count changed.
+    private func useOne(_ item: PantryItem) {
+        if item.quantity <= 1 {
+            viewModel.decrementQuantity(item.id) { removed, removedFromShoppingList in
+                withAnimation {
+                    pendingUndo = PendingUndo(
+                        id: removed.id,
+                        itemName: removed.name,
+                        addedToShoppingList: removedFromShoppingList
+                    ) {
+                        viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
+                    }
+                }
+            }
+        } else {
+            viewModel.decrementQuantity(item.id)
+            withAnimation {
+                pendingUndo = PendingUndo(
+                    id: "\(item.id)-\(item.quantity - 1)",
+                    itemName: item.name,
+                    addedToShoppingList: false,
+                    message: L10n.duplicateAdded(item.name, item.quantity - 1)
+                ) {
+                    viewModel.incrementQuantity(item.id)
+                }
+            }
+        }
+    }
+
     private func presentScanner() {
         editingItem = nil
         showScanner = true
@@ -254,23 +286,26 @@ struct RootTabView: View {
 /// `ShoppingListEntry`) so `RootTabView` can host one toast for both. `id` identifies the
 /// specific removal (for `.task(id:)`'s auto-dismiss timer), `itemName` is what the toast
 /// displays, `addedToShoppingList` picks which toast message to show (it left the pantry for
-/// the shopping list, not just "removed"), and `restore` puts the removed thing back when the
-/// user taps Undo.
+/// the shopping list, not just "removed"), `message` replaces that wording for an undo that
+/// isn't a removal (one unit used, the rest still there), and `restore` puts the removed thing
+/// back when the user taps Undo.
 private struct PendingUndo {
     let id: String
     let itemName: String
     let addedToShoppingList: Bool
+    var message: String? = nil
     let restore: () -> Void
 }
 
 private struct UndoToastView: View {
     let itemName: String
     let addedToShoppingList: Bool
+    let message: String?
     let onUndo: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(addedToShoppingList ? L10n.itemAddedToShoppingListToast(itemName) : L10n.itemRemovedToast(itemName))
+            Text(message ?? (addedToShoppingList ? L10n.itemAddedToShoppingListToast(itemName) : L10n.itemRemovedToast(itemName)))
                 .font(.subheadline)
                 .foregroundColor(.white)
                 .lineLimit(1)

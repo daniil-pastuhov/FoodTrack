@@ -163,6 +163,7 @@
     <string name="duplicate_dialog_add_one">Legg til én til</string>
     <string name="duplicate_dialog_separate">Hold adskilt</string>
     <string name="duplicate_added_snackbar">%1$s er nå %2$d</string>
+    <string name="in_pantry_count">I matskapet: %1$d</string>
     <string name="scan_mode_barcode">Strekkode</string>
     <string name="scan_mode_date_ocr">Datoskanning</string>
     <string name="scan_mode_photo">Bilde</string>
