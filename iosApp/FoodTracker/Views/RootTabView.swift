@@ -47,21 +47,16 @@ struct RootTabView: View {
                         viewModel: viewModel,
                         onEditItem: { presentAddEdit(editing: $0) },
                         onScrollingDownChanged: { isDashboardScrollingDown = $0 },
-                        onItemRemoved: { removed, removedFromShoppingList in
-                            withAnimation {
-                                pendingUndo = PendingUndo(
-                                    id: removed.id,
-                                    itemName: removed.name,
-                                    addedToShoppingList: removedFromShoppingList
-                                ) {
-                                    viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
-                                }
-                            }
-                        }
+                        onItemRemoved: offerItemUndo
                     )
                     .transition(.opacity)
                 case .calendar:
-                    CalendarView(viewModel: viewModel)
+                    CalendarView(
+                        viewModel: viewModel,
+                        onEditItem: { presentAddEdit(editing: $0) },
+                        onUseOne: { useOne($0) },
+                        onToss: { viewModel.deleteItem($0.id, onItemRemoved: offerItemUndo) }
+                    )
                         .transition(.opacity)
                 case .shoppingList:
                     ShoppingListView(
@@ -239,17 +234,7 @@ struct RootTabView: View {
     /// gets its own undo, since closing the scanner gives no other sign that the count changed.
     private func useOne(_ item: PantryItem) {
         if item.quantity <= 1 {
-            viewModel.decrementQuantity(item.id) { removed, removedFromShoppingList in
-                withAnimation {
-                    pendingUndo = PendingUndo(
-                        id: removed.id,
-                        itemName: removed.name,
-                        addedToShoppingList: removedFromShoppingList
-                    ) {
-                        viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
-                    }
-                }
-            }
+            viewModel.decrementQuantity(item.id, onItemRemoved: offerItemUndo)
         } else {
             viewModel.decrementQuantity(item.id)
             withAnimation {
@@ -261,6 +246,20 @@ struct RootTabView: View {
                 ) {
                     viewModel.incrementQuantity(item.id)
                 }
+            }
+        }
+    }
+
+    /// Offers a removed pantry item back through the undo toast, reversing the shopping-list add
+    /// too when the removal made one (per the flag every removal hands its `onItemRemoved`).
+    private func offerItemUndo(_ removed: PantryItem, _ removedFromShoppingList: Bool) {
+        withAnimation {
+            pendingUndo = PendingUndo(
+                id: removed.id,
+                itemName: removed.name,
+                addedToShoppingList: removedFromShoppingList
+            ) {
+                viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
             }
         }
     }

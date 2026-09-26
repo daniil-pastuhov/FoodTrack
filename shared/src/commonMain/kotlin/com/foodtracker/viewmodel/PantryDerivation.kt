@@ -11,6 +11,7 @@ import com.foodtracker.model.index
 import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.util.DateUtils
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
 
 /**
  * The pure functions behind [PantryStateHolder]'s derived state.
@@ -27,6 +28,7 @@ object PantryDerivation {
         val allRows: List<PantryRow>,
         val itemsByExpiryDate: Map<LocalDate, List<PantryRow>>,
         val statusByExpiryDate: Map<LocalDate, ExpiryStatus>,
+        val agenda: List<AgendaSection>,
         val availableCategories: List<String>,
         val expiredCount: Int,
         val expiringSoonCount: Int,
@@ -80,12 +82,36 @@ object PantryDerivation {
             statusByExpiryDate = itemsByExpiryDate.mapValues { (_, rows) ->
                 rows.minBy { it.status.ordinal }.status
             },
+            agenda = buildAgenda(allRows, today),
             availableCategories = availableCategories(allRows, index),
             expiredCount = expired,
             expiringSoonCount = expiringSoon,
             freshCount = fresh,
             expiringSoonDays = expiringSoonDays
         )
+    }
+
+    /** Groups [rows] into the Calendar's agenda sections (see [AgendaBucket]), dropping empty
+     *  ones. Reads the rows' precomputed [PantryRow.daysRemaining], so [today] must be the same
+     *  date those were derived against. */
+    fun buildAgenda(rows: List<PantryRow>, today: LocalDate): List<AgendaSection> {
+        // Days from today to this week's Sunday: 0 on a Sunday, 6 on a Monday.
+        val daysLeftInWeek = 7 - today.dayOfWeek.isoDayNumber
+        val byBucket = rows.groupBy { row ->
+            val days = row.daysRemaining
+            when {
+                days < 0 -> AgendaBucket.OVERDUE
+                days == 0 -> AgendaBucket.TODAY
+                days == 1 -> AgendaBucket.TOMORROW
+                days <= daysLeftInWeek -> AgendaBucket.THIS_WEEK
+                days <= daysLeftInWeek + 7 -> AgendaBucket.NEXT_WEEK
+                else -> AgendaBucket.LATER
+            }
+        }
+        val order = compareBy<PantryRow> { it.item.expiryDate.toEpochDays() }.thenBy { it.sortName }
+        return AgendaBucket.entries.mapNotNull { bucket ->
+            byBucket[bucket]?.let { AgendaSection(bucket, it.sortedWith(order)) }
+        }
     }
 
     fun filterAndSort(

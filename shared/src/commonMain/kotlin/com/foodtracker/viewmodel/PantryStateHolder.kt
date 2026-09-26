@@ -104,6 +104,9 @@ data class PantryUiState(
      *  day indicator dots. Previously recomputed per day cell, per recomposition, by mapping
      *  that day's items to a throwaway status list. */
     val statusByExpiryDate: Map<LocalDate, ExpiryStatus> = emptyMap(),
+    /** The Calendar's agenda: every item bucketed into Overdue / Today / Tomorrow / this week /
+     *  next week / later, empty buckets dropped. */
+    val agenda: List<AgendaSection> = emptyList(),
     /** Distinct resolved category names present on the current items, in the user's configured
      *  category order — the dashboard's category filter chips. */
     val availableCategories: List<String> = emptyList(),
@@ -276,6 +279,7 @@ class PantryStateHolder(
                             filteredItems = filtered,
                             itemsByExpiryDate = base.itemsByExpiryDate,
                             statusByExpiryDate = base.statusByExpiryDate,
+                            agenda = base.agenda,
                             availableCategories = base.availableCategories,
                             expiredCount = base.expiredCount,
                             expiringSoonCount = base.expiringSoonCount,

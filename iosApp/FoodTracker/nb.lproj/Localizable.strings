@@ -54,10 +54,21 @@
 
 "calendar_button" = "Kalender";
 "calendar_title" = "Kalender";
+"calendar_previous_month" = "Forrige måned";
+"calendar_next_month" = "Neste måned";
 "calendar_no_items_for_day" = "Ingen varer utløper denne dagen";
-"calendar_summary_expired" = "%d utløpt";
-"calendar_summary_expiring_soon" = "%d utløper snart";
-"calendar_summary_all_fresh" = "Alle varer er ferske";
+"calendar_section_overdue" = "Utløpt";
+"calendar_section_today" = "I dag";
+"calendar_section_tomorrow" = "I morgen";
+"calendar_section_this_week" = "Senere denne uken";
+"calendar_section_next_week" = "Neste uke";
+"calendar_section_later" = "Senere";
+"calendar_agenda_empty" = "Ingenting i spiskammeret ennå";
+"calendar_show_all" = "Vis alle";
+"calendar_swipe_used" = "Brukt";
+"calendar_swipe_tossed" = "Kastet";
+"calendar_show_month" = "Vis måned";
+"calendar_show_week" = "Vis uke";
 
 "section_product_details" = "Produktdetaljer";
 "product_name_label" = "Produktnavn *";

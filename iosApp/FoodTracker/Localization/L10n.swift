@@ -82,13 +82,23 @@ public enum L10n {
 
     public static var calendarButton: String { NSLocalizedString("calendar_button", comment: "") }
     public static var calendarTitle: String { NSLocalizedString("calendar_title", comment: "") }
+    public static var calendarPreviousMonth: String { NSLocalizedString("calendar_previous_month", comment: "") }
+    public static var calendarNextMonth: String { NSLocalizedString("calendar_next_month", comment: "") }
     public static var calendarNoItemsForDay: String { NSLocalizedString("calendar_no_items_for_day", comment: "") }
-    public static var calendarAllFresh: String { NSLocalizedString("calendar_summary_all_fresh", comment: "") }
-    public static func calendarSummaryExpired(_ count: Int) -> String {
-        String(format: NSLocalizedString("calendar_summary_expired", comment: ""), count)
-    }
-    public static func calendarSummaryExpiringSoon(_ count: Int) -> String {
-        String(format: NSLocalizedString("calendar_summary_expiring_soon", comment: ""), count)
+    public static var calendarSectionOverdue: String { NSLocalizedString("calendar_section_overdue", comment: "") }
+    public static var calendarSectionToday: String { NSLocalizedString("calendar_section_today", comment: "") }
+    public static var calendarSectionTomorrow: String { NSLocalizedString("calendar_section_tomorrow", comment: "") }
+    public static var calendarSectionThisWeek: String { NSLocalizedString("calendar_section_this_week", comment: "") }
+    public static var calendarSectionNextWeek: String { NSLocalizedString("calendar_section_next_week", comment: "") }
+    public static var calendarSectionLater: String { NSLocalizedString("calendar_section_later", comment: "") }
+    public static var calendarAgendaEmpty: String { NSLocalizedString("calendar_agenda_empty", comment: "") }
+    public static var calendarShowAll: String { NSLocalizedString("calendar_show_all", comment: "") }
+    public static var calendarSwipeUsed: String { NSLocalizedString("calendar_swipe_used", comment: "") }
+    public static var calendarSwipeTossed: String { NSLocalizedString("calendar_swipe_tossed", comment: "") }
+    public static var calendarShowMonth: String { NSLocalizedString("calendar_show_month", comment: "") }
+    public static var calendarShowWeek: String { NSLocalizedString("calendar_show_week", comment: "") }
+    public static func calendarDayItemCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("calendar_day_item_count", comment: ""), count)
     }
 
     public static var sectionProductDetails: String { NSLocalizedString("section_product_details", comment: "") }

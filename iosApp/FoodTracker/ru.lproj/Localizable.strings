@@ -54,10 +54,21 @@
 
 "calendar_button" = "Календарь";
 "calendar_title" = "Календарь";
+"calendar_previous_month" = "Предыдущий месяц";
+"calendar_next_month" = "Следующий месяц";
 "calendar_no_items_for_day" = "В этот день ничего не истекает";
-"calendar_summary_expired" = "%d просрочено";
-"calendar_summary_expiring_soon" = "%d скоро истекает";
-"calendar_summary_all_fresh" = "Все продукты свежие";
+"calendar_section_overdue" = "Просрочено";
+"calendar_section_today" = "Сегодня";
+"calendar_section_tomorrow" = "Завтра";
+"calendar_section_this_week" = "Позже на этой неделе";
+"calendar_section_next_week" = "На следующей неделе";
+"calendar_section_later" = "Позже";
+"calendar_agenda_empty" = "В кладовой пока пусто";
+"calendar_show_all" = "Показать все";
+"calendar_swipe_used" = "Использовано";
+"calendar_swipe_tossed" = "Выброшено";
+"calendar_show_month" = "Показать месяц";
+"calendar_show_week" = "Показать неделю";
 
 "section_product_details" = "Информация о продукте";
 "product_name_label" = "Название продукта *";

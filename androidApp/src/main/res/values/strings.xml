@@ -316,9 +316,22 @@
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
     <string name="calendar_no_items_for_day">No items expiring on this day</string>
-    <string name="calendar_summary_expired">%1$d expired</string>
-    <string name="calendar_summary_expiring_soon">%1$d expiring soon</string>
-    <string name="calendar_summary_all_fresh">All items fresh</string>
+    <string name="calendar_section_overdue">Overdue</string>
+    <string name="calendar_section_today">Today</string>
+    <string name="calendar_section_tomorrow">Tomorrow</string>
+    <string name="calendar_section_this_week">Later this week</string>
+    <string name="calendar_section_next_week">Next week</string>
+    <string name="calendar_section_later">Later</string>
+    <string name="calendar_agenda_empty">Nothing in your pantry yet</string>
+    <string name="calendar_show_all">Show all</string>
+    <string name="calendar_swipe_used">Used</string>
+    <string name="calendar_swipe_tossed">Tossed</string>
+    <string name="calendar_show_month">Show month</string>
+    <string name="calendar_show_week">Show week</string>
+    <plurals name="calendar_day_item_count">
+        <item quantity="one">%1$d item expiring</item>
+        <item quantity="other">%1$d items expiring</item>
+    </plurals>
 
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Expiry reminders</string>

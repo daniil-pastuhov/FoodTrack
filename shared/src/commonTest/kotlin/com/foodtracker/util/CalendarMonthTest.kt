@@ -62,4 +62,26 @@ class CalendarMonthTest {
     fun groupItemsByExpiryDateReturnsEmptyMapForEmptyList() {
         assertEquals(emptyMap(), groupItemsByExpiryDate(emptyList()))
     }
+
+    @Test
+    fun weekDaysRunMondayToSundayAroundTheGivenDate() {
+        // 2026-09-26 is a Saturday.
+        val days = weekDays(LocalDate(2026, 9, 26))
+        assertEquals(LocalDate(2026, 9, 21), days.first())
+        assertEquals(LocalDate(2026, 9, 27), days.last())
+        assertEquals(7, days.size)
+    }
+
+    @Test
+    fun weekStartOfAMondayIsThatMonday() {
+        assertEquals(LocalDate(2026, 9, 21), weekStart(LocalDate(2026, 9, 21)))
+    }
+
+    @Test
+    fun weekDaysSpanYearBoundary() {
+        // 2027-01-01 is a Friday.
+        val days = weekDays(LocalDate(2027, 1, 1))
+        assertEquals(LocalDate(2026, 12, 28), days.first())
+        assertEquals(LocalDate(2027, 1, 3), days.last())
+    }
 }

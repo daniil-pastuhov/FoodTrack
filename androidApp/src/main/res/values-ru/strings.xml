@@ -316,9 +316,24 @@
     <string name="calendar_previous_month">Предыдущий месяц</string>
     <string name="calendar_next_month">Следующий месяц</string>
     <string name="calendar_no_items_for_day">В этот день ничего не истекает</string>
-    <string name="calendar_summary_expired">%1$d просрочено</string>
-    <string name="calendar_summary_expiring_soon">%1$d скоро истекает</string>
-    <string name="calendar_summary_all_fresh">Все продукты свежие</string>
+    <string name="calendar_section_overdue">Просрочено</string>
+    <string name="calendar_section_today">Сегодня</string>
+    <string name="calendar_section_tomorrow">Завтра</string>
+    <string name="calendar_section_this_week">Позже на этой неделе</string>
+    <string name="calendar_section_next_week">На следующей неделе</string>
+    <string name="calendar_section_later">Позже</string>
+    <string name="calendar_agenda_empty">В кладовой пока пусто</string>
+    <string name="calendar_show_all">Показать все</string>
+    <string name="calendar_swipe_used">Использовано</string>
+    <string name="calendar_swipe_tossed">Выброшено</string>
+    <string name="calendar_show_month">Показать месяц</string>
+    <string name="calendar_show_week">Показать неделю</string>
+    <plurals name="calendar_day_item_count">
+        <item quantity="one">Истекает %1$d продукт</item>
+        <item quantity="few">Истекает %1$d продукта</item>
+        <item quantity="many">Истекает %1$d продуктов</item>
+        <item quantity="other">Истекает %1$d продукта</item>
+    </plurals>
 
     <string name="settings_section_notifications">Уведомления</string>
     <string name="settings_notifications_enabled">Напоминания о сроке годности</string>

@@ -14,7 +14,7 @@ import org.junit.runner.RunWith
 /**
  * Pages the calendar forward and back a month at a time.
  *
- * Every page rebuilds the 42-cell month grid and re-derives each day's indicator colour from the
+ * Every page rebuilds the 42-cell month grid and re-derives each day's count badge from the
  * items expiring that day, so this is the benchmark for work left inside composition rather than
  * hoisted into the state holder.
  */
@@ -41,8 +41,11 @@ class CalendarPagingBenchmark {
             }
             device.wait(Until.findObject(By.text("Calendar")), 3_000)?.click()
                 ?: error("Calendar tab not found in the bottom nav")
+            // The calendar opens on the week strip; the month grid is behind the title.
+            device.wait(Until.findObject(By.desc("Show month")), 5_000)?.click()
+                ?: error("Calendar screen never appeared")
             check(device.wait(Until.hasObject(By.desc("Next month")), 5_000)) {
-                "Calendar screen never appeared"
+                "Month grid never appeared"
             }
         }
     ) {

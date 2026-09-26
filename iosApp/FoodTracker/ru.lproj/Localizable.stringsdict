@@ -342,5 +342,25 @@
 			<string>%d товара в очереди ещё не добавлены.</string>
 		</dict>
 	</dict>
+    <key>calendar_day_item_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Истекает %d продукт</string>
+            <key>few</key>
+            <string>Истекает %d продукта</string>
+            <key>many</key>
+            <string>Истекает %d продуктов</string>
+            <key>other</key>
+            <string>Истекает %d продукта</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

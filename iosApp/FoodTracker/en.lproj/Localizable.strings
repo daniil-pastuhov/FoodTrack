@@ -54,10 +54,21 @@
 
 "calendar_button" = "Calendar";
 "calendar_title" = "Calendar";
+"calendar_previous_month" = "Previous month";
+"calendar_next_month" = "Next month";
 "calendar_no_items_for_day" = "No items expiring on this day";
-"calendar_summary_expired" = "%d expired";
-"calendar_summary_expiring_soon" = "%d expiring soon";
-"calendar_summary_all_fresh" = "All items fresh";
+"calendar_section_overdue" = "Overdue";
+"calendar_section_today" = "Today";
+"calendar_section_tomorrow" = "Tomorrow";
+"calendar_section_this_week" = "Later this week";
+"calendar_section_next_week" = "Next week";
+"calendar_section_later" = "Later";
+"calendar_agenda_empty" = "Nothing in your pantry yet";
+"calendar_show_all" = "Show all";
+"calendar_swipe_used" = "Used";
+"calendar_swipe_tossed" = "Tossed";
+"calendar_show_month" = "Show month";
+"calendar_show_week" = "Show week";
 
 "section_product_details" = "Product Details";
 "product_name_label" = "Product Name *";

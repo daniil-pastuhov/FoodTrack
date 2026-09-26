@@ -294,9 +294,22 @@
     <string name="calendar_previous_month">Forrige måned</string>
     <string name="calendar_next_month">Neste måned</string>
     <string name="calendar_no_items_for_day">Ingen varer utløper denne dagen</string>
-    <string name="calendar_summary_expired">%1$d utløpt</string>
-    <string name="calendar_summary_expiring_soon">%1$d utløper snart</string>
-    <string name="calendar_summary_all_fresh">Alle varer er ferske</string>
+    <string name="calendar_section_overdue">Utløpt</string>
+    <string name="calendar_section_today">I dag</string>
+    <string name="calendar_section_tomorrow">I morgen</string>
+    <string name="calendar_section_this_week">Senere denne uken</string>
+    <string name="calendar_section_next_week">Neste uke</string>
+    <string name="calendar_section_later">Senere</string>
+    <string name="calendar_agenda_empty">Ingenting i spiskammeret ennå</string>
+    <string name="calendar_show_all">Vis alle</string>
+    <string name="calendar_swipe_used">Brukt</string>
+    <string name="calendar_swipe_tossed">Kastet</string>
+    <string name="calendar_show_month">Vis måned</string>
+    <string name="calendar_show_week">Vis uke</string>
+    <plurals name="calendar_day_item_count">
+        <item quantity="one">%1$d vare utløper</item>
+        <item quantity="other">%1$d varer utløper</item>
+    </plurals>
 
     <string name="settings_section_notifications">Varsler</string>
     <string name="settings_notifications_enabled">Utløpspåminnelser</string>

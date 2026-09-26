@@ -622,6 +622,9 @@ fun FoodTrackerRoot(
                                 AppScreen.CALENDAR -> {
                                     CalendarScreen(
                                         stateHolder = stateHolder,
+                                        onEditItem = onNavigateToAddEdit,
+                                        onUseOne = onUseOneHandler,
+                                        onToss = onDeleteItemHandler,
                                         bottomOverlayClearance = pillClearance
                                     )
                                 }

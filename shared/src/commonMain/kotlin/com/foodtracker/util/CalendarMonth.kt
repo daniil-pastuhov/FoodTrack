@@ -24,5 +24,15 @@ fun monthGrid(anyDateInMonth: LocalDate): List<CalendarDay> {
     }
 }
 
+/** The Monday that starts [date]'s Monday-start week (the same weeks [monthGrid] lays out). */
+fun weekStart(date: LocalDate): LocalDate =
+    date.minus(DatePeriod(days = date.dayOfWeek.isoDayNumber - 1))
+
+/** The seven days, Monday to Sunday, of the week containing [date]. */
+fun weekDays(date: LocalDate): List<LocalDate> {
+    val start = weekStart(date)
+    return (0 until 7).map { start.plus(DatePeriod(days = it)) }
+}
+
 fun groupItemsByExpiryDate(items: List<PantryItem>): Map<LocalDate, List<PantryItem>> =
     items.groupBy { it.expiryDate }

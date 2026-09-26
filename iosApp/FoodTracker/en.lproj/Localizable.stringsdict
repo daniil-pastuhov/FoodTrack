@@ -274,5 +274,21 @@
 			<string>%d items are queued and have not been added yet.</string>
 		</dict>
 	</dict>
+    <key>calendar_day_item_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d item expiring</string>
+            <key>other</key>
+            <string>%d items expiring</string>
+        </dict>
+    </dict>
 </dict>
 </plist>
