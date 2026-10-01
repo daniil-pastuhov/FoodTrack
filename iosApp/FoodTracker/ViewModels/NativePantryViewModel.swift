@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 import SwiftUI
+import UIKit
 import WidgetKit
 
 public enum NativeStatusFilter: String, CaseIterable, Identifiable {
@@ -74,6 +75,7 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var categoryPreferences: [CategoryPreference] = []
 
     private let modelContext: ModelContext
+    private var dayChangeObserver: NSObjectProtocol?
 
     /// Shared on-disk container for pantry data. `NativePantryViewModel()` (used at every
     /// call site) resolves to this by default; a test can pass an in-memory container instead.
@@ -140,6 +142,24 @@ public class NativePantryViewModel: ObservableObject {
         backfillShelfLivesFromInventoryIfNeeded()
         loadKnownProductNames()
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)
+        observeDayChanges()
+    }
+
+    /// `PantryItem.daysRemaining` and every count/filter built on it read the clock when they're
+    /// evaluated, but SwiftUI only re-evaluates them when something published changes — so an
+    /// app left open across midnight kept showing yesterday's countdowns. iOS posts
+    /// `significantTimeChangeNotification` at midnight, on clock and time-zone changes, and on
+    /// becoming active if one of those happened while suspended; a redraw is all that's needed.
+    private func observeDayChanges() {
+        dayChangeObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.significantTimeChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.objectWillChange.send()
+            }
+        }
     }
 
     private func registerSentinelCategoryIfNeeded() {

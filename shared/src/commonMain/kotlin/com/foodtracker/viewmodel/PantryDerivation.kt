@@ -33,7 +33,9 @@ object PantryDerivation {
         val expiredCount: Int,
         val expiringSoonCount: Int,
         val freshCount: Int,
-        val expiringSoonDays: Int
+        val expiringSoonDays: Int,
+        /** The date [allRows] and [agenda] were derived against. */
+        val today: LocalDate
     )
 
     fun deriveBase(
@@ -87,7 +89,8 @@ object PantryDerivation {
             expiredCount = expired,
             expiringSoonCount = expiringSoon,
             freshCount = fresh,
-            expiringSoonDays = expiringSoonDays
+            expiringSoonDays = expiringSoonDays,
+            today = today
         )
     }
 

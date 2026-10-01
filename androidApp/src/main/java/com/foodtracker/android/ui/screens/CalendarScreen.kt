@@ -93,7 +93,6 @@ import com.foodtracker.android.util.formatWeekdayDay
 import com.foodtracker.android.util.narrowWeekdayNames
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
-import com.foodtracker.util.DateUtils
 import com.foodtracker.util.monthGrid
 import com.foodtracker.util.weekDays
 import com.foodtracker.util.weekStart
@@ -147,7 +146,8 @@ fun CalendarScreen(
     bottomOverlayClearance: Dp = 160.dp
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
-    val today = remember { DateUtils.today() }
+    // From state, not remembered locally: it has to move at midnight together with the agenda.
+    val today = state.today
     var showMonth by remember { mutableStateOf(false) }
     // Some date inside the week or month currently on screen; the title shows its month.
     var anchor by remember { mutableStateOf(today) }

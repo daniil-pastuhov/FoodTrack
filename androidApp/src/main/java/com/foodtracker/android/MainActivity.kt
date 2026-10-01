@@ -2,7 +2,10 @@ package com.foodtracker.android
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -65,6 +68,35 @@ class MainActivity : ComponentActivity() {
                 onAddCurrentLocationAsStore = ::resolveCurrentLocation
             )
         }
+    }
+
+    /** Re-derives the pantry when the date may have moved under it. See
+     *  [PantryStateHolder.refreshToday] for why its own midnight timer isn't enough. */
+    private val dateChangeReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) = stateHolder.refreshToday()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // The app may have sat in the background (or the device asleep) across midnight.
+        stateHolder.refreshToday()
+        // Only while visible: in the background nothing shows the labels, and onStart catches up.
+        // NOT_EXPORTED still receives these, since they are sent by the system.
+        ContextCompat.registerReceiver(
+            this,
+            dateChangeReceiver,
+            IntentFilter().apply {
+                addAction(Intent.ACTION_DATE_CHANGED)
+                addAction(Intent.ACTION_TIME_CHANGED)
+                addAction(Intent.ACTION_TIMEZONE_CHANGED)
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    override fun onStop() {
+        unregisterReceiver(dateChangeReceiver)
+        super.onStop()
     }
 
     override fun onNewIntent(intent: Intent) {

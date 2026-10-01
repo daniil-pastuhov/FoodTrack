@@ -51,8 +51,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
+import kotlinx.datetime.plus
 import kotlin.coroutines.CoroutineContext
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -110,6 +115,10 @@ data class PantryUiState(
     /** Distinct resolved category names present on the current items, in the user's configured
      *  category order — the dashboard's category filter chips. */
     val availableCategories: List<String> = emptyList(),
+    /** The date every row's [PantryRow.daysRemaining]/status and the [agenda] were derived
+     *  against. Screens that mark "today" read it from here rather than calling
+     *  [DateUtils.today] themselves, so their highlight and the labels can't disagree. */
+    val today: LocalDate = DateUtils.today(),
     val selectedLocation: String? = null,
     val selectedCategory: String? = null,
     val selectedStatusFilter: StatusFilter = StatusFilter.ALL,
@@ -178,7 +187,10 @@ class PantryStateHolder(
      *  test can pass [kotlin.coroutines.EmptyCoroutineContext] and have the derivation run
      *  inline on the calling thread, which is the only way to measure its cost without also
      *  measuring a thread hand-off. */
-    private val computationContext: CoroutineContext = Dispatchers.Default
+    private val computationContext: CoroutineContext = Dispatchers.Default,
+    /** Source of the current date. Injectable so a test can move the day on without waiting
+     *  for midnight. */
+    private val todayProvider: () -> LocalDate = DateUtils::today
 ) {
     // Read once. getSettings() is a synchronous SharedPreferences read plus a JSON decode, and
     // it happens while the DI graph is being built — i.e. on the main thread during startup.
@@ -198,6 +210,13 @@ class PantryStateHolder(
     /** Category preferences, shared by the pantry derivation and the shopping list derivation so
      *  the underlying Room query runs once rather than once per consumer. */
     private val preferencesState = MutableStateFlow(emptyList<CategoryPreference>())
+
+    /** The date the pantry is derived against. An input to [basePantry] like any other, so when
+     *  the day rolls over every "expires in N days" label, status and agenda bucket is rebuilt.
+     *  Without it they stayed frozen at whatever day the last item/settings change happened on,
+     *  so an app left running overnight showed yesterday's countdowns. Advanced by
+     *  [observeDayRollover] and by [refreshToday]. */
+    private val todayState = MutableStateFlow(todayProvider())
 
     /**
      * Everything derived from the pantry that does **not** depend on the dashboard's filter
@@ -223,9 +242,10 @@ class PantryStateHolder(
             // Only this one setting affects anything in Base. Depending on the whole AppSettings
             // would rebuild every row whenever an unrelated setting changed — the sort option in
             // particular, which affects only the filter stage below.
-            settingsState.map { it.expiringSoonDays }.distinctUntilChanged()
-        ) { items, preferences, expiringSoonDays ->
-            PantryDerivation.deriveBase(items, preferences, expiringSoonDays)
+            settingsState.map { it.expiringSoonDays }.distinctUntilChanged(),
+            todayState
+        ) { items, preferences, expiringSoonDays, today ->
+            PantryDerivation.deriveBase(items, preferences, expiringSoonDays, today)
         }.flowOn(computationContext)
 
     init {
@@ -234,6 +254,7 @@ class PantryStateHolder(
         observeShoppingList()
         observeKnownProductNames()
         observeSettingsPersistence()
+        observeDayRollover()
         coroutineScope.launch {
             categoryPreferenceRepository.registerIfAbsent(UNCATEGORIZED_ORIGIN, Double.MAX_VALUE, uncategorizedLabel)
         }
@@ -280,6 +301,7 @@ class PantryStateHolder(
                             itemsByExpiryDate = base.itemsByExpiryDate,
                             statusByExpiryDate = base.statusByExpiryDate,
                             agenda = base.agenda,
+                            today = base.today,
                             availableCategories = base.availableCategories,
                             expiredCount = base.expiredCount,
                             expiringSoonCount = base.expiringSoonCount,
@@ -297,6 +319,36 @@ class PantryStateHolder(
                         )
                     }
                 }
+        }
+    }
+
+    /**
+     * Re-reads the current date, re-deriving the pantry if it changed. Cheap when it hasn't —
+     * [todayState] ignores an equal value.
+     *
+     * [observeDayRollover] covers midnight while the process is awake, but its timer can't be
+     * relied on alone: on Android `delay` runs on a monotonic clock that stops while the device
+     * sleeps, and it can't know about the user changing the clock or time zone. The platform
+     * calls this on those occasions (returning to the foreground, time/zone change broadcasts).
+     */
+    fun refreshToday() {
+        todayState.value = todayProvider()
+    }
+
+    /** Advances [todayState] at each local midnight for as long as the holder lives. */
+    @OptIn(ExperimentalTime::class)
+    private fun observeDayRollover() {
+        coroutineScope.launch {
+            while (isActive) {
+                val zone = TimeZone.currentSystemDefault()
+                val nextMidnight = todayState.value.plus(1, DateTimeUnit.DAY).atStartOfDayIn(zone)
+                // A second's margin so the wake-up lands after midnight, not on a clock that
+                // still reads 23:59:59.999. Floored so a clock already past the target (it was
+                // changed, or the timer fired late) re-checks promptly instead of spinning.
+                val wait = (nextMidnight - Clock.System.now()).inWholeMilliseconds + 1_000
+                delay(wait.coerceAtLeast(1_000))
+                refreshToday()
+            }
         }
     }
 
