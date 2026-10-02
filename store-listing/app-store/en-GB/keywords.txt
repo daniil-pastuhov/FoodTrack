@@ -1,0 +1,1 @@
+expiry,expiration,date,food,waste,pantry,fridge,grocery,shopping list,barcode,scanner,reminder

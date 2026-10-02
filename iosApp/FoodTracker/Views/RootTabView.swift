@@ -125,6 +125,9 @@ struct RootTabView: View {
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab == .home)
         .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
+        #if DEBUG
+        .onAppear(perform: applyScreenshotLaunchArguments)
+        #endif
         .animation(.easeInOut(duration: 0.25), value: pendingUndo?.id)
         .task(id: pendingUndo?.id) {
             guard pendingUndo != nil else { return }
@@ -324,3 +327,24 @@ private struct UndoToastView: View {
         .shadow(radius: 6)
     }
 }
+
+#if DEBUG
+extension RootTabView {
+    /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
+    /// `-demoBackup <path>` replaces the pantry with a backup file, and `-demoTab <name>`
+    /// (home, calendar, shopping, settings) opens that tab.
+    func applyScreenshotLaunchArguments() {
+        let arguments = UserDefaults.standard
+        if let path = arguments.string(forKey: "demoBackup"),
+           let raw = try? String(contentsOfFile: path, encoding: .utf8) {
+            _ = viewModel.restoreBackup(raw, mode: .replace)
+        }
+        switch arguments.string(forKey: "demoTab") {
+        case "calendar": selectedTab = .calendar
+        case "shopping": selectedTab = .shoppingList
+        case "settings": selectedTab = .settings
+        default: break
+        }
+    }
+}
+#endif
