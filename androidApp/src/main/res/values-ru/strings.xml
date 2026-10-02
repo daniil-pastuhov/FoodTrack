@@ -421,7 +421,7 @@
     <string name="restore_mode_replace_subtitle">Сначала удалит всё на этом устройстве, включая настройки.</string>
     <string name="backup_export_success">Копия сохранена</string>
     <string name="backup_export_failed">Не удалось сохранить копию</string>
-    <string name="backup_import_malformed">Этот файл не является резервной копией FoodTracker</string>
+    <string name="backup_import_malformed">Этот файл не является резервной копией Срокоеда</string>
     <string name="backup_import_unsupported">Эта копия создана более новой версией приложения</string>
     <string name="backup_import_empty">В этой копии нечего восстанавливать</string>
     <plurals name="backup_import_success">

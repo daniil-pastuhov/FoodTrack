@@ -300,7 +300,7 @@
 "restore_mode_replace_title" = "Replace everything";
 "backup_export_success" = "Backup saved";
 "backup_export_failed" = "Couldn't save the backup";
-"backup_import_malformed" = "That file isn't a FoodTracker backup";
+"backup_import_malformed" = "That file isn't a BestBefore backup";
 "backup_import_unsupported" = "That backup was made by a newer version of the app";
 "backup_import_empty" = "That backup has nothing to restore";
 

@@ -1,0 +1,5 @@
+/* Navn på hjemskjermen og tekster for tillatelsesforespørsler. Navnet skal samsvare med app_name i androidApp/src/main/res/values-nb/strings.xml. */
+"CFBundleDisplayName" = "Matvakt";
+"NSCameraUsageDescription" = "Matvakt bruker kameraet til å skanne strekkoder, lese utløpsdatoer på emballasjen og ta bilder av matvarer. Bildene blir på telefonen din.";
+"NSLocationWhenInUseUsageDescription" = "Matvakt bruker posisjonen din én gang, når du trykker på «Lagre posisjonen min», for å huske hvor en butikk ligger. Posisjonen lagres på telefonen og sendes aldri noe sted.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Matvakt sjekker om du er i en av butikkene du har lagret, slik at handlelisten kan vises når du kommer dit. Når appen er lukket, fungerer dette bare hvis du tillater tilgang hele tiden. Posisjonen din sendes aldri noe sted.";

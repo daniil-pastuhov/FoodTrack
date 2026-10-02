@@ -300,7 +300,7 @@
 "restore_mode_replace_title" = "Erstatt alt";
 "backup_export_success" = "Sikkerhetskopi lagret";
 "backup_export_failed" = "Kunne ikke lagre sikkerhetskopien";
-"backup_import_malformed" = "Den filen er ikke en FoodTracker-sikkerhetskopi";
+"backup_import_malformed" = "Den filen er ikke en Matvakt-sikkerhetskopi";
 "backup_import_unsupported" = "Den sikkerhetskopien er laget av en nyere versjon av appen";
 "backup_import_empty" = "Den sikkerhetskopien har ingenting å gjenopprette";
 

@@ -395,7 +395,7 @@
     <string name="restore_mode_replace_subtitle">Sletter først det som er på denne enheten, inkludert innstillinger.</string>
     <string name="backup_export_success">Sikkerhetskopi lagret</string>
     <string name="backup_export_failed">Kunne ikke lagre sikkerhetskopien</string>
-    <string name="backup_import_malformed">Den filen er ikke en FoodTracker-sikkerhetskopi</string>
+    <string name="backup_import_malformed">Den filen er ikke en Matvakt-sikkerhetskopi</string>
     <string name="backup_import_unsupported">Den sikkerhetskopien er laget av en nyere versjon av appen</string>
     <string name="backup_import_empty">Den sikkerhetskopien har ingenting å gjenopprette</string>
     <plurals name="backup_import_success">

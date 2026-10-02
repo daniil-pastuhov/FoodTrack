@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>BestBefore</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -12,22 +14,10 @@
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
-	<key>CFBundleDisplayName</key>
-	<string>BestBefore</string>
 	<key>CFBundlePackageType</key>
 	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSCameraUsageDescription</key>
-	<string>FoodTracker requires camera access to scan barcodes, recognize expiration dates using machine learning, and photograph food items.</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>FoodTracker uses your location once, when you tap "Save my current location", to remember where a shop is. The location is stored on your phone and never sent anywhere.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>FoodTracker checks whether you are at one of the shops you saved so it can show your shopping list when you get there. This only works while the app is closed if you allow it all the time. Your location is never sent anywhere.</string>
+	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -39,49 +29,61 @@
 			</array>
 		</dict>
 	</array>
-	<key>UIApplicationShortcutItems</key>
-	<array>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>scan</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Scan</string>
-			<key>UIApplicationShortcutItemSubtitle</key>
-			<string>Scan a barcode</string>
-			<key>UIApplicationShortcutItemIconType</key>
-			<string>UIApplicationShortcutIconTypeCapturePhoto</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>add-item</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Add item</string>
-			<key>UIApplicationShortcutItemSubtitle</key>
-			<string>Add an item by hand</string>
-			<key>UIApplicationShortcutItemIconType</key>
-			<string>UIApplicationShortcutIconTypeAdd</string>
-		</dict>
-		<dict>
-			<key>UIApplicationShortcutItemType</key>
-			<string>shopping-list</string>
-			<key>UIApplicationShortcutItemTitle</key>
-			<string>Shopping</string>
-			<key>UIApplicationShortcutItemSubtitle</key>
-			<string>Open shopping list</string>
-			<key>UIApplicationShortcutItemIconType</key>
-			<string>UIApplicationShortcutIconTypeTaskCompleted</string>
-		</dict>
-	</array>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>BestBefore uses the camera to scan barcodes, read expiration dates printed on packaging, and photograph food items. Photos stay on your phone.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>BestBefore checks whether you are at one of the shops you saved so it can show your shopping list when you get there. This only works while the app is closed if you allow it all the time. Your location is never sent anywhere.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>BestBefore uses your location once, when you tap "Save my current location", to remember where a shop is. The location is stored on your phone and never sent anywhere.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
 	</dict>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeCapturePhoto</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Scan a barcode</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Scan</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>scan</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeAdd</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Add an item by hand</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Add item</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>add-item</string>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconType</key>
+			<string>UIApplicationShortcutIconTypeTaskCompleted</string>
+			<key>UIApplicationShortcutItemSubtitle</key>
+			<string>Open shopping list</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Shopping</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>shopping-list</string>
+		</dict>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

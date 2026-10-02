@@ -82,6 +82,9 @@
 		333BD43AE5A4BDA48CD004F6 /* CategoryPreferenceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */; };
 		B60EA7804EAD089E4B949D10 /* CategoryPreferenceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */; };
 		625E9325BA2904F65F1624C1 /* CategorySettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B102148F4E1D8FF58A6B369 /* CategorySettingsView.swift */; };
+		C0FFEE0000000000000000A2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000A1 /* PrivacyInfo.xcprivacy */; };
+		C0FFEE0000000000000000B2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000B1 /* PrivacyInfo.xcprivacy */; };
+		C0FFEE0000000000000000C5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000C4 /* InfoPlist.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -150,6 +153,11 @@
 		A1B2C3D40000000000000001 /* ShelfLife.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShelfLife.swift; sourceTree = "<group>"; };
 		678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryPreferenceRecord.swift; sourceTree = "<group>"; };
 		6B102148F4E1D8FF58A6B369 /* CategorySettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategorySettingsView.swift; sourceTree = "<group>"; };
+		C0FFEE0000000000000000A1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C0FFEE0000000000000000B1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C0FFEE0000000000000000C1 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0FFEE0000000000000000C2 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		C0FFEE0000000000000000C3 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -191,6 +199,8 @@
 				C653CCBC3A5E4983A37A2426 /* Localizable.strings */,
 				B047C1A68DF14A948F57FDA3 /* Localizable.stringsdict */,
 				FD0B2C260A7C5D988F621408 /* Info.plist */,
+				C0FFEE0000000000000000A1 /* PrivacyInfo.xcprivacy */,
+				C0FFEE0000000000000000C4 /* InfoPlist.strings */,
 				CFE3E7A9677B455C8365937F /* Assets.xcassets */,
 				159A2BFDCB04E883857F16A7 /* AppGroup.swift */,
 				197B4ABF5AB08BED3889ED45 /* FoodTracker.entitlements */,
@@ -208,6 +218,7 @@
 				723335A444AE4795857A463B /* OverviewWidget.swift */,
 				FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */,
 				B3568D45ABFFD1894E1B1FB6 /* Info.plist */,
+				C0FFEE0000000000000000B1 /* PrivacyInfo.xcprivacy */,
 				AA192FD460A90E7EB53491B2 /* FoodTrackerWidgetExtension.entitlements */,
 			);
 			path = FoodTrackerWidget;
@@ -591,6 +602,8 @@
 				4DAC83F3781747A699AB49AB /* Localizable.strings in Resources */,
 				2DE27CAFAADB4327BAFEDA62 /* Localizable.stringsdict in Resources */,
 				DEF85DB5F3DFB01B08613C8A /* Assets.xcassets in Resources */,
+				C0FFEE0000000000000000A2 /* PrivacyInfo.xcprivacy in Resources */,
+				C0FFEE0000000000000000C5 /* InfoPlist.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -600,6 +613,7 @@
 			files = (
 				2C51BDC366A9ED76AADFB989 /* Localizable.strings in Resources */,
 				0C9198EE94B1F49EF9F75D96 /* Localizable.stringsdict in Resources */,
+				C0FFEE0000000000000000B2 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -632,6 +646,16 @@
 				91CBDDA99060492A92159624 /* ru */,
 			);
 			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		C0FFEE0000000000000000C4 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				C0FFEE0000000000000000C1 /* en */,
+				C0FFEE0000000000000000C3 /* nb */,
+				C0FFEE0000000000000000C2 /* ru */,
+			);
+			name = InfoPlist.strings;
 			sourceTree = "<group>";
 		};
 /* End PBXVariantGroup section */

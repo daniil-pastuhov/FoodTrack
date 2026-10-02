@@ -300,7 +300,7 @@
 "restore_mode_replace_title" = "Заменить всё";
 "backup_export_success" = "Копия сохранена";
 "backup_export_failed" = "Не удалось сохранить копию";
-"backup_import_malformed" = "Этот файл не является резервной копией FoodTracker";
+"backup_import_malformed" = "Этот файл не является резервной копией Срокоеда";
 "backup_import_unsupported" = "Эта копия создана более новой версией приложения";
 "backup_import_empty" = "В этой копии нечего восстанавливать";
 
