@@ -1,0 +1,126 @@
+name: CI
+
+# Every push and pull request: Android unit tests, an Android debug build, and an iOS build.
+# Pushes to main also publish a signed bundle to the Google Play internal track.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  # Superseded pull-request runs are cancelled; runs on main never are, so a Play upload is
+  # never cut off halfway.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  android:
+    name: Android tests and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests and debug build
+        run: ./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug
+      - name: Keep test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-reports
+          path: androidApp/build/reports/tests/
+          retention-days: 7
+
+  ios:
+    name: iOS build and shared tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      # :shared has no Android host-test target; its commonTest is compiled for iOS (see CLAUDE.md).
+      - name: Compile shared tests
+        run: ./gradlew :shared:compileTestKotlinIosSimulatorArm64
+      - name: Build iOS app
+        run: |
+          xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build
+
+  publish-play:
+    name: Publish to Google Play (internal)
+    needs: android
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: play-publish
+      cancel-in-progress: false
+    env:
+      # Play only accepts draft releases until the app's first review is done. Set the repository
+      # variable PLAY_RELEASE_STATUS to "completed" afterwards to roll each build out to testers.
+      PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS || 'draft' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Restore the release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then echo "::error::Missing secret for $name"; exit 1; fi
+          done
+          echo "$KEYSTORE_BASE64" | base64 --decode > androidApp/release-keystore.jks
+          # Read by androidApp/build.gradle.kts with java.util.Properties, which treats "\" as an
+          # escape and drops leading spaces: escape both so a password reads back exactly.
+          prop() { local v=${1//\\/\\\\}; [[ $v == " "* ]] && v="\\$v"; printf '%s' "$v"; }
+          # storeFile is relative to androidApp/.
+          printf 'storeFile=release-keystore.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$(prop "$KEYSTORE_PASSWORD")" "$(prop "$KEY_ALIAS")" "$(prop "$KEY_PASSWORD")" \
+            > androidApp/keystore.properties
+      - name: Build signed bundle
+        # Past the codes uploaded by hand (5 and 6), and unique per re-run attempt too: Play
+        # refuses a version code it has already accepted.
+        run: |
+          echo "VERSION_CODE=$((100 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))" >> "$GITHUB_ENV"
+          ./gradlew :androidApp:bundleRelease -PversionCode=$((100 + GITHUB_RUN_NUMBER * 10 + GITHUB_RUN_ATTEMPT))
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Installed in its own step so the Play key is not in the environment while pip runs.
+      - name: Install upload dependencies
+        run: pip install --quiet google-api-python-client google-auth-httplib2
+      - name: Upload to the internal track
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          python scripts/play_upload.py \
+            --aab androidApp/build/outputs/bundle/release/androidApp-release.aab \
+            --mapping androidApp/build/outputs/mapping/release/mapping.txt \
+            --track internal \
+            --status "$PLAY_RELEASE_STATUS" \
+            --release-name "$VERSION_CODE (${GITHUB_SHA::7})"
+      - name: Keep the bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.run_number }}
+          path: |
+            androidApp/build/outputs/bundle/release/androidApp-release.aab
+            androidApp/build/outputs/mapping/release/mapping.txt
+          retention-days: 14

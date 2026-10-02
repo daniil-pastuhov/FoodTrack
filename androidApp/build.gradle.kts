@@ -14,7 +14,7 @@ plugins {
 val keystorePropertiesFile = file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {
-        keystorePropertiesFile.inputStream().use { load(it) }
+        keystorePropertiesFile.reader(Charsets.UTF_8).use { load(it) }
     }
 }
 val hasReleaseSigning = keystorePropertiesFile.exists()
@@ -27,7 +27,9 @@ android {
         applicationId = "com.foodtracker.android"
         minSdk = 24
         targetSdk = 37
-        versionCode = 6
+        // CI passes -PversionCode (see .github/workflows/ci.yml) so every upload to Google Play
+        // gets a new, higher code; a local build falls back to this one.
+        versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 6
         versionName = "1.2.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
