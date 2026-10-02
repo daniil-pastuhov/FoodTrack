@@ -7,7 +7,8 @@
 #
 # Signing is automatic: with the App Store Connect API key, xcodebuild creates or fetches the
 # distribution certificate and profiles itself, so no Xcode account login is needed (on CI too).
-# The key needs the App Manager or Admin role.
+# The key needs the Admin role: Apple only lets Admin keys use cloud-managed distribution
+# certificates, and an App Manager key fails with "Cloud signing permission error".
 #
 # BUILD_NUMBER defaults to the current UTC time (yyyymmddHHMM): App Store Connect wants every
 # upload of a version to have a higher build number, and a timestamp always is, whether the

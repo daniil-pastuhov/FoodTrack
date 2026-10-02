@@ -86,6 +86,13 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
     private let photoOutput = AVCapturePhotoOutput()
     private var videoDevice: AVCaptureDevice?
 
+    /// Keeps the preview, the frames handed to Vision and captured photos upright however the
+    /// device is held. Without it they come out 90° off whenever the device isn't in the
+    /// camera's native orientation: on iPad held in landscape (the usual way), the preview is
+    /// sideways and date OCR reads rotated text.
+    private var rotationCoordinator: AVCaptureDevice.RotationCoordinator?
+    private var rotationObservations: [NSKeyValueObservation] = []
+
     public var hasTorch: Bool { videoDevice?.hasTorch ?? false }
 
     public func setTorchEnabled(_ enabled: Bool) {
@@ -165,6 +172,12 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
             print("AVCaptureSession.canAddOutput(photoOutput) returned false — photo capture will be unavailable")
         }
 
+        // On iPad the app can run in Split View, Slide Over or a Stage Manager window, where the
+        // camera is otherwise cut off (the session is interrupted and the preview goes black).
+        if captureSession.isMultitaskingCameraAccessSupported {
+            captureSession.isMultitaskingCameraAccessEnabled = true
+        }
+
         captureSession.commitConfiguration()
 
         let preview = AVCaptureVideoPreviewLayer(session: captureSession)
@@ -173,8 +186,40 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         view.layer.addSublayer(preview)
         self.previewLayer = preview
 
+        let coordinator = AVCaptureDevice.RotationCoordinator(device: videoDevice, previewLayer: preview)
+        rotationCoordinator = coordinator
+        applyRotation(from: coordinator)
+        rotationObservations = [
+            coordinator.observe(\.videoRotationAngleForHorizonLevelPreview) { [weak self] coordinator, _ in
+                DispatchQueue.main.async { self?.applyRotation(from: coordinator) }
+            },
+            coordinator.observe(\.videoRotationAngleForHorizonLevelCapture) { [weak self] coordinator, _ in
+                DispatchQueue.main.async { self?.applyRotation(from: coordinator) }
+            },
+        ]
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.captureSession.startRunning()
+        }
+    }
+
+    /// The preview follows the interface. Photos follow the preview too, so they come out the
+    /// way they were framed: following the horizon instead would let a receipt shot flat on a
+    /// table (where the horizon is ambiguous) be saved sideways on a portrait-locked iPhone.
+    /// The live date-OCR frames follow the horizon, so the text is upright for Vision however
+    /// the device is turned; they are re-read many times a second, so an ambiguous moment costs
+    /// nothing. Barcode detection doesn't care about orientation.
+    private func applyRotation(from coordinator: AVCaptureDevice.RotationCoordinator) {
+        let previewAngle = coordinator.videoRotationAngleForHorizonLevelPreview
+        if let connection = previewLayer?.connection, connection.isVideoRotationAngleSupported(previewAngle) {
+            connection.videoRotationAngle = previewAngle
+        }
+        if let connection = photoOutput.connection(with: .video), connection.isVideoRotationAngleSupported(previewAngle) {
+            connection.videoRotationAngle = previewAngle
+        }
+        let captureAngle = coordinator.videoRotationAngleForHorizonLevelCapture
+        if let connection = videoOutput.connection(with: .video), connection.isVideoRotationAngleSupported(captureAngle) {
+            connection.videoRotationAngle = captureAngle
         }
     }
 

@@ -49,6 +49,7 @@ struct RootTabView: View {
                         onScrollingDownChanged: { isDashboardScrollingDown = $0 },
                         onItemRemoved: offerItemUndo
                     )
+                    .readableContentWidth(background: Color(.systemGroupedBackground))
                     .transition(.opacity)
                 case .calendar:
                     CalendarView(
@@ -73,9 +74,11 @@ struct RootTabView: View {
                             }
                         }
                     )
+                    .readableContentWidth(background: Color(.systemBackground))
                     .transition(.opacity)
                 case .settings:
                     SettingsView(viewModel: viewModel, onDataCleared: { selectedTab = .home })
+                        .readableContentWidth(background: Color(.systemGroupedBackground))
                         .transition(.opacity)
                 }
             }
@@ -325,6 +328,36 @@ private struct UndoToastView: View {
         .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.15)))
         .padding(.horizontal, 16)
         .shadow(radius: 6)
+    }
+}
+
+
+/// Caps a tab's content at a comfortable reading width on iPad and centres it, filling the sides
+/// with the screen's own background. Full-width rows on a 13" screen put a product's name and
+/// its quantity controls a whole screen apart. Does nothing on iPhone (compact width).
+/// The Calendar tab doesn't use it: it has its own two-column layout for regular width.
+private struct ReadableContentWidth: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    let background: Color
+
+    // One modifier chain whatever the size class, with only its values changing: an if/else
+    // here would give the tab a different identity on each side, and resizing a Split View or
+    // Stage Manager window across the compact/regular line would rebuild it, dropping its state
+    // and any sheet it has open.
+    func body(content: Content) -> some View {
+        let isRegular = horizontalSizeClass == .regular
+        content
+            .frame(maxWidth: isRegular ? 720 : .infinity)
+            .frame(maxWidth: .infinity)
+            .background {
+                if isRegular { background.ignoresSafeArea() }
+            }
+    }
+}
+
+private extension View {
+    func readableContentWidth(background: Color) -> some View {
+        modifier(ReadableContentWidth(background: background))
     }
 }
 

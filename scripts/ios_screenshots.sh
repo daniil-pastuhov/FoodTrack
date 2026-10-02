@@ -12,7 +12,7 @@ set -euo pipefail
 
 ROOT=${0:A:h:h}
 OUT=${1:-$ROOT/build/ios-screenshots}
-DEVICE_NAME="iPhone 17 Pro Max"
+DEVICE_NAME=${DEVICE_NAME:-"iPhone 17 Pro Max"}   # e.g. DEVICE_NAME="iPad Pro 13-inch (M5)"
 BUNDLE_ID=com.foodbest.ios
 DERIVED=$ROOT/build/ios-screenshots-derived-data
 

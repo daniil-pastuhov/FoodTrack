@@ -3,12 +3,11 @@
 Everything App Store Connect asks for, ready to paste. One folder per listing language:
 `en-GB/` (English, U.K.), `ru/` (Russian), `no/` (Norwegian). Each folder has `name.txt`,
 `subtitle.txt`, `promotional_text.txt`, `keywords.txt`, `description.txt` and
-`screenshots/1-4.png` (1320×2868, the 6.9" iPhone size; App Store Connect scales them down for
-smaller iPhones).
+`screenshots/1-4.png` (1320×2868, the 6.9" iPhone size) and `ipad-screenshots/1-4.png`
+(2064×2752, the 13" iPad size). App Store Connect scales both down for smaller devices.
 
-The app is iPhone-only. It still runs on iPad in iPhone mode, but no iPad screenshots are needed.
-
-Retake the raw screenshots after UI changes with `scripts/ios_screenshots.sh`.
+Retake the raw screenshots after UI changes with `scripts/ios_screenshots.sh`, and with
+`DEVICE_NAME="iPad Pro 13-inch (M5)" scripts/ios_screenshots.sh` for the iPad set.
 
 ## 1. One-time setup
 
@@ -21,7 +20,9 @@ Retake the raw screenshots after UI changes with `scripts/ios_screenshots.sh`.
      same for `com.foodbest.ios.FoodTrackerWidget`.
    - SKU: `bestbefore-ios`. User access: Full access.
 3. **API key** for uploads: Users and Access → Integrations → App Store Connect API → Team Keys →
-   +. Role: App Manager. Download the `.p8` once, and keep it outside the repo, e.g.
+   +. Role: **Admin**. Automatic signing creates the App Store distribution certificate in the
+   cloud, and Apple only lets Admin keys do that (an App Manager key fails with "Cloud signing
+   permission error"). Download the `.p8` once, and keep it outside the repo, e.g.
    `~/.config/bestbefore/`. Note the Key ID and the Issuer ID.
 
 ## 2. Uploading a build
@@ -93,4 +94,5 @@ product photos, which stay on the device.
 
 - What's New (first version): leave empty, or use `First release.`
 - Pick the build uploaded in step 2.
-- Screenshots: drag `screenshots/1.png` to `4.png` into "iPhone 6.9" Display" for each language.
+- Screenshots, for each language: drag `screenshots/1.png` to `4.png` into "iPhone 6.9" Display",
+  and `ipad-screenshots/1.png` to `4.png` into "iPad 13" Display".
