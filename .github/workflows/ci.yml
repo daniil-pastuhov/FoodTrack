@@ -29,6 +29,14 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      # androidApp's debug signing config uses the key alias "debug", and the Android Gradle
+      # Plugin only generates a debug keystore by itself for its default alias, so a fresh runner
+      # has none. A throwaway one is fine: nothing signed with it leaves the runner.
+      - name: Create a debug keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android \
+            -alias debug -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
       - name: Unit tests and debug build
         run: ./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug
       - name: Keep test reports
