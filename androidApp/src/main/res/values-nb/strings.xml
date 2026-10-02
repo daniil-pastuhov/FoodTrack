@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Matvakt</string>
+    <string name="nav_label_home">Hjem</string>
+    <string name="nav_label_calendar">Kalender</string>
+    <string name="nav_label_shopping_list">Handleliste</string>
+    <string name="nav_label_settings">Innstillinger</string>
     <string name="app_subtitle">Sporing av matvarer og utløpsdatoer</string>
 
     <string name="scan_item">Skann vare</string>
@@ -196,6 +200,7 @@
     <string name="essential_item_description">Legges automatisk til handlelisten når varen fjernes fra matskapet</string>
 
     <string name="shopping_list_title">Handleliste</string>
+    <string name="shopping_list_drag_handle_content_description">Dra for å endre rekkefølgen</string>
     <string name="shopping_list_content_description">Handleliste</string>
     <string name="shopping_list_add_placeholder">Legg til en vare …</string>
     <string name="shopping_list_add_button">Legg til</string>
@@ -250,6 +255,22 @@
     <plurals name="expired_days_ago">
         <item quantity="one">Utløpt for %d dag siden</item>
         <item quantity="other">Utløpt for %d dager siden</item>
+    </plurals>
+    <plurals name="expires_in_months">
+        <item quantity="one">Om %d måned</item>
+        <item quantity="other">Om %d måneder</item>
+    </plurals>
+    <plurals name="expires_in_years">
+        <item quantity="one">Om %d år</item>
+        <item quantity="other">Om %d år</item>
+    </plurals>
+    <plurals name="expired_months_ago">
+        <item quantity="one">Utløpt for %d måned siden</item>
+        <item quantity="other">Utløpt for %d måneder siden</item>
+    </plurals>
+    <plurals name="expired_years_ago">
+        <item quantity="one">Utløpt for %d år siden</item>
+        <item quantity="other">Utløpt for %d år siden</item>
     </plurals>
 
     <string name="notification_channel_name">Varsler om utløpsdato</string>

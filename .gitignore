@@ -21,3 +21,7 @@ keystore.properties
 *.jks
 *.keystore
 perf/raw/
+
+# Google Play publishing service-account keys — never commit
+*service-account*.json
+bestbefore-*.json

@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Срокоед</string>
+    <string name="nav_label_home">Главная</string>
+    <string name="nav_label_calendar">Календарь</string>
+    <string name="nav_label_shopping_list">Покупки</string>
+    <string name="nav_label_settings">Настройки</string>
     <string name="app_subtitle">Учёт продуктов и сроков годности</string>
 
     <string name="scan_item">Сканировать</string>
@@ -204,6 +208,7 @@
     <string name="essential_item_description">Автоматически добавляется в список покупок при удалении из кладовой</string>
 
     <string name="shopping_list_title">Список покупок</string>
+    <string name="shopping_list_drag_handle_content_description">Перетащите, чтобы изменить порядок</string>
     <string name="shopping_list_content_description">Список покупок</string>
     <string name="shopping_list_add_placeholder">Добавить продукт…</string>
     <string name="shopping_list_add_button">Добавить</string>
@@ -264,6 +269,30 @@
         <item quantity="few">Просрочено %d дня назад</item>
         <item quantity="many">Просрочено %d дней назад</item>
         <item quantity="other">Просрочено %d дня назад</item>
+    </plurals>
+    <plurals name="expires_in_months">
+        <item quantity="one">Через %d месяц</item>
+        <item quantity="few">Через %d месяца</item>
+        <item quantity="many">Через %d месяцев</item>
+        <item quantity="other">Через %d месяца</item>
+    </plurals>
+    <plurals name="expires_in_years">
+        <item quantity="one">Через %d год</item>
+        <item quantity="few">Через %d года</item>
+        <item quantity="many">Через %d лет</item>
+        <item quantity="other">Через %d года</item>
+    </plurals>
+    <plurals name="expired_months_ago">
+        <item quantity="one">Просрочено %d месяц назад</item>
+        <item quantity="few">Просрочено %d месяца назад</item>
+        <item quantity="many">Просрочено %d месяцев назад</item>
+        <item quantity="other">Просрочено %d месяца назад</item>
+    </plurals>
+    <plurals name="expired_years_ago">
+        <item quantity="one">Просрочено %d год назад</item>
+        <item quantity="few">Просрочено %d года назад</item>
+        <item quantity="many">Просрочено %d лет назад</item>
+        <item quantity="other">Просрочено %d года назад</item>
     </plurals>
 
     <string name="notification_channel_name">Уведомления о сроке годности</string>
