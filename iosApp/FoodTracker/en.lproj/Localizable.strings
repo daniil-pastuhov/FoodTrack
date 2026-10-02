@@ -351,3 +351,16 @@
 "batch_discard_title" = "Discard scanned items?";
 "batch_discard_confirm" = "Discard";
 "batch_discard_keep" = "Keep scanning";
+
+/* Built-in storage locations and categories: stored under fixed English keys, shown translated. */
+"storage_location_fridge" = "Fridge";
+"storage_location_freezer" = "Freezer";
+"storage_location_pantry" = "Pantry";
+"category_builtin_fruit" = "Fruit";
+"category_builtin_vegetables" = "Vegetables";
+"category_builtin_bakery" = "Bakery";
+"category_builtin_dairy" = "Dairy";
+"category_builtin_meat_fish" = "Meat & fish";
+"category_builtin_drinks" = "Drinks";
+"category_builtin_sweets" = "Sweets";
+"category_builtin_pantry" = "Pantry";

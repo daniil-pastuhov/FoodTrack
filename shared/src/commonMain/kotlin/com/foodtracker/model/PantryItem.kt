@@ -13,7 +13,7 @@ data class PantryItem(
     val imageUrl: String? = null,
     val expiryDate: LocalDate,
     val addedDate: LocalDate,
-    val storageLocation: String = "Pantry",
+    val storageLocation: String = DefaultStorageLocations.PANTRY,
     val category: String? = null,
     val quantity: Int = 1,
     val notes: String? = null,

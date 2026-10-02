@@ -59,6 +59,11 @@ public enum FoodLabels {
     public static let categorySweets = "Sweets"
     public static let categoryPantry = "Pantry"
 
+    public static let builtInCategories = [
+        categoryFruit, categoryVegetables, categoryBakery, categoryDairy,
+        categoryProtein, categoryDrinks, categorySweets, categoryPantry
+    ]
+
     /// Classifier label (lowercased) to (stable key, category).
     ///
     /// Several classifier labels intentionally share a key where the distinction doesn't matter

@@ -347,6 +347,19 @@
     <string name="settings_remember_last_location_desc">New items start in the storage location you picked last time</string>
     <string name="settings_confirm_rename">Confirm rename</string>
     <string name="settings_set_default_location">Set as default</string>
+    <!-- Names for the built-in storage locations and categories, which are stored under fixed
+         English keys (DefaultStorageLocations, FoodLabels.CATEGORY_*) and shown translated. -->
+    <string name="storage_location_fridge">Fridge</string>
+    <string name="storage_location_freezer">Freezer</string>
+    <string name="storage_location_pantry">Pantry</string>
+    <string name="category_builtin_fruit">Fruit</string>
+    <string name="category_builtin_vegetables">Vegetables</string>
+    <string name="category_builtin_bakery">Bakery</string>
+    <string name="category_builtin_dairy">Dairy</string>
+    <string name="category_builtin_meat_fish">Meat &amp; fish</string>
+    <string name="category_builtin_drinks">Drinks</string>
+    <string name="category_builtin_sweets">Sweets</string>
+    <string name="category_builtin_pantry">Pantry</string>
     <string name="settings_rename_location">Rename</string>
     <string name="settings_delete_location">Delete</string>
     <string name="settings_add_location_placeholder">New location name</string>

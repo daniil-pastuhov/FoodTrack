@@ -351,3 +351,16 @@
 "batch_discard_title" = "Forkast skannede varer?";
 "batch_discard_confirm" = "Forkast";
 "batch_discard_keep" = "Fortsett å skanne";
+
+/* Built-in storage locations and categories: stored under fixed English keys, shown translated. */
+"storage_location_fridge" = "Kjøleskap";
+"storage_location_freezer" = "Fryser";
+"storage_location_pantry" = "Matskap";
+"category_builtin_fruit" = "Frukt";
+"category_builtin_vegetables" = "Grønnsaker";
+"category_builtin_bakery" = "Bakevarer";
+"category_builtin_dairy" = "Meieri";
+"category_builtin_meat_fish" = "Kjøtt og fisk";
+"category_builtin_drinks" = "Drikke";
+"category_builtin_sweets" = "Søtsaker";
+"category_builtin_pantry" = "Tørrvarer";

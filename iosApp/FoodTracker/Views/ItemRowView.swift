@@ -34,10 +34,10 @@ public struct ItemRowView: View {
                 FlowLayout(spacing: 6) {
                     badgeView
 
-                    chip(item.storageLocation)
+                    chip(L10n.storageLocationName(item.storageLocation))
 
                     if let category = resolveCategoryDisplayName(item.category, categoryPreferences), !category.isEmpty {
-                        chip(category)
+                        chip(L10n.categoryName(category))
                     }
                 }
             }

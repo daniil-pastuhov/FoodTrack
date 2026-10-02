@@ -351,3 +351,16 @@
 "batch_discard_title" = "Удалить отсканированное?";
 "batch_discard_confirm" = "Удалить";
 "batch_discard_keep" = "Продолжить сканирование";
+
+/* Built-in storage locations and categories: stored under fixed English keys, shown translated. */
+"storage_location_fridge" = "Холодильник";
+"storage_location_freezer" = "Морозилка";
+"storage_location_pantry" = "Кладовая";
+"category_builtin_fruit" = "Фрукты";
+"category_builtin_vegetables" = "Овощи";
+"category_builtin_bakery" = "Выпечка";
+"category_builtin_dairy" = "Молочное";
+"category_builtin_meat_fish" = "Мясо и рыба";
+"category_builtin_drinks" = "Напитки";
+"category_builtin_sweets" = "Сладкое";
+"category_builtin_pantry" = "Бакалея";

@@ -164,6 +164,37 @@ public enum L10n {
     public static var shoppingListUncategorized: String { NSLocalizedString("shopping_list_uncategorized", comment: "") }
     public static var photoSuggestionsTitle: String { NSLocalizedString("photo_suggestions_title", comment: "") }
     public static var photoSuggestionsAnalyzing: String { NSLocalizedString("photo_suggestions_analyzing", comment: "") }
+    /// What to show for a storage location. The built-in ones (`DefaultStorageLocations`) are
+    /// stored under English keys and translated here; a location the user named is shown as
+    /// typed.
+    public static func storageLocationName(_ location: String) -> String {
+        switch location {
+        case DefaultStorageLocations.fridge: return NSLocalizedString("storage_location_fridge", comment: "")
+        case DefaultStorageLocations.freezer: return NSLocalizedString("storage_location_freezer", comment: "")
+        case DefaultStorageLocations.pantry: return NSLocalizedString("storage_location_pantry", comment: "")
+        default: return location
+        }
+    }
+
+    /// How a category name is shown: one of the app's own category keys (`FoodLabels.category*`,
+    /// e.g. "Dairy") translated, anything else (a name the user typed or renamed to, an Open Food
+    /// Facts category) as-is. Applied to the resolved display name, so a renamed built-in shows
+    /// its new name and an untouched one follows the device's language, without the translation
+    /// ever being stored. Mirrors `categoryLabel` in the Android app.
+    public static func categoryName(_ name: String) -> String {
+        switch name {
+        case FoodLabels.categoryFruit: return NSLocalizedString("category_builtin_fruit", comment: "")
+        case FoodLabels.categoryVegetables: return NSLocalizedString("category_builtin_vegetables", comment: "")
+        case FoodLabels.categoryBakery: return NSLocalizedString("category_builtin_bakery", comment: "")
+        case FoodLabels.categoryDairy: return NSLocalizedString("category_builtin_dairy", comment: "")
+        case FoodLabels.categoryProtein: return NSLocalizedString("category_builtin_meat_fish", comment: "")
+        case FoodLabels.categoryDrinks: return NSLocalizedString("category_builtin_drinks", comment: "")
+        case FoodLabels.categorySweets: return NSLocalizedString("category_builtin_sweets", comment: "")
+        case FoodLabels.categoryPantry: return NSLocalizedString("category_builtin_pantry", comment: "")
+        default: return name
+        }
+    }
+
     /// The localized name for an image-classifier suggestion, or nil when the key has no string
     /// yet - the caller should then skip the chip rather than show an empty one.
     ///

@@ -68,6 +68,9 @@ import com.foodtracker.model.CategoryPreference
 import com.foodtracker.viewmodel.PantryStateHolder
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import com.foodtracker.android.util.categoryLabel
+import com.foodtracker.android.util.categoryRename
+import androidx.compose.ui.platform.LocalContext
 
 /** Lets the user reorder (drag), rename, or disable each category detected from a scanned or
  *  added product's raw category value (see [CategoryPreference]). A rename/disable applies
@@ -84,6 +87,8 @@ fun CategorySettingsScreen(
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     var editingOrigin by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf("") }
+    val context = LocalContext.current
+    val labelOf: (String) -> String = remember(context) { { categoryLabel(context.resources, it) } }
     var shelfLifeOrigin by remember { mutableStateOf<String?>(null) }
     var shelfLifeText by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -121,7 +126,7 @@ fun CategorySettingsScreen(
                 emptyList()
             } else {
                 state.categoryPreferences
-                    .map { it.displayName }
+                    .map { labelOf(it.displayName) }
                     .distinct()
                     .filter {
                         it.contains(editingText, ignoreCase = true) &&
@@ -165,7 +170,12 @@ fun CategorySettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    stateHolder.renameCategory(origin, editingText)
+                    // The field shows translated names: see categoryRename.
+                    val current = state.categoryPreferences.firstOrNull { it.originName == origin }?.displayName
+                    val newName = current?.let {
+                        categoryRename(it, editingText, state.categoryPreferences.map { pref -> pref.displayName }, labelOf)
+                    }
+                    if (newName != null) stateHolder.renameCategory(origin, newName)
                     editingOrigin = null
                 }) {
                     Text(stringResource(R.string.settings_confirm_rename), color = BrandPrimary)
@@ -324,7 +334,7 @@ fun CategorySettingsScreen(
                             onToggleEnabled = { stateHolder.setCategoryEnabled(pref.originName, it) },
                             onRenameClick = {
                                 editingOrigin = pref.originName
-                                editingText = pref.displayName
+                                editingText = labelOf(pref.displayName)
                             },
                             onShelfLifeClick = {
                                 shelfLifeOrigin = pref.originName
@@ -375,7 +385,7 @@ private fun CategoryPreferenceRow(
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = preference.displayName,
+                    text = categoryLabel(preference.displayName),
                     fontWeight = FontWeight.SemiBold,
                     color = if (preference.enabled) MaterialTheme.colorScheme.onSurface else TextSecondary,
                     maxLines = 1,

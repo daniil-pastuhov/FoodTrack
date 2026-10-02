@@ -225,7 +225,7 @@ public struct SettingsView: View {
             ForEach(settings.storageLocations, id: \.self) { location in
                 HStack {
                     if editingLocation == location {
-                        TextField(location, text: $editingLocationText)
+                        TextField(L10n.storageLocationName(location), text: $editingLocationText)
                         Button {
                             commitRename(from: location)
                         } label: {
@@ -241,12 +241,12 @@ public struct SettingsView: View {
                         }
                         .buttonStyle(.plain)
 
-                        Text(location)
+                        Text(L10n.storageLocationName(location))
                         Spacer()
 
                         Button {
                             editingLocation = location
-                            editingLocationText = location
+                            editingLocationText = L10n.storageLocationName(location)
                         } label: {
                             Image(systemName: "pencil")
                         }
@@ -435,7 +435,9 @@ public struct SettingsView: View {
 
     private func commitRename(from oldName: String) {
         let newName = editingLocationText.trimmingCharacters(in: .whitespaces)
-        if !newName.isEmpty && !settings.storageLocations.contains(newName) {
+        // The field starts out showing the translated name, so confirming it unchanged must not
+        // replace a built-in key with its translation.
+        if !newName.isEmpty && newName != L10n.storageLocationName(oldName) && !isExistingLocation(newName) {
             update { current in
                 current.storageLocations = current.storageLocations.map { $0 == oldName ? newName : $0 }
                 if current.defaultStorageLocation == oldName {
@@ -451,9 +453,16 @@ public struct SettingsView: View {
 
     private func addLocation() {
         let newName = newLocationText.trimmingCharacters(in: .whitespaces)
-        guard !newName.isEmpty, !settings.storageLocations.contains(newName) else { return }
+        guard !newName.isEmpty, !isExistingLocation(newName) else { return }
         update { $0.storageLocations.append(newName) }
         newLocationText = ""
+    }
+
+    /// Whether `name` already names a location, either exactly as stored or as a built-in
+    /// location's translated name. Without the second check, adding "Kjøleskap" next to the
+    /// built-in "Fridge" would give two locations that show up under the same name.
+    private func isExistingLocation(_ name: String) -> Bool {
+        settings.storageLocations.contains { $0 == name || L10n.storageLocationName($0) == name }
     }
 
     private func deleteLocations(at offsets: IndexSet) {

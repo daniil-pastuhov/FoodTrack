@@ -378,6 +378,17 @@
     <string name="settings_remember_last_location_desc">Новые продукты получают место хранения, выбранное в прошлый раз</string>
     <string name="settings_confirm_rename">Подтвердить переименование</string>
     <string name="settings_set_default_location">Сделать по умолчанию</string>
+    <string name="storage_location_fridge">Холодильник</string>
+    <string name="storage_location_freezer">Морозилка</string>
+    <string name="storage_location_pantry">Кладовая</string>
+    <string name="category_builtin_fruit">Фрукты</string>
+    <string name="category_builtin_vegetables">Овощи</string>
+    <string name="category_builtin_bakery">Выпечка</string>
+    <string name="category_builtin_dairy">Молочное</string>
+    <string name="category_builtin_meat_fish">Мясо и рыба</string>
+    <string name="category_builtin_drinks">Напитки</string>
+    <string name="category_builtin_sweets">Сладкое</string>
+    <string name="category_builtin_pantry">Бакалея</string>
     <string name="settings_rename_location">Переименовать</string>
     <string name="settings_delete_location">Удалить</string>
     <string name="settings_add_location_placeholder">Название нового места</string>

@@ -54,8 +54,20 @@ public struct AddEditItemView: View {
         guard Calendar.current.isDate(expiryDate, inSameDayAs: candidate.date) else { return nil }
         return candidate
     }
-    @State private var storageLocation: String = "Pantry"
+
+    /// The category to save: the field shows display names, so map what it says back to the
+    /// stored key (an empty result is the "Other" bucket, i.e. no category).
+    private var savedCategory: String? {
+        let text = category.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return nil }
+        let stored = categoryForFieldText(text, original: categorySource, viewModel.categoryPreferences)
+        return stored.isEmpty ? nil : stored
+    }
+    @State private var storageLocation: String = DefaultStorageLocations.pantry
     @State private var category: String = ""
+    /// The stored category whatever is in the `category` field stands for (the field shows display
+    /// names), so saving it unchanged keeps that exact category. See `categoryForFieldText`.
+    @State private var categorySource: String?
     @State private var quantity: Int = 1
     @State private var notes: String = ""
     @State private var essential: Bool = true
@@ -142,7 +154,10 @@ public struct AddEditItemView: View {
                                                     // real, and it is what lets the per-category
                                                     // default shelf life apply to an item with
                                                     // no barcode to remember one against.
-                                                    if category.isEmpty { category = suggestion.category }
+                                                    if category.isEmpty {
+                                                        categorySource = suggestion.category
+                                                        category = categoryFieldText(suggestion.category, viewModel.categoryPreferences)
+                                                    }
                                                 } label: {
                                                     Text(label)
                                                         .font(.caption)
@@ -241,7 +256,7 @@ public struct AddEditItemView: View {
                     FlowLayout(spacing: 8) {
                         ForEach(settingsStore.settings.storageLocations, id: \.self) { loc in
                             StorageLocationChip(
-                                title: loc,
+                                title: L10n.storageLocationName(loc),
                                 isSelected: storageLocation == loc
                             ) {
                                 storageLocation = loc
@@ -256,7 +271,7 @@ public struct AddEditItemView: View {
                         TextField(L10n.categoryLabel, text: $category)
 
                         let suggestions = viewModel.categoryPreferences
-                            .map { $0.displayName }
+                            .map { L10n.categoryName($0.displayName) }
                             .filter {
                                 let current = category.trimmingCharacters(in: .whitespaces)
                                 return !current.isEmpty &&
@@ -339,7 +354,7 @@ public struct AddEditItemView: View {
                             expiryDate: expiryDate,
                             addedDate: editingItem?.addedDate ?? Date(),
                             storageLocation: storageLocation,
-                            category: category.trimmingCharacters(in: .whitespaces).isEmpty ? nil : category,
+                            category: savedCategory,
                             quantity: quantity,
                             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
                             essential: essential
@@ -359,7 +374,8 @@ public struct AddEditItemView: View {
                     imageUrl = item.imageUrl
                     expiryDate = item.expiryDate
                     storageLocation = item.storageLocation
-                    category = item.category ?? ""
+                    categorySource = item.category
+                    category = item.category.map { categoryFieldText($0, viewModel.categoryPreferences) } ?? ""
                     quantity = item.quantity
                     notes = item.notes ?? ""
                     essential = item.essential
@@ -369,7 +385,8 @@ public struct AddEditItemView: View {
                     barcode = prefillBarcode ?? ""
                     imageUrl = prefillImageUrl
                     storageLocation = settingsStore.settings.storageLocationForNewItem
-                    category = prefillCategory ?? ""
+                    categorySource = prefillCategory
+                    category = prefillCategory.map { categoryFieldText($0, viewModel.categoryPreferences) } ?? ""
                     if let date = prefillDate {
                         expiryDate = date
                     } else if let suggested = prefillSuggestion?.date {
@@ -432,7 +449,10 @@ public struct AddEditItemView: View {
                     if let scannedName { name = scannedName }
                     if let scannedBrand { brand = scannedBrand }
                     if let scannedImageUrl { imageUrl = scannedImageUrl }
-                    if let scannedCategory { category = scannedCategory }
+                    if let scannedCategory {
+                        categorySource = scannedCategory
+                        category = categoryFieldText(scannedCategory, viewModel.categoryPreferences)
+                    }
                     // A date read off the packaging wins; otherwise fall back to what this
                     // barcode (or its category) suggests. Either way this is the scan's answer
                     // rather than the user's, so it does not count as an edit and the caption

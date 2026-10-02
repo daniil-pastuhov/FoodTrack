@@ -25,12 +25,29 @@ enum class SortOption {
     STORAGE_LOCATION
 }
 
+/**
+ * The storage locations a fresh install starts with.
+ *
+ * These English names are stored keys, not display text: they are what lands in
+ * [AppSettings.storageLocations] and on every [PantryItem.storageLocation], so they stay the same
+ * whatever language the device is in. Each platform shows them translated, and anything the
+ * user typed (a renamed or added location) as-is. Changing one of these strings would orphan
+ * every item already stored under the old one.
+ */
+object DefaultStorageLocations {
+    const val FRIDGE = "Fridge"
+    const val FREEZER = "Freezer"
+    const val PANTRY = "Pantry"
+
+    val ALL = listOf(FRIDGE, FREEZER, PANTRY)
+}
+
 @Serializable
 data class AppSettings(
     val notifications: NotificationSettings = NotificationSettings(),
     val expiringSoonDays: Int = 3,
-    val storageLocations: List<String> = listOf("Fridge", "Freezer", "Pantry"),
-    val defaultStorageLocation: String = "Pantry",
+    val storageLocations: List<String> = DefaultStorageLocations.ALL,
+    val defaultStorageLocation: String = DefaultStorageLocations.PANTRY,
     /** When on, a new item starts out in the storage location the previous new item was saved
      *  to (see [lastUsedStorageLocation]) rather than in [defaultStorageLocation], so a batch
      *  of scans that all go into the freezer only needs the location picked once. */

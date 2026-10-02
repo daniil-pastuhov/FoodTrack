@@ -329,7 +329,7 @@ private struct FilterSheetView: View {
                             viewModel.selectedLocation = nil
                         }
                         ForEach(settingsStore.settings.storageLocations, id: \.self) { loc in
-                            LocationChip(title: loc, isSelected: viewModel.selectedLocation == loc) {
+                            LocationChip(title: L10n.storageLocationName(loc), isSelected: viewModel.selectedLocation == loc) {
                                 viewModel.selectedLocation = loc
                             }
                         }

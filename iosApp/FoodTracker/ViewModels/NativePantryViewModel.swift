@@ -478,7 +478,7 @@ public class NativePantryViewModel: ObservableObject {
     /// The label to show for a raw category value `origin` (e.g. a filter chip), resolved
     /// through the user's category preferences.
     public func categoryLabel(for origin: String) -> String {
-        resolveCategoryDisplayName(origin, categoryPreferences) ?? origin
+        L10n.categoryName(resolveCategoryDisplayName(origin, categoryPreferences) ?? origin)
     }
 
     // Ties need an explicit secondary key so the sort doesn't silently fall back to whatever

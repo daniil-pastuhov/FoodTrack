@@ -54,7 +54,7 @@ struct CategorySettingsView: View {
                                 .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(pref.displayName)
+                                Text(L10n.categoryName(pref.displayName))
                                     .foregroundColor(pref.enabled ? .primary : .secondary)
                                 
                                 // Show original names if different, comma-separated if multiple
@@ -94,7 +94,7 @@ struct CategorySettingsView: View {
 
                             Button {
                                 editingOrigin = pref.originName
-                                editingText = pref.displayName
+                                editingText = L10n.categoryName(pref.displayName)
                             } label: {
                                 Image(systemName: "pencil")
                             }
@@ -128,7 +128,7 @@ struct CategorySettingsView: View {
                         .padding(.horizontal)
 
                     let suggestions = viewModel.categoryPreferences
-                        .map { $0.displayName }
+                        .map { L10n.categoryName($0.displayName) }
                         .filter {
                             let current = editingText.trimmingCharacters(in: .whitespaces)
                             return !current.isEmpty &&
@@ -171,7 +171,15 @@ struct CategorySettingsView: View {
                     ToolbarItem(placement: .confirmationAction) {
                         Button(L10n.saveButton) {
                             if let origin = editingOrigin {
-                                viewModel.renameCategory(origin, newDisplayName: editingText)
+                                // The field shows translated names: see `categoryRename`.
+                                if let current = viewModel.categoryPreferences.first(where: { $0.originName == origin })?.displayName,
+                                   let newName = categoryRename(
+                                       current: current,
+                                       input: editingText,
+                                       viewModel.categoryPreferences.map { $0.displayName }
+                                   ) {
+                                    viewModel.renameCategory(origin, newDisplayName: newName)
+                                }
                             }
                             editingOrigin = nil
                         }

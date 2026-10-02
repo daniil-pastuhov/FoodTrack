@@ -106,6 +106,7 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
+import com.foodtracker.android.util.storageLocationLabel
 
 /** Below this width the agenda stacks under the week strip / month grid instead of beside it. */
 private val WIDE_LAYOUT_BREAKPOINT = 600.dp
@@ -688,7 +689,7 @@ private fun AgendaRow(
                 }
                 val details = listOfNotNull(
                     if (showDate) formatWeekdayDay(item.expiryDate) else null,
-                    item.storageLocation.takeIf { it.isNotBlank() },
+                    item.storageLocation.takeIf { it.isNotBlank() }?.let { storageLocationLabel(it) },
                     item.brand?.takeIf { it.isNotBlank() }
                 )
                 if (details.isNotEmpty()) {

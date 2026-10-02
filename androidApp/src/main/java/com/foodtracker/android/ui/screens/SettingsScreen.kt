@@ -75,6 +75,10 @@ import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.StorePlace
 import com.foodtracker.model.AppTheme
+import androidx.compose.ui.platform.LocalContext
+import com.foodtracker.android.util.storageLocationLabel
+import com.foodtracker.android.util.storageLocationRename
+import com.foodtracker.android.util.isExistingLocation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +100,8 @@ fun SettingsScreen(
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
 ) {
+    val context = LocalContext.current
+    val locationLabel: (String) -> String = remember(context) { { storageLocationLabel(context.resources, it) } }
     var draft by remember { mutableStateOf(settings) }
     var newLocationText by remember { mutableStateOf("") }
     var newAllergenText by remember { mutableStateOf("") }
@@ -359,8 +365,8 @@ fun SettingsScreen(
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(onClick = {
-                                val newName = editingLocationText.trim()
-                                if (newName.isNotBlank() && !draft.storageLocations.contains(newName)) {
+                                val newName = storageLocationRename(location, editingLocationText, draft.storageLocations, locationLabel)
+                                if (newName != null) {
                                     val updatedLocations = draft.storageLocations.map { if (it == location) newName else it }
                                     val updatedDefault = if (draft.defaultStorageLocation == location) newName else draft.defaultStorageLocation
                                     val updatedLastUsed = if (draft.lastUsedStorageLocation == location) newName else draft.lastUsedStorageLocation
@@ -384,10 +390,10 @@ fun SettingsScreen(
                                     tint = BrandPrimary
                                 )
                             }
-                            Text(location, modifier = Modifier.weight(1f))
+                            Text(storageLocationLabel(location), modifier = Modifier.weight(1f))
                             IconButton(onClick = {
                                 editingLocation = location
-                                editingLocationText = location
+                                editingLocationText = locationLabel(location)
                             }) {
                                 Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.settings_rename_location), tint = TextSecondary)
                             }
@@ -428,7 +434,7 @@ fun SettingsScreen(
                     )
                     IconButton(onClick = {
                         val newName = newLocationText.trim()
-                        if (newName.isNotBlank() && !draft.storageLocations.contains(newName)) {
+                        if (newName.isNotBlank() && !isExistingLocation(draft.storageLocations, newName, locationLabel)) {
                             persist(draft.copy(storageLocations = draft.storageLocations + newName))
                             newLocationText = ""
                         }

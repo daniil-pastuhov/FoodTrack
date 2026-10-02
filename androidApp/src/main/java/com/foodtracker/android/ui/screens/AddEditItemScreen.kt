@@ -96,6 +96,10 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.ExperimentalTime
 import kotlin.time.Instant
+import com.foodtracker.android.util.storageLocationLabel
+import com.foodtracker.android.util.categoryFieldText
+import com.foodtracker.android.util.categoryForFieldText
+import com.foodtracker.android.util.categoryLabel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalTime::class)
 @Composable
@@ -163,8 +167,16 @@ fun AddEditItemScreen(
     var storageLocation by remember {
         mutableStateOf(initialItem?.storageLocation ?: settings.storageLocationForNewItem())
     }
+    val appContext = LocalContext.current
+    val labelOf: (String) -> String = remember(appContext) { { categoryLabel(appContext.resources, it) } }
+    // The field shows display names; this is the stored category whatever is in the field stands
+    // for, so saving it unchanged keeps that exact category (see categoryForFieldText).
+    var categorySource by remember { mutableStateOf(initialItem?.category ?: prefillCategory) }
+    val initialCategoryText = categorySource
+        ?.let { categoryFieldText(it, state.categoryPreferences, labelOf) }
+        ?: ""
     var category by remember {
-        mutableStateOf(initialItem?.category ?: prefillCategory ?: "")
+        mutableStateOf(initialCategoryText)
     }
     var quantity by remember {
         mutableStateOf(initialItem?.quantity ?: 1)
@@ -181,7 +193,7 @@ fun AddEditItemScreen(
             emptyList()
         } else {
             state.categoryPreferences
-                .map { it.displayName }
+                .map { labelOf(it.displayName) }
                 .distinct()
                 .filter {
                     it.contains(category, ignoreCase = true) &&
@@ -225,7 +237,9 @@ fun AddEditItemScreen(
                 expiryDate = expiryDate,
                 addedDate = initialItem?.addedDate ?: today,
                 storageLocation = storageLocation,
-                category = category.trim().ifBlank { null },
+                category = category.trim().ifBlank { null }
+                    ?.let { categoryForFieldText(it, categorySource, state.categoryPreferences, labelOf) }
+                    ?.ifBlank { null },
                 quantity = quantity,
                 notes = notes.trim().ifBlank { null },
                 essential = essential
@@ -467,7 +481,10 @@ fun AddEditItemScreen(
                                         // The classifier's category is coarse but real, and it
                                         // is what lets the per-category default shelf life apply
                                         // to an item with no barcode to remember one against.
-                                        if (category.isBlank()) category = suggestion.category
+                                        if (category.isBlank()) {
+                                            categorySource = suggestion.category
+                                            category = categoryFieldText(suggestion.category, state.categoryPreferences, labelOf)
+                                        }
                                         focusManager.clearFocus()
                                     },
                                     label = { Text(label) }
@@ -645,7 +662,7 @@ fun AddEditItemScreen(
                     FilterChip(
                         selected = storageLocation == location,
                         onClick = { storageLocation = location },
-                        label = { Text(location) },
+                        label = { Text(storageLocationLabel(location)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BrandPrimary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
@@ -801,7 +818,10 @@ fun AddEditItemScreen(
                 scannedName?.let { name = it }
                 scannedBrand?.let { brand = it }
                 scannedImageUrl?.let { imageUrl = it }
-                scannedCategory?.let { category = it }
+                scannedCategory?.let {
+                    categorySource = it
+                    category = categoryFieldText(it, state.categoryPreferences, labelOf)
+                }
                 // A date read off the packaging wins; otherwise fall back to what this barcode
                 // (or its category) suggests. Either way this is the scan's answer rather than
                 // the user's, so it does not count as an edit and the caption stays visible.

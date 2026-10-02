@@ -30,7 +30,7 @@ public struct PantryItem: Identifiable, Codable, Equatable {
         imageUrl: String? = nil,
         expiryDate: Date,
         addedDate: Date = Date(),
-        storageLocation: String = "Pantry",
+        storageLocation: String = DefaultStorageLocations.pantry,
         category: String? = nil,
         quantity: Int = 1,
         notes: String? = nil,
@@ -208,6 +208,21 @@ public struct StorePlace: Codable, Equatable, Identifiable {
     }
 }
 
+/// The storage locations a fresh install starts with.
+///
+/// These English names are stored keys, not display text: they are what lands in
+/// `AppSettings.storageLocations` and on every `PantryItem.storageLocation`, so they stay the
+/// same whatever language the device is in. Views show them through
+/// `L10n.storageLocationName`, which translates these three and leaves anything the user typed
+/// as-is. Mirrors `DefaultStorageLocations` in the shared Kotlin module.
+public enum DefaultStorageLocations {
+    public static let fridge = "Fridge"
+    public static let freezer = "Freezer"
+    public static let pantry = "Pantry"
+
+    public static let all = [fridge, freezer, pantry]
+}
+
 public struct AppSettings: Codable, Equatable {
     public var notifications: NotificationSettings
     public var expiringSoonDays: Int
@@ -236,8 +251,8 @@ public struct AppSettings: Codable, Equatable {
     public init(
         notifications: NotificationSettings = NotificationSettings(),
         expiringSoonDays: Int = 3,
-        storageLocations: [String] = ["Fridge", "Freezer", "Pantry"],
-        defaultStorageLocation: String = "Pantry",
+        storageLocations: [String] = DefaultStorageLocations.all,
+        defaultStorageLocation: String = DefaultStorageLocations.pantry,
         rememberLastStorageLocation: Bool = true,
         lastUsedStorageLocation: String? = nil,
         theme: AppTheme = .system,

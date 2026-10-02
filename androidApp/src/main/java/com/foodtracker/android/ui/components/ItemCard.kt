@@ -67,6 +67,8 @@ import com.foodtracker.android.ui.theme.BrandDark
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.viewmodel.PantryRow
+import com.foodtracker.android.util.storageLocationLabel
+import com.foodtracker.android.util.categoryLabel
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -251,7 +253,7 @@ fun ItemCard(
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = item.storageLocation,
+                                    text = storageLocationLabel(item.storageLocation),
                                     fontSize = 11.sp,
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Medium,
@@ -268,7 +270,7 @@ fun ItemCard(
                                 modifier = Modifier.padding(vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = displayCategory,
+                                    text = categoryLabel(displayCategory),
                                     fontSize = 11.sp,
                                     color = TextSecondary,
                                     fontWeight = FontWeight.Medium,

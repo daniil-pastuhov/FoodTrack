@@ -104,6 +104,7 @@ import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.viewmodel.ShoppingRow
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import com.foodtracker.android.util.categoryLabel
 
 private const val MAX_NAME_SUGGESTIONS = 5
 
@@ -159,7 +160,7 @@ fun ShoppingListScreen(
             entries = items.map { it.entry },
             title = shareTitle,
             uncategorizedLabel = uncategorizedLabel,
-            categoryLabel = { raw -> labelByRawCategory[raw] }
+            categoryLabel = { raw -> labelByRawCategory[raw]?.let { categoryLabel(context.resources, it) } }
         )
     }
 
@@ -360,7 +361,7 @@ fun ShoppingListScreen(
                                 val category = row.category
                                 if (category != null) {
                                     Text(
-                                        text = category,
+                                        text = categoryLabel(category),
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = TextSecondary,

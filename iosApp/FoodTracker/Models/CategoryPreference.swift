@@ -50,6 +50,47 @@ func resolveCategoryDisplayName(_ origin: String?, _ preferences: [CategoryPrefe
     return pref.enabled ? pref.displayName : nil
 }
 
+/// What the item editor's category field shows for a stored `category`: the name it is shown
+/// under everywhere else, so the field never shows a raw English key. Mirrors
+/// `categoryFieldText` in the Android app.
+func categoryFieldText(_ category: String, _ preferences: [CategoryPreference]) -> String {
+    L10n.categoryName(preferences.first { $0.originName == category }?.displayName ?? category)
+}
+
+/// The category to store for what the item editor's field says when saving an item that had
+/// `original` as its category.
+///
+/// Unchanged text keeps `original`: several categories can share a display name (merged in
+/// Settings), so mapping the name back could otherwise move the item to a different one just
+/// because it was edited. Otherwise a built-in category's translated name maps to its English
+/// key (what shelf-life defaults match on), a name shown for an existing category maps to that
+/// category, and anything else is a new category, stored as typed.
+func categoryForFieldText(_ text: String, original: String?, _ preferences: [CategoryPreference]) -> String {
+    if let original, text == categoryFieldText(original, preferences) { return original }
+    if let builtIn = FoodLabels.builtInCategories.first(where: { L10n.categoryName($0) == text }) { return builtIn }
+    if let match = preferences.first(where: { L10n.categoryName($0.displayName) == text }) { return match.originName }
+    return text
+}
+
+/// The display name to store when the user renames a category to `text`. Picking a translated
+/// name ("Молочное") stands for the built-in key it translates ("Dairy"), so that renaming a
+/// category to it merges the two, as renaming to any other existing name does.
+func categoryNameForInput(_ text: String, _ displayNames: [String]) -> String {
+    displayNames.first { L10n.categoryName($0) == text } ?? text
+}
+
+/// The display name to rename a category currently shown as `current` to when the user confirms
+/// `input`, or nil to leave it alone. Confirming the name the field was prefilled with must
+/// change nothing, even when another category shows the same text: mapping it back could
+/// otherwise pick that other category's name, renaming or merging this one, or freezing an
+/// untouched built-in in today's language. Mirrors `categoryRename` in the Android app.
+func categoryRename(current: String, input: String, _ displayNames: [String]) -> String? {
+    let text = input.trimmingCharacters(in: .whitespaces)
+    if text.isEmpty || text == L10n.categoryName(current) { return nil }
+    let newName = categoryNameForInput(text, displayNames)
+    return newName == current ? nil : newName
+}
+
 /// Sort key for ordering categories by their user-chosen position: a disabled or not-yet-known
 /// origin (including nil/uncategorized) always sorts last.
 func categoryPreferenceSortOrder(_ origin: String?, _ preferences: [CategoryPreference]) -> Double {

@@ -187,7 +187,7 @@ struct ShoppingListView: View {
                                 }
                             } header: {
                                 if let category = group.category {
-                                    Text(category)
+                                    Text(L10n.categoryName(category))
                                 } else if group.category != groupedEntries.first?.category {
                                     Divider()
                                         .padding(.vertical, 8)
@@ -434,7 +434,7 @@ struct ShoppingListView: View {
             entries: viewModel.shoppingList,
             title: L10n.shoppingListTitle,
             uncategorizedLabel: L10n.shoppingListUncategorized,
-            categoryLabel: { resolveCategoryDisplayName($0, preferences) }
+            categoryLabel: { resolveCategoryDisplayName($0, preferences).map(L10n.categoryName) }
         )
     }
 

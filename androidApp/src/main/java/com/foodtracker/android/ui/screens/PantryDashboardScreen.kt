@@ -117,6 +117,8 @@ import com.foodtracker.model.SortOption
 import com.foodtracker.model.categoryPreferenceSortOrder
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.StatusFilter
+import com.foodtracker.android.util.storageLocationLabel
+import com.foodtracker.android.util.categoryLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -620,7 +622,7 @@ private fun FilterSheetContent(
                 FilterChip(
                     selected = selectedLocation == location,
                     onClick = { stateHolder.onLocationSelected(location) },
-                    label = { Text(location) },
+                    label = { Text(storageLocationLabel(location)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
                         selectedLabelColor = BrandPrimary
@@ -657,7 +659,7 @@ private fun FilterSheetContent(
                     FilterChip(
                         selected = selectedCategory == category,
                         onClick = { stateHolder.onCategorySelected(category) },
-                        label = { Text(category) },
+                        label = { Text(categoryLabel(category)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
                             selectedLabelColor = BrandPrimary
