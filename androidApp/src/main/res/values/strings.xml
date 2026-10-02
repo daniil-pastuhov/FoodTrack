@@ -443,11 +443,15 @@
     <string name="clear_data_confirm">Clear Data</string>
     <string name="settings_section_stores">Shopping reminders</string>
     <string name="settings_store_reminders_enabled">Remind me near a shop</string>
-    <string name="settings_store_reminders_desc">Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; nothing leaves your phone.</string>
+    <string name="settings_store_reminders_desc">Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; BestBefore doesn\'t send it to us or share it with anyone.</string>
     <string name="settings_add_store_placeholder">Name this shop</string>
     <string name="settings_add_store">Save my current location</string>
     <string name="settings_remove_store_content_description">Remove shop</string>
     <string name="settings_store_location_failed">Couldn\'t get your location. Check location permission and try again outdoors.</string>
+    <string name="background_location_disclosure_title">Use your location in the background?</string>
+    <string name="background_location_disclosure_message">BestBefore uses your location to show your shopping list when you arrive at a shop you saved, even when the app is closed or not in use.\n\nYour location is only used on this phone: BestBefore doesn\'t send it to us or share it with anyone.\n\nOn the next screen, choose \"Allow all the time\".</string>
+    <string name="background_location_disclosure_continue">Continue</string>
+    <string name="background_location_disclosure_not_now">Not now</string>
     <string name="store_reminder_channel_name">Shopping reminders</string>
     <string name="store_reminder_channel_desc">Your shopping list, when you are at a shop you saved</string>
     <string name="store_reminder_title_named_format">You\'re at %1$s</string>

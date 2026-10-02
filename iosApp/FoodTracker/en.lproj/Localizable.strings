@@ -338,7 +338,7 @@
 
 "settings_section_stores" = "Shopping reminders";
 "settings_store_reminders_enabled" = "Remind me near a shop";
-"settings_store_reminders_desc" = "Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; nothing leaves your phone.";
+"settings_store_reminders_desc" = "Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; BestBefore doesn't send it to us or share it with anyone.";
 "settings_add_store_placeholder" = "Name this shop";
 "settings_add_store" = "Save my current location";
 "settings_store_location_failed" = "Couldn't get your location. Check location permission and try again outdoors.";

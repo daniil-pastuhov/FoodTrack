@@ -81,6 +81,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
+import com.foodtracker.android.ui.components.BackgroundLocationDisclosureDialog
 
 enum class AppScreen {
     DASHBOARD,
@@ -125,7 +126,11 @@ private val PREDICTIVE_BACK_MAX_CORNER_RADIUS_DP = 32.dp
 fun FoodTrackerRoot(
     stateHolder: PantryStateHolder,
     currentScreenState: MutableState<AppScreen>,
-    onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit
+    onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit,
+    /** Set by the activity when it is about to ask for background location; see
+     *  [BackgroundLocationDisclosureDialog]. */
+    backgroundLocationDisclosureState: MutableState<Boolean> = remember { mutableStateOf(false) },
+    onBackgroundLocationDisclosureAccepted: () -> Unit = {}
 ) {
     val context = LocalContext.current
     // Collect only the slices this root scope actually reads, rather than the whole
@@ -148,6 +153,15 @@ fun FoodTrackerRoot(
     }
 
     FoodTrackerTheme(darkTheme = darkTheme) {
+        if (backgroundLocationDisclosureState.value) {
+            BackgroundLocationDisclosureDialog(
+                onContinue = {
+                    backgroundLocationDisclosureState.value = false
+                    onBackgroundLocationDisclosureAccepted()
+                },
+                onDismiss = { backgroundLocationDisclosureState.value = false }
+            )
+        }
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background

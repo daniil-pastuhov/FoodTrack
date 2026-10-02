@@ -53,6 +53,10 @@ class MainActivity : ComponentActivity() {
     private val backgroundLocationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    /** Whether the in-app disclosure that has to come before the background location request
+     *  is showing (see BackgroundLocationDisclosureDialog). */
+    private val backgroundLocationDisclosureState = mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyScreenFromIntent(intent)
@@ -65,7 +69,11 @@ class MainActivity : ComponentActivity() {
             FoodTrackerRoot(
                 stateHolder = stateHolder,
                 currentScreenState = currentScreenState,
-                onAddCurrentLocationAsStore = ::resolveCurrentLocation
+                onAddCurrentLocationAsStore = ::resolveCurrentLocation,
+                backgroundLocationDisclosureState = backgroundLocationDisclosureState,
+                onBackgroundLocationDisclosureAccepted = {
+                    backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                }
             )
         }
     }
@@ -197,7 +205,8 @@ class MainActivity : ComponentActivity() {
     /**
      * Asks for background location, but only after a shop has actually been saved — at which
      * point the permission dialog's "Allow all the time" has an obvious purpose the user has
-     * just demonstrated wanting.
+     * just demonstrated wanting. The system request itself comes after the in-app disclosure
+     * Google Play requires, and only if the user continues past it.
      *
      * Skipped below API 29, where background location isn't a separate grant.
      */
@@ -208,7 +217,7 @@ class MainActivity : ComponentActivity() {
             Manifest.permission.ACCESS_BACKGROUND_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
         if (granted) return
-        backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+        backgroundLocationDisclosureState.value = true
     }
 
     companion object {

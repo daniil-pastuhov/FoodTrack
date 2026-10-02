@@ -338,7 +338,7 @@
 
 "settings_section_stores" = "Handlepåminnelser";
 "settings_store_reminders_enabled" = "Minn meg på nær en butikk";
-"settings_store_reminders_desc" = "Viser handlelisten når du stopper ved en lagret butikk. Bruker posisjonen din i bakgrunnen; ingenting forlater telefonen.";
+"settings_store_reminders_desc" = "Viser handlelisten når du stopper ved en lagret butikk. Bruker posisjonen din i bakgrunnen; Matvakt sender den ikke til oss og deler den ikke med noen.";
 "settings_add_store_placeholder" = "Navn på butikken";
 "settings_add_store" = "Lagre posisjonen min";
 "settings_store_location_failed" = "Fant ikke posisjonen din. Sjekk posisjonstillatelsen og prøv igjen utendørs.";

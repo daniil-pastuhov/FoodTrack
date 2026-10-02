@@ -1,5 +1,5 @@
 /* Home-screen name and permission prompts. Keep the name in sync with app_name in androidApp/src/main/res/values/strings.xml. */
 "CFBundleDisplayName" = "BestBefore";
 "NSCameraUsageDescription" = "BestBefore uses the camera to scan barcodes, read expiration dates printed on packaging, and photograph food items. Photos stay on your phone.";
-"NSLocationWhenInUseUsageDescription" = "BestBefore uses your location once, when you tap \"Save my current location\", to remember where a shop is. The location is stored on your phone and never sent anywhere.";
-"NSLocationAlwaysAndWhenInUseUsageDescription" = "BestBefore checks whether you are at one of the shops you saved so it can show your shopping list when you get there. This only works while the app is closed if you allow it all the time. Your location is never sent anywhere.";
+"NSLocationWhenInUseUsageDescription" = "BestBefore uses your location once, when you tap \"Save my current location\", to remember where a shop is. The location is stored on your phone, and BestBefore doesn't send it to us or share it with anyone.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "BestBefore checks whether you are at one of the shops you saved so it can show your shopping list when you get there. This only works while the app is closed if you allow it all the time. BestBefore doesn't send your location to us or share it with anyone.";
