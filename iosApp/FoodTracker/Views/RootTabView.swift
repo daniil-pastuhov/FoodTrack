@@ -11,17 +11,8 @@ struct RootTabView: View {
     @State private var isDashboardScrollingDown: Bool = false
 
     @State private var showScanner: Bool = false
-    @State private var showAddEdit: Bool = false
-    @State private var editingItem: PantryItem? = nil
-    @State private var prefillBarcode: String? = nil
-    @State private var prefillName: String? = nil
-    @State private var prefillBrand: String? = nil
-    @State private var prefillImageUrl: String? = nil
-    @State private var prefillDate: Date? = nil
-    @State private var prefillCategory: String? = nil
-    /// Expiry to start a new item from when the scan produced no date of its own - the
-    /// shelf life this barcode was last given, or its category's default.
-    @State private var prefillSuggestion: ShelfLifeSuggestion? = nil
+    /// What the add/edit sheet should open with, or nil while it is closed. See `AddEditRequest`.
+    @State private var addEditRequest: AddEditRequest?
     /// Outcome of a shared-list QR scanned from the dashboard's scanner, shown as a
     /// transient toast - this screen has no snackbar of its own.
     @State private var importResult: String? = nil
@@ -163,28 +154,23 @@ struct RootTabView: View {
                     importResult = L10n.batchAdded(added)
                 }
             ) { barcode, name, brand, imageUrl, date, category, suggestion in
-                editingItem = nil
-                prefillBarcode = barcode
-                prefillName = name
-                prefillBrand = brand
-                prefillImageUrl = imageUrl
-                prefillDate = date
-                prefillCategory = category
-                prefillSuggestion = suggestion
-                showAddEdit = true
+                addEditRequest = AddEditRequest(
+                    barcode: barcode, name: name, brand: brand, imageUrl: imageUrl,
+                    date: date, category: category, suggestion: suggestion
+                )
             }
         }
-        .sheet(isPresented: $showAddEdit) {
+        .sheet(item: $addEditRequest) { request in
             AddEditItemView(
                 viewModel: viewModel,
-                editingItem: editingItem,
-                prefillBarcode: prefillBarcode,
-                prefillName: prefillName,
-                prefillBrand: prefillBrand,
-                prefillImageUrl: prefillImageUrl,
-                prefillDate: prefillDate,
-                prefillCategory: prefillCategory,
-                prefillSuggestion: prefillSuggestion,
+                editingItem: request.editing,
+                prefillBarcode: request.barcode,
+                prefillName: request.name,
+                prefillBrand: request.brand,
+                prefillImageUrl: request.imageUrl,
+                prefillDate: request.date,
+                prefillCategory: request.category,
+                prefillSuggestion: request.suggestion,
                 onDuplicateMerged: { updated in
                     importResult = L10n.duplicateAdded(updated.name, updated.quantity)
                 }
@@ -223,15 +209,7 @@ struct RootTabView: View {
             presentScanner()
         case .addItem:
             selectedTab = .home
-            editingItem = nil
-            prefillBarcode = nil
-            prefillName = nil
-            prefillBrand = nil
-            prefillImageUrl = nil
-            prefillDate = nil
-            prefillCategory = nil
-            prefillSuggestion = nil
-            showAddEdit = true
+            addEditRequest = AddEditRequest()
         }
     }
 
@@ -271,20 +249,33 @@ struct RootTabView: View {
     }
 
     private func presentScanner() {
-        editingItem = nil
         showScanner = true
     }
 
     private func presentAddEdit(editing item: PantryItem?) {
-        editingItem = item
-        prefillBarcode = nil
-        prefillName = nil
-        prefillBrand = nil
-        prefillImageUrl = nil
-        prefillDate = nil
-        prefillCategory = nil
-        showAddEdit = true
+        addEditRequest = AddEditRequest(editing: item)
     }
+}
+
+/// Everything the add/edit sheet opens with, presented with `.sheet(item:)`.
+///
+/// These used to be separate `@State` values next to an `isPresented` flag. SwiftUI could then
+/// build the sheet from the previous values: a scanned product opened an empty form, with its
+/// name, brand and picture missing. Handing the sheet a single value means it can only ever see
+/// the values it was opened with.
+private struct AddEditRequest: Identifiable {
+    let id = UUID()
+    var editing: PantryItem? = nil
+    var barcode: String? = nil
+    var name: String? = nil
+    var brand: String? = nil
+    var imageUrl: String? = nil
+    /// Expiry printed on the packaging, when the scan read one.
+    var date: Date? = nil
+    var category: String? = nil
+    /// Expiry to start a new item from when the scan produced no date of its own: the shelf life
+    /// this barcode was last given, or its category's default.
+    var suggestion: ShelfLifeSuggestion? = nil
 }
 
 /// A pending undo offer, generic over what was removed (a `PantryItem` or a
