@@ -21,6 +21,9 @@ public struct PantryItem: Identifiable, Codable, Equatable {
     public var quantity: Int
     public var notes: String?
     public var essential: Bool
+    /// Whether this item gets its own expiry reminder and appears in the summary. Mirrors
+    /// Android's `PantryItem.notificationsEnabled`.
+    public var notificationsEnabled: Bool
 
     public init(
         id: String = UUID().uuidString,
@@ -34,7 +37,8 @@ public struct PantryItem: Identifiable, Codable, Equatable {
         category: String? = nil,
         quantity: Int = 1,
         notes: String? = nil,
-        essential: Bool = true
+        essential: Bool = true,
+        notificationsEnabled: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -48,6 +52,7 @@ public struct PantryItem: Identifiable, Codable, Equatable {
         self.quantity = quantity
         self.notes = notes
         self.essential = essential
+        self.notificationsEnabled = notificationsEnabled
     }
 
     /// Key used to match this item's product against a shopping list entry: barcode when
@@ -120,17 +125,62 @@ public struct ProductInfo: Codable {
     }
 }
 
+/// How often the summary notification fires. Mirrors Android's `DigestFrequency`.
+public enum DigestFrequency: String, Codable, CaseIterable, Identifiable {
+    case daily = "DAILY"
+    case weekly = "WEEKLY"
+    public var id: String { rawValue }
+}
+
 public struct NotificationSettings: Codable, Equatable {
+    /// Master switch: off silences every expiry notification, individual and summary alike.
     public var enabled: Bool
     public var leadDays: Int
     public var hour: Int
     public var minute: Int
+    /// One reminder per product, `leadDays` before it expires.
+    public var individualEnabled: Bool
+    /// One grouped notification naming what expires in the coming week. Off by default: with
+    /// individual reminders on too, every item would be announced twice.
+    public var digestEnabled: Bool
+    public var digestFrequency: DigestFrequency
+    /// ISO day of week (1 = Monday ... 7 = Sunday) the summary fires on when weekly, matching
+    /// Android's `digestWeekday`. Note this is *not* `Calendar`'s numbering (1 = Sunday).
+    public var digestWeekday: Int
 
-    public init(enabled: Bool = true, leadDays: Int = 1, hour: Int = 9, minute: Int = 0) {
+    public init(
+        enabled: Bool = true,
+        leadDays: Int = 1,
+        hour: Int = 9,
+        minute: Int = 0,
+        individualEnabled: Bool = true,
+        digestEnabled: Bool = false,
+        digestFrequency: DigestFrequency = .daily,
+        digestWeekday: Int = 1
+    ) {
         self.enabled = enabled
         self.leadDays = leadDays
         self.hour = hour
         self.minute = minute
+        self.individualEnabled = individualEnabled
+        self.digestEnabled = digestEnabled
+        self.digestFrequency = digestFrequency
+        self.digestWeekday = digestWeekday
+    }
+
+    // decodeIfPresent for everything added after the first release: settings saved before
+    // then have no such keys, and the synthesized decoder would fail the whole struct - and
+    // with it `AppSettings`, resetting every other setting too.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try container.decode(Bool.self, forKey: .enabled)
+        leadDays = try container.decode(Int.self, forKey: .leadDays)
+        hour = try container.decode(Int.self, forKey: .hour)
+        minute = try container.decode(Int.self, forKey: .minute)
+        individualEnabled = try container.decodeIfPresent(Bool.self, forKey: .individualEnabled) ?? true
+        digestEnabled = try container.decodeIfPresent(Bool.self, forKey: .digestEnabled) ?? false
+        digestFrequency = try container.decodeIfPresent(DigestFrequency.self, forKey: .digestFrequency) ?? .daily
+        digestWeekday = try container.decodeIfPresent(Int.self, forKey: .digestWeekday) ?? 1
     }
 }
 

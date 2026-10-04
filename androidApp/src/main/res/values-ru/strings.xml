@@ -206,6 +206,8 @@
 
     <string name="essential_item_label">Обязательный продукт</string>
     <string name="essential_item_description">Автоматически добавляется в список покупок при удалении из кладовой</string>
+    <string name="item_notifications_label">Напомнить до истечения срока</string>
+    <string name="item_notifications_description">Выключите, чтобы не получать уведомления об этом продукте</string>
 
     <string name="shopping_list_title">Список покупок</string>
     <string name="shopping_list_drag_handle_content_description">Перетащите, чтобы изменить порядок</string>
@@ -295,8 +297,10 @@
         <item quantity="other">Просрочено %d года назад</item>
     </plurals>
 
-    <string name="notification_channel_name">Уведомления о сроке годности</string>
-    <string name="notification_channel_desc">Уведомления, когда продукты скоро испортятся</string>
+    <string name="notification_channel_name">Уведомления по каждому продукту</string>
+    <string name="notification_channel_desc">Отдельное уведомление для каждого продукта незадолго до истечения срока</string>
+    <string name="notification_digest_channel_name">Сводка по срокам годности</string>
+    <string name="notification_digest_channel_desc">Одно уведомление со списком продуктов, срок которых истекает на этой неделе</string>
     <string name="notif_title_today">Продукт истекает сегодня! ⚠️</string>
     <string name="notif_title_soon">Продукт скоро истекает! ⚠️</string>
     <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть его!</string>
@@ -368,6 +372,14 @@
     <string name="settings_notifications_enabled">Напоминания о сроке годности</string>
     <string name="settings_lead_days_label">Напоминать за столько дней до истечения срока</string>
     <string name="settings_time_label">Время напоминания</string>
+    <string name="settings_individual_alerts">Отдельные уведомления</string>
+    <string name="settings_individual_alerts_desc">Уведомление для каждого продукта до истечения срока</string>
+    <string name="settings_digest">Сводка</string>
+    <string name="settings_digest_desc">Одно уведомление со списком продуктов, срок которых истекает на этой неделе</string>
+    <string name="settings_digest_frequency_label">Как часто</string>
+    <string name="settings_digest_daily">Ежедневно</string>
+    <string name="settings_digest_weekly">Еженедельно</string>
+    <string name="settings_digest_weekday_label">День недели</string>
 
     <string name="settings_section_expiring_soon">Порог «скоро истекает»</string>
     <string name="settings_expiring_soon_desc">Продукты, срок которых истекает в течение этого количества дней, помечаются как «Скоро истекают»</string>

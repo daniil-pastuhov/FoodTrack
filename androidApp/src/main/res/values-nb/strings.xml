@@ -198,6 +198,8 @@
 
     <string name="essential_item_label">Nødvendig vare</string>
     <string name="essential_item_description">Legges automatisk til handlelisten når varen fjernes fra matskapet</string>
+    <string name="item_notifications_label">Minn meg på før den går ut</string>
+    <string name="item_notifications_description">Slå av for aldri å få varsler om denne varen</string>
 
     <string name="shopping_list_title">Handleliste</string>
     <string name="shopping_list_drag_handle_content_description">Dra for å endre rekkefølgen</string>
@@ -273,8 +275,10 @@
         <item quantity="other">Utløpt for %d år siden</item>
     </plurals>
 
-    <string name="notification_channel_name">Varsler om utløpsdato</string>
-    <string name="notification_channel_desc">Varsler når matvarer snart går ut på dato</string>
+    <string name="notification_channel_name">Utløpsvarsler for hver vare</string>
+    <string name="notification_channel_desc">Ett varsel per vare, kort tid før den går ut på dato</string>
+    <string name="notification_digest_channel_name">Utløpsoppsummering</string>
+    <string name="notification_digest_channel_desc">Ett varsel med det som går ut på dato den kommende uken</string>
     <string name="notif_title_today">Produktet utløper i dag! ⚠️</string>
     <string name="notif_title_soon">Produktet utløper snart! ⚠️</string>
     <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise det!</string>
@@ -336,6 +340,14 @@
     <string name="settings_notifications_enabled">Utløpspåminnelser</string>
     <string name="settings_lead_days_label">Minn meg på dette antall dager før utløp</string>
     <string name="settings_time_label">Varslingstidspunkt</string>
+    <string name="settings_individual_alerts">Enkeltvarsler</string>
+    <string name="settings_individual_alerts_desc">Ett varsel per vare før den går ut på dato</string>
+    <string name="settings_digest">Oppsummering</string>
+    <string name="settings_digest_desc">Ett varsel med det som går ut på dato den kommende uken</string>
+    <string name="settings_digest_frequency_label">Hvor ofte</string>
+    <string name="settings_digest_daily">Daglig</string>
+    <string name="settings_digest_weekly">Ukentlig</string>
+    <string name="settings_digest_weekday_label">Ukedag</string>
 
     <string name="settings_section_expiring_soon">Terskel for «utløper snart»</string>
     <string name="settings_expiring_soon_desc">Varer som utløper innen dette antall dager merkes som «Utløper snart»</string>

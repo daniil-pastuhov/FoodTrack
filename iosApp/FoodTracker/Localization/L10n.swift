@@ -153,6 +153,8 @@ public enum L10n {
 
     public static var essentialItemLabel: String { NSLocalizedString("essential_item_label", comment: "") }
     public static var essentialItemDescription: String { NSLocalizedString("essential_item_description", comment: "") }
+    public static var itemNotificationsLabel: String { NSLocalizedString("item_notifications_label", comment: "") }
+    public static var itemNotificationsDescription: String { NSLocalizedString("item_notifications_description", comment: "") }
 
     public static var shoppingListButton: String { NSLocalizedString("shopping_list_button", comment: "") }
     public static var shoppingListTitle: String { NSLocalizedString("shopping_list_title", comment: "") }
@@ -359,6 +361,14 @@ public enum L10n {
     public static var settingsNotificationsEnabled: String { NSLocalizedString("settings_notifications_enabled", comment: "") }
     public static var settingsLeadDaysLabel: String { NSLocalizedString("settings_lead_days_label", comment: "") }
     public static var settingsTimeLabel: String { NSLocalizedString("settings_time_label", comment: "") }
+    public static var settingsIndividualAlerts: String { NSLocalizedString("settings_individual_alerts", comment: "") }
+    public static var settingsIndividualAlertsDesc: String { NSLocalizedString("settings_individual_alerts_desc", comment: "") }
+    public static var settingsDigest: String { NSLocalizedString("settings_digest", comment: "") }
+    public static var settingsDigestDesc: String { NSLocalizedString("settings_digest_desc", comment: "") }
+    public static var settingsDigestFrequencyLabel: String { NSLocalizedString("settings_digest_frequency_label", comment: "") }
+    public static var settingsDigestDaily: String { NSLocalizedString("settings_digest_daily", comment: "") }
+    public static var settingsDigestWeekly: String { NSLocalizedString("settings_digest_weekly", comment: "") }
+    public static var settingsDigestWeekdayLabel: String { NSLocalizedString("settings_digest_weekday_label", comment: "") }
 
     public static var settingsSectionExpiringSoon: String { NSLocalizedString("settings_section_expiring_soon", comment: "") }
     public static var settingsExpiringSoonDesc: String { NSLocalizedString("settings_expiring_soon_desc", comment: "") }

@@ -101,6 +101,8 @@
 
 "essential_item_label" = "Nødvendig vare";
 "essential_item_description" = "Legges automatisk til handlelisten når varen fjernes fra matskapet";
+"item_notifications_label" = "Minn meg på før den går ut";
+"item_notifications_description" = "Slå av for aldri å få varsler om denne varen";
 
 "shopping_list_button" = "Handleliste";
 "shopping_list_title" = "Handleliste";
@@ -154,6 +156,14 @@
 "settings_notifications_enabled" = "Utløpspåminnelser";
 "settings_lead_days_label" = "Minn meg på dette antall dager før utløp";
 "settings_time_label" = "Varslingstidspunkt";
+"settings_individual_alerts" = "Enkeltvarsler";
+"settings_individual_alerts_desc" = "Ett varsel per vare før den går ut på dato";
+"settings_digest" = "Oppsummering";
+"settings_digest_desc" = "Ett varsel med det som går ut på dato den kommende uken";
+"settings_digest_frequency_label" = "Hvor ofte";
+"settings_digest_daily" = "Daglig";
+"settings_digest_weekly" = "Ukentlig";
+"settings_digest_weekday_label" = "Ukedag";
 
 "settings_section_expiring_soon" = "Terskel for «utløper snart»";
 "settings_expiring_soon_desc" = "Varer som utløper innen dette antall dager merkes som «Utløper snart»";

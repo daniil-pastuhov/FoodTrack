@@ -71,6 +71,7 @@ public struct AddEditItemView: View {
     @State private var quantity: Int = 1
     @State private var notes: String = ""
     @State private var essential: Bool = true
+    @State private var notificationsEnabled: Bool = true
     // Embedded scan flow: presents ScannerSheetView on top of this form instead of navigating
     // away, so fields already typed here (quantity, notes, storage location, essential)
     // survive a scan rather than being lost to a fresh screen instance.
@@ -329,6 +330,14 @@ public struct AddEditItemView: View {
                                 .foregroundColor(.secondary)
                         }
                     }
+                    Toggle(isOn: $notificationsEnabled) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(L10n.itemNotificationsLabel)
+                            Text(L10n.itemNotificationsDescription)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
             }
             .navigationTitle(editingItem != nil ? L10n.editItemTitle : L10n.addItemTitle)
@@ -357,7 +366,8 @@ public struct AddEditItemView: View {
                             category: savedCategory,
                             quantity: quantity,
                             notes: notes.trimmingCharacters(in: .whitespaces).isEmpty ? nil : notes,
-                            essential: essential
+                            essential: essential,
+                            notificationsEnabled: notificationsEnabled
                         )
                         viewModel.saveItem(item)
                         dismiss()
@@ -379,6 +389,7 @@ public struct AddEditItemView: View {
                     quantity = item.quantity
                     notes = item.notes ?? ""
                     essential = item.essential
+                    notificationsEnabled = item.notificationsEnabled
                 } else {
                     name = prefillName ?? ""
                     brand = prefillBrand ?? ""

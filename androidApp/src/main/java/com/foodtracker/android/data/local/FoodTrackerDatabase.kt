@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LocalProductEntity::class,
         CategoryPreferenceEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -255,6 +255,14 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE local_products ADD COLUMN novaGroup INTEGER")
                 db.execSQL("ALTER TABLE local_products ADD COLUMN allergens TEXT")
                 db.execSQL("ALTER TABLE local_products ADD COLUMN ingredients TEXT")
+            }
+        }
+
+        // Adds the per-item "remind me" switch. Defaults to on, so every existing item keeps
+        // the reminder it was already getting.
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE pantry_items ADD COLUMN notificationsEnabled INTEGER NOT NULL DEFAULT 1")
             }
         }
     }

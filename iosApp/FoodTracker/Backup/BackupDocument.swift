@@ -187,6 +187,8 @@ private struct WireItem: Codable {
     let quantity: Int
     let notes: String?
     let essential: Bool
+    /// Optional so backups written before the per-item switch existed still decode; nil means on.
+    let notificationsEnabled: Bool?
 
     init(from item: PantryItem) {
         id = item.id
@@ -201,6 +203,7 @@ private struct WireItem: Codable {
         quantity = item.quantity
         notes = item.notes
         essential = item.essential
+        notificationsEnabled = item.notificationsEnabled
     }
 
     var asPantryItem: PantryItem {
@@ -216,7 +219,8 @@ private struct WireItem: Codable {
             category: category,
             quantity: quantity,
             notes: notes,
-            essential: essential
+            essential: essential,
+            notificationsEnabled: notificationsEnabled ?? true
         )
     }
 }

@@ -89,7 +89,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
-                FoodTrackerDatabase.MIGRATION_9_10
+                FoodTrackerDatabase.MIGRATION_9_10,
+                FoodTrackerDatabase.MIGRATION_10_11
             )
             .build()
 
@@ -97,6 +98,10 @@ class FoodTrackerMigrationTest {
         assertNotNull("existing pantry item must survive the migration", migratedItem)
         assertEquals("Cheddar Cheese", migratedItem!!.name)
         assertTrue("essential must default to true for pre-existing rows", migratedItem.essential)
+        assertTrue(
+            "notifications must stay on for pre-existing rows",
+            migratedItem.notificationsEnabled
+        )
 
         val shoppingList = db.shoppingListDao().getAllFlow().first()
         assertEquals(0, shoppingList.size)
@@ -171,7 +176,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
-                FoodTrackerDatabase.MIGRATION_9_10
+                FoodTrackerDatabase.MIGRATION_9_10,
+                FoodTrackerDatabase.MIGRATION_10_11
             )
             .build()
 
@@ -262,7 +268,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
-                FoodTrackerDatabase.MIGRATION_9_10
+                FoodTrackerDatabase.MIGRATION_9_10,
+                FoodTrackerDatabase.MIGRATION_10_11
             )
             .build()
 
@@ -372,7 +379,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
-                FoodTrackerDatabase.MIGRATION_9_10
+                FoodTrackerDatabase.MIGRATION_9_10,
+                FoodTrackerDatabase.MIGRATION_10_11
             )
             .build()
 
@@ -471,7 +479,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_6_7,
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
-                FoodTrackerDatabase.MIGRATION_9_10
+                FoodTrackerDatabase.MIGRATION_9_10,
+                FoodTrackerDatabase.MIGRATION_10_11
             )
             .build()
 
@@ -597,7 +606,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_8_9, FoodTrackerDatabase.MIGRATION_9_10)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_8_9, FoodTrackerDatabase.MIGRATION_9_10, FoodTrackerDatabase.MIGRATION_10_11)
             .build()
         val dao = db.localProductDao()
 

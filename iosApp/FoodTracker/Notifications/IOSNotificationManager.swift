@@ -84,7 +84,12 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
 
     public func scheduleNotification(for item: PantryItem) {
         let notificationSettings = SettingsStore.shared.settings.notifications
-        guard notificationSettings.enabled else { return }
+        guard Self.wantsIndividualReminder(notificationSettings, notificationsEnabled: item.notificationsEnabled) else {
+            // Also clears a request scheduled before the reminder was switched off - for the
+            // item, or for per-item reminders as a whole - which would otherwise still fire.
+            cancelNotification(for: item.id)
+            return
+        }
 
         // If the item already expired before today, do not schedule
         guard item.daysRemaining >= 0 else { return }
@@ -128,6 +133,16 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
                 print("Failed to schedule notification for \(item.name): \(error.localizedDescription)")
             }
         }
+    }
+
+    /// Whether an item should get its own reminder: notifications on as a whole, per-item
+    /// reminders on, and not silenced for this product. Mirrors Android's
+    /// `NotificationHelper.wantsIndividualReminder`.
+    private nonisolated static func wantsIndividualReminder(
+        _ settings: NotificationSettings,
+        notificationsEnabled: Bool
+    ) -> Bool {
+        settings.enabled && settings.individualEnabled && notificationsEnabled
     }
 
     /// Builds the per-item reminder's content for an item that will have [daysRemaining] days
@@ -191,8 +206,8 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     private nonisolated static let digestWindowDays = 7
     private nonisolated static let namedItemCount = 3
 
-    /// (Re)schedules the once-daily digest for the next occurrence of the configured reminder
-    /// time, naming the most urgent of the given items as of right now.
+    /// (Re)schedules the digest for the next occurrence of the configured reminder time - daily,
+    /// or weekly on the chosen weekday - naming the most urgent of the given items as of right now.
     ///
     /// Unlike Android's `DigestNotificationReceiver` (a `BroadcastReceiver` that recomputes the
     /// count fresh at the moment the alarm fires), a `UNNotificationRequest`'s content is fixed
@@ -210,18 +225,39 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     public func scheduleDigestNotification(items: [PantryItem]) {
         let notificationSettings = SettingsStore.shared.settings.notifications
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.digestIdentifier])
-        guard notificationSettings.enabled else { return }
+        guard notificationSettings.enabled, notificationSettings.digestEnabled else { return }
 
+        var timeComponents = DateComponents()
+        timeComponents.hour = notificationSettings.hour
+        timeComponents.minute = notificationSettings.minute
+        timeComponents.second = 0
+        if notificationSettings.digestFrequency == .weekly {
+            // ISO 1=Mon...7=Sun onto Calendar's 1=Sun...7=Sat.
+            timeComponents.weekday = min(max(notificationSettings.digestWeekday, 1), 7) % 7 + 1
+        }
+
+        let calendar = Calendar.current
+        guard let nextFireDate = calendar.nextDate(after: Date(), matching: timeComponents, matchingPolicy: .nextTime, direction: .forward) else { return }
+        let fireComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: nextFireDate)
+
+        // Selected and worded as of the day it fires, not today: a weekly summary can land up
+        // to six days after it is scheduled, and "expires in 5 days" written today would be
+        // wrong by then - or name food that has already gone off, and miss what has come due.
         let expiringThisWeek = items
-            .filter { $0.daysRemaining >= 0 && $0.daysRemaining <= Self.digestWindowDays }
-            .sorted { $0.daysRemaining < $1.daysRemaining }
+            .filter { $0.notificationsEnabled }
+            .compactMap { item -> (item: PantryItem, days: Int)? in
+                guard let days = Self.days(from: nextFireDate, to: item.expiryDate),
+                      (0...Self.digestWindowDays).contains(days) else { return nil }
+                return (item, days)
+            }
+            .sorted { $0.days < $1.days }
         guard !expiringThisWeek.isEmpty else { return }
 
         // Naming the items rather than only counting them is the point of the digest: "3 items
         // expiring this week" tells the user nothing they can act on without opening the app.
         let named = expiringThisWeek.prefix(Self.namedItemCount)
         var body = named
-            .map { L10n.notifDigestItem(name: $0.name, expiry: $0.daysRemainingFormatted) }
+            .map { L10n.notifDigestItem(name: $0.item.name, expiry: L10n.daysRemaining($0.days)) }
             .joined(separator: "\n")
         let remaining = expiringThisWeek.count - named.count
         if remaining > 0 {
@@ -233,16 +269,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         content.body = body
         content.sound = .default
         content.categoryIdentifier = Self.digestCategoryIdentifier
-        content.userInfo = ["digestItemIds": expiringThisWeek.map { $0.id }]
-
-        var timeComponents = DateComponents()
-        timeComponents.hour = notificationSettings.hour
-        timeComponents.minute = notificationSettings.minute
-        timeComponents.second = 0
-
-        let calendar = Calendar.current
-        guard let nextFireDate = calendar.nextDate(after: Date(), matching: timeComponents, matchingPolicy: .nextTime, direction: .forward) else { return }
-        let fireComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: nextFireDate)
+        content.userInfo = ["digestItemIds": expiringThisWeek.map { $0.item.id }]
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: fireComponents, repeats: false)
         let request = UNNotificationRequest(identifier: Self.digestIdentifier, content: content, trigger: trigger)
@@ -348,7 +375,9 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         let notificationSettings = SettingsStore.shared.settings.notifications
         let context = ModelContext(NativePantryViewModel.sharedModelContainer)
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == itemId })
-        guard let record = try? context.fetch(descriptor).first else { return }
+        guard let record = try? context.fetch(descriptor).first,
+              Self.wantsIndividualReminder(notificationSettings, notificationsEnabled: record.notificationsEnabled)
+        else { return }
 
         let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
         var components = Calendar.current.dateComponents([.year, .month, .day], from: tomorrow)

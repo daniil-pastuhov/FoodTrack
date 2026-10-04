@@ -17,7 +17,10 @@ data class PantryItem(
     val category: String? = null,
     val quantity: Int = 1,
     val notes: String? = null,
-    val essential: Boolean = true
+    val essential: Boolean = true,
+    /** Whether this item gets its own expiry reminder and appears in the summary. On by
+     *  default; turning it off silences just this product, not notifications as a whole. */
+    val notificationsEnabled: Boolean = true
 ) {
     fun daysRemaining(today: LocalDate): Int {
         return (expiryDate.toEpochDays() - today.toEpochDays()).toInt()
