@@ -1,0 +1,295 @@
+#!/usr/bin/env python3
+"""Starts a release: bumps the version, writes localized release notes, opens a release PR.
+
+    scripts/release            # interactive
+    scripts/release --dry-run  # everything up to the commit, then show what would change
+
+What it does (see "Releasing" in README.md for the whole flow):
+1. Takes origin/main and the commits since the last vX.Y.Z tag.
+2. Asks for a patch, minor or major bump.
+3. Has the Claude CLI (`claude -p`) turn the commits into short store release notes in every
+   language below, and lets you accept, edit or regenerate them.
+4. Creates release/vX.Y.Z from origin/main with the version bump and
+   release-notes/vX.Y.Z/<locale>.txt, pushes it and opens a PR to main.
+
+CI publishes every push to a release/v* branch to internal testing, and promotes the build to
+closed testing (and tags vX.Y.Z) when the PR is merged.
+
+Needs: git, gh (logged in) and claude on PATH. Standard library only.
+"""
+import argparse
+import difflib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+# --- Per-app settings ---------------------------------------------------------------------
+APP_DESCRIPTION = ("BestBefore, an app that tracks groceries and their expiry dates, on Android "
+                   "and iOS")
+# Play locale code -> language name for the prompt. The order is the order shown to you.
+LOCALES = {"en-GB": "English (UK)", "ru-RU": "Russian", "no-NO": "Norwegian Bokmål"}
+# (file, regex with the version as group 2, how many matches the file must have)
+VERSION_FILES = [
+    ("androidApp/build.gradle.kts", r'(versionName = ")(\d+\.\d+\.\d+)(")', 1),
+    # The app and the widget extension, Debug and Release; App Store Connect wants them equal.
+    ("iosApp/FoodTracker.xcodeproj/project.pbxproj", r"(MARKETING_VERSION = )(\d+\.\d+\.\d+)(;)", 4),
+]
+# ------------------------------------------------------------------------------------------
+
+NOTES_LIMIT = 500  # Google Play's limit per language
+ROOT = Path(__file__).resolve().parent.parent
+REMOTE = "origin"
+BASE = f"{REMOTE}/main"
+
+
+def run(*cmd, check=True, capture=True, input=None, strip=True):
+    result = subprocess.run(cmd, cwd=ROOT, text=True, input=input,
+                            stdout=subprocess.PIPE if capture else None,
+                            stderr=subprocess.PIPE if capture else None)
+    if check and result.returncode != 0:
+        sys.exit(f"Failed: {' '.join(cmd)}\n{(result.stderr or '').strip()}")
+    output = result.stdout or ""
+    return output.strip() if strip else output
+
+
+def git(*args, **kwargs):
+    return run("git", *args, **kwargs)
+
+
+def parse_version(text):
+    return tuple(int(part) for part in text.split("."))
+
+
+def bump(version, kind):
+    major, minor, patch = parse_version(version)
+    if kind == "major":
+        return f"{major + 1}.0.0"
+    if kind == "minor":
+        return f"{major}.{minor + 1}.0"
+    return f"{major}.{minor}.{patch + 1}"
+
+
+def bumped_files(new_version):
+    """{path: (old text, new text)} for every version file, read from origin/main."""
+    changes = {}
+    for path, pattern, expected in VERSION_FILES:
+        old = git("show", f"{BASE}:{path}", strip=False)
+        new, count = re.subn(pattern, lambda m: m.group(1) + new_version + m.group(3), old)
+        if count != expected:
+            sys.exit(f"Expected {expected} version entries in {path}, found {count}; "
+                     "update VERSION_FILES in scripts/release")
+        changes[path] = (old, new)
+    return changes
+
+
+def current_version():
+    path, pattern, _ = VERSION_FILES[0]
+    match = re.search(pattern, git("show", f"{BASE}:{path}"))
+    if not match:
+        sys.exit(f"No version found in {path}")
+    return match.group(2)
+
+
+def ask(prompt, choices):
+    while True:
+        answer = input(prompt).strip()
+        if answer in choices:
+            return choices[answer]
+        print(f"Please answer one of: {', '.join(k or '<enter>' for k in choices)}")
+
+
+# --- Release notes ------------------------------------------------------------------------
+
+def draft_notes(version, commits, feedback=None):
+    languages = "\n".join(f'- "{code}": {name}' for code, name in LOCALES.items())
+    prompt = f"""You write the "What's new" release notes for {APP_DESCRIPTION}, version {version}.
+
+Below are the git commits since the previous release. Write notes for people who use the app:
+- Only changes a user can notice: features, improvements, fixes. Leave out CI, build, tests,
+  refactoring, tooling, docs and store-listing work. If nothing is user-visible, write one
+  short line such as "Small fixes and improvements."
+- Plain text, one change per line starting with "• ". No headings, no version number, no
+  markdown, no commit hashes. Friendly and concrete, at most about 5 lines.
+- Each language must be at most {NOTES_LIMIT} characters including line breaks.
+- Write English first, then translate it faithfully and naturally (not word for word) into
+  each language, with the same lines in the same order.
+
+Languages (JSON keys):
+{languages}
+
+Answer with ONLY a JSON object mapping each key above to its notes, and nothing else.
+
+Commits:
+{commits}
+"""
+    if feedback:
+        prompt += f"\nThe developer reviewed a previous draft and asks for this change:\n{feedback}\n"
+    print("Asking Claude for release notes…")
+    output = run("claude", "-p", "--output-format", "json", input=prompt)
+    try:
+        text = json.loads(output)["result"]
+        notes = json.loads(text[text.index("{"):text.rindex("}") + 1])
+    except (ValueError, KeyError) as error:
+        sys.exit(f"Could not read Claude's answer ({error}):\n{output}")
+    return {code: str(notes.get(code, "")).strip() for code in LOCALES}
+
+
+def notes_problems(notes):
+    problems = []
+    for code in LOCALES:
+        text = notes.get(code, "")
+        if not text:
+            problems.append(f"{code} is empty")
+        elif len(text) > NOTES_LIMIT:
+            problems.append(f"{code} has {len(text)} characters (max {NOTES_LIMIT})")
+    return problems
+
+
+def show_notes(notes):
+    for code, name in LOCALES.items():
+        text = notes.get(code, "")
+        print(f"\n--- {code} · {name} · {len(text)}/{NOTES_LIMIT} ---\n{text}")
+    print()
+
+
+def edit_notes(notes, version):
+    """Opens all languages in one file in $EDITOR, as [locale] sections."""
+    body = [f"# Release notes for {version}. One [locale] section per language, at most "
+            f"{NOTES_LIMIT} characters each.", "# Lines starting with # are ignored.", ""]
+    for code in LOCALES:
+        body += [f"[{code}]", notes.get(code, ""), ""]
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False, encoding="utf-8") as file:
+        file.write("\n".join(body))
+    editor = os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
+    subprocess.run(f'{editor} "{file.name}"', shell=True, check=False)
+    edited, current = {}, None
+    for line in Path(file.name).read_text(encoding="utf-8").splitlines():
+        header = re.fullmatch(r"\[([A-Za-z-]+)\]\s*", line)
+        if header and header.group(1) in LOCALES:
+            current = header.group(1)
+            edited[current] = []
+        elif current and not line.startswith("#"):
+            edited[current].append(line)
+    os.unlink(file.name)
+    return {code: "\n".join(lines).strip() for code, lines in edited.items()} | \
+        {code: notes.get(code, "") for code in LOCALES if code not in edited}
+
+
+def review_notes(version, commits):
+    notes = draft_notes(version, commits)
+    while True:
+        show_notes(notes)
+        problems = notes_problems(notes)
+        for problem in problems:
+            print(f"! {problem}")
+        choices = {"e": "edit", "r": "regenerate", "q": "quit"}
+        if not problems:
+            choices = {"a": "accept", "": "accept"} | choices
+        action = ask(("[A]ccept, " if not problems else "") + "[e]dit, [r]egenerate, [q]uit? ",
+                     choices)
+        if action == "accept":
+            return notes
+        if action == "edit":
+            notes = edit_notes(notes, version)
+        elif action == "regenerate":
+            feedback = input("What should change? (Enter to just try again) ").strip()
+            notes = draft_notes(version, commits, feedback or None)
+        else:
+            sys.exit("Stopped; nothing was changed.")
+
+
+# --- Main ---------------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--dry-run", action="store_true",
+                        help="stop before creating the branch and show what would be committed")
+    args = parser.parse_args()
+
+    for tool in ("git", "claude") + (() if args.dry_run else ("gh",)):
+        if not shutil.which(tool):
+            sys.exit(f"{tool} is not on PATH")
+    if not args.dry_run and git("status", "--porcelain"):
+        sys.exit("The working tree has uncommitted changes; commit or stash them first.")
+
+    print(f"Fetching {REMOTE}…")
+    git("fetch", "--tags", REMOTE)
+    previous_tag = git("describe", "--tags", "--abbrev=0", "--match", "v[0-9]*.[0-9]*.[0-9]*",
+                       BASE, check=False)
+    if not previous_tag:
+        sys.exit(f"No vX.Y.Z tag on {BASE}. Tag the last released commit first, e.g.\n"
+                 "  git tag v1.0.0 <commit> && git push origin v1.0.0")
+    commits = git("log", f"{previous_tag}..{BASE}", "--no-merges", "--format=* %s%n%w(0,2,2)%b")
+    if not commits:
+        sys.exit(f"No commits on {BASE} since {previous_tag}; nothing to release.")
+    count = git("rev-list", "--count", "--no-merges", f"{previous_tag}..{BASE}")
+    print(f"\n{count} commits since {previous_tag}:")
+    for line in git("log", f"{previous_tag}..{BASE}", "--no-merges", "--format=%h %s").splitlines():
+        print(f"  {line}")
+
+    version = current_version()
+    choices = {"p": "patch", "": "patch", "m": "minor", "M": "major"}
+    options = [f"[P]atch → {bump(version, 'patch')}", f"[m]inor → {bump(version, 'minor')}",
+               f"[M]ajor → {bump(version, 'major')}"]
+    if parse_version(version) > parse_version(previous_tag[1:]):
+        # main already carries an unreleased version bump (made by hand); allow releasing it as is.
+        choices["k"] = "keep"
+        options.append(f"[k]eep {version} (not released yet)")
+    print(f"\nLast release: {previous_tag}. Version on main: {version}.")
+    kind = ask(", ".join(options) + "? ", choices)
+    new_version = version if kind == "keep" else bump(version, kind)
+    tag, branch = f"v{new_version}", f"release/v{new_version}"
+
+    if git("rev-parse", "--verify", "--quiet", f"refs/tags/{tag}", check=False):
+        sys.exit(f"Tag {tag} already exists")
+    if git("ls-remote", "--heads", REMOTE, branch) or \
+            git("rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", check=False):
+        sys.exit(f"Branch {branch} already exists (locally or on {REMOTE})")
+
+    notes = review_notes(new_version, commits)
+    notes_dir = f"release-notes/{tag}"
+    changes = bumped_files(new_version)
+
+    if args.dry_run:
+        print(f"Dry run: would create {branch} from {BASE} ({git('rev-parse', '--short', BASE)}) with:")
+        for path, (old, new) in changes.items():
+            sys.stdout.writelines(difflib.unified_diff(
+                old.splitlines(True), new.splitlines(True), f"a/{path}", f"b/{path}", n=0))
+        for code in LOCALES:
+            print(f"+ {notes_dir}/{code}.txt")
+        return 0
+
+    git("switch", "-c", branch, BASE, "--no-track")
+    for path, (_, new) in changes.items():
+        (ROOT / path).write_text(new, encoding="utf-8")
+    (ROOT / notes_dir).mkdir(parents=True, exist_ok=True)
+    for code in LOCALES:
+        (ROOT / notes_dir / f"{code}.txt").write_text(notes[code] + "\n", encoding="utf-8")
+    git("add", notes_dir, *changes)
+    first_locale = next(iter(LOCALES))
+    git("commit", "-m", f"Release {new_version}\n\n{notes[first_locale]}")
+    print(f"Pushing {branch}…")
+    git("push", "-u", REMOTE, branch, capture=False)
+
+    commit_list = git("log", f"{previous_tag}..{BASE}", "--no-merges", "--format=- %h %s")
+    body = (f"Release notes ({first_locale}; every language is in `{notes_dir}/`):\n\n"
+            f"{notes[first_locale]}\n\n"
+            f"Every push to this branch is published to **internal testing**. Merging this PR "
+            f"promotes the tested build to **closed testing** with these notes and tags `{tag}`.\n\n"
+            f"Changes since {previous_tag}:\n{commit_list}\n")
+    url = run("gh", "pr", "create", "--base", "main", "--head", branch,
+              "--title", f"Release {new_version}", "--body", body)
+    print(f"\nRelease PR: {url}\nCI is now publishing {new_version} to internal testing.")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (KeyboardInterrupt, EOFError):
+        sys.exit("\nStopped.")

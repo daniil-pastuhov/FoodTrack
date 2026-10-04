@@ -39,3 +39,25 @@ A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Andr
 ```bash
 xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker -destination 'generic/platform=iOS Simulator' build
 ```
+
+## Releasing
+
+Merging to `main` publishes nothing; CI only tests and builds it. A release goes out in two steps:
+
+1. **Start it**: `scripts/release` (add `--dry-run` to try it without changing anything). It
+   lists the commits on `origin/main` since the last `vX.Y.Z` tag and asks for a patch, minor or
+   major bump. Then it has the Claude CLI write store release notes in every listing language
+   (en-GB, ru-RU, no-NO) for you to accept, edit or regenerate. It creates
+   `release/vX.Y.Z` with the version bump (Android `versionName` and every iOS
+   `MARKETING_VERSION`) and `release-notes/vX.Y.Z/<locale>.txt`, pushes it and opens a PR.
+2. **Internal testing**: CI publishes every push to `release/v*` to the Google Play internal track
+   and to the internal TestFlight testers, with those notes. Fixes for the release go on the
+   branch; each push becomes a new internal build.
+3. **Closed testing**: merging the PR promotes the newest internal Play build of that version to
+   closed testing (`alpha`). It also adds the newest TestFlight build of the version to the
+   external group "External testers" and submits it for beta review. Then it tags `vX.Y.Z` and
+   creates a GitHub release.
+
+Needs `gh` (logged in) and `claude` on your PATH. Play rejects notes longer than 500 characters
+per language, and the script checks that. TestFlight's beta review needs the Test Information and
+the Beta App Review contact filled in once in App Store Connect.
