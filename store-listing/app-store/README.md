@@ -60,12 +60,23 @@ The result is **4+**.
 
 ## 5. App Privacy ("nutrition label")
 
-- **Data collection: "No, we do not collect data from this app."**
+- **Data collection: "Yes, we collect data from this app."** The only collection is crash
+  reports, sent to Firebase Crashlytics from release builds.
   - Apple counts data as collected only when it is sent off the device to you or a partner.
-  - BestBefore has no account, analytics or ads, and no server.
-  - Barcode lookups go to Open Food Facts without any user or device identifier, and nothing
-    else leaves the phone.
+  - BestBefore has no account, analytics or ads, and no server of its own.
+  - Barcode lookups go to Open Food Facts without any user or device identifier.
+  - Declare these types, each **not linked to the user** and **not used for tracking**, with
+    the purpose **App Functionality**:
+    - **Diagnostics > Crash Data**: the crash report itself.
+    - **Diagnostics > Other Diagnostic Data**: device model, OS version, free disk and memory
+      at the time of the crash.
+    - **Identifiers > Device ID**: the Firebase installation ID Crashlytics groups crashes by.
 - **Tracking: No.**
+- The privacy policy (URL above) has to say the same: crash reports go to Google's Firebase
+  Crashlytics.
+- Google Play's Data safety form needs the matching answers: **Crash logs**, **Diagnostics**
+  and **Device or other IDs** are collected, are not shared, are encrypted in transit, are
+  not optional, and are used for **App functionality**.
 
 ## 6. App Review information
 
