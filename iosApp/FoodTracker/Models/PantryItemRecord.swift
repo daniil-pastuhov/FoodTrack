@@ -18,6 +18,7 @@ final class PantryItemRecord {
     var quantity: Int = 1
     var notes: String?
     var essential: Bool = true
+    var notificationsEnabled: Bool = true
 
     init(from item: PantryItem) {
         id = item.id
@@ -32,6 +33,7 @@ final class PantryItemRecord {
         quantity = item.quantity
         notes = item.notes
         essential = item.essential
+        notificationsEnabled = item.notificationsEnabled
     }
 
     func update(from item: PantryItem) {
@@ -46,6 +48,7 @@ final class PantryItemRecord {
         quantity = item.quantity
         notes = item.notes
         essential = item.essential
+        notificationsEnabled = item.notificationsEnabled
     }
 
     var asPantryItem: PantryItem {
@@ -61,7 +64,8 @@ final class PantryItemRecord {
             category: category,
             quantity: quantity,
             notes: notes,
-            essential: essential
+            essential: essential,
+            notificationsEnabled: notificationsEnabled
         )
     }
 }

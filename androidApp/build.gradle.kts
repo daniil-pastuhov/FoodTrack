@@ -29,8 +29,8 @@ android {
         targetSdk = 37
         // CI passes -PversionCode (see .github/workflows/ci.yml) so every upload to Google Play
         // gets a new, higher code; a local build falls back to this one.
-        versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 6
-        versionName = "1.2.1"
+        versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 7
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

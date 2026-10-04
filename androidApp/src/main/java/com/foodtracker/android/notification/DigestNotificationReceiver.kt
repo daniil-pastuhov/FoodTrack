@@ -18,15 +18,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
 /**
- * Fires once a day at the configured reminder time and posts a single notification naming the
- * items that are actually in trouble — a lighter-weight cadence than one alarm per item, useful
- * once several items cluster around the same expiry window. Always reschedules itself for the
- * next day first (see [NotificationHelper.scheduleDigest]), so a quiet day with nothing to
- * report doesn't silently end the daily cadence.
+ * Fires at the configured reminder time - daily, or weekly on the chosen weekday - and posts a
+ * single notification naming the items that are actually in trouble: a lighter-weight cadence
+ * than one alarm per item, useful once several items cluster around the same expiry window.
+ * Always reschedules itself for the next occurrence first (see [NotificationHelper.scheduleDigest]),
+ * so a quiet day with nothing to report doesn't silently end the cadence.
  */
 class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
 
@@ -35,15 +36,12 @@ class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
     override fun onReceive(context: Context, intent: Intent) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
         NotificationHelper.scheduleDigest(context, notificationSettings)
-        if (!notificationSettings.enabled) return
+        if (!notificationSettings.enabled || !notificationSettings.digestEnabled) return
 
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val today = DateUtils.today()
-                val expiringThisWeek = repository.getItemsFlow().first()
-                    .filter { it.daysRemaining(today) in 0..DIGEST_WINDOW_DAYS }
-                    .sortedBy { it.daysRemaining(today) }
+                val expiringThisWeek = digestItems(repository.getItemsFlow().first(), DateUtils.today())
                 if (expiringThisWeek.isNotEmpty()) {
                     postDigestNotification(context, expiringThisWeek)
                 }
@@ -110,7 +108,7 @@ class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
+        val notification = NotificationCompat.Builder(context, NotificationHelper.DIGEST_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(ContextCompat.getColor(context, R.color.notification_accent))
             .setContentTitle(title)
@@ -135,6 +133,13 @@ class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
 
     companion object {
         const val DIGEST_NOTIFICATION_ID = -1000
+
+        /** The items the digest names on [today]: not silenced, and expiring within
+         *  [DIGEST_WINDOW_DAYS] (expired ones are left out), most urgent first. */
+        internal fun digestItems(items: List<PantryItem>, today: LocalDate): List<PantryItem> =
+            items
+                .filter { it.notificationsEnabled && it.daysRemaining(today) in 0..DIGEST_WINDOW_DAYS }
+                .sortedBy { it.daysRemaining(today) }
 
         /** How far ahead the digest looks. */
         private const val DIGEST_WINDOW_DAYS = 7

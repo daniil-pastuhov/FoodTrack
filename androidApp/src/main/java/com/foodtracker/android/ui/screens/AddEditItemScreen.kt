@@ -187,6 +187,9 @@ fun AddEditItemScreen(
     var essential by remember {
         mutableStateOf(initialItem?.essential ?: true)
     }
+    var notificationsEnabled by remember {
+        mutableStateOf(initialItem?.notificationsEnabled ?: true)
+    }
 
     val categorySuggestions = remember(category, state.categoryPreferences) {
         if (category.isBlank()) {
@@ -242,7 +245,8 @@ fun AddEditItemScreen(
                     ?.ifBlank { null },
                 quantity = quantity,
                 notes = notes.trim().ifBlank { null },
-                essential = essential
+                essential = essential,
+                notificationsEnabled = notificationsEnabled
             )
             onSaveItem(item)
         }
@@ -762,6 +766,29 @@ fun AddEditItemScreen(
                     )
                 }
                 Switch(checked = essential, onCheckedChange = { essential = it })
+            }
+
+            // Per-item reminder toggle
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.item_notifications_label),
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = stringResource(R.string.item_notifications_description),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+                Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
             }
 
             // Notes Field

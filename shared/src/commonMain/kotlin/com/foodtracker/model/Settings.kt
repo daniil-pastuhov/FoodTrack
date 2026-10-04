@@ -4,11 +4,27 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class NotificationSettings(
+    /** Master switch: off silences every expiry notification, individual and summary alike. */
     val enabled: Boolean = true,
     val leadDays: Int = 1,
     val hour: Int = 9,
-    val minute: Int = 0
+    val minute: Int = 0,
+    /** One reminder per product, [leadDays] before it expires. */
+    val individualEnabled: Boolean = true,
+    /** One grouped notification naming what expires in the coming week. Off by default: with
+     *  individual reminders on too, every item would be announced twice. */
+    val digestEnabled: Boolean = false,
+    val digestFrequency: DigestFrequency = DigestFrequency.DAILY,
+    /** ISO day of week (1 = Monday .. 7 = Sunday) the summary fires on when [digestFrequency]
+     *  is [DigestFrequency.WEEKLY]. Ignored for a daily summary. */
+    val digestWeekday: Int = 1
 )
+
+@Serializable
+enum class DigestFrequency {
+    DAILY,
+    WEEKLY
+}
 
 @Serializable
 enum class AppTheme {

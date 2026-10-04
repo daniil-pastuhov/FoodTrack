@@ -18,7 +18,8 @@ data class PantryItemEntity(
     val category: String?,
     val quantity: Int = 1,
     val notes: String?,
-    val essential: Boolean = true
+    val essential: Boolean = true,
+    val notificationsEnabled: Boolean = true
 )
 
 fun PantryItemEntity.toDomain(): PantryItem = PantryItem(
@@ -33,7 +34,8 @@ fun PantryItemEntity.toDomain(): PantryItem = PantryItem(
     category = category,
     quantity = quantity,
     notes = notes,
-    essential = essential
+    essential = essential,
+    notificationsEnabled = notificationsEnabled
 )
 
 fun PantryItem.toEntity(): PantryItemEntity = PantryItemEntity(
@@ -48,5 +50,6 @@ fun PantryItem.toEntity(): PantryItemEntity = PantryItemEntity(
     category = category,
     quantity = quantity,
     notes = notes,
-    essential = essential
+    essential = essential,
+    notificationsEnabled = notificationsEnabled
 )

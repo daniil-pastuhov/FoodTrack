@@ -101,6 +101,8 @@
 
 "essential_item_label" = "Essential item";
 "essential_item_description" = "Automatically add to your shopping list when removed from the pantry";
+"item_notifications_label" = "Remind me before it expires";
+"item_notifications_description" = "Turn off to never get notified about this item";
 
 "shopping_list_button" = "Shopping List";
 "shopping_list_title" = "Shopping List";
@@ -154,6 +156,14 @@
 "settings_notifications_enabled" = "Expiry reminders";
 "settings_lead_days_label" = "Remind me this many days before expiry";
 "settings_time_label" = "Reminder time";
+"settings_individual_alerts" = "Individual alerts";
+"settings_individual_alerts_desc" = "One notification per product, before it expires";
+"settings_digest" = "Summary";
+"settings_digest_desc" = "One notification listing what expires in the coming week";
+"settings_digest_frequency_label" = "How often";
+"settings_digest_daily" = "Daily";
+"settings_digest_weekly" = "Weekly";
+"settings_digest_weekday_label" = "Day of the week";
 
 "settings_section_expiring_soon" = "Expiring Soon Threshold";
 "settings_expiring_soon_desc" = "Items expiring within this many days are flagged as 'Expiring Soon'";

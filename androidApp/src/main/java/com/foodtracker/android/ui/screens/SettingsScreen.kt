@@ -6,6 +6,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
@@ -75,6 +77,11 @@ import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.StorePlace
 import com.foodtracker.model.AppTheme
+import com.foodtracker.model.DigestFrequency
+import com.foodtracker.model.NotificationSettings
+import java.time.DayOfWeek
+import java.time.format.TextStyle
+import java.util.Locale
 import androidx.compose.ui.platform.LocalContext
 import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.android.util.storageLocationRename
@@ -252,23 +259,74 @@ fun SettingsScreen(
                 }
 
                 if (draft.notifications.enabled) {
+                    val notifications = draft.notifications
+                    fun persistNotifications(updated: NotificationSettings) =
+                        persist(draft.copy(notifications = updated))
+
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text(
-                        text = stringResource(R.string.settings_lead_days_label),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                    NotificationToggleRow(
+                        title = stringResource(R.string.settings_individual_alerts),
+                        description = stringResource(R.string.settings_individual_alerts_desc),
+                        checked = notifications.individualEnabled,
+                        onCheckedChange = { persistNotifications(notifications.copy(individualEnabled = it)) }
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(1, 2, 3, 5, 7).forEach { days ->
-                            FilterChip(
-                                selected = draft.notifications.leadDays == days,
-                                onClick = { persist(draft.copy(notifications = draft.notifications.copy(leadDays = days))) },
-                                label = { Text(days.toString()) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BrandPrimary,
-                                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    if (notifications.individualEnabled) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = stringResource(R.string.settings_lead_days_label),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(1, 2, 3, 5, 7).forEach { days ->
+                                SettingsChoiceChip(
+                                    label = days.toString(),
+                                    selected = notifications.leadDays == days,
+                                    onClick = { persistNotifications(notifications.copy(leadDays = days)) }
                                 )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    NotificationToggleRow(
+                        title = stringResource(R.string.settings_digest),
+                        description = stringResource(R.string.settings_digest_desc),
+                        checked = notifications.digestEnabled,
+                        onCheckedChange = { persistNotifications(notifications.copy(digestEnabled = it)) }
+                    )
+                    if (notifications.digestEnabled) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = stringResource(R.string.settings_digest_frequency_label),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            SettingsChoiceChip(
+                                label = stringResource(R.string.settings_digest_daily),
+                                selected = notifications.digestFrequency == DigestFrequency.DAILY,
+                                onClick = { persistNotifications(notifications.copy(digestFrequency = DigestFrequency.DAILY)) }
+                            )
+                            SettingsChoiceChip(
+                                label = stringResource(R.string.settings_digest_weekly),
+                                selected = notifications.digestFrequency == DigestFrequency.WEEKLY,
+                                onClick = { persistNotifications(notifications.copy(digestFrequency = DigestFrequency.WEEKLY)) }
+                            )
+                        }
+                        if (notifications.digestFrequency == DigestFrequency.WEEKLY) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = stringResource(R.string.settings_digest_weekday_label),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            WeekdayChips(
+                                selected = notifications.digestWeekday,
+                                onSelect = { persistNotifications(notifications.copy(digestWeekday = it)) }
                             )
                         }
                     }
@@ -691,6 +749,62 @@ fun SettingsScreen(
             // (see MainActivity).
             Spacer(modifier = Modifier.height(bottomOverlayClearance))
         }
+        }
+    }
+}
+
+/** A labelled on/off row inside a settings card, with a one-line explanation underneath. */
+@Composable
+private fun NotificationToggleRow(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title)
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
+        )
+    }
+}
+
+@Composable
+private fun SettingsChoiceChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = BrandPrimary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+        )
+    )
+}
+
+/** Monday-first weekday picker; [selected] and the value passed to [onSelect] are ISO day
+ *  numbers (1 = Monday .. 7 = Sunday), matching [NotificationSettings.digestWeekday]. Wraps
+ *  rather than scrolls, since seven chips don't fit one row on a phone. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WeekdayChips(selected: Int, onSelect: (Int) -> Unit) {
+    val locale = Locale.getDefault()
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        DayOfWeek.entries.forEach { day ->
+            SettingsChoiceChip(
+                label = day.getDisplayName(TextStyle.SHORT, locale),
+                selected = selected == day.value,
+                onClick = { onSelect(day.value) }
+            )
         }
     }
 }

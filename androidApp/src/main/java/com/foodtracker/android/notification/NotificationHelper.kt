@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import com.foodtracker.android.R
 import com.foodtracker.android.settings.AndroidSettingsRepository
+import com.foodtracker.model.DigestFrequency
 import com.foodtracker.model.NotificationSettings
 import com.foodtracker.model.PantryItem
 import com.foodtracker.notification.ExpiryNotificationCalculator
@@ -18,24 +19,41 @@ import kotlinx.datetime.LocalDate
 
 object NotificationHelper {
 
+    /** Per-item expiry reminders. The id predates the summary channel and is kept as-is, so
+     *  whatever the user already set for it in system settings carries over. */
     const val CHANNEL_ID = "foodtracker_expiry_channel"
+
+    /** The grouped summary. Its own channel, so the user can silence or demote it in system
+     *  settings without touching the per-item reminders, and the other way round. */
+    const val DIGEST_CHANNEL_ID = "foodtracker_digest_channel"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel(
+            val itemChannel = NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.notification_channel_name),
-                importance
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = context.getString(R.string.notification_channel_desc)
                 enableVibration(true)
                 enableLights(true)
             }
+            val digestChannel = NotificationChannel(
+                DIGEST_CHANNEL_ID,
+                context.getString(R.string.notification_digest_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = context.getString(R.string.notification_digest_channel_desc)
+            }
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannels(listOf(itemChannel, digestChannel))
         }
     }
+
+    /** Whether [item] should get its own reminder under [settings]: notifications on as a
+     *  whole, per-item reminders on, and not silenced for this product. */
+    internal fun wantsIndividualReminder(settings: NotificationSettings, item: PantryItem): Boolean =
+        settings.enabled && settings.individualEnabled && item.notificationsEnabled
 
     /**
      * The reminder's title and body for an item with [daysRemaining] days left *at the moment
@@ -66,7 +84,12 @@ object NotificationHelper {
 
     fun scheduleNotification(context: Context, item: PantryItem) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
-        if (!notificationSettings.enabled) return
+        if (!wantsIndividualReminder(notificationSettings, item)) {
+            // Also clears an alarm scheduled before the reminder was switched off - for the
+            // item, or for per-item reminders as a whole - which would otherwise still fire.
+            cancelNotification(context, item.id)
+            return
+        }
 
         val today = DateUtils.today()
         val payload = ExpiryNotificationCalculator.calculateNotification(
@@ -151,6 +174,9 @@ object NotificationHelper {
         fallbackBody: String?
     ) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
+        // The reminder may have been switched off since it was posted. A deleted item (null)
+        // still snoozes on its fallback copy, as before.
+        if (item != null && !wantsIndividualReminder(notificationSettings, item)) return
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
         val tomorrow = LocalDate.fromEpochDays(DateUtils.today().toEpochDays() + 1)
@@ -227,28 +253,21 @@ object NotificationHelper {
     private const val DIGEST_REQUEST_CODE = -1000
 
     /**
-     * Schedules (or, if notifications are disabled, cancels) the once-daily digest that
-     * summarizes how many items expire within the coming week in a single notification.
-     * Fires at the same reminder time as per-item alerts and reschedules itself for the next
-     * day each time it fires — a one-shot-and-reschedule alarm, like [scheduleNotification],
-     * rather than `setRepeating`, which isn't reliably exact under Doze.
+     * Schedules (or, if notifications or the summary are disabled, cancels) the digest that
+     * names what expires within the coming week in a single notification. Fires at the same
+     * reminder time as per-item alerts - daily, or weekly on the chosen weekday - and
+     * reschedules itself for the next occurrence each time it fires: a one-shot-and-reschedule
+     * alarm, like [scheduleNotification], rather than `setRepeating`, which isn't reliably exact
+     * under Doze.
      */
     fun scheduleDigest(context: Context, notificationSettings: NotificationSettings) {
-        if (!notificationSettings.enabled) {
+        if (!notificationSettings.enabled || !notificationSettings.digestEnabled) {
             cancelDigest(context)
             return
         }
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, notificationSettings.hour)
-            set(Calendar.MINUTE, notificationSettings.minute)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
-        }
+        val calendar = nextDigestTime(Calendar.getInstance(), notificationSettings)
 
         val intent = Intent(context, DigestNotificationReceiver::class.java)
         val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
@@ -258,6 +277,30 @@ object NotificationHelper {
             alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+    }
+
+    /**
+     * The next moment, strictly after [now], the digest should fire under [settings]: today or
+     * tomorrow at the reminder time for a daily summary, or the next [NotificationSettings.digestWeekday]
+     * at that time for a weekly one - today counts only while its slot is still ahead.
+     */
+    internal fun nextDigestTime(now: Calendar, settings: NotificationSettings): Calendar {
+        val nowMillis = now.timeInMillis
+        return (now.clone() as Calendar).apply {
+            set(Calendar.HOUR_OF_DAY, settings.hour)
+            set(Calendar.MINUTE, settings.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+            if (settings.digestFrequency == DigestFrequency.WEEKLY) {
+                // ISO 1=Mon..7=Sun onto Calendar's 1=Sun..7=Sat.
+                val targetDay = settings.digestWeekday.coerceIn(1, 7) % 7 + 1
+                val daysAhead = (targetDay - get(Calendar.DAY_OF_WEEK) + 7) % 7
+                add(Calendar.DAY_OF_YEAR, daysAhead)
+                if (timeInMillis <= nowMillis) add(Calendar.DAY_OF_YEAR, 7)
+            } else if (timeInMillis <= nowMillis) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
         }
     }
 

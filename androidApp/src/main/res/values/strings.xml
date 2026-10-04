@@ -199,6 +199,8 @@
 
     <string name="essential_item_label">Essential item</string>
     <string name="essential_item_description">Automatically add to your shopping list when removed from the pantry</string>
+    <string name="item_notifications_label">Remind me before it expires</string>
+    <string name="item_notifications_description">Turn off to never get notified about this item</string>
 
     <string name="shopping_list_title">Shopping List</string>
     <string name="shopping_list_content_description">Shopping list</string>
@@ -274,8 +276,10 @@
         <item quantity="other">%d years expired</item>
     </plurals>
 
-    <string name="notification_channel_name">Food Expiration Alerts</string>
-    <string name="notification_channel_desc">Notifications when food items are about to expire</string>
+    <string name="notification_channel_name">Expiry alerts for each item</string>
+    <string name="notification_channel_desc">One notification per product, shortly before it expires</string>
+    <string name="notification_digest_channel_name">Expiry summary</string>
+    <string name="notification_digest_channel_desc">One notification listing what expires in the coming week</string>
     <string name="notif_title_today">Product Expires Today! ⚠️</string>
     <string name="notif_title_soon">Product Expiring Soon! ⚠️</string>
     <string name="notif_body_today_format">%1$s expires today. Make sure to consume it!</string>
@@ -337,6 +341,14 @@
     <string name="settings_notifications_enabled">Expiry reminders</string>
     <string name="settings_lead_days_label">Remind me this many days before expiry</string>
     <string name="settings_time_label">Reminder time</string>
+    <string name="settings_individual_alerts">Individual alerts</string>
+    <string name="settings_individual_alerts_desc">One notification per product, before it expires</string>
+    <string name="settings_digest">Summary</string>
+    <string name="settings_digest_desc">One notification listing what expires in the coming week</string>
+    <string name="settings_digest_frequency_label">How often</string>
+    <string name="settings_digest_daily">Daily</string>
+    <string name="settings_digest_weekly">Weekly</string>
+    <string name="settings_digest_weekday_label">Day of the week</string>
 
     <string name="settings_section_expiring_soon">Expiring Soon Threshold</string>
     <string name="settings_expiring_soon_desc">Items expiring within this many days are flagged as \'Expiring Soon\'</string>

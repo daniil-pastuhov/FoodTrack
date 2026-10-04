@@ -160,16 +160,45 @@ public struct SettingsView: View {
             ))
 
             if settings.notifications.enabled {
-                Picker(L10n.settingsLeadDaysLabel, selection: Binding(
-                    get: { settings.notifications.leadDays },
-                    set: { newValue in
-                        update { $0.notifications.leadDays = newValue }
-                        IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
-                        IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
+                Toggle(isOn: notificationBinding(\.individualEnabled)) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.settingsIndividualAlerts)
+                        Text(L10n.settingsIndividualAlertsDesc)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                )) {
-                    ForEach([1, 2, 3, 5, 7], id: \.self) { days in
-                        Text("\(days)").tag(days)
+                }
+
+                if settings.notifications.individualEnabled {
+                    Picker(L10n.settingsLeadDaysLabel, selection: notificationBinding(\.leadDays)) {
+                        ForEach([1, 2, 3, 5, 7], id: \.self) { days in
+                            Text("\(days)").tag(days)
+                        }
+                    }
+                }
+
+                Toggle(isOn: notificationBinding(\.digestEnabled)) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.settingsDigest)
+                        Text(L10n.settingsDigestDesc)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if settings.notifications.digestEnabled {
+                    Picker(L10n.settingsDigestFrequencyLabel, selection: notificationBinding(\.digestFrequency)) {
+                        Text(L10n.settingsDigestDaily).tag(DigestFrequency.daily)
+                        Text(L10n.settingsDigestWeekly).tag(DigestFrequency.weekly)
+                    }
+                    .pickerStyle(.segmented)
+
+                    if settings.notifications.digestFrequency == .weekly {
+                        Picker(L10n.settingsDigestWeekdayLabel, selection: notificationBinding(\.digestWeekday)) {
+                            ForEach(1...7, id: \.self) { isoDay in
+                                Text(Self.weekdayName(isoDay: isoDay)).tag(isoDay)
+                            }
+                        }
                     }
                 }
 
@@ -191,6 +220,25 @@ public struct SettingsView: View {
                 )
             }
         }
+    }
+
+    /// Binds one notification setting, re-scheduling every reminder and the summary on change -
+    /// any of these fields can change what should fire, and when.
+    private func notificationBinding<Value>(_ keyPath: WritableKeyPath<NotificationSettings, Value>) -> Binding<Value> {
+        Binding(
+            get: { settings.notifications[keyPath: keyPath] },
+            set: { newValue in
+                update { $0.notifications[keyPath: keyPath] = newValue }
+                IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
+                IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
+            }
+        )
+    }
+
+    /// Localized weekday name for an ISO day number (1 = Monday ... 7 = Sunday).
+    private static func weekdayName(isoDay: Int) -> String {
+        let symbols = Calendar.current.standaloneWeekdaySymbols // index 0 = Sunday
+        return symbols[isoDay % 7].capitalized
     }
 
     private var expiringSoonSection: some View {
