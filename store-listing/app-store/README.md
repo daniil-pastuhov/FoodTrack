@@ -86,7 +86,7 @@ The result is **4+**.
 - Notes (paste as is):
 
 ```
-BestBefore has no account or login; all data stays on the device.
+BestBefore has no account or login; the pantry stays on the device. Apart from barcode lookups on Open Food Facts, the app sends only crash reports, to Firebase Crashlytics.
 
 To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by
 hand), then open the Calendar and Shopping List tabs.
