@@ -48,8 +48,8 @@ Merging to `main` publishes nothing; CI only tests and builds it. A release goes
    lists the commits on `origin/main` since the last `vX.Y.Z` tag and asks for a patch, minor or
    major bump. Then it has the Claude CLI write store release notes in every listing language
    (en-GB, ru-RU, no-NO) for you to accept, edit or regenerate. It creates
-   `release/vX.Y.Z` with the version bump (Android `versionName` and every iOS
-   `MARKETING_VERSION`) and `release-notes/vX.Y.Z/<locale>.txt`, pushes it and opens a PR.
+   `release/vX.Y.Z` with the version bump in `Version.xcconfig` and
+   `release-notes/vX.Y.Z/<locale>.txt`, pushes it and opens a PR.
 2. **Internal testing**: CI publishes every push to `release/v*` to the Google Play internal track
    and to the internal TestFlight testers, with those notes. Fixes for the release go on the
    branch; each push becomes a new internal build.
@@ -57,6 +57,10 @@ Merging to `main` publishes nothing; CI only tests and builds it. A release goes
    closed testing (`alpha`). It also adds the newest TestFlight build of the version to the
    external group "External testers" and submits it for beta review. Then it tags `vX.Y.Z` and
    creates a GitHub release.
+
+**Version**: `Version.xcconfig` holds the one version of both apps. Gradle reads it for Android's
+`versionName`, and it is the Xcode project's base configuration, so the app and the widget get it
+as `MARKETING_VERSION`. Don't set the version anywhere else.
 
 Needs `gh` (logged in) and `claude` on your PATH. Play rejects notes longer than 500 characters
 per language, and the script checks that. TestFlight's beta review needs the Test Information and

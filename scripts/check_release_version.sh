@@ -4,8 +4,8 @@
 #
 #   scripts/check_release_version.sh 1.3.0
 #
-# The Android versionName, every iOS MARKETING_VERSION and the release notes all have to match,
-# since scripts/release writes them together and a hand edit can leave one behind.
+# Version.xcconfig (the one version of both the Android and the iOS app) and the release notes
+# have to match the branch, since a hand edit can leave one behind.
 set -euo pipefail
 
 VERSION=${1:?usage: $0 X.Y.Z}
@@ -14,10 +14,11 @@ LOCALES=(en-GB ru-RU no-NO)
 fail() { echo "::error::$1"; exit 1; }
 
 [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "'$VERSION' is not a X.Y.Z version"
-grep -q "versionName = \"$VERSION\"" "$ROOT/androidApp/build.gradle.kts" ||
-  fail "androidApp/build.gradle.kts versionName is not $VERSION"
-if grep "MARKETING_VERSION = " "$ROOT/iosApp/FoodTracker.xcodeproj/project.pbxproj" | grep -vq "= $VERSION;"; then
-  fail "not every MARKETING_VERSION in project.pbxproj is $VERSION"
+grep -qx "MARKETING_VERSION = $VERSION" "$ROOT/Version.xcconfig" ||
+  fail "Version.xcconfig is not MARKETING_VERSION = $VERSION"
+# A MARKETING_VERSION in the Xcode project would override Version.xcconfig for that target.
+if grep -q "MARKETING_VERSION" "$ROOT/iosApp/FoodTracker.xcodeproj/project.pbxproj"; then
+  fail "project.pbxproj sets MARKETING_VERSION; keep the version in Version.xcconfig only"
 fi
 for locale in "${LOCALES[@]}"; do
   notes="$ROOT/release-notes/v$VERSION/$locale.txt"

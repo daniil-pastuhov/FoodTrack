@@ -19,6 +19,12 @@ val keystoreProperties = Properties().apply {
 }
 val hasReleaseSigning = keystorePropertiesFile.exists()
 
+// One version for both apps: Version.xcconfig is also the iOS project's base configuration.
+val appVersion: String = providers.fileContents(rootProject.layout.projectDirectory.file("Version.xcconfig"))
+    .asText.get()
+    .let { Regex("""(?m)^MARKETING_VERSION\s*=\s*(\S+)""").find(it)?.groupValues?.get(1) }
+    ?: error("No MARKETING_VERSION in Version.xcconfig")
+
 android {
     namespace = "com.foodtracker.android"
     compileSdk = 37
@@ -30,7 +36,7 @@ android {
         // CI passes -PversionCode (see .github/workflows/ci.yml) so every upload to Google Play
         // gets a new, higher code; a local build falls back to this one.
         versionCode = providers.gradleProperty("versionCode").orNull?.toInt() ?: 7
-        versionName = "1.3.0"
+        versionName = appVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

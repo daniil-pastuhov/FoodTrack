@@ -35,9 +35,8 @@ APP_DESCRIPTION = ("BestBefore, an app that tracks groceries and their expiry da
 LOCALES = {"en-GB": "English (UK)", "ru-RU": "Russian", "no-NO": "Norwegian Bokmål"}
 # (file, regex with the version as group 2, how many matches the file must have)
 VERSION_FILES = [
-    ("androidApp/build.gradle.kts", r'(versionName = ")(\d+\.\d+\.\d+)(")', 1),
-    # The app and the widget extension, Debug and Release; App Store Connect wants them equal.
-    ("iosApp/FoodTracker.xcodeproj/project.pbxproj", r"(MARKETING_VERSION = )(\d+\.\d+\.\d+)(;)", 4),
+    # The one version of both apps: Gradle reads it for versionName, Xcode for MARKETING_VERSION.
+    ("Version.xcconfig", r"(MARKETING_VERSION = )(\d+\.\d+\.\d+)()", 1),
 ]
 # ------------------------------------------------------------------------------------------
 
