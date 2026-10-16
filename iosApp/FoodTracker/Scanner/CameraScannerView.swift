@@ -306,7 +306,7 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
             let handler = VNImageRequestHandler(cgImage: cgImage, orientation: image.imageOrientation.cgOrientation, options: [:])
             try? handler.perform([request])
 
-            let observations = (request.results as? [VNRecognizedTextObservation]) ?? []
+            let observations = request.results ?? []
             // Vision returns observations in no particular order, so sort top-to-bottom: the
             // parser's one-line lookahead for weighed goods depends on reading order.
             let lines = observations
@@ -318,8 +318,6 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
     }
 
     private func extractDate(from lines: [String]) -> Date? {
-        let keywordRegex = try? NSRegularExpression(pattern: "(?i)\\b(exp|bb|bbd|best before|use by|expires|val)\\b")
-
         let formats = [
             "dd.MM.yyyy", "dd/MM/yyyy", "dd-MM-yyyy",
             "yyyy-MM-dd",

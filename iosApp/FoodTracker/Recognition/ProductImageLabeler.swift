@@ -22,25 +22,27 @@ enum ProductImageLabeler {
             return []
         }
 
-        let observations: [VNClassificationObservation] = await withCheckedContinuation { continuation in
-            let request = VNClassifyImageRequest()
-            let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
+        let recognized: [RecognizedLabel] = await withCheckedContinuation { continuation in
             // Vision's handler is synchronous and CPU-bound, so it must not run on the main
             // actor: this is called right after a capture, while the sheet is still animating.
+            // The request, the handler and their results are built, used and converted all on
+            // this queue: Vision's types aren't Sendable, so only plain values cross back.
             DispatchQueue.global(qos: .userInitiated).async {
+                let request = VNClassifyImageRequest()
+                let handler = VNImageRequestHandler(cgImage: cgImage, options: [:])
                 try? handler.perform([request])
-                continuation.resume(returning: request.results ?? [])
+                // Vision's taxonomy uses hyphenated compound identifiers ("ice_cream" style varies by
+                // OS version), so normalise to the spaced form the shared vocabulary is keyed on.
+                let labels = (request.results ?? []).map {
+                    RecognizedLabel(
+                        text: $0.identifier.replacingOccurrences(of: "_", with: " "),
+                        confidence: $0.confidence
+                    )
+                }
+                continuation.resume(returning: labels)
             }
         }
 
-        // Vision's taxonomy uses hyphenated compound identifiers ("ice_cream" style varies by
-        // OS version), so normalise to the spaced form the shared vocabulary is keyed on.
-        let recognized = observations.map {
-            RecognizedLabel(
-                text: $0.identifier.replacingOccurrences(of: "_", with: " "),
-                confidence: $0.confidence
-            )
-        }
         return FoodLabels.suggestions(from: recognized)
     }
 }

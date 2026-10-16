@@ -2,7 +2,7 @@ import Foundation
 
 /// A label as it comes off the on-device image classifier, before this module has decided whether
 /// it is worth showing. `text` is the classifier's own English label; `confidence` is 0..1.
-public struct RecognizedLabel: Equatable {
+public struct RecognizedLabel: Equatable, Sendable {
     public let text: String
     public let confidence: Float
 

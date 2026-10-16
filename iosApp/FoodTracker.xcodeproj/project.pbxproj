@@ -395,7 +395,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2E984110B77A531380BECEAB /* Build configuration list for PBXNativeTarget "FoodTracker" */;
 			buildPhases = (
-				B6C0EEA3D9235888BF072A11 /* Compile Shared KMP Framework */,
 				BE3719E1291C5BC0B23613F6 /* Sources */,
 				AA9E150F96E45AEBB6587FD7 /* Frameworks */,
 				D75F6E0878CF43D1A4DD8114 /* Resources */,
@@ -499,24 +498,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		B6C0EEA3D9235888BF072A11 /* Compile Shared KMP Framework */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			name = "Compile Shared KMP Framework";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode";
-		};
 		F1EBA5E00000000000000005 /* Upload Crashlytics dSYMs */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
@@ -760,10 +741,6 @@
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = S8Q8KHX6G5;
 				ENABLE_PREVIEWS = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../shared/build/bin/iosSimulatorArm64/debugFramework",
-				);
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FoodTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -789,10 +766,6 @@
 				CURRENT_PROJECT_VERSION = 6;
 				DEVELOPMENT_TEAM = S8Q8KHX6G5;
 				ENABLE_PREVIEWS = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(SRCROOT)/../shared/build/bin/iosSimulatorArm64/releaseFramework",
-				);
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = FoodTracker/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
