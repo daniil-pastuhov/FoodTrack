@@ -1,0 +1,5 @@
+• Pick your reminders: an alert per item, a daily or weekly summary, or both, and mute single items
+• Native iPad support, in any orientation and in Split View
+• On iPhone and iPad, scanned products open with name, brand and photo filled in
+• Easier expiry date picker, and a stray swipe no longer discards your edits
+• Crash reports help us fix problems faster; your pantry data stays on your device
