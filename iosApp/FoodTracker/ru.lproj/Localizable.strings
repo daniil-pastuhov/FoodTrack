@@ -97,6 +97,9 @@
 "edit_item_title" = "Изменить продукт";
 "add_item_title" = "Добавить в кладовую";
 "cancel_button" = "Отмена";
+"discard_changes_title" = "Отменить изменения?";
+"discard_changes_confirm" = "Не сохранять";
+"discard_changes_keep" = "Продолжить редактирование";
 "save_button" = "Сохранить";
 
 "essential_item_label" = "Обязательный продукт";

@@ -97,6 +97,9 @@
 "edit_item_title" = "Edit Item";
 "add_item_title" = "Add to Pantry";
 "cancel_button" = "Cancel";
+"discard_changes_title" = "Discard changes?";
+"discard_changes_confirm" = "Discard";
+"discard_changes_keep" = "Keep editing";
 "save_button" = "Save";
 
 "essential_item_label" = "Essential item";
