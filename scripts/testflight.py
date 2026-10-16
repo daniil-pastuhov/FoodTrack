@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Hands an uploaded iOS build to TestFlight testers through the App Store Connect API.
+"""Hands iOS builds to TestFlight testers and App Review through the App Store Connect API.
 
 Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in README.md):
 
@@ -7,9 +7,9 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     # set the localized "What to Test" text and give it to the internal group.
     python3 scripts/testflight.py notes --version 1.3.0 --build N --notes-dir release-notes/v1.3.0
 
-    # After the release PR is merged: give the newest build of that version to the external
-    # group and submit it for beta review.
-    python3 scripts/testflight.py submit --version 1.3.0 --notes-dir release-notes/v1.3.0
+    # After the release PR is merged: put the newest build of that version on its App Store
+    # version, with the notes as "What's New", and submit it for App Review.
+    python3 scripts/testflight.py appstore --version 1.3.0 --notes-dir release-notes/v1.3.0
 
     # Read-only overview of the app's builds and groups.
     python3 scripts/testflight.py status
@@ -34,12 +34,14 @@ from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
 
 BUNDLE_ID = "com.foodbest.ios"
 API = "https://api.appstoreconnect.apple.com/v1"
-EXTERNAL_GROUP = "External testers"
 # Release notes are stored under Play's locale codes; App Store Connect names the same
 # languages as in store-listing/app-store/.
 ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
 # "What to Test" is limited to 4000 characters; the notes are much shorter (Play allows 500).
 WHATS_NEW_LIMIT = 4000
+# App Store version states in which the version and its metadata can still be edited.
+EDITABLE_STATES = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED",
+                   "METADATA_REJECTED", "INVALID_BINARY"}
 
 
 class AscError(Exception):
@@ -179,43 +181,106 @@ def cmd_notes(args):
     return 0
 
 
-def cmd_submit(args):
+def newest_valid_build(asc, app_id, version):
+    valid = [b for b in asc.builds(app_id, version)
+             if b["attributes"]["processingState"] == "VALID"]
+    if not valid:
+        sys.exit(f"No processed build of {version} in App Store Connect")
+    print(f"Using build {valid[0]['attributes']['version']} of {version}")
+    return valid[0]
+
+
+def version_state(version):
+    attrs = version["attributes"]
+    return attrs.get("appVersionState") or attrs.get("appStoreState")
+
+
+def submit_for_review(asc, app_id, version, release_type):
+    try:
+        # An open submission (not sent yet, or sent back by App Review) is reused: an app can
+        # have only one.
+        open_submissions = asc.call("GET", "/reviewSubmissions", {
+            "filter[app]": app_id, "filter[platform]": "IOS",
+            "filter[state]": "READY_FOR_REVIEW,UNRESOLVED_ISSUES"})["data"]
+        if open_submissions:
+            submission = open_submissions[0]
+        else:
+            submission = asc.call("POST", "/reviewSubmissions", body={"data": {
+                "type": "reviewSubmissions", "attributes": {"platform": "IOS"},
+                "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
+        items = asc.call("GET", f"/reviewSubmissions/{submission['id']}/items",
+                         {"include": "appStoreVersion"})["data"]
+        if not any((item["relationships"].get("appStoreVersion", {}).get("data") or {}).get("id")
+                   == version["id"] for item in items):
+            asc.call("POST", "/reviewSubmissionItems", body={"data": {
+                "type": "reviewSubmissionItems", "relationships": {
+                    "reviewSubmission": {"data": {"type": "reviewSubmissions",
+                                                  "id": submission["id"]}},
+                    "appStoreVersion": {"data": {"type": "appStoreVersions",
+                                                 "id": version["id"]}}}}})
+        asc.call("PATCH", f"/reviewSubmissions/{submission['id']}", body={"data": {
+            "type": "reviewSubmissions", "id": submission["id"],
+            "attributes": {"submitted": True}}})
+    except AscError as error:
+        if error.status in (409, 422):
+            sys.exit("App Store Connect refused the App Review submission. Check that the version "
+                     "page in App Store Connect has no missing items (App Privacy, App Review "
+                     f"contact, screenshots), then re-run the job.\n{error.body}")
+        raise
+    when = "once Apple approves it" if release_type == "AFTER_APPROVAL" else \
+        "when you release it in App Store Connect after approval"
+    print(f"Submitted for App Review; it goes live {when}")
+    return 0
+
+
+def cmd_appstore(args):
     asc = Asc()
     app_id = asc.app_id()
     notes = read_notes(args.notes_dir)
-    valid = [b for b in asc.builds(app_id, args.version)
-             if b["attributes"]["processingState"] == "VALID"]
-    if not valid:
-        sys.exit(f"No processed build of {args.version} in App Store Connect")
-    build = valid[0]
-    print(f"Using build {build['attributes']['version']} of {args.version}")
-    # Notes again, in case the newest build came from a push whose notes step failed.
-    set_whats_new(asc, build["id"], notes)
-
-    group = next((g for g in asc.groups(app_id) if g["attributes"]["name"] == EXTERNAL_GROUP
-                  and not g["attributes"]["isInternalGroup"]), None)
-    if group is None:
-        group = asc.call("POST", "/betaGroups", body={"data": {
-            "type": "betaGroups", "attributes": {"name": EXTERNAL_GROUP},
+    versions = asc.call("GET", f"/apps/{app_id}/appStoreVersions",
+                        {"filter[platform]": "IOS", "limit": 50})["data"]
+    version = next((v for v in versions if v["attributes"]["versionString"] == args.version), None)
+    if version and version_state(version) == "READY_FOR_REVIEW":
+        # Left in a submission that was never sent, e.g. by a run that failed on the last step.
+        print(f"App Store version {args.version} is in an unsent review submission; sending it")
+        return submit_for_review(asc, app_id, version, args.release_type)
+    if version and version_state(version) not in EDITABLE_STATES:
+        print(f"App Store version {args.version} is already {version_state(version)}; nothing to do")
+        return 0
+    # Only one version can be in preparation at a time; one created by hand is taken over.
+    version = version or next((v for v in versions if version_state(v) in EDITABLE_STATES), None)
+    attributes = {"versionString": args.version, "releaseType": args.release_type}
+    if version:
+        asc.call("PATCH", f"/appStoreVersions/{version['id']}", body={"data": {
+            "type": "appStoreVersions", "id": version["id"], "attributes": attributes}})
+        print(f"Updating App Store version {args.version} ({version_state(version)})")
+    else:
+        version = asc.call("POST", "/appStoreVersions", body={"data": {
+            "type": "appStoreVersions", "attributes": {"platform": "IOS", **attributes},
             "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
-        print(f"Created the external group '{EXTERNAL_GROUP}'; add testers to it in App Store Connect")
-    add_to_group(asc, group, build["id"])
+        print(f"Created App Store version {args.version}")
 
-    try:
-        asc.call("POST", "/betaAppReviewSubmissions", body={"data": {
-            "type": "betaAppReviewSubmissions",
-            "relationships": {"build": {"data": {"type": "builds", "id": build["id"]}}}}})
-        print("Submitted for TestFlight beta review; testers get it once Apple approves")
-    except AscError as error:
-        if error.status == 409 and "already" in error.body.lower():
-            print("The build was already submitted for beta review")
-        elif error.status == 409:
-            sys.exit("App Store Connect refused the beta review submission. Fill in TestFlight → "
-                     "Test Information (feedback email, beta description) and the Beta App Review "
-                     f"contact once, then re-run the job.\n{error.body}")
-        else:
-            raise
-    return 0
+    # The newest build of the version is the one testers have been trying; it is submitted as is
+    # rather than rebuilt from the merge commit.
+    build = newest_valid_build(asc, app_id, args.version)
+    asc.call("PATCH", f"/appStoreVersions/{version['id']}/relationships/build",
+             body={"data": {"type": "builds", "id": build["id"]}})
+
+    # A new version starts with the previous one's localizations; only What's New changes.
+    localizations = {loc["attributes"]["locale"]: loc["id"] for loc in asc.call(
+        "GET", f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations",
+        {"limit": 50})["data"]}
+    for locale, text in notes.items():
+        if locale not in localizations:
+            print(f"::warning::The App Store listing has no {locale} localization; "
+                  f"its What's New was not set")
+            continue
+        asc.call("PATCH", f"/appStoreVersionLocalizations/{localizations[locale]}", body={"data": {
+            "type": "appStoreVersionLocalizations", "id": localizations[locale],
+            "attributes": {"whatsNew": text}}})
+        print(f"Set What's New ({locale})")
+
+    return submit_for_review(asc, app_id, version, args.release_type)
 
 
 def cmd_status(_args):
@@ -244,10 +309,13 @@ def main() -> int:
     notes.add_argument("--notes-dir", required=True)
     notes.add_argument("--timeout", type=int, default=45, help="minutes to wait for processing")
     notes.set_defaults(func=cmd_notes)
-    submit = commands.add_parser("submit", help="hand the newest build to external testers")
-    submit.add_argument("--version", required=True)
-    submit.add_argument("--notes-dir", required=True)
-    submit.set_defaults(func=cmd_submit)
+    appstore = commands.add_parser("appstore", help="submit the newest build for App Review")
+    appstore.add_argument("--version", required=True)
+    appstore.add_argument("--notes-dir", required=True)
+    appstore.add_argument("--release-type", choices=["AFTER_APPROVAL", "MANUAL"],
+                          default="AFTER_APPROVAL",
+                          help="go live as soon as Apple approves, or wait for a manual release")
+    appstore.set_defaults(func=cmd_appstore)
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     args = parser.parse_args()
     try:
