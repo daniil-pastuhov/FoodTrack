@@ -29,6 +29,9 @@ profileinstaller = "1.4.1"
 kotlinx-collections-immutable = "0.5.2"
 zxing-core = "3.5.3"
 play-services-location = "21.3.0"
+firebase-bom = "34.19.0"
+google-services = "4.5.0"
+firebase-crashlytics-plugin = "3.0.8"
 
 [libraries]
 # KotlinX
@@ -78,6 +81,10 @@ mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref
 # Geofencing for the "you are near a shop" shopping-list reminder (StoreGeofenceManager).
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
 
+# Crash reporting (Firebase Crashlytics, configured by androidApp/google-services.json)
+firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
+firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+
 # Coil image loading
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
@@ -118,3 +125,5 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
+firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }

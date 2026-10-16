@@ -3,7 +3,7 @@ Attached: a recording from a physical iPhone on the latest iOS, starting from la
 
 2. PURPOSE AND AUDIENCE
 BestBefore helps households waste less food. People forget what is in the fridge, freezer and cupboards until it has gone off. The app keeps a list of the food at home with each item's expiry date and reminds the user a few days before something expires, so it gets eaten in time. Items that are used up go onto a shopping list.
-Audience: anyone who buys groceries, typically adults managing a household. The app is free, with no account, ads or tracking. All data stays on the device.
+Audience: anyone who buys groceries, typically adults managing a household. The app is free, with no account, ads or tracking. The pantry stays on the device. Apart from barcode lookups on Open Food Facts, the app sends only crash reports (see 4).
 
 3. SETUP AND MAIN FEATURES
 No login, demo account or sample files are needed; the app is ready on first launch.
@@ -17,8 +17,9 @@ No login, demo account or sample files are needed; the app is ready on first lau
 
 4. EXTERNAL SERVICES
 - Open Food Facts (https://world.openfoodfacts.org), a free, open product database. When a barcode is scanned, the app requests that product's name, picture and nutrition data. Only the barcode number is sent: no account, key, user data or device identifier.
+- Firebase Crashlytics (Google), in release builds only. If the app crashes, it sends a crash report: the stack trace, device model, OS and app version, free memory and disk space, and a random Firebase installation ID. No pantry data, name or account. It is not linked to the user and not used for tracking. No other Firebase product is included.
 - Everything else runs on the device with Apple frameworks: AVFoundation (camera, barcodes), Vision (reading printed dates and receipts, recognising fruit and vegetables in photos), Core Location region monitoring (optional shop reminders), UserNotifications, WidgetKit and SwiftData.
-- There are no authentication services, payment processors, analytics or ads, and no AI services. A "recipe ideas" button builds a text prompt from the expiring items and opens the standard share sheet, so the user can paste it into any app they choose. The app itself calls no AI service.
+- Apart from crash reports, there are no authentication services, payment processors, analytics or ads, and no AI services. A "recipe ideas" button builds a text prompt from the expiring items and opens the standard share sheet, so the user can paste it into any app they choose. The app itself calls no AI service.
 
 5. REGIONAL DIFFERENCES
 The app works the same in all regions. It is available in English, Russian and Norwegian. Open Food Facts covers some countries' products better than others; when a barcode isn't found, the user types the name and everything else works the same.

@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 
 // Release signing credentials live in a git-ignored keystore.properties next to this
@@ -39,6 +41,9 @@ android {
         versionName = appVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // Read by the firebase_crashlytics_collection_enabled meta-data in AndroidManifest.xml.
+        manifestPlaceholders["crashlyticsCollectionEnabled"] = true
     }
 
     signingConfigs {
@@ -56,6 +61,10 @@ android {
     }
 
     buildTypes {
+        // Crashes hit while developing would only bury the ones real users run into.
+        debug {
+            manifestPlaceholders["crashlyticsCollectionEnabled"] = false
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -164,6 +173,9 @@ dependencies {
     implementation(libs.zxing.core)
 
     implementation(libs.play.services.location)
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.crashlytics)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.datetime)

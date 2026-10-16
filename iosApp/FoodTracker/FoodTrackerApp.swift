@@ -1,3 +1,4 @@
+import FirebaseCore
 import SwiftUI
 
 @main
@@ -13,6 +14,14 @@ struct FoodTrackerApp: App {
     // Exists only to catch home-screen quick actions, which SwiftUI's App has no hook for.
     @UIApplicationDelegateAdaptor(QuickActionDelegate.self) private var quickActionDelegate
     @ObservedObject private var settingsStore = SettingsStore.shared
+
+    init() {
+        // Starts Crashlytics, configured by GoogleService-Info.plist. Left out of debug builds:
+        // crashes hit while developing would only bury the ones real users run into.
+        #if !DEBUG
+        FirebaseApp.configure()
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {

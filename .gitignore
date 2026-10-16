@@ -8,6 +8,12 @@
 .DS_Store
 DerivedData/
 *.xcworkspace
+# ...except the pinned Swift package versions (Firebase), so every build resolves the same ones.
+!/iosApp/FoodTracker.xcodeproj/project.xcworkspace/
+/iosApp/FoodTracker.xcodeproj/project.xcworkspace/*
+!/iosApp/FoodTracker.xcodeproj/project.xcworkspace/xcshareddata/
+/iosApp/FoodTracker.xcodeproj/project.xcworkspace/xcshareddata/*
+!/iosApp/FoodTracker.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 *.xcuserdatad
 
 # Release build output — never commit binaries

@@ -85,6 +85,8 @@
 		C0FFEE0000000000000000A2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000A1 /* PrivacyInfo.xcprivacy */; };
 		C0FFEE0000000000000000B2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000B1 /* PrivacyInfo.xcprivacy */; };
 		C0FFEE0000000000000000C5 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C0FFEE0000000000000000C4 /* InfoPlist.strings */; };
+		F1EBA5E00000000000000001 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = F1EBA5E00000000000000002 /* GoogleService-Info.plist */; };
+		F1EBA5E00000000000000003 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = F1EBA5E00000000000000004 /* FirebaseCrashlytics */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -159,6 +161,7 @@
 		C0FFEE0000000000000000C1 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		C0FFEE0000000000000000C2 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		C0FFEE0000000000000000C3 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		F1EBA5E00000000000000002 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -166,6 +169,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F1EBA5E00000000000000003 /* FirebaseCrashlytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -200,6 +204,7 @@
 				C653CCBC3A5E4983A37A2426 /* Localizable.strings */,
 				B047C1A68DF14A948F57FDA3 /* Localizable.stringsdict */,
 				FD0B2C260A7C5D988F621408 /* Info.plist */,
+				F1EBA5E00000000000000002 /* GoogleService-Info.plist */,
 				C0FFEE0000000000000000A1 /* PrivacyInfo.xcprivacy */,
 				C0FFEE0000000000000000C4 /* InfoPlist.strings */,
 				CFE3E7A9677B455C8365937F /* Assets.xcassets */,
@@ -395,6 +400,7 @@
 				AA9E150F96E45AEBB6587FD7 /* Frameworks */,
 				D75F6E0878CF43D1A4DD8114 /* Resources */,
 				BE3E7C38F832D965E258CE6F /* Embed App Extensions */,
+				F1EBA5E00000000000000005 /* Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
@@ -402,6 +408,9 @@
 				881CEF93CFEB78C6EEC2FD81 /* PBXTargetDependency */,
 			);
 			name = FoodTracker;
+			packageProductDependencies = (
+				F1EBA5E00000000000000004 /* FirebaseCrashlytics */,
+			);
 			productName = FoodTracker;
 			productReference = 3887357415BF56C699A811E6 /* FoodTracker.app */;
 			productType = "com.apple.product-type.application";
@@ -452,6 +461,9 @@
 				ru,
 			);
 			mainGroup = 43621D17980B5A4694FCDAAD;
+			packageReferences = (
+				F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = 8B228704103F56A284DBF16D /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -504,6 +516,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"YES\" = \"$OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED\" ]; then\n  echo \"Skipping Gradle build task invocation due to OVERRIDE_KOTLIN_BUILD_IDE_SUPPORTED environment variable set to \\\"YES\\\"\"\n  exit 0\nfi\ncd \"$SRCROOT/..\"\n./gradlew :shared:embedAndSignAppleFrameworkForXcode";
+		};
+		F1EBA5E00000000000000005 /* Upload Crashlytics dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Upload Crashlytics dSYMs";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Debug builds skip Crashlytics entirely (see FoodTrackerApp.init) and carry no dSYM.\nif [ \"$CONFIGURATION\" = \"Debug\" ]; then\n  exit 0\nfi\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -606,6 +642,7 @@
 				DEF85DB5F3DFB01B08613C8A /* Assets.xcassets in Resources */,
 				C0FFEE0000000000000000A2 /* PrivacyInfo.xcprivacy in Resources */,
 				C0FFEE0000000000000000C5 /* InfoPlist.strings in Resources */,
+				F1EBA5E00000000000000001 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -852,6 +889,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.19.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		F1EBA5E00000000000000004 /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = F632ACA8F0295F80B8DF7F62 /* Project object */;
 }
