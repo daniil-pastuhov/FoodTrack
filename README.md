@@ -53,15 +53,17 @@ Merging to `main` publishes nothing; CI only tests and builds it. A release goes
 2. **Internal testing**: CI publishes every push to `release/v*` to the Google Play internal track
    and to the internal TestFlight testers, with those notes. Fixes for the release go on the
    branch; each push becomes a new internal build.
-3. **Closed testing**: merging the PR promotes the newest internal Play build of that version to
-   closed testing (`alpha`). It also adds the newest TestFlight build of the version to the
-   external group "External testers" and submits it for beta review. Then it tags `vX.Y.Z` and
-   creates a GitHub release.
+3. **Play closed testing and the App Store**: merging the PR promotes the newest internal Play
+   build of that version to closed testing (`alpha`). It also puts the newest TestFlight build of
+   the version on its App Store version, with the notes as "What's New", and submits it for App
+   Review; it goes live as soon as Apple approves it (set the repository variable
+   `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
+   tags `vX.Y.Z` and creates a GitHub release.
 
 **Version**: `Version.xcconfig` holds the one version of both apps. Gradle reads it for Android's
 `versionName`, and it is the Xcode project's base configuration, so the app and the widget get it
 as `MARKETING_VERSION`. Don't set the version anywhere else.
 
 Needs `gh` (logged in) and `claude` on your PATH. Play rejects notes longer than 500 characters
-per language, and the script checks that. TestFlight's beta review needs the Test Information and
-the Beta App Review contact filled in once in App Store Connect.
+per language, and the script checks that. App Review needs the version page in App Store Connect
+complete (App Privacy, App Review contact); the job says so if Apple refuses the submission.
