@@ -1,0 +1,5 @@
+• Velg påminnelser: varsel per vare, et daglig eller ukentlig sammendrag, eller begge deler – og slå dem av for enkeltvarer
+• Full støtte for iPad, i alle retninger og i Split View
+• På iPhone og iPad åpnes skannede varer med navn, merke og bilde allerede utfylt
+• Enklere å velge utløpsdato, og et tilfeldig sveip forkaster ikke lenger endringene dine
+• Krasjrapporter hjelper oss å rette feil raskere; matlageret ditt blir på enheten
