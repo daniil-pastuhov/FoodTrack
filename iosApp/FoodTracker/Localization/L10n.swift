@@ -149,6 +149,9 @@ public enum L10n {
     public static var editItemTitle: String { NSLocalizedString("edit_item_title", comment: "") }
     public static var addItemTitle: String { NSLocalizedString("add_item_title", comment: "") }
     public static var cancelButton: String { NSLocalizedString("cancel_button", comment: "") }
+    public static var discardChangesTitle: String { NSLocalizedString("discard_changes_title", comment: "") }
+    public static var discardChangesConfirm: String { NSLocalizedString("discard_changes_confirm", comment: "") }
+    public static var discardChangesKeep: String { NSLocalizedString("discard_changes_keep", comment: "") }
     public static var saveButton: String { NSLocalizedString("save_button", comment: "") }
 
     public static var essentialItemLabel: String { NSLocalizedString("essential_item_label", comment: "") }

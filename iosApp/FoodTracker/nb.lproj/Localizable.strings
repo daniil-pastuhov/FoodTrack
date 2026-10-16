@@ -97,6 +97,9 @@
 "edit_item_title" = "Rediger vare";
 "add_item_title" = "Legg til i matskapet";
 "cancel_button" = "Avbryt";
+"discard_changes_title" = "Forkaste endringene?";
+"discard_changes_confirm" = "Forkast";
+"discard_changes_keep" = "Fortsett å redigere";
 "save_button" = "Lagre";
 
 "essential_item_label" = "Nødvendig vare";

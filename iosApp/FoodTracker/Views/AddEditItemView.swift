@@ -76,6 +76,24 @@ public struct AddEditItemView: View {
     // away, so fields already typed here (quantity, notes, storage location, essential)
     // survive a scan rather than being lost to a fresh screen instance.
     @State private var showScanner: Bool = false
+    @State private var showDatePicker = false
+    @State private var showDiscardConfirmation = false
+    /// The form as it stood once `onAppear` had filled it in, to tell whether there is anything
+    /// a dismissal would throw away. Nil until then, so the prefill itself is not an edit.
+    @State private var initialSnapshot: FormSnapshot?
+
+    private var currentSnapshot: FormSnapshot {
+        FormSnapshot(
+            name: name, brand: brand, barcode: barcode, imageUrl: imageUrl, expiryDate: expiryDate,
+            storageLocation: storageLocation, category: category, quantity: quantity, notes: notes,
+            essential: essential, notificationsEnabled: notificationsEnabled
+        )
+    }
+
+    private var hasUnsavedChanges: Bool {
+        guard let initialSnapshot else { return false }
+        return currentSnapshot != initialSnapshot
+    }
 
     public init(
         viewModel: NativePantryViewModel,
@@ -207,14 +225,20 @@ public struct AddEditItemView: View {
                 }
 
                 Section(header: Text(L10n.sectionExpirationDate)) {
-                    // Day/month/year wheels: the graphical calendar collapses into a
-                    // month/year-only wheel when its header is tapped, and users got
-                    // stuck there with no obvious way to pick the day.
-                    DatePicker(L10n.expiryPickerLabel, selection: $expiryDate, displayedComponents: [.date])
-                        .datePickerStyle(.wheel)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity)
-                        .clipped()
+                    // The wheel lives in its own small sheet rather than inline: inside this
+                    // scrolling form, a flick on the wheel could be taken by the form's scroll
+                    // or by the sheet's swipe-to-dismiss instead.
+                    Button {
+                        showDatePicker = true
+                    } label: {
+                        HStack {
+                            Text(L10n.expiryPickerLabel)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(expiryDate.formatted(date: .abbreviated, time: .omitted))
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
 
                     if let suggestion = activeSuggestion, let days = suggestion.days {
                         Label {
@@ -344,7 +368,21 @@ public struct AddEditItemView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(L10n.cancelButton) { dismiss() }
+                    Button(L10n.cancelButton) {
+                        if hasUnsavedChanges {
+                            showDiscardConfirmation = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .confirmationDialog(
+                        L10n.discardChangesTitle,
+                        isPresented: $showDiscardConfirmation,
+                        titleVisibility: .visible
+                    ) {
+                        Button(L10n.discardChangesConfirm, role: .destructive) { dismiss() }
+                        Button(L10n.discardChangesKeep, role: .cancel) {}
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showScanner = true }) {
@@ -404,6 +442,12 @@ public struct AddEditItemView: View {
                         expiryDate = suggested
                     }
                 }
+                if initialSnapshot == nil {
+                    initialSnapshot = currentSnapshot
+                }
+            }
+            .sheet(isPresented: $showDatePicker) {
+                ExpiryDatePickerSheet(expiryDate: $expiryDate)
             }
             // Offered when the scan matched something already in the pantry. Adding a unit to
             // the existing item is almost always what a re-scan of the same product means;
@@ -476,6 +520,9 @@ public struct AddEditItemView: View {
                 }
             }
         }
+        // A swipe down would otherwise drop everything typed or scanned without asking; with
+        // it blocked, Cancel is the way out, and it confirms first.
+        .interactiveDismissDisabled(hasUnsavedChanges)
     }
 
     private var imagePreviewContent: some View {
@@ -488,6 +535,48 @@ public struct AddEditItemView: View {
         Image(systemName: "takeoutbag.and.cup.and.straw.fill")
             .font(.system(size: 32))
             .foregroundColor(.accentColor)
+    }
+}
+
+/// Everything the form saves, for `AddEditItemView.hasUnsavedChanges`.
+private struct FormSnapshot: Equatable {
+    var name: String
+    var brand: String
+    var barcode: String
+    var imageUrl: String?
+    var expiryDate: Date
+    var storageLocation: String
+    var category: String
+    var quantity: Int
+    var notes: String
+    var essential: Bool
+    var notificationsEnabled: Bool
+}
+
+/// Day/month/year wheels: the graphical calendar collapses into a month/year-only wheel when
+/// its header is tapped, and users got stuck there with no obvious way to pick the day.
+/// Nothing else on this sheet scrolls, so a drag on the wheel always spins the wheel.
+private struct ExpiryDatePickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var expiryDate: Date
+
+    var body: some View {
+        NavigationStack {
+            DatePicker(L10n.expiryPickerLabel, selection: $expiryDate, displayedComponents: [.date])
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .frame(maxWidth: .infinity)
+                .navigationTitle(L10n.expiryPickerLabel)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(L10n.doneButton) { dismiss() }
+                            .fontWeight(.bold)
+                    }
+                }
+        }
+        .presentationDetents([.height(320)])
+        .presentationDragIndicator(.visible)
     }
 }
 
