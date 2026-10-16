@@ -34,7 +34,7 @@ ASC_KEY_ID=XXXXXXXXXX ASC_ISSUER_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx \
 ASC_KEY_PATH=~/.config/bestbefore/AuthKey_XXXXXXXXXX.p8 scripts/ios_release.sh
 ```
 
-From CI, on every push to main:
+From CI, on every push to a `release/v*` branch (see "Releasing" in the top-level README.md):
 - Add the repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_P8_BASE64`, the last one
   made with `base64 -i AuthKey_XXXX.p8`.
 - Set the repository variable `IOS_PUBLISH` to `true`.

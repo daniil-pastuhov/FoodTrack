@@ -20,6 +20,8 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
   -destination 'generic/platform=iOS Simulator' build      # build iOS app
 ```
 
+**Releases** are cut with `scripts/release`, not by pushing to main: it bumps the version in `Version.xcconfig` (the single version of both apps: `androidApp/build.gradle.kts` reads it for `versionName`, and it is the Xcode project's base configuration, so no target sets `MARKETING_VERSION` itself) on a `release/vX.Y.Z` branch and writes `release-notes/vX.Y.Z/<play-locale>.txt`. CI (`.github/workflows/ci.yml`) publishes pushes to `release/v*` to Play internal and TestFlight, and on the PR's merge promotes that build to Play closed testing and the external TestFlight group, and tags `vX.Y.Z`. Main publishes nothing. See "Releasing" in README.md.
+
 The Firebase configs are committed (`androidApp/google-services.json`, `iosApp/FoodTracker/GoogleService-Info.plist`); no other external setup is needed. See "Data layer" below for what actually persists where.
 
 ## Architecture
