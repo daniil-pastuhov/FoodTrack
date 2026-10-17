@@ -1,6 +1,12 @@
 name: CI
 
-# Every push and pull request: Android unit tests, an Android debug build, and an iOS build.
+# Every push and pull request: Android unit tests, an Android debug build, and an iOS build, except
+# where another run already built the same code (see the build jobs' "if"):
+# - a release/v* pull request: the push run of the same commit builds it, and must, as the publish
+#   jobs need it;
+# - the push of a pull request's merge commit to main: the pull request's runs built the merge (as
+#   of its last push, so a main that moved in between goes unbuilt). A release PR's merge is still
+#   built, because its pull request runs are the ones skipped above.
 #
 # Release flow (scripts/release starts it; see "Releasing" in README.md):
 # - Each push to a release/vX.Y.Z branch publishes a signed bundle to the Google Play internal
@@ -29,7 +35,12 @@ concurrency:
 jobs:
   android:
     name: Android tests and build
-    if: github.event.action != 'closed'
+    if: >-
+      github.event.action != 'closed' &&
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v')) &&
+      !(github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+        startsWith(github.event.head_commit.message, 'Merge pull request #') &&
+        !contains(github.event.head_commit.message, '/release/v'))
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -58,7 +69,12 @@ jobs:
 
   ios:
     name: iOS build and shared tests
-    if: github.event.action != 'closed'
+    if: >-
+      github.event.action != 'closed' &&
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v')) &&
+      !(github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+        startsWith(github.event.head_commit.message, 'Merge pull request #') &&
+        !contains(github.event.head_commit.message, '/release/v'))
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v7

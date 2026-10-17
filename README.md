@@ -42,7 +42,7 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker -destinatio
 
 ## Releasing
 
-Merging to `main` publishes nothing; CI only tests and builds it. A release goes out in two steps:
+Merging to `main` publishes nothing; CI only tests and builds it (a merged pull request other than a release one is not built again on `main`, as its pull request runs built it). A release goes out in two steps:
 
 1. **Start it**: `scripts/release` (add `--dry-run` to try it without changing anything). It
    lists the commits on `origin/main` since the last `vX.Y.Z` tag and asks for a patch, minor or
