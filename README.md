@@ -27,7 +27,7 @@ A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Andr
 
 ### Run Unit Tests
 ```bash
-./gradlew :shared:test
+./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest
 ```
 
 ### Build Android App

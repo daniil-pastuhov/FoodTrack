@@ -11,7 +11,7 @@ FoodTracker — a Kotlin Multiplatform grocery/expiration-date tracker with a Je
 Requires JDK 17. Modules: `:shared` (KMP), `:androidApp`.
 
 ```bash
-./gradlew :shared:compileTestKotlinIosSimulatorArm64        # shared-module commonTest, compiled (no Android host-test target registered — `:shared:test` does not exist)
+./gradlew :shared:testAndroidHostTest                       # shared-module commonTest, run on the JVM (`:shared:test` does not exist)
 ./gradlew :androidApp:testDebugUnitTest                      # androidApp unit tests (includes Room DAO tests, via Robolectric)
 ./gradlew :androidApp:testDebugUnitTest --tests "*ClassName*"  # single test class
 ./gradlew :androidApp:assembleDebug                        # build Android debug APK

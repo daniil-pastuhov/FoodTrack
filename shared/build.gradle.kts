@@ -13,6 +13,9 @@ kotlin {
         minSdk = 24
 
         compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
+
+        // Runs commonTest on the JVM (`:shared:testAndroidHostTest`), so CI tests it on Linux.
+        withHostTest {}
     }
     
     listOf(

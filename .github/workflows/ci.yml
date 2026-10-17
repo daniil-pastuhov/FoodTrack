@@ -1,12 +1,16 @@
 name: CI
 
-# Every push and pull request: Android unit tests, an Android debug build, and an iOS build, except
-# where another run already built the same code (see the build jobs' "if"):
+# Every push and pull request: Android and shared unit tests, an Android debug build, and an iOS
+# build, each only when its files changed (see the "changes" job), and none where another run
+# already built the same code:
 # - a release/v* pull request: the push run of the same commit builds it, and must, as the publish
 #   jobs need it;
 # - the push of a pull request's merge commit to main: the pull request's runs built the merge (as
 #   of its last push, so a main that moved in between goes unbuilt). A release PR's merge is still
 #   built, because its pull request runs are the ones skipped above.
+# A release/v* push builds both platforms whatever changed, except that the TestFlight archive
+# stands in for the iOS build when it runs. macOS minutes cost ten times Linux ones, so anything
+# that doesn't need a Mac runs on Linux.
 #
 # Release flow (scripts/release starts it; see "Releasing" in README.md):
 # - Each push to a release/vX.Y.Z branch publishes a signed bundle to the Google Play internal
@@ -33,8 +37,8 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'closed' }}
 
 jobs:
-  android:
-    name: Android tests and build
+  changes:
+    name: Find what to build
     if: >-
       github.event.action != 'closed' &&
       !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v')) &&
@@ -42,6 +46,57 @@ jobs:
         startsWith(github.event.head_commit.message, 'Merge pull request #') &&
         !contains(github.event.head_commit.message, '/release/v'))
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      android: ${{ steps.decide.outputs.android }}
+      ios: ${{ steps.decide.outputs.ios }}
+    env:
+      BUILD_ALL: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/v') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        if: env.BUILD_ALL != 'true'
+        with:
+          # Version.xcconfig holds the version of both apps; a change to this workflow builds both.
+          filters: |
+            android:
+              - 'androidApp/**'
+              - 'shared/**'
+              - 'gradle/**'
+              - '*.gradle.kts'
+              - 'gradle.properties'
+              - 'gradlew'
+              - 'macrobenchmark/**'
+              - 'Version.xcconfig'
+              - '.github/workflows/ci.yml'
+            ios:
+              - 'iosApp/**'
+              - 'Version.xcconfig'
+              - '.github/workflows/ci.yml'
+      - name: Decide
+        id: decide
+        env:
+          ANDROID: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.android == 'true' }}
+          # publish-testflight's archive compiles everything the simulator build does.
+          IOS: >-
+            ${{ (env.BUILD_ALL == 'true' || steps.filter.outputs.ios == 'true') &&
+            !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') &&
+              vars.IOS_PUBLISH == 'true') }}
+        run: |
+          echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
+          echo "ios=$IOS" >> "$GITHUB_OUTPUT"
+          echo "Android: $ANDROID, iOS: $IOS"
+
+  android:
+    name: Android tests and build
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -57,46 +112,49 @@ jobs:
           mkdir -p ~/.android
           keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android \
             -alias debug -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+      # :shared's commonTest runs on the JVM through its Android host-test target.
       - name: Unit tests and debug build
-        run: ./gradlew :androidApp:testDebugUnitTest :androidApp:assembleDebug
+        run: ./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug
       - name: Keep test reports
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: android-test-reports
-          path: androidApp/build/reports/tests/
+          path: |
+            androidApp/build/reports/tests/
+            shared/build/reports/tests/
           retention-days: 7
 
   ios:
-    name: iOS build and shared tests
-    if: >-
-      github.event.action != 'closed' &&
-      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v')) &&
-      !(github.event_name == 'push' && github.ref == 'refs/heads/main' &&
-        startsWith(github.event.head_commit.message, 'Merge pull request #') &&
-        !contains(github.event.head_commit.message, '/release/v'))
+    name: iOS build
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6
+      # The Swift packages (Firebase above all) are slow to clone afresh on every run.
+      - name: Restore Swift packages
+        uses: actions/cache@v6
         with:
-          distribution: temurin
-          java-version: "17"
-      - uses: gradle/actions/setup-gradle@v5
-      # :shared has no Android host-test target; its commonTest is compiled for iOS (see CLAUDE.md).
-      - name: Compile shared tests
-        run: ./gradlew :shared:compileTestKotlinIosSimulatorArm64
+          path: ${{ runner.temp }}/SourcePackages
+          key: spm-${{ hashFiles('iosApp/FoodTracker.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-
+      # A generic simulator destination builds every simulator architecture; arm64 is enough to
+      # catch a compile error.
       - name: Build iOS app
         run: |
           xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
             -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
 
   publish-play:
     name: Publish to Google Play (internal)
     needs: android
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     concurrency:
       group: play-publish
       cancel-in-progress: false
@@ -165,14 +223,17 @@ jobs:
 
   publish-testflight:
     name: Publish to TestFlight (internal)
-    needs: ios
+    # No "needs: ios": the archive compiles everything that build would, so it is skipped here.
     # Needs the repository variable IOS_PUBLISH set to "true" and the ASC_* secrets (see
     # store-listing/app-store/README.md).
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') && vars.IOS_PUBLISH == 'true'
     runs-on: macos-latest
+    timeout-minutes: 45
     concurrency:
       group: testflight-publish
       cancel-in-progress: false
+    outputs:
+      build-number: ${{ steps.upload.outputs.build-number }}
     steps:
       - uses: actions/checkout@v7
       - name: Check the release version
@@ -184,14 +245,31 @@ jobs:
           if [ -z "$ASC_KEY_P8_BASE64" ]; then echo "::error::Missing secret ASC_KEY_P8_BASE64"; exit 1; fi
           echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
       - name: Archive and upload
+        id: upload
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          # Chosen here rather than inside ios_release.sh so the next step knows which build to wait for.
+          # Chosen here rather than inside ios_release.sh so the next job knows which build to wait for.
           BUILD_NUMBER=$(date -u +%Y%m%d%H%M)
-          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "build-number=$BUILD_NUMBER" >> "$GITHUB_OUTPUT"
           BUILD_NUMBER=$BUILD_NUMBER ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" scripts/ios_release.sh
+
+  # Waiting for App Store Connect to process the upload needs no Mac, so it doesn't hold one.
+  testflight-notes:
+    name: Hand the TestFlight build to internal testers
+    needs: publish-testflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency:
+      group: testflight-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - name: Restore the App Store Connect API key
+        env:
+          ASC_KEY_P8_BASE64: ${{ secrets.ASC_KEY_P8_BASE64 }}
+        run: echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
@@ -201,6 +279,7 @@ jobs:
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          BUILD_NUMBER: ${{ needs.publish-testflight.outputs.build-number }}
         run: |
           VERSION=${GITHUB_REF_NAME#release/v}
           ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" python scripts/testflight.py notes \
@@ -214,6 +293,7 @@ jobs:
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     concurrency:
       group: play-publish
       cancel-in-progress: false
@@ -242,13 +322,40 @@ jobs:
             --status "$PLAY_RELEASE_STATUS" \
             --release-notes-dir "release-notes/v$RELEASE_VERSION"
 
+  # The upload and the wait for its processing are separate jobs, so the testflight-publish group
+  # alone could let release-app-store run between them and submit an older build. This waits for
+  # the release branch's runs to finish first, outside that group: inside it, it would hold the
+  # group that the run it waits for still needs.
+  wait-for-testflight:
+    name: Wait for the release branch's TestFlight upload
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
+      vars.IOS_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      actions: read
+    steps:
+      - name: Wait for the release branch's runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          while [ -n "$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --branch "$GITHUB_HEAD_REF" \
+                       --event push --json status --jq '.[] | select(.status != "completed") | .status')" ]; do
+            echo "A $GITHUB_HEAD_REF run is still going; checking again in 30 s"
+            sleep 30
+          done
+
   release-app-store:
     name: Submit to the App Store
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
       vars.IOS_PUBLISH == 'true'
+    needs: wait-for-testflight
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     concurrency:
       group: testflight-publish
       cancel-in-progress: false
@@ -285,6 +392,7 @@ jobs:
     # re-run without moving the tag that scripts/release counts the next release's commits from.
     if: ${{ !cancelled() && needs.promote-play.result == 'success' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     steps:
