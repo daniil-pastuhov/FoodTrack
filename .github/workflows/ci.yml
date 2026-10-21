@@ -129,7 +129,12 @@ jobs:
     name: iOS build
     needs: changes
     if: needs.changes.outputs.ios == 'true'
-    runs-on: macos-latest
+    # Xcode 27.1 (the iOS 27.1 SDK) is what lets the app fill iPhone Duo's inner display; with
+    # an older SDK it is kept to a smaller region. macos-latest only has Xcode 26, so the Xcode 27
+    # image is used, with 27.1 picked over its default 27.0.
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -227,7 +232,10 @@ jobs:
     # Needs the repository variable IOS_PUBLISH set to "true" and the ASC_* secrets (see
     # store-listing/app-store/README.md).
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') && vars.IOS_PUBLISH == 'true'
-    runs-on: macos-latest
+    # Same Xcode as the iOS build job, for iPhone Duo (see there).
+    runs-on: xcode-27
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
     timeout-minutes: 45
     concurrency:
       group: testflight-publish
