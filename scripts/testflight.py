@@ -37,6 +37,8 @@ API = "https://api.appstoreconnect.apple.com/v1"
 # Release notes are stored under Play's locale codes; App Store Connect names the same
 # languages as in store-listing/app-store/.
 ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
+# One folder per App Store Connect locale, holding promotional_text.txt among others.
+LISTING_DIR = pathlib.Path(__file__).resolve().parent.parent / "store-listing" / "app-store"
 # "What to Test" is limited to 4000 characters; the notes are much shorter (Play allows 500).
 WHATS_NEW_LIMIT = 4000
 # App Store version states in which the version and its metadata can still be edited.
@@ -233,6 +235,20 @@ def submit_for_review(asc, app_id, version, release_type):
     return 0
 
 
+def set_promotional_text(asc, localizations):
+    """Sets each localization's promotional text from store-listing/app-store/<locale>/."""
+    for locale, localization_id in localizations.items():
+        path = LISTING_DIR / locale / "promotional_text.txt"
+        if not path.exists():
+            print(f"::warning::{path.relative_to(LISTING_DIR.parent.parent)} is missing; "
+                  f"the {locale} promotional text was not set")
+            continue
+        asc.call("PATCH", f"/appStoreVersionLocalizations/{localization_id}", body={"data": {
+            "type": "appStoreVersionLocalizations", "id": localization_id,
+            "attributes": {"promotionalText": path.read_text(encoding="utf-8").strip()}}})
+        print(f"Set promotional text ({locale})")
+
+
 def cmd_appstore(args):
     asc = Asc()
     app_id = asc.app_id()
@@ -266,10 +282,12 @@ def cmd_appstore(args):
     asc.call("PATCH", f"/appStoreVersions/{version['id']}/relationships/build",
              body={"data": {"type": "builds", "id": build["id"]}})
 
-    # A new version starts with the previous one's localizations; only What's New changes.
+    # A new version starts with the previous one's localizations, except What's New and the
+    # promotional text, which Apple leaves empty.
     localizations = {loc["attributes"]["locale"]: loc["id"] for loc in asc.call(
         "GET", f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations",
         {"limit": 50})["data"]}
+    set_promotional_text(asc, localizations)
     for locale, text in notes.items():
         if locale not in localizations:
             print(f"::warning::The App Store listing has no {locale} localization; "

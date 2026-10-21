@@ -28,6 +28,21 @@ device frame (the captions live in that script). Pick the simulator with `DEVICE
   pose is set in Xcode's Device Hub; simctl can't change it.
 - `ipad-screenshots/`: `DEVICE_NAME="iPad Pro 13-inch (M5)"`.
 
+Each folder also has the two images for the version page's "Header and Search Results" section,
+which the App Store shows on iOS 27 and iPadOS 27 and later. They are optional; without them,
+search results show the screenshots.
+
+| File | Size | Placement |
+|---|---|---|
+| `header.png` | 3840×1646 (21:9) | Product page header: three phones, no text |
+| `search-result.png` | 3840×2560 (3:2) | Search results: a headline and the home screen |
+
+`scripts/store_art.py <raw-dir>` makes them from the same raw captures as the iPhone sets (the
+headlines live in that script). The layouts keep key artwork inside the safe areas of Apple's
+templates, and the search headline stays readable when the image is scaled to 384 px wide, about
+the width search shows it at on an iPhone. Neither image may show prices, URLs, a copyright
+symbol, other platforms or Apple awards.
+
 ## 1. One-time setup
 
 1. **Apple Developer Program**: paid membership ($99/year) for team `S8Q8KHX6G5`.
