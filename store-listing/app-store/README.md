@@ -2,12 +2,31 @@
 
 Everything App Store Connect asks for, ready to paste. One folder per listing language:
 `en-GB/` (English, U.K.), `ru/` (Russian), `no/` (Norwegian). Each folder has `name.txt`,
-`subtitle.txt`, `promotional_text.txt`, `keywords.txt`, `description.txt` and
-`screenshots/1-4.png` (1320×2868, the 6.9" iPhone size) and `ipad-screenshots/1-4.png`
-(2064×2752, the 13" iPad size). App Store Connect scales both down for smaller devices.
+`subtitle.txt`, `promotional_text.txt`, `keywords.txt`, `description.txt` and these
+screenshot sets, four each, in App Store Connect's media sections of the same name:
 
-Retake the raw screenshots after UI changes with `scripts/ios_screenshots.sh`, and with
-`DEVICE_NAME="iPad Pro 13-inch (M5)" scripts/ios_screenshots.sh` for the iPad set.
+| Folder | Size | App Store Connect display |
+|---|---|---|
+| `screenshots/` | 1320×2868 | iPhone with Dynamic Island (large display), 6.9" |
+| `medium-screenshots/` | 1206×2622 | iPhone with Dynamic Island (medium display), 6.3"; at least one is required |
+| `duo-inner-screenshots/` | 2007×2853 | iPhone Duo, inner display |
+| `duo-outer-screenshots/` | 1398×2034 | iPhone Duo, outer display |
+| `ipad-screenshots/` | 2064×2752 | iPad 13" |
+
+iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product page, and from
+April 2027 they are required for apps built with the iOS 27.1 SDK.
+
+Retake them after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry in
+every language, then `scripts/frame_screenshots.py <raw-dir> <folder>` adds the captions and
+device frame (the captions live in that script). Pick the simulator with `DEVICE_NAME`:
+
+- `screenshots/`: the default, iPhone 17 Pro Max.
+- `medium-screenshots/`: `DEVICE_NAME="iPhone 17 Pro"`. Not an iOS 27.0 simulator: there the app
+  hangs on its launch screen, waiting on the notification service, so every capture is blank.
+- `duo-inner-screenshots/`: `DEVICE_NAME="iPhone Duo"`, with the simulator open and upright.
+- `duo-outer-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=1`, with the simulator folded. The
+  pose is set in Xcode's Device Hub; simctl can't change it.
+- `ipad-screenshots/`: `DEVICE_NAME="iPad Pro 13-inch (M5)"`.
 
 ## 1. One-time setup
 

@@ -9,6 +9,13 @@ struct RootTabView: View {
     @ObservedObject private var router = AppRouter.shared
     @State private var selectedTab: RootTab = .home
     @State private var isDashboardScrollingDown: Bool = false
+    /// Whether the system has moved the status bar and navigation bar into a strip down the
+    /// side of the screen, as iPhone Duo does on its folded display. Scan/Add then join the
+    /// dashboard's toolbar in that strip instead of floating over the list.
+    private var barsInSideStrip: Bool { hasSideSafeAreaInset && horizontalSizeClass == .compact }
+    /// See `sideBarStripReader`.
+    @State private var hasSideSafeAreaInset: Bool = false
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var showScanner: Bool = false
     /// What the add/edit sheet should open with, or nil while it is closed. See `AddEditRequest`.
@@ -37,6 +44,9 @@ struct RootTabView: View {
                     PantryDashboardView(
                         viewModel: viewModel,
                         onEditItem: { presentAddEdit(editing: $0) },
+                        toolbarScanAndAdd: barsInSideStrip
+                            ? ScanAndAddActions(onScan: presentScanner, onAdd: { presentAddEdit(editing: nil) })
+                            : nil,
                         onScrollingDownChanged: { isDashboardScrollingDown = $0 },
                         onItemRemoved: offerItemUndo
                     )
@@ -82,8 +92,9 @@ struct RootTabView: View {
             // Scan/Add are only meaningful from the pantry list, so they only show on Home —
             // floating out (fade + slide toward the corner they hover over) on every other tab,
             // and also collapsing on the same downward scroll that collapses the dashboard's
-            // own metrics row, reappearing on the way back up.
-            if selectedTab == .home {
+            // own metrics row, reappearing on the way back up. With the bars in a side strip
+            // they sit in the dashboard's toolbar instead (see `barsInSideStrip`).
+            if selectedTab == .home && !barsInSideStrip {
                 HStack {
                     Spacer()
                     ScanAndAddButtons(
@@ -118,6 +129,7 @@ struct RootTabView: View {
             }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab == .home)
+        .background(sideBarStripReader)
         .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
         #if DEBUG
         .onAppear(perform: applyScreenshotLaunchArguments)
@@ -245,6 +257,22 @@ struct RootTabView: View {
             ) {
                 viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
             }
+        }
+    }
+
+    /// SwiftUI has no signal for where the system puts the bars, so `barsInSideStrip` goes by
+    /// the safe area: a side strip is the only thing that insets the app on the left or right
+    /// (the app is portrait-only on other iPhones, and iPads have no side insets). Only in
+    /// compact width does the toolbar move into the strip with the status bar; iPhone Duo's open
+    /// display held sideways has a strip too, but with just the status bar in it.
+    private var sideBarStripReader: some View {
+        GeometryReader { geometry in
+            let insets = geometry.safeAreaInsets
+            Color.clear
+                .onAppear { hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0 }
+                .onChange(of: insets) { _, insets in
+                    hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0
+                }
         }
     }
 

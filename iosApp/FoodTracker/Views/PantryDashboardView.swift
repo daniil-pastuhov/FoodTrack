@@ -18,6 +18,9 @@ public struct PantryDashboardView: View {
     /// that reverses both — hosted at the root (rather than here) so it renders above the
     /// floating nav bar/scan buttons that overlay this screen, instead of underneath them.
     var onItemRemoved: (PantryItem, Bool) -> Void
+    /// Scan/Add as toolbar buttons, when the root has them here rather than floating over the
+    /// list (see `RootTabView.barsInSideStrip`); nil leaves them out of the toolbar.
+    var toolbarScanAndAdd: ScanAndAddActions?
     @State private var showFilters: Bool = false
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
@@ -31,11 +34,13 @@ public struct PantryDashboardView: View {
     public init(
         viewModel: NativePantryViewModel,
         onEditItem: @escaping (PantryItem) -> Void,
+        toolbarScanAndAdd: ScanAndAddActions? = nil,
         onScrollingDownChanged: @escaping (Bool) -> Void = { _ in },
         onItemRemoved: @escaping (PantryItem, Bool) -> Void = { _, _ in }
     ) {
         self.viewModel = viewModel
         self.onEditItem = onEditItem
+        self.toolbarScanAndAdd = toolbarScanAndAdd
         self.onScrollingDownChanged = onScrollingDownChanged
         self.onItemRemoved = onItemRemoved
     }
@@ -212,6 +217,20 @@ public struct PantryDashboardView: View {
                                 .contentTransition(.symbolEffect(.replace))
                         }
                         .accessibilityLabel(L10n.filtersButton)
+                    }
+                    if let toolbarScanAndAdd {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(action: toolbarScanAndAdd.onAdd) {
+                                Image(systemName: "plus")
+                            }
+                            .accessibilityLabel(L10n.addItemTitle)
+                        }
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button(action: toolbarScanAndAdd.onScan) {
+                                Image(systemName: "barcode.viewfinder")
+                            }
+                            .accessibilityLabel(L10n.scanButton)
+                        }
                     }
                 }
             }

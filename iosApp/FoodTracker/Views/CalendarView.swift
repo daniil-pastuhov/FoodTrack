@@ -326,6 +326,7 @@ struct CalendarView: View {
                         .font(.subheadline)
                         .textCase(nil)
                     }
+                    .agendaLeadingInset()
                 }
             } else {
                 let sections = buildAgenda(viewModel.items, today: today)
@@ -345,6 +346,7 @@ struct CalendarView: View {
                         }
                         .font(.caption)
                         .accessibilityElement(children: .combine)
+                        .agendaLeadingInset()
                     }
                 }
             }
@@ -360,6 +362,7 @@ struct CalendarView: View {
             .font(.subheadline)
             .foregroundColor(.secondary)
             .listRowSeparator(.hidden)
+            .agendaLeadingInset()
     }
 
     private func agendaRow(_ item: PantryItem, showDate: Bool) -> some View {
@@ -395,6 +398,7 @@ struct CalendarView: View {
         }
         .accessibilityAction(named: L10n.calendarSwipeUsed) { onUseOne(item) }
         .accessibilityAction(named: L10n.calendarSwipeTossed) { onToss(item) }
+        .agendaLeadingInset()
     }
 
     // MARK: - Helpers
@@ -500,5 +504,28 @@ private struct CalendarDayCell: View {
         if isToday { return .white }
         if dimmed { return .secondary.opacity(0.4) }
         return .primary
+    }
+}
+
+/// Pins the agenda's leading inset to 20pt when it sits beside the week strip (regular width).
+/// A plain List takes that inset from its layout margins, and on the iPhone Duo's inner display
+/// those come out as zero for a list that starts mid-screen, so rows and headers touched the
+/// divider. Setting the inset (rather than padding, which would add to the 20pt iPad already
+/// gets) gives both the same margin. Compact width keeps the system default (nil).
+private struct AgendaLeadingInset: ViewModifier {
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.listRowInsets(.leading, horizontalSizeClass == .regular ? 20 : nil)
+        } else {
+            content
+        }
+    }
+}
+
+private extension View {
+    func agendaLeadingInset() -> some View {
+        modifier(AgendaLeadingInset())
     }
 }

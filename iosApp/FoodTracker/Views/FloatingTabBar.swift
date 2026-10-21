@@ -93,6 +93,18 @@ private struct TabBadge: View {
     }
 }
 
+/// What the Scan and Add buttons do, for when they sit in a toolbar instead of floating.
+/// Public because `PantryDashboardView`, which takes it, is.
+public struct ScanAndAddActions {
+    let onScan: () -> Void
+    let onAdd: () -> Void
+
+    public init(onScan: @escaping () -> Void, onAdd: @escaping () -> Void) {
+        self.onScan = onScan
+        self.onAdd = onAdd
+    }
+}
+
 /// The two floating round buttons that hover above `FloatingTabBar`, reachable from every tab:
 /// the primary "scan a barcode" button and the secondary "add an item" button. Scan is the
 /// more important, more frequently used action, so it gets the larger primary button closest
