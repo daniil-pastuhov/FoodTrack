@@ -13,6 +13,9 @@ set -euo pipefail
 ROOT=${0:A:h:h}
 OUT=${1:-$ROOT/build/ios-screenshots}
 DEVICE_NAME=${DEVICE_NAME:-"iPhone 17 Pro Max"}   # e.g. DEVICE_NAME="iPad Pro 13-inch (M5)"
+# Which of the simulator's displays to capture. iPhone Duo has two: the default is whichever is
+# on, so open the simulator for the inner display; folded, its outer display is SCREEN=1.
+SCREEN=${SCREEN:-}
 BUNDLE_ID=com.foodbest.ios
 DERIVED=$ROOT/build/ios-screenshots-derived-data
 
@@ -97,7 +100,7 @@ PY
       -demoBackup "$DATA/tmp/demo.json" -demoTab "$TAB" \
       -AppleLanguages "($LANG_CODE)" -AppleLocale "$LANG_CODE" >/dev/null
     sleep 4
-    xcrun simctl io "$UDID" screenshot "$OUT/$LANG_CODE/$N-$TAB.png" >/dev/null 2>&1
+    xcrun simctl io "$UDID" screenshot ${SCREEN:+--display="$SCREEN"} "$OUT/$LANG_CODE/$N-$TAB.png" >/dev/null 2>&1
     N=$((N + 1))
   done
   echo "$LANG_CODE: $(ls "$OUT/$LANG_CODE" | wc -l | tr -d ' ') screenshots"
