@@ -135,7 +135,8 @@
     <string name="quantity_increase_content_description">Increase quantity</string>
     <string name="notes_label">Notes (e.g. opened, quantity, shelf)</string>
     <string name="update_item_button">Update Item</string>
-    <string name="save_item_button">Save to Pantry</string>
+    <!-- %1$s is the selected storage location, e.g. "Fridge" -->
+    <string name="save_item_button">Save to %1$s</string>
     <string name="date_picker_ok">OK</string>
     <string name="date_picker_cancel">Cancel</string>
 
