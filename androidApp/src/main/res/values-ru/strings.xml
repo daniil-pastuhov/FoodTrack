@@ -136,7 +136,7 @@
     <string name="quantity_increase_content_description">Увеличить количество</string>
     <string name="notes_label">Заметки (напр. вскрыто, количество, полка)</string>
     <string name="update_item_button">Обновить продукт</string>
-    <string name="save_item_button">Сохранить в кладовую</string>
+    <string name="save_item_button">Сохранить: %1$s</string>
     <string name="date_picker_ok">ОК</string>
     <string name="date_picker_cancel">Отмена</string>
 

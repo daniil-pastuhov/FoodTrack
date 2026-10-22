@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -33,7 +35,7 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -45,12 +47,15 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SuggestionChip
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -72,6 +77,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -342,19 +348,19 @@ fun AddEditItemScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onScanButtonClick) {
+                    // A bare 24dp glyph reads as cramped next to the bold title, so the camera
+                    // gets a tonal container. Saving lives in the pinned bottom bar.
+                    FilledTonalIconButton(
+                        onClick = onScanButtonClick,
+                        modifier = Modifier.padding(end = 8.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = BrandPrimary.copy(alpha = 0.12f),
+                            contentColor = BrandPrimary
+                        )
+                    ) {
                         Icon(
                             Icons.Default.CameraAlt,
                             contentDescription = stringResource(R.string.scan_content_description)
-                        )
-                    }
-                    IconButton(onClick = ::saveItem, enabled = name.isNotBlank()) {
-                        Icon(
-                            Icons.Default.Save,
-                            contentDescription = stringResource(
-                                if (initialItem != null) R.string.update_item_button else R.string.save_item_button
-                            ),
-                            tint = if (name.isNotBlank()) BrandPrimary else TextSecondary.copy(alpha = 0.4f)
                         )
                     }
                 },
@@ -362,6 +368,48 @@ fun AddEditItemScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 )
             )
+        },
+        bottomBar = {
+            // Pinned so saving never needs a scroll to the end of a long form. The bar rides
+            // above the keyboard too, so the name can be typed and saved without dismissing it.
+            Surface(
+                color = MaterialTheme.colorScheme.background,
+                shadowElevation = 8.dp
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = 20.dp, vertical = 12.dp)
+                ) {
+                    Button(
+                        onClick = ::saveItem,
+                        enabled = name.isNotBlank(),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                        shape = RoundedCornerShape(14.dp),
+                        modifier = Modifier
+                            .widthIn(max = 640.dp)
+                            .fillMaxWidth()
+                            .height(52.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (initialItem != null) {
+                                stringResource(R.string.update_item_button)
+                            } else {
+                                stringResource(R.string.save_item_button, storageLocationLabel(storageLocation))
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         },
         modifier = modifier.fillMaxSize()
     ) { innerPadding ->
@@ -800,27 +848,6 @@ fun AddEditItemScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Save Button
-            Button(
-                onClick = ::saveItem,
-                enabled = name.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Icon(Icons.Default.Save, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(if (initialItem != null) R.string.update_item_button else R.string.save_item_button),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-            }
         }
         }
     }

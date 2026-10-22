@@ -134,7 +134,7 @@
     <string name="quantity_increase_content_description">Øk antall</string>
     <string name="notes_label">Notater (f.eks. åpnet, mengde, hylle)</string>
     <string name="update_item_button">Oppdater vare</string>
-    <string name="save_item_button">Lagre i matskapet</string>
+    <string name="save_item_button">Lagre i %1$s</string>
     <string name="date_picker_ok">OK</string>
     <string name="date_picker_cancel">Avbryt</string>
 
