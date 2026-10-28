@@ -1,0 +1,3 @@
+• På Android oppdateres widgetene på startskjermen med en gang når du bruker eller legger til en vare, og et trykk på en widget åpner ikke lenger appen to ganger
+• På Android er Lagre-knappen alltid synlig når du legger til eller redigerer en vare, så du slipper å rulle
+• Støtte for iPhone Duo, med Skann og Legg til i sidelisten når den er sammenbrettet

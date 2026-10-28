@@ -1,0 +1,3 @@
+• On Android, home-screen widgets update straight away when you use or add an item, and tapping a widget no longer opens the app twice
+• On Android, the Save button stays on screen while you add or edit an item, with no scrolling to reach it
+• Support for iPhone Duo, with Scan and Add in the side strip when it's folded
