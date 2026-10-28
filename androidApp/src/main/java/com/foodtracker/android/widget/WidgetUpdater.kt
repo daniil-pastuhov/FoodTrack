@@ -29,8 +29,11 @@ class WidgetUpdater(
 ) {
     fun start() {
         coroutineScope.launch {
+            // The expiry window is part of the key: with no live session, a day rollover or a
+            // threshold change has to start one, or the widgets keep yesterday's filter until
+            // the next pantry write.
             stateHolder.uiState
-                .map { it.items }
+                .map { it.items to it.expiryWindow() }
                 .distinctUntilChanged()
                 .collectLatest {
                     // A single failed updateAll() must not throw out of collectLatest: an

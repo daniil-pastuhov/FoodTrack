@@ -3,6 +3,9 @@ package com.foodtracker.android.widget
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -35,9 +38,12 @@ import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
 import com.foodtracker.model.PantryItem
 import com.foodtracker.repository.PantryRepository
-import com.foodtracker.repository.SettingsRepository
-import com.foodtracker.util.DateUtils
+import com.foodtracker.viewmodel.PantryStateHolder
+import com.foodtracker.viewmodel.PantryUiState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.datetime.LocalDate
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
@@ -48,17 +54,31 @@ import org.koin.core.component.inject
 class ExpiryWidget : GlanceAppWidget(), KoinComponent {
 
     private val pantryRepository: PantryRepository by inject()
-    private val settingsRepository: SettingsRepository by inject()
+    private val stateHolder: PantryStateHolder by inject()
 
+    /**
+     * Everything is collected *inside* [provideContent], not read once before it. Glance keeps
+     * a widget's session (and this coroutine) alive for a while after it renders or handles a
+     * tap, and `updateAll` on a live session only recomposes it — it does not re-run
+     * [provideGlance]. A value captured up front therefore stayed stale: an item consumed in
+     * the app shortly after touching the widget never disappeared from it. The one-shot reads
+     * are kept as initial values so the first frame isn't empty.
+     */
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val today = DateUtils.today()
-        val settings = settingsRepository.getSettings()
-        val items = pantryRepository.getItemsFlow().first()
-            .filter { it.daysRemaining(today) <= settings.expiringSoonDays }
-            .sortedBy { it.daysRemaining(today) }
+        val itemsFlow = pantryRepository.getItemsFlow()
+        val initialItems = itemsFlow.first()
+        // The holder's midnight timer stops while the device sleeps, and only MainActivity
+        // otherwise corrects it; a widget update (including the 30-minute periodic one) may be
+        // the first thing to run after midnight with the app in the background. Cheap when the
+        // date hasn't moved, and when it has, WidgetUpdater's window key refreshes the widgets.
+        stateHolder.refreshToday()
+        val windowFlow = stateHolder.expiryWindowFlow()
 
         provideContent {
-            ExpiryWidgetContent(items = items, today = today)
+            val allItems by itemsFlow.collectAsState(initial = initialItems)
+            val window by windowFlow.collectAsState(initial = stateHolder.uiState.value.expiryWindow())
+            val items = remember(allItems, window) { expiringItems(allItems, window) }
+            ExpiryWidgetContent(items = items, today = window.today)
         }
     }
 }
@@ -66,6 +86,34 @@ class ExpiryWidget : GlanceAppWidget(), KoinComponent {
 class ExpiryWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ExpiryWidget()
 }
+
+/** What decides which items count as expiring: today's date and the user's threshold. */
+internal data class ExpiryWindow(val today: LocalDate, val expiringSoonDays: Int)
+
+internal fun PantryUiState.expiryWindow(): ExpiryWindow = ExpiryWindow(today, settings.expiringSoonDays)
+
+/**
+ * The [ExpiryWindow] as it changes. Taken from the state holder rather than from
+ * `DateUtils.today()` and `SettingsRepository`, because the holder already advances `today` at
+ * midnight (and on time/zone changes) and publishes a settings change the moment it is made.
+ */
+internal fun PantryStateHolder.expiryWindowFlow(): Flow<ExpiryWindow> =
+    uiState.map { it.expiryWindow() }.distinctUntilChanged()
+
+/** Expired or expiring-within-the-threshold items, soonest first. */
+internal fun expiringItems(items: List<PantryItem>, window: ExpiryWindow): List<PantryItem> =
+    items
+        .filter { it.daysRemaining(window.today) <= window.expiringSoonDays }
+        .sortedBy { it.daysRemaining(window.today) }
+
+/** Opens the dashboard, including when [MainActivity] is already running on another screen. */
+internal fun openDashboardIntent(context: Context): Intent =
+    Intent(context, MainActivity::class.java).apply {
+        putExtra(MainActivity.EXTRA_OPEN_DASHBOARD, true)
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+            Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
 
 @Composable
 private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
@@ -79,7 +127,7 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
         Text(
             text = context.getString(R.string.widget_expiry_title),
             style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background)),
-            modifier = GlanceModifier.clickable(actionStartActivity(Intent(context, MainActivity::class.java)))
+            modifier = GlanceModifier.clickable(actionStartActivity(openDashboardIntent(context)))
         )
         Spacer(modifier = GlanceModifier.height(8.dp))
         if (items.isEmpty()) {

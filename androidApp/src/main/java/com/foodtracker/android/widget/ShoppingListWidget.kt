@@ -3,6 +3,8 @@ package com.foodtracker.android.widget
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -46,9 +48,13 @@ class ShoppingListWidget : GlanceAppWidget(), KoinComponent {
 
     private val shoppingListRepository: ShoppingListRepository by inject()
 
+    /** Collects inside [provideContent] rather than reading once up front; see
+     *  [ExpiryWidget.provideGlance] for why a captured list goes stale. */
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val entries = shoppingListRepository.getEntriesFlow().first()
+        val entriesFlow = shoppingListRepository.getEntriesFlow()
+        val initialEntries = entriesFlow.first()
         provideContent {
+            val entries by entriesFlow.collectAsState(initial = initialEntries)
             ShoppingListWidgetContent(entries = entries)
         }
     }

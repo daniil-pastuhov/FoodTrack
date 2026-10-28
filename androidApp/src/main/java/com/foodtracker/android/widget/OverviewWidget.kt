@@ -1,8 +1,10 @@
 package com.foodtracker.android.widget
 
 import android.content.Context
-import android.content.Intent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -23,14 +25,12 @@ import androidx.glance.layout.padding
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.repository.PantryRepository
-import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.repository.ShoppingListRepository
-import com.foodtracker.util.DateUtils
+import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import org.koin.core.component.KoinComponent
@@ -58,36 +58,52 @@ private sealed class OverviewRow {
 class OverviewWidget : GlanceAppWidget(), KoinComponent {
 
     private val pantryRepository: PantryRepository by inject()
-    private val settingsRepository: SettingsRepository by inject()
     private val shoppingListRepository: ShoppingListRepository by inject()
+    private val stateHolder: PantryStateHolder by inject()
 
+    /** Collects inside [provideContent] rather than reading once up front; see
+     *  [ExpiryWidget.provideGlance] for why a captured value goes stale. */
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val today = DateUtils.today()
-        val settings = settingsRepository.getSettings()
-        val expiryItems = pantryRepository.getItemsFlow().first()
-            .filter { it.daysRemaining(today) <= settings.expiringSoonDays }
-            .sortedBy { it.daysRemaining(today) }
-        val shoppingEntries = shoppingListRepository.getEntriesFlow().first()
-
-        val rows = buildList {
-            add(OverviewRow.Header(OverviewSection.EXPIRY, context.getString(R.string.widget_expiry_title)))
-            if (expiryItems.isEmpty()) {
-                add(OverviewRow.Empty(context.getString(R.string.widget_expiry_empty)))
-            } else {
-                expiryItems.take(MAX_ROWS_PER_SECTION).forEach { add(OverviewRow.ExpiryItem(it)) }
-            }
-
-            add(OverviewRow.Header(OverviewSection.SHOPPING_LIST, context.getString(R.string.widget_shopping_list_title)))
-            if (shoppingEntries.isEmpty()) {
-                add(OverviewRow.Empty(context.getString(R.string.widget_shopping_list_empty)))
-            } else {
-                shoppingEntries.take(MAX_ROWS_PER_SECTION).forEach { add(OverviewRow.ShoppingItem(it)) }
-            }
-        }
+        val itemsFlow = pantryRepository.getItemsFlow()
+        val entriesFlow = shoppingListRepository.getEntriesFlow()
+        val initialItems = itemsFlow.first()
+        val initialEntries = entriesFlow.first()
+        stateHolder.refreshToday() // see ExpiryWidget.provideGlance
+        val windowFlow = stateHolder.expiryWindowFlow()
 
         provideContent {
-            OverviewWidgetContent(rows = rows, today = today)
+            val allItems by itemsFlow.collectAsState(initial = initialItems)
+            val shoppingEntries by entriesFlow.collectAsState(initial = initialEntries)
+            val window by windowFlow.collectAsState(initial = stateHolder.uiState.value.expiryWindow())
+            val rows = remember(allItems, shoppingEntries, window) {
+                buildOverviewRows(
+                    context = context,
+                    expiryItems = expiringItems(allItems, window),
+                    shoppingEntries = shoppingEntries
+                )
+            }
+            OverviewWidgetContent(rows = rows, today = window.today)
         }
+    }
+}
+
+private fun buildOverviewRows(
+    context: Context,
+    expiryItems: List<PantryItem>,
+    shoppingEntries: List<ShoppingListEntry>
+): List<OverviewRow> = buildList {
+    add(OverviewRow.Header(OverviewSection.EXPIRY, context.getString(R.string.widget_expiry_title)))
+    if (expiryItems.isEmpty()) {
+        add(OverviewRow.Empty(context.getString(R.string.widget_expiry_empty)))
+    } else {
+        expiryItems.take(MAX_ROWS_PER_SECTION).forEach { add(OverviewRow.ExpiryItem(it)) }
+    }
+
+    add(OverviewRow.Header(OverviewSection.SHOPPING_LIST, context.getString(R.string.widget_shopping_list_title)))
+    if (shoppingEntries.isEmpty()) {
+        add(OverviewRow.Empty(context.getString(R.string.widget_shopping_list_empty)))
+    } else {
+        shoppingEntries.take(MAX_ROWS_PER_SECTION).forEach { add(OverviewRow.ShoppingItem(it)) }
     }
 }
 
@@ -136,7 +152,7 @@ private fun OverviewRowContent(row: OverviewRow, today: LocalDate) {
     when (row) {
         is OverviewRow.Header -> {
             val openIntent = when (row.section) {
-                OverviewSection.EXPIRY -> Intent(context, MainActivity::class.java)
+                OverviewSection.EXPIRY -> openDashboardIntent(context)
                 OverviewSection.SHOPPING_LIST -> openShoppingListIntent(context)
             }
             WidgetSectionHeader(

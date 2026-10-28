@@ -86,7 +86,10 @@ class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
         val body = intent.getStringExtra(EXTRA_BODY) ?: context.getString(R.string.notif_fallback_body)
 
         // Intent to open app when tapping notification
+        // The extra is what lands on the dashboard: MainActivity is singleTop, so CLEAR_TOP
+        // reuses a running instance through onNewIntent rather than recreating it.
         val tapIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra(MainActivity.EXTRA_OPEN_DASHBOARD, true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
 

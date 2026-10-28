@@ -59,7 +59,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        applyScreenFromIntent(intent)
+        // Only on a genuine first launch. When the system recreates the activity (rotation, a
+        // reclaimed background activity), `intent` is still the one that first launched it, so
+        // re-applying it would jump back to a long-gone shortcut's screen — e.g. reopening the
+        // app from the launcher landing on Add Item. A newer intent that caused the recreation
+        // arrives separately through onNewIntent.
+        if (savedInstanceState == null) {
+            applyScreenFromIntent(intent)
+        }
         // Re-asserted on every start rather than only when Settings changes: geofences are
         // OS-level registrations that can be dropped underneath the app (a reboot clears them
         // all), and permission can be revoked from system settings between runs.
@@ -125,6 +132,10 @@ class MainActivity : ComponentActivity() {
         if (shareRecipeFromIntent(intent)) return
         if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING_LIST, false)) {
             currentScreenState.value = AppScreen.SHOPPING_LIST
+            return
+        }
+        if (intent.getBooleanExtra(EXTRA_OPEN_DASHBOARD, false)) {
+            currentScreenState.value = AppScreen.DASHBOARD
             return
         }
         when (intent.getStringExtra(EXTRA_SHORTCUT)) {
@@ -222,6 +233,12 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
+
+        /** Sent by the expiry widgets' title taps and the expiry/digest notification taps.
+         *  Needed now that the activity is singleTop:
+         *  a plain intent would reach the running instance via onNewIntent and leave it on
+         *  whatever screen it was showing, rather than on the dashboard the tap implies. */
+        const val EXTRA_OPEN_DASHBOARD = "com.foodtracker.android.EXTRA_OPEN_DASHBOARD"
         const val EXTRA_SHORTCUT = "com.foodtracker.android.EXTRA_SHORTCUT"
 
         /** Pantry item ids the digest notification's "Recipe ideas" action asks to build a

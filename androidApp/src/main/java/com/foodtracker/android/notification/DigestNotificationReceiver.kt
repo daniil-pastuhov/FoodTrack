@@ -57,7 +57,9 @@ class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
      * without opening the app, which is the thing the notification exists to save them.
      */
     private fun postDigestNotification(context: Context, items: List<PantryItem>) {
+        // See ExpiryNotificationReceiver: the extra, not CLEAR_TOP, is what lands on the dashboard.
         val tapIntent = Intent(context, MainActivity::class.java).apply {
+            putExtra(MainActivity.EXTRA_OPEN_DASHBOARD, true)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         val pendingTapIntent = PendingIntent.getActivity(

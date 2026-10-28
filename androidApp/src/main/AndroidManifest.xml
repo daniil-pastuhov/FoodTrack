@@ -32,9 +32,14 @@
             android:name="firebase_crashlytics_collection_enabled"
             android:value="${crashlyticsCollectionEnabled}" />
 
+        <!-- singleTop: widget taps, notifications and shortcuts all start this activity, and
+             with the default "standard" mode each one pushed a second copy on top of the
+             running one, so Back revealed the same screen again. singleTop routes them through
+             onNewIntent on the existing instance instead. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
