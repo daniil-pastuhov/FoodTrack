@@ -1,0 +1,5 @@
+• Clearer notification settings: choose alerts for each item, a summary, or both
+• The summary can now arrive every 1, 2, 3, 5 or 7 days
+• A short note tells you exactly which reminders you'll get
+• If notifications are blocked, a banner shows up with a quick link to your settings
+• Reminder times now show their unit, e.g. "3 days before"
