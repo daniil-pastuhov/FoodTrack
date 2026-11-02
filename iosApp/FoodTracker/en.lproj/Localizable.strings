@@ -156,17 +156,24 @@
 
 "settings_title" = "Settings";
 "settings_section_notifications" = "Notifications";
-"settings_notifications_enabled" = "Expiry reminders";
-"settings_lead_days_label" = "Remind me this many days before expiry";
-"settings_time_label" = "Reminder time";
-"settings_individual_alerts" = "Individual alerts";
-"settings_individual_alerts_desc" = "One notification per product, before it expires";
-"settings_digest" = "Summary";
-"settings_digest_desc" = "One notification listing what expires in the coming week";
+"settings_notifications_enabled" = "Remind me before food expires";
+"settings_lead_days_label" = "Remind me";
+"settings_time_label" = "Time";
 "settings_digest_frequency_label" = "How often";
 "settings_digest_daily" = "Daily";
 "settings_digest_weekly" = "Weekly";
 "settings_digest_weekday_label" = "Day of the week";
+"settings_reminder_style_label" = "How";
+"settings_reminder_style_each_item" = "Each item";
+"settings_reminder_style_summary" = "Summary";
+"settings_reminder_style_both" = "Both";
+"settings_reminder_preview_each_item" = "A notification for each item %1$@ it expires, at %2$@.";
+"settings_reminder_preview_summary_daily" = "Every day at %@, a list of everything expiring in the next 7 days.";
+"settings_reminder_preview_summary_weekly" = "Every week on %1$@ at %2$@, a list of everything expiring in the next 7 days.";
+"settings_reminder_preview_summary_every" = "%1$@ at %2$@, a list of everything expiring in the next 7 days.";
+"settings_reminder_preview_none" = "Choose how you want to be reminded. Right now no reminders will be sent.";
+"settings_notifications_blocked" = "Notifications are turned off for this app in your phone's settings, so reminders won't arrive.";
+"settings_notifications_open_settings" = "Open settings";
 
 "settings_section_expiring_soon" = "Expiring Soon Threshold";
 "settings_expiring_soon_desc" = "Items expiring within this many days are flagged as 'Expiring Soon'";

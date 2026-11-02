@@ -207,7 +207,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     private nonisolated static let namedItemCount = 3
 
     /// (Re)schedules the digest for the next occurrence of the configured reminder time - daily,
-    /// or weekly on the chosen weekday - naming the most urgent of the given items as of right now.
+    /// every N days, or weekly on the chosen weekday - naming the most urgent of the given items as of right now.
     ///
     /// Unlike Android's `DigestNotificationReceiver` (a `BroadcastReceiver` that recomputes the
     /// count fresh at the moment the alarm fires), a `UNNotificationRequest`'s content is fixed
@@ -222,22 +222,42 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     /// Naming items rather than counting them makes a stale digest more visibly stale, which
     /// is a fair trade for a notification the user can otherwise do nothing with; the recipe
     /// action re-resolves the ids against live data, so it never acts on a stale name.
+    /// The first day from today that `isDigestDay` accepts, at the reminder time; today counts
+    /// only while its slot is still ahead. Mirrors Android's `NotificationHelper.nextDigestTime`.
+    nonisolated static func nextDigestDate(after now: Date, settings: NotificationSettings, calendar: Calendar) -> Date? {
+        let today = calendar.startOfDay(for: now)
+        // Every schedule repeats within 7 days, so 8 candidates (today included) always hit.
+        for offset in 0...7 {
+            guard let day = calendar.date(byAdding: .day, value: offset, to: today),
+                  let fire = calendar.date(bySettingHour: settings.hour, minute: settings.minute, second: 0, of: day),
+                  fire > now else { continue }
+            let ymd = calendar.dateComponents([.year, .month, .day, .weekday], from: day)
+            guard let year = ymd.year, let month = ymd.month, let dayOfMonth = ymd.day, let weekday = ymd.weekday else { continue }
+            // Calendar's 1=Sun...7=Sat onto ISO 1=Mon...7=Sun.
+            let isoWeekday = (weekday + 5) % 7 + 1
+            if settings.isDigestDay(epochDay: epochDay(year: year, month: month, day: dayOfMonth), isoWeekday: isoWeekday) {
+                return fire
+            }
+        }
+        return nil
+    }
+
+    /// Days since 1970-01-01 for a local calendar date - the same count as Java's
+    /// `LocalDate.toEpochDay`, so iOS and Android agree on which days an every-N-days summary fires.
+    private nonisolated static func epochDay(year: Int, month: Int, day: Int) -> Int {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        let date = utc.date(from: DateComponents(year: year, month: month, day: day)) ?? Date(timeIntervalSince1970: 0)
+        return Int((date.timeIntervalSince1970 / 86_400).rounded(.down))
+    }
+
     public func scheduleDigestNotification(items: [PantryItem]) {
         let notificationSettings = SettingsStore.shared.settings.notifications
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.digestIdentifier])
         guard notificationSettings.enabled, notificationSettings.digestEnabled else { return }
 
-        var timeComponents = DateComponents()
-        timeComponents.hour = notificationSettings.hour
-        timeComponents.minute = notificationSettings.minute
-        timeComponents.second = 0
-        if notificationSettings.digestFrequency == .weekly {
-            // ISO 1=Mon...7=Sun onto Calendar's 1=Sun...7=Sat.
-            timeComponents.weekday = min(max(notificationSettings.digestWeekday, 1), 7) % 7 + 1
-        }
-
         let calendar = Calendar.current
-        guard let nextFireDate = calendar.nextDate(after: Date(), matching: timeComponents, matchingPolicy: .nextTime, direction: .forward) else { return }
+        guard let nextFireDate = Self.nextDigestDate(after: Date(), settings: notificationSettings, calendar: calendar) else { return }
         let fireComponents = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: nextFireDate)
 
         // Selected and worded as of the day it fires, not today: a weekly summary can land up

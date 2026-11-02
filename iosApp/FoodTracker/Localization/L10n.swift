@@ -364,10 +364,33 @@ public enum L10n {
     public static var settingsNotificationsEnabled: String { NSLocalizedString("settings_notifications_enabled", comment: "") }
     public static var settingsLeadDaysLabel: String { NSLocalizedString("settings_lead_days_label", comment: "") }
     public static var settingsTimeLabel: String { NSLocalizedString("settings_time_label", comment: "") }
-    public static var settingsIndividualAlerts: String { NSLocalizedString("settings_individual_alerts", comment: "") }
-    public static var settingsIndividualAlertsDesc: String { NSLocalizedString("settings_individual_alerts_desc", comment: "") }
-    public static var settingsDigest: String { NSLocalizedString("settings_digest", comment: "") }
-    public static var settingsDigestDesc: String { NSLocalizedString("settings_digest_desc", comment: "") }
+    public static var settingsReminderStyleLabel: String { NSLocalizedString("settings_reminder_style_label", comment: "") }
+    public static var settingsReminderStyleEachItem: String { NSLocalizedString("settings_reminder_style_each_item", comment: "") }
+    public static var settingsReminderStyleSummary: String { NSLocalizedString("settings_reminder_style_summary", comment: "") }
+    public static var settingsReminderStyleBoth: String { NSLocalizedString("settings_reminder_style_both", comment: "") }
+    /// "3 days before" / "за 3 дня" - the lead-time value, unit included.
+    public static func settingsLeadDaysPhrase(_ days: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("settings_lead_days_phrase", comment: ""), days)
+    }
+    public static func settingsReminderPreviewEachItem(leadDays: Int, time: String) -> String {
+        String(format: NSLocalizedString("settings_reminder_preview_each_item", comment: ""), settingsLeadDaysPhrase(leadDays), time)
+    }
+    public static func settingsReminderPreviewSummaryDaily(time: String) -> String {
+        String(format: NSLocalizedString("settings_reminder_preview_summary_daily", comment: ""), time)
+    }
+    public static func settingsReminderPreviewSummaryWeekly(weekday: String, time: String) -> String {
+        String(format: NSLocalizedString("settings_reminder_preview_summary_weekly", comment: ""), weekday, time)
+    }
+    public static func settingsReminderPreviewSummaryEvery(days: Int, time: String) -> String {
+        let phrase = String.localizedStringWithFormat(NSLocalizedString("settings_digest_every_days_phrase", comment: ""), days)
+        return String(format: NSLocalizedString("settings_reminder_preview_summary_every", comment: ""), phrase, time)
+    }
+    public static func settingsDigestEveryDaysChip(_ days: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("settings_digest_every_days_chip", comment: ""), days)
+    }
+    public static var settingsReminderPreviewNone: String { NSLocalizedString("settings_reminder_preview_none", comment: "") }
+    public static var settingsNotificationsBlocked: String { NSLocalizedString("settings_notifications_blocked", comment: "") }
+    public static var settingsNotificationsOpenSettings: String { NSLocalizedString("settings_notifications_open_settings", comment: "") }
     public static var settingsDigestFrequencyLabel: String { NSLocalizedString("settings_digest_frequency_label", comment: "") }
     public static var settingsDigestDaily: String { NSLocalizedString("settings_digest_daily", comment: "") }
     public static var settingsDigestWeekly: String { NSLocalizedString("settings_digest_weekly", comment: "") }

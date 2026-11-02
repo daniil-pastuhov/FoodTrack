@@ -147,6 +147,10 @@ public struct NotificationSettings: Codable, Equatable {
     /// ISO day of week (1 = Monday ... 7 = Sunday) the summary fires on when weekly, matching
     /// Android's `digestWeekday`. Note this is *not* `Calendar`'s numbering (1 = Sunday).
     public var digestWeekday: Int
+    /// Days between summaries when `digestFrequency` is `.daily` (1 = every day). Weekly stays
+    /// its own frequency, so settings saved before this existed keep their meaning. Read
+    /// through `digestEveryDays`. Mirrors Android's `digestIntervalDays`.
+    public var digestIntervalDays: Int
 
     public init(
         enabled: Bool = true,
@@ -156,7 +160,8 @@ public struct NotificationSettings: Codable, Equatable {
         individualEnabled: Bool = true,
         digestEnabled: Bool = false,
         digestFrequency: DigestFrequency = .daily,
-        digestWeekday: Int = 1
+        digestWeekday: Int = 1,
+        digestIntervalDays: Int = 1
     ) {
         self.enabled = enabled
         self.leadDays = leadDays
@@ -166,6 +171,7 @@ public struct NotificationSettings: Codable, Equatable {
         self.digestEnabled = digestEnabled
         self.digestFrequency = digestFrequency
         self.digestWeekday = digestWeekday
+        self.digestIntervalDays = digestIntervalDays
     }
 
     // decodeIfPresent for everything added after the first release: settings saved before
@@ -181,6 +187,74 @@ public struct NotificationSettings: Codable, Equatable {
         digestEnabled = try container.decodeIfPresent(Bool.self, forKey: .digestEnabled) ?? false
         digestFrequency = try container.decodeIfPresent(DigestFrequency.self, forKey: .digestFrequency) ?? .daily
         digestWeekday = try container.decodeIfPresent(Int.self, forKey: .digestWeekday) ?? 1
+        digestIntervalDays = try container.decodeIfPresent(Int.self, forKey: .digestIntervalDays) ?? 1
+    }
+}
+
+/// How expiry reminders are delivered: the single choice the settings screen offers instead of
+/// two independent toggles. UI-only - persisted as `individualEnabled` / `digestEnabled`, so
+/// stored settings don't change shape. Mirrors `ReminderStyle` in shared `Settings.kt`.
+public enum ReminderStyle: CaseIterable, Hashable {
+    case eachItem
+    case summary
+    case both
+}
+
+extension NotificationSettings {
+    /// The current style, or nil when both delivery types are off - a state saved by older
+    /// versions, where the master switch was on but nothing would ever fire.
+    public var reminderStyle: ReminderStyle? {
+        switch (individualEnabled, digestEnabled) {
+        case (true, true): return .both
+        case (true, false): return .eachItem
+        case (false, true): return .summary
+        case (false, false): return nil
+        }
+    }
+
+    public func withReminderStyle(_ style: ReminderStyle) -> NotificationSettings {
+        var copy = self
+        copy.individualEnabled = style != .summary
+        copy.digestEnabled = style != .eachItem
+        return copy
+    }
+
+    /// Days between summaries, 1...7: 7 for weekly, otherwise `digestIntervalDays`.
+    public var digestEveryDays: Int {
+        digestFrequency == .weekly ? 7 : min(max(digestIntervalDays, 1), 7)
+    }
+
+    /// Sets how often the summary fires. 7 means weekly, on `digestWeekday`.
+    public func withDigestEveryDays(_ days: Int) -> NotificationSettings {
+        let clamped = min(max(days, 1), 7)
+        var copy = self
+        copy.digestFrequency = clamped == 7 ? .weekly : .daily
+        if clamped != 7 { copy.digestIntervalDays = clamped }
+        return copy
+    }
+
+    /// Whether the summary fires on the local calendar day `epochDay` (days since 1970-01-01),
+    /// whose ISO weekday (1 = Monday ... 7 = Sunday) is `isoWeekday`. Every N days is anchored
+    /// to the epoch, not to "now": the digest is rescheduled on every pantry change, and an
+    /// interval counted from now would keep moving out and never fire. Mirrors `isDigestDay`
+    /// in shared `Settings.kt`, so both apps pick the same days.
+    public func isDigestDay(epochDay: Int, isoWeekday: Int) -> Bool {
+        switch digestEveryDays {
+        case 1: return true
+        case 7: return isoWeekday == min(max(digestWeekday, 1), 7)
+        case let every:
+            let remainder = epochDay % every
+            return (remainder < 0 ? remainder + every : remainder) == 0
+        }
+    }
+
+    /// Flips the master switch. Turning it on with no delivery type selected brings back
+    /// per-item reminders, so "on" always means something will actually fire.
+    public func withEnabled(_ enabled: Bool) -> NotificationSettings {
+        var copy = self
+        copy.enabled = enabled
+        copy.individualEnabled = individualEnabled || (enabled && !digestEnabled)
+        return copy
     }
 }
 

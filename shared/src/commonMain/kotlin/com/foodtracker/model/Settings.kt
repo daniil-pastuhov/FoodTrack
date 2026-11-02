@@ -17,7 +17,44 @@ data class NotificationSettings(
     val digestFrequency: DigestFrequency = DigestFrequency.DAILY,
     /** ISO day of week (1 = Monday .. 7 = Sunday) the summary fires on when [digestFrequency]
      *  is [DigestFrequency.WEEKLY]. Ignored for a daily summary. */
-    val digestWeekday: Int = 1
+    val digestWeekday: Int = 1,
+    /** Days between summaries when [digestFrequency] is [DigestFrequency.DAILY]: 1 is every
+     *  day. Weekly stays its own frequency (it has a weekday), so settings saved before this
+     *  field existed keep meaning what they did. Read through [digestEveryDays]. */
+    val digestIntervalDays: Int = 1
+)
+
+/**
+ * How expiry reminders are delivered: the single choice the settings screen offers instead of
+ * two independent toggles. UI-only - persisted as [NotificationSettings.individualEnabled] and
+ * [NotificationSettings.digestEnabled], so stored settings don't change shape.
+ */
+enum class ReminderStyle {
+    EACH_ITEM,
+    SUMMARY,
+    BOTH
+}
+
+/** The current [ReminderStyle], or null when both delivery types are off - a state saved by
+ *  older versions, where the master switch was on but nothing would ever fire. */
+val NotificationSettings.reminderStyle: ReminderStyle?
+    get() = when {
+        individualEnabled && digestEnabled -> ReminderStyle.BOTH
+        individualEnabled -> ReminderStyle.EACH_ITEM
+        digestEnabled -> ReminderStyle.SUMMARY
+        else -> null
+    }
+
+fun NotificationSettings.withReminderStyle(style: ReminderStyle): NotificationSettings = copy(
+    individualEnabled = style != ReminderStyle.SUMMARY,
+    digestEnabled = style != ReminderStyle.EACH_ITEM
+)
+
+/** Flips the master switch. Turning it on with no delivery type selected brings back per-item
+ *  reminders, so "on" always means something will actually fire. */
+fun NotificationSettings.withEnabled(enabled: Boolean): NotificationSettings = copy(
+    enabled = enabled,
+    individualEnabled = individualEnabled || (enabled && !digestEnabled)
 )
 
 @Serializable
@@ -96,4 +133,29 @@ data class AppSettings(
         return if (rememberLastStorageLocation && last != null && last in storageLocations) last
         else defaultStorageLocation
     }
+}
+
+/** Days between summaries, 1..7: 7 for a weekly summary, otherwise [NotificationSettings.digestIntervalDays]. */
+val NotificationSettings.digestEveryDays: Int
+    get() = if (digestFrequency == DigestFrequency.WEEKLY) 7 else digestIntervalDays.coerceIn(1, 7)
+
+/** Sets how often the summary fires. 7 means weekly, on [NotificationSettings.digestWeekday]. */
+fun NotificationSettings.withDigestEveryDays(days: Int): NotificationSettings {
+    val clamped = days.coerceIn(1, 7)
+    return copy(
+        digestFrequency = if (clamped == 7) DigestFrequency.WEEKLY else DigestFrequency.DAILY,
+        digestIntervalDays = if (clamped == 7) digestIntervalDays else clamped
+    )
+}
+
+/**
+ * Whether the summary fires on the local calendar day [epochDay] (days since 1970-01-01), whose
+ * ISO weekday (1 = Monday .. 7 = Sunday) is [isoWeekday]. Every N days is anchored to the epoch
+ * rather than to "now", so rescheduling - which iOS does on every pantry change - can't keep
+ * pushing the next summary N days out and never fire it.
+ */
+fun NotificationSettings.isDigestDay(epochDay: Long, isoWeekday: Int): Boolean = when (val every = digestEveryDays) {
+    1 -> true
+    7 -> isoWeekday == digestWeekday.coerceIn(1, 7)
+    else -> epochDay.mod(every.toLong()) == 0L
 }
