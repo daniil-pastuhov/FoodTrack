@@ -1,0 +1,5 @@
+• Tydeligere varslingsinnstillinger: velg varsel for hver vare, et sammendrag eller begge deler
+• Sammendraget kan nå komme hver 1., 2., 3., 5. eller 7. dag
+• En kort tekst viser nøyaktig hvilke påminnelser du får
+• Er varsler blokkert, vises et banner med snarvei til innstillingene
+• Påminnelsestider vises nå med enhet, f.eks. «3 dager før»
