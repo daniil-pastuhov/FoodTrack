@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UserNotifications
 
 public struct SettingsView: View {
     @ObservedObject var viewModel: NativePantryViewModel
@@ -23,6 +24,9 @@ public struct SettingsView: View {
     @State private var newStoreText: String = ""
     @State private var isResolvingStoreLocation = false
     @State private var storeLocationFailed = false
+    /// iOS has notifications for the app switched off (authorization denied).
+    @State private var notificationsDenied = false
+    @Environment(\.scenePhase) private var scenePhase
 
     public init(viewModel: NativePantryViewModel, onDataCleared: @escaping () -> Void = {}) {
         self.viewModel = viewModel
@@ -149,51 +153,66 @@ public struct SettingsView: View {
     }
 
     private var notificationsSection: some View {
-        Section(header: Text(L10n.settingsSectionNotifications)) {
+        Section(
+            header: Text(L10n.settingsSectionNotifications),
+            footer: settings.notifications.enabled ? Text(reminderPreview) : nil
+        ) {
             Toggle(L10n.settingsNotificationsEnabled, isOn: Binding(
                 get: { settings.notifications.enabled },
                 set: { newValue in
-                    update { $0.notifications.enabled = newValue }
-                    IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
-                    IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
+                    update { $0.notifications = $0.notifications.withEnabled(newValue) }
+                    rescheduleNotifications()
                 }
             ))
 
             if settings.notifications.enabled {
-                Toggle(isOn: notificationBinding(\.individualEnabled)) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.settingsIndividualAlerts)
-                        Text(L10n.settingsIndividualAlertsDesc)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                if notificationsDenied {
+                    notificationsBlockedRow
                 }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L10n.settingsReminderStyleLabel)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    Picker(L10n.settingsReminderStyleLabel, selection: Binding<ReminderStyle?>(
+                        get: { settings.notifications.reminderStyle },
+                        set: { newValue in
+                            guard let newValue else { return }
+                            update { $0.notifications = $0.notifications.withReminderStyle(newValue) }
+                            rescheduleNotifications()
+                        }
+                    )) {
+                        Text(L10n.settingsReminderStyleEachItem).tag(ReminderStyle?.some(.eachItem))
+                        Text(L10n.settingsReminderStyleSummary).tag(ReminderStyle?.some(.summary))
+                        Text(L10n.settingsReminderStyleBoth).tag(ReminderStyle?.some(.both))
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
+                }
+                .padding(.vertical, 4)
 
                 if settings.notifications.individualEnabled {
                     Picker(L10n.settingsLeadDaysLabel, selection: notificationBinding(\.leadDays)) {
                         ForEach([1, 2, 3, 5, 7], id: \.self) { days in
-                            Text("\(days)").tag(days)
+                            Text(L10n.settingsLeadDaysPhrase(days)).tag(days)
                         }
                     }
                 }
 
-                Toggle(isOn: notificationBinding(\.digestEnabled)) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.settingsDigest)
-                        Text(L10n.settingsDigestDesc)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
                 if settings.notifications.digestEnabled {
-                    Picker(L10n.settingsDigestFrequencyLabel, selection: notificationBinding(\.digestFrequency)) {
-                        Text(L10n.settingsDigestDaily).tag(DigestFrequency.daily)
-                        Text(L10n.settingsDigestWeekly).tag(DigestFrequency.weekly)
+                    Picker(L10n.settingsDigestFrequencyLabel, selection: Binding(
+                        get: { settings.notifications.digestEveryDays },
+                        set: { newValue in
+                            update { $0.notifications = $0.notifications.withDigestEveryDays(newValue) }
+                            rescheduleNotifications()
+                        }
+                    )) {
+                        ForEach([1, 2, 3, 5, 7], id: \.self) { days in
+                            Text(Self.digestEveryDaysLabel(days)).tag(days)
+                        }
                     }
-                    .pickerStyle(.segmented)
 
-                    if settings.notifications.digestFrequency == .weekly {
+                    if settings.notifications.digestEveryDays == 7 {
                         Picker(L10n.settingsDigestWeekdayLabel, selection: notificationBinding(\.digestWeekday)) {
                             ForEach(1...7, id: \.self) { isoDay in
                                 Text(Self.weekdayName(isoDay: isoDay)).tag(isoDay)
@@ -212,14 +231,81 @@ public struct SettingsView: View {
                                 $0.notifications.hour = comps.hour ?? 9
                                 $0.notifications.minute = comps.minute ?? 0
                             }
-                            IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
-                            IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
+                            rescheduleNotifications()
                         }
                     ),
                     displayedComponents: [.hourAndMinute]
                 )
             }
         }
+        // Rows appear and disappear as choices change (style, interval, the blocked warning);
+        // animating on the values themselves covers every binding without wrapping each
+        // setter in withAnimation.
+        .animation(.default, value: settings.notifications)
+        .animation(.default, value: notificationsDenied)
+        // Re-checked whenever the app comes back to the foreground: the fix happens in the
+        // system Settings app, and the user returns straight here afterwards.
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+            notificationsDenied = status == .denied
+        }
+    }
+
+    /// Shown when iOS won't deliver the reminders the user has turned on - the in-app switch
+    /// alone would otherwise claim they're on while nothing ever arrives.
+    private var notificationsBlockedRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label {
+                Text(L10n.settingsNotificationsBlocked)
+                    .font(.subheadline)
+            } icon: {
+                Image(systemName: "bell.slash.fill")
+                    .foregroundColor(.red)
+            }
+            Button(L10n.settingsNotificationsOpenSettings) {
+                if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            .font(.subheadline.weight(.semibold))
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// One plain sentence saying what the current notification settings will actually do, so
+    /// the user doesn't have to work it out from the individual controls.
+    private var reminderPreview: String {
+        let notifications = settings.notifications
+        let time = Self.timeDate(hour: notifications.hour, minute: notifications.minute)
+            .formatted(date: .omitted, time: .shortened)
+        let eachItem = L10n.settingsReminderPreviewEachItem(leadDays: notifications.leadDays, time: time)
+        let summary: String
+        switch notifications.digestEveryDays {
+        case 1: summary = L10n.settingsReminderPreviewSummaryDaily(time: time)
+        case 7: summary = L10n.settingsReminderPreviewSummaryWeekly(weekday: Self.weekdayName(isoDay: notifications.digestWeekday, capitalized: false), time: time)
+        case let every: summary = L10n.settingsReminderPreviewSummaryEvery(days: every, time: time)
+        }
+        switch notifications.reminderStyle {
+        case .eachItem: return eachItem
+        case .summary: return summary
+        case .both: return eachItem + "\n" + summary
+        case nil: return L10n.settingsReminderPreviewNone
+        }
+    }
+
+    /// "Daily" and "Weekly" at the ends, "N days" between.
+    private static func digestEveryDaysLabel(_ days: Int) -> String {
+        switch days {
+        case 1: return L10n.settingsDigestDaily
+        case 7: return L10n.settingsDigestWeekly
+        default: return L10n.settingsDigestEveryDaysChip(days)
+        }
+    }
+
+    private func rescheduleNotifications() {
+        IOSNotificationManager.shared.rescheduleAll(items: viewModel.items)
+        IOSNotificationManager.shared.scheduleDigestNotification(items: viewModel.items)
     }
 
     /// Binds one notification setting, re-scheduling every reminder and the summary on change -
@@ -236,9 +322,11 @@ public struct SettingsView: View {
     }
 
     /// Localized weekday name for an ISO day number (1 = Monday ... 7 = Sunday).
-    private static func weekdayName(isoDay: Int) -> String {
+    /// `capitalized: false` keeps the locale's own casing, for use mid-sentence ("på mandag").
+    private static func weekdayName(isoDay: Int, capitalized: Bool = true) -> String {
         let symbols = Calendar.current.standaloneWeekdaySymbols // index 0 = Sunday
-        return symbols[isoDay % 7].capitalized
+        let name = symbols[isoDay % 7]
+        return capitalized ? name.capitalized : name
     }
 
     private var expiringSoonSection: some View {

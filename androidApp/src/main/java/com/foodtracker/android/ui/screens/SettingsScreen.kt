@@ -1,7 +1,14 @@
 package com.foodtracker.android.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +39,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -66,6 +74,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -77,8 +86,15 @@ import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.StorePlace
 import com.foodtracker.model.AppTheme
-import com.foodtracker.model.DigestFrequency
 import com.foodtracker.model.NotificationSettings
+import com.foodtracker.model.ReminderStyle
+import com.foodtracker.model.reminderStyle
+import com.foodtracker.model.digestEveryDays
+import com.foodtracker.model.withDigestEveryDays
+import com.foodtracker.model.withEnabled
+import com.foodtracker.model.withReminderStyle
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import com.foodtracker.android.notification.NotificationHelper
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import java.util.Locale
@@ -87,7 +103,7 @@ import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.android.util.storageLocationRename
 import com.foodtracker.android.util.isExistingLocation
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun SettingsScreen(
     settings: AppSettings,
@@ -130,6 +146,14 @@ fun SettingsScreen(
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> pendingImportUri = uri }
+
+    // Re-checked on every resume, since the usual fix happens in system settings and the user
+    // comes straight back here afterwards.
+    var blockedNotificationsIntent by remember { mutableStateOf<Intent?>(null) }
+    LifecycleResumeEffect(draft.notifications) {
+        blockedNotificationsIntent = NotificationHelper.blockedNotificationsSettingsIntent(context, draft.notifications)
+        onPauseOrDispose { }
+    }
 
     fun persist(updated: AppSettings) {
         draft = updated
@@ -249,39 +273,48 @@ fun SettingsScreen(
         ) {
             // Notifications
             SettingsSectionCard(title = stringResource(R.string.settings_section_notifications)) {
+                val notifications = draft.notifications
+                fun persistNotifications(updated: NotificationSettings) =
+                    persist(draft.copy(notifications = updated))
+
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.settings_notifications_enabled), modifier = Modifier.weight(1f))
                     Switch(
-                        checked = draft.notifications.enabled,
-                        onCheckedChange = { persist(draft.copy(notifications = draft.notifications.copy(enabled = it))) },
+                        checked = notifications.enabled,
+                        onCheckedChange = { persistNotifications(notifications.withEnabled(it)) },
                         colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
                     )
                 }
 
-                if (draft.notifications.enabled) {
-                    val notifications = draft.notifications
-                    fun persistNotifications(updated: NotificationSettings) =
-                        persist(draft.copy(notifications = updated))
+                ExpandingBlock(visible = notifications.enabled) {
+                    ExpandingBlock(visible = blockedNotificationsIntent != null) {
+                        Spacer(modifier = Modifier.height(10.dp))
+                        NotificationsBlockedBanner(onOpenSettings = { blockedNotificationsIntent?.let(context::startActivity) })
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
-                    NotificationToggleRow(
-                        title = stringResource(R.string.settings_individual_alerts),
-                        description = stringResource(R.string.settings_individual_alerts_desc),
-                        checked = notifications.individualEnabled,
-                        onCheckedChange = { persistNotifications(notifications.copy(individualEnabled = it)) }
-                    )
-                    if (notifications.individualEnabled) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = stringResource(R.string.settings_lead_days_label),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SettingsFieldLabel(stringResource(R.string.settings_reminder_style_label))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(
+                            ReminderStyle.EACH_ITEM to R.string.settings_reminder_style_each_item,
+                            ReminderStyle.SUMMARY to R.string.settings_reminder_style_summary,
+                            ReminderStyle.BOTH to R.string.settings_reminder_style_both
+                        ).forEach { (style, label) ->
+                            SettingsChoiceChip(
+                                label = stringResource(label),
+                                selected = notifications.reminderStyle == style,
+                                onClick = { persistNotifications(notifications.withReminderStyle(style)) }
+                            )
+                        }
+                    }
+
+                    ExpandingBlock(visible = notifications.individualEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SettingsFieldLabel(stringResource(R.string.settings_lead_days_label))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf(1, 2, 3, 5, 7).forEach { days ->
                                 SettingsChoiceChip(
-                                    label = days.toString(),
+                                    label = pluralStringResource(R.plurals.settings_lead_days_phrase, days, days),
                                     selected = notifications.leadDays == days,
                                     onClick = { persistNotifications(notifications.copy(leadDays = days)) }
                                 )
@@ -289,41 +322,21 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-                    NotificationToggleRow(
-                        title = stringResource(R.string.settings_digest),
-                        description = stringResource(R.string.settings_digest_desc),
-                        checked = notifications.digestEnabled,
-                        onCheckedChange = { persistNotifications(notifications.copy(digestEnabled = it)) }
-                    )
-                    if (notifications.digestEnabled) {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        Text(
-                            text = stringResource(R.string.settings_digest_frequency_label),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            SettingsChoiceChip(
-                                label = stringResource(R.string.settings_digest_daily),
-                                selected = notifications.digestFrequency == DigestFrequency.DAILY,
-                                onClick = { persistNotifications(notifications.copy(digestFrequency = DigestFrequency.DAILY)) }
-                            )
-                            SettingsChoiceChip(
-                                label = stringResource(R.string.settings_digest_weekly),
-                                selected = notifications.digestFrequency == DigestFrequency.WEEKLY,
-                                onClick = { persistNotifications(notifications.copy(digestFrequency = DigestFrequency.WEEKLY)) }
-                            )
+                    ExpandingBlock(visible = notifications.digestEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        SettingsFieldLabel(stringResource(R.string.settings_digest_frequency_label))
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(1, 2, 3, 5, 7).forEach { days ->
+                                SettingsChoiceChip(
+                                    label = digestEveryDaysLabel(days),
+                                    selected = notifications.digestEveryDays == days,
+                                    onClick = { persistNotifications(notifications.withDigestEveryDays(days)) }
+                                )
+                            }
                         }
-                        if (notifications.digestFrequency == DigestFrequency.WEEKLY) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = stringResource(R.string.settings_digest_weekday_label),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
+                        ExpandingBlock(visible = notifications.digestEveryDays == 7) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            SettingsFieldLabel(stringResource(R.string.settings_digest_weekday_label))
                             WeekdayChips(
                                 selected = notifications.digestWeekday,
                                 onSelect = { persistNotifications(notifications.copy(digestWeekday = it)) }
@@ -331,13 +344,8 @@ fun SettingsScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Text(
-                        text = stringResource(R.string.settings_time_label),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SettingsFieldLabel(stringResource(R.string.settings_time_label))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -350,10 +358,19 @@ fun SettingsScreen(
                         Icon(Icons.Default.Schedule, contentDescription = null, tint = BrandPrimary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = "%02d:%02d".format(draft.notifications.hour, draft.notifications.minute),
+                            text = formatReminderTime(notifications),
                             fontWeight = FontWeight.Bold
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = reminderPreview(notifications),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary,
+                        // The sentence grows to two lines for "Both" and shrinks back.
+                        modifier = Modifier.animateContentSize()
+                    )
                 }
             }
 
@@ -753,28 +770,100 @@ fun SettingsScreen(
     }
 }
 
-/** A labelled on/off row inside a settings card, with a one-line explanation underneath. */
+private fun formatReminderTime(settings: NotificationSettings): String =
+    "%02d:%02d".format(settings.hour, settings.minute)
+
+/** One plain sentence saying what the current notification settings will actually do, so the
+ *  user doesn't have to work it out from the individual controls. */
 @Composable
-private fun NotificationToggleRow(
-    title: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
-) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title)
+private fun reminderPreview(settings: NotificationSettings): String {
+    val time = formatReminderTime(settings)
+    val eachItem = stringResource(
+        R.string.settings_reminder_preview_each_item,
+        pluralStringResource(R.plurals.settings_lead_days_phrase, settings.leadDays, settings.leadDays),
+        time
+    )
+    val summary = when (val every = settings.digestEveryDays) {
+        1 -> stringResource(R.string.settings_reminder_preview_summary_daily, time)
+        7 -> stringResource(
+            R.string.settings_reminder_preview_summary_weekly,
+            DayOfWeek.of(settings.digestWeekday.coerceIn(1, 7)).getDisplayName(TextStyle.FULL, Locale.getDefault()),
+            time
+        )
+        else -> stringResource(
+            R.string.settings_reminder_preview_summary_every,
+            pluralStringResource(R.plurals.settings_digest_every_days_phrase, every, every),
+            time
+        )
+    }
+    return when (settings.reminderStyle) {
+        ReminderStyle.EACH_ITEM -> eachItem
+        ReminderStyle.SUMMARY -> summary
+        ReminderStyle.BOTH -> "$eachItem\n$summary"
+        null -> stringResource(R.string.settings_reminder_preview_none)
+    }
+}
+
+/** Chip label for a summary interval: "Daily" and "Weekly" at the ends, "N days" between. */
+@Composable
+private fun digestEveryDaysLabel(days: Int): String = when (days) {
+    1 -> stringResource(R.string.settings_digest_daily)
+    7 -> stringResource(R.string.settings_digest_weekly)
+    else -> pluralStringResource(R.plurals.settings_digest_every_days_chip, days, days)
+}
+
+/** A run of settings rows that expands into place when it appears and collapses when it goes,
+ *  instead of making everything below it jump. */
+@Composable
+private fun ExpandingBlock(visible: Boolean, content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
+    ) {
+        Column { content() }
+    }
+}
+
+@Composable
+private fun SettingsFieldLabel(text: String) {
+    Text(text = text, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+    Spacer(modifier = Modifier.height(6.dp))
+}
+
+/** Shown when the system won't deliver the reminders the user has turned on - the in-app
+ *  switch alone would otherwise claim they're on while nothing ever arrives. */
+@Composable
+private fun NotificationsBlockedBanner(onOpenSettings: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.errorContainer)
+            .padding(start = 14.dp, end = 4.dp, top = 12.dp, bottom = 2.dp)
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                Icons.Default.NotificationsOff,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = description,
+                text = stringResource(R.string.settings_notifications_blocked),
                 style = MaterialTheme.typography.bodySmall,
-                color = TextSecondary
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.padding(end = 10.dp)
             )
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
-        )
+        TextButton(onClick = onOpenSettings, modifier = Modifier.align(Alignment.End)) {
+            Text(
+                stringResource(R.string.settings_notifications_open_settings),
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 

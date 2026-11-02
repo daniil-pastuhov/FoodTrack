@@ -337,17 +337,36 @@
     </plurals>
 
     <string name="settings_section_notifications">Varsler</string>
-    <string name="settings_notifications_enabled">Utløpspåminnelser</string>
-    <string name="settings_lead_days_label">Minn meg på dette antall dager før utløp</string>
-    <string name="settings_time_label">Varslingstidspunkt</string>
-    <string name="settings_individual_alerts">Enkeltvarsler</string>
-    <string name="settings_individual_alerts_desc">Ett varsel per vare før den går ut på dato</string>
-    <string name="settings_digest">Oppsummering</string>
-    <string name="settings_digest_desc">Ett varsel med det som går ut på dato den kommende uken</string>
+    <string name="settings_notifications_enabled">Minn meg på før maten går ut på dato</string>
+    <string name="settings_lead_days_label">Minn meg på</string>
+    <string name="settings_time_label">Tidspunkt</string>
     <string name="settings_digest_frequency_label">Hvor ofte</string>
     <string name="settings_digest_daily">Daglig</string>
     <string name="settings_digest_weekly">Ukentlig</string>
     <string name="settings_digest_weekday_label">Ukedag</string>
+    <string name="settings_reminder_style_label">Hvordan</string>
+    <string name="settings_reminder_style_each_item">Hver vare</string>
+    <string name="settings_reminder_style_summary">Oppsummering</string>
+    <string name="settings_reminder_style_both">Begge</string>
+    <plurals name="settings_lead_days_phrase">
+            <item quantity="one">%1$d dag før</item>
+            <item quantity="other">%1$d dager før</item>
+    </plurals>
+    <string name="settings_reminder_preview_each_item">Et varsel for hver vare %1$s den går ut på dato, kl. %2$s.</string>
+    <string name="settings_reminder_preview_summary_daily">Hver dag kl. %1$s: en liste over alt som går ut på dato de neste 7 dagene.</string>
+    <string name="settings_reminder_preview_summary_weekly">Hver uke på %1$s kl. %2$s: en liste over alt som går ut på dato de neste 7 dagene.</string>
+    <plurals name="settings_digest_every_days_chip">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dager</item>
+    </plurals>
+    <plurals name="settings_digest_every_days_phrase">
+        <item quantity="one">Hver %1$d. dag</item>
+        <item quantity="other">Hver %1$d. dag</item>
+    </plurals>
+    <string name="settings_reminder_preview_summary_every">%1$s kl. %2$s: en liste over alt som går ut på dato de neste 7 dagene.</string>
+    <string name="settings_reminder_preview_none">Velg hvordan du vil bli påminnet. Nå sendes ingen påminnelser.</string>
+    <string name="settings_notifications_blocked">Varsler er slått av for denne appen i telefonens innstillinger, så påminnelsene kommer ikke frem.</string>
+    <string name="settings_notifications_open_settings">Åpne innstillinger</string>
 
     <string name="settings_section_expiring_soon">Terskel for «utløper snart»</string>
     <string name="settings_expiring_soon_desc">Varer som utløper innen dette antall dager merkes som «Utløper snart»</string>

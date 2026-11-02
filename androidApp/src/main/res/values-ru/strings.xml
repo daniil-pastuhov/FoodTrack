@@ -369,17 +369,42 @@
     </plurals>
 
     <string name="settings_section_notifications">Уведомления</string>
-    <string name="settings_notifications_enabled">Напоминания о сроке годности</string>
-    <string name="settings_lead_days_label">Напоминать за столько дней до истечения срока</string>
-    <string name="settings_time_label">Время напоминания</string>
-    <string name="settings_individual_alerts">Отдельные уведомления</string>
-    <string name="settings_individual_alerts_desc">Уведомление для каждого продукта до истечения срока</string>
-    <string name="settings_digest">Сводка</string>
-    <string name="settings_digest_desc">Одно уведомление со списком продуктов, срок которых истекает на этой неделе</string>
+    <string name="settings_notifications_enabled">Напоминать о сроке годности</string>
+    <string name="settings_lead_days_label">Напомнить</string>
+    <string name="settings_time_label">Время</string>
     <string name="settings_digest_frequency_label">Как часто</string>
     <string name="settings_digest_daily">Ежедневно</string>
     <string name="settings_digest_weekly">Еженедельно</string>
     <string name="settings_digest_weekday_label">День недели</string>
+    <string name="settings_reminder_style_label">Как напоминать</string>
+    <string name="settings_reminder_style_each_item">По продуктам</string>
+    <string name="settings_reminder_style_summary">Сводка</string>
+    <string name="settings_reminder_style_both">Оба</string>
+    <plurals name="settings_lead_days_phrase">
+            <item quantity="one">за %1$d день</item>
+            <item quantity="few">за %1$d дня</item>
+            <item quantity="many">за %1$d дней</item>
+            <item quantity="other">за %1$d дня</item>
+    </plurals>
+    <string name="settings_reminder_preview_each_item">Уведомление о каждом продукте %1$s до истечения срока, в %2$s.</string>
+    <string name="settings_reminder_preview_summary_daily">Каждый день в %1$s — список всего, что истекает в ближайшие 7 дней.</string>
+    <string name="settings_reminder_preview_summary_weekly">Раз в неделю (%1$s) в %2$s — список всего, что истекает в ближайшие 7 дней.</string>
+    <plurals name="settings_digest_every_days_chip">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <plurals name="settings_digest_every_days_phrase">
+        <item quantity="one">Каждый %1$d день</item>
+        <item quantity="few">Каждые %1$d дня</item>
+        <item quantity="many">Каждые %1$d дней</item>
+        <item quantity="other">Каждые %1$d дня</item>
+    </plurals>
+    <string name="settings_reminder_preview_summary_every">%1$s в %2$s — список всего, что истекает в ближайшие 7 дней.</string>
+    <string name="settings_reminder_preview_none">Выберите способ напоминаний — сейчас они не отправляются.</string>
+    <string name="settings_notifications_blocked">Уведомления для этого приложения отключены в настройках телефона, поэтому напоминания не придут.</string>
+    <string name="settings_notifications_open_settings">Открыть настройки</string>
 
     <string name="settings_section_expiring_soon">Порог «скоро истекает»</string>
     <string name="settings_expiring_soon_desc">Продукты, срок которых истекает в течение этого количества дней, помечаются как «Скоро истекают»</string>

@@ -156,17 +156,24 @@
 
 "settings_title" = "Innstillinger";
 "settings_section_notifications" = "Varsler";
-"settings_notifications_enabled" = "Utløpspåminnelser";
-"settings_lead_days_label" = "Minn meg på dette antall dager før utløp";
-"settings_time_label" = "Varslingstidspunkt";
-"settings_individual_alerts" = "Enkeltvarsler";
-"settings_individual_alerts_desc" = "Ett varsel per vare før den går ut på dato";
-"settings_digest" = "Oppsummering";
-"settings_digest_desc" = "Ett varsel med det som går ut på dato den kommende uken";
+"settings_notifications_enabled" = "Minn meg på før maten går ut på dato";
+"settings_lead_days_label" = "Minn meg på";
+"settings_time_label" = "Tidspunkt";
 "settings_digest_frequency_label" = "Hvor ofte";
 "settings_digest_daily" = "Daglig";
 "settings_digest_weekly" = "Ukentlig";
 "settings_digest_weekday_label" = "Ukedag";
+"settings_reminder_style_label" = "Hvordan";
+"settings_reminder_style_each_item" = "Hver vare";
+"settings_reminder_style_summary" = "Oppsummering";
+"settings_reminder_style_both" = "Begge";
+"settings_reminder_preview_each_item" = "Et varsel for hver vare %1$@ den går ut på dato, kl. %2$@.";
+"settings_reminder_preview_summary_daily" = "Hver dag kl. %@: en liste over alt som går ut på dato de neste 7 dagene.";
+"settings_reminder_preview_summary_weekly" = "Hver uke på %1$@ kl. %2$@: en liste over alt som går ut på dato de neste 7 dagene.";
+"settings_reminder_preview_summary_every" = "%1$@ kl. %2$@: en liste over alt som går ut på dato de neste 7 dagene.";
+"settings_reminder_preview_none" = "Velg hvordan du vil bli påminnet. Nå sendes ingen påminnelser.";
+"settings_notifications_blocked" = "Varsler er slått av for denne appen i telefonens innstillinger, så påminnelsene kommer ikke frem.";
+"settings_notifications_open_settings" = "Åpne innstillinger";
 
 "settings_section_expiring_soon" = "Terskel for «utløper snart»";
 "settings_expiring_soon_desc" = "Varer som utløper innen dette antall dager merkes som «Utløper snart»";

@@ -362,5 +362,65 @@
             <string>Истекает %d продукта</string>
         </dict>
     </dict>
+    <key>settings_lead_days_phrase</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>за %d день</string>
+            <key>few</key>
+            <string>за %d дня</string>
+            <key>many</key>
+            <string>за %d дней</string>
+            <key>other</key>
+            <string>за %d дня</string>
+        </dict>
+    </dict>
+    <key>settings_digest_every_days_chip</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d день</string>
+            <key>few</key>
+            <string>%d дня</string>
+            <key>many</key>
+            <string>%d дней</string>
+            <key>other</key>
+            <string>%d дня</string>
+        </dict>
+    </dict>
+    <key>settings_digest_every_days_phrase</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Каждый %d день</string>
+            <key>few</key>
+            <string>Каждые %d дня</string>
+            <key>many</key>
+            <string>Каждые %d дней</string>
+            <key>other</key>
+            <string>Каждые %d дня</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

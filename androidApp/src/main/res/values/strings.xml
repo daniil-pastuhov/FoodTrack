@@ -339,17 +339,36 @@
     </plurals>
 
     <string name="settings_section_notifications">Notifications</string>
-    <string name="settings_notifications_enabled">Expiry reminders</string>
-    <string name="settings_lead_days_label">Remind me this many days before expiry</string>
-    <string name="settings_time_label">Reminder time</string>
-    <string name="settings_individual_alerts">Individual alerts</string>
-    <string name="settings_individual_alerts_desc">One notification per product, before it expires</string>
-    <string name="settings_digest">Summary</string>
-    <string name="settings_digest_desc">One notification listing what expires in the coming week</string>
+    <string name="settings_notifications_enabled">Remind me before food expires</string>
+    <string name="settings_lead_days_label">Remind me</string>
+    <string name="settings_time_label">Time</string>
     <string name="settings_digest_frequency_label">How often</string>
     <string name="settings_digest_daily">Daily</string>
     <string name="settings_digest_weekly">Weekly</string>
     <string name="settings_digest_weekday_label">Day of the week</string>
+    <string name="settings_reminder_style_label">How</string>
+    <string name="settings_reminder_style_each_item">Each item</string>
+    <string name="settings_reminder_style_summary">Summary</string>
+    <string name="settings_reminder_style_both">Both</string>
+    <plurals name="settings_lead_days_phrase">
+            <item quantity="one">%1$d day before</item>
+            <item quantity="other">%1$d days before</item>
+    </plurals>
+    <string name="settings_reminder_preview_each_item">A notification for each item %1$s it expires, at %2$s.</string>
+    <string name="settings_reminder_preview_summary_daily">Every day at %1$s, a list of everything expiring in the next 7 days.</string>
+    <string name="settings_reminder_preview_summary_weekly">Every week on %1$s at %2$s, a list of everything expiring in the next 7 days.</string>
+    <plurals name="settings_digest_every_days_chip">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="settings_digest_every_days_phrase">
+        <item quantity="one">Every %1$d day</item>
+        <item quantity="other">Every %1$d days</item>
+    </plurals>
+    <string name="settings_reminder_preview_summary_every">%1$s at %2$s, a list of everything expiring in the next 7 days.</string>
+    <string name="settings_reminder_preview_none">Choose how you want to be reminded. Right now no reminders will be sent.</string>
+    <string name="settings_notifications_blocked">Notifications are turned off for this app in your phone\'s settings, so reminders won\'t arrive.</string>
+    <string name="settings_notifications_open_settings">Open settings</string>
 
     <string name="settings_section_expiring_soon">Expiring Soon Threshold</string>
     <string name="settings_expiring_soon_desc">Items expiring within this many days are flagged as \'Expiring Soon\'</string>

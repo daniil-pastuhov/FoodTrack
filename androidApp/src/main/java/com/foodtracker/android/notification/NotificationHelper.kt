@@ -6,12 +6,15 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
 import com.foodtracker.android.R
 import com.foodtracker.android.settings.AndroidSettingsRepository
-import com.foodtracker.model.DigestFrequency
 import com.foodtracker.model.NotificationSettings
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.isDigestDay
 import com.foodtracker.notification.ExpiryNotificationCalculator
 import com.foodtracker.util.DateUtils
 import java.util.Calendar
@@ -48,6 +51,36 @@ object NotificationHelper {
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannels(listOf(itemChannel, digestChannel))
         }
+    }
+
+    /**
+     * The system settings screen that would unblock expiry reminders, or null when nothing the
+     * user has chosen is blocked. Covers the app-wide switch (and the Android 13+ permission,
+     * which reports the same way) and each channel the current [settings] would post to.
+     */
+    fun blockedNotificationsSettingsIntent(context: Context, settings: NotificationSettings): Intent? {
+        if (!settings.enabled) return null
+        val manager = NotificationManagerCompat.from(context)
+        val pkg = context.packageName
+        if (!manager.areNotificationsEnabled()) {
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+            } else {
+                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val blockedChannel = listOfNotNull(
+                CHANNEL_ID.takeIf { settings.individualEnabled },
+                DIGEST_CHANNEL_ID.takeIf { settings.digestEnabled }
+            ).firstOrNull { manager.getNotificationChannel(it)?.importance == NotificationManager.IMPORTANCE_NONE }
+            if (blockedChannel != null) {
+                return Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, pkg)
+                    .putExtra(Settings.EXTRA_CHANNEL_ID, blockedChannel)
+            }
+        }
+        return null
     }
 
     /** Whether [item] should get its own reminder under [settings]: notifications on as a
@@ -255,7 +288,7 @@ object NotificationHelper {
     /**
      * Schedules (or, if notifications or the summary are disabled, cancels) the digest that
      * names what expires within the coming week in a single notification. Fires at the same
-     * reminder time as per-item alerts - daily, or weekly on the chosen weekday - and
+     * reminder time as per-item alerts - every day, every N days, or weekly on the chosen weekday - and
      * reschedules itself for the next occurrence each time it fires: a one-shot-and-reschedule
      * alarm, like [scheduleNotification], rather than `setRepeating`, which isn't reliably exact
      * under Doze.
@@ -281,27 +314,29 @@ object NotificationHelper {
     }
 
     /**
-     * The next moment, strictly after [now], the digest should fire under [settings]: today or
-     * tomorrow at the reminder time for a daily summary, or the next [NotificationSettings.digestWeekday]
-     * at that time for a weekly one - today counts only while its slot is still ahead.
+     * The next moment, strictly after [now], the digest should fire under [settings]: the first
+     * day from today that [isDigestDay] accepts, at the reminder time - today counts only while
+     * its slot is still ahead.
      */
     internal fun nextDigestTime(now: Calendar, settings: NotificationSettings): Calendar {
         val nowMillis = now.timeInMillis
-        return (now.clone() as Calendar).apply {
+        val candidate = (now.clone() as Calendar).apply {
             set(Calendar.HOUR_OF_DAY, settings.hour)
             set(Calendar.MINUTE, settings.minute)
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
-            if (settings.digestFrequency == DigestFrequency.WEEKLY) {
-                // ISO 1=Mon..7=Sun onto Calendar's 1=Sun..7=Sat.
-                val targetDay = settings.digestWeekday.coerceIn(1, 7) % 7 + 1
-                val daysAhead = (targetDay - get(Calendar.DAY_OF_WEEK) + 7) % 7
-                add(Calendar.DAY_OF_YEAR, daysAhead)
-                if (timeInMillis <= nowMillis) add(Calendar.DAY_OF_YEAR, 7)
-            } else if (timeInMillis <= nowMillis) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
         }
+        // Every schedule repeats within 7 days, so 8 candidates (today included) always hit.
+        repeat(8) {
+            val day = java.time.LocalDate.of(
+                candidate.get(Calendar.YEAR), candidate.get(Calendar.MONTH) + 1, candidate.get(Calendar.DAY_OF_MONTH)
+            )
+            if (candidate.timeInMillis > nowMillis && settings.isDigestDay(day.toEpochDay(), day.dayOfWeek.value)) {
+                return candidate
+            }
+            candidate.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        return candidate
     }
 
     fun cancelDigest(context: Context) {

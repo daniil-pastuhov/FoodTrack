@@ -156,17 +156,24 @@
 
 "settings_title" = "Настройки";
 "settings_section_notifications" = "Уведомления";
-"settings_notifications_enabled" = "Напоминания о сроке годности";
-"settings_lead_days_label" = "Напоминать за столько дней до истечения срока";
-"settings_time_label" = "Время напоминания";
-"settings_individual_alerts" = "Отдельные уведомления";
-"settings_individual_alerts_desc" = "Уведомление для каждого продукта до истечения срока";
-"settings_digest" = "Сводка";
-"settings_digest_desc" = "Одно уведомление со списком продуктов, срок которых истекает на этой неделе";
+"settings_notifications_enabled" = "Напоминать о сроке годности";
+"settings_lead_days_label" = "Напомнить";
+"settings_time_label" = "Время";
 "settings_digest_frequency_label" = "Как часто";
 "settings_digest_daily" = "Ежедневно";
 "settings_digest_weekly" = "Еженедельно";
 "settings_digest_weekday_label" = "День недели";
+"settings_reminder_style_label" = "Как напоминать";
+"settings_reminder_style_each_item" = "По продуктам";
+"settings_reminder_style_summary" = "Сводка";
+"settings_reminder_style_both" = "Оба";
+"settings_reminder_preview_each_item" = "Уведомление о каждом продукте %1$@ до истечения срока, в %2$@.";
+"settings_reminder_preview_summary_daily" = "Каждый день в %@ — список всего, что истекает в ближайшие 7 дней.";
+"settings_reminder_preview_summary_weekly" = "Раз в неделю (%1$@) в %2$@ — список всего, что истекает в ближайшие 7 дней.";
+"settings_reminder_preview_summary_every" = "%1$@ в %2$@ — список всего, что истекает в ближайшие 7 дней.";
+"settings_reminder_preview_none" = "Выберите способ напоминаний — сейчас они не отправляются.";
+"settings_notifications_blocked" = "Уведомления для этого приложения отключены в настройках телефона, поэтому напоминания не придут.";
+"settings_notifications_open_settings" = "Открыть настройки";
 
 "settings_section_expiring_soon" = "Порог «скоро истекает»";
 "settings_expiring_soon_desc" = "Продукты, срок которых истекает в течение этого количества дней, помечаются как «Скоро истекают»";
