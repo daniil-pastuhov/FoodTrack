@@ -18,6 +18,15 @@ interface ProductNameDao {
     @Query("UPDATE known_product_names SET sortOrder = :sortOrder WHERE normalizedName = :normalizedName")
     suspend fun updateSortOrder(normalizedName: String, sortOrder: Double): Int
 
+    @Query("SELECT * FROM known_product_names WHERE normalizedName = :normalizedName")
+    suspend fun find(normalizedName: String): ProductNameEntity?
+
+    @Query("SELECT shoppingSectionId FROM known_product_names WHERE normalizedName = :normalizedName")
+    suspend fun getSectionId(normalizedName: String): String?
+
+    @Query("UPDATE known_product_names SET shoppingSectionId = :sectionId WHERE normalizedName = :normalizedName")
+    suspend fun updateSectionId(normalizedName: String, sectionId: String?): Int
+
     @Upsert
     suspend fun upsert(entity: ProductNameEntity)
 

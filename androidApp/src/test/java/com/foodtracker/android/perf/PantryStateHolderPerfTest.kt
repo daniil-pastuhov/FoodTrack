@@ -59,6 +59,7 @@ class PantryStateHolderPerfTest {
             productNameRepository = names,
             localProductRepository = products,
             categoryPreferenceRepository = categories,
+            shoppingSectionRepository = FakeShoppingSectionRepository(),
             uncategorizedLabel = "Other",
             coroutineScope = scope,
             // The unconfined fixture also runs the derivation inline, so a measurement covers

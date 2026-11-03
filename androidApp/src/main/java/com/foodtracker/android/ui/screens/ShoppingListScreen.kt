@@ -17,6 +17,10 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -50,7 +55,8 @@ import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -98,6 +104,7 @@ import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.BrandPrimary
 import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.android.util.generateQrBitmap
 import com.foodtracker.share.ShoppingListShare
@@ -147,22 +154,22 @@ fun ShoppingListScreen(
     var showQrCode by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val uncategorizedLabel = stringResource(R.string.shopping_list_uncategorized)
+    var showNewSectionDialog by remember { mutableStateOf(false) }
+    var renamingSection by remember { mutableStateOf<ShoppingSection?>(null) }
+    var deletingSection by remember { mutableStateOf<ShoppingSection?>(null) }
+    // Hoisted above the empty/non-empty switch so the list keeps its scroll position.
+    val lazyListState = rememberLazyListState()
     val shareTitle = stringResource(R.string.shopping_list_title)
 
-    // Built from shoppingRows rather than shoppingList: each row already carries the resolved
-    // (renamed, disabled-folded) category name the on-screen list shows, so the shared text
-    // reads the same rather than exposing the raw Open Food Facts value stored on the entry.
-    fun buildShareText(): String {
-        val items = state.shoppingRows.filterIsInstance<ShoppingRow.Item>()
-        val labelByRawCategory = items.associate { it.entry.category to it.categoryDisplayName }
-        return ShoppingListShare.toText(
-            entries = items.map { it.entry },
+    // Built from shoppingList rather than shoppingRows: a collapsed section's entries aren't
+    // in the rows, but they are still on the list being shared.
+    fun buildShareText(): String =
+        ShoppingListShare.toText(
+            entries = state.shoppingList,
             title = shareTitle,
-            uncategorizedLabel = uncategorizedLabel,
-            categoryLabel = { raw -> labelByRawCategory[raw]?.let { categoryLabel(context.resources, it) } }
+            sections = state.shoppingSections,
+            sectionLabel = { categoryLabel(context.resources, it.name) }
         )
-    }
 
     fun shareAsText() {
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
@@ -193,6 +200,12 @@ fun ShoppingListScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = { showNewSectionDialog = true }) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.PlaylistAdd,
+                            contentDescription = stringResource(R.string.shopping_section_new)
+                        )
+                    }
                     IconButton(onClick = { showShareSheet = true }) {
                         Icon(
                             Icons.Default.IosShare,
@@ -306,107 +319,17 @@ fun ShoppingListScreen(
                     }
                 }
             } else {
-                // Flattened so drag reorder has a single index space to work with; headers are
-                // never wrapped in a ReorderableItem, so they can't be dragged themselves, and a
-                // move is only accepted (see reorderableState below) when both ends share a
-                // resolved category (a disabled category, or two origins renamed to the same
-                // name, fold into the same group here), which keeps drags from crossing into a
-                // different group. Groups are ordered by the user's category preference order
-                // (see CategorySettingsScreen), not alphabetically.
-                // Grouping, category-name resolution and ordering are all derived once per
-                // data change in PantryStateHolder. Done here they re-ran on every emission,
-                // resolving each entry's category with a linear scan over every preference and
-                // re-evaluating each group's order key inside the sort comparator.
-                val flatRows = state.shoppingRows
-                var localRows by remember { mutableStateOf(flatRows) }
-                LaunchedEffect(flatRows) { localRows = flatRows }
-
-                val lazyListState = rememberLazyListState()
-                val haptics = LocalHapticFeedback.current
-                val reorderableState = rememberReorderableLazyListState(lazyListState) { from, to ->
-                    val fromRow = localRows.getOrNull(from.index) as? ShoppingRow.Item
-                    val toRow = localRows.getOrNull(to.index) as? ShoppingRow.Item
-                    // Field comparison: the resolved name is carried on the row. This ran two
-                    // linear preference scans per drag-move event, i.e. per frame of a drag.
-                    val sameGroup = fromRow != null && toRow != null &&
-                        fromRow.categoryDisplayName == toRow.categoryDisplayName
-                    if (sameGroup) {
-                        localRows = localRows.toMutableList().apply {
-                            add(to.index, removeAt(from.index))
-                        }
-                    }
-                }
-
-                fun commitReorder(movedId: String) {
-                    val index = localRows.indexOfFirst { it is ShoppingRow.Item && it.entry.id == movedId }
-                    if (index == -1) return
-                    val beforeId = (localRows.getOrNull(index - 1) as? ShoppingRow.Item)?.entry?.id
-                    val afterId = (localRows.getOrNull(index + 1) as? ShoppingRow.Item)?.entry?.id
-                    stateHolder.moveShoppingListEntry(movedId, beforeId, afterId)
-                }
-
-                LazyColumn(
-                    state = lazyListState,
-                    modifier = Modifier.fillMaxSize(),
-                    // Bottom padding clears the floating pill nav bar and scan/add buttons
-                    // that overlay this screen (see MainActivity).
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomOverlayClearance),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(localRows, key = { it.key }) { row ->
-                        when (row) {
-                            is ShoppingRow.Header -> {
-                                // Bound to a local: ShoppingRow now lives in :shared, and a
-                                // public property from another module can't be smart-cast.
-                                val category = row.category
-                                if (category != null) {
-                                    Text(
-                                        text = categoryLabel(category),
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextSecondary,
-                                        modifier = Modifier
-                                            .animateItem()
-                                            .padding(top = 8.dp, bottom = 2.dp)
-                                    )
-                                } else {
-                                    val isFirstRow = localRows.firstOrNull() == row
-                                    if (!isFirstRow) {
-                                        HorizontalDivider(
-                                            modifier = Modifier
-                                                .animateItem()
-                                                .padding(vertical = 8.dp), thickness = DividerDefaults.Thickness, color = MaterialTheme.colorScheme.outlineVariant
-                                        )
-                                    }
-                                }
-                            }
-                            is ShoppingRow.Item -> {
-                                val entry = row.entry
-                                ReorderableItem(reorderableState, key = entry.id) { isDragging ->
-                                    ShoppingListRow(
-                                        entry = entry,
-                                        isDragging = isDragging,
-                                        dragHandleModifier = Modifier.draggableHandle(
-                                            onDragStarted = {
-                                                haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
-                                            },
-                                            onDragStopped = {
-                                                haptics.performHapticFeedback(HapticFeedbackType.GestureEnd)
-                                                commitReorder(entry.id)
-                                            }
-                                        ),
-                                        onCheckOff = { onCheckOffEntry(entry.id) },
-                                        onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
-                                        onDecrement = { onDecrementEntry(entry.id) },
-                                        onClick = { onAddEntryManually(entry) },
-                                        modifier = Modifier.animateItem()
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    item { Spacer(modifier = Modifier.height(8.dp)) }
-                }
+                ShoppingSectionedList(
+                    state = state,
+                    stateHolder = stateHolder,
+                    lazyListState = lazyListState,
+                    bottomOverlayClearance = bottomOverlayClearance,
+                    onCheckOffEntry = onCheckOffEntry,
+                    onDecrementEntry = onDecrementEntry,
+                    onEntryClick = onAddEntryManually,
+                    onRenameSection = { renamingSection = it },
+                    onDeleteSection = { deletingSection = it }
+                )
             }
             }
         }
@@ -464,7 +387,7 @@ fun ShoppingListScreen(
 
     if (showQrCode) {
         val payload = remember(state.shoppingList) {
-            ShoppingListShare.toPayload(state.shoppingRows.filterIsInstance<ShoppingRow.Item>().map { it.entry })
+            ShoppingListShare.toPayload(state.shoppingList, state.shoppingSections)
         }
         val qrBitmap = remember(payload) { generateQrBitmap(payload) }
         AlertDialog(
@@ -499,6 +422,51 @@ fun ShoppingListScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showQrCode = false }) {
+                    Text(stringResource(R.string.share_recipe_cancel_button))
+                }
+            }
+        )
+    }
+
+    if (showNewSectionDialog) {
+        ShoppingSectionNameDialog(
+            title = stringResource(R.string.shopping_section_new),
+            initialName = "",
+            onConfirm = { name ->
+                stateHolder.createShoppingSection(name)
+                showNewSectionDialog = false
+            },
+            onDismiss = { showNewSectionDialog = false }
+        )
+    }
+
+    renamingSection?.let { section ->
+        ShoppingSectionNameDialog(
+            title = stringResource(R.string.shopping_section_rename),
+            initialName = categoryLabel(section.name),
+            onConfirm = { name ->
+                stateHolder.renameShoppingSection(section.id, name)
+                renamingSection = null
+            },
+            onDismiss = { renamingSection = null }
+        )
+    }
+
+    deletingSection?.let { section ->
+        AlertDialog(
+            onDismissRequest = { deletingSection = null },
+            title = { Text(stringResource(R.string.shopping_section_delete_title, categoryLabel(section.name))) },
+            text = { Text(stringResource(R.string.shopping_section_delete_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    stateHolder.deleteShoppingSection(section.id)
+                    deletingSection = null
+                }) {
+                    Text(stringResource(R.string.shopping_section_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingSection = null }) {
                     Text(stringResource(R.string.share_recipe_cancel_button))
                 }
             }
@@ -554,7 +522,7 @@ fun ShoppingListScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ShoppingListRow(
+internal fun ShoppingListRow(
     entry: ShoppingListEntry,
     isDragging: Boolean,
     dragHandleModifier: Modifier,
@@ -562,8 +530,13 @@ private fun ShoppingListRow(
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Sections the entry can be moved to from its long-press menu (its own one excluded), as
+     *  id to label. The non-drag way to move an entry, for anyone who can't or won't drag. */
+    moveTargets: List<Pair<String, String>> = emptyList(),
+    onMoveToSection: (String) -> Unit = {}
 ) {
+    var showMoveMenu by remember { mutableStateOf(false) }
     val containerColor by animateColorAsState(
         targetValue = if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface,
         label = "shoppingRowContainerColor"
@@ -597,8 +570,29 @@ private fun ShoppingListRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .animateContentSize()
-                .clickable(onClick = onClick)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (moveTargets.isEmpty()) null else ({ showMoveMenu = true }),
+                    onLongClickLabel = stringResource(R.string.shopping_section_move_to)
+                )
         ) {
+            DropdownMenu(expanded = showMoveMenu, onDismissRequest = { showMoveMenu = false }) {
+                Text(
+                    text = stringResource(R.string.shopping_section_move_to),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+                moveTargets.forEach { (id, label) ->
+                    DropdownMenuItem(
+                        text = { Text(label) },
+                        onClick = {
+                            showMoveMenu = false
+                            onMoveToSection(id)
+                        }
+                    )
+                }
+            }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
@@ -609,7 +603,14 @@ private fun ShoppingListRow(
                     imageVector = Icons.Default.DragHandle,
                     contentDescription = stringResource(R.string.shopping_list_drag_handle_content_description),
                     tint = TextSecondary,
-                    modifier = dragHandleModifier
+                    // Consumes the handle's touch-down after the drag detector has seen it, so
+                    // the card around it doesn't also start its long-press timer and pop the
+                    // "Move to section" menu in the middle of a drag.
+                    modifier = Modifier
+                        .pointerInput(Unit) {
+                            awaitEachGesture { awaitFirstDown(requireUnconsumed = false).consume() }
+                        }
+                        .then(dragHandleModifier)
                         .padding(end = 8.dp)
                         .size(20.dp)
                 )

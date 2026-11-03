@@ -47,7 +47,9 @@ class WidgetUpdater(
         }
         coroutineScope.launch {
             stateHolder.uiState
-                .map { it.shoppingList }
+                // Sections too: renaming, reordering or folding one changes the widget's layout
+                // without touching a single entry.
+                .map { it.shoppingList to it.shoppingSections }
                 .distinctUntilChanged()
                 .collectLatest {
                     refreshWidget { ShoppingListWidget().updateAll(context) }

@@ -5,6 +5,7 @@ import com.foodtracker.android.perf.FakeLocalProductRepository
 import com.foodtracker.android.perf.FakePantryRepository
 import com.foodtracker.android.perf.FakeProductNameRepository
 import com.foodtracker.android.perf.FakeSettingsRepository
+import com.foodtracker.android.perf.FakeShoppingSectionRepository
 import com.foodtracker.android.perf.FakeShoppingListRepository
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.ExpiryStatus
@@ -52,6 +53,7 @@ class DayRolloverTest {
             productNameRepository = FakeProductNameRepository(),
             localProductRepository = FakeLocalProductRepository(),
             categoryPreferenceRepository = FakeCategoryPreferenceRepository(),
+            shoppingSectionRepository = FakeShoppingSectionRepository(),
             uncategorizedLabel = "Other",
             coroutineScope = scope,
             computationContext = EmptyCoroutineContext,

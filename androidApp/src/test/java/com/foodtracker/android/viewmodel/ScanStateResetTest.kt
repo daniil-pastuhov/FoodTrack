@@ -5,6 +5,7 @@ import com.foodtracker.android.perf.FakeLocalProductRepository
 import com.foodtracker.android.perf.FakePantryRepository
 import com.foodtracker.android.perf.FakeProductNameRepository
 import com.foodtracker.android.perf.FakeSettingsRepository
+import com.foodtracker.android.perf.FakeShoppingSectionRepository
 import com.foodtracker.android.perf.FakeShoppingListRepository
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.repository.LocalProductRepository
@@ -59,6 +60,7 @@ class ScanStateResetTest {
             productNameRepository = FakeProductNameRepository(),
             localProductRepository = gatedLocalProducts ?: localProducts,
             categoryPreferenceRepository = FakeCategoryPreferenceRepository(),
+            shoppingSectionRepository = FakeShoppingSectionRepository(),
             uncategorizedLabel = "Other",
             coroutineScope = scope,
             computationContext = EmptyCoroutineContext

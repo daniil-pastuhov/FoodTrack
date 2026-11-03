@@ -12,6 +12,8 @@ final class ShoppingListEntryRecord {
     var quantity: Int = 1
     var addedDate: Date
     var sortOrder: Double = 0
+    /// Defaulted so the store migrates in place; nil is the default section.
+    var sectionId: String? = nil
 
     init(from entry: ShoppingListEntry) {
         id = entry.id
@@ -21,6 +23,7 @@ final class ShoppingListEntryRecord {
         quantity = entry.quantity
         addedDate = entry.addedDate
         sortOrder = entry.sortOrder
+        sectionId = entry.sectionId
     }
 
     func update(from entry: ShoppingListEntry) {
@@ -30,6 +33,7 @@ final class ShoppingListEntryRecord {
         quantity = entry.quantity
         addedDate = entry.addedDate
         sortOrder = entry.sortOrder
+        sectionId = entry.sectionId
     }
 
     var asEntry: ShoppingListEntry {
@@ -40,7 +44,8 @@ final class ShoppingListEntryRecord {
             category: category,
             quantity: quantity,
             addedDate: addedDate,
-            sortOrder: sortOrder
+            sortOrder: sortOrder,
+            sectionId: sectionId
         )
     }
 }

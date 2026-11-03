@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
 
 @Database(
     entities = [
@@ -11,9 +12,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ShoppingListEntryEntity::class,
         ProductNameEntity::class,
         LocalProductEntity::class,
-        CategoryPreferenceEntity::class
+        CategoryPreferenceEntity::class,
+        ShoppingSectionEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -22,6 +24,7 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
     abstract fun productNameDao(): ProductNameDao
     abstract fun localProductDao(): LocalProductDao
     abstract fun categoryPreferenceDao(): CategoryPreferenceDao
+    abstract fun shoppingSectionDao(): ShoppingSectionDao
 
     companion object {
         const val DB_NAME = "foodtracker.db"
@@ -273,6 +276,101 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
         val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE local_products ADD COLUMN storageLocation TEXT")
+            }
+        }
+
+        // Replaces the shopping list's category grouping with user-made sections. Existing users
+        // keep the grouping they see today: every category that currently groups shopping
+        // entries becomes a section of the same (displayed) name, in the same order, and the
+        // entries move into it. The resolution mirrors `resolveCategoryDisplayName` - a disabled
+        // category, or no category, is the "Other" bucket, which is the default section now; a
+        // category with no preference row shows (and becomes a section) under its raw value.
+        //
+        // Each product is also remembered in its new section, so re-adding it later lands it
+        // there just like a product the user moved by hand.
+        //
+        // Ids are derived from the name (`migrated_<hex>`) rather than numbered, which keeps the
+        // statement free of window functions older SQLite versions on the device don't have.
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS shopping_sections (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        sortOrder REAL NOT NULL,
+                        collapsed INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "INSERT OR IGNORE INTO shopping_sections (id, name, sortOrder, collapsed) " +
+                        "VALUES ('$DEFAULT_SHOPPING_SECTION_ID', '', ${-Double.MAX_VALUE}, 0)"
+                )
+                db.execSQL("ALTER TABLE shopping_list_entries ADD COLUMN sectionId TEXT")
+                db.execSQL("ALTER TABLE known_product_names ADD COLUMN shoppingSectionId TEXT")
+
+                db.execSQL(
+                    """
+                    CREATE TEMP TABLE migrated_section_map AS
+                    SELECT e.id AS entryId,
+                        CASE
+                            WHEN p.originName IS NULL THEN e.category
+                            WHEN p.enabled = 1 THEN p.displayName
+                            ELSE NULL
+                        END AS sectionName,
+                        CASE
+                            WHEN p.originName IS NULL THEN ${Double.MAX_VALUE}
+                            ELSE p.sortOrder
+                        END AS sectionOrder
+                    FROM shopping_list_entries e
+                    LEFT JOIN category_preferences p ON p.originName = e.category
+                    WHERE e.category IS NOT NULL AND e.category != ''
+                    """.trimIndent()
+                )
+                db.execSQL("DELETE FROM migrated_section_map WHERE sectionName IS NULL OR TRIM(sectionName) = ''")
+                db.execSQL(
+                    """
+                    CREATE TEMP TABLE migrated_section_groups AS
+                    SELECT sectionName AS name, MIN(sectionOrder) AS sectionOrder
+                    FROM migrated_section_map
+                    GROUP BY sectionName
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    INSERT OR IGNORE INTO shopping_sections (id, name, sortOrder, collapsed)
+                    SELECT 'migrated_' || hex(g.name), g.name,
+                        (SELECT COUNT(*) FROM migrated_section_groups o
+                            WHERE o.sectionOrder < g.sectionOrder
+                               OR (o.sectionOrder = g.sectionOrder AND o.name < g.name)),
+                        0
+                    FROM migrated_section_groups g
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    UPDATE shopping_list_entries SET sectionId = (
+                        SELECT 'migrated_' || hex(m.sectionName)
+                        FROM migrated_section_map m
+                        WHERE m.entryId = shopping_list_entries.id
+                    )
+                    """.trimIndent()
+                )
+                // Matched in Kotlin rather than with SQL LOWER(): normalizedName was written by
+                // Kotlin's Unicode-aware lowercase(), and SQLite's LOWER() folds ASCII only, so
+                // "Молоко" or "Ål" would never match their stored "молоко" / "ål".
+                db.query("SELECT productName, sectionId FROM shopping_list_entries WHERE sectionId IS NOT NULL").use { cursor ->
+                    while (cursor.moveToNext()) {
+                        db.execSQL(
+                            "UPDATE known_product_names SET shoppingSectionId = ? " +
+                                "WHERE normalizedName = ? AND shoppingSectionId IS NULL",
+                            arrayOf<Any?>(cursor.getString(1), cursor.getString(0).trim().lowercase())
+                        )
+                    }
+                }
+                db.execSQL("DROP TABLE migrated_section_map")
+                db.execSQL("DROP TABLE migrated_section_groups")
             }
         }
     }

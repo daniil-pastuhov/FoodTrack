@@ -15,11 +15,14 @@ import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShelfLife
 import com.foodtracker.model.ShelfLifeSource
 import com.foodtracker.model.ShelfLifeSuggestion
+import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
 import com.foodtracker.model.SortOption
 import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.model.resolveCategoryOrigin
+import com.foodtracker.model.resolveShoppingSectionId
 import com.foodtracker.match.NameSimilarity
 import com.foodtracker.parser.GS1BarcodeParser
 import com.foodtracker.parser.ReceiptLine
@@ -32,6 +35,7 @@ import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
+import com.foodtracker.repository.ShoppingSectionRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
@@ -158,9 +162,11 @@ data class PantryUiState(
     val scanningShoppingListEntryId: String? = null,
     // Shopping list
     val shoppingList: List<ShoppingListEntry> = emptyList(),
-    /** The shopping list flattened into category-grouped rows with headers, ready to render.
-     *  Grouping used to happen in composition on every emission. */
+    /** The shopping list flattened into sectioned rows with headers, ready to render.
+     *  Collapsed sections contribute only their header. */
     val shoppingRows: List<ShoppingRow> = emptyList(),
+    /** The user's shopping-list sections in display order, the default one first. */
+    val shoppingSections: List<ShoppingSection> = emptyList(),
     val knownProductNames: List<String> = emptyList(),
     // Category preferences: rename/reorder/enable state for each raw category value seen on a
     // product, managed from Settings (see CategorySettingsScreen / CategoryPreferenceRepository).
@@ -177,6 +183,7 @@ class PantryStateHolder(
     private val productNameRepository: ProductNameRepository,
     private val localProductRepository: LocalProductRepository,
     private val categoryPreferenceRepository: CategoryPreferenceRepository,
+    private val shoppingSectionRepository: ShoppingSectionRepository,
     /** Localized label for the "Other" bucket (see [UNCATEGORIZED_ORIGIN]) - seeded as that
      *  sentinel category's initial display name the first time it's registered, so it reads
      *  correctly in the device's language rather than a hardcoded English default. */
@@ -356,14 +363,23 @@ class PantryStateHolder(
         coroutineScope.launch {
             combine(
                 shoppingListRepository.getEntriesFlow(),
-                preferencesState
-            ) { entries, preferences ->
-                entries to PantryDerivation.buildShoppingRows(entries, preferences)
+                shoppingSectionRepository.getSectionsFlow()
+            ) { entries, sections ->
+                Triple(
+                    entries,
+                    PantryDerivation.orderedShoppingSections(sections),
+                    PantryDerivation.buildShoppingRows(entries, sections)
+                )
             }
                 .flowOn(computationContext)
-                .collect { (entries, rows) ->
+                .collect { (entries, sections, rows) ->
+                    // Categories still register from here: the shopping list no longer groups
+                    // by them, but an entry's category is carried into the pantry on purchase,
+                    // so Settings should know it as soon as it is seen.
                     registerCategories(entries.mapNotNull { it.category })
-                    _uiState.update { it.copy(shoppingList = entries, shoppingRows = rows) }
+                    _uiState.update {
+                        it.copy(shoppingList = entries, shoppingRows = rows, shoppingSections = sections)
+                    }
                 }
         }
     }
@@ -475,6 +491,7 @@ class PantryStateHolder(
                 exportedAtEpochMillis = currentTimeMillis(),
                 items = repository.getItemsFlow().first(),
                 shoppingList = shoppingListRepository.getEntriesFlow().first(),
+                shoppingSections = shoppingSectionRepository.getAll().filterNot { it.isDefault },
                 categoryPreferences = categoryPreferenceRepository.getPreferencesFlow().first(),
                 products = localProductRepository.getAll(),
                 knownProductNames = productNameRepository.getKnownNamesFlow().first(),
@@ -512,6 +529,7 @@ class PantryStateHolder(
         if (mode == RestoreMode.REPLACE) {
             repository.clearAll()
             shoppingListRepository.clearAll()
+            shoppingSectionRepository.clearAll()
             localProductRepository.clearAll()
             categoryPreferenceRepository.clearAll()
             productNameRepository.clearAll()
@@ -522,6 +540,14 @@ class PantryStateHolder(
         // display name, which the backup's own (possibly renamed) version would then have to
         // overwrite - churning the preferences table and re-running the derivation each time.
         categoryPreferenceRepository.upsertAll(document.categoryPreferences)
+
+        // Sections before entries, so no restored entry ever points at a missing section. On a
+        // merge a section that already exists keeps the device's own name, order and collapse
+        // state - the user may have rearranged it since the backup was taken.
+        val existingSectionIds = shoppingSectionRepository.getAll().mapTo(HashSet()) { it.id }
+        shoppingSectionRepository.upsertAll(
+            document.shoppingSections.filter { !it.isDefault && (mode == RestoreMode.REPLACE || it.id !in existingSectionIds) }
+        )
 
         val existingItemIds = repository.getItemsFlow().first().mapTo(HashSet()) { it.id }
         var itemsRestored = 0
@@ -1109,7 +1135,12 @@ class PantryStateHolder(
     private suspend fun addImportedEntry(entry: ImportedShoppingEntry): Boolean {
         val existing = shoppingListRepository.findByName(entry.productName)
         if (existing != null) return false
-        addToShoppingListIfAbsent(entry.productName, barcode = null, category = entry.category)
+        addToShoppingListIfAbsent(
+            entry.productName,
+            barcode = null,
+            category = entry.category,
+            sectionId = entry.section?.let { sectionIdForImportedName(it) }
+        )
         recordProductName(entry.productName)
         // Quantity is applied after the fact: addToShoppingListIfAbsent is the shared dedupe
         // path and always creates a single unit, and teaching it about quantities would change
@@ -1120,6 +1151,22 @@ class PantryStateHolder(
             }
         }
         return true
+    }
+
+    /** The local section called [name] (case-insensitively), created at the end if there is
+     *  none - section ids are per-device, so an imported list is filed by section name. */
+    private suspend fun sectionIdForImportedName(name: String): String {
+        val trimmed = name.trim()
+        val sections = shoppingSectionRepository.getAll()
+        sections.firstOrNull { !it.isDefault && it.name.trim().equals(trimmed, ignoreCase = true) }
+            ?.let { return it.id }
+        val created = ShoppingSection(
+            id = newShoppingSectionId(),
+            name = trimmed,
+            sortOrder = nextShoppingSectionSortOrder()
+        )
+        shoppingSectionRepository.upsert(created)
+        return created.id
     }
 
     /** Marks [id] as the shopping list entry the in-progress scan flow is completing, so
@@ -1174,7 +1221,12 @@ class PantryStateHolder(
     }
 
     @OptIn(ExperimentalTime::class)
-    private suspend fun addToShoppingListIfAbsent(name: String, barcode: String?, category: String?) {
+    private suspend fun addToShoppingListIfAbsent(
+        name: String,
+        barcode: String?,
+        category: String?,
+        sectionId: String? = null
+    ) {
         val existing = if (barcode != null) {
             shoppingListRepository.findByBarcode(barcode)
         } else {
@@ -1187,6 +1239,11 @@ class PantryStateHolder(
         // it rather than always appending to the end.
         val sortOrder = productNameRepository.getSortOrder(name)
             ?: ((shoppingListRepository.getMaxSortOrder() ?: 0.0) + 1.0)
+        // Same for its section: back to wherever the user last moved it, as long as that
+        // section still exists. An explicit [sectionId] (an import) wins.
+        val existingSections = shoppingSectionRepository.getAll().mapTo(HashSet()) { it.id }
+        val resolvedSection = (sectionId ?: productNameRepository.getSectionId(name))
+            ?.takeIf { it != DEFAULT_SHOPPING_SECTION_ID && it in existingSections }
 
         shoppingListRepository.addEntry(
             ShoppingListEntry(
@@ -1195,17 +1252,27 @@ class PantryStateHolder(
                 barcode = barcode,
                 category = category,
                 addedDate = DateUtils.today(),
-                sortOrder = sortOrder
+                sortOrder = sortOrder,
+                sectionId = resolvedSection
             )
         )
     }
 
-    /** Called after a drag-and-drop reorder completes. [beforeId]/[afterId] are the ids of the
-     *  entries now immediately above/below [movedId] within the same category group (null at a
-     *  group boundary). Computes a fractional sort order between them and persists it both on
-     *  the moved entry and on its product name, so the position is remembered the next time this
-     *  product re-enters the shopping list (see [addToShoppingListIfAbsent]). */
-    fun moveShoppingListEntry(movedId: String, beforeId: String?, afterId: String?) {
+    /**
+     * Called after a drag-and-drop completes. [targetSectionId] is the section the entry was
+     * dropped into (its own one for a plain reorder), and [beforeId]/[afterId] are the entries
+     * now immediately above/below it within that section (null at a section boundary).
+     *
+     * Computes a fractional sort order between the neighbours and persists it, together with
+     * the section, on the entry and on its product name, so both are remembered the next time
+     * this product re-enters the list (see [addToShoppingListIfAbsent]).
+     */
+    fun moveShoppingListEntry(
+        movedId: String,
+        targetSectionId: String?,
+        beforeId: String?,
+        afterId: String?
+    ) {
         val list = _uiState.value.shoppingList
         val moved = list.find { it.id == movedId } ?: return
         val beforeOrder = beforeId?.let { id -> list.find { it.id == id }?.sortOrder }
@@ -1216,11 +1283,78 @@ class PantryStateHolder(
             afterOrder != null -> afterOrder - 1.0
             else -> moved.sortOrder
         }
+        val newSectionId = targetSectionId?.takeIf { it != DEFAULT_SHOPPING_SECTION_ID }
         coroutineScope.launch {
-            shoppingListRepository.updateEntry(moved.copy(sortOrder = newSortOrder))
+            shoppingListRepository.updateEntry(moved.copy(sortOrder = newSortOrder, sectionId = newSectionId))
             productNameRepository.recordSortOrder(moved.productName, newSortOrder)
+            productNameRepository.recordSectionId(moved.productName, newSectionId)
         }
     }
+
+    /** Moves [entryId] to the end of [targetSectionId] - the non-drag "Move to section" action. */
+    fun moveShoppingListEntryToSection(entryId: String, targetSectionId: String) {
+        val state = _uiState.value
+        val ids = state.shoppingSections.mapTo(HashSet()) { it.id }
+        val lastInTarget = state.shoppingList.lastOrNull {
+            it.id != entryId &&
+                resolveShoppingSectionId(it.sectionId, ids) == targetSectionId
+        }
+        moveShoppingListEntry(entryId, targetSectionId, beforeId = lastInTarget?.id, afterId = null)
+    }
+
+    /** Adds a section called [name] at the end of the list. Blank names are ignored. */
+    fun createShoppingSection(name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        coroutineScope.launch {
+            shoppingSectionRepository.upsert(
+                ShoppingSection(
+                    id = newShoppingSectionId(),
+                    name = trimmed,
+                    sortOrder = nextShoppingSectionSortOrder()
+                )
+            )
+        }
+    }
+
+    fun renameShoppingSection(id: String, name: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || id == DEFAULT_SHOPPING_SECTION_ID) return
+        val section = _uiState.value.shoppingSections.find { it.id == id } ?: return
+        coroutineScope.launch { shoppingSectionRepository.upsert(section.copy(name = trimmed)) }
+    }
+
+    /** Deletes the section; its entries move to the default section. The default section
+     *  itself can't be deleted. */
+    fun deleteShoppingSection(id: String) {
+        if (id == DEFAULT_SHOPPING_SECTION_ID) return
+        coroutineScope.launch { shoppingSectionRepository.delete(id) }
+    }
+
+    fun setShoppingSectionCollapsed(id: String, collapsed: Boolean) {
+        coroutineScope.launch { shoppingSectionRepository.setCollapsed(id, collapsed) }
+    }
+
+    /** Applies a new order of the user sections, given as their ids top to bottom. The default
+     *  section is pinned first and is ignored if present. Renumbered with whole steps rather
+     *  than a fractional midpoint, since sections are few and a reorder touches them all
+     *  anyway. */
+    fun reorderShoppingSections(orderedIds: List<String>) {
+        val byId = _uiState.value.shoppingSections.associateBy { it.id }
+        val reordered = orderedIds
+            .filter { it != DEFAULT_SHOPPING_SECTION_ID }
+            .mapNotNull { byId[it] }
+            .mapIndexed { index, section -> section.copy(sortOrder = index.toDouble()) }
+        if (reordered.isEmpty()) return
+        coroutineScope.launch { shoppingSectionRepository.upsertAll(reordered) }
+    }
+
+    @OptIn(ExperimentalTime::class)
+    private fun newShoppingSectionId(): String =
+        "section_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt().toUInt()}"
+
+    private suspend fun nextShoppingSectionSortOrder(): Double =
+        (shoppingSectionRepository.getMaxSortOrder()?.coerceAtLeast(-1.0) ?: -1.0) + 1.0
 
     /** Renames the category identified by [originName] (its raw, scanned value - see
      *  [CategoryPreference.originName]) to [newDisplayName]. Applies retroactively everywhere

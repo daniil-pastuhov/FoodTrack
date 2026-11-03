@@ -91,7 +91,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
 
@@ -179,7 +180,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
 
@@ -272,7 +274,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
 
@@ -384,7 +387,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
 
@@ -485,7 +489,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
 
@@ -615,7 +620,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
         val dao = db.localProductDao()
@@ -690,11 +696,12 @@ class FoodTrackerMigrationTest {
                     put("nutriScore", "a")
                 }
             )
+            stripToVersion12(db)
             db.version = 11
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_11_12)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_11_12, FoodTrackerDatabase.MIGRATION_12_13)
             .build()
         val dao = db.localProductDao()
 
@@ -707,6 +714,137 @@ class FoodTrackerMigrationTest {
 
         dao.updateStorageLocation("1111", "Freezer")
         assertEquals("Freezer", dao.getStorageLocation("1111"))
+
+        db.close()
+    }
+
+    /** Takes a database Room created at the current version back to the version-12 shape of
+     *  the tables MIGRATION_12_13 changes: no `shopping_sections`, and the two tables it adds a
+     *  column to recreated without it. */
+    private fun stripToVersion12(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE shopping_sections")
+        db.execSQL("DROP TABLE shopping_list_entries")
+        db.execSQL(
+            """
+            CREATE TABLE shopping_list_entries (
+                id TEXT NOT NULL PRIMARY KEY,
+                productName TEXT NOT NULL,
+                barcode TEXT,
+                category TEXT,
+                quantity INTEGER NOT NULL,
+                addedDateEpochDays INTEGER NOT NULL,
+                sortOrder REAL NOT NULL
+            )
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE known_product_names")
+        db.execSQL(
+            """
+            CREATE TABLE known_product_names (
+                normalizedName TEXT NOT NULL PRIMARY KEY,
+                displayName TEXT NOT NULL,
+                lastUsedAtEpochMillis INTEGER NOT NULL,
+                sortOrder REAL
+            )
+            """.trimIndent()
+        )
+    }
+
+    @Test
+    fun migrate12To13TurnsShoppingCategoriesIntoSections() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-12-13.db")
+        dbFile.delete()
+
+        Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .build()
+            .apply { openHelper.writableDatabase }
+            .close()
+        SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            stripToVersion12(db)
+            fun preference(origin: String, display: String, order: Double, enabled: Boolean = true) =
+                db.insert("category_preferences", null, ContentValues().apply {
+                    put("originName", origin)
+                    put("displayName", display)
+                    put("sortOrder", order)
+                    put("enabled", if (enabled) 1 else 0)
+                })
+            preference("", "Other", Double.MAX_VALUE)
+            preference("Dairy", "Dairy", 0.0)
+            preference("en:milks", "Dairy", 3.0) // renamed onto the same display name
+            preference("Bakery", "Bread", 1.0) // renamed
+            preference("Snacks", "Snacks", 2.0, enabled = false)
+
+            fun entry(id: String, name: String, category: String?, sortOrder: Double) =
+                db.insert("shopping_list_entries", null, ContentValues().apply {
+                    put("id", id)
+                    put("productName", name)
+                    if (category != null) put("category", category) else putNull("category")
+                    put("quantity", 1)
+                    put("addedDateEpochDays", 20000)
+                    put("sortOrder", sortOrder)
+                })
+            entry("e1", "Milk", "Dairy", 1.0)
+            entry("e2", "Oat milk", "en:milks", 2.0)
+            entry("e3", "Baguette", "Bakery", 3.0)
+            entry("e4", "Chips", "Snacks", 4.0)
+            entry("e5", "Soap", null, 5.0)
+            entry("e6", "Tofu", "Asian aisle", 6.0) // no preference row: shown under its raw value
+            entry("e7", "Молоко", "Dairy", 7.0) // non-ASCII: SQLite's LOWER() can't fold it
+            entry("e8", "Salt", "", 8.0) // empty category is the Other bucket, not a section
+            entry("e9", "Socks", "Clothing", 9.0) // ties with "Asian aisle" on order: alphabetical
+
+            db.insert("known_product_names", null, ContentValues().apply {
+                put("normalizedName", "milk")
+                put("displayName", "Milk")
+                put("lastUsedAtEpochMillis", 1L)
+                put("sortOrder", 1.0)
+            })
+            db.insert("known_product_names", null, ContentValues().apply {
+                put("normalizedName", "молоко")
+                put("displayName", "Молоко")
+                put("lastUsedAtEpochMillis", 1L)
+            })
+            db.insert("known_product_names", null, ContentValues().apply {
+                put("normalizedName", "soap")
+                put("displayName", "Soap")
+                put("lastUsedAtEpochMillis", 1L)
+            })
+            db.version = 12
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_12_13)
+            .build()
+
+        val sections = db.shoppingSectionDao().getAll()
+        assertEquals(
+            "the default section plus one per displayed category, in the category order",
+            listOf("", "Dairy", "Bread", "Asian aisle", "Clothing"),
+            sections.map { it.name }
+        )
+        assertEquals(com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID, sections.first().id)
+        assertTrue(sections.none { it.collapsed })
+        val idByName = sections.associate { it.name to it.id }
+
+        val entries = db.shoppingListDao().getAllFlow().first().associateBy { it.id }
+        assertEquals("every entry survives", 9, entries.size)
+        assertEquals(idByName["Dairy"], entries.getValue("e1").sectionId)
+        assertEquals("merged origins share one section", idByName["Dairy"], entries.getValue("e2").sectionId)
+        assertEquals("a renamed category keeps its new name", idByName["Bread"], entries.getValue("e3").sectionId)
+        assertNull("a disabled category was the Other bucket", entries.getValue("e4").sectionId)
+        assertNull("no category stays in the default section", entries.getValue("e5").sectionId)
+        assertEquals(idByName["Asian aisle"], entries.getValue("e6").sectionId)
+        assertNull("an empty category stays in the default section", entries.getValue("e8").sectionId)
+        assertEquals(idByName["Clothing"], entries.getValue("e9").sectionId)
+        assertEquals("Milk", entries.getValue("e1").productName)
+        assertEquals(1.0, entries.getValue("e1").sortOrder, 0.0)
+
+        val names = db.productNameDao()
+        assertEquals("the product remembers its section", idByName["Dairy"], names.getSectionId("milk"))
+        assertEquals("and keeps its position", 1.0, names.getSortOrder("milk")!!, 0.0)
+        assertEquals("matched Unicode-aware, like the app writes it", idByName["Dairy"], names.getSectionId("молоко"))
+        assertNull(names.getSectionId("soap"))
 
         db.close()
     }

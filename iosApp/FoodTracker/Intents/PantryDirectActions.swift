@@ -99,6 +99,24 @@ enum PantryDirectActions {
         try? context.save()
         WidgetCenter.shared.reloadAllTimelines()
     }
+
+    /// Folds or unfolds a shopping-list section from its widget header. The same stored flag
+    /// the app's header toggles, so the two always show the same sections open.
+    static func setShoppingSectionCollapsed(_ sectionId: String, _ collapsed: Bool) {
+        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
+        let descriptor = FetchDescriptor<ShoppingSectionRecord>(predicate: #Predicate { $0.id == sectionId })
+        if let record = try? context.fetch(descriptor).first {
+            record.collapsed = collapsed
+        } else if sectionId == ShoppingSection.defaultId {
+            var section = ShoppingSection.defaultSection
+            section.collapsed = collapsed
+            context.insert(ShoppingSectionRecord(from: section))
+        } else {
+            return
+        }
+        try? context.save()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
 }
 
 /// "Used one" on an expiry widget row.
@@ -141,6 +159,31 @@ struct TickOffShoppingEntryIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         PantryDirectActions.deleteShoppingListEntry(entryId)
+        return .result()
+    }
+}
+
+/// A section header on the shopping-list widget: folds or unfolds that section.
+struct ToggleShoppingSectionIntent: AppIntent {
+    static var title: LocalizedStringResource = "Toggle section"
+    static var openAppWhenRun: Bool = false
+
+    @Parameter(title: "Section ID")
+    var sectionId: String
+
+    @Parameter(title: "Collapse")
+    var collapse: Bool
+
+    init() {}
+
+    init(sectionId: String, collapse: Bool) {
+        self.sectionId = sectionId
+        self.collapse = collapse
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        PantryDirectActions.setShoppingSectionCollapsed(sectionId, collapse)
         return .result()
     }
 }

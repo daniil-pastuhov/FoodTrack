@@ -8,6 +8,7 @@ import com.foodtracker.android.data.local.RoomLocalProductRepository
 import com.foodtracker.android.data.local.RoomPantryRepository
 import com.foodtracker.android.data.local.RoomProductNameRepository
 import com.foodtracker.android.data.local.RoomShoppingListRepository
+import com.foodtracker.android.data.local.RoomShoppingSectionRepository
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
@@ -16,6 +17,7 @@ import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
+import com.foodtracker.repository.ShoppingSectionRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.viewmodel.PantryStateHolder
 import org.koin.android.ext.koin.androidContext
@@ -37,7 +39,8 @@ val appModule = module {
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
-                FoodTrackerDatabase.MIGRATION_11_12
+                FoodTrackerDatabase.MIGRATION_11_12,
+                FoodTrackerDatabase.MIGRATION_12_13
             )
             .build()
     }
@@ -46,11 +49,13 @@ val appModule = module {
     single { get<FoodTrackerDatabase>().productNameDao() }
     single { get<FoodTrackerDatabase>().localProductDao() }
     single { get<FoodTrackerDatabase>().categoryPreferenceDao() }
+    single { get<FoodTrackerDatabase>().shoppingSectionDao() }
     single<PantryRepository> { RoomPantryRepository(get()) }
     single<ShoppingListRepository> { RoomShoppingListRepository(get()) }
     single<ProductNameRepository> { RoomProductNameRepository(get()) }
     single<LocalProductRepository> { RoomLocalProductRepository(get()) }
     single<CategoryPreferenceRepository> { RoomCategoryPreferenceRepository(get()) }
+    single<ShoppingSectionRepository> { RoomShoppingSectionRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
     single { OpenFoodFactsApi() }
     // Depends on PantryStateHolder rather than the repositories: see WidgetUpdater for why.
@@ -63,6 +68,7 @@ val appModule = module {
             productNameRepository = get(),
             localProductRepository = get(),
             categoryPreferenceRepository = get(),
+            shoppingSectionRepository = get(),
             uncategorizedLabel = androidContext().getString(R.string.shopping_list_uncategorized),
             openFoodFactsApi = get()
         )

@@ -5,6 +5,7 @@ import com.foodtracker.android.perf.FakeLocalProductRepository
 import com.foodtracker.android.perf.FakePantryRepository
 import com.foodtracker.android.perf.FakeProductNameRepository
 import com.foodtracker.android.perf.FakeSettingsRepository
+import com.foodtracker.android.perf.FakeShoppingSectionRepository
 import com.foodtracker.android.perf.FakeShoppingListRepository
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.CategoryPreference
@@ -49,6 +50,7 @@ class SmartDefaultExpiryTest {
             productNameRepository = FakeProductNameRepository(),
             localProductRepository = localProducts,
             categoryPreferenceRepository = FakeCategoryPreferenceRepository(categories),
+            shoppingSectionRepository = FakeShoppingSectionRepository(),
             uncategorizedLabel = "Other",
             coroutineScope = scope,
             computationContext = EmptyCoroutineContext

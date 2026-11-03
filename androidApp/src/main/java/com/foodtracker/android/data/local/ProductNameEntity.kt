@@ -13,5 +13,7 @@ data class ProductNameEntity(
     val lastUsedAtEpochMillis: Long,
     /** The shopping-list manual position last recorded for this product name, or null if it
      *  has never been dragged to a specific spot. */
-    val sortOrder: Double? = null
+    val sortOrder: Double? = null,
+    /** The shopping-list section this product was last moved to, or null for the default. */
+    val shoppingSectionId: String? = null
 )
