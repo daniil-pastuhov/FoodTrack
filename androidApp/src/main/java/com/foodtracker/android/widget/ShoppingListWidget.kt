@@ -37,28 +37,45 @@ import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.repository.ShoppingListRepository
+import com.foodtracker.repository.ShoppingSectionRepository
+import com.foodtracker.viewmodel.PantryDerivation
+import com.foodtracker.viewmodel.ShoppingRow
+import com.foodtracker.android.util.categoryLabel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-/** Home-screen widget showing the flat shopping list (name + quantity), newest first — the
- *  same order `ShoppingListDao.getAllFlow()` returns, without re-implementing the in-app
- *  screen's category grouping. */
+/** Home-screen widget showing the shopping list the way the app does: in the user's sections,
+ *  in their order, with folded sections showing only their header. The rows come from the same
+ *  [PantryDerivation.buildShoppingRows] the app's screen uses, so the two can't drift. Tapping a
+ *  header folds or unfolds that section for the app too (see [ToggleShoppingSectionAction]). */
 class ShoppingListWidget : GlanceAppWidget(), KoinComponent {
 
     private val shoppingListRepository: ShoppingListRepository by inject()
+    private val shoppingSectionRepository: ShoppingSectionRepository by inject()
 
     /** Collects inside [provideContent] rather than reading once up front; see
      *  [ExpiryWidget.provideGlance] for why a captured list goes stale. */
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val entriesFlow = shoppingListRepository.getEntriesFlow()
-        val initialEntries = entriesFlow.first()
+        val rowsFlow = combine(
+            shoppingListRepository.getEntriesFlow(),
+            shoppingSectionRepository.getSectionsFlow()
+        ) { entries, sections ->
+            WidgetShoppingList(
+                rows = PantryDerivation.buildShoppingRows(entries, sections),
+                isEmpty = entries.isEmpty()
+            )
+        }
+        val initial = rowsFlow.first()
         provideContent {
-            val entries by entriesFlow.collectAsState(initial = initialEntries)
-            ShoppingListWidgetContent(entries = entries)
+            val list by rowsFlow.collectAsState(initial = initial)
+            ShoppingListWidgetContent(list)
         }
     }
 }
+
+private data class WidgetShoppingList(val rows: List<ShoppingRow>, val isEmpty: Boolean)
 
 class ShoppingListWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ShoppingListWidget()
@@ -76,7 +93,7 @@ internal fun openShoppingListIntent(context: Context): Intent =
     }
 
 @Composable
-private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
+private fun ShoppingListWidgetContent(list: WidgetShoppingList) {
     val context = LocalContext.current
     Column(
         modifier = GlanceModifier
@@ -90,21 +107,24 @@ private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
             modifier = GlanceModifier.clickable(actionStartActivity(openShoppingListIntent(context)))
         )
         Spacer(modifier = GlanceModifier.height(8.dp))
-        if (entries.isEmpty()) {
+        if (list.isEmpty) {
             Text(
                 text = context.getString(R.string.widget_shopping_list_empty),
                 style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
             )
         } else {
-            val visibleEntries = entries.take(12)
+            val rows = list.rows.take(MAX_WIDGET_ROWS)
             // defaultWeight() gives the list a bounded height (rather than wrap-content), which
             // is what makes it actually scroll instead of just clipping past the widget's edge.
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
-                itemsIndexed(visibleEntries, itemId = { _, entry -> entry.id.hashCode().toLong() }) { index, entry ->
-                    Column {
-                        ShoppingListRow(entry, showAction = true)
-                        if (index != visibleEntries.lastIndex) {
-                            WidgetRowDivider()
+                itemsIndexed(rows, itemId = { _, row -> row.key.hashCode().toLong() }) { index, row ->
+                    when (row) {
+                        is ShoppingRow.Header -> ShoppingSectionWidgetHeader(row)
+                        is ShoppingRow.Item -> Column {
+                            ShoppingListRow(row.entry, showAction = true)
+                            if (rows.getOrNull(index + 1) is ShoppingRow.Item) {
+                                WidgetRowDivider()
+                            }
                         }
                     }
                 }
@@ -112,6 +132,46 @@ private fun ShoppingListWidgetContent(entries: List<ShoppingListEntry>) {
         }
     }
 }
+
+/** A section's header on the widget: chevron, name and count, tapping it folds or unfolds the
+ *  section (persisted, so the app follows). */
+@Composable
+private fun ShoppingSectionWidgetHeader(header: ShoppingRow.Header) {
+    val context = LocalContext.current
+    val section = header.section
+    val label = if (section.isDefault) {
+        context.getString(R.string.shopping_section_default)
+    } else {
+        categoryLabel(context.resources, section.name)
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = GlanceModifier
+            .fillMaxWidth()
+            .padding(top = 6.dp, bottom = 2.dp)
+            .clickable(toggleShoppingSectionAction(section.id, collapse = !section.collapsed))
+    ) {
+        Text(
+            text = if (section.collapsed) "▸" else "▾",
+            style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
+        )
+        Spacer(modifier = GlanceModifier.width(6.dp))
+        Text(
+            text = label,
+            maxLines = 1,
+            modifier = GlanceModifier.defaultWeight(),
+            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background_muted))
+        )
+        Text(
+            text = header.itemCount.toString(),
+            style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
+        )
+    }
+}
+
+/** Glance's LazyColumn is backed by a RemoteViews collection; well past any realistic list, but
+ *  keeps a pathological one from producing a huge widget update. */
+private const val MAX_WIDGET_ROWS = 60
 
 /**
  * One shopping-list row.

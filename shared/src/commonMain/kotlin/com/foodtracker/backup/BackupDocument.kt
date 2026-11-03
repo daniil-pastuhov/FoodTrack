@@ -5,6 +5,7 @@ import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -30,6 +31,9 @@ data class BackupDocument(
     val exportedAtEpochMillis: Long = 0L,
     val items: List<PantryItem> = emptyList(),
     val shoppingList: List<ShoppingListEntry> = emptyList(),
+    /** The user's shopping-list sections (never the default one, which every install has).
+     *  Absent from backups made before sections existed, which restore into the default. */
+    val shoppingSections: List<ShoppingSection> = emptyList(),
     val categoryPreferences: List<CategoryPreference> = emptyList(),
     val products: List<CachedProduct> = emptyList(),
     val knownProductNames: List<String> = emptyList(),
@@ -38,7 +42,7 @@ data class BackupDocument(
     /** Nothing worth restoring. An empty-but-valid backup is a real thing (a new install that
      *  exported immediately), so callers say so rather than reporting a broken file. */
     val isEmpty: Boolean
-        get() = items.isEmpty() && shoppingList.isEmpty() && products.isEmpty() &&
+        get() = items.isEmpty() && shoppingList.isEmpty() && shoppingSections.isEmpty() && products.isEmpty() &&
                 categoryPreferences.isEmpty() && knownProductNames.isEmpty()
 
     companion object {

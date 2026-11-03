@@ -167,6 +167,31 @@ public enum L10n {
     public static var shoppingListEmptySubtitle: String { NSLocalizedString("shopping_list_empty_subtitle", comment: "") }
     public static var shoppingListCheckOff: String { NSLocalizedString("shopping_list_check_off", comment: "") }
     public static var shoppingListUncategorized: String { NSLocalizedString("shopping_list_uncategorized", comment: "") }
+    public static var shoppingSectionDefault: String { NSLocalizedString("shopping_section_default", comment: "") }
+    public static var shoppingSectionNew: String { NSLocalizedString("shopping_section_new", comment: "") }
+    public static var shoppingSectionRename: String { NSLocalizedString("shopping_section_rename", comment: "") }
+    public static var shoppingSectionDelete: String { NSLocalizedString("shopping_section_delete", comment: "") }
+    public static func shoppingSectionDeleteTitle(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_section_delete_title", comment: ""), name)
+    }
+    public static var shoppingSectionDeleteMessage: String { NSLocalizedString("shopping_section_delete_message", comment: "") }
+    public static var shoppingSectionSave: String { NSLocalizedString("shopping_section_save", comment: "") }
+    public static var shoppingSectionNamePlaceholder: String { NSLocalizedString("shopping_section_name_placeholder", comment: "") }
+    public static var shoppingSectionMoveTo: String { NSLocalizedString("shopping_section_move_to", comment: "") }
+    public static var shoppingSectionReorder: String { NSLocalizedString("shopping_section_reorder", comment: "") }
+    public static func shoppingSectionOptions(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_section_options", comment: ""), name)
+    }
+    public static var shoppingSectionCollapsed: String { NSLocalizedString("shopping_section_collapsed", comment: "") }
+    public static var shoppingSectionExpanded: String { NSLocalizedString("shopping_section_expanded", comment: "") }
+    public static func widgetShoppingListMore(_ count: Int) -> String {
+        String(format: NSLocalizedString("widget_shopping_list_more", comment: ""), count)
+    }
+    /// What a section is called on screen: the default section's localized name, a built-in
+    /// category key (a section converted from a category) translated, anything else as typed.
+    public static func shoppingSectionName(_ section: ShoppingSection) -> String {
+        section.isDefault ? shoppingSectionDefault : categoryName(section.name)
+    }
     public static var photoSuggestionsTitle: String { NSLocalizedString("photo_suggestions_title", comment: "") }
     public static var photoSuggestionsAnalyzing: String { NSLocalizedString("photo_suggestions_analyzing", comment: "") }
     /// What to show for a storage location. The built-in ones (`DefaultStorageLocations`) are

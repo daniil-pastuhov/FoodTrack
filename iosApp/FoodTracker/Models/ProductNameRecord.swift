@@ -14,6 +14,9 @@ final class ProductNameRecord {
     /// The shopping-list manual position last recorded for this product name, or nil if it has
     /// never been dragged to a specific spot.
     var sortOrder: Double?
+    /// The shopping-list section this product was last moved to, or nil for the default one.
+    /// Defaulted so the store migrates in place.
+    var shoppingSectionId: String? = nil
 
     init(normalizedName: String, displayName: String, lastUsedAt: Date, sortOrder: Double? = nil) {
         self.normalizedName = normalizedName

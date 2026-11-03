@@ -11,16 +11,17 @@ class RoomProductNameRepository(private val dao: ProductNameDao) : ProductNameRe
         val trimmed = name.trim()
         if (trimmed.isBlank()) return
         val normalized = trimmed.lowercase()
-        // Preserve any manually-set sortOrder — this upsert runs on every scan/save of a
-        // product name, not just the first time, and would otherwise silently reset the
-        // remembered position to null each time.
-        val existingSortOrder = dao.getSortOrder(normalized)
+        // Preserve the remembered sortOrder and section — this upsert runs on every scan/save
+        // of a product name, not just the first time, and would otherwise silently reset them
+        // to null each time.
+        val existing = dao.find(normalized)
         dao.upsert(
             ProductNameEntity(
                 normalizedName = normalized,
                 displayName = trimmed,
                 lastUsedAtEpochMillis = System.currentTimeMillis(),
-                sortOrder = existingSortOrder
+                sortOrder = existing?.sortOrder,
+                shoppingSectionId = existing?.shoppingSectionId
             )
         )
     }
@@ -40,6 +41,25 @@ class RoomProductNameRepository(private val dao: ProductNameDao) : ProductNameRe
                     displayName = trimmed,
                     lastUsedAtEpochMillis = System.currentTimeMillis(),
                     sortOrder = sortOrder
+                )
+            )
+        }
+    }
+
+    override suspend fun getSectionId(name: String): String? =
+        dao.getSectionId(name.trim().lowercase())
+
+    override suspend fun recordSectionId(name: String, sectionId: String?) {
+        val trimmed = name.trim()
+        if (trimmed.isBlank()) return
+        val normalized = trimmed.lowercase()
+        if (dao.updateSectionId(normalized, sectionId) == 0) {
+            dao.upsert(
+                ProductNameEntity(
+                    normalizedName = normalized,
+                    displayName = trimmed,
+                    lastUsedAtEpochMillis = System.currentTimeMillis(),
+                    shoppingSectionId = sectionId
                 )
             )
         }

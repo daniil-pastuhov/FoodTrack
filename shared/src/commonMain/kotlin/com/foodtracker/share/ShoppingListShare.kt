@@ -1,6 +1,9 @@
 package com.foodtracker.share
 
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
+import com.foodtracker.model.resolveShoppingSectionId
+import com.foodtracker.viewmodel.PantryDerivation
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -14,7 +17,11 @@ import kotlinx.serialization.json.Json
 data class ImportedShoppingEntry(
     val productName: String,
     val quantity: Int = 1,
-    val category: String? = null
+    val category: String? = null,
+    /** The sender's section name, or null for their default section. Matched by name on the
+     *  receiving device (see `PantryStateHolder.importShoppingList`), since section ids are
+     *  local to each device. */
+    val section: String? = null
 )
 
 /**
@@ -58,7 +65,8 @@ object ShoppingListShare {
     private data class PayloadEntry(
         @SerialName("n") val name: String,
         @SerialName("q") val quantity: Int = 1,
-        @SerialName("c") val category: String? = null
+        @SerialName("c") val category: String? = null,
+        @SerialName("s") val section: String? = null
     )
 
     @Serializable
@@ -68,32 +76,32 @@ object ShoppingListShare {
     )
 
     /**
-     * The list as human-readable text, grouped by category under [title].
+     * The list as human-readable text, under [title], grouped the way the list itself is:
+     * the default section's entries first without a heading, then each of [sections] that has
+     * entries under its name, in order. [entries] are expected in display order already.
      *
-     * [categoryLabel] resolves an entry's raw category to what the user sees (the caller passes
-     * the same resolution the list itself renders with), and [uncategorizedLabel] names the
-     * bucket for entries with no category. Quantities above one are appended as "(2)", which is
-     * also what [parseText] reads back.
+     * [sectionLabel] names a user section (the caller translates built-in names the same way
+     * the screen does). Quantities above one are appended as "(2)", which is also what
+     * [parseText] reads back.
      */
     fun toText(
         entries: List<ShoppingListEntry>,
         title: String,
-        uncategorizedLabel: String,
-        categoryLabel: (String?) -> String? = { it }
+        sections: List<ShoppingSection> = emptyList(),
+        sectionLabel: (ShoppingSection) -> String = { it.name }
     ): String {
         if (entries.isEmpty()) return title
 
-        val grouped = entries.groupBy { categoryLabel(it.category) }
+        val ordered = PantryDerivation.orderedShoppingSections(sections)
+        val ids = ordered.mapTo(HashSet()) { it.id }
+        val grouped = entries.groupBy { resolveShoppingSectionId(it.sectionId, ids) }
         val builder = StringBuilder(title)
-        // Named groups first, in the order they appear, with the uncategorized bucket last -
-        // the same shape the on-screen list has.
-        val orderedKeys = grouped.keys.filterNotNull().sortedBy { key ->
-            entries.indexOfFirst { categoryLabel(it.category) == key }
-        } + if (grouped.containsKey(null)) listOf(null) else emptyList()
-
-        orderedKeys.forEach { key ->
-            builder.append("\n\n").append(key ?: uncategorizedLabel)
-            grouped[key].orEmpty().forEach { entry ->
+        ordered.forEach { section ->
+            val group = grouped[section.id].orEmpty()
+            if (group.isEmpty()) return@forEach
+            builder.append("\n")
+            if (!section.isDefault) builder.append("\n").append(sectionLabel(section))
+            group.forEach { entry ->
                 builder.append("\n- ").append(entry.productName)
                 if (entry.quantity > 1) builder.append(" (").append(entry.quantity).append(')')
             }
@@ -101,11 +109,19 @@ object ShoppingListShare {
         return builder.toString()
     }
 
-    /** The list as a QR payload: [PAYLOAD_PREFIX] followed by compact JSON. */
-    fun toPayload(entries: List<ShoppingListEntry>): String {
+    /** The list as a QR payload: [PAYLOAD_PREFIX] followed by compact JSON. Each entry carries
+     *  its section's name (none for the default section) so the receiver can file it the same
+     *  way. */
+    fun toPayload(entries: List<ShoppingListEntry>, sections: List<ShoppingSection> = emptyList()): String {
+        val names = sections.filterNot { it.isDefault }.associate { it.id to it.name }
         val payload = Payload(
             entries = entries.take(MAX_IMPORTED_ENTRIES).map {
-                PayloadEntry(name = it.productName, quantity = it.quantity, category = it.category)
+                PayloadEntry(
+                    name = it.productName,
+                    quantity = it.quantity,
+                    category = it.category,
+                    section = it.sectionId?.let(names::get)
+                )
             }
         )
         return PAYLOAD_PREFIX + json.encodeToString(payload)
@@ -148,9 +164,9 @@ object ShoppingListShare {
      * items. So if *any* line is bulleted, only bulleted lines count; otherwise every non-blank
      * line does. A trailing "(2)" is read back as a quantity either way.
      *
-     * Categories are deliberately not recovered from headers: the receiving device resolves a
-     * category from the product itself, and importing a foreign display name would create a
-     * duplicate category that happens to read the same.
+     * Section headings are deliberately not recovered: a hand-typed list has none, and a line
+     * that merely looks like a heading can't be told apart from one. The QR payload carries
+     * sections explicitly instead.
      */
     fun parseText(raw: String): List<ImportedShoppingEntry> {
         val lines = raw.lines().map { it.trim() }.filter { it.isNotEmpty() }
@@ -169,7 +185,8 @@ object ShoppingListShare {
         return ImportedShoppingEntry(
             productName = trimmed,
             quantity = quantity.coerceIn(1, MAX_QUANTITY),
-            category = category?.trim()?.takeIf { it.isNotEmpty() }
+            category = category?.trim()?.takeIf { it.isNotEmpty() },
+            section = section?.trim()?.takeIf { it.isNotEmpty() }
         )
     }
 

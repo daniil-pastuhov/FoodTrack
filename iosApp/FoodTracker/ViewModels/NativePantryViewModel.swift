@@ -64,6 +64,9 @@ public class NativePantryViewModel: ObservableObject {
     /// both sides have something to match.
     @Published public var allergenWarnings: [String] = []
     @Published public var shoppingList: [ShoppingListEntry] = []
+    /// The user's shopping-list sections in display order, the default one first (see
+    /// `ShoppingSection`).
+    @Published public var shoppingSections: [ShoppingSection] = [.defaultSection]
     /// Set while the scan flow was launched from a specific shopping list row (rather than
     /// the dashboard's general scan button), so `saveItem` knows to remove that exact entry
     /// even if it has no barcode of its own to match against (manually-added entries).
@@ -89,7 +92,8 @@ public class NativePantryViewModel: ObservableObject {
             ShoppingListEntryRecord.self,
             ProductNameRecord.self,
             LocalProductRecord.self,
-            CategoryPreferenceRecord.self
+            CategoryPreferenceRecord.self,
+            ShoppingSectionRecord.self
         ])
         guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
             fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see WIDGETS_TASK.md")
@@ -137,6 +141,8 @@ public class NativePantryViewModel: ObservableObject {
         
         loadCategoryPreferences()
         loadItems()
+        migrateShoppingCategoriesToSectionsIfNeeded()
+        loadShoppingSections()
         loadShoppingList()
         backfillKnownProductNamesFromInventoryIfNeeded()
         backfillShelfLivesFromInventoryIfNeeded()
@@ -189,6 +195,80 @@ public class NativePantryViewModel: ObservableObject {
         )
         shoppingList = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asEntry }
         registerCategories(shoppingList.compactMap { $0.category })
+    }
+
+    private func loadShoppingSections() {
+        let records = (try? modelContext.fetch(FetchDescriptor<ShoppingSectionRecord>())) ?? []
+        shoppingSections = ShoppingSections.ordered(records.map { $0.asSection })
+    }
+
+    /// Re-reads the shopping list and its sections from the store, for when the widget (a
+    /// separate process) may have changed them - ticked an entry off, or folded a section.
+    public func reloadShoppingList() {
+        loadShoppingSections()
+        loadShoppingList()
+    }
+
+    /// The sectioned rows the shopping list (and its share text) shows.
+    public var shoppingRows: [ShoppingRow] {
+        ShoppingSections.rows(entries: shoppingList, sections: shoppingSections)
+    }
+
+    /// Replaces the shopping list's old category grouping with sections, once - the counterpart
+    /// of Android's `MIGRATION_12_13`, with the same rules so both platforms upgrade the same
+    /// way. Every category that currently groups shopping entries becomes a section of the name
+    /// the user sees, in the same order, and its entries (and their product names, so a re-add
+    /// lands there too) move into it. A disabled category, or none, was the "Other" bucket,
+    /// which is the default section now; a category with no preference shows - and becomes a
+    /// section - under its raw value.
+    private func migrateShoppingCategoriesToSectionsIfNeeded() {
+        let flagKey = "shoppingSectionsMigrated"
+        guard !UserDefaults.standard.bool(forKey: flagKey) else { return }
+
+        let entries = (try? modelContext.fetch(FetchDescriptor<ShoppingListEntryRecord>())) ?? []
+        let preferences = Dictionary(
+            categoryPreferences.map { ($0.originName, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var sectionNameByEntry: [String: String] = [:]
+        var orderByName: [String: Double] = [:]
+        for entry in entries {
+            guard let category = entry.category, !category.isEmpty else { continue }
+            let name: String
+            let order: Double
+            if let preference = preferences[category] {
+                guard preference.enabled else { continue }
+                name = preference.displayName
+                order = preference.sortOrder
+            } else {
+                name = category
+                order = .greatestFiniteMagnitude
+            }
+            guard !name.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+            sectionNameByEntry[entry.id] = name
+            orderByName[name] = min(orderByName[name] ?? .greatestFiniteMagnitude, order)
+        }
+
+        let names = orderByName.keys.sorted {
+            let (lhs, rhs) = (orderByName[$0]!, orderByName[$1]!)
+            return lhs != rhs ? lhs < rhs : $0 < $1
+        }
+        var idByName: [String: String] = [:]
+        for (index, name) in names.enumerated() {
+            let id = "migrated_" + name.utf8.map { String(format: "%02X", $0) }.joined()
+            idByName[name] = id
+            modelContext.insert(ShoppingSectionRecord(from: ShoppingSection(id: id, name: name, sortOrder: Double(index))))
+        }
+        let products = (try? modelContext.fetch(FetchDescriptor<ProductNameRecord>())) ?? []
+        let productByName = Dictionary(products.map { ($0.normalizedName, $0) }, uniquingKeysWith: { first, _ in first })
+        for entry in entries {
+            guard let name = sectionNameByEntry[entry.id], let id = idByName[name] else { continue }
+            entry.sectionId = id
+            let normalized = entry.productName.trimmingCharacters(in: .whitespaces).lowercased()
+            productByName[normalized]?.shoppingSectionId = id
+        }
+        try? modelContext.save()
+        UserDefaults.standard.set(true, forKey: flagKey)
     }
 
     private func loadCategoryPreferences() {
@@ -418,6 +498,28 @@ public class NativePantryViewModel: ObservableObject {
             existing.sortOrder = sortOrder
         } else {
             modelContext.insert(ProductNameRecord(normalizedName: normalized, displayName: trimmed, lastUsedAt: Date(), sortOrder: sortOrder))
+        }
+        try? modelContext.save()
+    }
+
+    /// The shopping-list section `name` was last moved to, or nil if it never left the default.
+    private func sectionId(forKnownProduct name: String) -> String? {
+        let normalized = name.trimmingCharacters(in: .whitespaces).lowercased()
+        let descriptor = FetchDescriptor<ProductNameRecord>(predicate: #Predicate { $0.normalizedName == normalized })
+        return (try? modelContext.fetch(descriptor).first)?.shoppingSectionId
+    }
+
+    private func recordSectionId(name: String, sectionId: String?) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let normalized = trimmed.lowercased()
+        let descriptor = FetchDescriptor<ProductNameRecord>(predicate: #Predicate { $0.normalizedName == normalized })
+        if let existing = try? modelContext.fetch(descriptor).first {
+            existing.shoppingSectionId = sectionId
+        } else {
+            let record = ProductNameRecord(normalizedName: normalized, displayName: trimmed, lastUsedAt: Date())
+            record.shoppingSectionId = sectionId
+            modelContext.insert(record)
         }
         try? modelContext.save()
     }
@@ -1144,7 +1246,12 @@ public class NativePantryViewModel: ObservableObject {
         var added = 0
         for entry in parsed {
             let before = shoppingList.count
-            addShoppingListEntryIfAbsent(name: entry.productName, barcode: nil, category: entry.category)
+            addShoppingListEntryIfAbsent(
+                name: entry.productName,
+                barcode: nil,
+                category: entry.category,
+                sectionId: entry.section.map { sectionIdForImportedName($0) }
+            )
             guard shoppingList.count > before else { continue }
             added += 1
             recordProductName(entry.productName)
@@ -1168,6 +1275,22 @@ public class NativePantryViewModel: ObservableObject {
             WidgetCenter.shared.reloadAllTimelines()
         }
         return (added, parsed.count)
+    }
+
+    /// The local section called `name` (case-insensitively), created at the end if there is
+    /// none - section ids are per-device, so an imported list is filed by section name.
+    private func sectionIdForImportedName(_ name: String) -> String {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        if let match = shoppingSections.first(where: {
+            !$0.isDefault && $0.name.trimmingCharacters(in: .whitespaces).caseInsensitiveCompare(trimmed) == .orderedSame
+        }) {
+            return match.id
+        }
+        let section = ShoppingSection(id: Self.newShoppingSectionId(), name: trimmed, sortOrder: nextShoppingSectionSortOrder())
+        modelContext.insert(ShoppingSectionRecord(from: section))
+        try? modelContext.save()
+        loadShoppingSections()
+        return section.id
     }
 
     public func beginScanForShoppingListEntry(_ id: String) {
@@ -1258,7 +1381,7 @@ public class NativePantryViewModel: ObservableObject {
         }
     }
 
-    private func addShoppingListEntryIfAbsent(name: String, barcode: String?, category: String?) {
+    private func addShoppingListEntryIfAbsent(name: String, barcode: String?, category: String?, sectionId: String? = nil) {
         let existing: ShoppingListEntryRecord?
         if let barcode {
             let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.barcode == barcode })
@@ -1276,12 +1399,18 @@ public class NativePantryViewModel: ObservableObject {
         // item (e.g. an essential pantry item running out again) lands back where the user put
         // it rather than always appending to the end.
         let resolvedSortOrder = sortOrder(forKnownProduct: name) ?? (maxShoppingListSortOrder() + 1)
+        // Same for its section: back to wherever the user last moved it, as long as that section
+        // still exists. An explicit `sectionId` (an import) wins.
+        let existingSections = Set(shoppingSections.map(\.id))
+        let resolvedSection = (sectionId ?? self.sectionId(forKnownProduct: name))
+            .flatMap { $0 != ShoppingSection.defaultId && existingSections.contains($0) ? $0 : nil }
 
         modelContext.insert(ShoppingListEntryRecord(from: ShoppingListEntry(
             productName: name,
             barcode: barcode,
             category: category,
-            sortOrder: resolvedSortOrder
+            sortOrder: resolvedSortOrder,
+            sectionId: resolvedSection
         )))
         try? modelContext.save()
         loadShoppingList()
@@ -1293,12 +1422,14 @@ public class NativePantryViewModel: ObservableObject {
         return (try? modelContext.fetch(descriptor).first)?.sortOrder ?? 0
     }
 
-    /// Called after a drag-and-drop reorder completes. `beforeId`/`afterId` are the ids of the
-    /// entries now immediately above/below `movedId` within the same category group (nil at a
-    /// group boundary). Computes a fractional sort order between them and persists it both on
-    /// the moved entry and on its product name, so the position is remembered the next time this
-    /// product re-enters the shopping list (see `addShoppingListEntryIfAbsent`).
-    public func moveShoppingListEntry(_ movedId: String, beforeId: String?, afterId: String?) {
+    /// Called after a drag-and-drop completes. `sectionId` is the section the entry was dropped
+    /// into (its own one for a plain reorder), and `beforeId`/`afterId` are the entries now
+    /// immediately above/below it within that section (nil at a section boundary).
+    ///
+    /// Computes a fractional sort order between the neighbours and persists it, with the
+    /// section, on the entry and on its product name, so both are remembered the next time the
+    /// product re-enters the list (see `addShoppingListEntryIfAbsent`).
+    public func moveShoppingListEntry(_ movedId: String, toSection sectionId: String, beforeId: String?, afterId: String?) {
         let descriptor = FetchDescriptor<ShoppingListEntryRecord>(predicate: #Predicate { $0.id == movedId })
         guard let moved = try? modelContext.fetch(descriptor).first else { return }
 
@@ -1321,11 +1452,96 @@ public class NativePantryViewModel: ObservableObject {
         } else {
             newSortOrder = moved.sortOrder
         }
+        let newSectionId: String? = sectionId == ShoppingSection.defaultId ? nil : sectionId
 
         moved.sortOrder = newSortOrder
+        moved.sectionId = newSectionId
         try? modelContext.save()
         recordSortOrder(name: moved.productName, sortOrder: newSortOrder)
+        recordSectionId(name: moved.productName, sectionId: newSectionId)
         loadShoppingList()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Moves `entryId` to the end of `sectionId` - the non-drag "Move to section" action.
+    public func moveShoppingListEntry(_ entryId: String, toSection sectionId: String) {
+        let ids = Set(shoppingSections.map(\.id))
+        let last = shoppingList.last {
+            $0.id != entryId && ShoppingSections.resolve($0.sectionId, in: ids) == sectionId
+        }
+        moveShoppingListEntry(entryId, toSection: sectionId, beforeId: last?.id, afterId: nil)
+    }
+
+    /// Adds a section called `name` at the end. Blank names are ignored.
+    public func createShoppingSection(_ name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        modelContext.insert(ShoppingSectionRecord(from: ShoppingSection(
+            id: Self.newShoppingSectionId(), name: trimmed, sortOrder: nextShoppingSectionSortOrder()
+        )))
+        saveShoppingSections()
+    }
+
+    public func renameShoppingSection(_ id: String, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty, id != ShoppingSection.defaultId, let record = shoppingSectionRecord(id) else { return }
+        record.name = trimmed
+        saveShoppingSections()
+    }
+
+    /// Deletes the section; its entries move to the default section. The default section itself
+    /// can't be deleted.
+    public func deleteShoppingSection(_ id: String) {
+        guard id != ShoppingSection.defaultId, let record = shoppingSectionRecord(id) else { return }
+        let entries = (try? modelContext.fetch(FetchDescriptor<ShoppingListEntryRecord>(
+            predicate: #Predicate { $0.sectionId == id }
+        ))) ?? []
+        for entry in entries { entry.sectionId = nil }
+        modelContext.delete(record)
+        saveShoppingSections()
+        loadShoppingList()
+    }
+
+    public func setShoppingSectionCollapsed(_ id: String, _ collapsed: Bool) {
+        if let record = shoppingSectionRecord(id) {
+            record.collapsed = collapsed
+        } else if id == ShoppingSection.defaultId {
+            var section = ShoppingSection.defaultSection
+            section.collapsed = collapsed
+            modelContext.insert(ShoppingSectionRecord(from: section))
+        } else {
+            return
+        }
+        saveShoppingSections()
+    }
+
+    /// Applies a new order of the user sections, given as their ids top to bottom. The default
+    /// section is pinned first and ignored if present.
+    public func reorderShoppingSections(_ orderedIds: [String]) {
+        for (index, id) in orderedIds.filter({ $0 != ShoppingSection.defaultId }).enumerated() {
+            shoppingSectionRecord(id)?.sortOrder = Double(index)
+        }
+        saveShoppingSections()
+    }
+
+    private func shoppingSectionRecord(_ id: String) -> ShoppingSectionRecord? {
+        let descriptor = FetchDescriptor<ShoppingSectionRecord>(predicate: #Predicate { $0.id == id })
+        return try? modelContext.fetch(descriptor).first
+    }
+
+    private func saveShoppingSections() {
+        try? modelContext.save()
+        loadShoppingSections()
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    private func nextShoppingSectionSortOrder() -> Double {
+        let orders = shoppingSections.filter { !$0.isDefault }.map(\.sortOrder)
+        return max(orders.max() ?? -1, -1) + 1
+    }
+
+    private static func newShoppingSectionId() -> String {
+        "section_\(UUID().uuidString)"
     }
 
     /// Renames the category identified by `originName` (its raw, scanned value - see
@@ -1496,6 +1712,7 @@ public class NativePantryViewModel: ObservableObject {
             exportedAtEpochMillis: Int64(Date().timeIntervalSince1970 * 1000),
             items: items,
             shoppingList: shoppingList,
+            shoppingSections: shoppingSections.filter { !$0.isDefault },
             categoryPreferences: categoryPreferences,
             products: products,
             knownProductNames: names,
@@ -1519,6 +1736,7 @@ public class NativePantryViewModel: ObservableObject {
         if mode == .replace {
             try? modelContext.delete(model: PantryItemRecord.self)
             try? modelContext.delete(model: ShoppingListEntryRecord.self)
+            try? modelContext.delete(model: ShoppingSectionRecord.self)
             try? modelContext.delete(model: LocalProductRecord.self)
             try? modelContext.delete(model: CategoryPreferenceRecord.self)
             try? modelContext.delete(model: ProductNameRecord.self)
@@ -1549,6 +1767,13 @@ public class NativePantryViewModel: ObservableObject {
             if mode == .merge && existingItemIds.contains(item.id) { continue }
             modelContext.insert(PantryItemRecord(from: item))
             itemsRestored += 1
+        }
+
+        // Sections before entries, so no restored entry points at a missing section. On a merge
+        // a section that already exists keeps this device's name, order and collapse state.
+        let existingSectionIds = Set(((try? modelContext.fetch(FetchDescriptor<ShoppingSectionRecord>())) ?? []).map { $0.id })
+        for section in document.shoppingSections where !section.isDefault && !existingSectionIds.contains(section.id) {
+            modelContext.insert(ShoppingSectionRecord(from: section))
         }
 
         let existingEntryIds = Set(((try? modelContext.fetch(FetchDescriptor<ShoppingListEntryRecord>())) ?? []).map { $0.id })
@@ -1603,6 +1828,7 @@ public class NativePantryViewModel: ObservableObject {
 
         loadCategoryPreferences()
         loadItems()
+        loadShoppingSections()
         loadShoppingList()
         loadKnownProductNames()
         IOSNotificationManager.shared.scheduleDigestNotification(items: items)

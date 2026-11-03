@@ -4,7 +4,10 @@ import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.CategoryPreferenceIndex
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.DEFAULT_SHOPPING_SECTION
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
+import com.foodtracker.model.resolveShoppingSectionId
 import com.foodtracker.model.SortOption
 import com.foodtracker.model.categoryPreferenceSortOrder
 import com.foodtracker.model.index
@@ -188,35 +191,40 @@ object PantryDerivation {
             .thenBy { it.sortName }
     }
 
-    /** Flattens [entries] into category-grouped rows with headers, ordered by the user's
-     *  configured category order. Groups fold together when several origins resolve to the same
-     *  display name, and disabled categories collapse into the uncategorized group. */
+    /**
+     * Flattens [entries] into sectioned rows: the default section first, then the user's sections
+     * by their order. Every section emits a header - an empty one too, so it can be dropped
+     * onto - and its items only while it is expanded. Items keep the order they arrive in
+     * (the repository's `sortOrder`, then newest first), which is the user's manual order.
+     *
+     * [collapsedOverride], when given, replaces each section's stored `collapsed` flag; the
+     * screen uses it to fold sections away for the duration of a drag without persisting it.
+     */
     fun buildShoppingRows(
         entries: List<ShoppingListEntry>,
-        preferences: List<CategoryPreference>
+        sections: List<ShoppingSection>,
+        collapsedOverride: ((ShoppingSection) -> Boolean)? = null
     ): List<ShoppingRow> {
-        val index = preferences.index()
-        val rows = entries.map { ShoppingRow.Item(it, resolveCategoryDisplayName(it.category, index)) }
-        val grouped = rows.groupBy { it.categoryDisplayName }
-        // Each group's order key is computed once here rather than inside the comparator, which
-        // the previous in-composition version re-evaluated on every comparison.
-        val orderByCategory = grouped.mapValues { (_, group) ->
-            group.minOf { categoryPreferenceSortOrder(it.entry.category, index) }
-        }
+        val ordered = orderedShoppingSections(sections)
+        val ids = ordered.mapTo(HashSet()) { it.id }
+        val bySection = entries.groupBy { resolveShoppingSectionId(it.sectionId, ids) }
         return buildList {
-            grouped.entries
-                .sortedWith(
-                    compareBy(
-                        { orderByCategory.getValue(it.key) },
-                        // Uncategorized (null) sorts last among equal order keys.
-                        { it.key ?: "￿" }
-                    )
-                )
-                .forEach { (category, group) ->
-                    add(ShoppingRow.Header(category))
-                    addAll(group)
-                }
+            ordered.forEach { section ->
+                val group = bySection[section.id].orEmpty()
+                add(ShoppingRow.Header(section, group.size))
+                val collapsed = collapsedOverride?.invoke(section) ?: section.collapsed
+                if (!collapsed) group.forEach { add(ShoppingRow.Item(it, section.id)) }
+            }
         }
+    }
+
+    /** [sections] in display order, with the default section first (and present even if the
+     *  store somehow lost it). */
+    fun orderedShoppingSections(sections: List<ShoppingSection>): List<ShoppingSection> {
+        val default = sections.firstOrNull { it.isDefault } ?: DEFAULT_SHOPPING_SECTION
+        return listOf(default) + sections
+            .filterNot { it.isDefault }
+            .sortedWith(compareBy<ShoppingSection> { it.sortOrder }.thenBy { it.name.lowercase() })
     }
 
     /** One row per user-visible category, carrying the other raw origins merged onto that same

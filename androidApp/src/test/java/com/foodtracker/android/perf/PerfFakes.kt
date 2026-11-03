@@ -5,7 +5,10 @@ import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
+import com.foodtracker.model.DEFAULT_SHOPPING_SECTION
+import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
 import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
@@ -13,8 +16,10 @@ import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.repository.ShoppingListRepository
+import com.foodtracker.repository.ShoppingSectionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 
 /**
  * In-memory repository fakes for the JVM performance tests.
@@ -84,10 +89,52 @@ class FakeProductNameRepository : ProductNameRepository {
     override suspend fun recordSortOrder(name: String, sortOrder: Double) {
         sortOrders[name] = sortOrder
     }
+    val sectionIds = mutableMapOf<String, String?>()
+    override suspend fun getSectionId(name: String): String? = sectionIds[name.trim().lowercase()]
+    override suspend fun recordSectionId(name: String, sectionId: String?) {
+        sectionIds[name.trim().lowercase()] = sectionId
+    }
 
     override suspend fun clearAll() {
         namesFlow.value = emptyList()
         sortOrders.clear()
+        sectionIds.clear()
+    }
+}
+
+class FakeShoppingSectionRepository(
+    sections: List<ShoppingSection> = emptyList(),
+    /** Entries to re-home on [delete], mirroring the Room DAO's transaction. */
+    private val entries: FakeShoppingListRepository? = null
+) : ShoppingSectionRepository {
+    val sectionsFlow = MutableStateFlow(sections)
+    private fun withDefault(list: List<ShoppingSection>) =
+        if (list.any { it.isDefault }) list else listOf(DEFAULT_SHOPPING_SECTION) + list
+    override fun getSectionsFlow(): Flow<List<ShoppingSection>> = sectionsFlow.map(::withDefault)
+    override suspend fun getAll(): List<ShoppingSection> = withDefault(sectionsFlow.value)
+    override suspend fun getMaxSortOrder(): Double? =
+        sectionsFlow.value.filterNot { it.isDefault }.maxOfOrNull { it.sortOrder }
+    override suspend fun upsert(section: ShoppingSection) = upsertAll(listOf(section))
+    override suspend fun upsertAll(sections: List<ShoppingSection>) {
+        val byId = sections.associateBy { it.id }
+        sectionsFlow.value = sectionsFlow.value.map { byId[it.id] ?: it } +
+            sections.filter { s -> sectionsFlow.value.none { it.id == s.id } }
+    }
+    override suspend fun setCollapsed(id: String, collapsed: Boolean) {
+        val current = withDefault(sectionsFlow.value)
+        sectionsFlow.value = current.map { if (it.id == id) it.copy(collapsed = collapsed) else it }
+    }
+    override suspend fun delete(id: String) {
+        if (id == DEFAULT_SHOPPING_SECTION_ID) return
+        entries?.let { repo ->
+            repo.entriesFlow.value = repo.entriesFlow.value.map {
+                if (it.sectionId == id) it.copy(sectionId = null) else it
+            }
+        }
+        sectionsFlow.value = sectionsFlow.value.filterNot { it.id == id }
+    }
+    override suspend fun clearAll() {
+        sectionsFlow.value = sectionsFlow.value.filter { it.isDefault }
     }
 }
 

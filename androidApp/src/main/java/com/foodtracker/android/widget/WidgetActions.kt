@@ -56,5 +56,31 @@ class TickOffShoppingEntryAction : ActionCallback, KoinComponent {
     }
 }
 
+/** The collapsed state a shopping-section header tap should switch its section to. Passed in
+ *  rather than read back, since the widget may be running without the app's state loaded. */
+internal val widgetCollapseKey = ActionParameters.Key<Boolean>("widget_collapse")
+
+/**
+ * Tapping a section header on the shopping-list widget folds or unfolds it. Persisted through
+ * [PantryStateHolder.setShoppingSectionCollapsed] - the same flag the app's header toggles - so
+ * the app and the widget always show the same sections open. `WidgetUpdater` refreshes the
+ * widget when the sections change.
+ */
+class ToggleShoppingSectionAction : ActionCallback, KoinComponent {
+
+    private val stateHolder: PantryStateHolder by inject()
+
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val sectionId = parameters[widgetTargetIdKey] ?: return
+        val collapse = parameters[widgetCollapseKey] ?: return
+        stateHolder.setShoppingSectionCollapsed(sectionId, collapse)
+    }
+}
+
+internal fun toggleShoppingSectionAction(sectionId: String, collapse: Boolean): Action =
+    actionRunCallback<ToggleShoppingSectionAction>(
+        actionParametersOf(widgetTargetIdKey to sectionId, widgetCollapseKey to collapse)
+    )
+
 internal inline fun <reified T : ActionCallback> widgetRowAction(targetId: String): Action =
     actionRunCallback<T>(actionParametersOf(widgetTargetIdKey to targetId))

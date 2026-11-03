@@ -15,5 +15,10 @@ interface ProductNameRepository {
     suspend fun getSortOrder(name: String): Double?
     suspend fun recordSortOrder(name: String, sortOrder: Double)
 
+    /** The shopping-list section [name] was last moved to via [recordSectionId], or null if it
+     *  never left the default one. Lets a re-added product go back to its section. */
+    suspend fun getSectionId(name: String): String?
+    suspend fun recordSectionId(name: String, sectionId: String?)
+
     suspend fun clearAll()
 }

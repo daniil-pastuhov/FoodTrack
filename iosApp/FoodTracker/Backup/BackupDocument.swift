@@ -60,13 +60,16 @@ public struct BackupDocument: Codable, Equatable {
     public var exportedAtEpochMillis: Int64
     public var items: [PantryItem]
     public var shoppingList: [ShoppingListEntry]
+    /// The user's shopping-list sections (never the default one). Absent from backups made
+    /// before sections existed, which restore into the default section.
+    public var shoppingSections: [ShoppingSection]
     public var categoryPreferences: [CategoryPreference]
     public var products: [CachedProduct]
     public var knownProductNames: [String]
     public var settings: AppSettings
 
     public var isEmpty: Bool {
-        items.isEmpty && shoppingList.isEmpty && products.isEmpty &&
+        items.isEmpty && shoppingList.isEmpty && shoppingSections.isEmpty && products.isEmpty &&
         categoryPreferences.isEmpty && knownProductNames.isEmpty
     }
 
@@ -75,6 +78,7 @@ public struct BackupDocument: Codable, Equatable {
         exportedAtEpochMillis: Int64 = 0,
         items: [PantryItem] = [],
         shoppingList: [ShoppingListEntry] = [],
+        shoppingSections: [ShoppingSection] = [],
         categoryPreferences: [CategoryPreference] = [],
         products: [CachedProduct] = [],
         knownProductNames: [String] = [],
@@ -84,6 +88,7 @@ public struct BackupDocument: Codable, Equatable {
         self.exportedAtEpochMillis = exportedAtEpochMillis
         self.items = items
         self.shoppingList = shoppingList
+        self.shoppingSections = shoppingSections
         self.categoryPreferences = categoryPreferences
         self.products = products
         self.knownProductNames = knownProductNames
@@ -93,7 +98,7 @@ public struct BackupDocument: Codable, Equatable {
     // MARK: - Wire format
 
     private enum CodingKeys: String, CodingKey {
-        case version, exportedAtEpochMillis, items, shoppingList
+        case version, exportedAtEpochMillis, items, shoppingList, shoppingSections
         case categoryPreferences, products, knownProductNames, settings
     }
 
@@ -103,6 +108,7 @@ public struct BackupDocument: Codable, Equatable {
         exportedAtEpochMillis = try container.decodeIfPresent(Int64.self, forKey: .exportedAtEpochMillis) ?? 0
         items = (try container.decodeIfPresent([WireItem].self, forKey: .items) ?? []).map { $0.asPantryItem }
         shoppingList = (try container.decodeIfPresent([WireEntry].self, forKey: .shoppingList) ?? []).map { $0.asEntry }
+        shoppingSections = try container.decodeIfPresent([ShoppingSection].self, forKey: .shoppingSections) ?? []
         categoryPreferences = try container.decodeIfPresent([CategoryPreference].self, forKey: .categoryPreferences) ?? []
         products = try container.decodeIfPresent([CachedProduct].self, forKey: .products) ?? []
         knownProductNames = try container.decodeIfPresent([String].self, forKey: .knownProductNames) ?? []
@@ -115,6 +121,7 @@ public struct BackupDocument: Codable, Equatable {
         try container.encode(exportedAtEpochMillis, forKey: .exportedAtEpochMillis)
         try container.encode(items.map(WireItem.init(from:)), forKey: .items)
         try container.encode(shoppingList.map(WireEntry.init(from:)), forKey: .shoppingList)
+        try container.encode(shoppingSections, forKey: .shoppingSections)
         try container.encode(categoryPreferences, forKey: .categoryPreferences)
         try container.encode(products, forKey: .products)
         try container.encode(knownProductNames, forKey: .knownProductNames)
@@ -237,6 +244,7 @@ private struct WireEntry: Codable {
     let quantity: Int
     let addedDate: String
     let sortOrder: Double
+    let sectionId: String?
 
     init(from entry: ShoppingListEntry) {
         id = entry.id
@@ -246,6 +254,7 @@ private struct WireEntry: Codable {
         quantity = entry.quantity
         addedDate = BackupDates.string(from: entry.addedDate)
         sortOrder = entry.sortOrder
+        sectionId = entry.sectionId
     }
 
     var asEntry: ShoppingListEntry {
@@ -256,7 +265,8 @@ private struct WireEntry: Codable {
             category: category,
             quantity: quantity,
             addedDate: BackupDates.date(from: addedDate),
-            sortOrder: sortOrder
+            sortOrder: sortOrder,
+            sectionId: sectionId
         )
     }
 }

@@ -5,6 +5,7 @@ import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSource
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.model.ShoppingSection
 import kotlinx.datetime.LocalDate
 
 /**
@@ -29,27 +30,30 @@ data class PantryRow(
 }
 
 /**
- * A row in the shopping list's flattened, grouped-by-category layout: either a category header
- * (never draggable) or an entry (draggable within its own group only).
+ * A row in the shopping list's flattened, sectioned layout: either a section header or an
+ * entry. A collapsed section contributes only its header.
  *
- * The flattening, grouping and category-name resolution behind this used to run in composition
- * on every emission. [categoryDisplayName] is carried on [Item] so the drag handler's
- * "are these two rows in the same group?" check is a field comparison rather than two linear
- * preference scans per drag frame.
+ * [Item.sectionId] is the *resolved* section (an entry pointing at a deleted section shows in
+ * the default one), so the drag handler can tell which section a row belongs to with a field
+ * comparison.
  */
 sealed interface ShoppingRow {
     /** Stable identity for `LazyColumn`'s `key`. */
     val key: String
 
-    data class Header(val category: String?) : ShoppingRow {
-        override val key: String get() = "header_${category ?: ""}"
+    data class Header(val section: ShoppingSection, val itemCount: Int) : ShoppingRow {
+        override val key: String get() = headerKey(section.id)
     }
 
     data class Item(
         val entry: ShoppingListEntry,
-        val categoryDisplayName: String?
+        val sectionId: String
     ) : ShoppingRow {
         override val key: String get() = entry.id
+    }
+
+    companion object {
+        fun headerKey(sectionId: String): String = "header_$sectionId"
     }
 }
 

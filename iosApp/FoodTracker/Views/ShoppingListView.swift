@@ -35,6 +35,11 @@ struct ShoppingListView: View {
     @State private var importText = ""
     @State private var importResult: String?
     @FocusState private var isInputFocused: Bool
+    @State private var showNewSection = false
+    @State private var showReorderSections = false
+    @State private var sectionNameText = ""
+    @State private var renamingSection: ShoppingSection?
+    @State private var deletingSection: ShoppingSection?
 
     var body: some View {
         NavigationStack {
@@ -110,95 +115,18 @@ struct ShoppingListView: View {
                     .frame(maxWidth: .infinity)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                 } else {
-                    List {
-                        ForEach(groupedEntries, id: \.category) { group in
-                            Section {
-                                ForEach(group.entries) { entry in
-                                    HStack(spacing: 14) {
-                                        // Decorative affordance only: the row itself is
-                                        // reorderable by long-press-and-drag via .onMove below.
-                                        // The system's own grabber is not used because it needs
-                                        // edit mode, and edit mode suppresses .swipeActions.
-                                        Image(systemName: "line.3.horizontal")
-                                            .font(.title3)
-                                            .foregroundColor(.secondary)
-                                            .accessibilityHidden(true)
-
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(entry.productName)
-                                                .font(.title3)
-                                            if let barcode = entry.barcode {
-                                                Text(barcode)
-                                                    .font(.subheadline)
-                                                    .foregroundColor(.secondary)
-                                            }
-                                        }
-                                        Spacer()
-                                        Button {
-                                            if entry.quantity <= 1 {
-                                                viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
-                                            } else {
-                                                viewModel.decrementShoppingListQuantity(entry.id)
-                                            }
-                                        } label: {
-                                            Image(systemName: "minus.circle")
-                                                .font(.title2)
-                                        }
-                                        .buttonStyle(.plain)
-                                        Text("\(entry.quantity)")
-                                            .font(.title3)
-                                            .frame(minWidth: 24)
-                                            .contentTransition(.numericText())
-                                            .animation(.easeInOut(duration: 0.2), value: entry.quantity)
-                                        Button {
-                                            viewModel.incrementShoppingListQuantity(entry.id)
-                                        } label: {
-                                            Image(systemName: "plus.circle")
-                                                .font(.title2)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                    .padding(.vertical, 10)
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        addEntryManually(entry)
-                                    }
-                                    .swipeActions(edge: .trailing) {
-                                        Button(role: .destructive) {
-                                            viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
-                                        } label: {
-                                            Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
-                                        }
-                                    }
-                                    // No .onDelete is attached, so this is only insurance
-                                    // against a stray delete affordance appearing alongside
-                                    // the reorder support added by .onMove.
-                                    .deleteDisabled(true)
-                                }
-                                .onMove { from, to in
-                                    guard let sourceIndex = from.first else { return }
-                                    let movedId = group.entries[sourceIndex].id
-                                    var reordered = group.entries
-                                    reordered.move(fromOffsets: from, toOffset: to)
-                                    guard let newIndex = reordered.firstIndex(where: { $0.id == movedId }) else { return }
-                                    let beforeId = newIndex > 0 ? reordered[newIndex - 1].id : nil
-                                    let afterId = newIndex < reordered.count - 1 ? reordered[newIndex + 1].id : nil
-                                    viewModel.moveShoppingListEntry(movedId, beforeId: beforeId, afterId: afterId)
-                                }
-                            } header: {
-                                if let category = group.category {
-                                    Text(L10n.categoryName(category))
-                                } else if group.category != groupedEntries.first?.category {
-                                    Divider()
-                                        .padding(.vertical, 8)
-                                }
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
+                    ShoppingSectionedList(
+                        viewModel: viewModel,
+                        onItemRemoved: onItemRemoved,
+                        onEntryTap: addEntryManually,
+                        onRenameSection: { section in
+                            sectionNameText = L10n.shoppingSectionName(section)
+                            renamingSection = section
+                        },
+                        onDeleteSection: { deletingSection = $0 }
+                    )
                     // Clears the floating pill nav bar that overlays this screen (see RootTabView).
                     .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
-                    .animation(.default, value: viewModel.shoppingList)
                     .transition(.opacity)
                 }
             }
@@ -207,6 +135,26 @@ struct ShoppingListView: View {
             .navigationTitle(L10n.shoppingListTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            sectionNameText = ""
+                            showNewSection = true
+                        } label: {
+                            Label(L10n.shoppingSectionNew, systemImage: "folder.badge.plus")
+                        }
+                        if viewModel.shoppingSections.count > 2 {
+                            Button {
+                                showReorderSections = true
+                            } label: {
+                                Label(L10n.shoppingSectionReorder, systemImage: "arrow.up.arrow.down")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "folder.badge.plus")
+                    }
+                    .accessibilityLabel(L10n.shoppingSectionNew)
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showShareSheet = true
@@ -234,7 +182,45 @@ struct ShoppingListView: View {
                 Text(L10n.shoppingListShareDialogMessage)
             }
             .sheet(isPresented: $showQrCode) {
-                ShoppingListQrSheet(payload: ShoppingListShare.toPayload(entries: viewModel.shoppingList))
+                ShoppingListQrSheet(payload: ShoppingListShare.toPayload(
+                    entries: viewModel.shoppingList,
+                    sections: viewModel.shoppingSections
+                ))
+            }
+            .sheet(isPresented: $showReorderSections) {
+                ShoppingSectionReorderSheet(viewModel: viewModel)
+            }
+            .alert(L10n.shoppingSectionNew, isPresented: $showNewSection) {
+                TextField(L10n.shoppingSectionNamePlaceholder, text: $sectionNameText)
+                Button(L10n.cancelButton, role: .cancel) {}
+                Button(L10n.shoppingSectionSave) { viewModel.createShoppingSection(sectionNameText) }
+                    .disabled(sectionNameText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .alert(
+                L10n.shoppingSectionRename,
+                isPresented: Binding(get: { renamingSection != nil }, set: { if !$0 { renamingSection = nil } })
+            ) {
+                TextField(L10n.shoppingSectionNamePlaceholder, text: $sectionNameText)
+                Button(L10n.cancelButton, role: .cancel) {}
+                Button(L10n.shoppingSectionSave) {
+                    if let section = renamingSection {
+                        viewModel.renameShoppingSection(section.id, to: sectionNameText)
+                    }
+                }
+                .disabled(sectionNameText.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            .alert(
+                deletingSection.map { L10n.shoppingSectionDeleteTitle(L10n.shoppingSectionName($0)) } ?? "",
+                isPresented: Binding(get: { deletingSection != nil }, set: { if !$0 { deletingSection = nil } })
+            ) {
+                Button(L10n.cancelButton, role: .cancel) {}
+                Button(L10n.shoppingSectionDelete, role: .destructive) {
+                    if let section = deletingSection {
+                        withAnimation { viewModel.deleteShoppingSection(section.id) }
+                    }
+                }
+            } message: {
+                Text(L10n.shoppingSectionDeleteMessage)
             }
             .sheet(isPresented: $showImportSheet) {
                 NavigationStack {
@@ -421,20 +407,14 @@ struct ShoppingListView: View {
         }.prefix(5).map { $0 }
     }
 
-    // Groups are keyed by the *resolved* category (so a disabled category, or two origins
-    // renamed to the same name, fold into one group here) and ordered by the user's category
-    // preference order (see CategorySettingsView) rather than alphabetically.
-
-    /// The list as shareable text, with the same resolved (renamed, disabled-folded) category
-    /// names the on-screen list shows rather than the raw Open Food Facts values stored on each
-    /// entry.
+    /// The list as shareable text, grouped by section the way the screen shows it. Built from
+    /// the whole list, not the rows, so a collapsed section's entries are still shared.
     private func shareText() -> String {
-        let preferences = viewModel.categoryPreferences
-        return ShoppingListShare.toText(
+        ShoppingListShare.toText(
             entries: viewModel.shoppingList,
             title: L10n.shoppingListTitle,
-            uncategorizedLabel: L10n.shoppingListUncategorized,
-            categoryLabel: { resolveCategoryDisplayName($0, preferences).map(L10n.categoryName) }
+            sections: viewModel.shoppingSections,
+            sectionLabel: L10n.shoppingSectionName
         )
     }
 
@@ -450,19 +430,6 @@ struct ShoppingListView: View {
             L10n.shoppingListImportAllPresent
         } else {
             L10n.shoppingListImportNothing
-        }
-    }
-
-    private var groupedEntries: [(category: String?, entries: [ShoppingListEntry])] {
-        let preferences = viewModel.categoryPreferences
-        let grouped = Dictionary(grouping: viewModel.shoppingList, by: { resolveCategoryDisplayName($0.category, preferences) })
-        return grouped.keys.sorted { lhs, rhs in
-            let lhsOrder = grouped[lhs]?.map { categoryPreferenceSortOrder($0.category, preferences) }.min() ?? .greatestFiniteMagnitude
-            let rhsOrder = grouped[rhs]?.map { categoryPreferenceSortOrder($0.category, preferences) }.min() ?? .greatestFiniteMagnitude
-            if lhsOrder != rhsOrder { return lhsOrder < rhsOrder }
-            return (lhs ?? "\u{FFFF}") < (rhs ?? "\u{FFFF}")
-        }.map { key in
-            (category: key, entries: grouped[key] ?? [])
         }
     }
 
