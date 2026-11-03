@@ -75,7 +75,7 @@ class OpenFoodFactsApi(
         return try {
             val url = "https://world.openfoodfacts.org/api/v2/product/$cleanBarcode.json"
             val response: OffResponse = httpClient.get(url) {
-                header("User-Agent", "FoodTracker-KMP/1.0 (https://github.com/foodtracker)")
+                header("User-Agent", "FoodTracker-Android/1.0 (https://github.com/daniil-pastuhov/FoodTrack)")
             }.body()
 
             if (response.status == 1 && response.product != null) {

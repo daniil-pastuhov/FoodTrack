@@ -7,7 +7,7 @@ import Foundation
 ///
 /// Registering `group.com.foodbest.ios` under the `S8Q8KHX6G5` team (in Xcode's Signing &
 /// Capabilities and/or the Apple Developer portal) is a manual step this file can't perform —
-/// see WIDGETS_TASK.md.
+/// see "Setup" in CONTRIBUTING.md.
 enum AppGroup {
     static let identifier = "group.com.foodbest.ios"
 }
