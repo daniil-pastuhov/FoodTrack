@@ -2,4 +2,4 @@
 // androidApp/build.gradle.kts) and iOS's MARKETING_VERSION (this file is the Xcode project's base
 // configuration, so the app and the widget extension both inherit it). scripts/release bumps it;
 // don't set MARKETING_VERSION anywhere else.
-MARKETING_VERSION = 1.5.1
+MARKETING_VERSION = 1.6.0

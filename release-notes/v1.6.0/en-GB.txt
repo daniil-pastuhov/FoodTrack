@@ -1,0 +1,4 @@
+• Organise your shopping list into your own sections: create, rename, collapse and reorder them
+• Drag products between sections – each product remembers its section for next time
+• The shopping list widget now shows your sections too, and you can collapse them right from the home screen
+• Scanning a product you've added before now pre-selects the storage location you used last time
