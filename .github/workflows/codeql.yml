@@ -1,0 +1,112 @@
+name: CodeQL
+
+# Advanced setup rather than GitHub's default one: the default setup's autobuild can build neither
+# app. Android fails on the missing debug keystore (see "Create a debug keystore" in ci.yml), and
+# iOS needs the xcodebuild invocation that ci.yml's iOS build uses. The build steps
+# below mirror ci.yml's; keep the two in step.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+            runner: ubuntu-latest
+          - language: python
+            build-mode: none
+            runner: ubuntu-latest
+          - language: java-kotlin
+            build-mode: manual
+            runner: ubuntu-latest
+          # Not ci.yml's xcode-27 runner: on that image, CodeQL's build tracer makes every system
+          # binary the build spawns (sandbox-exec first) fail with "Bad CPU type in executable".
+          # The image's default Xcode is fine for analysis, since the app uses no iOS 27 API;
+          # Xcode 27.1 only matters for the shipped app (see ci.yml).
+          - language: swift
+            build-mode: manual
+            runner: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - if: matrix.language == 'java-kotlin'
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          # A cached build would skip the compilation CodeQL has to observe.
+          cache-read-only: true
+      - if: matrix.language == 'java-kotlin'
+        name: Create a debug keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android \
+            -alias debug -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+      - if: matrix.language == 'swift'
+        name: Restore Swift packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/SourcePackages
+          key: spm-codeql-${{ hashFiles('iosApp/FoodTracker.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: spm-codeql-
+      # Resolved before tracing starts, so CodeQL only traces the app's own compilation.
+      - if: matrix.language == 'swift'
+        name: Resolve Swift packages
+        run: |
+          xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resolvePackageDependencies
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      # The Kotlin extractor only sees compilations that run in the traced process, hence no
+      # Gradle or Kotlin daemon and no build cache.
+      - if: matrix.language == 'java-kotlin'
+        name: Build Android
+        run: |
+          ./gradlew --no-daemon --no-build-cache -Pkotlin.compiler.execution.strategy=in-process \
+            :androidApp:assembleDebug
+
+      - if: matrix.language == 'swift'
+        name: Build iOS
+        run: |
+          xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
+            -destination 'generic/platform=iOS Simulator' \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            ARCHS=arm64 CODE_SIGNING_ALLOWED=NO build
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
