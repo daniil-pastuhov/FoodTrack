@@ -1,0 +1,4 @@
+• Del handlelisten inn i dine egne seksjoner: opprett, skjul og endre rekkefølgen på dem
+• Dra varer mellom seksjoner – hver vare husker seksjonen sin til neste gang
+• Handleliste-widgeten viser nå også seksjonene, og du kan skjule dem rett fra startskjermen
+• Når du skanner en vare du har lagt til før, velges oppbevaringsstedet du brukte sist automatisk
