@@ -21,6 +21,13 @@ interface LocalProductDao {
     @Query("UPDATE local_products SET shelfLifeDays = :days WHERE barcode = :barcode")
     suspend fun updateShelfLifeDays(barcode: String, days: Int)
 
+    @Query("SELECT storageLocation FROM local_products WHERE barcode = :barcode")
+    suspend fun getStorageLocation(barcode: String): String?
+
+    /** Targeted UPDATE for the same reason as [updateShelfLifeDays]. */
+    @Query("UPDATE local_products SET storageLocation = :location WHERE barcode = :barcode")
+    suspend fun updateStorageLocation(barcode: String, location: String)
+
     @Query("SELECT * FROM local_products")
     suspend fun getAll(): List<LocalProductEntity>
 

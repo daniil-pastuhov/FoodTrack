@@ -13,7 +13,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LocalProductEntity::class,
         CategoryPreferenceEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -263,6 +263,16 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE pantry_items ADD COLUMN notificationsEnabled INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        // Remembers which storage location each cached product was last put in, so a re-scan
+        // pre-selects it. Nothing to backfill: until a product is added again, the scan flow
+        // falls back to a pantry item carrying the same barcode (see
+        // PantryStateHolder.storageLocationForNewItem).
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE local_products ADD COLUMN storageLocation TEXT")
             }
         }
     }

@@ -376,7 +376,7 @@
     <string name="settings_section_locations">Storage Locations</string>
     <string name="settings_locations_desc">Tap the star to set the default for new items</string>
     <string name="settings_remember_last_location">Remember last storage location</string>
-    <string name="settings_remember_last_location_desc">New items start in the storage location you picked last time</string>
+    <string name="settings_remember_last_location_desc">Products you haven\'t added before start in the storage location you picked last time</string>
     <string name="settings_confirm_rename">Confirm rename</string>
     <string name="settings_set_default_location">Set as default</string>
     <!-- Names for the built-in storage locations and categories, which are stored under fixed

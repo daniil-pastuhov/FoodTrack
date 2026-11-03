@@ -18,6 +18,10 @@ data class CachedProduct(
     val imageUrl: String? = null,
     val category: String? = null,
     val shelfLifeDays: Int? = null,
+    /** Storage location this barcode was put in the last time it was added, so a re-scan
+     *  pre-selects it. Null until then; may name a location that has since been removed or
+     *  renamed, which callers must check against the current list. */
+    val storageLocation: String? = null,
     /** Cached so an allergen warning doesn't depend on the network being up at the moment it
      *  matters, and so a re-scan shows the same detail offline. */
     val nutrition: ProductNutrition = ProductNutrition()

@@ -63,6 +63,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -172,6 +173,20 @@ fun AddEditItemScreen(
     }
     var storageLocation by remember {
         mutableStateOf(initialItem?.storageLocation ?: settings.storageLocationForNewItem())
+    }
+    var storageLocationPicked by remember { mutableStateOf(false) }
+    // The barcode the form was opened with, or the one last scanned from the overlay below.
+    // Not the barcode text field itself: typing in it shouldn't move the location per keystroke.
+    var scannedBarcodeForLocation by remember { mutableStateOf(prefillBarcode) }
+    // A scanned product the user has stored before goes back where it was put last time; the
+    // last-used/default location above only stands for products the app hasn't seen stored.
+    // Resolved asynchronously (it reads the product cache), so it must not override a location
+    // the user has already tapped in the meantime.
+    LaunchedEffect(scannedBarcodeForLocation) {
+        val lookup = scannedBarcodeForLocation
+        if (initialItem != null || lookup.isNullOrBlank()) return@LaunchedEffect
+        val known = stateHolder.storageLocationForNewItem(lookup)
+        if (!storageLocationPicked) storageLocation = known
     }
     val appContext = LocalContext.current
     val labelOf: (String) -> String = remember(appContext) { { categoryLabel(appContext.resources, it) } }
@@ -713,7 +728,10 @@ fun AddEditItemScreen(
                 settings.storageLocations.forEach { location ->
                     FilterChip(
                         selected = storageLocation == location,
-                        onClick = { storageLocation = location },
+                        onClick = {
+                            storageLocation = location
+                            storageLocationPicked = true
+                        },
                         label = { Text(storageLocationLabel(location)) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = BrandPrimary,
@@ -868,7 +886,10 @@ fun AddEditItemScreen(
                 showScanner = false
             },
             onProceedToAddItem = { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedExpiryDate, scannedCategory, scannedSuggestion ->
-                scannedBarcode?.let { barcode = it }
+                scannedBarcode?.let {
+                    barcode = it
+                    scannedBarcodeForLocation = it
+                }
                 scannedName?.let { name = it }
                 scannedBrand?.let { brand = it }
                 scannedImageUrl?.let { imageUrl = it }

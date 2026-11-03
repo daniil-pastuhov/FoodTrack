@@ -15,6 +15,10 @@ final class LocalProductRecord {
     /// to pre-fill the expiry date on a re-scan. Nil until the product has been added once (or
     /// when the observed span was implausible - see `ShelfLife.learnableShelfLife`).
     var shelfLifeDays: Int?
+    /// Storage location this barcode was put in the last time it was added to the pantry, used
+    /// to pre-select the location on a re-scan. Nil until the product has been added once.
+    /// Defaulted so an existing store migrates in place.
+    var storageLocation: String? = nil
     /// Nutri-Score letter as Open Food Facts reports it (a...e), or nil when unrated.
     var nutriScore: String?
     /// NOVA processing group, 1...4.
@@ -49,6 +53,7 @@ final class LocalProductRecord {
         imageUrl: String? = nil,
         category: String? = nil,
         shelfLifeDays: Int? = nil,
+        storageLocation: String? = nil,
         nutrition: ProductNutrition = ProductNutrition()
     ) {
         self.barcode = barcode
@@ -57,6 +62,7 @@ final class LocalProductRecord {
         self.imageUrl = imageUrl
         self.category = category
         self.shelfLifeDays = shelfLifeDays
+        self.storageLocation = storageLocation
         self.nutriScore = nutrition.nutriScore
         self.novaGroup = nutrition.novaGroup
         self.allergens = nutrition.allergens.isEmpty ? nil : nutrition.allergens.joined(separator: "\n")

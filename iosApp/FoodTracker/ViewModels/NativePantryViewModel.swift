@@ -291,9 +291,9 @@ public class NativePantryViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
         let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
         if let existing = try? modelContext.fetch(descriptor).first {
-            // Deliberately leaves shelfLifeDays alone: it is learned from what the user chose,
-            // not carried on the Open Food Facts response this re-caches from, so overwriting
-            // it here would forget the suggestion on every re-scan.
+            // Deliberately leaves shelfLifeDays and storageLocation alone: both are learned from
+            // what the user chose, not carried on the Open Food Facts response this re-caches
+            // from, so overwriting them here would forget the suggestion on every re-scan.
             existing.name = name
             existing.brand = brand
             existing.imageUrl = imageUrl
@@ -609,6 +609,12 @@ public class NativePantryViewModel: ObservableObject {
             batchQueue[index].category = product?.category
             batchQueue[index].expiryDate = suggestion.date
             batchQueue[index].expirySource = suggestion.source
+            // Only replace the placeholder's location if the user hasn't already picked
+            // another one for this row.
+            if let known = knownStorageLocation(for: barcode),
+               batchQueue[index].storageLocation == settings.storageLocationForNewItem {
+                batchQueue[index].storageLocation = known
+            }
             batchQueue[index].isLookingUp = false
         }
     }
@@ -728,7 +734,8 @@ public class NativePantryViewModel: ObservableObject {
                 category: match?.category,
                 expiryDate: suggestion.date,
                 quantity: line.quantity,
-                storageLocation: settings.storageLocationForNewItem,
+                storageLocation: match?.barcode.flatMap { knownStorageLocation(for: $0) }
+                    ?? settings.storageLocationForNewItem,
                 expirySource: suggestion.source
             )
         }
@@ -919,6 +926,47 @@ public class NativePantryViewModel: ObservableObject {
         }
     }
 
+    /// The storage location to pre-select for a new item with `barcode`: where that product was
+    /// put the last time it was added, or else the general rule in
+    /// `AppSettings.storageLocationForNewItem` (last-used or default location) for a product
+    /// the app has never seen stored. Mirrors `PantryStateHolder.storageLocationForNewItem`.
+    public func storageLocationForNewItem(barcode: String?) -> String {
+        let settings = SettingsStore.shared.settings
+        if let trimmed = barcode?.trimmingCharacters(in: .whitespaces), !trimmed.isEmpty,
+           let known = knownStorageLocation(for: trimmed) {
+            return known
+        }
+        return settings.storageLocationForNewItem
+    }
+
+    /// Where `barcode`'s product was last put away, if that is still one of the configured
+    /// locations. Learned on save (see `rememberProductStorageLocation`); for a product saved
+    /// before that was tracked, the newest pantry item carrying the barcode stands in.
+    private func knownStorageLocation(for barcode: String) -> String? {
+        let valid = SettingsStore.shared.settings.storageLocations
+        let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == barcode })
+        if let remembered = (try? modelContext.fetch(descriptor).first)?.storageLocation,
+           valid.contains(remembered) {
+            return remembered
+        }
+        return items
+            .filter { $0.barcode == barcode && valid.contains($0.storageLocation) }
+            .max { $0.addedDate < $1.addedDate }?
+            .storageLocation
+    }
+
+    /// Records where `barcode`'s product was just put away, so a re-scan pre-selects it. Only
+    /// new items count, like `rememberShelfLife`: an opened jar moved to the fridge says nothing
+    /// about where the next one goes. Must run after `saveLocalProduct`, for the same reason.
+    private func rememberProductStorageLocation(barcode: String, location: String) {
+        let trimmed = barcode.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let descriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == trimmed })
+        guard let existing = try? modelContext.fetch(descriptor).first else { return }
+        existing.storageLocation = location
+        try? modelContext.save()
+    }
+
     /// Records `location` as the one to pre-select for the next new item (see
     /// `AppSettings.storageLocationForNewItem`). Only new items count: editing an old item's
     /// location says nothing about where the next scan is going. Skipped while the feature is
@@ -953,7 +1001,10 @@ public class NativePantryViewModel: ObservableObject {
                 // Carried from the scan that produced this item, when there was one.
                 nutrition: scannedProduct?.barcode == barcode ? scannedProduct?.nutrition ?? ProductNutrition() : ProductNutrition()
             )
-            if isNewItem { rememberShelfLife(barcode: barcode, item: item) }
+            if isNewItem {
+                rememberShelfLife(barcode: barcode, item: item)
+                rememberProductStorageLocation(barcode: barcode, location: item.storageLocation)
+            }
         }
 
         if isNewItem {
@@ -1436,6 +1487,7 @@ public class NativePantryViewModel: ObservableObject {
                 imageUrl: $0.imageUrl,
                 category: $0.category,
                 shelfLifeDays: $0.shelfLifeDays,
+                storageLocation: $0.storageLocation,
                 nutrition: $0.nutrition
             )
         }
@@ -1521,6 +1573,7 @@ public class NativePantryViewModel: ObservableObject {
                 existing.imageUrl = product.imageUrl
                 existing.category = product.category
                 existing.shelfLifeDays = product.shelfLifeDays
+                existing.storageLocation = product.storageLocation
                 existing.apply(product.nutrition)
             } else {
                 let record = LocalProductRecord(
@@ -1530,6 +1583,7 @@ public class NativePantryViewModel: ObservableObject {
                     imageUrl: product.imageUrl,
                     category: product.category,
                     shelfLifeDays: product.shelfLifeDays,
+                    storageLocation: product.storageLocation,
                     nutrition: product.nutrition
                 )
                 modelContext.insert(record)

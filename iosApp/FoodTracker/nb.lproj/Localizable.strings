@@ -181,7 +181,7 @@
 "settings_section_locations" = "Oppbevaringssteder";
 "settings_locations_desc" = "Trykk på stjernen for å sette standard for nye varer";
 "settings_remember_last_location" = "Husk sist brukte oppbevaringssted";
-"settings_remember_last_location_desc" = "Nye varer starter på oppbevaringsstedet du valgte sist";
+"settings_remember_last_location_desc" = "Varer du ikke har lagt til før, starter på oppbevaringsstedet du valgte sist";
 "settings_add_location_placeholder" = "Navn på nytt sted";
 "settings_add_location" = "Legg til sted";
 "settings_set_default_location" = "Sett som standard";

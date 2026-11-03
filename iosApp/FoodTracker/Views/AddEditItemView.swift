@@ -64,6 +64,8 @@ public struct AddEditItemView: View {
         return stored.isEmpty ? nil : stored
     }
     @State private var storageLocation: String = DefaultStorageLocations.pantry
+    /// Set once the user taps a location chip, so a scan from the overlay doesn't move it.
+    @State private var storageLocationPicked = false
     @State private var category: String = ""
     /// The stored category whatever is in the `category` field stands for (the field shows display
     /// names), so saving it unchanged keeps that exact category. See `categoryForFieldText`.
@@ -285,6 +287,7 @@ public struct AddEditItemView: View {
                                 isSelected: storageLocation == loc
                             ) {
                                 storageLocation = loc
+                                storageLocationPicked = true
                             }
                         }
                     }
@@ -433,7 +436,9 @@ public struct AddEditItemView: View {
                     brand = prefillBrand ?? ""
                     barcode = prefillBarcode ?? ""
                     imageUrl = prefillImageUrl
-                    storageLocation = settingsStore.settings.storageLocationForNewItem
+                    // A product stored before goes back where it was put last time; the
+                    // last-used/default location only stands for products not seen stored.
+                    storageLocation = viewModel.storageLocationForNewItem(barcode: prefillBarcode)
                     categorySource = prefillCategory
                     category = prefillCategory.map { categoryFieldText($0, viewModel.categoryPreferences) } ?? ""
                     if let date = prefillDate {
@@ -500,7 +505,13 @@ public struct AddEditItemView: View {
                     // would discard whatever they had typed.
                     checkDuplicates: false
                 ) { scannedBarcode, scannedName, scannedBrand, scannedImageUrl, scannedDate, scannedCategory, scannedSuggestion in
-                    if let scannedBarcode { barcode = scannedBarcode }
+                    if let scannedBarcode {
+                        barcode = scannedBarcode
+                        // A product stored before goes back where it was put last time.
+                        if editingItem == nil && !storageLocationPicked {
+                            storageLocation = viewModel.storageLocationForNewItem(barcode: scannedBarcode)
+                        }
+                    }
                     if let scannedName { name = scannedName }
                     if let scannedBrand { brand = scannedBrand }
                     if let scannedImageUrl { imageUrl = scannedImageUrl }

@@ -90,7 +90,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
-                FoodTrackerDatabase.MIGRATION_10_11
+                FoodTrackerDatabase.MIGRATION_10_11,
+                FoodTrackerDatabase.MIGRATION_11_12
             )
             .build()
 
@@ -177,7 +178,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
-                FoodTrackerDatabase.MIGRATION_10_11
+                FoodTrackerDatabase.MIGRATION_10_11,
+                FoodTrackerDatabase.MIGRATION_11_12
             )
             .build()
 
@@ -269,7 +271,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
-                FoodTrackerDatabase.MIGRATION_10_11
+                FoodTrackerDatabase.MIGRATION_10_11,
+                FoodTrackerDatabase.MIGRATION_11_12
             )
             .build()
 
@@ -380,7 +383,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
-                FoodTrackerDatabase.MIGRATION_10_11
+                FoodTrackerDatabase.MIGRATION_10_11,
+                FoodTrackerDatabase.MIGRATION_11_12
             )
             .build()
 
@@ -480,7 +484,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_7_8,
                 FoodTrackerDatabase.MIGRATION_8_9,
                 FoodTrackerDatabase.MIGRATION_9_10,
-                FoodTrackerDatabase.MIGRATION_10_11
+                FoodTrackerDatabase.MIGRATION_10_11,
+                FoodTrackerDatabase.MIGRATION_11_12
             )
             .build()
 
@@ -606,7 +611,12 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_8_9, FoodTrackerDatabase.MIGRATION_9_10, FoodTrackerDatabase.MIGRATION_10_11)
+            .addMigrations(
+                FoodTrackerDatabase.MIGRATION_8_9,
+                FoodTrackerDatabase.MIGRATION_9_10,
+                FoodTrackerDatabase.MIGRATION_10_11,
+                FoodTrackerDatabase.MIGRATION_11_12
+            )
             .build()
         val dao = db.localProductDao()
 
@@ -635,6 +645,68 @@ class FoodTrackerMigrationTest {
         assertNotNull(untouched)
         assertEquals("Product 1111", untouched!!.name)
         assertEquals("Brand", untouched.brand)
+
+        db.close()
+    }
+
+    @Test
+    fun migrate11To12AddsStorageLocationToCachedProductsWithoutTouchingThem() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-11-12.db")
+        dbFile.delete()
+
+        // Build a version-11 database with Room itself (so every other table matches the
+        // schema exactly), then strip local_products back to its v11 shape and seed a row.
+        Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .build()
+            .apply { openHelper.writableDatabase }
+            .close()
+        SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            db.execSQL("DROP TABLE local_products")
+            db.execSQL(
+                """
+                CREATE TABLE local_products (
+                    barcode TEXT NOT NULL PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    brand TEXT,
+                    imageUrl TEXT,
+                    category TEXT,
+                    shelfLifeDays INTEGER,
+                    nutriScore TEXT,
+                    novaGroup INTEGER,
+                    allergens TEXT,
+                    ingredients TEXT
+                )
+                """.trimIndent()
+            )
+            db.insert(
+                "local_products",
+                null,
+                ContentValues().apply {
+                    put("barcode", "1111")
+                    put("name", "Peas")
+                    put("brand", "Brand")
+                    put("shelfLifeDays", 30)
+                    put("nutriScore", "a")
+                }
+            )
+            db.version = 11
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_11_12)
+            .build()
+        val dao = db.localProductDao()
+
+        val migrated = dao.getByBarcode("1111")
+        assertNotNull("cached product must survive the migration", migrated)
+        assertEquals("Peas", migrated!!.name)
+        assertEquals(30, migrated.shelfLifeDays)
+        assertEquals("a", migrated.nutriScore)
+        assertNull("no location is known until the product is added again", migrated.storageLocation)
+
+        dao.updateStorageLocation("1111", "Freezer")
+        assertEquals("Freezer", dao.getStorageLocation("1111"))
 
         db.close()
     }

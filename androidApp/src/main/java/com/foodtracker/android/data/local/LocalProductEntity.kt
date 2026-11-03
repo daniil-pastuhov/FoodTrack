@@ -17,6 +17,9 @@ data class LocalProductEntity(
      *  to pre-fill the expiry date on a re-scan. Null until the product has been added once (or
      *  when the observed span was implausible - see `ShelfLife.learnableShelfLife`). */
     val shelfLifeDays: Int? = null,
+    /** Storage location this barcode was put in the last time it was added to the pantry, used
+     *  to pre-select the location on a re-scan. Null until the product has been added once. */
+    val storageLocation: String? = null,
     /** Nutri-Score letter as Open Food Facts reports it (a..e), or null when unrated. */
     val nutriScore: String? = null,
     /** NOVA processing group, 1..4. */

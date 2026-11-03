@@ -23,6 +23,15 @@ interface LocalProductRepository {
      *  no-op - [saveProduct] always runs first on the save path that calls this. */
     suspend fun recordShelfLifeDays(barcode: String, days: Int)
 
+    /** The storage location this barcode was last added to (see [recordStorageLocation]), or
+     *  null if it has never been added since this was tracked. */
+    suspend fun getStorageLocation(barcode: String): String?
+
+    /** Records where this barcode's product was just put away, so a re-scan pre-selects the
+     *  same location. Same contract as [recordShelfLifeDays]: leaves the rest of the cached row
+     *  alone, and is a no-op for a barcode with no cached product yet. */
+    suspend fun recordStorageLocation(barcode: String, location: String)
+
     /** Every cached product, shelf lives included - the whole table, for a backup. */
     suspend fun getAll(): List<CachedProduct>
 

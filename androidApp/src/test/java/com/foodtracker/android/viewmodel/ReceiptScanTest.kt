@@ -134,6 +134,22 @@ class ReceiptScanTest {
     }
 
     @Test
+    fun testAMatchedLineStartsInTheProductsRememberedLocationAndOthersInTheGeneralOne() {
+        val fixture = Fixture(settings = AppSettings(lastUsedStorageLocation = "Pantry"))
+        try {
+            fixture.localProducts.seed(ProductInfo(barcode = "111", name = "Brown Bread"))
+            fixture.localProducts.storageLocations["111"] = "Freezer"
+
+            fixture.stateHolder.enqueueReceiptLines(receipt)
+
+            assertEquals("Freezer", fixture.queue.first { it.barcode == "111" }.storageLocation)
+            assertEquals("Pantry", fixture.queue.first { it.name == "MLK SEMI 2PT" }.storageLocation)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun testAnUnrelatedCachedProductIsNotAdopted() {
         val fixture = Fixture()
         try {
