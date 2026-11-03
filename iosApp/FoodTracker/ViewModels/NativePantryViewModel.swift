@@ -96,7 +96,7 @@ public class NativePantryViewModel: ObservableObject {
             ShoppingSectionRecord.self
         ])
         guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
-            fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see WIDGETS_TASK.md")
+            fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see \"Setup\" in CONTRIBUTING.md")
         }
         let storeURL = appGroupURL.appendingPathComponent("FoodTracker.store")
         migrateLegacyStoreIfNeeded(to: storeURL)
@@ -925,7 +925,7 @@ public class NativePantryViewModel: ObservableObject {
             return nil
         }
         var request = URLRequest(url: url)
-        request.setValue("FoodTracker-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
         guard let (data, _) = try? await URLSession.shared.data(for: request),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let status = json["status"] as? Int, status == 1,
@@ -985,7 +985,7 @@ public class NativePantryViewModel: ObservableObject {
             }
 
             var request = URLRequest(url: url)
-            request.setValue("FoodTracker-iOS/1.0", forHTTPHeaderField: "User-Agent")
+            request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
 
             do {
                 let (data, _) = try await URLSession.shared.data(for: request)

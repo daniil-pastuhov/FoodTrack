@@ -12,7 +12,8 @@ plugins {
 
 // Release signing credentials live in a git-ignored keystore.properties next to this
 // file (storeFile is resolved relative to this module dir), never in source control.
-// See README.MD "Release signing" for how to generate one.
+// It holds storeFile, storePassword, keyAlias and keyPassword; CI writes it from repository
+// secrets (see .github/workflows/ci.yml). Without it, release builds come out unsigned.
 val keystorePropertiesFile = file("keystore.properties")
 val keystoreProperties = Properties().apply {
     if (keystorePropertiesFile.exists()) {

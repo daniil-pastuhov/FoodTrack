@@ -99,7 +99,7 @@ public final class ProductImageLoader: @unchecked Sendable {
 
     private func fetchRemote(_ url: URL) async -> UIImage? {
         var request = URLRequest(url: url)
-        request.setValue("FoodTracker-iOS/1.0", forHTTPHeaderField: "User-Agent")
+        request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
         guard let (data, response) = try? await session.data(for: request) else { return nil }
         if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
             return nil

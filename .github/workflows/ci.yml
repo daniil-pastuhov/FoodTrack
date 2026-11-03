@@ -3,8 +3,8 @@ name: CI
 # Every push and pull request: Android and shared unit tests, an Android debug build, and an iOS
 # build, each only when its files changed (see the "changes" job), and none where another run
 # already built the same code:
-# - a release/v* pull request: the push run of the same commit builds it, and must, as the publish
-#   jobs need it;
+# - a release/v* pull request from this repository (not a fork, whose pushes run nothing here): the
+#   push run of the same commit builds it, and must, as the publish jobs need it;
 # - the push of a pull request's merge commit to main: the pull request's runs built the merge (as
 #   of its last push, so a main that moved in between goes unbuilt). A release PR's merge is still
 #   built, because its pull request runs are the ones skipped above.
@@ -41,7 +41,8 @@ jobs:
     name: Find what to build
     if: >-
       github.event.action != 'closed' &&
-      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v')) &&
+      !(github.event_name == 'pull_request' && startsWith(github.head_ref, 'release/v') &&
+        github.event.pull_request.head.repo.full_name == github.repository) &&
       !(github.event_name == 'push' && github.ref == 'refs/heads/main' &&
         startsWith(github.event.head_commit.message, 'Merge pull request #') &&
         !contains(github.event.head_commit.message, '/release/v'))
@@ -299,7 +300,8 @@ jobs:
     name: Promote to Google Play closed testing
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
-      github.event.pull_request.merged && startsWith(github.head_ref, 'release/v')
+      github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     concurrency:
@@ -339,6 +341,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       vars.IOS_PUBLISH == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -360,6 +363,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
       github.event.pull_request.merged && startsWith(github.head_ref, 'release/v') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
       vars.IOS_PUBLISH == 'true'
     needs: wait-for-testflight
     runs-on: ubuntu-latest

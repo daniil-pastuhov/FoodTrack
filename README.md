@@ -19,11 +19,15 @@ A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Andr
 
 ## Project Structure
 
-- `shared/`: Kotlin Multiplatform shared domain, Open Food Facts Ktor client, GS1 parser, Date OCR parsing heuristics, and Pantry repositories.
-- `androidApp/`: Native Android application built with Jetpack Compose (Material 3), CameraX, and Google ML Kit.
-- `iosApp/`: Native iOS application built with SwiftUI, AVFoundation, and Apple Vision.
+- `shared/`: Kotlin Multiplatform shared domain, Open Food Facts Ktor client, GS1 parser, Date OCR parsing heuristics, the pantry state holder and repository interfaces. Only the Android app uses it.
+- `androidApp/`: Native Android application built with Jetpack Compose (Material 3), CameraX, Google ML Kit and Room.
+- `iosApp/`: Native iOS application built with SwiftUI, AVFoundation, Apple Vision and SwiftData. It is a separate implementation and does not link `shared/`, so a logic change on one platform has to be ported to the other by hand.
+
+The pantry stays on the device: there is no backend, account or sync. The only network calls are barcode lookups on Open Food Facts and, in release builds, crash reports to Firebase Crashlytics.
 
 ## Building and Running
+
+Requires JDK 17 for Android and Xcode for iOS. See [CONTRIBUTING.md](CONTRIBUTING.md) for the one-time setup (a debug keystore, and your own signing team for running on an iPhone).
 
 ### Run Unit Tests
 ```bash
@@ -41,6 +45,8 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker -destinatio
 ```
 
 ## Releasing
+
+This section is for the maintainer: publishing needs the repository's store credentials.
 
 Merging to `main` publishes nothing; CI only tests and builds it (a merged pull request other than a release one is not built again on `main`, as its pull request runs built it). A release goes out in two steps:
 
@@ -67,3 +73,15 @@ as `MARKETING_VERSION`. Don't set the version anywhere else.
 Needs `gh` (logged in) and `claude` on your PATH. Play rejects notes longer than 500 characters
 per language, and the script checks that. App Review needs the version page in App Store Connect
 complete (App Privacy, App Review contact); the job says so if Apple refuses the submission.
+
+## Contributing
+
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). To report a security problem, see [SECURITY.md](SECURITY.md).
+
+## License
+
+FoodTracker is licensed under the [Apache License 2.0](LICENSE).
+
+The license covers the code. It does not cover the "BestBefore" name, the app icon or the store-listing artwork in `store-listing/`. Please use your own name and icon if you publish a fork to an app store.
+
+Product data and pictures come from [Open Food Facts](https://world.openfoodfacts.org/), under the Open Database License (database) and Creative Commons Attribution-ShareAlike (pictures).
