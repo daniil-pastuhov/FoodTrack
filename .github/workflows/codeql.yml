@@ -75,6 +75,19 @@ jobs:
           path: ${{ runner.temp }}/SourcePackages
           key: spm-${{ hashFiles('iosApp/FoodTracker.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
           restore-keys: spm-
+      # CodeQL's macOS build tracer needs Rosetta 2 on Apple silicon, which the xcode-27 image
+      # lacks: without it every process the traced build spawns fails with "Bad CPU type".
+      - if: matrix.language == 'swift'
+        name: Install Rosetta
+        run: arch -x86_64 /usr/bin/true 2>/dev/null || sudo softwareupdate --install-rosetta --agree-to-license
+      # Resolved before tracing starts, so CodeQL only traces the app's own compilation.
+      - if: matrix.language == 'swift'
+        name: Resolve Swift packages
+        run: |
+          xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/SourcePackages" \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            -resolvePackageDependencies
 
       - uses: github/codeql-action/init@v4
         with:
