@@ -240,6 +240,26 @@ class BackupRestoreTest {
     }
 
     @Test
+    fun testRememberedStorageLocationsSurviveARestore() {
+        val source = Fixture(items = listOf(item("a", "Milk", barcode = "111")))
+        val json = try {
+            source.localProducts.seed(ProductInfo(barcode = "111", name = "Milk"))
+            source.localProducts.storageLocations["111"] = "Freezer"
+            source.exportJson()
+        } finally {
+            source.close()
+        }
+
+        val target = Fixture()
+        try {
+            target.restore(json, RestoreMode.REPLACE)
+            assertEquals("Freezer", target.localProducts.storageLocations["111"])
+        } finally {
+            target.close()
+        }
+    }
+
+    @Test
     fun testARejectedFileChangesNothing() {
         val fixture = Fixture(items = listOf(item("local", "Yoghurt")))
         try {

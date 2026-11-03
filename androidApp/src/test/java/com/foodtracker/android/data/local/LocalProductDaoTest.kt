@@ -3,6 +3,7 @@ package com.foodtracker.android.data.local
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.foodtracker.model.ProductInfo
+import com.foodtracker.model.ProductNutrition
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -105,5 +106,86 @@ class LocalProductDaoTest {
         repo.recordShelfLifeDays("  7038010000000  ", 21)
 
         assertEquals(21, repo.getShelfLifeDays(" 7038010000000 "))
+    }
+
+    @Test
+    fun recordingAStorageLocationLeavesTheCachedProductAndShelfLifeAlone() = runTest {
+        repo.saveProduct(product())
+        repo.recordShelfLifeDays("7038010000000", 14)
+        repo.recordStorageLocation("7038010000000", "Freezer")
+
+        assertEquals("Freezer", repo.getStorageLocation("7038010000000"))
+        assertEquals(14, repo.getShelfLifeDays("7038010000000"))
+        assertEquals("Yoghurt", repo.getByBarcode("7038010000000")?.name)
+    }
+
+    @Test
+    fun rescanningAProductKeepsItsRememberedStorageLocation() = runTest {
+        repo.saveProduct(product())
+        repo.recordStorageLocation("7038010000000", "Freezer")
+
+        // Same hazard as the shelf life: ProductInfo carries no location, so a verbatim upsert
+        // on re-scan would forget where the user puts this product.
+        repo.saveProduct(product(name = "Yoghurt Natural"))
+
+        assertEquals("Freezer", repo.getStorageLocation("7038010000000"))
+    }
+
+    @Test
+    fun recordingAStorageLocationForAnUncachedBarcodeIsANoOp() = runTest {
+        repo.recordStorageLocation("0000000000000", "Freezer")
+
+        assertNull(repo.getByBarcode("0000000000000"))
+        assertNull(repo.getStorageLocation("0000000000000"))
+    }
+
+    @Test
+    fun storageLocationBarcodesAreTrimmed() = runTest {
+        repo.saveProduct(product())
+        repo.recordStorageLocation("  7038010000000  ", "Fridge")
+
+        assertEquals("Fridge", repo.getStorageLocation(" 7038010000000 "))
+    }
+
+    @Test
+    fun storageLocationSurvivesTheBackupReadAndWritePaths() = runTest {
+        repo.saveProduct(product())
+        repo.recordStorageLocation("7038010000000", "Freezer")
+        val exported = repo.getAll()
+        assertEquals("Freezer", exported.single().storageLocation)
+
+        repo.clearAll()
+        repo.saveAll(exported)
+
+        assertEquals("Freezer", repo.getStorageLocation("7038010000000"))
+    }
+
+    @Test
+    fun storageLocationIsScopedToItsOwnBarcode() = runTest {
+        repo.saveProduct(product())
+        repo.saveProduct(product().copy(barcode = "7038010000001", name = "Skyr"))
+        repo.saveProduct(product().copy(barcode = "7038010000002", name = "Kefir"))
+        repo.recordStorageLocation("7038010000002", "Fridge")
+
+        repo.recordStorageLocation("7038010000001", "Freezer")
+
+        assertEquals("Freezer", repo.getStorageLocation("7038010000001"))
+        assertNull(repo.getStorageLocation("7038010000000"))
+        assertEquals("Fridge", repo.getStorageLocation("7038010000002"))
+        // A barcode with no cached row must not pick up a neighbouring product's location
+        // (this one sorts between ...000 and ...001).
+        assertNull(repo.getStorageLocation("70380100000005"))
+    }
+
+    @Test
+    fun resavingWithoutNutritionKeepsTheCachedNutrition() = runTest {
+        repo.saveProduct(product().copy(nutrition = ProductNutrition(nutriScore = "b", allergens = listOf("Milk"))))
+
+        // A manual save carries no nutrition; it must not blank what a lookup cached.
+        repo.saveProduct(product(name = "Yoghurt Natural"))
+
+        val cached = repo.getByBarcode("7038010000000")
+        assertEquals("b", cached?.nutrition?.nutriScore)
+        assertEquals(listOf("Milk"), cached?.nutrition?.allergens)
     }
 }

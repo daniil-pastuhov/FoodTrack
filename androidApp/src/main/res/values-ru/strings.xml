@@ -412,7 +412,7 @@
     <string name="settings_section_locations">Места хранения</string>
     <string name="settings_locations_desc">Нажмите на звёздочку, чтобы задать место по умолчанию для новых продуктов</string>
     <string name="settings_remember_last_location">Запоминать последнее место хранения</string>
-    <string name="settings_remember_last_location_desc">Новые продукты получают место хранения, выбранное в прошлый раз</string>
+    <string name="settings_remember_last_location_desc">Продукты, которых вы раньше не добавляли, получают место хранения, выбранное в прошлый раз</string>
     <string name="settings_confirm_rename">Подтвердить переименование</string>
     <string name="settings_set_default_location">Сделать по умолчанию</string>
     <string name="storage_location_fridge">Холодильник</string>

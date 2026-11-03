@@ -697,6 +697,7 @@ class PantryStateHolder(
                 barcode = barcode,
                 category = product?.category
             )
+            val knownLocation = knownStorageLocation(barcode, settings)
             _uiState.update { state ->
                 state.copy(
                     batchQueue = state.batchQueue.map { entry ->
@@ -710,6 +711,13 @@ class PantryStateHolder(
                             category = product?.category,
                             expiryDate = suggestion.date,
                             expirySource = suggestion.source,
+                            // Only replace the placeholder's location if the user hasn't
+                            // already picked another one for this row.
+                            storageLocation = if (knownLocation != null && entry.storageLocation == placeholder.storageLocation) {
+                                knownLocation
+                            } else {
+                                entry.storageLocation
+                            },
                             isLookingUp = false
                         )
                     }
@@ -760,7 +768,8 @@ class PantryStateHolder(
                     category = match?.category,
                     expiryDate = suggestion.date,
                     quantity = line.quantity,
-                    storageLocation = settings.storageLocationForNewItem(),
+                    storageLocation = match?.barcode?.let { knownStorageLocation(it, settings) }
+                        ?: settings.storageLocationForNewItem(),
                     expirySource = suggestion.source
                 )
             }
@@ -943,7 +952,10 @@ class PantryStateHolder(
                 // Must run after saveProduct: recordShelfLifeDays deliberately only updates an
                 // existing cache row (so it can't clobber the cached name/brand/image), and
                 // saveProduct is what guarantees that row exists.
-                if (isNewItem) rememberShelfLife(barcode, resolvedItem)
+                if (isNewItem) {
+                    rememberShelfLife(barcode, resolvedItem)
+                    localProductRepository.recordStorageLocation(barcode, resolvedItem.storageLocation)
+                }
             }
             if (isNewItem) {
                 val scanEntryId = _uiState.value.scanningShoppingListEntryId
@@ -1322,6 +1334,30 @@ class PantryStateHolder(
         if (settings.rememberLastStorageLocation && settings.lastUsedStorageLocation != location) {
             updateSettings(settings.copy(lastUsedStorageLocation = location))
         }
+    }
+
+    /**
+     * The storage location to pre-select for a new item with [barcode]: where that product was
+     * put the last time it was added, or else the general rule in
+     * [AppSettings.storageLocationForNewItem] (last-used or default location) for a product
+     * the app has never seen stored.
+     */
+    suspend fun storageLocationForNewItem(barcode: String?): String {
+        val settings = _uiState.value.settings
+        val trimmed = barcode?.trim()?.takeIf { it.isNotEmpty() }
+        return trimmed?.let { knownStorageLocation(it, settings) } ?: settings.storageLocationForNewItem()
+    }
+
+    /** Where [barcode]'s product was last put away, if that is still one of the configured
+     *  locations. Learned on save (see [saveItem]); for a product saved before that was
+     *  tracked, the newest pantry item carrying the barcode stands in. */
+    private suspend fun knownStorageLocation(barcode: String, settings: AppSettings): String? {
+        val valid = settings.storageLocations
+        localProductRepository.getStorageLocation(barcode)?.takeIf { it in valid }?.let { return it }
+        return repository.findByBarcode(barcode)
+            .filter { it.storageLocation in valid }
+            .maxByOrNull { it.addedDate }
+            ?.storageLocation
     }
 
     /** Learns how long [item]'s product keeps, so a future scan of the same barcode pre-fills

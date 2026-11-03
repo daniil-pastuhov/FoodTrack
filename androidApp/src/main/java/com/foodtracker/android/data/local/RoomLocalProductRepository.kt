@@ -28,12 +28,12 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
         // ProductInfo carries no shelf life (it doubles as the Open Food Facts DTO), so an
         // upsert built from one would reset an already-learned value to null. Carry the stored
         // one across rather than letting a plain re-scan forget it.
-        val existingShelfLife = dao.getShelfLifeDays(trimmed)
+        val existing = dao.getByBarcode(trimmed)
         // A manually-entered product carries no nutrition, and neither does a lookup OFF has
         // nothing for. Keep whatever a previous successful lookup cached rather than blanking
         // it - losing a cached allergen list is the one outcome worth avoiding here.
         val nutrition = product.nutrition.takeIf { !it.isEmpty }
-            ?: dao.getByBarcode(trimmed)?.toNutrition()
+            ?: existing?.toNutrition()
             ?: ProductNutrition()
         dao.upsert(
             LocalProductEntity(
@@ -42,7 +42,9 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
                 brand = product.brand,
                 imageUrl = product.imageUrl,
                 category = product.category,
-                shelfLifeDays = existingShelfLife,
+                // Same for the remembered storage location: learned, not part of ProductInfo.
+                shelfLifeDays = existing?.shelfLifeDays,
+                storageLocation = existing?.storageLocation,
                 nutriScore = nutrition.nutriScore,
                 novaGroup = nutrition.novaGroup,
                 allergens = nutrition.allergens.takeIf { it.isNotEmpty() }?.joinToString("\n"),
@@ -63,6 +65,18 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
         dao.updateShelfLifeDays(trimmed, days)
     }
 
+    override suspend fun getStorageLocation(barcode: String): String? {
+        val trimmed = barcode.trim()
+        if (trimmed.isEmpty()) return null
+        return dao.getStorageLocation(trimmed)
+    }
+
+    override suspend fun recordStorageLocation(barcode: String, location: String) {
+        val trimmed = barcode.trim()
+        if (trimmed.isEmpty()) return
+        dao.updateStorageLocation(trimmed, location)
+    }
+
     override suspend fun getAll(): List<CachedProduct> = dao.getAll().map {
         CachedProduct(
             barcode = it.barcode,
@@ -71,6 +85,7 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
             imageUrl = it.imageUrl,
             category = it.category,
             shelfLifeDays = it.shelfLifeDays,
+            storageLocation = it.storageLocation,
             nutrition = it.toNutrition()
         )
     }
@@ -88,6 +103,7 @@ class RoomLocalProductRepository(private val dao: LocalProductDao) : LocalProduc
                     imageUrl = product.imageUrl,
                     category = product.category,
                     shelfLifeDays = product.shelfLifeDays,
+                    storageLocation = product.storageLocation,
                     nutriScore = product.nutrition.nutriScore,
                     novaGroup = product.nutrition.novaGroup,
                     allergens = product.nutrition.allergens.takeIf { it.isNotEmpty() }?.joinToString("\n"),

@@ -94,6 +94,7 @@ class FakeProductNameRepository : ProductNameRepository {
 class FakeLocalProductRepository : LocalProductRepository {
     private val products = mutableMapOf<String, ProductInfo>()
     val shelfLives = mutableMapOf<String, Int>()
+    val storageLocations = mutableMapOf<String, String>()
 
     /** Non-suspending seeding, so a test can arrange a cached product without a coroutine. */
     fun seed(product: ProductInfo) {
@@ -119,6 +120,13 @@ class FakeLocalProductRepository : LocalProductRepository {
         if (products.containsKey(barcode)) shelfLives[barcode] = days
     }
 
+    override suspend fun getStorageLocation(barcode: String): String? = storageLocations[barcode]
+
+    /** Same cached-row-only contract as [recordShelfLifeDays]. */
+    override suspend fun recordStorageLocation(barcode: String, location: String) {
+        if (products.containsKey(barcode)) storageLocations[barcode] = location
+    }
+
     override suspend fun getAll(): List<CachedProduct> = products.values.map {
         CachedProduct(
             barcode = it.barcode,
@@ -126,7 +134,8 @@ class FakeLocalProductRepository : LocalProductRepository {
             brand = it.brand,
             imageUrl = it.imageUrl,
             category = it.category,
-            shelfLifeDays = shelfLives[it.barcode]
+            shelfLifeDays = shelfLives[it.barcode],
+            storageLocation = storageLocations[it.barcode]
         )
     }
 
@@ -134,12 +143,14 @@ class FakeLocalProductRepository : LocalProductRepository {
         products.forEach { product ->
             this.products[product.barcode] = product.toProductInfo()
             product.shelfLifeDays?.let { shelfLives[product.barcode] = it }
+            product.storageLocation?.let { storageLocations[product.barcode] = it }
         }
     }
 
     override suspend fun clearAll() {
         products.clear()
         shelfLives.clear()
+        storageLocations.clear()
     }
 }
 

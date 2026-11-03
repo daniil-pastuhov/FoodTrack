@@ -374,7 +374,7 @@
     <string name="settings_section_locations">Oppbevaringssteder</string>
     <string name="settings_locations_desc">Trykk på stjernen for å sette standard for nye varer</string>
     <string name="settings_remember_last_location">Husk sist brukte oppbevaringssted</string>
-    <string name="settings_remember_last_location_desc">Nye varer starter på oppbevaringsstedet du valgte sist</string>
+    <string name="settings_remember_last_location_desc">Varer du ikke har lagt til før, starter på oppbevaringsstedet du valgte sist</string>
     <string name="settings_confirm_rename">Bekreft omdøping</string>
     <string name="settings_set_default_location">Sett som standard</string>
     <string name="storage_location_fridge">Kjøleskap</string>
