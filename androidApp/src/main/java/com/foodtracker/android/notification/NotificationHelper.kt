@@ -92,26 +92,38 @@ object NotificationHelper {
      * The reminder's title and body for an item with [daysRemaining] days left *at the moment
      * it fires* - which is not the same as today when the reminder is scheduled days ahead.
      * Shared by [scheduleNotification] and [snoozeUntilTomorrow] so a snoozed reminder counts
-     * down with the item instead of repeating yesterday's wording.
+     * down with the item instead of repeating yesterday's wording. Snoozing is also the one way
+     * to get here with a negative count: scheduling skips an item that is already past its date.
      */
-    private fun notificationCopy(
+    internal fun notificationCopy(
         context: Context,
         itemName: String,
         brand: String?,
         daysRemaining: Int
     ): Pair<String, String> {
         val nameWithBrand = if (!brand.isNullOrBlank()) "$itemName ($brand)" else itemName
-        return if (daysRemaining <= 0) {
-            context.getString(R.string.notif_title_today) to
-                context.getString(R.string.notif_body_today_format, nameWithBrand)
-        } else {
-            context.getString(R.string.notif_title_soon) to
-                context.resources.getQuantityString(
-                    R.plurals.notif_body_soon_format,
-                    daysRemaining,
-                    nameWithBrand,
-                    daysRemaining
-                )
+        return when {
+            daysRemaining < 0 -> {
+                val daysPast = -daysRemaining
+                context.getString(R.string.notif_title_past) to
+                    context.resources.getQuantityString(
+                        R.plurals.notif_body_past_format,
+                        daysPast,
+                        nameWithBrand,
+                        daysPast
+                    )
+            }
+            daysRemaining == 0 ->
+                context.getString(R.string.notif_title_today) to
+                    context.getString(R.string.notif_body_today_format, nameWithBrand)
+            else ->
+                context.getString(R.string.notif_title_soon) to
+                    context.resources.getQuantityString(
+                        R.plurals.notif_body_soon_format,
+                        daysRemaining,
+                        nameWithBrand,
+                        daysRemaining
+                    )
         }
     }
 

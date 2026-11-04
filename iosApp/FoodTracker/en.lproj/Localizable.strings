@@ -134,6 +134,10 @@
 "shopping_list_did_you_mean_none_of_these" = "None of these, add new item";
 
 "manual_entry_button" = "Manual";
+"camera_off_title" = "The camera is off";
+"camera_off_body" = "BestBefore needs the camera to scan. You can still add food by hand.";
+"camera_off_open_settings" = "Open settings";
+"camera_off_add_by_hand" = "Type it in";
 "scanner_mode_picker_label" = "Scanner Mode";
 "scan_mode_barcode" = "Barcode";
 "scan_mode_date_ocr" = "Date OCR";
@@ -161,6 +165,7 @@
 
 "notif_title_today" = "Product Expires Today! ⚠️";
 "notif_title_soon" = "Product Expiring Soon! ⚠️";
+"notif_title_past" = "Worth a look";
 
 "expiry_date_found_format" = "Found Expiry: %@";
 "notif_body_today_format" = "%@ expires today. Make sure to consume it!";

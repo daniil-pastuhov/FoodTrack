@@ -259,6 +259,10 @@ public enum L10n {
     public static var shoppingListDidYouMeanNoneOfThese: String { NSLocalizedString("shopping_list_did_you_mean_none_of_these", comment: "") }
 
     public static var manualEntryButton: String { NSLocalizedString("manual_entry_button", comment: "") }
+    public static var cameraOffTitle: String { NSLocalizedString("camera_off_title", comment: "") }
+    public static var cameraOffBody: String { NSLocalizedString("camera_off_body", comment: "") }
+    public static var cameraOffOpenSettings: String { NSLocalizedString("camera_off_open_settings", comment: "") }
+    public static var cameraOffAddByHand: String { NSLocalizedString("camera_off_add_by_hand", comment: "") }
     public static var scannerModePickerLabel: String { NSLocalizedString("scanner_mode_picker_label", comment: "") }
     public static var scanModeBarcode: String { NSLocalizedString("scan_mode_barcode", comment: "") }
     public static var scanModeDateOcr: String { NSLocalizedString("scan_mode_date_ocr", comment: "") }
@@ -327,6 +331,7 @@ public enum L10n {
 
     public static var notifTitleToday: String { NSLocalizedString("notif_title_today", comment: "") }
     public static var notifTitleSoon: String { NSLocalizedString("notif_title_soon", comment: "") }
+    public static var notifTitlePast: String { NSLocalizedString("notif_title_past", comment: "") }
 
     public static func expiryDateFound(_ date: String) -> String {
         String(format: NSLocalizedString("expiry_date_found_format", comment: ""), date)
@@ -338,6 +343,11 @@ public enum L10n {
 
     public static func notifBodySoon(_ nameWithBrand: String, days: Int) -> String {
         let format = NSLocalizedString("notif_body_soon_format", comment: "")
+        return String.localizedStringWithFormat(format, nameWithBrand, days)
+    }
+
+    public static func notifBodyPast(_ nameWithBrand: String, days: Int) -> String {
+        let format = NSLocalizedString("notif_body_past_format", comment: "")
         return String.localizedStringWithFormat(format, nameWithBrand, days)
     }
 
