@@ -1,0 +1,258 @@
+{
+  "meta": {
+    "name": "Enamel",
+    "rationale": "A blue-rimmed enamel mug: warm white, deep cobalt and soft round forms. Cool blue leaves warm colours free to mean urgency.",
+    "themes": [
+      "light",
+      "dark"
+    ]
+  },
+  "primitives": {
+    "color": {
+      "neutral": {
+        "0": "#ffffff",
+        "50": "#faf8f3",
+        "100": "#f2efe8",
+        "200": "#e4e0d7",
+        "300": "#cdc9c0",
+        "400": "#a09c93",
+        "500": "#75726a",
+        "600": "#5a5750",
+        "700": "#44423d",
+        "800": "#2e2d2a",
+        "900": "#1e1d1b",
+        "950": "#121110"
+      },
+      "navy": {
+        "700": "#34425f",
+        "800": "#26324d",
+        "850": "#1e2940",
+        "900": "#172033",
+        "950": "#0f1626"
+      },
+      "cobalt": {
+        "100": "#dce6f7",
+        "200": "#bacdee",
+        "300": "#a3bdec",
+        "600": "#2a4e94",
+        "700": "#203e7a",
+        "800": "#223f74",
+        "900": "#11213f"
+      },
+      "rust": {
+        "100": "#f7dbd5",
+        "300": "#efb0a2",
+        "600": "#a8391f",
+        "800": "#74291a",
+        "900": "#4f180c"
+      },
+      "apricot": {
+        "100": "#fcdcb9",
+        "300": "#f4b071",
+        "800": "#70380c",
+        "900": "#4d2506"
+      },
+      "honey": {
+        "100": "#fbedc0",
+        "300": "#efc65f",
+        "800": "#5f4507",
+        "900": "#412e02"
+      },
+      "leaf": {
+        "100": "#dcefdf",
+        "300": "#94cda1",
+        "800": "#1f4a31",
+        "900": "#0f2d1b"
+      },
+      "sky": {
+        "100": "#dce6f7",
+        "300": "#a3bdec",
+        "800": "#223f74",
+        "900": "#11213f"
+      }
+    }
+  },
+  "color": {
+    "light": {
+      "background": "{neutral.50}",
+      "on-background": "{neutral.900}",
+      "surface": "{neutral.0}",
+      "on-surface": "{neutral.900}",
+      "on-surface-variant": "{neutral.600}",
+      "surface-container": "{neutral.100}",
+      "surface-container-high": "{neutral.0}",
+      "outline": "{neutral.500}",
+      "outline-variant": "{neutral.200}",
+      "primary": "{cobalt.600}",
+      "on-primary": "{neutral.0}",
+      "primary-container": "{cobalt.100}",
+      "on-primary-container": "{cobalt.900}",
+      "error": "{rust.600}",
+      "on-error": "{neutral.0}",
+      "error-container": "{rust.100}",
+      "on-error-container": "{rust.900}",
+      "warning-container": "{honey.100}",
+      "on-warning-container": "{honey.900}",
+      "success-container": "{leaf.100}",
+      "on-success-container": "{leaf.900}",
+      "info-container": "{sky.100}",
+      "on-info-container": "{sky.900}",
+      "inverse-surface": "{neutral.800}",
+      "on-inverse-surface": "{neutral.50}",
+      "inverse-primary": "{cobalt.300}",
+      "focus-ring": "{cobalt.700}",
+      "scrim": "{neutral.950}",
+      "expired-container": "{rust.100}",
+      "on-expired-container": "{rust.900}",
+      "today-container": "{apricot.100}",
+      "on-today-container": "{apricot.900}",
+      "soon-container": "{honey.100}",
+      "on-soon-container": "{honey.900}"
+    },
+    "dark": {
+      "background": "{navy.950}",
+      "on-background": "{neutral.100}",
+      "surface": "{navy.900}",
+      "on-surface": "{neutral.100}",
+      "on-surface-variant": "{neutral.300}",
+      "surface-container": "{navy.850}",
+      "surface-container-high": "{navy.800}",
+      "outline": "{neutral.400}",
+      "outline-variant": "{navy.700}",
+      "primary": "{cobalt.300}",
+      "on-primary": "{cobalt.900}",
+      "primary-container": "{cobalt.800}",
+      "on-primary-container": "{cobalt.100}",
+      "error": "{rust.300}",
+      "on-error": "{rust.900}",
+      "error-container": "{rust.800}",
+      "on-error-container": "{rust.100}",
+      "warning-container": "{honey.800}",
+      "on-warning-container": "{honey.100}",
+      "success-container": "{leaf.800}",
+      "on-success-container": "{leaf.100}",
+      "info-container": "{sky.800}",
+      "on-info-container": "{sky.100}",
+      "inverse-surface": "{neutral.100}",
+      "on-inverse-surface": "{neutral.900}",
+      "inverse-primary": "{cobalt.600}",
+      "focus-ring": "{cobalt.200}",
+      "scrim": "{neutral.950}",
+      "expired-container": "{rust.800}",
+      "on-expired-container": "{rust.100}",
+      "today-container": "{apricot.800}",
+      "on-today-container": "{apricot.100}",
+      "soon-container": "{honey.800}",
+      "on-soon-container": "{honey.100}"
+    }
+  },
+  "contrast": [
+    {
+      "fg": "on-surface-variant",
+      "bg": "surface-container",
+      "use": "text"
+    }
+  ],
+  "font": {
+    "display": {
+      "family": "Nunito",
+      "fallback": "system-ui, sans-serif",
+      "google": "Nunito:wght@700;800"
+    },
+    "body": {
+      "family": "system-ui, -apple-system",
+      "fallback": "Roboto, 'Segoe UI', sans-serif"
+    }
+  },
+  "type": {
+    "display": {
+      "font": "display",
+      "size": 30,
+      "line": 38,
+      "weight": 800,
+      "tracking": -0.4
+    },
+    "headline": {
+      "font": "display",
+      "size": 24,
+      "line": 30,
+      "weight": 800
+    },
+    "title": {
+      "font": "display",
+      "size": 19,
+      "line": 26,
+      "weight": 800
+    },
+    "title-sm": {
+      "font": "body",
+      "size": 16,
+      "line": 22,
+      "weight": 600
+    },
+    "body": {
+      "font": "body",
+      "size": 16,
+      "line": 24,
+      "weight": 400
+    },
+    "body-sm": {
+      "font": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 400
+    },
+    "label": {
+      "font": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 600,
+      "tracking": 0.1
+    },
+    "caption": {
+      "font": "body",
+      "size": 12,
+      "line": 16,
+      "weight": 500,
+      "tracking": 0.2
+    }
+  },
+  "space": {
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48
+  },
+  "radius": {
+    "sm": 12,
+    "md": 18,
+    "lg": 24,
+    "xl": 32,
+    "full": 9999
+  },
+  "size": {
+    "control": 52,
+    "touch": 48
+  },
+  "elevation": {
+    "light": {
+      "1": "0 1px 2px rgba(34,48,84,.08)",
+      "2": "0 4px 12px rgba(34,48,84,.10)",
+      "3": "0 10px 28px rgba(34,48,84,.16)"
+    },
+    "dark": {
+      "1": "0 1px 2px rgba(0,0,0,.45)",
+      "2": "0 4px 12px rgba(0,0,0,.5)",
+      "3": "0 10px 28px rgba(0,0,0,.55)"
+    }
+  },
+  "icons": {
+    "set": "material-symbols-rounded",
+    "stroke": 2
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "meta": {
+    "name": "Larder",
+    "rationale": "A well-kept larder: oat paper, bottle green and a hearty book serif. The safe, obviously fitting choice.",
+    "themes": [
+      "light",
+      "dark"
+    ]
+  },
+  "primitives": {
+    "color": {
+      "neutral": {
+        "0": "#fffdf8",
+        "50": "#f8f4e9",
+        "100": "#f0eadb",
+        "200": "#e2dac6",
+        "300": "#c9bfa7",
+        "400": "#9c927b",
+        "500": "#776e5a",
+        "600": "#5b5444",
+        "700": "#454033",
+        "800": "#2f2b22",
+        "850": "#26231b",
+        "900": "#1d1b15",
+        "950": "#14120d"
+      },
+      "green": {
+        "100": "#dcebdd",
+        "200": "#bbd6bd",
+        "300": "#9ac5a1",
+        "600": "#2f6246",
+        "700": "#234e37",
+        "800": "#1f4331",
+        "900": "#102a1c"
+      },
+      "rust": {
+        "100": "#f3d9d2",
+        "300": "#e8ae9e",
+        "600": "#9e3a26",
+        "800": "#6e2a1c",
+        "900": "#4c1a10"
+      },
+      "apricot": {
+        "100": "#f8ddc2",
+        "300": "#edb183",
+        "800": "#6b3411",
+        "900": "#4a2208"
+      },
+      "honey": {
+        "100": "#f7e9c6",
+        "300": "#eac27a",
+        "800": "#5e4208",
+        "900": "#402c03"
+      },
+      "leaf": {
+        "100": "#dcebdd",
+        "300": "#9ac5a1",
+        "800": "#1f4331",
+        "900": "#102a1c"
+      },
+      "sky": {
+        "100": "#dce6ef",
+        "300": "#a4bfd6",
+        "800": "#2c4760",
+        "900": "#172c40"
+      }
+    }
+  },
+  "color": {
+    "light": {
+      "background": "{neutral.50}",
+      "on-background": "{neutral.900}",
+      "surface": "{neutral.0}",
+      "on-surface": "{neutral.900}",
+      "on-surface-variant": "{neutral.600}",
+      "surface-container": "{neutral.100}",
+      "surface-container-high": "{neutral.0}",
+      "outline": "{neutral.500}",
+      "outline-variant": "{neutral.200}",
+      "primary": "{green.600}",
+      "on-primary": "{neutral.0}",
+      "primary-container": "{green.100}",
+      "on-primary-container": "{green.900}",
+      "error": "{rust.600}",
+      "on-error": "{neutral.0}",
+      "error-container": "{rust.100}",
+      "on-error-container": "{rust.900}",
+      "warning-container": "{honey.100}",
+      "on-warning-container": "{honey.900}",
+      "success-container": "{leaf.100}",
+      "on-success-container": "{leaf.900}",
+      "info-container": "{sky.100}",
+      "on-info-container": "{sky.900}",
+      "inverse-surface": "{neutral.800}",
+      "on-inverse-surface": "{neutral.50}",
+      "inverse-primary": "{green.300}",
+      "focus-ring": "{green.700}",
+      "scrim": "{neutral.950}",
+      "expired-container": "{rust.100}",
+      "on-expired-container": "{rust.900}",
+      "today-container": "{apricot.100}",
+      "on-today-container": "{apricot.900}",
+      "soon-container": "{honey.100}",
+      "on-soon-container": "{honey.900}"
+    },
+    "dark": {
+      "background": "{neutral.950}",
+      "on-background": "{neutral.100}",
+      "surface": "{neutral.900}",
+      "on-surface": "{neutral.100}",
+      "on-surface-variant": "{neutral.300}",
+      "surface-container": "{neutral.850}",
+      "surface-container-high": "{neutral.800}",
+      "outline": "{neutral.400}",
+      "outline-variant": "{neutral.700}",
+      "primary": "{green.300}",
+      "on-primary": "{green.900}",
+      "primary-container": "{green.800}",
+      "on-primary-container": "{green.100}",
+      "error": "{rust.300}",
+      "on-error": "{rust.900}",
+      "error-container": "{rust.800}",
+      "on-error-container": "{rust.100}",
+      "warning-container": "{honey.800}",
+      "on-warning-container": "{honey.100}",
+      "success-container": "{leaf.800}",
+      "on-success-container": "{leaf.100}",
+      "info-container": "{sky.800}",
+      "on-info-container": "{sky.100}",
+      "inverse-surface": "{neutral.100}",
+      "on-inverse-surface": "{neutral.900}",
+      "inverse-primary": "{green.600}",
+      "focus-ring": "{green.200}",
+      "scrim": "{neutral.950}",
+      "expired-container": "{rust.800}",
+      "on-expired-container": "{rust.100}",
+      "today-container": "{apricot.800}",
+      "on-today-container": "{apricot.100}",
+      "soon-container": "{honey.800}",
+      "on-soon-container": "{honey.100}"
+    }
+  },
+  "contrast": [
+    {
+      "fg": "on-surface-variant",
+      "bg": "surface-container",
+      "use": "text"
+    }
+  ],
+  "font": {
+    "display": {
+      "family": "Vollkorn",
+      "fallback": "Georgia, serif",
+      "google": "Vollkorn:wght@500;600"
+    },
+    "body": {
+      "family": "system-ui, -apple-system",
+      "fallback": "Roboto, 'Segoe UI', sans-serif"
+    }
+  },
+  "type": {
+    "display": {
+      "font": "display",
+      "size": 32,
+      "line": 40,
+      "weight": 600,
+      "tracking": -0.3
+    },
+    "headline": {
+      "font": "display",
+      "size": 24,
+      "line": 30,
+      "weight": 600
+    },
+    "title": {
+      "font": "display",
+      "size": 19,
+      "line": 26,
+      "weight": 600
+    },
+    "title-sm": {
+      "font": "body",
+      "size": 16,
+      "line": 22,
+      "weight": 600
+    },
+    "body": {
+      "font": "body",
+      "size": 16,
+      "line": 24,
+      "weight": 400
+    },
+    "body-sm": {
+      "font": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 400
+    },
+    "label": {
+      "font": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 600,
+      "tracking": 0.1
+    },
+    "caption": {
+      "font": "body",
+      "size": 12,
+      "line": 16,
+      "weight": 500,
+      "tracking": 0.2
+    }
+  },
+  "space": {
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48
+  },
+  "radius": {
+    "sm": 8,
+    "md": 12,
+    "lg": 18,
+    "xl": 26,
+    "full": 9999
+  },
+  "size": {
+    "control": 48,
+    "touch": 48
+  },
+  "elevation": {
+    "light": {
+      "1": "0 1px 2px rgba(47,43,34,.08)",
+      "2": "0 4px 12px rgba(47,43,34,.10)",
+      "3": "0 10px 28px rgba(47,43,34,.16)"
+    },
+    "dark": {
+      "1": "0 1px 2px rgba(0,0,0,.45)",
+      "2": "0 4px 12px rgba(0,0,0,.5)",
+      "3": "0 10px 28px rgba(0,0,0,.55)"
+    }
+  },
+  "icons": {
+    "set": "lucide",
+    "version": "0.460.0",
+    "stroke": 1.75
+  }
+}

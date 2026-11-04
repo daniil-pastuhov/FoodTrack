@@ -1,0 +1,85 @@
+/* Shopping list. Scoped under .shop. One markup reflows: stacked on phones, two panes from 700px. */
+.shop .shell { flex-direction: column; }
+.shop .pane.shop-side { flex: none; }
+/* .is-focus draws a ring on the wrapper too; the control already shows focus */
+.shop .field.is-focus { outline: 0; }
+.shop-add { padding: 0 var(--space-4) var(--space-3); }
+.shop-add .control { padding-right: 0; }
+.shop-add .icon-btn { flex: none; color: var(--color-primary); }
+.shop-add .icon-btn.is-add { color: var(--color-on-primary); }
+.shop-add .icon-btn.is-add::before { content: ""; grid-area: 1/1; width: 36px; height: 36px; border-radius: 50%; background: var(--color-primary); }
+.shop-add .icon-btn.is-add svg.lucide { grid-area: 1/1; position: relative; }
+.shop-suggest { padding: 0 var(--space-4) var(--space-3); }
+
+/* Section header: the toggle takes the free space, so menu and handle stay pinned right */
+.shop-sec { position: relative; display: flex; align-items: center; min-height: var(--size-touch); margin-top: var(--space-2); }
+.shop-sec:first-child { margin-top: 0; }
+.shop-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-touch); padding: 0; border: 0; background: transparent; color: var(--color-on-surface-variant); font: var(--type-label); text-align: left; cursor: pointer; }
+.shop-toggle .name { min-width: 0; }
+.shop-toggle .count { flex: none; font: var(--type-caption); font-variant-numeric: tabular-nums; }
+.app .shop-toggle svg.lucide { flex: none; width: 18px; height: 18px; }
+.shop-toggle[aria-expanded="false"] svg.lucide { transform: rotate(-90deg); }
+.shop-sec + .shop-sec { margin-top: 0; }
+.shop-grip { flex: none; display: grid; place-items: center; width: 28px; height: var(--size-touch); padding: 0; border: 0; background: transparent; color: var(--color-on-surface-variant); cursor: grab; }
+.app .shop-grip svg.lucide { width: 18px; height: 18px; }
+
+/* Row: tick, name, quantity, handle. The name may take two lines, since Russian runs long. */
+.shop-row.item { gap: 0; min-height: 64px; padding: var(--space-1) 0 var(--space-1) var(--space-1); background: var(--color-surface); }
+.shop-open { align-self: stretch; display: flex; flex-direction: column; justify-content: center; padding: 0 var(--space-1); color: inherit; text-decoration: none; }
+.shop-row .nm { overflow-wrap: anywhere; }
+.shop-row .shop-open > .where { display: block; margin-top: 2px; font: var(--type-caption); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-row .stepper { flex: none; box-shadow: none; }
+.shop-row .stepper output { min-width: 24px; font: var(--type-label); }
+.app .shop-row .stepper svg.lucide { width: 18px; height: 18px; }
+.shop-row.is-ticked .nm { color: var(--color-on-surface-variant); text-decoration: line-through; }
+.shop-row.is-drag { position: relative; z-index: 2; border-radius: var(--radius-md); background: var(--color-surface-container-high); box-shadow: var(--elevation-3); }
+.shop-row.is-drag + .list-item { border-top-color: transparent; }
+.group.is-dragging { overflow: visible; }
+.group.is-dragging .shop-row:last-child { border-radius: 0 0 var(--radius-lg) var(--radius-lg); }
+
+/* Swipe reveal: ticking is not destructive, so it stays green rather than red */
+.shop-reveal { position: relative; display: flex; align-items: center; background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.shop-reveal + .list-item, .list-item + .shop-reveal { border-top: 1px solid var(--color-outline-variant); }
+.shop-reveal > i, .shop-reveal > svg.lucide { position: absolute; left: var(--space-5); }
+.shop-reveal > .list { flex: 1; min-width: 0; }
+.shop-reveal .shop-row { flex: 1; min-width: 0; transform: translateX(96px); }
+
+/* Section menu: anchored to its ⋮, the Android dropdown and the iOS menu in one look */
+.shop-menu { position: absolute; top: 44px; right: 28px; z-index: 10; min-width: 208px; padding: var(--space-1) 0; border-radius: var(--radius-md); background: var(--color-surface-container-high); color: var(--color-on-surface); box-shadow: var(--elevation-3); }
+.shop-menu button { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--size-touch); padding: 0 var(--space-4); border: 0; background: transparent; color: inherit; font: var(--type-body); text-align: left; cursor: pointer; }
+.shop-menu button:hover { background: color-mix(in srgb, var(--color-on-surface) 8%, transparent); }
+.shop-menu .is-danger { color: var(--color-error); }
+
+/* Sheets */
+.shop .sheet { max-width: 560px; }
+.shop .sheet .lead { margin: 0 0 var(--space-3); color: var(--color-on-surface-variant); font: var(--type-body-sm); }
+.shop-action { width: 100%; padding: var(--space-2) var(--space-1); border: 0; border-radius: var(--radius-md); background: transparent; font: var(--type-body); text-align: left; cursor: pointer; }
+.shop-action svg.lucide { color: var(--color-primary); }
+.shop-action[disabled] { color: color-mix(in srgb, var(--color-on-surface) 38%, transparent); cursor: not-allowed; background: transparent; }
+.shop-action[disabled] svg.lucide { color: inherit; }
+.shop-action .grow { flex: 1; min-width: 0; }
+.shop-pick { width: 100%; justify-content: flex-start; padding: 0 var(--space-3); border-radius: var(--radius-md); }
+.shop .dialog .list { margin: 0 calc(var(--space-3) * -1); }
+.shop .dialog:has(.shop-pick) .actions { flex-direction: column-reverse; align-items: flex-end; gap: 0; }
+
+/* QR: the tile is pinned to the light theme, so the code stays dark on light and scannable in dark mode */
+.shop-qr { display: grid; justify-items: center; gap: var(--space-3); text-align: center; }
+.shop-qr-tile { padding: var(--space-3); border-radius: var(--radius-md); background: var(--color-surface); }
+.shop-qr-tile svg { display: block; width: 240px; height: 240px; }
+.shop-qr .hint { margin: 0; max-width: 36ch; color: var(--color-on-surface-variant); font: var(--type-body-sm); }
+.shop-paste textarea { min-height: 120px; resize: none; line-height: 24px; }
+.shop-paste .control { align-items: stretch; }
+
+/* Tablet and open foldable: list and sections beside each other */
+.shop-index { flex: 1; min-height: 0; overflow: auto; padding: 0 var(--space-4) var(--space-4); scrollbar-width: none; }
+.shop-index .sec { margin-top: var(--space-2); }
+.shop-index .btn { margin-top: var(--space-2); margin-left: calc(var(--space-3) * -1); }
+.shop-index .list-item { width: 100%; min-height: 52px; border: 0; border-radius: 0; background: transparent; font: var(--type-body); color: var(--color-on-surface); text-align: left; cursor: pointer; }
+.shop-index li + li .list-item { border-top: 1px solid var(--color-outline-variant); }
+.shop-index .count { flex: none; color: var(--color-on-surface-variant); font: var(--type-label); font-variant-numeric: tabular-nums; }
+@container (min-width: 700px) {
+  .shop .shell { flex-direction: row; }
+  .shop .pane.shop-side { flex: 0 0 300px; border-right: 1px solid var(--color-outline-variant); }
+  .shop .shop-main .scroll { padding-top: var(--space-3); }
+  .shop-suggest .chips { flex-wrap: wrap; overflow: visible; }
+}

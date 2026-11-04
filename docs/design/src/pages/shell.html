@@ -1,0 +1,27 @@
+<section class="v-page" data-page="shell" data-title="App shell" data-group="Foundations">
+<h1>App shell</h1>
+<p class="v-lead">Four destinations: Home, Calendar, Shopping and Settings. Scan is always one tap away on Home. Every device uses the same floating pill bar, on Android and iOS. Tablets and foldables get two panes where the content earns them, and the pill stays at the bottom so it never takes a column.</p>
+
+<article class="v-screen" data-screen="nav" data-title="Navigation" data-purpose="Get anywhere in one tap. Scan stays the primary action on Home.">
+<div class="v-state" data-state="android" data-label="Android" data-trigger="Floating pill on every device" data-note="The pill is the app&#x27;s existing component in Larder colours and shapes: sized to its tabs, the selected tab&#x27;s whole cell tinted, content scrolling beneath it. Each tab is at least 48dp tall.">
+<div class="app has-nav"><div class="shell">
+
+<div class="pane"><header class="hd"><div class="bar"><span class="brand">BestBefore</span></div><h2 class="lede">Home</h2></header><div class="scroll"><p class="muted">Screen content sits here. Scroll areas leave room for Scan, so nothing hides behind it.</p></div></div></div>
+<button class="fab" aria-label="Scan"><i data-icon="scan-barcode"></i>Scan</button>
+<nav class="bottom-nav" aria-label="Main"><a href="#" aria-current="page"><span class="ind"><i data-icon="house"></i></span>Home</a><a href="#"><span class="ind"><i data-icon="calendar-days"></i></span>Calendar</a><a href="#"><span class="ind"><i data-icon="shopping-basket"></i><span class="badge">5</span></span>Shopping</a><a href="#"><span class="ind"><i data-icon="settings"></i></span>Settings</a></nav></div></div>
+</article>
+
+<div class="v-section"><h2>Native behaviour per platform</h2><p>One look, native behaviour. These parts follow each platform.</p>
+<table class="v-table"><thead><tr><th>Element</th><th>Android (Material 3)</th><th>iOS and iPadOS (HIG)</th></tr></thead><tbody>
+<tr><td>Navigation</td><td>Floating pill bar on phones, tablets and foldables</td><td>The same floating pill bar, on iPad too</td></tr>
+<tr><td>Scan</td><td>Extended FAB above the pill on phones, level with it at the bottom right on tablets</td><td>Same button and position, respecting the safe area</td></tr>
+<tr><td>Back</td><td>System back and predictive back</td><td>Edge swipe and back chevron</td></tr>
+<tr><td>Sheets</td><td>Modal bottom sheet</td><td>Sheet with medium and large detents</td></tr>
+<tr><td>Dialogs</td><td>Alert dialog, buttons as designed</td><td>Native alert; destructive role on the confirm action</td></tr>
+<tr><td>Date picker</td><td>Material date picker</td><td>Wheel date picker, kept on purpose because people got stuck in the graphical one</td></tr>
+<tr><td>Swipe on a row</td><td>Swipe to dismiss with a coloured reveal</td><td>Native swipe actions</td></tr>
+<tr><td>Snackbar with Undo</td><td>Snackbar</td><td>Same component, as iOS has no native equivalent</td></tr>
+<tr><td>Body font</td><td>Roboto</td><td>SF Pro</td></tr>
+<tr><td>Text size</td><td>Follows font scale</td><td>Follows Dynamic Type, Vollkorn scaled with it</td></tr>
+</tbody></table></div>
+</section>

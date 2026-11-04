@@ -1,0 +1,284 @@
+{
+  "meta": {
+    "name": "Preserves",
+    "rationale": "A shelf of labelled jars: plum, butter and a slab serif, with the date as the hero of every row. The bolder choice.",
+    "themes": [
+      "light",
+      "dark"
+    ]
+  },
+  "primitives": {
+    "color": {
+      "neutral": {
+        "0": "#fffcf5",
+        "50": "#fbf5e6",
+        "100": "#f3ead5",
+        "200": "#e5d8be",
+        "300": "#d0c0ab",
+        "400": "#a39484",
+        "500": "#77675f",
+        "600": "#5c4d4d",
+        "700": "#463843",
+        "800": "#2f2436",
+        "900": "#21172a",
+        "950": "#170f1b"
+      },
+      "dusk": {
+        "700": "#4b3a52",
+        "800": "#37293f",
+        "850": "#2c2033",
+        "900": "#221829",
+        "950": "#170f1b"
+      },
+      "plum": {
+        "100": "#f0dfea",
+        "200": "#e0c1d6",
+        "300": "#d6adc8",
+        "600": "#6a2d5c",
+        "700": "#55224a",
+        "800": "#4e2343",
+        "900": "#2c0f26"
+      },
+      "butter": {
+        "200": "#f8e3a0",
+        "300": "#f2d06e",
+        "400": "#e9bc45",
+        "900": "#3a2a00"
+      },
+      "rust": {
+        "100": "#f6d9cf",
+        "300": "#edae98",
+        "600": "#a03a1f",
+        "800": "#70291a",
+        "900": "#4d190d"
+      },
+      "apricot": {
+        "100": "#fadcbc",
+        "300": "#f0b07a",
+        "800": "#6e360f",
+        "900": "#4b2306"
+      },
+      "honey": {
+        "100": "#f8ebc4",
+        "300": "#e9c470",
+        "800": "#5d4308",
+        "900": "#3f2d03"
+      },
+      "leaf": {
+        "100": "#dfecd9",
+        "300": "#a0c893",
+        "800": "#2a4a22",
+        "900": "#172e12"
+      },
+      "sky": {
+        "100": "#e0e4f0",
+        "300": "#adb9d8",
+        "800": "#333f60",
+        "900": "#1c2640"
+      }
+    }
+  },
+  "color": {
+    "light": {
+      "background": "{neutral.50}",
+      "on-background": "{neutral.900}",
+      "surface": "{neutral.0}",
+      "on-surface": "{neutral.900}",
+      "on-surface-variant": "{neutral.600}",
+      "surface-container": "{neutral.100}",
+      "surface-container-high": "{neutral.0}",
+      "outline": "{neutral.500}",
+      "outline-variant": "{neutral.200}",
+      "primary": "{plum.600}",
+      "on-primary": "{neutral.0}",
+      "primary-container": "{plum.100}",
+      "on-primary-container": "{plum.900}",
+      "error": "{rust.600}",
+      "on-error": "{neutral.0}",
+      "error-container": "{rust.100}",
+      "on-error-container": "{rust.900}",
+      "warning-container": "{honey.100}",
+      "on-warning-container": "{honey.900}",
+      "success-container": "{leaf.100}",
+      "on-success-container": "{leaf.900}",
+      "info-container": "{sky.100}",
+      "on-info-container": "{sky.900}",
+      "inverse-surface": "{neutral.800}",
+      "on-inverse-surface": "{neutral.50}",
+      "inverse-primary": "{plum.300}",
+      "focus-ring": "{plum.700}",
+      "scrim": "{neutral.950}",
+      "expired-container": "{rust.100}",
+      "on-expired-container": "{rust.900}",
+      "today-container": "{apricot.100}",
+      "on-today-container": "{apricot.900}",
+      "soon-container": "{honey.100}",
+      "on-soon-container": "{honey.900}",
+      "accent": "{butter.300}",
+      "on-accent": "{butter.900}",
+      "band": "{plum.600}",
+      "on-band": "{butter.200}",
+      "on-band-variant": "{plum.100}"
+    },
+    "dark": {
+      "background": "{dusk.950}",
+      "on-background": "{neutral.100}",
+      "surface": "{dusk.900}",
+      "on-surface": "{neutral.100}",
+      "on-surface-variant": "{neutral.300}",
+      "surface-container": "{dusk.850}",
+      "surface-container-high": "{dusk.800}",
+      "outline": "{neutral.400}",
+      "outline-variant": "{dusk.700}",
+      "primary": "{plum.300}",
+      "on-primary": "{plum.900}",
+      "primary-container": "{plum.800}",
+      "on-primary-container": "{plum.100}",
+      "error": "{rust.300}",
+      "on-error": "{rust.900}",
+      "error-container": "{rust.800}",
+      "on-error-container": "{rust.100}",
+      "warning-container": "{honey.800}",
+      "on-warning-container": "{honey.100}",
+      "success-container": "{leaf.800}",
+      "on-success-container": "{leaf.100}",
+      "info-container": "{sky.800}",
+      "on-info-container": "{sky.100}",
+      "inverse-surface": "{neutral.100}",
+      "on-inverse-surface": "{neutral.900}",
+      "inverse-primary": "{plum.600}",
+      "focus-ring": "{plum.200}",
+      "scrim": "{neutral.950}",
+      "expired-container": "{rust.800}",
+      "on-expired-container": "{rust.100}",
+      "today-container": "{apricot.800}",
+      "on-today-container": "{apricot.100}",
+      "soon-container": "{honey.800}",
+      "on-soon-container": "{honey.100}",
+      "accent": "{butter.300}",
+      "on-accent": "{butter.900}",
+      "band": "{dusk.850}",
+      "on-band": "{butter.300}",
+      "on-band-variant": "{neutral.300}"
+    }
+  },
+  "contrast": [
+    {
+      "fg": "on-surface-variant",
+      "bg": "surface-container",
+      "use": "text"
+    },
+    {
+      "fg": "on-band",
+      "bg": "band",
+      "use": "text"
+    },
+    {
+      "fg": "on-band-variant",
+      "bg": "band",
+      "use": "text"
+    }
+  ],
+  "font": {
+    "display": {
+      "family": "Bitter",
+      "fallback": "Georgia, serif",
+      "google": "Bitter:wght@600;700"
+    },
+    "body": {
+      "family": "system-ui, -apple-system",
+      "fallback": "Roboto, 'Segoe UI', sans-serif"
+    }
+  },
+  "type": {
+    "display": {
+      "font": "display",
+      "size": 30,
+      "line": 38,
+      "weight": 700,
+      "tracking": -0.2
+    },
+    "headline": {
+      "font": "display",
+      "size": 24,
+      "line": 30,
+      "weight": 700
+    },
+    "title": {
+      "font": "display",
+      "size": 19,
+      "line": 26,
+      "weight": 700
+    },
+    "title-sm": {
+      "font": "body",
+      "size": 16,
+      "line": 22,
+      "weight": 600
+    },
+    "body": {
+      "font": "body",
+      "size": 16,
+      "line": 24,
+      "weight": 400
+    },
+    "body-sm": {
+      "font": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 400
+    },
+    "label": {
+      "font": "body",
+      "size": 14,
+      "line": 20,
+      "weight": 600,
+      "tracking": 0.1
+    },
+    "caption": {
+      "font": "body",
+      "size": 12,
+      "line": 16,
+      "weight": 500,
+      "tracking": 0.2
+    }
+  },
+  "space": {
+    "1": 4,
+    "2": 8,
+    "3": 12,
+    "4": 16,
+    "5": 20,
+    "6": 24,
+    "8": 32,
+    "10": 40,
+    "12": 48
+  },
+  "radius": {
+    "sm": 3,
+    "md": 4,
+    "lg": 6,
+    "xl": 10,
+    "full": 9999
+  },
+  "size": {
+    "control": 48,
+    "touch": 48
+  },
+  "elevation": {
+    "light": {
+      "1": "0 1px 2px rgba(44,15,38,.08)",
+      "2": "0 4px 12px rgba(44,15,38,.10)",
+      "3": "0 10px 28px rgba(44,15,38,.16)"
+    },
+    "dark": {
+      "1": "0 1px 2px rgba(0,0,0,.45)",
+      "2": "0 4px 12px rgba(0,0,0,.5)",
+      "3": "0 10px 28px rgba(0,0,0,.55)"
+    }
+  },
+  "icons": {
+    "set": "material-symbols-sharp",
+    "stroke": 1.5
+  }
+}
