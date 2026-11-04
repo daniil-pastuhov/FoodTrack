@@ -123,7 +123,11 @@ data class AppSettings(
      * switch that gates asking for background location, which is the most intrusive permission
      * the app requests. Nothing about it should happen without the user turning it on first.
      */
-    val storeRemindersEnabled: Boolean = false
+    val storeRemindersEnabled: Boolean = false,
+    /** Whether the first-run flow is done with. Absent from settings saved by older versions, so
+     *  it reads false for them; the state holder sets it as soon as the pantry has anything in
+     *  it, which is what keeps people upgrading out of the flow. */
+    val onboardingCompleted: Boolean = false
 ) {
     /** The storage location a freshly created item should be pre-filled with. Falls back to
      *  [defaultStorageLocation] when the remembered one is off, unset, or no longer one of

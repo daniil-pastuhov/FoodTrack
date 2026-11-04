@@ -12,5 +12,14 @@ interface PantryRepository {
     suspend fun findByBarcode(barcode: String): List<PantryItem>
     suspend fun saveItem(item: PantryItem)
     suspend fun deleteItem(id: String)
+
+    /** The items among [ids] that exist. */
+    suspend fun getItems(ids: Collection<String>): List<PantryItem> = ids.mapNotNull { getItem(it) }
+
+    /** Deletes [ids] in one go, so observers see one change rather than one per item. */
+    suspend fun deleteItems(ids: Collection<String>) = ids.forEach { deleteItem(it) }
+
+    /** Saves [items] in one go, so observers see one change rather than one per item. */
+    suspend fun saveItems(items: List<PantryItem>) = items.forEach { saveItem(it) }
     suspend fun clearAll()
 }

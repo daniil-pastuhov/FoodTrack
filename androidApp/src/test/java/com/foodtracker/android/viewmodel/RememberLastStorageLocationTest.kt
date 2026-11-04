@@ -87,7 +87,10 @@ class RememberLastStorageLocationTest {
 
     @Test
     fun testNothingIsRememberedWhileTheFeatureIsOff() {
-        val fixture = Fixture(settings = AppSettings(rememberLastStorageLocation = false))
+        // Onboarding already done, because a first item would otherwise be a settings write.
+        val fixture = Fixture(
+            settings = AppSettings(rememberLastStorageLocation = false, onboardingCompleted = true)
+        )
         try {
             fixture.stateHolder.saveItem(pantryItem("milk", "Freezer"))
 

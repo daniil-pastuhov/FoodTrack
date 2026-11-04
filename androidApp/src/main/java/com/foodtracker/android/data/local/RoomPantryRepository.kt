@@ -41,5 +41,12 @@ class RoomPantryRepository(private val dao: PantryDao) : PantryRepository {
 
     override suspend fun deleteItem(id: String) = dao.deleteById(id)
 
+    override suspend fun getItems(ids: Collection<String>): List<PantryItem> =
+        dao.getByIds(ids.toList()).map { it.toDomain() }
+
+    override suspend fun deleteItems(ids: Collection<String>) = dao.deleteByIds(ids.toList())
+
+    override suspend fun saveItems(items: List<PantryItem>) = dao.upsertAll(items.map { it.toEntity() })
+
     override suspend fun clearAll() = dao.clearAll()
 }

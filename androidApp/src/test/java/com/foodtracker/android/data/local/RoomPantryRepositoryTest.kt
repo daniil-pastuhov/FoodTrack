@@ -59,4 +59,28 @@ class RoomPantryRepositoryTest {
         assertEquals(0, afterDelete.size)
         assertNull(repo.getItem("test-1"))
     }
+
+    private fun item(id: String) = PantryItem(
+        id = id,
+        name = "Item $id",
+        expiryDate = LocalDate(2026, 10, 1),
+        addedDate = LocalDate(2026, 9, 3),
+        storageLocation = "Fridge"
+    )
+
+    @Test
+    fun testBulkDeleteAndRestoreBeyondOneQueryOfIds() = runTest {
+        val items = (1..1200).map { item("id-$it") }
+        repo.saveItems(items)
+        val ids = items.dropLast(1).map { it.id }
+
+        val found = repo.getItems(ids + "missing")
+        repo.deleteItems(ids)
+
+        assertEquals(ids.toSet(), found.map { it.id }.toSet())
+        assertEquals(listOf("id-1200"), repo.getItemsFlow().first().map { it.id })
+
+        repo.saveItems(found)
+        assertEquals(1200, repo.getItemsFlow().first().size)
+    }
 }

@@ -1,6 +1,8 @@
 package com.foodtracker.viewmodel
 
 import com.foodtracker.api.OpenFoodFactsApi
+import com.foodtracker.api.ProductLookupResult
+import com.foodtracker.api.productOrNull
 import com.foodtracker.backup.BackupDocument
 import com.foodtracker.backup.BackupReadResult
 import com.foodtracker.backup.BackupSerializer
@@ -10,6 +12,7 @@ import com.foodtracker.model.AppSettings
 import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.ExpiryStatus
+import com.foodtracker.model.MAX_ITEM_QUANTITY
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShelfLife
@@ -48,7 +51,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
@@ -80,6 +83,17 @@ private data class ReceiptMatch(
     val imageUrl: String? = null,
     val category: String? = null
 )
+
+/**
+ * A finished add that the person should hear about wherever they land, published as
+ * [PantryUiState.homeConfirmation]. The platform words it; [Saved.location] is the stored key, so
+ * it still has to go through the location's translated label.
+ */
+sealed interface HomeConfirmation {
+    data class Saved(val name: String, val location: String) : HomeConfirmation
+    data class BatchAdded(val count: Int) : HomeConfirmation
+    data class OneMoreAdded(val name: String, val quantity: Int) : HomeConfirmation
+}
 
 enum class StatusFilter {
     ALL,
@@ -134,7 +148,11 @@ data class PantryUiState(
     val settings: AppSettings = AppSettings(),
     // Scan flow state
     val scannedProduct: ProductInfo? = null,
+    /** The scanned barcode when the lookup came back without a product, for either reason:
+     *  [lookupResult] says whether it is unknown or the lookup couldn't be made. */
     val productNotFoundBarcode: String? = null,
+    /** How the current scan's lookup ended. Null while there is no finished lookup. */
+    val lookupResult: ProductLookupResult? = null,
     val detectedDate: LocalDate? = null,
     /** Expiry date to pre-fill on the item this scan produces, and where it came from - a
      *  date read off the packaging, the shelf life this barcode was given last time, or its
@@ -173,8 +191,16 @@ data class PantryUiState(
     val categoryPreferences: List<CategoryPreference> = emptyList(),
     /** One row per user-visible category for the Settings screen, with the origins merged onto
      *  each display name already resolved into a subtitle string. */
-    val categoryRows: List<CategoryRow> = emptyList()
-)
+    val categoryRows: List<CategoryRow> = emptyList(),
+    /** A finished add waiting to be confirmed. Show it, then call
+     *  [PantryStateHolder.consumeHomeConfirmation]. */
+    val homeConfirmation: HomeConfirmation? = null
+) {
+    /** Whether the first-run flow is due. False until the pantry has loaded, because a pantry
+     *  with items in it completes onboarding (see [AppSettings.onboardingCompleted]). */
+    val needsOnboarding: Boolean
+        get() = !isLoading && !settings.onboardingCompleted
+}
 
 class PantryStateHolder(
     private val repository: PantryRepository,
@@ -300,6 +326,9 @@ class PantryStateHolder(
                 .flowOn(computationContext)
                 .collect { (base, filter, filtered) ->
                     registerCategories(base.items.mapNotNull { it.category })
+                    // Before isLoading drops below, so needsOnboarding can't flash true for
+                    // someone upgrading with a full pantry.
+                    if (base.items.isNotEmpty()) completeOnboarding()
                     _uiState.update { current ->
                         current.copy(
                             items = base.items,
@@ -459,6 +488,12 @@ class PantryStateHolder(
         _uiState.update { it.copy(settings = newSettings) }
     }
 
+    /** Marks the first-run flow as done. Safe to call when it already is. */
+    fun completeOnboarding() {
+        val current = settingsState.value
+        if (!current.onboardingCompleted) updateSettings(current.copy(onboardingCompleted = true))
+    }
+
     /**
      * Persists settings off the caller's thread. `saveSettings` is a JSON encode plus a
      * SharedPreferences write, and it used to run synchronously inside `updateSettings` — that
@@ -471,7 +506,10 @@ class PantryStateHolder(
     private fun observeSettingsPersistence() {
         coroutineScope.launch {
             settingsState
-                .drop(1) // The initial value came *from* the repository; writing it back is a no-op.
+                // The initial value came *from* the repository, so writing it back is a no-op.
+                // Not drop(1): the derivation starts first and can change settings before this
+                // collects, and that change would be the value dropped.
+                .dropWhile { it == initialSettings }
                 .collect { settingsRepository.saveSettings(it) }
         }
     }
@@ -569,7 +607,9 @@ class PantryStateHolder(
         document.knownProductNames.forEach { productNameRepository.recordName(it) }
 
         if (mode == RestoreMode.REPLACE) {
-            updateSettings(document.settings)
+            // Someone restoring a backup is past first run, even if the backup is older than
+            // onboarding or the pantry in it is empty.
+            updateSettings(document.settings.copy(onboardingCompleted = true))
         }
 
         return RestoreSummary(
@@ -621,10 +661,8 @@ class PantryStateHolder(
 
         barcodeLookupJob?.cancel()
         barcodeLookupJob = coroutineScope.launch {
-            // A locally-cached product (whether it was previously found via the API or entered
-            // by hand for a barcode OFF didn't know) wins over the network, so a "custom"
-            // product from a past scan is recognized here instead of showing not-found again.
-            val product = localProductRepository.getByBarcode(barcode) ?: openFoodFactsApi.fetchProduct(barcode)
+            val lookup = lookUp(barcode)
+            val product = lookup.productOrNull
             val suggestion = suggestExpiry(
                 detectedDate = gs1Date ?: _uiState.value.detectedDate,
                 barcode = barcode,
@@ -641,6 +679,7 @@ class PantryStateHolder(
                 it.copy(
                     scannedProduct = product,
                     productNotFoundBarcode = if (product == null) barcode else null,
+                    lookupResult = lookup,
                     suggestedExpiry = suggestion,
                     allergenWarnings = warnings,
                     isLookingUpBarcode = false,
@@ -650,6 +689,16 @@ class PantryStateHolder(
         }
         return true
     }
+
+    /** What this device knows about [barcode], without touching the network. */
+    suspend fun cachedProduct(barcode: String): ProductInfo? = localProductRepository.getByBarcode(barcode)
+
+    /** A locally-cached product (whether it was previously found via the API or entered by hand
+     *  for a barcode OFF didn't know) wins over the network, which also means a product scanned
+     *  before still resolves offline. */
+    private suspend fun lookUp(barcode: String): ProductLookupResult =
+        localProductRepository.getByBarcode(barcode)?.let { ProductLookupResult.Found(it) }
+            ?: openFoodFactsApi.lookupProduct(barcode)
 
     /**
      * Resolves the expiry date to pre-fill for a scanned product: the date read off the
@@ -697,7 +746,7 @@ class PantryStateHolder(
     fun enqueueBatchScan(barcode: String) {
         val existing = _uiState.value.batchQueue.find { it.barcode == barcode }
         if (existing != null) {
-            updateBatchEntry(existing.copy(quantity = existing.quantity + 1))
+            updateBatchEntry(existing.copy(quantity = (existing.quantity + 1).coerceAtMost(MAX_ITEM_QUANTITY)))
             return
         }
 
@@ -717,7 +766,7 @@ class PantryStateHolder(
         _uiState.update { it.copy(batchQueue = it.batchQueue + placeholder) }
 
         coroutineScope.launch {
-            val product = localProductRepository.getByBarcode(barcode) ?: openFoodFactsApi.fetchProduct(barcode)
+            val product = lookUp(barcode).productOrNull
             val suggestion = suggestExpiry(
                 detectedDate = gs1Date,
                 barcode = barcode,
@@ -873,7 +922,8 @@ class PantryStateHolder(
         val today = DateUtils.today()
         queue.forEach { entry ->
             saveItem(
-                PantryItem(
+                announce = false,
+                item = PantryItem(
                     id = newItemId(),
                     name = entry.name,
                     brand = entry.brand,
@@ -888,6 +938,7 @@ class PantryStateHolder(
             )
         }
         clearBatchQueue()
+        confirm(HomeConfirmation.BatchAdded(queue.size))
         onComplete(queue.size)
     }
 
@@ -921,11 +972,29 @@ class PantryStateHolder(
     fun incrementQuantity(id: String, onUpdated: (PantryItem) -> Unit = {}) {
         coroutineScope.launch {
             val item = repository.getItem(id) ?: return@launch
-            val updated = item.copy(quantity = item.quantity + 1)
+            val updated = if (item.quantity < MAX_ITEM_QUANTITY) item.copy(quantity = item.quantity + 1) else item
             repository.saveItem(updated)
             onUpdated(updated)
         }
         dismissDuplicate()
+    }
+
+    /** [incrementQuantity] as the answer to the duplicate question, so unlike an Undo that adds
+     *  a unit back, it is confirmed. */
+    fun addOneMore(id: String, onUpdated: (PantryItem) -> Unit = {}) {
+        incrementQuantity(id) { updated ->
+            confirm(HomeConfirmation.OneMoreAdded(updated.name, updated.quantity))
+            onUpdated(updated)
+        }
+    }
+
+    private fun confirm(confirmation: HomeConfirmation) {
+        _uiState.update { it.copy(homeConfirmation = confirmation) }
+    }
+
+    /** Clears [PantryUiState.homeConfirmation] once it has been shown. */
+    fun consumeHomeConfirmation() {
+        _uiState.update { it.copy(homeConfirmation = null) }
     }
 
     /** Publishes the result of classifying a captured product photo. Platform code does the
@@ -952,7 +1021,8 @@ class PantryStateHolder(
         }
     }
 
-    fun saveItem(item: PantryItem) {
+    /** [announce] is off for rows of a batch, which get one [HomeConfirmation.BatchAdded]. */
+    fun saveItem(item: PantryItem, announce: Boolean = true) {
         // A freehand-typed category (rather than one carried over untouched from a scan) may
         // match an existing category's renamed display name (e.g. typing "test" when origin
         // "test2" was already renamed to display as "test") - reuse that origin instead of
@@ -994,6 +1064,9 @@ class PantryStateHolder(
                 }
             }
             clearScanState()
+            if (announce) {
+                confirm(HomeConfirmation.Saved(resolvedItem.name, resolvedItem.storageLocation))
+            }
         }
     }
 
@@ -1010,6 +1083,25 @@ class PantryStateHolder(
                 onItemRemoved(item)
             }
         }
+    }
+
+    /**
+     * Deletes every item in [ids] at once, so a whole selection goes with one Undo: hand what
+     * [onItemsRemoved] receives to [restoreItems]. Like [deleteItem] it never touches the
+     * shopping list, and [onItemsRemoved] isn't called when none of the ids still exist.
+     */
+    fun deleteItems(ids: Collection<String>, onItemsRemoved: (List<PantryItem>) -> Unit = {}) {
+        if (ids.isEmpty()) return
+        coroutineScope.launch {
+            val items = repository.getItems(ids)
+            repository.deleteItems(ids)
+            if (items.isNotEmpty()) onItemsRemoved(items)
+        }
+    }
+
+    /** Reverses a [deleteItems] by putting [items] straight back, ids intact. */
+    fun restoreItems(items: List<PantryItem>) {
+        coroutineScope.launch { repository.saveItems(items) }
     }
 
     /** Decrements one unit of an item; once the last unit is used it is removed the same way
@@ -1527,6 +1619,7 @@ class PantryStateHolder(
             it.copy(
                 scannedProduct = null,
                 productNotFoundBarcode = null,
+                lookupResult = null,
                 detectedDate = null,
                 suggestedExpiry = null,
                 photoLabelSuggestions = emptyList(),

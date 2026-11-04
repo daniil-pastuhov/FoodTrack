@@ -7,7 +7,10 @@ import io.ktor.client.call.body
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.isSuccess
 import io.ktor.serialization.kotlinx.json.json
+import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -65,36 +68,66 @@ internal fun OffProduct.toNutrition(): ProductNutrition = ProductNutrition(
     ingredients = ingredientsText?.trim()?.takeIf { it.isNotEmpty() }
 )
 
+/**
+ * What looking a barcode up came to. [Offline] and [NotFound] lead to different messages: the
+ * first means try again later or carry on by hand, the second means the product really isn't
+ * in the database.
+ */
+sealed interface ProductLookupResult {
+    data class Found(val product: ProductInfo) : ProductLookupResult
+
+    /** Open Food Facts answered, and it doesn't know this barcode. */
+    data object NotFound : ProductLookupResult
+
+    /** No answer worth trusting: no network, a timeout, a server error or an unreadable reply. */
+    data object Offline : ProductLookupResult
+}
+
+/** The product, when there is one. */
+val ProductLookupResult.productOrNull: ProductInfo?
+    get() = (this as? ProductLookupResult.Found)?.product
+
+internal fun OffResponse.toLookupResult(barcode: String): ProductLookupResult {
+    val prod = product
+    if (status != 1 || prod == null) return ProductLookupResult.NotFound
+    return ProductLookupResult.Found(
+        ProductInfo(
+            barcode = barcode,
+            name = prod.productName?.takeIf { it.isNotBlank() } ?: "Item $barcode",
+            brand = prod.brands?.takeIf { it.isNotBlank() },
+            imageUrl = prod.imageFrontUrl?.takeIf { it.isNotBlank() },
+            category = prod.categories?.split(",")?.firstOrNull()?.trim()?.let(::stripLanguagePrefix),
+            quantity = prod.quantity?.takeIf { it.isNotBlank() },
+            nutrition = prod.toNutrition()
+        )
+    )
+}
+
 class OpenFoodFactsApi(
     private val httpClient: HttpClient = createDefaultClient()
 ) {
-    suspend fun fetchProduct(barcode: String): ProductInfo? {
+    suspend fun lookupProduct(barcode: String): ProductLookupResult {
         val cleanBarcode = barcode.trim()
-        if (cleanBarcode.isEmpty()) return null
+        if (cleanBarcode.isEmpty()) return ProductLookupResult.NotFound
 
         return try {
             val url = "https://world.openfoodfacts.org/api/v2/product/$cleanBarcode.json"
-            val response: OffResponse = httpClient.get(url) {
+            val response = httpClient.get(url) {
                 header("User-Agent", "FoodTracker-Android/1.0 (https://github.com/daniil-pastuhov/FoodTrack)")
-            }.body()
-
-            if (response.status == 1 && response.product != null) {
-                val prod = response.product
-                val name = prod.productName?.takeIf { it.isNotBlank() } ?: "Item $cleanBarcode"
-                ProductInfo(
-                    barcode = cleanBarcode,
-                    name = name,
-                    brand = prod.brands?.takeIf { it.isNotBlank() },
-                    imageUrl = prod.imageFrontUrl?.takeIf { it.isNotBlank() },
-                    category = prod.categories?.split(",")?.firstOrNull()?.trim()?.let(::stripLanguagePrefix),
-                    quantity = prod.quantity?.takeIf { it.isNotBlank() },
-                    nutrition = prod.toNutrition()
-                )
-            } else {
-                null
             }
+            when {
+                // How the v2 API reports an unknown barcode, usually with a JSON body saying the
+                // same. Read from the status code so a differently shaped body can't turn a real
+                // not-found into a failure.
+                response.status == HttpStatusCode.NotFound -> ProductLookupResult.NotFound
+                !response.status.isSuccess() -> ProductLookupResult.Offline
+                else -> response.body<OffResponse>().toLookupResult(cleanBarcode)
+            }
+        } catch (e: CancellationException) {
+            // Leaving the scanner cancels the lookup, which is not a network failure.
+            throw e
         } catch (_: Exception) {
-            null
+            ProductLookupResult.Offline
         }
     }
 

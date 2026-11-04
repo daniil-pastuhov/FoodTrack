@@ -4,6 +4,9 @@ import com.foodtracker.util.DateUtils
 import kotlinx.datetime.LocalDate
 import kotlinx.serialization.Serializable
 
+/** The most of one item the app will count up to. An older item above it keeps its quantity. */
+const val MAX_ITEM_QUANTITY = 99
+
 @Serializable
 data class PantryItem(
     val id: String,
