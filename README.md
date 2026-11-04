@@ -84,4 +84,6 @@ FoodTracker is licensed under the [Apache License 2.0](LICENSE).
 
 The license covers the code. It does not cover the "BestBefore" name, the app icon or the store-listing artwork in `store-listing/`. Please use your own name and icon if you publish a fork to an app store.
 
+The app bundles the Vollkorn typeface (SIL Open Font License 1.1) and Lucide icons (ISC License). Their licence texts ship in the app, in `androidApp/src/main/assets/licenses/`.
+
 Product data and pictures come from [Open Food Facts](https://world.openfoodfacts.org/), under the Open Database License (database) and Creative Commons Attribution-ShareAlike (pictures).
