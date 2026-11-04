@@ -8,7 +8,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
+import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
+import androidx.glance.Image
+import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
@@ -27,6 +30,7 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
+import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
@@ -120,7 +124,7 @@ private fun ShoppingListWidgetContent(list: WidgetShoppingList) {
                     when (row) {
                         is ShoppingRow.Header -> ShoppingSectionWidgetHeader(row)
                         is ShoppingRow.Item -> Column {
-                            ShoppingListRow(row.entry)
+                            ShoppingListRow(row.entry, showAction = true)
                             if (rows.getOrNull(index + 1) is ShoppingRow.Item) {
                                 WidgetRowDivider()
                             }
@@ -172,12 +176,19 @@ private fun ShoppingSectionWidgetHeader(header: ShoppingRow.Header) {
  *  keeps a pathological one from producing a huge widget update. */
 private const val MAX_WIDGET_ROWS = 60
 
-/** One shopping-list row, shared with [OverviewWidget]'s dense summary. */
+/**
+ * One shopping-list row.
+ *
+ * [showAction] adds the tick that marks the entry bought. Off by default for the same reason as
+ * [ExpiryRow]'s: [OverviewWidget] reuses this row in a dense summary, where a 48dp control per row
+ * would crowd out the content. The iOS overview widget has no tick either.
+ */
 @Composable
-internal fun ShoppingListRow(entry: ShoppingListEntry) {
+internal fun ShoppingListRow(entry: ShoppingListEntry, showAction: Boolean = false) {
     val context = LocalContext.current
     Row(
-        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
+        // The tick's touch target already gives the row its height.
+        modifier = GlanceModifier.fillMaxWidth().padding(vertical = if (showAction) 0.dp else 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column {
@@ -197,5 +208,28 @@ internal fun ShoppingListRow(entry: ShoppingListEntry) {
                 style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background_muted))
             )
         }
+        if (showAction) {
+            BoughtTick(entry)
+        }
+    }
+}
+
+/** The tick on a shopping-list row: a 24dp icon in a 48dp touch target. The description names the
+ *  product because every row's tick would otherwise read the same. */
+@Composable
+private fun BoughtTick(entry: ShoppingListEntry) {
+    val context = LocalContext.current
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = GlanceModifier
+            .size(48.dp)
+            .clickable(widgetRowAction<TickOffShoppingEntryAction>(entry.id))
+    ) {
+        Image(
+            provider = ImageProvider(R.drawable.ic_widget_check),
+            contentDescription = context.getString(R.string.widget_action_mark_bought, entry.productName),
+            colorFilter = ColorFilter.tint(ColorProvider(R.color.widget_on_background_muted)),
+            modifier = GlanceModifier.size(24.dp)
+        )
     }
 }

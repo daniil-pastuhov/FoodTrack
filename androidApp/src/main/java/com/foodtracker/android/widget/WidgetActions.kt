@@ -12,7 +12,7 @@ import com.foodtracker.viewmodel.PantryStateHolder
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-/** The pantry item or shopping section a widget tap acts on. */
+/** The pantry item, shopping entry or shopping section a widget tap acts on. */
 internal val widgetTargetIdKey = ActionParameters.Key<String>("widget_target_id")
 
 /**
@@ -36,6 +36,24 @@ class ConsumeItemAction : ActionCallback, KoinComponent {
         stateHolder.decrementQuantity(itemId) { removedItem ->
             NotificationHelper.cancelNotification(context, removedItem.id)
         }
+    }
+}
+
+/**
+ * The tick on a shopping-list widget row: removes that entry, exactly as ticking it off in the
+ * app does (see [PantryStateHolder.deleteShoppingListEntry]), and as the iOS widget's
+ * `TickOffShoppingEntryIntent` does.
+ *
+ * There is no undo here, as a widget has nowhere to put a snackbar, so this is deliberately the
+ * plain delete rather than anything that also touches the pantry.
+ */
+class TickOffShoppingEntryAction : ActionCallback, KoinComponent {
+
+    private val stateHolder: PantryStateHolder by inject()
+
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val entryId = parameters[widgetTargetIdKey] ?: return
+        stateHolder.deleteShoppingListEntry(entryId)
     }
 }
 
