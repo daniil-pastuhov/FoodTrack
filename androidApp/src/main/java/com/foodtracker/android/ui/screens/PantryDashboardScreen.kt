@@ -104,12 +104,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
 import kotlin.math.roundToInt
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.ui.components.ItemCard
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.expiredStatusColors
-import com.foodtracker.android.ui.theme.expiringStatusColors
-import com.foodtracker.android.ui.theme.freshStatusColors
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
@@ -126,6 +122,7 @@ fun PantryDashboardScreen(
     stateHolder: PantryStateHolder,
     onNavigateToAddEdit: (PantryItem?) -> Unit,
     onDeleteItem: (String) -> Unit,
+    onDeleteItems: (Set<String>) -> Unit,
     onDecrementQuantity: (String) -> Unit,
     onMoveToShoppingList: (String) -> Unit,
     modifier: Modifier = Modifier,
@@ -202,10 +199,7 @@ fun PantryDashboardScreen(
     }
 
     fun deleteSelectedItems() {
-        // Goes through the same onDeleteItem the row's own delete menu item uses, so each
-        // removal still gets its usual undo snackbar and shopping-list-for-essentials handling
-        // — there's no separate bulk-undo, just one snackbar per item.
-        selectedIds.forEach(onDeleteItem)
+        onDeleteItems(selectedIds)
         selectedIds = emptySet()
     }
 
@@ -254,12 +248,12 @@ fun PantryDashboardScreen(
                                         modifier = Modifier
                                             .size(36.dp)
                                             .clip(CircleShape)
-                                            .background(BrandPrimary)
+                                            .background(MaterialTheme.colorScheme.primary)
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Fastfood,
                                             contentDescription = null,
-                                            tint = Color.White,
+                                            tint = MaterialTheme.colorScheme.onPrimary,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -275,7 +269,7 @@ fun PantryDashboardScreen(
                                         Text(
                                             text = stringResource(R.string.app_subtitle),
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = TextSecondary
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -352,34 +346,31 @@ fun PantryDashboardScreen(
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val expiredColors = expiredStatusColors()
                     MetricCard(
                         title = stringResource(R.string.metric_expired),
                         count = state.expiredCount,
-                        color = expiredColors.foreground,
-                        bgColor = expiredColors.background,
+                        color = LarderTheme.colors.onExpiredContainer,
+                        bgColor = LarderTheme.colors.expiredContainer,
                         icon = Icons.Default.Error,
                         selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
                         onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
                         modifier = Modifier.weight(1f)
                     )
-                    val expiringColors = expiringStatusColors()
                     MetricCard(
                         title = stringResource(R.string.metric_soon),
                         count = state.expiringSoonCount,
-                        color = expiringColors.foreground,
-                        bgColor = expiringColors.background,
+                        color = LarderTheme.colors.onSoonContainer,
+                        bgColor = LarderTheme.colors.soonContainer,
                         icon = Icons.Default.Warning,
                         selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
                         onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
                         modifier = Modifier.weight(1f)
                     )
-                    val freshColors = freshStatusColors()
                     MetricCard(
                         title = stringResource(R.string.metric_fresh),
                         count = state.freshCount,
-                        color = freshColors.foreground,
-                        bgColor = freshColors.background,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        bgColor = MaterialTheme.colorScheme.surfaceContainer,
                         icon = Icons.Default.Schedule,
                         selected = state.selectedStatusFilter == StatusFilter.FRESH,
                         onClick = { toggleMetricFilter(StatusFilter.FRESH) },
@@ -405,7 +396,7 @@ fun PantryDashboardScreen(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        CircularProgressIndicator(color = BrandPrimary)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                     "empty" -> Box(
                         contentAlignment = Alignment.Center,
@@ -417,7 +408,7 @@ fun PantryDashboardScreen(
                             Icon(
                                 imageVector = Icons.Default.Fastfood,
                                 contentDescription = null,
-                                tint = TextSecondary.copy(alpha = 0.4f),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                                 modifier = Modifier.size(64.dp)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
@@ -425,12 +416,12 @@ fun PantryDashboardScreen(
                                 text = stringResource(R.string.empty_state_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
-                                color = TextSecondary
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = stringResource(R.string.empty_state_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = TextSecondary.copy(alpha = 0.7f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                                 modifier = Modifier.padding(horizontal = 24.dp)
                             )
                         }
@@ -493,7 +484,7 @@ fun PantryDashboardScreen(
                         Text(
                             text = stringResource(R.string.share_recipe_include_other_items_subtitle),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -503,7 +494,7 @@ fun PantryDashboardScreen(
                     showShareDialog = false
                     shareSelectedRecipePrompt(includeOtherItemsInShare)
                 }) {
-                    Text(stringResource(R.string.share_recipe_share_button), color = BrandPrimary)
+                    Text(stringResource(R.string.share_recipe_share_button), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -586,7 +577,7 @@ private fun FilterSheetContent(
             value = searchQuery,
             onValueChange = { stateHolder.onSearchQueryChanged(it) },
             placeholder = { Text(stringResource(R.string.search_placeholder)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextSecondary) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
                     IconButton(onClick = { stateHolder.onSearchQueryChanged("") }) {
@@ -613,8 +604,8 @@ private fun FilterSheetContent(
                     onClick = { stateHolder.onLocationSelected(null) },
                     label = { Text(stringResource(R.string.filter_all_locations)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = BrandPrimary
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -624,8 +615,8 @@ private fun FilterSheetContent(
                     onClick = { stateHolder.onLocationSelected(location) },
                     label = { Text(storageLocationLabel(location)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = BrandPrimary
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -650,8 +641,8 @@ private fun FilterSheetContent(
                         onClick = { stateHolder.onCategorySelected(null) },
                         label = { Text(stringResource(R.string.filter_all_categories)) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                            selectedLabelColor = BrandPrimary
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }
@@ -661,8 +652,8 @@ private fun FilterSheetContent(
                         onClick = { stateHolder.onCategorySelected(category) },
                         label = { Text(categoryLabel(category)) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                            selectedLabelColor = BrandPrimary
+                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            selectedLabelColor = MaterialTheme.colorScheme.primary
                         )
                     )
                 }
@@ -682,8 +673,8 @@ private fun FilterSheetContent(
                     onClick = { stateHolder.onStatusFilterSelected(StatusFilter.ALL) },
                     label = { Text(stringResource(R.string.tab_all)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = BrandPrimary
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -693,8 +684,8 @@ private fun FilterSheetContent(
                     onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRING_SOON) },
                     label = { Text(stringResource(R.string.tab_expiring_soon)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = BrandPrimary
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -704,8 +695,8 @@ private fun FilterSheetContent(
                     onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRED) },
                     label = { Text(stringResource(R.string.tab_expired)) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = BrandPrimary
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -746,8 +737,8 @@ private fun FilterSheetContent(
                         { Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp)) }
                     } else null,
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = BrandPrimary.copy(alpha = 0.15f),
-                        selectedLabelColor = BrandPrimary
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        selectedLabelColor = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -762,7 +753,7 @@ private fun AnimatedDotBadge(visible: Boolean) {
         enter = fadeIn() + scaleIn(),
         exit = fadeOut() + scaleOut()
     ) {
-        Badge(containerColor = BrandPrimary)
+        Badge(containerColor = MaterialTheme.colorScheme.primary)
     }
 }
 

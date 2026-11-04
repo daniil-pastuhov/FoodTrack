@@ -525,4 +525,24 @@
     </plurals>
     <string name="batch_discard_confirm">Forkast</string>
     <string name="batch_discard_keep">Fortsett å skanne</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Laster</string>
+    <string name="status_today">Utløper i dag</string>
+    <string name="status_tomorrow">Utløper i morgen</string>
+    <plurals name="status_days_over">
+        <item quantity="one">Utløpt for %d dag siden</item>
+        <item quantity="other">Utløpt for %d dager siden</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d vare</item>
+        <item quantity="other">%1$d varer</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s lagret i %2$s</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">%d vare slettet</item>
+        <item quantity="other">%d varer slettet</item>
+    </plurals>
+    <string name="onboarding_placeholder_title">Velkommen til Matvakt</string>
+    <string name="onboarding_placeholder_continue">Kom i gang</string>
 </resources>

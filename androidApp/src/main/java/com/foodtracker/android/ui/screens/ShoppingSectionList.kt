@@ -58,8 +58,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.categoryLabel
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
@@ -350,7 +348,7 @@ private fun ShoppingSectionHeader(
             Icon(
                 imageVector = Icons.Default.ExpandMore,
                 contentDescription = null,
-                tint = TextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .size(20.dp)
                     .rotate(chevronRotation)
@@ -363,7 +361,7 @@ private fun ShoppingSectionHeader(
                     text = label,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
@@ -372,7 +370,7 @@ private fun ShoppingSectionHeader(
                 Text(
                     text = itemCount.toString(),
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                 )
             }
             if (!isDefault) {
@@ -381,7 +379,7 @@ private fun ShoppingSectionHeader(
                         Icon(
                             Icons.Default.MoreVert,
                             contentDescription = stringResource(R.string.shopping_section_options, label),
-                            tint = TextSecondary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -405,7 +403,7 @@ private fun ShoppingSectionHeader(
                 Icon(
                     imageVector = Icons.Default.DragHandle,
                     contentDescription = stringResource(R.string.shopping_section_drag_handle_content_description),
-                    tint = TextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = dragHandleModifier
                         .padding(horizontal = 8.dp)
                         .size(20.dp)
@@ -442,7 +440,7 @@ internal fun ShoppingSectionNameDialog(
         },
         confirmButton = {
             TextButton(onClick = { onConfirm(value.text) }, enabled = value.text.isNotBlank()) {
-                Text(stringResource(R.string.shopping_section_save), color = BrandPrimary)
+                Text(stringResource(R.string.shopping_section_save), color = MaterialTheme.colorScheme.primary)
             }
         },
         dismissButton = {

@@ -39,6 +39,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxDefaults
 import androidx.compose.material3.SwipeToDismissBoxState
@@ -63,9 +64,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.BrandDark
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.viewmodel.PantryRow
 import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.android.util.categoryLabel
@@ -92,7 +90,7 @@ fun ItemCard(
     val displayCategory = row.categoryDisplayName
     val borderWidth by animateDpAsState(targetValue = if (selected) 2.dp else 0.dp, label = "itemCardBorderWidth")
     val borderColor by animateColorAsState(
-        targetValue = if (selected) BrandPrimary else Color.Transparent,
+        targetValue = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent,
         label = "itemCardBorderColor"
     )
     // Mirrors iOS's swipe-to-delete (left)/swipe-to-shopping-list (right) row actions. There's no
@@ -163,7 +161,7 @@ fun ItemCard(
                         Icon(
                             imageVector = if (selected) Icons.Default.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
                             contentDescription = null,
-                            tint = if (selected) BrandPrimary else TextSecondary
+                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                     }
@@ -198,7 +196,7 @@ fun ItemCard(
                         Icon(
                             imageVector = Icons.Default.Fastfood,
                             contentDescription = null,
-                            tint = BrandPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -222,7 +220,7 @@ fun ItemCard(
                         Text(
                             text = item.brand!!,
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -248,14 +246,14 @@ fun ItemCard(
                                 Icon(
                                     imageVector = Icons.Default.Kitchen,
                                     contentDescription = null,
-                                    tint = TextSecondary,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(10.dp)
                                 )
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
                                     text = storageLocationLabel(item.storageLocation),
                                     fontSize = 11.sp,
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
@@ -272,7 +270,7 @@ fun ItemCard(
                                 Text(
                                     text = categoryLabel(displayCategory),
                                     fontSize = 11.sp,
-                                    color = TextSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -293,7 +291,7 @@ fun ItemCard(
                             Icon(
                                 imageVector = Icons.Default.Remove,
                                 contentDescription = stringResource(R.string.use_one_content_description),
-                                tint = TextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -301,7 +299,7 @@ fun ItemCard(
                             text = stringResource(R.string.quantity_format, item.quantity),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -317,7 +315,7 @@ fun ItemCard(
 @Composable
 private fun SwipeActionBackground(direction: SwipeToDismissBoxValue) {
     val (color, alignment, icon) = when (direction) {
-        SwipeToDismissBoxValue.StartToEnd -> Triple(Color(0xFF1976D2), Alignment.CenterStart, Icons.Default.AddShoppingCart)
+        SwipeToDismissBoxValue.StartToEnd -> Triple(MaterialTheme.colorScheme.primary, Alignment.CenterStart, Icons.Default.AddShoppingCart)
         SwipeToDismissBoxValue.EndToStart -> Triple(MaterialTheme.colorScheme.error, Alignment.CenterEnd, Icons.Default.DeleteOutline)
         SwipeToDismissBoxValue.Settled -> Triple(Color.Transparent, Alignment.Center, null)
     }
@@ -330,7 +328,7 @@ private fun SwipeActionBackground(direction: SwipeToDismissBoxValue) {
         contentAlignment = alignment
     ) {
         icon?.let {
-            Icon(imageVector = it, contentDescription = null, tint = Color.White)
+            Icon(imageVector = it, contentDescription = null, tint = contentColorFor(color))
         }
     }
 }

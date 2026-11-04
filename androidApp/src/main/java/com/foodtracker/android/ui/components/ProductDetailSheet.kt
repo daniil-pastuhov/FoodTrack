@@ -36,9 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.ExpiredRed
-import com.foodtracker.android.ui.theme.FreshGreen
-import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.model.ProductNutrition
 
 /**
@@ -118,7 +116,7 @@ fun ProductDetailSheet(
 
             nutrition.ingredients?.takeIf { it.isNotBlank() }?.let { ingredients ->
                 DetailSection(title = stringResource(R.string.product_detail_ingredients)) {
-                    Text(text = ingredients, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
+                    Text(text = ingredients, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -137,12 +135,13 @@ private fun DetailSection(title: String, content: @Composable () -> Unit) {
  *  means nothing to someone who hasn't seen the scale before. */
 @Composable
 private fun NutriScoreBadge(grade: String) {
-    val color = when (grade.lowercase()) {
-        "a" -> Color(0xFF038141)
-        "b" -> Color(0xFF85BB2F)
-        "c" -> Color(0xFFFECB02)
-        "d" -> Color(0xFFEE8100)
-        else -> ExpiredRed
+    val colors = LarderTheme.colors
+    val (color, onColor) = when (grade.lowercase()) {
+        "a" -> colors.nutriA to colors.onNutriA
+        "b" -> colors.nutriB to colors.onNutriB
+        "c" -> colors.nutriC to colors.onNutriC
+        "d" -> colors.nutriD to colors.onNutriD
+        else -> colors.nutriE to colors.onNutriE
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -151,7 +150,7 @@ private fun NutriScoreBadge(grade: String) {
         ) {
             Text(
                 text = grade.uppercase(),
-                color = Color.White,
+                color = onColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
@@ -160,7 +159,7 @@ private fun NutriScoreBadge(grade: String) {
         Text(
             text = stringResource(R.string.product_detail_nutriscore),
             style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -168,11 +167,12 @@ private fun NutriScoreBadge(grade: String) {
 /** NOVA 1..4, least to most processed. */
 @Composable
 private fun NovaBadge(group: Int) {
-    val color = when (group) {
-        1 -> FreshGreen
-        2 -> Color(0xFF85BB2F)
-        3 -> Color(0xFFEE8100)
-        else -> ExpiredRed
+    val colors = LarderTheme.colors
+    val (color, onColor) = when (group) {
+        1 -> colors.nutriA to colors.onNutriA
+        2 -> colors.nutriB to colors.onNutriB
+        3 -> colors.nutriD to colors.onNutriD
+        else -> colors.nutriE to colors.onNutriE
     }
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
@@ -181,7 +181,7 @@ private fun NovaBadge(group: Int) {
         ) {
             Text(
                 text = group.toString(),
-                color = Color.White,
+                color = onColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 20.sp
             )
@@ -190,7 +190,7 @@ private fun NovaBadge(group: Int) {
         Text(
             text = stringResource(R.string.product_detail_nova),
             style = MaterialTheme.typography.labelSmall,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

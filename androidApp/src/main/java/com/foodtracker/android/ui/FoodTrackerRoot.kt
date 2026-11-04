@@ -1,6 +1,7 @@
 package com.foodtracker.android.ui
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
@@ -19,26 +20,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,23 +50,41 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
 import com.foodtracker.android.location.StoreGeofenceManager
-import com.foodtracker.android.ui.components.AppBottomBar
-import com.foodtracker.android.ui.components.BottomNavTab
-import com.foodtracker.android.ui.components.ScanAndAddFabs
+import com.foodtracker.android.camera.CameraScanMode
+import com.foodtracker.android.ui.components.ProductDetailSheet
+import com.foodtracker.android.ui.design.FloatingNav
+import com.foodtracker.android.ui.design.LarderSnackbar
+import com.foodtracker.android.ui.design.LarderTab
+import com.foodtracker.android.ui.design.LocalShellChrome
+import com.foodtracker.android.ui.design.ScanFab
+import com.foodtracker.android.ui.design.ShellChrome
+import com.foodtracker.android.ui.design.isExpanded
+import com.foodtracker.android.ui.design.shellClearance
+import com.foodtracker.android.ui.navigation.AddItemMode
+import com.foodtracker.android.ui.navigation.ItemPrefill
+import com.foodtracker.android.ui.navigation.LarderNavigator
+import com.foodtracker.android.ui.navigation.LarderRoute
+import com.foodtracker.android.ui.navigation.LocalLarderNavigator
+import com.foodtracker.android.ui.navigation.route
+import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CalendarScreen
 import com.foodtracker.android.ui.screens.CategorySettingsScreen
+import com.foodtracker.android.ui.screens.OnboardingScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
 import com.foodtracker.android.ui.screens.ShoppingListMatchDialog
 import com.foodtracker.android.ui.screens.ShoppingListScreen
-import com.foodtracker.android.ui.theme.FoodTrackerTheme
+import com.foodtracker.android.ui.theme.LarderSpace
+import com.foodtracker.android.ui.theme.LarderTheme
+import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.backup.BackupReadResult
 import com.foodtracker.backup.BackupSerializer
 import com.foodtracker.backup.RestoreMode
@@ -70,9 +92,12 @@ import com.foodtracker.match.ShoppingListMatchResult
 import com.foodtracker.match.ShoppingListMatcher
 import com.foodtracker.model.AppTheme
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.ProductInfo
+import com.foodtracker.model.ProductNutrition
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.util.DateUtils
+import com.foodtracker.viewmodel.HomeConfirmation
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -83,15 +108,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import com.foodtracker.android.ui.components.BackgroundLocationDisclosureDialog
 
-enum class AppScreen {
-    DASHBOARD,
-    SCANNER,
-    ADD_EDIT,
-    SETTINGS,
-    CATEGORY_SETTINGS,
-    CALENDAR,
-    SHOPPING_LIST
-}
+/** Off until the real first-run flow replaces the placeholder at [LarderRoute.Onboarding]. */
+private const val SHOW_ONBOARDING_ON_FIRST_RUN = false
 
 /** Holds a generic shopping-list scan's resolved result plus its ranked candidate entries
  *  while the "Did you mean?" dialog is up, so a tapped suggestion (or "None of these") can
@@ -106,6 +124,45 @@ private data class PendingShoppingListMatch(
     val suggestedExpiry: ShelfLifeSuggestion?,
     val candidates: List<ShoppingListEntry>
 )
+
+private fun confirmationMessage(context: Context, confirmation: HomeConfirmation): String =
+    when (confirmation) {
+        is HomeConfirmation.Saved -> context.getString(
+            R.string.item_saved_snackbar,
+            confirmation.name,
+            storageLocationLabel(context.resources, confirmation.location)
+        )
+        is HomeConfirmation.BatchAdded -> context.resources.getQuantityString(
+            R.plurals.batch_added_snackbar,
+            confirmation.count,
+            confirmation.count
+        )
+        is HomeConfirmation.OneMoreAdded -> context.getString(
+            R.string.duplicate_added_snackbar,
+            confirmation.name,
+            confirmation.quantity
+        )
+    }
+
+/** The product detail route, on the sheet that exists today. */
+@Composable
+private fun ProductDetailRoute(stateHolder: PantryStateHolder, itemId: String, onDismiss: () -> Unit) {
+    val item = remember(itemId) { stateHolder.uiState.value.items.find { it.id == itemId } }
+    val product by produceState<ProductInfo?>(null, item) {
+        value = item?.barcode?.let { stateHolder.cachedProduct(it) }
+    }
+    if (item == null) {
+        LaunchedEffect(Unit) { onDismiss() }
+        return
+    }
+    val nutrition = product?.nutrition ?: ProductNutrition()
+    ProductDetailSheet(
+        productName = item.name,
+        nutrition = nutrition,
+        warnings = nutrition.matchedAllergens(stateHolder.uiState.value.settings.allergens),
+        onDismiss = onDismiss
+    )
+}
 
 // Material predictive-back visual treatment for the screen being swiped away: it shrinks
 // slightly, shifts toward the swipe edge, and gains rounded corners as the gesture progresses.
@@ -125,7 +182,7 @@ private val PREDICTIVE_BACK_MAX_CORNER_RADIUS_DP = 32.dp
 @Composable
 fun FoodTrackerRoot(
     stateHolder: PantryStateHolder,
-    currentScreenState: MutableState<AppScreen>,
+    currentScreenState: MutableState<LarderRoute>,
     onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit,
     /** Set by the activity when it is about to ask for background location; see
      *  [BackgroundLocationDisclosureDialog]. */
@@ -146,13 +203,21 @@ fun FoodTrackerRoot(
         stateHolder.uiState.map { it.shoppingList.size }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.shoppingList.size)
 
+    val homeConfirmation by remember(stateHolder) {
+        stateHolder.uiState.map { it.homeConfirmation }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(stateHolder.uiState.value.homeConfirmation)
+
+    val needsOnboarding by remember(stateHolder) {
+        stateHolder.uiState.map { it.needsOnboarding }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(stateHolder.uiState.value.needsOnboarding)
+
     val darkTheme = when (settings.theme) {
         AppTheme.SYSTEM -> isSystemInDarkTheme()
         AppTheme.LIGHT -> false
         AppTheme.DARK -> true
     }
 
-    FoodTrackerTheme(darkTheme = darkTheme) {
+    LarderTheme(darkTheme = darkTheme) {
         if (backgroundLocationDisclosureState.value) {
             BackgroundLocationDisclosureDialog(
                 onContinue = {
@@ -167,22 +232,12 @@ fun FoodTrackerRoot(
             color = MaterialTheme.colorScheme.background
         ) {
             var currentScreen by currentScreenState
+            val currentTab = currentScreen.tab
+            val shellChrome = remember { ShellChrome() }
             // Hoisted above the Dashboard so it survives navigating away to Add/Edit
             // and back — the Dashboard composable itself is torn down and rebuilt by
             // the `when` below, which would otherwise reset scroll position on return.
             val dashboardGridState = rememberLazyGridState()
-            var editingItem by remember { mutableStateOf<PantryItem?>(null) }
-            var prefillBarcode by remember { mutableStateOf<String?>(null) }
-            var prefillName by remember { mutableStateOf<String?>(null) }
-            var prefillBrand by remember { mutableStateOf<String?>(null) }
-            var prefillImageUrl by remember { mutableStateOf<String?>(null) }
-            var prefillExpiryDate by remember { mutableStateOf<LocalDate?>(null) }
-            var prefillCategory by remember { mutableStateOf<String?>(null) }
-            // Expiry to start a new item from when the scan produced no date of its
-            // own — the shelf life this barcode was last given, or its category's
-            // default. Reset alongside the other prefills so a suggestion from one scan
-            // can't leak into the next, unrelated Add/Edit.
-            var prefillSuggestion by remember { mutableStateOf<ShelfLifeSuggestion?>(null) }
             // Set when the scanner was launched from a specific shopping list row,
             // so a product-not-found result can still prefill the name/category the
             // user already typed there, instead of leaving Add/Edit blank.
@@ -196,17 +251,22 @@ fun FoodTrackerRoot(
             // completed — SCANNER and ADD_EDIT are reachable from both the Dashboard
             // and the Shopping List screen, so a hardcoded Dashboard destination would
             // strand a shopping-list-originated scan on the wrong screen.
-            var scanReturnScreen by remember { mutableStateOf(AppScreen.DASHBOARD) }
+            var scanReturnScreen by remember { mutableStateOf<LarderRoute>(LarderRoute.Home) }
             // Holds a generic shopping-list scan's ranked candidates while the "Did you
             // mean?" dialog is up; non-null triggers that dialog as an overlay.
             var pendingShoppingListMatch by remember { mutableStateOf<PendingShoppingListMatch?>(null) }
+            // The item whose product detail is showing, over whatever screen is underneath.
+            var detailItemId by remember { mutableStateOf<String?>(null) }
+            val openPrefilledItem: (ItemPrefill) -> Unit = { prefill ->
+                currentScreen = LarderRoute.AddItem(AddItemMode.Prefilled(prefill))
+            }
 
             // Notification permission launcher (Android 13+)
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
             ) { _ -> }
 
-            androidx.compose.runtime.LaunchedEffect(Unit) {
+            LaunchedEffect(Unit) {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                         != PackageManager.PERMISSION_GRANTED
@@ -221,7 +281,7 @@ fun FoodTrackerRoot(
             }
 
             val navigateToDashboard: () -> Unit = {
-                currentScreen = AppScreen.DASHBOARD
+                currentScreen = LarderRoute.Home
             }
             val navigateBackFromScanner: () -> Unit = {
                 stateHolder.clearScanState()
@@ -230,23 +290,23 @@ fun FoodTrackerRoot(
                 currentScreen = scanReturnScreen
             }
 
-            val onNavigateToScanner: () -> Unit = {
-                currentScreen = AppScreen.SCANNER
+            val onNavigateToScanner: (CameraScanMode) -> Unit = { mode ->
+                currentScreen = LarderRoute.Scanner(mode)
             }
             // Invoked from the global floating "scan" button, reachable from any of the
             // four bottom-nav tabs, so it returns to whichever tab it was opened from
             // rather than always landing back on the Dashboard.
-            val onNavigateToScannerGlobal: () -> Unit = {
+            val onNavigateToScannerGlobal: (CameraScanMode) -> Unit = { mode ->
                 scanReturnScreen = currentScreen
                 scanningShoppingListEntry = null
                 isScanningForNewShoppingListEntry = false
-                onNavigateToScanner()
+                onNavigateToScanner(mode)
             }
             val onScanNewShoppingListEntry: () -> Unit = {
-                scanReturnScreen = AppScreen.SHOPPING_LIST
+                scanReturnScreen = LarderRoute.Shopping
                 scanningShoppingListEntry = null
                 isScanningForNewShoppingListEntry = true
-                onNavigateToScanner()
+                onNavigateToScanner(CameraScanMode.BARCODE)
             }
             // Tapping a shopping list row (rather than its scan icon) skips the camera
             // entirely and goes straight to Add/Edit prefilled from the entry, for items
@@ -254,48 +314,40 @@ fun FoodTrackerRoot(
             // via beginScanForShoppingListEntry means saveItem still removes it from the
             // shopping list, same as the scan-to-complete path does.
             val onAddShoppingListEntryManually: (ShoppingListEntry) -> Unit = { entry ->
-                scanReturnScreen = AppScreen.SHOPPING_LIST
+                scanReturnScreen = LarderRoute.Shopping
                 scanningShoppingListEntry = entry
                 isScanningForNewShoppingListEntry = false
                 stateHolder.beginScanForShoppingListEntry(entry.id)
-                editingItem = null
-                prefillBarcode = entry.barcode
-                prefillName = entry.productName
-                prefillBrand = null
-                prefillImageUrl = null
-                prefillExpiryDate = null
-                prefillCategory = entry.category
-                prefillSuggestion = null
-                currentScreen = AppScreen.ADD_EDIT
+                openPrefilledItem(
+                    ItemPrefill(
+                        barcode = entry.barcode,
+                        name = entry.productName,
+                        brand = null,
+                        imageUrl = null,
+                        expiryDate = null,
+                        category = entry.category,
+                        suggestion = null
+                    )
+                )
             }
             val onNavigateToAddEdit: (PantryItem?) -> Unit = { item ->
-                editingItem = item
-                prefillBarcode = null
-                prefillName = null
-                prefillBrand = null
-                prefillImageUrl = null
-                prefillExpiryDate = null
-                prefillCategory = null
-                prefillSuggestion = null
                 scanReturnScreen = currentScreen
-                currentScreen = AppScreen.ADD_EDIT
+                currentScreen = LarderRoute.AddItem(
+                    if (item == null) AddItemMode.New else AddItemMode.Edit(item.id)
+                )
             }
-            // Maps the four bottom-nav tabs onto AppScreen and back, for the shared
-            // outer Scaffold that hosts the floating pill nav bar below.
-            val currentTab = when (currentScreen) {
-                AppScreen.CALENDAR -> BottomNavTab.CALENDAR
-                AppScreen.SHOPPING_LIST -> BottomNavTab.SHOPPING_LIST
-                AppScreen.SETTINGS -> BottomNavTab.SETTINGS
-                else -> BottomNavTab.HOME
-            }
-            val onTabSelected: (BottomNavTab) -> Unit = { tab ->
-                currentScreen = when (tab) {
-                    BottomNavTab.HOME -> AppScreen.DASHBOARD
-                    BottomNavTab.CALENDAR -> AppScreen.CALENDAR
-                    BottomNavTab.SHOPPING_LIST -> AppScreen.SHOPPING_LIST
-                    BottomNavTab.SETTINGS -> AppScreen.SETTINGS
+            val navigate by rememberUpdatedState<(LarderRoute) -> Unit> { route ->
+                when (route) {
+                    is LarderRoute.ProductDetail -> detailItemId = route.itemId
+                    is LarderRoute.Scanner -> onNavigateToScannerGlobal(route.mode)
+                    is LarderRoute.AddItem -> {
+                        scanReturnScreen = currentScreen
+                        currentScreen = route
+                    }
+                    else -> currentScreen = route
                 }
             }
+            val navigator = remember { LarderNavigator { navigate(it) } }
             // Snackbar offering to reverse a removal — a full delete, a "-" tap that
             // used up the last unit, or checking a shopping list entry off — since all
             // of these are otherwise a single tap that's easy to trigger by mistake.
@@ -304,6 +356,22 @@ fun FoodTrackerRoot(
             // entries.
             val snackbarHostState = remember { SnackbarHostState() }
             val snackbarScope = rememberCoroutineScope()
+            // Shown wherever the person lands, once they're back on a tab. Launched on the
+            // snackbar scope because consuming it ends this effect.
+            LaunchedEffect(homeConfirmation, currentTab != null) {
+                val confirmation = homeConfirmation
+                if (confirmation != null && currentTab != null) {
+                    stateHolder.consumeHomeConfirmation()
+                    snackbarScope.launch {
+                        snackbarHostState.showSnackbar(confirmationMessage(context, confirmation))
+                    }
+                }
+            }
+            LaunchedEffect(needsOnboarding) {
+                if (SHOW_ONBOARDING_ON_FIRST_RUN && needsOnboarding) {
+                    currentScreen = LarderRoute.Onboarding
+                }
+            }
             // [addedToShoppingList] swaps the message to "added to shopping list" rather
             // than "removed" — the item still left the pantry, but calling that a
             // "removal" reads as if it just vanished, when it's actually sitting on the
@@ -395,24 +463,12 @@ fun FoodTrackerRoot(
                 }
             }
 
-            val onBatchCommitted: (Int) -> Unit = { added ->
-                snackbarScope.launch {
-                    snackbarHostState.showSnackbar(
-                        context.resources.getQuantityString(R.plurals.batch_added_snackbar, added, added)
-                    )
-                }
-                currentScreen = scanReturnScreen
-            }
+            val onBatchCommitted: (Int) -> Unit = { currentScreen = scanReturnScreen }
             val onDuplicateMerged: (PantryItem) -> Unit = { updated ->
                 // The item's date hasn't changed, but its reminder was scheduled from a
                 // state that no longer exists; rescheduling keeps it consistent with
                 // every other write path.
                 com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, updated)
-                snackbarScope.launch {
-                    snackbarHostState.showSnackbar(
-                        context.getString(R.string.duplicate_added_snackbar, updated.name, updated.quantity)
-                    )
-                }
                 scanningShoppingListEntry = null
                 currentScreen = scanReturnScreen
             }
@@ -428,6 +484,29 @@ fun FoodTrackerRoot(
                     showUndoRemovalSnackbar(removedItem.name, false) {
                         stateHolder.restoreItem(removedItem)
                         com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, removedItem)
+                    }
+                }
+            }
+            // Several items go with one Undo, however many were selected.
+            val onDeleteItemsHandler: (Set<String>) -> Unit = { ids ->
+                stateHolder.deleteItems(ids) { removed ->
+                    removed.forEach {
+                        com.foodtracker.android.notification.NotificationHelper.cancelNotification(context, it.id)
+                    }
+                    snackbarScope.launch {
+                        val result = snackbarHostState.showSnackbar(
+                            message = context.resources.getQuantityString(
+                                R.plurals.items_deleted_snackbar, removed.size, removed.size
+                            ),
+                            actionLabel = context.getString(R.string.undo_action),
+                            duration = SnackbarDuration.Long
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            stateHolder.restoreItems(removed)
+                            removed.forEach {
+                                com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, it)
+                            }
+                        }
                     }
                 }
             }
@@ -492,7 +571,7 @@ fun FoodTrackerRoot(
             var backProgress by remember { mutableFloatStateOf(0f) }
             var backSwipeEdge by remember { mutableStateOf(BackEventCompat.EDGE_LEFT) }
 
-            PredictiveBackHandler(enabled = currentScreen != AppScreen.DASHBOARD) { progress ->
+            PredictiveBackHandler(enabled = currentScreen != LarderRoute.Home) { progress ->
                 try {
                     progress.collect { backEvent ->
                         inPredictiveBack = true
@@ -502,11 +581,12 @@ fun FoodTrackerRoot(
                     inPredictiveBack = false
                     backProgress = 0f
                     when (currentScreen) {
-                        AppScreen.SCANNER -> navigateBackFromScanner()
-                        AppScreen.ADD_EDIT -> currentScreen = scanReturnScreen
-                        AppScreen.CATEGORY_SETTINGS -> currentScreen = AppScreen.SETTINGS
-                        AppScreen.SETTINGS, AppScreen.CALENDAR, AppScreen.SHOPPING_LIST -> navigateToDashboard()
-                        AppScreen.DASHBOARD -> Unit
+                        is LarderRoute.Scanner -> navigateBackFromScanner()
+                        is LarderRoute.AddItem -> currentScreen = scanReturnScreen
+                        LarderRoute.Categories -> currentScreen = LarderRoute.Settings
+                        LarderRoute.Settings, LarderRoute.Calendar, LarderRoute.Shopping,
+                        LarderRoute.Onboarding -> navigateToDashboard()
+                        is LarderRoute.ProductDetail, LarderRoute.Home -> Unit
                     }
                 } catch (e: CancellationException) {
                     inPredictiveBack = false
@@ -514,14 +594,32 @@ fun FoodTrackerRoot(
                 }
             }
 
+            // Measured rather than assumed, because both grow with font scale. Read from the
+            // composables themselves, so no surrounding padding is folded into the numbers.
+            val density = LocalDensity.current
+            val expanded = isExpanded()
+            var pillHeightPx by remember { mutableIntStateOf(0) }
+            var scanHeightPx by remember { mutableIntStateOf(0) }
+            val scanVisible = (currentTab == LarderTab.Home || currentTab == LarderTab.Calendar) &&
+                !shellChrome.scanHidden
+            val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val clearance = shellClearance(
+                bottomInset = navBarInset,
+                pillHeight = if (shellChrome.navHidden) 0.dp else with(density) { pillHeightPx.toDp() },
+                scanHeight = if (scanVisible) with(density) { scanHeightPx.toDp() } else 0.dp,
+                expanded = expanded
+            )
+
+            CompositionLocalProvider(LocalLarderNavigator provides navigator) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Background preview of the Dashboard, revealed as the current screen
                 // scales away during an in-progress predictive back gesture.
-                if (inPredictiveBack && currentScreen != AppScreen.DASHBOARD) {
+                if (inPredictiveBack && currentScreen != LarderRoute.Home) {
                     PantryDashboardScreen(
                         stateHolder = stateHolder,
                         onNavigateToAddEdit = {},
                         onDeleteItem = onDeleteItemHandler,
+                        onDeleteItems = onDeleteItemsHandler,
                         onDecrementQuantity = onDecrementQuantityHandler,
                         onMoveToShoppingList = onMoveToShoppingListHandler,
                         gridState = dashboardGridState
@@ -555,51 +653,13 @@ fun FoodTrackerRoot(
                             }
                         )
                 ) {
-                    val tabScreens = setOf(
-                        AppScreen.DASHBOARD,
-                        AppScreen.CALENDAR,
-                        AppScreen.SHOPPING_LIST,
-                        AppScreen.SETTINGS
-                    )
-                    if (currentScreen in tabScreens) {
-                        // Shared chrome for the four peer tabs: a floating pill nav bar
-                        // plus the scan/add-item round buttons, both reachable from any
-                        // tab. Unlike a Scaffold bottomBar/FAB (which reserve layout
-                        // space and push content up above them), this overlays the bar
-                        // and buttons on top of full-size, edge-to-edge tab content, so
-                        // the product list scrolls underneath them rather than stopping
-                        // short — each tab reserves its own bottom content padding to
-                        // keep its last row reachable above the overlay.
+                    if (currentTab != null) {
+                        // The floating pill and Scan overlay full-size, edge-to-edge tab content
+                        // rather than reserving layout space like a Scaffold's bars, so lists
+                        // scroll underneath them. Each tab keeps its last row reachable with the
+                        // bottom padding it gets from shellClearance.
+                        CompositionLocalProvider(LocalShellChrome provides shellChrome) {
                         Box(modifier = Modifier.fillMaxSize()) {
-                            // The FAB stack's bottom offset is derived from the pill's
-                            // actually-measured height (rather than a hardcoded guess)
-                            // so the two never overlap regardless of font scale/density.
-                            // Measured directly on the pill/FAB composables themselves
-                            // (not on a Box wrapping them with navigationBarsPadding/
-                            // margin modifiers) so each value is exactly that element's
-                            // own size, with no ambiguity about whether surrounding
-                            // padding is folded in — that ambiguity previously caused the
-                            // nav bar inset to be counted twice and left a large dead gap
-                            // under Home's last row.
-                            var pillHeightPx by remember { mutableFloatStateOf(0f) }
-                            var fabStackHeightPx by remember { mutableFloatStateOf(0f) }
-                            val density = androidx.compose.ui.platform.LocalDensity.current
-                            val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-                            val pillHeight = with(density) { pillHeightPx.toDp() }
-                            val fabStackHeight = with(density) { fabStackHeightPx.toDp() }
-                            // Mirrors the pill's own visual placement (navigationBarsPadding
-                            // + this same 12dp bottom margin, see the Box below) plus a small
-                            // breathing-room buffer above it.
-                            val pillMarginBottom = 12.dp
-                            val bufferAboveOverlay = 16.dp
-                            val pillClearance = navBarInset + pillMarginBottom + pillHeight + bufferAboveOverlay
-                            // Home also has the FABs floating above the pill (see their own
-                            // 24dp gap above it below), so it needs extra clearance the
-                            // other tabs (pill only) don't.
-                            val fabGapAbovePill = 24.dp
-                            val homeClearance = navBarInset + pillMarginBottom + pillHeight +
-                                fabGapAbovePill + fabStackHeight + bufferAboveOverlay
-
                             AnimatedContent(
                                 targetState = currentScreen,
                                 transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
@@ -607,27 +667,28 @@ fun FoodTrackerRoot(
                                 label = "tabContent"
                             ) { screen ->
                             when (screen) {
-                                AppScreen.DASHBOARD -> {
+                                LarderRoute.Home -> {
                                     PantryDashboardScreen(
                                         stateHolder = stateHolder,
                                         onNavigateToAddEdit = onNavigateToAddEdit,
                                         onDeleteItem = onDeleteItemHandler,
+                                        onDeleteItems = onDeleteItemsHandler,
                                         onDecrementQuantity = onDecrementQuantityHandler,
                                         onMoveToShoppingList = onMoveToShoppingListHandler,
                                         gridState = dashboardGridState,
-                                        bottomOverlayClearance = homeClearance
+                                        bottomOverlayClearance = clearance.content
                                     )
                                 }
-                                AppScreen.CALENDAR -> {
+                                LarderRoute.Calendar -> {
                                     CalendarScreen(
                                         stateHolder = stateHolder,
                                         onEditItem = onNavigateToAddEdit,
                                         onUseOne = onUseOneHandler,
                                         onToss = onDeleteItemHandler,
-                                        bottomOverlayClearance = pillClearance
+                                        bottomOverlayClearance = clearance.content
                                     )
                                 }
-                                AppScreen.SHOPPING_LIST -> {
+                                LarderRoute.Shopping -> {
                                     ShoppingListScreen(
                                         stateHolder = stateHolder,
                                         onScanNewEntry = onScanNewShoppingListEntry,
@@ -635,10 +696,10 @@ fun FoodTrackerRoot(
                                         onCheckOffEntry = onCheckOffShoppingListEntryHandler,
                                         onDecrementEntry = onDecrementShoppingListQuantityHandler,
                                         onImportComplete = showImportResultSnackbar,
-                                        bottomOverlayClearance = pillClearance
+                                        bottomOverlayClearance = clearance.content
                                     )
                                 }
-                                AppScreen.SETTINGS -> {
+                                LarderRoute.Settings -> {
                                     SettingsScreen(
                                         settings = settings,
                                         onAddCurrentLocationAsStore = onAddCurrentLocationAsStore,
@@ -666,60 +727,61 @@ fun FoodTrackerRoot(
                                                 com.foodtracker.android.notification.NotificationHelper.cancelNotification(context, item.id)
                                             }
                                             stateHolder.clearAllData()
-                                            currentScreen = AppScreen.DASHBOARD
+                                            currentScreen = LarderRoute.Home
                                         },
-                                        onManageCategories = { currentScreen = AppScreen.CATEGORY_SETTINGS },
+                                        onManageCategories = { currentScreen = LarderRoute.Categories },
                                         onExportBackup = onExportBackup,
                                         onImportBackup = onImportBackup,
                                         backupFileName = BackupSerializer.suggestedFileName(
                                             DateUtils.today().toString()
                                         ),
-                                        bottomOverlayClearance = pillClearance
+                                        bottomOverlayClearance = clearance.content
                                     )
                                 }
                                 else -> Unit
                             }
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .padding(bottom = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AppBottomBar(
-                                    selectedTab = currentTab,
-                                    onTabSelected = onTabSelected,
-                                    shoppingListCount = shoppingListCount,
-                                    modifier = Modifier.onGloballyPositioned { pillHeightPx = it.size.height.toFloat() }
-                                )
-                            }
-                            val fabsVisible = currentTab == BottomNavTab.HOME
                             AnimatedVisibility(
-                                visible = fabsVisible,
+                                visible = !shellChrome.navHidden,
                                 enter = fadeIn() + slideInVertically { it / 2 },
                                 exit = fadeOut() + slideOutVertically { it / 2 },
-                                modifier = Modifier.align(Alignment.BottomEnd)
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .navigationBarsPadding()
+                                    .padding(start = LarderSpace.s3, end = LarderSpace.s3, bottom = LarderSpace.s3)
                             ) {
-                                ScanAndAddFabs(
-                                    onScan = onNavigateToScannerGlobal,
-                                    onAdd = { onNavigateToAddEdit(null) },
-                                    modifier = Modifier
-                                        .padding(
-                                            end = 16.dp,
-                                            bottom = navBarInset + pillMarginBottom + pillHeight + fabGapAbovePill
-                                        )
-                                        .onGloballyPositioned { fabStackHeightPx = it.size.height.toFloat() }
+                                FloatingNav(
+                                    selectedTab = currentTab,
+                                    onTabSelected = { currentScreen = it.route },
+                                    shoppingCount = shoppingListCount,
+                                    modifier = Modifier.onGloballyPositioned { pillHeightPx = it.size.height }
+                                )
+                            }
+                            AnimatedVisibility(
+                                visible = scanVisible,
+                                enter = fadeIn() + slideInVertically { it / 2 },
+                                exit = fadeOut() + slideOutVertically { it / 2 },
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(
+                                        end = if (expanded) LarderSpace.s5 else LarderSpace.s4,
+                                        bottom = clearance.scan
+                                    )
+                            ) {
+                                ScanFab(
+                                    onClick = { onNavigateToScannerGlobal(CameraScanMode.BARCODE) },
+                                    modifier = Modifier.onGloballyPositioned { scanHeightPx = it.size.height }
                                 )
                             }
                         }
+                        }
                     } else {
-                    when (currentScreen) {
-                        AppScreen.SCANNER -> {
+                    when (val route = currentScreen) {
+                        is LarderRoute.Scanner -> {
                             ScannerScreen(
                                 stateHolder = stateHolder,
+                                initialMode = route.mode,
                                 onNavigateBack = navigateBackFromScanner,
                                 onShoppingListScanned = onShoppingListPayloadScanned,
                                 onBatchCommitted = onBatchCommitted,
@@ -742,15 +804,17 @@ fun FoodTrackerRoot(
                                         when (val result = ShoppingListMatcher.match(name, barcode, stateHolder.uiState.value.shoppingList)) {
                                             is ShoppingListMatchResult.ExactBarcodeMatch -> {
                                                 stateHolder.beginScanForShoppingListEntry(result.entry.id)
-                                                editingItem = null
-                                                prefillBarcode = barcode
-                                                prefillName = name ?: result.entry.productName
-                                                prefillBrand = brand
-                                                prefillImageUrl = imageUrl
-                                                prefillExpiryDate = expiryDate
-                                                prefillCategory = category ?: result.entry.category
-                                                prefillSuggestion = suggestedExpiry
-                                                currentScreen = AppScreen.ADD_EDIT
+                                                openPrefilledItem(
+                                                    ItemPrefill(
+                                                        barcode = barcode,
+                                                        name = name ?: result.entry.productName,
+                                                        brand = brand,
+                                                        imageUrl = imageUrl,
+                                                        expiryDate = expiryDate,
+                                                        category = category ?: result.entry.category,
+                                                        suggestion = suggestedExpiry
+                                                    )
+                                                )
                                             }
                                             is ShoppingListMatchResult.Suggestions -> {
                                                 pendingShoppingListMatch = PendingShoppingListMatch(
@@ -766,44 +830,53 @@ fun FoodTrackerRoot(
                                                 currentScreen = scanReturnScreen
                                             }
                                             ShoppingListMatchResult.NoMatch -> {
-                                                editingItem = null
-                                                prefillBarcode = barcode
-                                                prefillName = name
-                                                prefillBrand = brand
-                                                prefillImageUrl = imageUrl
-                                                prefillExpiryDate = expiryDate
-                                                prefillCategory = category
-                                                prefillSuggestion = suggestedExpiry
-                                                currentScreen = AppScreen.ADD_EDIT
+                                                openPrefilledItem(
+                                                    ItemPrefill(
+                                                        barcode = barcode,
+                                                        name = name,
+                                                        brand = brand,
+                                                        imageUrl = imageUrl,
+                                                        expiryDate = expiryDate,
+                                                        category = category,
+                                                        suggestion = suggestedExpiry
+                                                    )
+                                                )
                                             }
                                         }
                                     } else {
                                         val fallbackEntry = scanningShoppingListEntry
-                                        editingItem = null
-                                        prefillBarcode = barcode
-                                        prefillName = name ?: fallbackEntry?.productName
-                                        prefillBrand = brand
-                                        prefillImageUrl = imageUrl
-                                        prefillExpiryDate = expiryDate
-                                        prefillCategory = category ?: fallbackEntry?.category
-                                        prefillSuggestion = suggestedExpiry
-                                        currentScreen = AppScreen.ADD_EDIT
+                                        openPrefilledItem(
+                                            ItemPrefill(
+                                                barcode = barcode,
+                                                name = name ?: fallbackEntry?.productName,
+                                                brand = brand,
+                                                imageUrl = imageUrl,
+                                                expiryDate = expiryDate,
+                                                category = category ?: fallbackEntry?.category,
+                                                suggestion = suggestedExpiry
+                                            )
+                                        )
                                     }
                                 }
                             )
                         }
 
-                        AppScreen.ADD_EDIT -> {
+                        is LarderRoute.AddItem -> {
+                            val prefill = (route.mode as? AddItemMode.Prefilled)?.prefill
+                            val editingId = (route.mode as? AddItemMode.Edit)?.itemId
+                            val editingItem = remember(editingId) {
+                                stateHolder.uiState.value.items.find { it.id == editingId }
+                            }
                             AddEditItemScreen(
                                 stateHolder = stateHolder,
                                 initialItem = editingItem,
-                                prefillBarcode = prefillBarcode,
-                                prefillName = prefillName,
-                                prefillBrand = prefillBrand,
-                                prefillImageUrl = prefillImageUrl,
-                                prefillExpiryDate = prefillExpiryDate,
-                                prefillCategory = prefillCategory,
-                                prefillSuggestion = prefillSuggestion,
+                                prefillBarcode = prefill?.barcode,
+                                prefillName = prefill?.name,
+                                prefillBrand = prefill?.brand,
+                                prefillImageUrl = prefill?.imageUrl,
+                                prefillExpiryDate = prefill?.expiryDate,
+                                prefillCategory = prefill?.category,
+                                prefillSuggestion = prefill?.suggestion,
                                 settings = settings,
                                 onNavigateBack = {
                                     // Cancelling out of Add/Edit must clear any pending
@@ -826,10 +899,19 @@ fun FoodTrackerRoot(
                             )
                         }
 
-                        AppScreen.CATEGORY_SETTINGS -> {
+                        LarderRoute.Categories -> {
                             CategorySettingsScreen(
                                 stateHolder = stateHolder,
-                                onNavigateBack = { currentScreen = AppScreen.SETTINGS }
+                                onNavigateBack = { currentScreen = LarderRoute.Settings }
+                            )
+                        }
+
+                        LarderRoute.Onboarding -> {
+                            OnboardingScreen(
+                                onFinished = {
+                                    stateHolder.completeOnboarding()
+                                    navigateToDashboard()
+                                }
                             )
                         }
 
@@ -843,30 +925,42 @@ fun FoodTrackerRoot(
                         candidates = pending.candidates,
                         onCandidateSelected = { chosen ->
                             stateHolder.beginScanForShoppingListEntry(chosen.id)
-                            editingItem = null
-                            prefillBarcode = pending.barcode
-                            prefillName = pending.name ?: chosen.productName
-                            prefillBrand = pending.brand
-                            prefillImageUrl = pending.imageUrl
-                            prefillExpiryDate = pending.expiryDate
-                            prefillCategory = pending.category ?: chosen.category
-                            prefillSuggestion = pending.suggestedExpiry
                             pendingShoppingListMatch = null
-                            currentScreen = AppScreen.ADD_EDIT
+                            openPrefilledItem(
+                                ItemPrefill(
+                                    barcode = pending.barcode,
+                                    name = pending.name ?: chosen.productName,
+                                    brand = pending.brand,
+                                    imageUrl = pending.imageUrl,
+                                    expiryDate = pending.expiryDate,
+                                    category = pending.category ?: chosen.category,
+                                    suggestion = pending.suggestedExpiry
+                                )
+                            )
                         },
                         onNoneOfThese = {
-                            editingItem = null
-                            prefillBarcode = pending.barcode
-                            prefillName = pending.name
-                            prefillBrand = pending.brand
-                            prefillImageUrl = pending.imageUrl
-                            prefillExpiryDate = pending.expiryDate
-                            prefillCategory = pending.category
-                            prefillSuggestion = pending.suggestedExpiry
                             pendingShoppingListMatch = null
-                            currentScreen = AppScreen.ADD_EDIT
+                            openPrefilledItem(
+                                ItemPrefill(
+                                    barcode = pending.barcode,
+                                    name = pending.name,
+                                    brand = pending.brand,
+                                    imageUrl = pending.imageUrl,
+                                    expiryDate = pending.expiryDate,
+                                    category = pending.category,
+                                    suggestion = pending.suggestedExpiry
+                                )
+                            )
                         },
                         onDismiss = { pendingShoppingListMatch = null }
+                    )
+                }
+
+                detailItemId?.let { itemId ->
+                    ProductDetailRoute(
+                        stateHolder = stateHolder,
+                        itemId = itemId,
+                        onDismiss = { detailItemId = null }
                     )
                 }
 
@@ -874,14 +968,15 @@ fun FoodTrackerRoot(
                     hostState = snackbarHostState,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(bottom = 88.dp)
+                        .padding(
+                            start = LarderSpace.s4,
+                            end = LarderSpace.s4,
+                            bottom = if (currentTab != null) clearance.snackbar else navBarInset + 88.dp
+                        )
                 ) { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        actionColor = MaterialTheme.colorScheme.primary
-                    )
+                    LarderSnackbar(data)
                 }
+            }
             }
         }
     }

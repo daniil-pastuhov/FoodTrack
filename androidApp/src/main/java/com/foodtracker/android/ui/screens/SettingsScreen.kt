@@ -80,8 +80,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.StorePlace
@@ -173,7 +171,7 @@ fun SettingsScreen(
                     persist(draft.copy(notifications = draft.notifications.copy(hour = timeState.hour, minute = timeState.minute)))
                     showTimePicker = false
                 }) {
-                    Text(stringResource(R.string.date_picker_ok), color = BrandPrimary)
+                    Text(stringResource(R.string.date_picker_ok), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -194,7 +192,7 @@ fun SettingsScreen(
                     Text(
                         text = stringResource(R.string.restore_mode_message),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     RestoreModeRow(
@@ -282,7 +280,7 @@ fun SettingsScreen(
                     Switch(
                         checked = notifications.enabled,
                         onCheckedChange = { persistNotifications(notifications.withEnabled(it)) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
 
@@ -355,7 +353,7 @@ fun SettingsScreen(
                             .clickable { showTimePicker = true }
                             .padding(horizontal = 14.dp, vertical = 12.dp)
                     ) {
-                        Icon(Icons.Default.Schedule, contentDescription = null, tint = BrandPrimary)
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = formatReminderTime(notifications),
@@ -367,7 +365,7 @@ fun SettingsScreen(
                     Text(
                         text = reminderPreview(notifications),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         // The sentence grows to two lines for "Both" and shrinks back.
                         modifier = Modifier.animateContentSize()
                     )
@@ -379,7 +377,7 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_expiring_soon_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -389,7 +387,7 @@ fun SettingsScreen(
                             onClick = { persist(draft.copy(expiringSoonDays = days)) },
                             label = { Text(days.toString()) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = BrandPrimary,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                             )
                         )
@@ -405,14 +403,14 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_remember_last_location_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Switch(
                         checked = draft.rememberLastStorageLocation,
                         onCheckedChange = { persist(draft.copy(rememberLastStorageLocation = it)) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
 
@@ -420,7 +418,7 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_locations_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -455,14 +453,14 @@ fun SettingsScreen(
                                 }
                                 editingLocation = null
                             }) {
-                                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.settings_confirm_rename), tint = BrandPrimary)
+                                Icon(Icons.Default.Check, contentDescription = stringResource(R.string.settings_confirm_rename), tint = MaterialTheme.colorScheme.primary)
                             }
                         } else {
                             IconButton(onClick = { persist(draft.copy(defaultStorageLocation = location)) }) {
                                 Icon(
                                     imageVector = if (draft.defaultStorageLocation == location) Icons.Default.Star else Icons.Default.StarBorder,
                                     contentDescription = stringResource(R.string.settings_set_default_location),
-                                    tint = BrandPrimary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                             Text(storageLocationLabel(location), modifier = Modifier.weight(1f))
@@ -470,7 +468,7 @@ fun SettingsScreen(
                                 editingLocation = location
                                 editingLocationText = locationLabel(location)
                             }) {
-                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.settings_rename_location), tint = TextSecondary)
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.settings_rename_location), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             IconButton(
                                 onClick = {
@@ -490,7 +488,7 @@ fun SettingsScreen(
                                 Icon(
                                     Icons.Default.DeleteOutline,
                                     contentDescription = stringResource(R.string.settings_delete_location),
-                                    tint = if (draft.storageLocations.size > 1) MaterialTheme.colorScheme.error else TextSecondary.copy(alpha = 0.3f)
+                                    tint = if (draft.storageLocations.size > 1) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
                                 )
                             }
                         }
@@ -514,7 +512,7 @@ fun SettingsScreen(
                             newLocationText = ""
                         }
                     }) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.settings_add_location), tint = BrandPrimary)
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.settings_add_location), tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -525,7 +523,7 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_allergens_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 draft.allergens.sorted().forEach { allergen ->
@@ -538,7 +536,7 @@ fun SettingsScreen(
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = stringResource(R.string.settings_remove_allergen_content_description),
-                                tint = TextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -565,7 +563,7 @@ fun SettingsScreen(
                         Icon(
                             Icons.Default.Add,
                             contentDescription = stringResource(R.string.settings_add_allergen),
-                            tint = BrandPrimary
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
@@ -579,13 +577,13 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_store_reminders_desc),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Switch(
                         checked = draft.storeRemindersEnabled,
                         onCheckedChange = { persist(draft.copy(storeRemindersEnabled = it)) },
-                        colors = SwitchDefaults.colors(checkedTrackColor = BrandPrimary)
+                        colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary)
                     )
                 }
 
@@ -606,7 +604,7 @@ fun SettingsScreen(
                                 Icon(
                                     Icons.Default.Close,
                                     contentDescription = stringResource(R.string.settings_remove_store_content_description),
-                                    tint = TextSecondary,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -661,7 +659,7 @@ fun SettingsScreen(
                         ) {
                             if (isResolvingStoreLocation) {
                                 CircularProgressIndicator(
-                                    color = BrandPrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     strokeWidth = 2.dp,
                                     modifier = Modifier.size(18.dp)
                                 )
@@ -669,7 +667,7 @@ fun SettingsScreen(
                                 Icon(
                                     Icons.Default.MyLocation,
                                     contentDescription = stringResource(R.string.settings_add_store),
-                                    tint = BrandPrimary
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
@@ -682,7 +680,7 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_categories_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
@@ -694,7 +692,7 @@ fun SettingsScreen(
                         .padding(horizontal = 14.dp, vertical = 12.dp)
                 ) {
                     Text(stringResource(R.string.settings_manage_categories_button), modifier = Modifier.weight(1f))
-                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
@@ -712,7 +710,7 @@ fun SettingsScreen(
                             onClick = { persist(draft.copy(theme = theme)) },
                             label = { Text(label) },
                             colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = BrandPrimary,
+                                selectedContainerColor = MaterialTheme.colorScheme.primary,
                                 selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             modifier = Modifier.weight(1f)
@@ -726,7 +724,7 @@ fun SettingsScreen(
                 Text(
                     text = stringResource(R.string.settings_backup_desc),
                     style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 OutlinedButton(
@@ -827,7 +825,7 @@ private fun ExpandingBlock(visible: Boolean, content: @Composable () -> Unit) {
 
 @Composable
 private fun SettingsFieldLabel(text: String) {
-    Text(text = text, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+    Text(text = text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Spacer(modifier = Modifier.height(6.dp))
 }
 
@@ -874,7 +872,7 @@ private fun SettingsChoiceChip(label: String, selected: Boolean, onClick: () -> 
         onClick = onClick,
         label = { Text(label) },
         colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = BrandPrimary,
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
         )
     )
@@ -935,8 +933,8 @@ private fun RestoreModeRow(
         Text(
             text = title,
             fontWeight = FontWeight.SemiBold,
-            color = if (destructive) MaterialTheme.colorScheme.error else BrandPrimary
+            color = if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
         )
-        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+        Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

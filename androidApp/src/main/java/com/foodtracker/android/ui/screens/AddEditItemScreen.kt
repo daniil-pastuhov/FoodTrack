@@ -82,8 +82,6 @@ import coil.request.ImageRequest
 import com.foodtracker.android.R
 import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.ui.components.ProductDetailSheet
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.android.util.daysRemainingLabel
 import com.foodtracker.android.util.foodLabelName
 import com.foodtracker.android.util.formatLocalDate
@@ -273,11 +271,11 @@ fun AddEditItemScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    stateHolder.incrementQuantity(duplicate.id) { updated ->
+                    stateHolder.addOneMore(duplicate.id) { updated ->
                         onDuplicateMerged(updated)
                     }
                 }) {
-                    Text(stringResource(R.string.duplicate_dialog_add_one), color = BrandPrimary)
+                    Text(stringResource(R.string.duplicate_dialog_add_one), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -316,7 +314,7 @@ fun AddEditItemScreen(
                     }
                     showDatePicker = false
                 }) {
-                    Text(stringResource(R.string.date_picker_ok), color = BrandPrimary)
+                    Text(stringResource(R.string.date_picker_ok), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -351,8 +349,8 @@ fun AddEditItemScreen(
                         onClick = onScanButtonClick,
                         modifier = Modifier.padding(end = 8.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = BrandPrimary.copy(alpha = 0.12f),
-                            contentColor = BrandPrimary
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            contentColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Icon(
@@ -384,7 +382,7 @@ fun AddEditItemScreen(
                     Button(
                         onClick = ::saveItem,
                         enabled = name.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .widthIn(max = 640.dp)
@@ -455,7 +453,7 @@ fun AddEditItemScreen(
                         Icon(
                             imageVector = Icons.Default.Fastfood,
                             contentDescription = null,
-                            tint = BrandPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -471,7 +469,7 @@ fun AddEditItemScreen(
                         Text(
                             text = stringResource(R.string.barcode_format, barcode),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -518,7 +516,7 @@ fun AddEditItemScreen(
                             else R.string.photo_suggestions_title
                         ),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (!state.isLabelingPhoto) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -588,7 +586,7 @@ fun AddEditItemScreen(
                             .clickable { showDatePicker = true }
                             .padding(horizontal = 14.dp, vertical = 12.dp)
                     ) {
-                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = BrandPrimary)
+                        Icon(Icons.Default.CalendarToday, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = formatLocalDate(expiryDate),
@@ -598,7 +596,7 @@ fun AddEditItemScreen(
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = daysRemainingLabel((expiryDate.toEpochDays() - today.toEpochDays()).toInt()),
-                            color = BrandPrimary,
+                            color = MaterialTheme.colorScheme.primary,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -619,7 +617,7 @@ fun AddEditItemScreen(
                             Icon(
                                 Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = BrandPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -632,7 +630,7 @@ fun AddEditItemScreen(
                                     )
                                     else -> stringResource(R.string.expiry_suggestion_remembered, spanLabel)
                                 },
-                                color = TextSecondary,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp
                             )
                         }
@@ -716,7 +714,7 @@ fun AddEditItemScreen(
                         },
                         label = { Text(storageLocationLabel(location)) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = BrandPrimary,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                         )
                     )
@@ -810,7 +808,7 @@ fun AddEditItemScreen(
                     Text(
                         text = stringResource(R.string.essential_item_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(checked = essential, onCheckedChange = { essential = it })
@@ -833,7 +831,7 @@ fun AddEditItemScreen(
                     Text(
                         text = stringResource(R.string.item_notifications_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })

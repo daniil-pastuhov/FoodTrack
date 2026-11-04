@@ -62,8 +62,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.viewmodel.PantryStateHolder
 import sh.calvin.reorderable.ReorderableItem
@@ -178,7 +176,7 @@ fun CategorySettingsScreen(
                     if (newName != null) stateHolder.renameCategory(origin, newName)
                     editingOrigin = null
                 }) {
-                    Text(stringResource(R.string.settings_confirm_rename), color = BrandPrimary)
+                    Text(stringResource(R.string.settings_confirm_rename), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -198,7 +196,7 @@ fun CategorySettingsScreen(
                     Text(
                         text = stringResource(R.string.category_settings_shelf_life_dialog_message),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
@@ -220,7 +218,7 @@ fun CategorySettingsScreen(
                     stateHolder.setCategoryDefaultShelfLife(origin, shelfLifeText.toIntOrNull())
                     shelfLifeOrigin = null
                 }) {
-                    Text(stringResource(R.string.settings_confirm_rename), color = BrandPrimary)
+                    Text(stringResource(R.string.settings_confirm_rename), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -264,7 +262,7 @@ fun CategorySettingsScreen(
                 Text(
                     text = stringResource(R.string.category_settings_empty),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
             }
@@ -283,7 +281,7 @@ fun CategorySettingsScreen(
                     Text(
                         text = stringResource(R.string.category_settings_description),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = 12.dp)
                     )
                 }
@@ -310,7 +308,7 @@ fun CategorySettingsScreen(
                             Switch(
                                 checked = allEnabled,
                                 onCheckedChange = { stateHolder.setAllCategoriesEnabled(it) },
-                                colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
+                                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                             )
                         }
                     }
@@ -378,7 +376,7 @@ private fun CategoryPreferenceRow(
             Icon(
                 imageVector = Icons.Default.DragHandle,
                 contentDescription = stringResource(R.string.category_settings_drag_handle_content_description),
-                tint = TextSecondary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = dragHandleModifier
                     .padding(end = 8.dp)
                     .size(20.dp)
@@ -387,7 +385,7 @@ private fun CategoryPreferenceRow(
                 Text(
                     text = categoryLabel(preference.displayName),
                     fontWeight = FontWeight.SemiBold,
-                    color = if (preference.enabled) MaterialTheme.colorScheme.onSurface else TextSecondary,
+                    color = if (preference.enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -395,7 +393,7 @@ private fun CategoryPreferenceRow(
                     Text(
                         text = stringResource(R.string.category_settings_original_name_format, allOrigins),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -418,7 +416,7 @@ private fun CategoryPreferenceRow(
                         stringResource(R.string.category_settings_shelf_life_none)
                     },
                     fontSize = 12.sp,
-                    color = if (days != null) BrandPrimary else TextSecondary,
+                    color = if (days != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
             }
@@ -426,13 +424,13 @@ private fun CategoryPreferenceRow(
                 Icon(
                     imageVector = Icons.Default.Edit,
                     contentDescription = stringResource(R.string.category_settings_rename_content_description),
-                    tint = TextSecondary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Switch(
                 checked = preference.enabled,
                 onCheckedChange = onToggleEnabled,
-                colors = SwitchDefaults.colors(checkedThumbColor = BrandPrimary, checkedTrackColor = BrandPrimary.copy(alpha = 0.5f))
+                colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
             )
         }
     }

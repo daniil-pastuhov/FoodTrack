@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Mirrors ui/theme/Color.kt's DarkColorScheme so the widgets follow the same
-         light/dark color scheme as the in-app UI. -->
+    <!-- The widgets' dark colours. See values/colors.xml. -->
     <color name="widget_background">#FF1E293B</color>
     <color name="widget_on_background">#FFF8FAFC</color>
     <color name="widget_on_background_muted">#FF94A3B8</color>

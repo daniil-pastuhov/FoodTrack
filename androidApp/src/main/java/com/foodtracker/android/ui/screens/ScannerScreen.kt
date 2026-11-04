@@ -99,13 +99,10 @@ import com.foodtracker.android.camera.CameraPreviewView
 import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.camera.ProductImageLabeler
 import com.foodtracker.android.camera.ReceiptTextRecognizer
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.FreshGreen
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.share.ShoppingListShare
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.viewmodel.BatchScanEntry
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.datetime.LocalDate
@@ -155,10 +152,14 @@ fun ScannerScreen(
      *  says which pantry item it is; null where the host has no use for it (Add/Edit, or a
      *  scan that is filling in a shopping list entry). */
     onUseOne: ((PantryItem) -> Unit)? = null,
+    /** The mode to open in, when the host can complete it. */
+    initialMode: CameraScanMode = enabledModes.first(),
     modifier: Modifier = Modifier
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
-    var currentMode by remember { mutableStateOf(enabledModes.first()) }
+    var currentMode by remember {
+        mutableStateOf(initialMode.takeIf { it in enabledModes } ?: enabledModes.first())
+    }
     val context = LocalContext.current
     // Every way into the scanner lands here - the scan buttons, the Add/Edit overlay and the
     // launcher shortcut - so the permission is settled here rather than by each caller.
@@ -455,14 +456,14 @@ fun ScannerScreen(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(FreshGreen)
+                        .background(MaterialTheme.colorScheme.primary)
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = stringResource(R.string.expiry_date_found_format, formatLocalDate(detectedDate)),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -509,7 +510,7 @@ fun ScannerScreen(
                 Box(
                     modifier = Modifier
                         .size(width = reticleWidth, height = reticleHeight)
-                        .border(2.dp, BrandPrimary.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
+                        .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -586,10 +587,10 @@ fun ScannerScreen(
                     modifier = Modifier
                         .size(72.dp)
                         .background(Color.White, CircleShape)
-                        .border(3.dp, BrandPrimary, CircleShape)
+                        .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
                 ) {
                     if (isReadingReceipt) {
-                        CircularProgressIndicator(color = BrandPrimary, modifier = Modifier.size(28.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                     } else {
                         Icon(
                             imageVector = Icons.Default.ReceiptLong,
@@ -646,10 +647,10 @@ fun ScannerScreen(
                     modifier = Modifier
                         .size(72.dp)
                         .background(Color.White, CircleShape)
-                        .border(3.dp, BrandPrimary, CircleShape)
+                        .border(3.dp, MaterialTheme.colorScheme.primary, CircleShape)
                 ) {
                     if (isCapturingPhoto) {
-                        CircularProgressIndicator(color = BrandPrimary, modifier = Modifier.size(28.dp))
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
                     } else {
                         Icon(
                             imageVector = Icons.Default.CameraAlt,
@@ -687,7 +688,7 @@ fun ScannerScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             CircularProgressIndicator(
-                                color = BrandPrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -761,7 +762,7 @@ fun ScannerScreen(
                                         state.suggestedExpiry
                                     )
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -809,7 +810,7 @@ fun ScannerScreen(
                                         text = stringResource(R.string.in_pantry_count, inPantry.quantity),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = BrandPrimary
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -859,7 +860,7 @@ fun ScannerScreen(
                                         state.suggestedExpiry
                                     )
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -923,7 +924,7 @@ fun ScannerScreen(
                                         state.suggestedExpiry
                                     )
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -939,7 +940,7 @@ fun ScannerScreen(
                             Icon(
                                 imageVector = Icons.Default.EventAvailable,
                                 contentDescription = null,
-                                tint = FreshGreen,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(28.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -976,7 +977,7 @@ fun ScannerScreen(
                                 onClick = {
                                     onProceedToAddItem(null, null, null, null, date, null, state.suggestedExpiry)
                                 },
-                                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(12.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -1006,7 +1007,7 @@ fun ScannerScreen(
                         confirmDiscardQueue = false
                         discardQueueAndLeave()
                     }) {
-                        Text(stringResource(R.string.batch_discard_confirm), color = BrandPrimary)
+                        Text(stringResource(R.string.batch_discard_confirm), color = MaterialTheme.colorScheme.primary)
                     }
                 },
                 dismissButton = {
@@ -1161,9 +1162,9 @@ private fun ScanModeChip(
             containerColor = Color.Black.copy(alpha = 0.6f),
             labelColor = Color.White,
             iconColor = Color.White,
-            selectedContainerColor = BrandPrimary,
-            selectedLabelColor = Color.White,
-            selectedLeadingIconColor = Color.White
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary
         )
     )
 }
@@ -1204,7 +1205,7 @@ private fun BatchQueuePanel(
             )
             if (entries.isNotEmpty()) {
                 TextButton(onClick = onClear) {
-                    Text(stringResource(R.string.batch_clear_button), color = TextSecondary)
+                    Text(stringResource(R.string.batch_clear_button), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -1235,7 +1236,7 @@ private fun BatchQueuePanel(
                                 color = if (entry.needsAttention && !entry.isLookingUp) {
                                     MaterialTheme.colorScheme.error
                                 } else {
-                                    TextSecondary
+                                    MaterialTheme.colorScheme.onSurfaceVariant
                                 }
                             )
                         }
@@ -1243,7 +1244,7 @@ private fun BatchQueuePanel(
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = stringResource(R.string.batch_queue_remove_content_description),
-                                tint = TextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -1253,7 +1254,7 @@ private fun BatchQueuePanel(
             Spacer(modifier = Modifier.height(8.dp))
             Button(
                 onClick = onCommit,
-                colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth().height(48.dp)
             ) {

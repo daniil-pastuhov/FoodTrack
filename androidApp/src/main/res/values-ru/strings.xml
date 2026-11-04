@@ -575,4 +575,30 @@
     </plurals>
     <string name="batch_discard_confirm">Удалить</string>
     <string name="batch_discard_keep">Продолжить сканирование</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Загрузка</string>
+    <string name="status_today">Истекает сегодня</string>
+    <string name="status_tomorrow">Истекает завтра</string>
+    <plurals name="status_days_over">
+        <item quantity="one">Просрочено %d день назад</item>
+        <item quantity="few">Просрочено %d дня назад</item>
+        <item quantity="many">Просрочено %d дней назад</item>
+        <item quantity="other">Просрочено %d дня назад</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d товар</item>
+        <item quantity="few">%1$d товара</item>
+        <item quantity="many">%1$d товаров</item>
+        <item quantity="other">%1$d товара</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s: сохранено в «%2$s»</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">Удалён %d товар</item>
+        <item quantity="few">Удалено %d товара</item>
+        <item quantity="many">Удалено %d товаров</item>
+        <item quantity="other">Удалено %d товара</item>
+    </plurals>
+    <string name="onboarding_placeholder_title">Добро пожаловать в Срокоед</string>
+    <string name="onboarding_placeholder_continue">Начать</string>
 </resources>

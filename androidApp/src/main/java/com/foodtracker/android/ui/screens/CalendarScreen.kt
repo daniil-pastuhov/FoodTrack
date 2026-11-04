@@ -43,6 +43,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxDefaults
@@ -81,12 +82,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.ui.components.ExpiryBadge
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
-import com.foodtracker.android.ui.theme.expiredStatusColors
-import com.foodtracker.android.ui.theme.expiringStatusColors
-import com.foodtracker.android.ui.theme.freshStatusColors
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.android.util.formatMonthYear
 import com.foodtracker.android.util.formatWeekdayDay
@@ -378,7 +375,7 @@ private fun WeekdayHeaderRow() {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = TextSecondary,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
@@ -430,8 +427,8 @@ private fun CalendarDayCell(
                 .clip(CircleShape)
                 .then(
                     when {
-                        isToday -> Modifier.background(BrandPrimary)
-                        isSelected -> Modifier.background(BrandPrimary.copy(alpha = 0.18f))
+                        isToday -> Modifier.background(MaterialTheme.colorScheme.primary)
+                        isSelected -> Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
                         else -> Modifier
                     }
                 )
@@ -439,8 +436,8 @@ private fun CalendarDayCell(
             Text(
                 text = date.day.toString(),
                 color = when {
-                    isToday -> Color.White
-                    dimmed -> TextSecondary.copy(alpha = 0.35f)
+                    isToday -> MaterialTheme.colorScheme.onPrimary
+                    dimmed -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
                     else -> MaterialTheme.colorScheme.onBackground
                 },
                 fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
@@ -461,7 +458,7 @@ private fun CalendarDayCell(
             ) {
                 Text(
                     text = if (count > 9) "9+" else count.toString(),
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.surface,
                     fontSize = 9.sp,
                     lineHeight = 9.sp,
                     fontWeight = FontWeight.Bold
@@ -475,9 +472,9 @@ private fun CalendarDayCell(
 private fun statusColor(status: ExpiryStatus?): Color? =
     when (status) {
         null -> null
-        ExpiryStatus.EXPIRED -> expiredStatusColors().foreground
-        ExpiryStatus.EXPIRING_TODAY, ExpiryStatus.EXPIRING_SOON -> expiringStatusColors().foreground
-        ExpiryStatus.FRESH -> freshStatusColors().foreground
+        ExpiryStatus.EXPIRED -> LarderTheme.colors.onExpiredContainer
+        ExpiryStatus.EXPIRING_TODAY, ExpiryStatus.EXPIRING_SOON -> LarderTheme.colors.onSoonContainer
+        ExpiryStatus.FRESH -> MaterialTheme.colorScheme.onSurfaceVariant
     }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -557,7 +554,7 @@ private fun EmptyMessage(text: String) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyMedium,
-        color = TextSecondary,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
     )
 }
@@ -575,9 +572,9 @@ private fun AgendaSectionHeader(bucket: AgendaBucket, count: Int) {
         }
     )
     val color = when (bucket) {
-        AgendaBucket.OVERDUE -> expiredStatusColors().foreground
-        AgendaBucket.TODAY, AgendaBucket.TOMORROW -> expiringStatusColors().foreground
-        else -> TextSecondary
+        AgendaBucket.OVERDUE -> LarderTheme.colors.onExpiredContainer
+        AgendaBucket.TODAY, AgendaBucket.TOMORROW -> LarderTheme.colors.onSoonContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -597,7 +594,7 @@ private fun AgendaSectionHeader(bucket: AgendaBucket, count: Int) {
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelMedium,
-            color = TextSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -683,7 +680,7 @@ private fun AgendaRow(
                             text = stringResource(R.string.quantity_format, item.quantity),
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -696,7 +693,7 @@ private fun AgendaRow(
                     Text(
                         text = details.joinToString(" · "),
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -714,7 +711,7 @@ private fun AgendaRow(
 @Composable
 private fun AgendaSwipeBackground(direction: SwipeToDismissBoxValue) {
     val (color, alignment, icon) = when (direction) {
-        SwipeToDismissBoxValue.StartToEnd -> Triple(freshStatusColors().foreground, Alignment.CenterStart, Icons.Default.Check)
+        SwipeToDismissBoxValue.StartToEnd -> Triple(MaterialTheme.colorScheme.primary, Alignment.CenterStart, Icons.Default.Check)
         SwipeToDismissBoxValue.EndToStart -> Triple(MaterialTheme.colorScheme.error, Alignment.CenterEnd, Icons.Default.DeleteOutline)
         SwipeToDismissBoxValue.Settled -> Triple(Color.Transparent, Alignment.Center, null)
     }
@@ -725,6 +722,6 @@ private fun AgendaSwipeBackground(direction: SwipeToDismissBoxValue) {
             .background(color)
             .padding(horizontal = 20.dp)
     ) {
-        icon?.let { Icon(imageVector = it, contentDescription = null, tint = Color.White) }
+        icon?.let { Icon(imageVector = it, contentDescription = null, tint = contentColorFor(color)) }
     }
 }

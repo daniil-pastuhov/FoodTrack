@@ -101,8 +101,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
 import com.foodtracker.viewmodel.PantryStateHolder
@@ -254,7 +252,7 @@ fun ShoppingListScreen(
                             if (newEntryText.isBlank()) R.string.shopping_list_scan_content_description
                             else R.string.shopping_list_add_button
                         ),
-                        tint = BrandPrimary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -301,19 +299,19 @@ fun ShoppingListScreen(
                         Icon(
                             imageVector = Icons.Default.ShoppingCart,
                             contentDescription = null,
-                            tint = TextSecondary.copy(alpha = 0.4f),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
                         Text(
                             text = stringResource(R.string.shopping_list_empty_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             text = stringResource(R.string.shopping_list_empty_subtitle),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                             modifier = Modifier.padding(horizontal = 24.dp)
                         )
                     }
@@ -345,7 +343,7 @@ fun ShoppingListScreen(
                     Text(
                         text = stringResource(R.string.shopping_list_share_dialog_message),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     // Sharing an empty list would hand someone a title and nothing else, so the
@@ -405,7 +403,7 @@ fun ShoppingListScreen(
                         Text(
                             text = stringResource(R.string.shopping_list_share_qr_hint),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center
                         )
                     } else {
@@ -483,7 +481,7 @@ fun ShoppingListScreen(
                     Text(
                         text = stringResource(R.string.shopping_list_import_message),
                         style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     OutlinedTextField(
@@ -507,7 +505,7 @@ fun ShoppingListScreen(
                     },
                     enabled = importText.isNotBlank()
                 ) {
-                    Text(stringResource(R.string.shopping_list_import_confirm), color = BrandPrimary)
+                    Text(stringResource(R.string.shopping_list_import_confirm), color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -580,7 +578,7 @@ internal fun ShoppingListRow(
                 Text(
                     text = stringResource(R.string.shopping_section_move_to),
                     style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 )
                 moveTargets.forEach { (id, label) ->
@@ -602,7 +600,7 @@ internal fun ShoppingListRow(
                 Icon(
                     imageVector = Icons.Default.DragHandle,
                     contentDescription = stringResource(R.string.shopping_list_drag_handle_content_description),
-                    tint = TextSecondary,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     // Consumes the handle's touch-down after the drag detector has seen it, so
                     // the card around it doesn't also start its long-press timer and pop the
                     // "Move to section" menu in the middle of a drag.
@@ -626,7 +624,7 @@ internal fun ShoppingListRow(
                         Text(
                             text = stringResource(R.string.barcode_format, barcode),
                             style = MaterialTheme.typography.bodySmall,
-                            color = TextSecondary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -634,7 +632,7 @@ internal fun ShoppingListRow(
                     Icon(
                         imageVector = Icons.Default.Remove,
                         contentDescription = stringResource(R.string.shopping_list_quantity_decrease_content_description),
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -661,7 +659,7 @@ internal fun ShoppingListRow(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = stringResource(R.string.shopping_list_quantity_increase_content_description),
-                        tint = TextSecondary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(16.dp)
                     )
                 }
@@ -688,7 +686,7 @@ private fun ShoppingListSwipeBackground() {
         Icon(
             imageVector = Icons.Default.DeleteOutline,
             contentDescription = null,
-            tint = Color.White
+            tint = MaterialTheme.colorScheme.onError
         )
     }
 }
@@ -744,7 +742,7 @@ private fun ShareActionRow(
     enabled: Boolean,
     onClick: () -> Unit
 ) {
-    val tint = if (enabled) BrandPrimary else TextSecondary.copy(alpha = 0.4f)
+    val tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -757,7 +755,7 @@ private fun ShareActionRow(
         Spacer(modifier = Modifier.width(12.dp))
         Text(
             text = label,
-            color = if (enabled) MaterialTheme.colorScheme.onSurface else TextSecondary.copy(alpha = 0.4f)
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
         )
     }
 }

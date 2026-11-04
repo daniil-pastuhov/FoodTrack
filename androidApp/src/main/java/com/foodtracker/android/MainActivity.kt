@@ -15,8 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import com.foodtracker.android.location.StoreGeofenceManager
-import com.foodtracker.android.ui.AppScreen
 import com.foodtracker.android.ui.FoodTrackerRoot
+import com.foodtracker.android.ui.navigation.LarderRoute
 import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.google.android.gms.location.LocationServices
@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
     // Hoisted out of the composable (rather than `remember`ed) so the Shopping List widget's
     // tap intent can navigate there via onNewIntent even when MainActivity is already running,
     // not just on a cold start.
-    private val currentScreenState = mutableStateOf(AppScreen.DASHBOARD)
+    private val currentScreenState = mutableStateOf<LarderRoute>(LarderRoute.Home)
 
     /** Held while the location permission dialog is up, so the Settings screen's spinner is
      *  always answered — whichever way the user decides. */
@@ -131,17 +131,17 @@ class MainActivity : ComponentActivity() {
     private fun applyScreenFromIntent(intent: Intent) {
         if (shareRecipeFromIntent(intent)) return
         if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING_LIST, false)) {
-            currentScreenState.value = AppScreen.SHOPPING_LIST
+            currentScreenState.value = LarderRoute.Shopping
             return
         }
         if (intent.getBooleanExtra(EXTRA_OPEN_DASHBOARD, false)) {
-            currentScreenState.value = AppScreen.DASHBOARD
+            currentScreenState.value = LarderRoute.Home
             return
         }
         when (intent.getStringExtra(EXTRA_SHORTCUT)) {
-            SHORTCUT_SCAN -> currentScreenState.value = AppScreen.SCANNER
-            SHORTCUT_ADD_ITEM -> currentScreenState.value = AppScreen.ADD_EDIT
-            SHORTCUT_SHOPPING_LIST -> currentScreenState.value = AppScreen.SHOPPING_LIST
+            SHORTCUT_SCAN -> currentScreenState.value = LarderRoute.Scanner()
+            SHORTCUT_ADD_ITEM -> currentScreenState.value = LarderRoute.AddItem()
+            SHORTCUT_SHOPPING_LIST -> currentScreenState.value = LarderRoute.Shopping
         }
     }
 
