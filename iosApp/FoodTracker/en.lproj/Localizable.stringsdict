@@ -34,6 +34,22 @@
             <string>%d days expired</string>
         </dict>
     </dict>
+    <key>notif_body_past_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%1$@ is %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%2$d day past its date.</string>
+            <key>other</key>
+            <string>%2$d days past its date.</string>
+        </dict>
+    </dict>
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

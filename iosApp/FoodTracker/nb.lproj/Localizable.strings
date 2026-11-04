@@ -134,6 +134,10 @@
 "shopping_list_did_you_mean_none_of_these" = "Ingen av disse, legg til ny vare";
 
 "manual_entry_button" = "Manuelt";
+"camera_off_title" = "Kameraet er av";
+"camera_off_body" = "Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.";
+"camera_off_open_settings" = "Åpne innstillinger";
+"camera_off_add_by_hand" = "Skriv det inn";
 "scanner_mode_picker_label" = "Skannemodus";
 "scan_mode_barcode" = "Strekkode";
 "scan_mode_date_ocr" = "Datoskanning";
@@ -161,6 +165,7 @@
 
 "notif_title_today" = "Produktet utløper i dag! ⚠️";
 "notif_title_soon" = "Produktet utløper snart! ⚠️";
+"notif_title_past" = "Verdt en titt";
 
 "expiry_date_found_format" = "Utløpsdato funnet: %@";
 "notif_body_today_format" = "%@ utløper i dag. Husk å spise det!";

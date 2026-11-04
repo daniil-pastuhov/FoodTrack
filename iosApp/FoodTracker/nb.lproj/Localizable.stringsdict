@@ -34,6 +34,22 @@
             <string>Utløpt for %d dager siden</string>
         </dict>
     </dict>
+    <key>notif_body_past_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%1$@ er %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%2$d dag over datoen.</string>
+            <key>other</key>
+            <string>%2$d dager over datoen.</string>
+        </dict>
+    </dict>
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

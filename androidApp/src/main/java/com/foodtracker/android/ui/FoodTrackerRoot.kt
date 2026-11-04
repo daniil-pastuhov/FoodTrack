@@ -201,15 +201,6 @@ fun FoodTrackerRoot(
             // mean?" dialog is up; non-null triggers that dialog as an overlay.
             var pendingShoppingListMatch by remember { mutableStateOf<PendingShoppingListMatch?>(null) }
 
-            // Camera permission launcher
-            val cameraPermissionLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.RequestPermission()
-            ) { isGranted ->
-                if (isGranted) {
-                    currentScreen = AppScreen.SCANNER
-                }
-            }
-
             // Notification permission launcher (Android 13+)
             val notificationPermissionLauncher = rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
@@ -240,13 +231,7 @@ fun FoodTrackerRoot(
             }
 
             val onNavigateToScanner: () -> Unit = {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
-                    == PackageManager.PERMISSION_GRANTED
-                ) {
-                    currentScreen = AppScreen.SCANNER
-                } else {
-                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
-                }
+                currentScreen = AppScreen.SCANNER
             }
             // Invoked from the global floating "scan" button, reachable from any of the
             // four bottom-nav tabs, so it returns to whichever tab it was opened from
