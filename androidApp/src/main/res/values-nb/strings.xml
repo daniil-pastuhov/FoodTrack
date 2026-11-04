@@ -456,7 +456,6 @@
     <string name="widget_shopping_list_title">Handleliste</string>
     <string name="widget_shopping_list_empty">Handlelisten din er tom</string>
     <string name="widget_action_used">Brukt én</string>
-    <string name="widget_action_bought">Kjøpt</string>
 
     <string name="widget_overview_label">Matskapoversikt</string>
     <string name="widget_overview_description">Viser hva som er utløpt eller snart utløper, etterfulgt av handlelisten din</string>

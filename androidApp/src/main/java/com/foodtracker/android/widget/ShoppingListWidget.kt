@@ -14,7 +14,6 @@ import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.Button
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
@@ -121,7 +120,7 @@ private fun ShoppingListWidgetContent(list: WidgetShoppingList) {
                     when (row) {
                         is ShoppingRow.Header -> ShoppingSectionWidgetHeader(row)
                         is ShoppingRow.Item -> Column {
-                            ShoppingListRow(row.entry, showAction = true)
+                            ShoppingListRow(row.entry)
                             if (rows.getOrNull(index + 1) is ShoppingRow.Item) {
                                 WidgetRowDivider()
                             }
@@ -173,15 +172,9 @@ private fun ShoppingSectionWidgetHeader(header: ShoppingRow.Header) {
  *  keeps a pathological one from producing a huge widget update. */
 private const val MAX_WIDGET_ROWS = 60
 
-/**
- * One shopping-list row.
- *
- * [showAction] adds the "Bought" button. Off by default for the same reason as
- * [ExpiryRow]'s: [OverviewWidget] reuses this row in a dense summary where a button per row
- * would crowd out the content.
- */
+/** One shopping-list row, shared with [OverviewWidget]'s dense summary. */
 @Composable
-internal fun ShoppingListRow(entry: ShoppingListEntry, showAction: Boolean = false) {
+internal fun ShoppingListRow(entry: ShoppingListEntry) {
     val context = LocalContext.current
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -202,14 +195,6 @@ internal fun ShoppingListRow(entry: ShoppingListEntry, showAction: Boolean = fal
             Text(
                 text = context.getString(R.string.quantity_format, entry.quantity),
                 style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background_muted))
-            )
-        }
-        if (showAction) {
-            Spacer(modifier = GlanceModifier.width(8.dp))
-            Button(
-                text = context.getString(R.string.widget_action_bought),
-                onClick = widgetRowAction<TickOffShoppingEntryAction>(entry.id),
-                modifier = GlanceModifier.height(32.dp)
             )
         }
     }
