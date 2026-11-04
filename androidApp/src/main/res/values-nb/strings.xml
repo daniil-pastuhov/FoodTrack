@@ -139,6 +139,10 @@
     <string name="date_picker_cancel">Avbryt</string>
 
     <string name="manual_entry_button">Manuell registrering</string>
+    <string name="camera_off_title">Kameraet er av</string>
+    <string name="camera_off_body">Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.</string>
+    <string name="camera_off_open_settings">Åpne innstillinger</string>
+    <string name="camera_off_add_by_hand">Skriv det inn</string>
     <string name="scan_mode_batch">Flere</string>
     <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen under</string>
     <string name="scan_mode_receipt">Kvittering</string>
@@ -295,10 +299,15 @@
     <string name="notification_digest_channel_desc">Ett varsel med det som går ut på dato den kommende uken</string>
     <string name="notif_title_today">Produktet utløper i dag! ⚠️</string>
     <string name="notif_title_soon">Produktet utløper snart! ⚠️</string>
+    <string name="notif_title_past">Verdt en titt</string>
     <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise det!</string>
     <plurals name="notif_body_soon_format">
         <item quantity="one">%1$s utløper om %2$d dag. Husk å spise det!</item>
         <item quantity="other">%1$s utløper om %2$d dager. Husk å spise det!</item>
+    </plurals>
+    <plurals name="notif_body_past_format">
+        <item quantity="one">%1$s er %2$d dag over datoen.</item>
+        <item quantity="other">%1$s er %2$d dager over datoen.</item>
     </plurals>
     <string name="notif_fallback_title">Varsel om utløpsdato</string>
     <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>

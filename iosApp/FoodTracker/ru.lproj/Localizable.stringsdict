@@ -42,6 +42,26 @@
             <string>Просрочено %d дня назад</string>
         </dict>
     </dict>
+    <key>notif_body_past_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%1$@: срок годности прошёл %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%2$d день назад.</string>
+            <key>few</key>
+            <string>%2$d дня назад.</string>
+            <key>many</key>
+            <string>%2$d дней назад.</string>
+            <key>other</key>
+            <string>%2$d дня назад.</string>
+        </dict>
+    </dict>
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

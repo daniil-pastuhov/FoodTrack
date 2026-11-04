@@ -109,6 +109,8 @@ android {
     }
 
     testOptions {
+        // So Robolectric resolves real strings and plurals per locale (see NotificationCopyTest).
+        unitTests.isIncludeAndroidResources = true
         unitTests.all {
             // Names the directory the JVM performance tests write their numbers into, so a
             // "before" and an "after" run don't overwrite each other:

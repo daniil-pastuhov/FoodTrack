@@ -134,6 +134,10 @@
 "shopping_list_did_you_mean_none_of_these" = "Ни один из них, добавить новый товар";
 
 "manual_entry_button" = "Вручную";
+"camera_off_title" = "Камера выключена";
+"camera_off_body" = "Срокоеду нужна камера для сканирования. Продукты можно добавить и вручную.";
+"camera_off_open_settings" = "Открыть настройки";
+"camera_off_add_by_hand" = "Ввести вручную";
 "scanner_mode_picker_label" = "Режим сканирования";
 "scan_mode_barcode" = "Штрихкод";
 "scan_mode_date_ocr" = "Скан даты";
@@ -161,6 +165,7 @@
 
 "notif_title_today" = "Продукт истекает сегодня! ⚠️";
 "notif_title_soon" = "Продукт скоро истекает! ⚠️";
+"notif_title_past" = "Стоит проверить";
 
 "expiry_date_found_format" = "Найден срок годности: %@";
 "notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть его!";

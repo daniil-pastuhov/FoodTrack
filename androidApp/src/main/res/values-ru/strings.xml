@@ -141,6 +141,10 @@
     <string name="date_picker_cancel">Отмена</string>
 
     <string name="manual_entry_button">Ввести вручную</string>
+    <string name="camera_off_title">Камера выключена</string>
+    <string name="camera_off_body">Срокоеду нужна камера для сканирования. Продукты можно добавить и вручную.</string>
+    <string name="camera_off_open_settings">Открыть настройки</string>
+    <string name="camera_off_add_by_hand">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
     <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список ниже</string>
     <string name="scan_mode_receipt">Чек</string>
@@ -317,12 +321,19 @@
     <string name="notification_digest_channel_desc">Одно уведомление со списком продуктов, срок которых истекает на этой неделе</string>
     <string name="notif_title_today">Продукт истекает сегодня! ⚠️</string>
     <string name="notif_title_soon">Продукт скоро истекает! ⚠️</string>
+    <string name="notif_title_past">Стоит проверить</string>
     <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть его!</string>
     <plurals name="notif_body_soon_format">
         <item quantity="one">%1$s истекает через %2$d день. Не забудьте съесть его!</item>
         <item quantity="few">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
         <item quantity="many">%1$s истекает через %2$d дней. Не забудьте съесть его!</item>
         <item quantity="other">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
+    </plurals>
+    <plurals name="notif_body_past_format">
+        <item quantity="one">%1$s: срок годности прошёл %2$d день назад.</item>
+        <item quantity="few">%1$s: срок годности прошёл %2$d дня назад.</item>
+        <item quantity="many">%1$s: срок годности прошёл %2$d дней назад.</item>
+        <item quantity="other">%1$s: срок годности прошёл %2$d дня назад.</item>
     </plurals>
     <string name="notif_fallback_title">Уведомление о сроке годности</string>
     <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>

@@ -32,8 +32,8 @@ class BlockedNotificationsTest {
     @Before
     fun setUp() {
         shadowOf(manager).setNotificationsEnabled(true)
-        // Created directly rather than through NotificationHelper.createNotificationChannel,
-        // whose channel names are string resources these unit tests don't load.
+        // Created directly, so each test can set a channel's importance without depending on
+        // NotificationHelper.createNotificationChannel.
         listOf(NotificationHelper.CHANNEL_ID, NotificationHelper.DIGEST_CHANNEL_ID).forEach { id ->
             manager.createNotificationChannel(NotificationChannel(id, id, NotificationManager.IMPORTANCE_DEFAULT))
         }
