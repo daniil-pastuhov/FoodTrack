@@ -544,8 +544,6 @@
         <item quantity="one">%d item deleted</item>
         <item quantity="other">%d items deleted</item>
     </plurals>
-    <string name="onboarding_placeholder_title">Welcome to BestBefore</string>
-    <string name="onboarding_placeholder_continue">Get started</string>
 
     <!-- Pantry -->
     <string name="lede_next_up">Next up: %1$s %2$s</string>
@@ -731,4 +729,42 @@
     <string name="discard_changes_keep">Keep editing</string>
     <string name="discard_new_message">This item hasn\'t been saved, so it won\'t be added to your pantry.</string>
     <string name="discard_edit_message">Your changes to %1$s won\'t be saved. The item stays as it was.</string>
+
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">What\'s due</string>
+    <string name="calendar_used_snackbar">%1$s used</string>
+    <string name="calendar_tossed_snackbar">%1$s tossed</string>
+    <string name="calendar_empty_message">Add food with its date and it will show up here, on the day it is due.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_welcome_title">Reminds you before food goes off, not after.</string>
+    <string name="onboarding_private_title">Private by design</string>
+    <string name="onboarding_private_body">No account and no ads. Your pantry stays on your device.</string>
+    <string name="onboarding_notifications_title">A quiet nudge, the day before</string>
+    <string name="onboarding_notifications_body">We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Best used soon</string>
+    <string name="onboarding_sample_body">Greek yoghurt reaches its date tomorrow.</string>
+    <string name="onboarding_sample_description">Example reminder: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Turn on reminders</string>
+    <string name="onboarding_not_now">Not now</string>
+    <string name="onboarding_camera_title">Scan it instead of typing</string>
+    <string name="onboarding_camera_body">Point the camera at a product and %1$s fills in the details for you. Photos stay on your device.</string>
+    <string name="onboarding_camera_barcodes_title">Barcodes</string>
+    <string name="onboarding_camera_barcodes_body">Finds the product and its name</string>
+    <string name="onboarding_camera_dates_title">Printed dates</string>
+    <string name="onboarding_camera_dates_body">Reads the date from the pack</string>
+    <string name="onboarding_camera_allow">Allow the camera</string>
+    <string name="onboarding_ready_title">Ready for your first item</string>
+    <string name="onboarding_ready_body">Bring something from the fridge and scan it. It takes a few seconds.</string>
+    <string name="onboarding_skip">Skip for now</string>
+    <string name="onboarding_declined_title">You can start without them</string>
+    <string name="onboarding_declined_body">Everything else works. You can change your mind at any time.</string>
+    <string name="onboarding_declined_reminders_title">Reminders are off</string>
+    <string name="onboarding_declined_reminders_body">Home will show a note with a way to turn them on</string>
+    <string name="onboarding_declined_camera_title">The camera is off</string>
+    <string name="onboarding_declined_camera_body">The scanner will show how to allow it</string>
+    <string name="onboarding_add_by_hand">Add an item by hand</string>
 </resources>

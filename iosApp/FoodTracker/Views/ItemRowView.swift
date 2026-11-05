@@ -11,7 +11,8 @@ struct ItemRowView: View {
     var isCurrent: Bool = false
     var onOpen: (() -> Void)? = nil
 
-    private var place: String {
+    /// "Fridge · Dairy", or the location alone when the item has no category.
+    static func place(of item: PantryItem, categoryPreferences: [CategoryPreference]) -> String {
         let location = L10n.storageLocationName(item.storageLocation)
         guard let category = resolveCategoryDisplayName(item.category, categoryPreferences), !category.isEmpty else {
             return location
@@ -23,7 +24,7 @@ struct ItemRowView: View {
         PantryRow(
             item: item,
             expiringSoonDays: expiringSoonDays,
-            place: place,
+            place: Self.place(of: item, categoryPreferences: categoryPreferences),
             selection: selection,
             isCurrent: isCurrent,
             onOpen: onOpen,

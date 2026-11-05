@@ -34,6 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.Lifecycle
@@ -130,11 +131,21 @@ fun ScannerScreen(
 
     // Every way into the scanner lands here - the scan buttons, the Add/Edit overlay and the
     // launcher shortcut - so the permission is settled here rather than by each caller.
-    var cameraAccess by remember { mutableStateOf(CameraAccess(granted = hasCameraPermission(context))) }
+    // A refusal given earlier, on the first-run camera screen or an earlier scan, goes straight to
+    // the camera-off state rather than putting the same question again.
+    var cameraAccess by remember {
+        mutableStateOf(
+            CameraAccess(
+                granted = hasCameraPermission(context),
+                refused = (view.context as? Activity)?.let {
+                    ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA)
+                } == true
+            )
+        )
+    }
     // The multiple-permissions contract even for one permission: it returns no entry for a
-    // cancelled request, where the single one reports a refusal. A shortcut's cold start needs
-    // that difference: the root's notification request lands in the same frame, and the system
-    // cancels whichever of the two comes second.
+    // cancelled request, where the single one reports a refusal. The system cancels a request
+    // that lands while another is up, and that is not the person saying no.
     val cameraPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->

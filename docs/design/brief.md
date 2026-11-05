@@ -103,6 +103,7 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - Round 1: A Larder, B Enamel, C Preserves → A Larder chosen by the user, the closest fit to warm and calm
 
 ## Open questions
+- Android: after one camera refusal the scanner opens straight on T5 with no second system prompt; an expired "Only this time" grant might read as a refusal. Check in the final pass.
 - Shopping: the row grip is 28dp wide as designed, below the 48dp and 44pt minimum.
 - Android has no non-drag way to reorder Shopping sections (WCAG 2.5.7).
 - Scanner: the Batch hint says "the list below", but on tablet the list is on the right.

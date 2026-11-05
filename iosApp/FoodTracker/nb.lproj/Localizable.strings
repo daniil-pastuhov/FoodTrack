@@ -413,9 +413,6 @@
 "quantity_increase" = "Øk antall";
 "use_one_label_format" = "Bruk én: %@";
 "item_saved_to_format" = "%1$@ lagret i %2$@";
-"onboarding_placeholder_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
-"onboarding_placeholder_body" = "Matlageret ditt blir på enheten din.";
-"onboarding_placeholder_continue" = "Kom i gang";
 
 /* Pantry */
 "lede_next_up" = "Neste: %1$@ %2$@";
@@ -561,3 +558,41 @@
 "update_item_button" = "Oppdater vare";
 "discard_new_message" = "Denne varen er ikke lagret, så den blir ikke lagt til i matskapet.";
 "discard_edit_message_format" = "Endringene i %@ blir ikke lagret. Varen forblir som den var.";
+
+/* Larder: Calendar */
+"calendar_pane_title" = "Hva som går ut";
+"calendar_used_snackbar" = "%1$@ brukt";
+"calendar_tossed_snackbar" = "%1$@ kastet";
+"calendar_empty_message" = "Legg til mat med dato, så dukker den opp her den dagen den går ut.";
+
+/* Onboarding */
+"onboarding_get_started" = "Kom i gang";
+"onboarding_welcome_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
+"onboarding_private_title" = "Privat fra starten av";
+"onboarding_private_body" = "Ingen konto og ingen reklame. Matlageret ditt blir på enheten din.";
+"onboarding_notifications_title" = "Et stille hint dagen før";
+"onboarding_notifications_body" = "Vi minner deg på det klokken 09:00, dagen før en dato. Du kan endre tidspunktet eller slå av påminnelser i Innstillinger.";
+"onboarding_sample_source" = "%1$@ · 09:00";
+"onboarding_sample_title" = "Bør brukes snart";
+"onboarding_sample_body" = "Gresk yoghurt når datoen sin i morgen.";
+"onboarding_sample_description" = "Eksempel på påminnelse: %1$@. %2$s";
+"onboarding_notifications_allow" = "Slå på påminnelser";
+"onboarding_not_now" = "Ikke nå";
+"onboarding_camera_title" = "Skann i stedet for å skrive";
+"onboarding_camera_body" = "Rett kameraet mot et produkt, så fyller %1$@ inn opplysningene for deg. Bilder blir på enheten din.";
+"onboarding_camera_barcodes_title" = "Strekkoder";
+"onboarding_camera_barcodes_body" = "Finner produktet og navnet på det";
+"onboarding_camera_dates_title" = "Trykte datoer";
+"onboarding_camera_dates_body" = "Leser datoen på pakken";
+"onboarding_camera_allow" = "Tillat kameraet";
+"onboarding_ready_title" = "Klar for det første produktet";
+"onboarding_ready_body" = "Hent noe fra kjøleskapet og skann det. Det tar noen få sekunder.";
+"onboarding_skip" = "Hopp over for nå";
+"onboarding_declined_title" = "Du kan begynne uten dem";
+"onboarding_declined_body" = "Alt annet virker. Du kan ombestemme deg når som helst.";
+"onboarding_declined_reminders_title" = "Påminnelser er av";
+"onboarding_declined_reminders_body" = "Hjem viser en merknad om hvordan du slår dem på";
+"onboarding_declined_camera_title" = "Kameraet er av";
+"onboarding_declined_camera_body" = "Skanneren viser hvordan du tillater det";
+"onboarding_add_by_hand" = "Legg til et produkt manuelt";
+"reminders_not_asked_message" = "Slå dem på, så minner vi deg på det dagen før en dato.";
