@@ -413,9 +413,6 @@
 "quantity_increase" = "Increase quantity";
 "use_one_label_format" = "Use one: %@";
 "item_saved_to_format" = "%1$@ saved to %2$@";
-"onboarding_placeholder_title" = "Reminds you before food goes off, not after.";
-"onboarding_placeholder_body" = "Your pantry stays on your device.";
-"onboarding_placeholder_continue" = "Get started";
 
 /* Pantry */
 "lede_next_up" = "Next up: %1$@ %2$@";
@@ -551,3 +548,35 @@
 "shopping_section_name_label" = "Section name";
 "shopping_section_keep" = "Keep section";
 "shopping_section_delete_confirm" = "Delete section";
+
+/* Onboarding */
+"onboarding_get_started" = "Get started";
+"onboarding_welcome_title" = "Reminds you before food goes off, not after.";
+"onboarding_private_title" = "Private by design";
+"onboarding_private_body" = "No account and no ads. Your pantry stays on your device.";
+"onboarding_notifications_title" = "A quiet nudge, the day before";
+"onboarding_notifications_body" = "We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.";
+"onboarding_sample_source" = "%1$@ · 09:00";
+"onboarding_sample_title" = "Best used soon";
+"onboarding_sample_body" = "Greek yoghurt reaches its date tomorrow.";
+"onboarding_sample_description" = "Example reminder: %1$@. %2$s";
+"onboarding_notifications_allow" = "Turn on reminders";
+"onboarding_not_now" = "Not now";
+"onboarding_camera_title" = "Scan it instead of typing";
+"onboarding_camera_body" = "Point the camera at a product and %1$@ fills in the details for you. Photos stay on your device.";
+"onboarding_camera_barcodes_title" = "Barcodes";
+"onboarding_camera_barcodes_body" = "Finds the product and its name";
+"onboarding_camera_dates_title" = "Printed dates";
+"onboarding_camera_dates_body" = "Reads the date from the pack";
+"onboarding_camera_allow" = "Allow the camera";
+"onboarding_ready_title" = "Ready for your first item";
+"onboarding_ready_body" = "Bring something from the fridge and scan it. It takes a few seconds.";
+"onboarding_skip" = "Skip for now";
+"onboarding_declined_title" = "You can start without them";
+"onboarding_declined_body" = "Everything else works. You can change your mind at any time.";
+"onboarding_declined_reminders_title" = "Reminders are off";
+"onboarding_declined_reminders_body" = "Home will show a note with a way to turn them on";
+"onboarding_declined_camera_title" = "The camera is off";
+"onboarding_declined_camera_body" = "The scanner will show how to allow it";
+"onboarding_add_by_hand" = "Add an item by hand";
+"reminders_not_asked_message" = "Turn them on and we'll remind you the day before a date.";

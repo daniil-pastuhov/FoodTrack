@@ -61,6 +61,8 @@ public struct SettingsView: View {
     @State private var isResolvingStoreLocation = false
     /// iOS has notifications for the app switched off (authorization denied).
     @State private var notificationsDenied = false
+    /// The system prompt hasn't been answered, as after Not now in onboarding.
+    @State private var notificationsNotAsked = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.isExpanded) private var isExpanded
     @Environment(\.showSnackbar) private var showSnackbar
@@ -146,6 +148,8 @@ public struct SettingsView: View {
                 guard scenePhase == .active else { return }
                 let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
                 notificationsDenied = status == .denied
+                // The store screenshots run without ever being asked.
+                notificationsNotAsked = status == .notDetermined && !FoodTrackerApp.isTakingScreenshots
             }
         }
     }
@@ -369,6 +373,17 @@ public struct SettingsView: View {
             ))
 
             if notifications.enabled {
+                if notificationsNotAsked {
+                    LarderCallout(
+                        .warning,
+                        icon: .bellOff,
+                        title: L10n.settingsNotificationsBlockedTitle,
+                        message: L10n.remindersNotAskedMessage,
+                        actionTitle: L10n.onboardingNotificationsAllow
+                    ) {
+                        Task { await IOSNotificationManager.shared.requestAuthorization(thenSchedule: viewModel.items) }
+                    }
+                }
                 if notificationsDenied {
                     LarderCallout(
                         .warning,
@@ -446,6 +461,7 @@ public struct SettingsView: View {
         // setter in withAnimation.
         .animation(.default, value: settings.notifications)
         .animation(.default, value: notificationsDenied)
+        .animation(.default, value: notificationsNotAsked)
     }
 
     private func chipRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {

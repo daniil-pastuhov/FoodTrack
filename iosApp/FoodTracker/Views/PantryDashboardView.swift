@@ -41,6 +41,8 @@ struct PantryDashboardView<DetailPane: View>: View {
     @State private var selectedItemIDs: Set<String> = []
     @State private var isSearching = false
     @State private var notificationsDenied = false
+    /// The system prompt hasn't been answered, as after Not now in onboarding.
+    @State private var notificationsNotAsked = false
 
     private var pantryEmpty: Bool { viewModel.items.isEmpty }
     private var query: String { viewModel.searchQuery.trimmingCharacters(in: .whitespaces) }
@@ -119,6 +121,8 @@ struct PantryDashboardView<DetailPane: View>: View {
             guard scenePhase == .active else { return }
             let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
             notificationsDenied = status == .denied
+            // The store screenshots run without ever being asked.
+            notificationsNotAsked = status == .notDetermined && !FoodTrackerApp.isTakingScreenshots
         }
         .onChange(of: pantryEmpty) { _, isEmpty in
             // Clear data can empty the pantry under a search or filter, which would then hide
@@ -144,6 +148,10 @@ struct PantryDashboardView<DetailPane: View>: View {
         VStack(spacing: 0) {
             if pantryEmpty {
                 brandBar
+                // First run lands here, so this is where declining reminders has to show.
+                if showsRemindersCallout {
+                    remindersCallout.padding(.horizontal, LarderSpace.s4)
+                }
                 homeEmptyState
             } else {
                 if isSelecting {
@@ -173,20 +181,8 @@ struct PantryDashboardView<DetailPane: View>: View {
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
             }
-            if notificationsDenied, settingsStore.settings.notifications.enabled,
-               !remindersCalloutDismissed, !isSelecting, !isSearching {
-                plainRow {
-                    LarderCallout(
-                        .warning,
-                        icon: .bellOff,
-                        title: L10n.homeRemindersOffTitle,
-                        message: L10n.homeRemindersOffMessage,
-                        actionTitle: L10n.settingsNotificationsOpenSettings,
-                        action: openNotificationSettings,
-                        onDismiss: { remindersCalloutDismissed = true }
-                    )
-                    .padding(.bottom, LarderSpace.s3)
-                }
+            if showsRemindersCallout, !isSelecting, !isSearching {
+                plainRow { remindersCallout }
             }
             if filtersActive, !isSelecting, !isSearching {
                 plainRow { activeFilterLine(shown: rows.count) }
@@ -282,6 +278,30 @@ struct PantryDashboardView<DetailPane: View>: View {
             .frame(maxWidth: .infinity, minHeight: LarderSize.touch, alignment: .leading)
             .padding(.vertical, LarderSpace.s3)
             .padding(.horizontal, LarderSpace.s4)
+    }
+
+    private var showsRemindersCallout: Bool {
+        (notificationsDenied || notificationsNotAsked) && settingsStore.settings.notifications.enabled
+            && !remindersCalloutDismissed && settingsStore.settings.onboardingCompleted
+    }
+
+    private var remindersCallout: some View {
+        LarderCallout(
+            .warning,
+            icon: .bellOff,
+            title: L10n.homeRemindersOffTitle,
+            message: notificationsNotAsked ? L10n.remindersNotAskedMessage : L10n.homeRemindersOffMessage,
+            actionTitle: notificationsNotAsked ? L10n.onboardingNotificationsAllow : L10n.settingsNotificationsOpenSettings,
+            action: {
+                if notificationsNotAsked {
+                    Task { await IOSNotificationManager.shared.requestAuthorization(thenSchedule: viewModel.items) }
+                } else {
+                    openNotificationSettings()
+                }
+            },
+            onDismiss: { remindersCalloutDismissed = true }
+        )
+        .padding(.bottom, LarderSpace.s3)
     }
 
     private var filterButton: some View {
