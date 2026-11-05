@@ -233,13 +233,13 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d д</string>
+            <string>%d день</string>
             <key>few</key>
-            <string>%d д</string>
+            <string>%d дня</string>
             <key>many</key>
-            <string>%d д</string>
+            <string>%d дней</string>
             <key>other</key>
-            <string>%d д</string>
+            <string>%d дня</string>
         </dict>
     </dict>
     <key>shopping_list_import_added_format</key>
@@ -480,6 +480,26 @@
             <string>Просрочено %d дней назад</string>
             <key>other</key>
             <string>Просрочено %d дня назад</string>
+        </dict>
+    </dict>
+    <key>clear_data_dialog_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Это удалит %d продукт и отменит напоминания о сроке годности. Это действие необратимо.</string>
+            <key>few</key>
+            <string>Это удалит %d продукта и отменит напоминания о сроке годности. Это действие необратимо.</string>
+            <key>many</key>
+            <string>Это удалит %d продуктов и отменит напоминания о сроке годности. Это действие необратимо.</string>
+            <key>other</key>
+            <string>Это удалит %d продукта и отменит напоминания о сроке годности. Это действие необратимо.</string>
         </dict>
     </dict>
 </dict>

@@ -474,10 +474,10 @@
     <string name="category_settings_shelf_life_field_label">Дней</string>
     <string name="category_settings_shelf_life_clear">Очистить</string>
     <plurals name="category_settings_shelf_life_days_format">
-        <item quantity="one">%1$d д</item>
-        <item quantity="few">%1$d д</item>
-        <item quantity="many">%1$d д</item>
-        <item quantity="other">%1$d д</item>
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
     </plurals>
     <string name="category_settings_rename_content_description">Переименовать категорию</string>
 
@@ -523,7 +523,7 @@
     <string name="restore_mode_replace_subtitle">Сначала удалит всё на этом устройстве, включая настройки.</string>
     <string name="backup_export_success">Копия сохранена</string>
     <string name="backup_export_failed">Не удалось сохранить копию</string>
-    <string name="backup_import_malformed">Этот файл не является резервной копией Срокоеда</string>
+    <string name="backup_import_malformed">Этот файл не является резервной копией Срокоеда. Ничего не изменилось.</string>
     <string name="backup_import_unsupported">Эта копия создана более новой версией приложения</string>
     <string name="backup_import_empty">В этой копии нечего восстанавливать</string>
     <plurals name="backup_import_success">
@@ -601,4 +601,42 @@
     </plurals>
     <string name="onboarding_placeholder_title">Добро пожаловать в Срокоед</string>
     <string name="onboarding_placeholder_continue">Начать</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Напоминания</string>
+    <string name="settings_group_kitchen">Ваша кухня</string>
+    <string name="settings_notifications_blocked_title">Напоминания выключены</string>
+    <string name="settings_off">Выкл.</string>
+    <string name="settings_allergens_none">Нет</string>
+    <string name="settings_add_allergen_label">Добавить аллерген</string>
+    <string name="settings_data_summary">Экспорт и импорт копии</string>
+    <string name="settings_location_default">По умолчанию</string>
+    <string name="settings_location_taken">Место «%1$s» уже есть</string>
+    <string name="settings_rename_location_format">Переименовать: %1$s</string>
+    <string name="settings_delete_location_format">Удалить: %1$s</string>
+    <string name="settings_set_default_location_format">Сделать по умолчанию: %1$s</string>
+    <string name="settings_remove_format">Убрать: %1$s</string>
+    <string name="settings_try_again">Повторить</string>
+    <string name="restore_mode_cancel">Не импортировать</string>
+    <string name="clear_data_keep">Отмена</string>
+    <string name="category_settings_empty_title">Категорий пока нет</string>
+    <string name="category_settings_scan">Сканировать продукт</string>
+    <string name="category_settings_move_up">Переместить выше</string>
+    <string name="category_settings_move_down">Переместить ниже</string>
+    <string name="category_settings_move_done">Готово</string>
+    <string name="category_settings_rename_field_label">Название категории</string>
+    <string name="category_settings_rename_confirm">Переименовать</string>
+    <string name="category_settings_rename_format">Переименовать категорию: %1$s</string>
+    <string name="category_settings_drag_handle_format">Перетащить: %1$s</string>
+    <string name="category_settings_show_format">Показать: %1$s</string>
+    <string name="category_settings_shelf_life_format">Задать срок по умолчанию: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Срок хранения по умолчанию: %1$s</string>
+    <string name="category_settings_shelf_life_range">От 0 до 3650 дней</string>
+    <string name="category_settings_shelf_life_error">Введите число от 0 до 3650, это примерно 10 лет</string>
+    <string name="category_settings_shelf_life_save">Сохранить</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">Это удалит %1$d продукт и отменит напоминания о сроке годности. Это действие необратимо.</item>
+        <item quantity="few">Это удалит %1$d продукта и отменит напоминания о сроке годности. Это действие необратимо.</item>
+        <item quantity="many">Это удалит %1$d продуктов и отменит напоминания о сроке годности. Это действие необратимо.</item>
+        <item quantity="other">Это удалит %1$d продукта и отменит напоминания о сроке годности. Это действие необратимо.</item>
+    </plurals>
 </resources>

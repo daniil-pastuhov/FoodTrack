@@ -189,9 +189,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d d</string>
+            <string>%d day</string>
             <key>other</key>
-            <string>%d d</string>
+            <string>%d days</string>
         </dict>
     </dict>
     <key>shopping_list_import_added_format</key>
@@ -384,6 +384,22 @@
             <string>%d day over</string>
             <key>other</key>
             <string>%d days over</string>
+        </dict>
+    </dict>
+    <key>clear_data_dialog_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>This removes %d item and cancels its reminders. You can't undo this.</string>
+            <key>other</key>
+            <string>This removes all %d items and cancels their reminders. You can't undo this.</string>
         </dict>
     </dict>
 </dict>

@@ -434,8 +434,8 @@
     <string name="category_settings_shelf_life_field_label">Dager</string>
     <string name="category_settings_shelf_life_clear">Fjern</string>
     <plurals name="category_settings_shelf_life_days_format">
-        <item quantity="one">%1$d d</item>
-        <item quantity="other">%1$d d</item>
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dager</item>
     </plurals>
     <string name="category_settings_rename_content_description">Endre navn på kategori</string>
 
@@ -481,7 +481,7 @@
     <string name="restore_mode_replace_subtitle">Sletter først det som er på denne enheten, inkludert innstillinger.</string>
     <string name="backup_export_success">Sikkerhetskopi lagret</string>
     <string name="backup_export_failed">Kunne ikke lagre sikkerhetskopien</string>
-    <string name="backup_import_malformed">Den filen er ikke en Matvakt-sikkerhetskopi</string>
+    <string name="backup_import_malformed">Den filen er ikke en Matvakt-sikkerhetskopi. Ingenting ble endret.</string>
     <string name="backup_import_unsupported">Den sikkerhetskopien er laget av en nyere versjon av appen</string>
     <string name="backup_import_empty">Den sikkerhetskopien har ingenting å gjenopprette</string>
     <plurals name="backup_import_success">
@@ -545,4 +545,40 @@
     </plurals>
     <string name="onboarding_placeholder_title">Velkommen til Matvakt</string>
     <string name="onboarding_placeholder_continue">Kom i gang</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Påminnelser</string>
+    <string name="settings_group_kitchen">Kjøkkenet ditt</string>
+    <string name="settings_notifications_blocked_title">Påminnelser er av</string>
+    <string name="settings_off">Av</string>
+    <string name="settings_allergens_none">Ingen ennå</string>
+    <string name="settings_add_allergen_label">Legg til et allergen</string>
+    <string name="settings_data_summary">Sikkerhetskopi og tømming</string>
+    <string name="settings_location_default">Standard</string>
+    <string name="settings_location_taken">Du har allerede et sted som heter %1$s</string>
+    <string name="settings_rename_location_format">Endre navn: %1$s</string>
+    <string name="settings_delete_location_format">Slett: %1$s</string>
+    <string name="settings_set_default_location_format">Sett som standard: %1$s</string>
+    <string name="settings_remove_format">Fjern: %1$s</string>
+    <string name="settings_try_again">Prøv igjen</string>
+    <string name="restore_mode_cancel">Ikke importer</string>
+    <string name="clear_data_keep">Behold matskapet</string>
+    <string name="category_settings_empty_title">Ingen kategorier ennå</string>
+    <string name="category_settings_scan">Skann en vare</string>
+    <string name="category_settings_move_up">Flytt opp</string>
+    <string name="category_settings_move_down">Flytt ned</string>
+    <string name="category_settings_move_done">Ferdig</string>
+    <string name="category_settings_rename_field_label">Kategorinavn</string>
+    <string name="category_settings_rename_confirm">Endre navn</string>
+    <string name="category_settings_rename_format">Endre navn på kategori: %1$s</string>
+    <string name="category_settings_drag_handle_format">Dra for å endre rekkefølge: %1$s</string>
+    <string name="category_settings_show_format">Vis: %1$s</string>
+    <string name="category_settings_shelf_life_format">Angi standard holdbarhet: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Standard holdbarhet for %1$s</string>
+    <string name="category_settings_shelf_life_range">Fra 0 til 3650 dager</string>
+    <string name="category_settings_shelf_life_error">Skriv inn et tall fra 0 til 3650, det er omtrent 10 år</string>
+    <string name="category_settings_shelf_life_save">Lagre</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">Dette fjerner %1$d vare og avbryter påminnelsene for den. Dette kan ikke angres.</item>
+        <item quantity="other">Dette fjerner alle %1$d varer og avbryter påminnelsene for dem. Dette kan ikke angres.</item>
+    </plurals>
 </resources>
