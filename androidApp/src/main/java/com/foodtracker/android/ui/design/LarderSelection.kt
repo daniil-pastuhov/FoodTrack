@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -233,11 +234,13 @@ fun LarderStepper(
     min: Int = 1,
     max: Int = MAX_ITEM_QUANTITY,
     decreaseDescription: String = stringResource(R.string.quantity_decrease_content_description),
-    increaseDescription: String = stringResource(R.string.quantity_increase_content_description)
+    increaseDescription: String = stringResource(R.string.quantity_increase_content_description),
+    /** False is the compact form for dense rows: no border, a narrower count in label type. */
+    outlined: Boolean = true
 ) {
     val scheme = MaterialTheme.colorScheme
     Row(
-        modifier = modifier.border(1.dp, scheme.outline, CircleShape),
+        modifier = if (outlined) modifier.border(1.dp, scheme.outline, CircleShape) else modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
         LarderIconButton(
@@ -249,8 +252,9 @@ fun LarderStepper(
         )
         Text(
             text = value.toString(),
-            modifier = Modifier.widthIn(min = LarderSpace.s8),
-            style = MaterialTheme.typography.titleMedium.merge(LarderTabularNumbers),
+            modifier = Modifier.widthIn(min = if (outlined) LarderSpace.s8 else LarderSpace.s6),
+            style = (if (outlined) MaterialTheme.typography.titleMedium else MaterialTheme.typography.labelLarge)
+                .merge(LarderTabularNumbers),
             color = scheme.onSurface,
             textAlign = TextAlign.Center
         )
@@ -271,12 +275,15 @@ fun <T> LarderSegmented(
     selected: T,
     onSelect: (T) -> Unit,
     label: @Composable (T) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Shares the full width equally between the segments, rather than hugging their labels. */
+    fill: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
     val outline = scheme.outline
     Row(
         modifier = modifier
+            .then(if (fill) Modifier.fillMaxWidth() else Modifier)
             .height(IntrinsicSize.Min)
             .drawBehind {
                 val inset = LarderSpace.s1.toPx()
@@ -297,7 +304,7 @@ fun <T> LarderSegmented(
             val endPercent = if (index == options.lastIndex) 50 else 0
             Box(
                 modifier = Modifier
-                    .weight(1f, fill = false)
+                    .weight(1f, fill = fill)
                     .fillMaxHeight()
                     .heightIn(min = LarderSize.touch)
                     .selectable(

@@ -84,7 +84,7 @@ struct RootTabView: View {
         #if DEBUG
         .onAppear(perform: applyScreenshotLaunchArguments)
         #endif
-        .sheet(item: $scannerRequest) { request in
+        .fullScreenCover(item: $scannerRequest) { request in
             ScannerSheetView(
                 viewModel: viewModel,
                 initialMode: request.mode,
