@@ -32,6 +32,17 @@ class LarderDesignLogicTest {
         expiryStatusLabel(resources, Locale.UK, status, days, date, today)
 
     @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun testStatusWordsStayFactual() {
+        assertEquals("1 day over", label(ExpiryStatus.EXPIRED, -1))
+        assertEquals("3 days over", label(ExpiryStatus.EXPIRED, -3))
+        assertEquals("Today", label(ExpiryStatus.EXPIRING_TODAY, 0))
+        assertEquals("Tomorrow", label(ExpiryStatus.EXPIRING_SOON, 1))
+        assertEquals("In 2 days", label(ExpiryStatus.EXPIRING_SOON, 2))
+        assertEquals("In 7 days", label(ExpiryStatus.FRESH, 7))
+    }
+
+    @Test
     fun testAFreshItemTurnsFromDaysToADateAfterAWeek() {
         assertTrue(showsDaysLeft(ExpiryStatus.FRESH, 7))
         assertFalse(showsDaysLeft(ExpiryStatus.FRESH, 8))
