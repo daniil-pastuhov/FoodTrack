@@ -75,12 +75,12 @@
 "barcode_word" = "Штрихкод";
 
 "section_expiration_date" = "Срок годности";
-"expiry_date_implausible_warning_format" = "Эта дата отстоит от сегодняшней более чем на %d лет. Проверьте год.";
-"expiry_picker_label" = "Годен до";
+"expiry_date_implausible_warning_format" = "Эта дата отстоит более чем на %d лет. Проверьте год.";
+"expiry_picker_label" = "Срок годности / годен до";
 "quick_date_3_days" = "+3 дня";
-"quick_date_1_week" = "+1 нед.";
-"quick_date_2_weeks" = "+2 нед.";
-"quick_date_1_month" = "+1 мес.";
+"quick_date_1_week" = "+1 неделя";
+"quick_date_2_weeks" = "+2 недели";
+"quick_date_1_month" = "+1 месяц";
 
 "section_storage" = "Хранение";
 "location_picker_label" = "Место";
@@ -91,10 +91,10 @@
 "use_one_button" = "Использовать одну штуку";
 
 "section_notes" = "Заметки";
-"notes_field_placeholder" = "Заметки (напр. вскрыто, дверца морозильника)";
+"notes_field_placeholder" = "напр. вскрыто, количество, полка";
 
 "edit_item_title" = "Изменить продукт";
-"add_item_title" = "Добавить в кладовую";
+"add_item_title" = "Добавить продукт";
 "cancel_button" = "Отмена";
 "discard_changes_title" = "Отменить изменения?";
 "discard_changes_confirm" = "Не сохранять";
@@ -551,3 +551,13 @@
 "shopping_section_name_label" = "Название раздела";
 "shopping_section_keep" = "Оставить раздел";
 "shopping_section_delete_confirm" = "Удалить раздел";
+
+/* Add item */
+"new_item_placeholder" = "Новый продукт";
+"add_name_missing" = "Добавьте название, чтобы потом найти продукт";
+"add_see_details" = "Подробнее";
+"storage_location_title" = "Место хранения";
+"save_item_button_format" = "Сохранить: %@";
+"update_item_button" = "Обновить продукт";
+"discard_new_message" = "Этот продукт не сохранён, поэтому в кладовую он не попадёт.";
+"discard_edit_message_format" = "Изменения в «%@» не сохранятся. Продукт останется прежним.";

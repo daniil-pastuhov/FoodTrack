@@ -682,5 +682,45 @@
             <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
         </dict>
     </dict>
+    <key>expires_in_months_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Через %d месяц</string>
+            <key>few</key>
+            <string>Через %d месяца</string>
+            <key>many</key>
+            <string>Через %d месяцев</string>
+            <key>other</key>
+            <string>Через %d месяца</string>
+        </dict>
+    </dict>
+    <key>expires_in_years_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Через %d год</string>
+            <key>few</key>
+            <string>Через %d года</string>
+            <key>many</key>
+            <string>Через %d лет</string>
+            <key>other</key>
+            <string>Через %d года</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

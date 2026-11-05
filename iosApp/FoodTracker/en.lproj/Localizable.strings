@@ -70,17 +70,17 @@
 "calendar_show_week" = "Show week";
 
 "section_product_details" = "Product Details";
-"product_name_label" = "Product Name *";
-"brand_label" = "Brand / Manufacturer";
+"product_name_label" = "Product name *";
+"brand_label" = "Brand";
 "barcode_word" = "Barcode";
 
 "section_expiration_date" = "Expiration Date";
-"expiry_date_implausible_warning_format" = "This date is more than %d years from today. Please double-check the year.";
-"expiry_picker_label" = "Best Before / Expiry";
+"expiry_date_implausible_warning_format" = "This date is over %d years away. Check the year.";
+"expiry_picker_label" = "Best before";
 "quick_date_3_days" = "+3 Days";
-"quick_date_1_week" = "+1 Wk";
-"quick_date_2_weeks" = "+2 Wks";
-"quick_date_1_month" = "+1 Mo";
+"quick_date_1_week" = "+1 Week";
+"quick_date_2_weeks" = "+2 Weeks";
+"quick_date_1_month" = "+1 Month";
 
 "section_storage" = "Storage";
 "location_picker_label" = "Location";
@@ -91,13 +91,13 @@
 "use_one_button" = "Use one";
 
 "section_notes" = "Notes";
-"notes_field_placeholder" = "Optional notes (e.g. opened, freezer door)";
+"notes_field_placeholder" = "e.g. opened, quantity, shelf";
 
 "edit_item_title" = "Edit Item";
-"add_item_title" = "Add to Pantry";
+"add_item_title" = "Add item";
 "cancel_button" = "Cancel";
 "discard_changes_title" = "Discard changes?";
-"discard_changes_confirm" = "Discard";
+"discard_changes_confirm" = "Discard changes";
 "discard_changes_keep" = "Keep editing";
 "save_button" = "Save";
 
@@ -551,3 +551,13 @@
 "shopping_section_name_label" = "Section name";
 "shopping_section_keep" = "Keep section";
 "shopping_section_delete_confirm" = "Delete section";
+
+/* Add item */
+"new_item_placeholder" = "New Item";
+"add_name_missing" = "Add a name so you can find this later";
+"add_see_details" = "See details";
+"storage_location_title" = "Storage Location";
+"save_item_button_format" = "Save to %@";
+"update_item_button" = "Update Item";
+"discard_new_message" = "This item hasn't been saved, so it won't be added to your pantry.";
+"discard_edit_message_format" = "Your changes to %@ won't be saved. The item stays as it was.";

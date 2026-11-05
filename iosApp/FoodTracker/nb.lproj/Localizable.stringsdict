@@ -546,5 +546,37 @@
             <string>Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</string>
         </dict>
     </dict>
+    <key>expires_in_months_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Om %d måned</string>
+            <key>other</key>
+            <string>Om %d måneder</string>
+        </dict>
+    </dict>
+    <key>expires_in_years_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Om %d år</string>
+            <key>other</key>
+            <string>Om %d år</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

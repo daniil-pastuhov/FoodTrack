@@ -75,12 +75,12 @@
 "barcode_word" = "Strekkode";
 
 "section_expiration_date" = "Utløpsdato";
-"expiry_date_implausible_warning_format" = "Denne datoen er mer enn %d år fra i dag. Dobbeltsjekk året.";
-"expiry_picker_label" = "Best før / utløper";
+"expiry_date_implausible_warning_format" = "Denne datoen er over %d år unna. Sjekk året.";
+"expiry_picker_label" = "Best før";
 "quick_date_3_days" = "+3 dager";
 "quick_date_1_week" = "+1 uke";
 "quick_date_2_weeks" = "+2 uker";
-"quick_date_1_month" = "+1 mnd";
+"quick_date_1_month" = "+1 måned";
 
 "section_storage" = "Oppbevaring";
 "location_picker_label" = "Sted";
@@ -91,13 +91,13 @@
 "use_one_button" = "Bruk én";
 
 "section_notes" = "Notater";
-"notes_field_placeholder" = "Valgfrie notater (f.eks. åpnet, fryserdør)";
+"notes_field_placeholder" = "f.eks. åpnet, mengde, hylle";
 
 "edit_item_title" = "Rediger vare";
-"add_item_title" = "Legg til i matskapet";
+"add_item_title" = "Legg til vare";
 "cancel_button" = "Avbryt";
 "discard_changes_title" = "Forkaste endringene?";
-"discard_changes_confirm" = "Forkast";
+"discard_changes_confirm" = "Forkast endringene";
 "discard_changes_keep" = "Fortsett å redigere";
 "save_button" = "Lagre";
 
@@ -551,3 +551,13 @@
 "shopping_section_name_label" = "Navn på seksjon";
 "shopping_section_keep" = "Behold seksjonen";
 "shopping_section_delete_confirm" = "Slett seksjonen";
+
+/* Add item */
+"new_item_placeholder" = "Ny vare";
+"add_name_missing" = "Legg til et navn, så finner du varen igjen senere";
+"add_see_details" = "Se detaljer";
+"storage_location_title" = "Oppbevaringssted";
+"save_item_button_format" = "Lagre i %@";
+"update_item_button" = "Oppdater vare";
+"discard_new_message" = "Denne varen er ikke lagret, så den blir ikke lagt til i matskapet.";
+"discard_edit_message_format" = "Endringene i %@ blir ikke lagret. Varen forblir som den var.";
