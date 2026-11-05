@@ -397,6 +397,8 @@ struct CalendarView: View {
                 }
             }
             .larderList()
+            .listSectionSpacing(0)
+            .environment(\.defaultMinListHeaderHeight, 0)
             .animation(.default, value: viewModel.items)
         }
     }
@@ -466,7 +468,7 @@ struct CalendarView: View {
         }
         .foregroundStyle(LarderColor.onSurfaceVariant)
         .textCase(nil)
-        .padding(.top, LarderSpace.s3)
+        .padding(.top, LarderSpace.s4)
         .padding(.bottom, LarderSpace.s2)
         .padding(.horizontal, LarderSpace.s4)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -711,12 +713,19 @@ private struct CalendarKey: View {
         }
     }
 
+    @ViewBuilder
+    private var entries: some View {
+        entry(L10n.metricExpired) { DayMarkShape(status: .expired) }
+        entry(L10n.calendarSectionToday) { DayMarkShape(status: .expiringToday) }
+        entry(L10n.metricExpiringSoon) { DayMarkShape(status: .expiringSoon) }
+        entry(L10n.metricFresh) { DayMark(status: .fresh, count: 1) }
+    }
+
+    /// Centred on one line; it only wraps when long words or large text need it.
     var body: some View {
-        FlowLayout(spacing: LarderSpace.s4) {
-            entry(L10n.metricExpired) { DayMarkShape(status: .expired) }
-            entry(L10n.calendarSectionToday) { DayMarkShape(status: .expiringToday) }
-            entry(L10n.metricExpiringSoon) { DayMarkShape(status: .expiringSoon) }
-            entry(L10n.metricFresh) { DayMark(status: .fresh, count: 1) }
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: LarderSpace.s4) { entries }
+            FlowLayout(spacing: LarderSpace.s4) { entries }
         }
         .frame(maxWidth: .infinity)
     }
