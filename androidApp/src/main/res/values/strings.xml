@@ -140,23 +140,23 @@
     <string name="date_picker_ok">OK</string>
     <string name="date_picker_cancel">Cancel</string>
 
-    <string name="manual_entry_button">Manual Entry</string>
+    <string name="manual_entry_button">Type it in</string>
     <string name="camera_off_title">The camera is off</string>
     <string name="camera_off_body">BestBefore needs the camera to scan. You can still add food by hand.</string>
     <string name="camera_off_open_settings">Open settings</string>
     <string name="camera_off_add_by_hand">Type it in</string>
     <string name="scan_mode_batch">Batch</string>
-    <string name="reticle_hint_batch">Keep scanning — everything lands in the list below</string>
+    <string name="reticle_hint_batch">Keep scanning. Everything lands in the list below</string>
     <string name="scan_mode_receipt">Receipt</string>
-    <string name="reticle_hint_receipt">Fit the whole receipt in frame, then tap to read it</string>
+    <string name="reticle_hint_receipt">Fit the whole receipt in the frame, then tap to read it</string>
     <string name="scan_receipt_button">Read receipt</string>
-    <string name="receipt_nothing_found">No products found on that receipt — try again with the whole receipt in frame</string>
+    <string name="receipt_nothing_found">No products found on that receipt. Try again with the whole receipt in frame</string>
     <plurals name="receipt_lines_added">
-        <item quantity="one">Added %1$d item from the receipt — check it below</item>
-        <item quantity="other">Added %1$d items from the receipt — check them below</item>
+        <item quantity="one">Added %1$d item from the receipt. Check it below</item>
+        <item quantity="other">Added %1$d items from the receipt. Check them below</item>
     </plurals>
     <string name="batch_queue_empty">Scan a product to start the list</string>
-    <string name="batch_queue_remove_content_description">Remove from list</string>
+    <string name="batch_queue_remove_content_description">Remove from list: %1$s</string>
     <string name="batch_queue_needs_date">Check date</string>
     <string name="batch_commit_button">Add all</string>
     <string name="batch_clear_button">Clear</string>
@@ -169,25 +169,25 @@
         <item quantity="other">%1$d items added</item>
     </plurals>
     <string name="duplicate_dialog_title">Already in your pantry</string>
-    <string name="duplicate_dialog_message">You already have %1$s. Add one more to it, or create a separate entry?</string>
+    <string name="duplicate_dialog_message">You already have %1$s. Add one more to it, or keep this one separate?</string>
     <string name="duplicate_dialog_add_one">Add one more</string>
     <string name="duplicate_dialog_separate">Keep separate</string>
     <string name="duplicate_added_snackbar">%1$s is now %2$d</string>
     <string name="in_pantry_count">In your pantry: %1$d</string>
     <string name="scan_mode_barcode">Barcode</string>
-    <string name="scan_mode_date_ocr">Date OCR</string>
+    <string name="scan_mode_date_ocr">Date</string>
     <string name="scan_mode_photo">Photo</string>
-    <string name="reticle_hint_barcode">Align product barcode within frame</string>
-    <string name="reticle_hint_date_ocr">Point camera at printed expiration date\n(e.g., \'EXP 24.11.2026\')</string>
-    <string name="reticle_hint_photo">Position product in center to snap a picture</string>
-    <string name="torch_toggle_content_description">Toggle flashlight</string>
+    <string name="reticle_hint_barcode">Line up the barcode inside the frame</string>
+    <string name="reticle_hint_date_ocr">Point at the printed date, like EXP 24.11.2026</string>
+    <string name="reticle_hint_photo">Put the product in the middle, then take the picture</string>
+    <string name="torch_toggle_content_description">Torch</string>
     <string name="expiry_date_found_format">Expiry Date Found: %1$s</string>
-    <string name="looking_up_product">Looking up product in Open Food Facts...</string>
-    <string name="scan_date_button">Scan Date</string>
+    <string name="looking_up_product">Looking up this product…</string>
+    <string name="scan_date_button">Scan date</string>
     <string name="continue_button">Continue</string>
 
     <string name="product_not_found_title">Product not found</string>
-    <string name="switch_to_photo_button">Try Photo Mode</string>
+    <string name="switch_to_photo_button">Photo mode</string>
 
     <string name="take_photo_button">Take photo</string>
     <string name="photo_captured_title">Photo captured</string>
@@ -520,7 +520,7 @@
     </plurals>
 
     <string name="date_captured_title">Expiry date read</string>
-    <string name="scan_again_button">Scan Again</string>
+    <string name="scan_again_button">Scan again</string>
     <string name="shopping_list_scan_unsupported">Open the scanner from your pantry to import a shared list</string>
     <string name="batch_discard_title">Discard scanned items?</string>
     <plurals name="batch_discard_message">
@@ -549,4 +549,29 @@
     </plurals>
     <string name="onboarding_placeholder_title">Welcome to BestBefore</string>
     <string name="onboarding_placeholder_continue">Get started</string>
+
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Close scanner</string>
+    <string name="scan_torch_on">On</string>
+    <string name="scan_torch_off">Off</string>
+    <string name="scan_idle_results_title">Results show up here</string>
+    <string name="scan_idle_results_message">Scan a barcode and the product appears on this side.</string>
+    <string name="scan_idle_date_title">The date shows up here</string>
+    <string name="scan_idle_date_message">Hold the camera steady on the printed date.</string>
+    <string name="scan_idle_photo_title">Your photo shows up here</string>
+    <string name="scan_idle_photo_message">Take a picture to get name suggestions.</string>
+    <string name="scan_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
+    <string name="scan_offline_title">You\'re offline</string>
+    <string name="scan_offline_message">Couldn\'t look this product up. You can carry on by hand, and the barcode stays with the item.</string>
+    <string name="scan_try_again">Try again</string>
+    <string name="scan_continue_by_hand">Continue by hand</string>
+    <string name="scan_best_before_format">Best before %1$s</string>
+    <string name="scan_date_from_barcode">Read from the barcode</string>
+    <string name="scan_date_from_packaging">Read from the packaging</string>
+    <string name="scan_use_this_date">Use this date</string>
+    <string name="scan_reading_receipt">Reading the receipt…</string>
+    <string name="receipt_queue_empty">Read a receipt to start the list</string>
+    <string name="scan_queue_cleared">Queue cleared</string>
+    <string name="scan_capture_failed">Couldn\'t capture photo. Try again.</string>
+    <string name="batch_queue_estimated_format">Estimated %1$s</string>
 </resources>

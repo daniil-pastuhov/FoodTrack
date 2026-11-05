@@ -158,7 +158,7 @@
         <item quantity="other">Добавлено %1$d товара из чека — проверьте ниже</item>
     </plurals>
     <string name="batch_queue_empty">Отсканируйте товар, чтобы начать список</string>
-    <string name="batch_queue_remove_content_description">Убрать из списка</string>
+    <string name="batch_queue_remove_content_description">Убрать из списка: %1$s</string>
     <string name="batch_queue_needs_date">Проверьте дату</string>
     <string name="batch_commit_button">Добавить все</string>
     <string name="batch_clear_button">Очистить</string>
@@ -601,4 +601,29 @@
     </plurals>
     <string name="onboarding_placeholder_title">Добро пожаловать в Срокоед</string>
     <string name="onboarding_placeholder_continue">Начать</string>
+
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Закрыть сканер</string>
+    <string name="scan_torch_on">Включён</string>
+    <string name="scan_torch_off">Выключен</string>
+    <string name="scan_idle_results_title">Результат появится здесь</string>
+    <string name="scan_idle_results_message">Отсканируйте штрихкод, и товар появится на этой стороне.</string>
+    <string name="scan_idle_date_title">Дата появится здесь</string>
+    <string name="scan_idle_date_message">Держите камеру ровно, наведя её на напечатанную дату.</string>
+    <string name="scan_idle_photo_title">Фото появится здесь</string>
+    <string name="scan_idle_photo_message">Сделайте снимок, чтобы получить варианты названия.</string>
+    <string name="scan_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
+    <string name="scan_offline_title">Нет подключения к сети</string>
+    <string name="scan_offline_message">Не удалось найти этот товар. Можно продолжить вручную, штрихкод останется у товара.</string>
+    <string name="scan_try_again">Повторить</string>
+    <string name="scan_continue_by_hand">Продолжить вручную</string>
+    <string name="scan_best_before_format">Годен до %1$s</string>
+    <string name="scan_date_from_barcode">Считано со штрихкода</string>
+    <string name="scan_date_from_packaging">Считано с упаковки</string>
+    <string name="scan_use_this_date">Использовать эту дату</string>
+    <string name="scan_reading_receipt">Считываем чек…</string>
+    <string name="receipt_queue_empty">Отсканируйте товар, чтобы начать список</string>
+    <string name="scan_queue_cleared">Очередь очищена</string>
+    <string name="scan_capture_failed">Не удалось сделать фото. Попробуйте ещё раз.</string>
+    <string name="batch_queue_estimated_format">%1$s</string>
 </resources>
