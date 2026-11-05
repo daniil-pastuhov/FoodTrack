@@ -8,7 +8,6 @@ struct RootTabView: View {
     @StateObject private var viewModel = NativePantryViewModel()
     @ObservedObject private var router = AppRouter.shared
     @State private var selectedTab: RootTab = .home
-    @State private var isDashboardScrollingDown: Bool = false
     /// Whether the system has moved the status bar and navigation bar into a strip down the
     /// side of the screen, as iPhone Duo does on its folded display. Scan then joins the
     /// dashboard's toolbar in that strip instead of floating over the list.
@@ -26,6 +25,12 @@ struct RootTabView: View {
     /// What the add/edit sheet should open with, or nil while it is closed. See `AddEditRequest`.
     @State private var addEditRequest: AddEditRequest?
     @State private var productDetailItem: PantryItem?
+    /// Runs once the product detail sheet has gone, so a second sheet or a snackbar isn't lost
+    /// behind it.
+    @State private var afterProductDetail: (() -> Void)?
+    /// The row picked for the right-hand pane on expanded Home.
+    @State private var homePaneItemID: String?
+    @State private var remindersCalloutDismissed = false
     @State private var showCategories: Bool = false
     @State private var showOnboarding: Bool = false
     /// The one snackbar on screen. Hosted here, rather than in each tab, so it sits above the
@@ -80,7 +85,6 @@ struct RootTabView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isScanFloating)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shellChrome.navHidden)
         .background(safeAreaReader)
-        .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
         #if DEBUG
         .onAppear(perform: applyScreenshotLaunchArguments)
         #endif
@@ -126,12 +130,17 @@ struct RootTabView: View {
                 }
             )
         }
-        .sheet(item: $productDetailItem) { item in
-            let nutrition = viewModel.nutrition(for: item)
-            ProductDetailView(
-                productName: item.name,
-                nutrition: nutrition,
-                warnings: nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
+        .larderSheet(item: $productDetailItem, onDismiss: {
+            afterProductDetail?()
+            afterProductDetail = nil
+        }) { item in
+            productDetail(
+                item,
+                actions: productDetailActions(item) { action in
+                    afterProductDetail = action
+                    productDetailItem = nil
+                },
+                onClose: { productDetailItem = nil }
             )
         }
         .sheet(isPresented: $showCategories) {
@@ -190,12 +199,18 @@ struct RootTabView: View {
             case .home:
                 PantryDashboardView(
                     viewModel: viewModel,
-                    onEditItem: { presentAddEdit(editing: $0) },
-                    toolbarScan: barsInSideStrip ? { presentScanner() } : nil,
-                    onScrollingDownChanged: { isDashboardScrollingDown = $0 },
+                    pickedItemID: homePaneItemID,
+                    remindersCalloutDismissed: $remindersCalloutDismissed,
+                    onOpenItem: { apply(.productDetail(itemId: $0.id)) },
+                    onUseOne: useOne,
                     onItemRemoved: offerItemUndo,
-                    onItemsDeleted: offerDeletedItemsUndo
-                )
+                    onItemsDeleted: offerDeletedItemsUndo,
+                    onScan: { presentScanner() },
+                    onAddByHand: { presentAddEdit(editing: nil) },
+                    showsHeaderScan: barsInSideStrip
+                ) { item in
+                    productDetail(item, actions: productDetailActions(item) { $0() })
+                }
                 .transition(.opacity)
             case .calendar:
                 CalendarView(
@@ -246,7 +261,11 @@ struct RootTabView: View {
             }
 
             // Last, so it renders above the pill and Scan rather than underneath them.
+            // Over the list on expanded Home, so it never covers the product pane's buttons.
+            let overList = isExpanded && selectedTab == .home
             LarderSnackbarHost(content: $snackbar)
+                .frame(maxWidth: overList ? HomeLayout.listPaneWidth : .infinity)
+                .frame(maxWidth: .infinity, alignment: overList ? .leading : .center)
                 .padding(.bottom, metrics.snackbarBottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -271,7 +290,11 @@ struct RootTabView: View {
                 presentAddEdit(editing: item)
             }
         case .productDetail(let itemId):
-            productDetailItem = viewModel.items.first { $0.id == itemId }
+            if isExpanded && selectedTab == .home {
+                homePaneItemID = itemId
+            } else {
+                productDetailItem = viewModel.items.first { $0.id == itemId }
+            }
         case .categories:
             showCategories = true
         case .onboarding:
@@ -279,15 +302,49 @@ struct RootTabView: View {
         }
     }
 
-    /// The scanner's "Use one": the last unit goes through the same removal as the row's "-"
-    /// button (essential items land on the shopping list, with an undo), while any other unit
-    /// gets its own undo, since closing the scanner gives no other sign that the count changed.
+    private func productDetail(
+        _ item: PantryItem,
+        actions: ProductDetailActions,
+        onClose: (() -> Void)? = nil
+    ) -> PantryProductDetail {
+        let nutrition = viewModel.nutrition(for: item)
+        let settings = SettingsStore.shared.settings
+        return PantryProductDetail(
+            item: item,
+            categoryName: resolveCategoryDisplayName(item.category, viewModel.categoryPreferences)
+                .flatMap { $0.isEmpty ? nil : L10n.categoryName($0) },
+            expiringSoonDays: settings.expiringSoonDays,
+            nutrition: nutrition,
+            warnings: nutrition.matchedAllergens(settings.allergens),
+            actions: actions,
+            onClose: onClose
+        )
+    }
+
+    /// `perform` decides when an action runs: straight away in the pane, after the sheet has gone.
+    private func productDetailActions(
+        _ item: PantryItem,
+        perform: @escaping (@escaping () -> Void) -> Void
+    ) -> ProductDetailActions {
+        ProductDetailActions(
+            useOne: { perform { useOne(item) } },
+            edit: { perform { presentAddEdit(editing: item) } },
+            moveToShoppingList: {
+                perform { viewModel.moveToShoppingList(item.id, onItemRemoved: offerItemUndo) }
+            },
+            delete: { perform { viewModel.deleteItem(item.id, onItemRemoved: offerItemUndo) } }
+        )
+    }
+
+    /// "Use one", from a row, the product detail or the scanner: the last unit goes through the
+    /// same removal (essential items land on the shopping list, with an undo), and any other unit
+    /// gets its own undo, since a count changing is easy to miss.
     private func useOne(_ item: PantryItem) {
         if item.quantity <= 1 {
             viewModel.decrementQuantity(item.id, onItemRemoved: offerItemUndo)
         } else {
             viewModel.decrementQuantity(item.id)
-            showSnackbar(L10n.duplicateAdded(item.name, item.quantity - 1)) {
+            showSnackbar(L10n.homeUsedOneSnackbar(item.name, item.quantity - 1)) {
                 viewModel.incrementQuantity(item.id)
             }
         }
@@ -376,7 +433,8 @@ extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
     /// calendar, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
-    /// an Undo, and `-demoRoute <name>` (onboarding, categories) goes to that route.
+    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`)
+    /// goes to that route.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
@@ -395,6 +453,9 @@ extension RootTabView {
         switch arguments.string(forKey: "demoRoute") {
         case "onboarding": apply(.onboarding)
         case "categories": apply(.categories)
+        case "productDetail":
+            let item = viewModel.items.first { $0.name == arguments.string(forKey: "demoItem") }
+            apply(.productDetail(itemId: (item ?? viewModel.filteredItems.first)?.id ?? ""))
         default: break
         }
     }

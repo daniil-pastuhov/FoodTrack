@@ -2,10 +2,10 @@
 "nav_home" = "Главная";
 
 "metric_expired" = "Просрочено";
-"metric_expiring_soon" = "Скоро истекают";
+"metric_expiring_soon" = "Скоро";
 "metric_fresh" = "Свежее";
 
-"location_filter_all" = "Все";
+"location_filter_all" = "Все места";
 "category_filter_all" = "Все категории";
 
 "status_filter_all" = "Все";
@@ -33,7 +33,6 @@
 "exit_selection_button" = "Отмена";
 "select_items_button" = "Выбрать";
 "more_options_button" = "Ещё";
-"delete_selected_dialog_title" = "Удалить выбранные продукты?";
 "action_get_recipe_ideas" = "Идеи рецептов";
 "recipe_prompt_intro" = "У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:";
 "recipe_prompt_item_format" = "%@ (%@)";
@@ -45,7 +44,7 @@
 "share_recipe_share_button" = "Поделиться";
 "share_recipe_cancel_button" = "Отмена";
 
-"search_placeholder" = "Поиск по названию или бренду...";
+"search_placeholder" = "Поиск по названию или бренду";
 "scan_button" = "Сканировать";
 "status_picker_label" = "Статус";
 "filters_sheet_title" = "Фильтры";
@@ -418,3 +417,66 @@
 "onboarding_placeholder_title" = "Напоминает до того, как еда испортится, а не после.";
 "onboarding_placeholder_body" = "Ваши запасы остаются на вашем устройстве.";
 "onboarding_placeholder_continue" = "Начать";
+
+/* Pantry */
+"lede_next_up" = "Дальше: %1$@ %2$@";
+"lede_nothing_this_week" = "На этой неделе ничего не истекает";
+"home_section_use_first" = "Сначала это";
+"home_section_later_this_week" = "Позже на этой неделе";
+"home_section_later" = "Потом";
+"home_clear_filters" = "Сбросить фильтры";
+"home_search_description" = "Поиск";
+"home_filters_on_description" = "Фильтры включены";
+"home_empty_title" = "Полки пусты";
+"home_empty_message" = "Отсканируйте первый продукт, и он появится здесь. Сначала идут самые близкие сроки.";
+"home_empty_scan" = "Сканировать продукт";
+"home_empty_add_by_hand" = "Добавить вручную";
+"home_no_results_title" = "Ничего не найдено по запросу «%1$@»";
+"home_no_results_message" = "Проверьте написание или попробуйте название бренда.";
+"home_clear_search" = "Очистить поиск";
+"home_no_filter_results_title" = "Под эти фильтры ничего не подходит";
+"home_no_filter_results_message" = "Попробуйте другое место или категорию.";
+"home_reminders_off_title" = "Напоминания выключены";
+"home_reminders_off_message" = "Уведомления для Срокоеда выключены в настройках телефона.";
+"home_dismiss" = "Закрыть";
+"home_swipe_to_list" = "В список";
+"home_use_one_item" = "Использовать один: %1$@";
+"home_used_one_snackbar" = "Использован один: %1$@. Осталось: %2$d.";
+"home_location_label" = "Место хранения";
+"home_category_label" = "Категория";
+"home_best_before_label" = "Годен до";
+"home_notes_label" = "Заметки";
+"home_done" = "Готово";
+"detail_close" = "Закрыть";
+"detail_edit" = "Изменить";
+"detail_to_shopping_list" = "В список покупок";
+"detail_nutri_caption" = "Nutri-Score %1$@";
+"detail_nova_caption" = "NOVA %1$d · %2$@";
+"detail_nova_description" = "NOVA %1$d, %2$@";
+"detail_nova_1" = "Без обработки";
+"detail_nova_2" = "Кулинарные ингредиенты";
+"detail_nova_3" = "Обработанный";
+"detail_nova_4" = "Ультраобработанный";
+"detail_credit" = "Данные о продукте из Open Food Facts";
+"detail_allergen_note" = "Этот аллерген есть в вашем списке.";
+"detail_choose_item" = "Выберите продукт, чтобы увидеть подробности.";
+"recipe_intro" = "Запрос для ИИ-помощника из выбранных продуктов: %1$@. Он покинет устройство, только если вы им поделитесь.";
+"recipe_names_two" = "%1$@ и %2$@";
+"recipe_names_three" = "%1$@, %2$@ и %3$@";
+"lede_number_1" = "Один";
+"lede_number_2" = "Два";
+"lede_number_3" = "Три";
+"lede_number_4" = "Четыре";
+"lede_number_5" = "Пять";
+"lede_number_6" = "Шесть";
+"lede_number_7" = "Семь";
+"lede_number_8" = "Восемь";
+"lede_number_9" = "Девять";
+"lede_number_10" = "Десять";
+"lede_on_weekday_1" = "в понедельник";
+"lede_on_weekday_2" = "во вторник";
+"lede_on_weekday_3" = "в среду";
+"lede_on_weekday_4" = "в четверг";
+"lede_on_weekday_5" = "в пятницу";
+"lede_on_weekday_6" = "в субботу";
+"lede_on_weekday_7" = "в воскресенье";

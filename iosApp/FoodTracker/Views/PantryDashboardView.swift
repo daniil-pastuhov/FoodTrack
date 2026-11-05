@@ -1,519 +1,680 @@
 import SwiftUI
 import UIKit
+import UserNotifications
 
-public struct PantryDashboardView: View {
+/// Home. Answers one question in plain words, what should I use first, with the soonest dates at
+/// the top. On expanded windows the product detail sits in a pane beside the list.
+struct PantryDashboardView<DetailPane: View>: View {
+    /// The list's width when the product detail sits beside it. The root lines snackbars up with it.
+    static var listPaneWidth: CGFloat { HomeLayout.listPaneWidth }
+
     @ObservedObject var viewModel: NativePantryViewModel
     @ObservedObject private var settingsStore = SettingsStore.shared
-    /// Row tap notifies the root (`RootTabView`) to open the shared Add/Edit sheet, since
-    /// scanning and adding/editing are handled globally now rather than by this tab itself
-    /// — see `FloatingNav`/`ScanFab`.
-    var onEditItem: (PantryItem) -> Void
-    /// Reports scroll direction so the root can collapse the Scan button on the same
-    /// downward scroll that scrolls the metrics row out of view, and bring them back on the
-    /// way up — matching the large-title's own native collapse behavior.
-    var onScrollingDownChanged: (Bool) -> Void
-    /// Fires with the removed item whenever the "-" button, swipe-to-delete, or the "move to
-    /// shopping list" swipe action fully removes it from the pantry, plus whether that removal
-    /// added a shopping-list entry for it, so the root can offer it back through an undo toast
-    /// that reverses both — hosted at the root (rather than here) so it renders above the
-    /// floating nav bar/scan buttons that overlay this screen, instead of underneath them.
-    var onItemRemoved: (PantryItem, Bool) -> Void
+    /// The row picked for the right-hand pane on expanded windows.
+    let pickedItemID: String?
+    /// Held by the root, so a dismissal outlasts a trip to another tab.
+    @Binding var remindersCalloutDismissed: Bool
+    let onOpenItem: (PantryItem) -> Void
+    let onUseOne: (PantryItem) -> Void
+    /// Fires with the removed item and whether that added a shopping-list entry, so the root can
+    /// offer it back through a snackbar that reverses both.
+    let onItemRemoved: (PantryItem, Bool) -> Void
     /// Fires after a multi-select delete, with what the root needs for its one Undo.
-    var onItemsDeleted: (DeletedItems) -> Void
-    /// Scan as a toolbar button, when the root has it here rather than floating over the list
-    /// (see `RootTabView.barsInSideStrip`); nil leaves it out of the toolbar.
-    var toolbarScan: (() -> Void)?
-    @State private var showFilters: Bool = false
-    @State private var isSelecting: Bool = false
-    @State private var selectedItemIDs: Set<String> = []
-    @State private var showShareDialog: Bool = false
-    @State private var showDeleteSelectedDialog: Bool = false
-    @State private var includeOtherItemsInShare: Bool = false
-    @State private var shareAfterDialogDismiss: Bool = false
-    @State private var showActivitySheet: Bool = false
-    @State private var shareText: String = ""
+    let onItemsDeleted: (DeletedItems) -> Void
+    let onScan: () -> Void
+    let onAddByHand: () -> Void
+    /// Scan beside search, when the root can't float it over the list (see
+    /// `RootTabView.barsInSideStrip`).
+    let showsHeaderScan: Bool
+    @ViewBuilder let detailPane: (PantryItem) -> DetailPane
 
-    public init(
-        viewModel: NativePantryViewModel,
-        onEditItem: @escaping (PantryItem) -> Void,
-        toolbarScan: (() -> Void)? = nil,
-        onScrollingDownChanged: @escaping (Bool) -> Void = { _ in },
-        onItemRemoved: @escaping (PantryItem, Bool) -> Void = { _, _ in },
-        onItemsDeleted: @escaping (DeletedItems) -> Void = { _ in }
-    ) {
-        self.viewModel = viewModel
-        self.onEditItem = onEditItem
-        self.toolbarScan = toolbarScan
-        self.onScrollingDownChanged = onScrollingDownChanged
-        self.onItemRemoved = onItemRemoved
-        self.onItemsDeleted = onItemsDeleted
+    @Environment(\.isExpanded) private var isExpanded
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var filterSheet: FilterSheetPage?
+    @State private var showRecipeSheet = false
+    @State private var shareAfterRecipeSheet = false
+    @State private var includeOtherItems = false
+    @State private var showActivitySheet = false
+    @State private var shareText = ""
+    @State private var isSelecting = false
+    @State private var selectedItemIDs: Set<String> = []
+    @State private var isSearching = false
+    @State private var notificationsDenied = false
+
+    private var pantryEmpty: Bool { viewModel.items.isEmpty }
+    private var query: String { viewModel.searchQuery.trimmingCharacters(in: .whitespaces) }
+    private var showingResults: Bool { isSearching && !query.isEmpty }
+    private var filtersActive: Bool { viewModel.selectedLocation != nil || viewModel.selectedCategory != nil }
+    private var twoPane: Bool { isExpanded && !pantryEmpty }
+    private var expiringSoonDays: Int { settingsStore.settings.expiringSoonDays }
+
+    private func sections(for rows: [PantryItem]) -> [HomeSection] {
+        if showingResults {
+            return rows.isEmpty ? [] : [HomeSection(title: nil, items: rows)]
+        }
+        return HomeSummary.sections(rows, sort: settingsStore.settings.sortOption)
     }
 
-    public var body: some View {
-        NavigationStack {
-            List {
-                // Urgency Metrics Cards — also the primary status filter.
-                // Kept inside the List (rather than a fixed header above it) so it
-                // scrolls together with the items and the large title collapses in
-                // sync with it instead of the title reacting to list scroll while
-                // this row sits static.
-                Section {
-                    HStack(spacing: 10) {
-                        MetricBadge(
-                            title: L10n.metricExpired,
-                            count: viewModel.expiredCount,
-                            color: LarderColor.onExpiredContainer,
-                            isSelected: viewModel.selectedFilter == .expired
-                        ) {
-                            viewModel.toggleMetricFilter(.expired)
-                        }
-                        MetricBadge(
-                            title: L10n.metricExpiringSoon,
-                            count: viewModel.expiringSoonCount,
-                            color: LarderColor.onSoonContainer,
-                            isSelected: viewModel.selectedFilter == .expiringSoon
-                        ) {
-                            viewModel.toggleMetricFilter(.expiringSoon)
-                        }
-                        MetricBadge(
-                            title: L10n.metricFresh,
-                            count: viewModel.freshCount,
-                            color: LarderColor.onSuccessContainer,
-                            isSelected: viewModel.selectedFilter == .fresh
-                        ) {
-                            viewModel.toggleMetricFilter(.fresh)
-                        }
+    var body: some View {
+        let rows = viewModel.filteredItems
+        let sections = sections(for: rows)
+        let paneItem = HomeSummary.paneItem(
+            pickedID: pickedItemID,
+            sections: sections,
+            searching: isSearching,
+            selecting: isSelecting
+        )
+        return HStack(spacing: 0) {
+            listPane(rows: rows, sections: sections, paneItemID: paneItem?.id)
+                .frame(maxWidth: twoPane ? HomeLayout.listPaneWidth : .infinity)
+            if twoPane {
+                Rectangle()
+                    .fill(LarderColor.outlineVariant)
+                    .frame(width: 1)
+                    .ignoresSafeArea()
+                Group {
+                    if let paneItem {
+                        detailPane(paneItem).id(paneItem.id)
+                    } else {
+                        NothingChosen()
                     }
-                    .animation(.easeInOut(duration: 0.2), value: viewModel.selectedFilter)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 6)
                 }
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(LarderColor.surfaceContainer.ignoresSafeArea())
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(LarderColor.background.ignoresSafeArea())
+        .shellChromeEffect(hideNav: isSelecting, hideScan: isSelecting || pantryEmpty)
+        .larderSheet(item: $filterSheet) { page in
+            FilterSheetView(viewModel: viewModel, settingsStore: settingsStore, page: page) {
+                filterSheet = nil
+            }
+        }
+        // `onDismiss` waits for this sheet to finish going before the share sheet presents:
+        // presenting two sheets in the same action is unreliable.
+        .larderSheet(isPresented: $showRecipeSheet, onDismiss: {
+            if shareAfterRecipeSheet {
+                shareAfterRecipeSheet = false
+                performShare()
+            }
+        }) {
+            RecipeIdeasSheet(
+                names: viewModel.items.filter { selectedItemIDs.contains($0.id) }.map(\.name),
+                otherCount: viewModel.items.count - selectedItemIDs.count,
+                includeOtherItems: $includeOtherItems,
+                onCancel: { showRecipeSheet = false },
+                onShare: {
+                    shareAfterRecipeSheet = true
+                    showRecipeSheet = false
+                }
+            )
+        }
+        .sheet(isPresented: $showActivitySheet) {
+            ActivityView(activityItems: [shareText])
+        }
+        // Re-checked on return to the foreground: the fix happens in the system Settings app.
+        .task(id: scenePhase) {
+            guard scenePhase == .active else { return }
+            let status = await UNUserNotificationCenter.current().notificationSettings().authorizationStatus
+            notificationsDenied = status == .denied
+        }
+        .onChange(of: pantryEmpty) { _, isEmpty in
+            // Clear data can empty the pantry under a search or filter, which would then hide
+            // the first thing added.
+            guard isEmpty else { return }
+            isSearching = false
+            endSelection()
+            viewModel.searchQuery = ""
+            clearFilters()
+            viewModel.selectedFilter = .all
+        }
+        .onAppear {
+            // The query survives a trip to another tab, so the search has to come back with it.
+            if !viewModel.searchQuery.isEmpty { isSearching = true }
+            #if DEBUG
+            applyDemoState(rows: rows)
+            #endif
+        }
+    }
 
-                // Items List
-                if viewModel.filteredItems.isEmpty {
-                    VStack(spacing: 12) {
-                        Spacer()
-                        Image(systemName: "takeoutbag.and.cup.and.straw")
-                            .font(.system(size: 48))
-                            .foregroundColor(LarderColor.onSurfaceVariant)
-                        Text(L10n.emptyStateTitle)
-                            .font(.headline)
-                            .foregroundColor(LarderColor.onSurfaceVariant)
-                        Text(L10n.emptyStateSubtitle)
-                            .font(.subheadline)
-                            .foregroundColor(LarderColor.onSurfaceVariant)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 48)
+    @ViewBuilder
+    private func listPane(rows: [PantryItem], sections: [HomeSection], paneItemID: String?) -> some View {
+        VStack(spacing: 0) {
+            if pantryEmpty {
+                brandBar
+                homeEmptyState
+            } else {
+                if isSelecting {
+                    selectionBar
+                } else if isSearching {
+                    searchBar
+                }
+                if sections.isEmpty {
+                    if !isSelecting && !isSearching { header }
+                    noResults
+                } else {
+                    list(rows: rows, sections: sections, paneItemID: paneItemID)
+                }
+                if isSelecting {
+                    selectionActions
+                }
+            }
+        }
+    }
+
+    private func list(rows: [PantryItem], sections: [HomeSection], paneItemID: String?) -> some View {
+        List {
+            // In the list rather than above it, so it scrolls away with the rows.
+            if !isSelecting && !isSearching {
+                header
                     .listRowInsets(EdgeInsets())
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                } else {
-                    ForEach(viewModel.filteredItems) { item in
-                        HStack(spacing: 10) {
-                            if isSelecting {
-                                Image(systemName: selectedItemIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(selectedItemIDs.contains(item.id) ? LarderColor.primary : LarderColor.onSurfaceVariant)
-                                    .font(.system(size: 20))
-                                    .contentTransition(.symbolEffect(.replace))
-                                    .transition(.scale.combined(with: .opacity))
-                            }
-                            ItemRowView(
-                                item: item,
-                                expiringSoonDays: settingsStore.settings.expiringSoonDays,
-                                categoryPreferences: viewModel.categoryPreferences,
-                                onDecrement: isSelecting ? nil : {
-                                    viewModel.decrementQuantity(item.id, onItemRemoved: onItemRemoved)
-                                }
-                            )
-                        }
-                        .contentShape(Rectangle())
-                        .animation(.easeInOut(duration: 0.2), value: isSelecting)
-                        .onTapGesture {
-                            if isSelecting {
-                                withAnimation(.easeInOut(duration: 0.2)) { toggleSelection(item.id) }
-                            } else {
-                                onEditItem(item)
-                            }
-                        }
-                        .onLongPressGesture {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isSelecting = true
-                                selectedItemIDs.insert(item.id)
-                            }
-                        }
-                        .larderListRow()
-                        .swipeActions(edge: .trailing) {
-                            if !isSelecting {
-                                Button(role: .destructive) {
-                                    viewModel.deleteItem(item.id, onItemRemoved: onItemRemoved)
-                                } label: {
-                                    Label(L10n.swipeDelete, systemImage: "trash.fill")
-                                }
-                            }
-                        }
-                        .swipeActions(edge: .leading) {
-                            if !isSelecting {
-                                Button {
-                                    viewModel.moveToShoppingList(item.id, onItemRemoved: onItemRemoved)
-                                } label: {
-                                    Label(L10n.swipeAddToShoppingList, systemImage: "cart.badge.plus")
-                                }
-                                .tint(LarderColor.primary)
-                            }
-                        }
+            }
+            if notificationsDenied, settingsStore.settings.notifications.enabled,
+               !remindersCalloutDismissed, !isSelecting, !isSearching {
+                plainRow {
+                    LarderCallout(
+                        .warning,
+                        icon: .bellOff,
+                        title: L10n.homeRemindersOffTitle,
+                        message: L10n.homeRemindersOffMessage,
+                        actionTitle: L10n.settingsNotificationsOpenSettings,
+                        action: openNotificationSettings,
+                        onDismiss: { remindersCalloutDismissed = true }
+                    )
+                    .padding(.bottom, LarderSpace.s3)
+                }
+            }
+            if filtersActive, !isSelecting, !isSearching {
+                plainRow { activeFilterLine(shown: rows.count) }
+            }
+            if showingResults {
+                plainRow { SectionHeader(L10n.homeSearchResults(rows.count)) }
+            }
+            ForEach(sections) { section in
+                if let title = section.title {
+                    plainRow { SectionHeader(title.text) }
+                }
+                ForEach(Array(section.items.enumerated()), id: \.element.id) { index, item in
+                    row(
+                        item,
+                        position: LarderGroupPosition(index: index, count: section.items.count),
+                        isCurrent: twoPane && item.id == paneItemID
+                    )
+                }
+            }
+        }
+        .larderList()
+        // Keeps rows out from under the status bar once the header has scrolled away.
+        .clipped()
+        .scrollDismissesKeyboard(.immediately)
+        .animation(.default, value: rows)
+    }
+
+    private func plainRow<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .listRowInsets(EdgeInsets(top: 0, leading: LarderSpace.s4, bottom: 0, trailing: LarderSpace.s4))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
+    }
+
+    private func row(_ item: PantryItem, position: LarderGroupPosition, isCurrent: Bool) -> some View {
+        let isSelected = selectedItemIDs.contains(item.id)
+        return ItemRowView(
+            item: item,
+            expiringSoonDays: expiringSoonDays,
+            categoryPreferences: viewModel.categoryPreferences,
+            onDecrement: { onUseOne(item) },
+            selection: isSelecting ? .init(isSelected: isSelected, toggle: { toggleSelection(item.id) }) : nil,
+            isCurrent: isCurrent,
+            onOpen: { onOpenItem(item) }
+        )
+        // While selecting the row has no button of its own, so a tap anywhere toggles it.
+        .gesture(TapGesture().onEnded { toggleSelection(item.id) }, including: isSelecting ? .all : .subviews)
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.4).onEnded { _ in
+                guard !isSelecting else { return }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSelecting = true
+                    selectedItemIDs.insert(item.id)
+                }
+            }
+        )
+        .larderGroupRow(position, isSelected: isSelected)
+        .larderSwipeActions(
+            leading: isSelecting ? [] : [
+                LarderSwipeAction(L10n.homeSwipeToList, icon: .shoppingBasket) {
+                    viewModel.moveToShoppingList(item.id, onItemRemoved: onItemRemoved)
+                },
+            ],
+            trailing: isSelecting ? [] : [
+                LarderSwipeAction(L10n.swipeDelete, icon: .trash2, tint: .destructive) {
+                    viewModel.deleteItem(item.id, onItemRemoved: onItemRemoved)
+                },
+            ]
+        )
+    }
+
+    // MARK: Headers
+
+    private var header: some View {
+        LedeHeader(HomeSummary.lede(viewModel.items).text ?? "", brand: L10n.appName) {
+            LarderIconButton(.search, label: L10n.homeSearchDescription) {
+                withAnimation(.easeInOut(duration: 0.2)) { isSearching = true }
+            }
+            filterButton
+            if showsHeaderScan {
+                LarderIconButton(.scanBarcode, label: L10n.scanButton, action: onScan)
+            }
+        } below: {
+            statusChips
+        }
+    }
+
+    /// The header of an empty pantry: search and filters hide until there is something to find.
+    private var brandBar: some View {
+        Text(L10n.appName)
+            .larderFont(.title)
+            .foregroundStyle(LarderColor.onBackground)
+            .frame(maxWidth: .infinity, minHeight: LarderSize.touch, alignment: .leading)
+            .padding(.vertical, LarderSpace.s3)
+            .padding(.horizontal, LarderSpace.s4)
+    }
+
+    private var filterButton: some View {
+        LarderIconButton(
+            .slidersHorizontal,
+            label: filtersActive ? L10n.homeFiltersOnDescription : L10n.filtersButton
+        ) {
+            filterSheet = .filters
+        }
+        .overlay(alignment: .topTrailing) {
+            if filtersActive {
+                Circle()
+                    .fill(LarderColor.primary)
+                    .padding(2)
+                    .background(LarderColor.background, in: Circle())
+                    .frame(width: LarderSpace.s3, height: LarderSpace.s3)
+                    .padding(LarderSpace.s2)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    /// Chips with nothing to show hide, except All and whichever is on, so it can be turned off.
+    private var statusChips: some View {
+        let selected = viewModel.selectedFilter
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: LarderSpace.s2) {
+                statusChip(L10n.statusFilterAll, viewModel.items.count, isOn: selected == .all) {
+                    viewModel.selectedFilter = .all
+                }
+                if viewModel.expiredCount > 0 || selected == .expired {
+                    statusChip(L10n.metricExpired, viewModel.expiredCount, isOn: selected == .expired) {
+                        viewModel.toggleMetricFilter(.expired)
+                    }
+                }
+                if viewModel.expiringSoonCount > 0 || selected == .expiringSoon {
+                    statusChip(L10n.metricExpiringSoon, viewModel.expiringSoonCount, isOn: selected == .expiringSoon) {
+                        viewModel.toggleMetricFilter(.expiringSoon)
+                    }
+                }
+                if viewModel.freshCount > 0 || selected == .fresh {
+                    statusChip(L10n.metricFresh, viewModel.freshCount, isOn: selected == .fresh) {
+                        viewModel.toggleMetricFilter(.fresh)
                     }
                 }
             }
-            .animation(.default, value: viewModel.filteredItems)
-            .animation(.easeInOut(duration: 0.2), value: isSelecting)
-            .listStyle(.insetGrouped)
-            .larderListBackground()
-            // `.onScrollGeometryChange` needs iOS 18, so scroll direction is inferred from the
-            // drag gesture instead — `.simultaneousGesture` lets it coexist with the List's own
-            // scrolling and the row taps/long-presses/swipe actions above.
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 8)
-                    .onChanged { value in
-                        onScrollingDownChanged(value.translation.height < 0)
-                    }
-            )
-            .navigationTitle(isSelecting ? L10n.selectionCount(selectedItemIDs.count) : L10n.appName)
-            .toolbar {
-                if isSelecting {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                isSelecting = false
-                                selectedItemIDs.removeAll()
-                            }
-                        }) {
-                            Text(L10n.exitSelectionButton)
-                        }
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: { showShareDialog = true }) {
-                            Image(systemName: "fork.knife.circle")
-                        }
-                        .disabled(selectedItemIDs.isEmpty)
-                        .accessibilityLabel(L10n.actionGetRecipeIdeas)
-                    }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(role: .destructive, action: { showDeleteSelectedDialog = true }) {
-                            Image(systemName: "trash")
-                        }
-                        .disabled(selectedItemIDs.isEmpty)
-                        .accessibilityLabel(L10n.swipeDelete)
-                    }
-                } else {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button(action: { showFilters = true }) {
-                            Image(systemName: viewModel.hasActiveFilters
-                                ? "line.3.horizontal.decrease.circle.fill"
-                                : "line.3.horizontal.decrease.circle")
-                                .contentTransition(.symbolEffect(.replace))
-                        }
-                        .accessibilityLabel(L10n.filtersButton)
-                    }
-                    if let toolbarScan {
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button(action: toolbarScan) {
-                                LarderIcon(.scanBarcode)
-                            }
-                            .accessibilityLabel(L10n.scanButton)
-                        }
-                    }
+            .padding(.vertical, LarderSpace.s2)
+            .padding(.horizontal, LarderSpace.s4)
+        }
+        .padding(.horizontal, -LarderSpace.s4)
+    }
+
+    /// `LarderChip` prints its count as given, so a capped one goes in with the title. A screen
+    /// reader still gets the real number.
+    @ViewBuilder
+    private func statusChip(_ title: String, _ count: Int, isOn: Bool, action: @escaping () -> Void) -> some View {
+        if HomeSummary.isCapped(count) {
+            LarderChip("\(title) \(HomeSummary.cappedLabel)", isSelected: isOn, action: action)
+                .accessibilityLabel("\(title), \(count)")
+        } else {
+            LarderChip(title, count: count, isSelected: isOn, action: action)
+        }
+    }
+
+    private var selectionBar: some View {
+        HStack(spacing: LarderSpace.s1) {
+            LarderIconButton(.x, label: L10n.exitSelectionButton) { endSelection() }
+            Text(L10n.selectionCount(selectedItemIDs.count))
+                .larderFont(.title)
+                .lineLimit(1)
+                .foregroundStyle(LarderColor.onBackground)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, LarderSpace.s1)
+        .frame(minHeight: 64)
+    }
+
+    private var selectionActions: some View {
+        VStack(spacing: 0) {
+            LarderDivider()
+            HStack(spacing: LarderSpace.s2) {
+                LarderButton(L10n.actionGetRecipeIdeas, icon: .sparkles, variant: .secondary, fullWidth: true) {
+                    showRecipeSheet = true
                 }
-            }
-            .sheet(isPresented: $showFilters) {
-                FilterSheetView(viewModel: viewModel, settingsStore: settingsStore)
-                    .presentationDetents([.medium])
-            }
-            // `onDismiss` (rather than triggering `showActivitySheet` directly from `onShare`)
-            // waits for this sheet's dismissal animation to finish before the next sheet
-            // presents — presenting two sheets back-to-back in the same action is unreliable.
-            .sheet(isPresented: $showShareDialog, onDismiss: {
-                if shareAfterDialogDismiss {
-                    shareAfterDialogDismiss = false
-                    performShare()
-                }
-            }) {
-                ShareRecipeDialog(
-                    includeOtherItems: $includeOtherItemsInShare,
-                    onCancel: { showShareDialog = false },
-                    onShare: {
-                        shareAfterDialogDismiss = true
-                        showShareDialog = false
-                    }
-                )
-                .presentationDetents([.height(220)])
-            }
-            .sheet(isPresented: $showActivitySheet) {
-                ActivityView(activityItems: [shareText])
-            }
-            .confirmationDialog(
-                L10n.deleteSelectedDialogTitle,
-                isPresented: $showDeleteSelectedDialog,
-                titleVisibility: .visible
-            ) {
-                Button(L10n.swipeDelete, role: .destructive) {
+                LarderButton(L10n.swipeDelete, icon: .trash2, variant: .dangerText) {
                     deleteSelectedItems()
                 }
-                Button(L10n.cancelButton, role: .cancel) {}
             }
+            .padding(.vertical, LarderSpace.s3)
+            .padding(.horizontal, LarderSpace.s4)
+        }
+        .background(LarderColor.surface.ignoresSafeArea(edges: .bottom))
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 0) {
+            LarderIconButton(.arrowLeft, label: L10n.backButton) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isSearching = false
+                    viewModel.searchQuery = ""
+                }
+            }
+            LarderTextField(nil, text: $viewModel.searchQuery, placeholder: L10n.searchPlaceholder, showsClear: true)
+                .accessibilityLabel(L10n.searchPlaceholder)
+        }
+        .padding(.leading, LarderSpace.s1)
+        .padding(.trailing, LarderSpace.s4)
+        .padding(.vertical, LarderSpace.s3)
+    }
+
+    /// Says what the filter sheet is hiding: "Fridge · 8 of 13 items".
+    private func activeFilterLine(shown: Int) -> some View {
+        let parts = [
+            viewModel.selectedLocation.map { L10n.storageLocationName($0) },
+            viewModel.selectedCategory.map { viewModel.categoryLabel(for: $0) },
+            L10n.homeActiveFilterCount(shown, of: viewModel.items.count),
+        ]
+        return SectionHeader(parts.compactMap { $0 }.joined(separator: " · ")) {
+            LarderButton(L10n.homeClearFilters, variant: .text) { clearFilters() }
+        }
+    }
+
+    // MARK: Whole-area states
+
+    private var homeEmptyState: some View {
+        EmptyState(.shelf, title: L10n.homeEmptyTitle, message: L10n.homeEmptyMessage) {
+            LarderButton(L10n.homeEmptyScan, icon: .scanBarcode, action: onScan)
+            LarderButton(L10n.homeEmptyAddByHand, variant: .text, action: onAddByHand)
+        }
+    }
+
+    /// A dead end to step out of, not a first-use moment, so no illustration.
+    @ViewBuilder
+    private var noResults: some View {
+        if query.isEmpty {
+            EmptyState(nil, title: L10n.homeNoFilterResultsTitle, message: L10n.homeNoFilterResultsMessage) {
+                LarderButton(L10n.homeClearFilters, variant: .secondary) {
+                    clearFilters()
+                    viewModel.selectedFilter = .all
+                }
+            }
+        } else {
+            EmptyState(nil, title: L10n.homeNoResultsTitle(query), message: L10n.homeNoResultsMessage) {
+                LarderButton(L10n.homeClearSearch, variant: .secondary) { viewModel.searchQuery = "" }
+            }
+        }
+    }
+
+    // MARK: Actions
+
+    private func clearFilters() {
+        viewModel.selectedLocation = nil
+        viewModel.selectedCategory = nil
+    }
+
+    private func endSelection() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            isSelecting = false
+            selectedItemIDs = []
         }
     }
 
     private func deleteSelectedItems() {
         onItemsDeleted(viewModel.deleteItems(selectedItemIDs))
-        selectedItemIDs = []
-        isSelecting = false
+        endSelection()
+    }
+
+    private func openNotificationSettings() {
+        if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
+            UIApplication.shared.open(url)
+        }
     }
 
     private func performShare() {
         let selectedItems = viewModel.items.filter { selectedItemIDs.contains($0.id) }
         guard !selectedItems.isEmpty else { return }
-        let otherItems = includeOtherItemsInShare
+        let otherItems = includeOtherItems
             ? viewModel.items.filter { !selectedItemIDs.contains($0.id) }
             : []
         shareText = NativePantryViewModel.recipePrompt(for: selectedItems, otherItems: otherItems)
         showActivitySheet = true
-        selectedItemIDs = []
-        isSelecting = false
-        includeOtherItemsInShare = false
+        endSelection()
+        includeOtherItems = false
     }
 
     private func toggleSelection(_ id: String) {
-        if selectedItemIDs.contains(id) {
-            selectedItemIDs.remove(id)
-            // Deselecting the last item ends selection mode, same as tapping Cancel — an empty
-            // selection has nothing to share or delete, so there's no reason to stay in it.
-            if selectedItemIDs.isEmpty {
-                isSelecting = false
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if selectedItemIDs.contains(id) {
+                selectedItemIDs.remove(id)
+                // An empty selection has nothing to share or delete, so there's no reason to stay.
+                if selectedItemIDs.isEmpty { isSelecting = false }
+            } else {
+                selectedItemIDs.insert(id)
             }
-        } else {
-            selectedItemIDs.insert(id)
         }
+    }
+
+    #if DEBUG
+    /// Screenshot support, as `RootTabView.applyScreenshotLaunchArguments`: `-demoHome <state>`
+    /// opens a Home state that otherwise takes a gesture, since a simulator can't be tapped from
+    /// a script.
+    private func applyDemoState(rows: [PantryItem]) {
+        switch UserDefaults.standard.string(forKey: "demoHome") {
+        case "search": isSearching = true; viewModel.searchQuery = "ch"
+        case "noResults": isSearching = true; viewModel.searchQuery = "quinoa"
+        case "filter": filterSheet = .filters
+        case "sort": filterSheet = .sort
+        case "filtered": viewModel.selectedLocation = "Fridge"
+        case "soon": viewModel.selectedFilter = .expiringSoon
+        case "select", "recipe":
+            isSelecting = true
+            selectedItemIDs = Set(rows.prefix(2).map(\.id))
+            showRecipeSheet = UserDefaults.standard.string(forKey: "demoHome") == "recipe"
+        default: break
+        }
+    }
+    #endif
+}
+
+/// Outside the generic view, because a generic type can't hold a stored static.
+enum HomeLayout {
+    static let listPaneWidth: CGFloat = 380
+}
+
+private struct NothingChosen: View {
+    var body: some View {
+        VStack(spacing: LarderSpace.s2) {
+            LarderIcon(.package)
+            Text(L10n.detailChooseItem)
+                .larderFont(.body)
+                .multilineTextAlignment(.center)
+        }
+        .foregroundStyle(LarderColor.onSurfaceVariant)
+        .padding(LarderSpace.s6)
     }
 }
 
-/// Groups search, the storage-location filter, and the status tabs behind one toolbar
-/// button so they don't have to permanently occupy space on the main dashboard.
+private enum FilterSheetPage: String, Identifiable {
+    case filters, sort
+
+    var id: String { rawValue }
+}
+
+/// Filters and sort share one sheet, with sort a step on from the filters. Choices apply as they
+/// are tapped, so the button can say how many items they leave.
 private struct FilterSheetView: View {
     @ObservedObject var viewModel: NativePantryViewModel
     @ObservedObject var settingsStore: SettingsStore
-    @Environment(\.dismiss) private var dismiss
+    @State private var page: FilterSheetPage
+    let onDone: () -> Void
+
+    init(
+        viewModel: NativePantryViewModel,
+        settingsStore: SettingsStore,
+        page: FilterSheetPage,
+        onDone: @escaping () -> Void
+    ) {
+        self.viewModel = viewModel
+        self.settingsStore = settingsStore
+        _page = State(initialValue: page)
+        self.onDone = onDone
+    }
+
+    private var chipLayout: FlowLayout {
+        FlowLayout(spacing: LarderSpace.s2, rowSpacing: LarderChip.wrapRowSpacing)
+    }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Search
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(LarderColor.onSurfaceVariant)
-                    TextField(L10n.searchPlaceholder, text: $viewModel.searchQuery)
-                    if !viewModel.searchQuery.isEmpty {
-                        Button {
-                            viewModel.searchQuery = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(LarderColor.onSurfaceVariant)
-                        }
-                    }
-                }
-                .padding(10)
-                .background(LarderColor.surfaceContainer)
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
+        switch page {
+        case .filters: filters
+        case .sort: sort
+        }
+    }
 
-                // Location Filter Chips
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        LocationChip(title: L10n.locationFilterAll, isSelected: viewModel.selectedLocation == nil) {
-                            viewModel.selectedLocation = nil
-                        }
-                        ForEach(settingsStore.settings.storageLocations, id: \.self) { loc in
-                            LocationChip(title: L10n.storageLocationName(loc), isSelected: viewModel.selectedLocation == loc) {
-                                viewModel.selectedLocation = loc
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
+    private var filters: some View {
+        LarderSheet(L10n.filtersSheetTitle) {
+            Text(L10n.homeLocationLabel).sheetLabel()
+            chipLayout {
+                LarderChip(L10n.locationFilterAll, isSelected: viewModel.selectedLocation == nil) {
+                    viewModel.selectedLocation = nil
                 }
-                .padding(.top, 8)
-
-                // Category Filter Chips — derived from categories present on current items
-                // (filtered to enabled ones and ordered per user preference; see
-                // CategorySettingsView), rather than a fixed settings list.
-                if !viewModel.availableCategories.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            LocationChip(title: L10n.categoryFilterAll, isSelected: viewModel.selectedCategory == nil) {
-                                viewModel.selectedCategory = nil
-                            }
-                            ForEach(viewModel.availableCategories, id: \.self) { category in
-                                LocationChip(title: viewModel.categoryLabel(for: category), isSelected: viewModel.selectedCategory == category) {
-                                    viewModel.selectedCategory = category
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 4)
+                ForEach(settingsStore.settings.storageLocations, id: \.self) { location in
+                    LarderChip(L10n.storageLocationName(location), isSelected: viewModel.selectedLocation == location) {
+                        viewModel.selectedLocation = location
                     }
-                    .padding(.top, 8)
-                }
-
-                // Status Filter Chips (Fresh is intentionally not included — it's only
-                // reachable via the Fresh metric card on the dashboard)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(NativeStatusFilter.tabCases) { filter in
-                            LocationChip(title: filter.localizedTitle, isSelected: viewModel.selectedFilter == filter) {
-                                viewModel.selectedFilter = filter
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                }
-                .padding(.top, 8)
-
-                // Sort Order
-                Text(L10n.sortSheetTitle)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(SortOption.allCases) { option in
-                            LocationChip(title: option.localizedTitle, isSelected: settingsStore.settings.sortOption == option) {
-                                var newSettings = settingsStore.settings
-                                newSettings.sortOption = option
-                                settingsStore.save(newSettings)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                }
-                .padding(.top, 4)
-
-                Spacer()
-            }
-            .navigationTitle(L10n.filtersSheetTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(L10n.doneButton) { dismiss() }
-                        .fontWeight(.semibold)
                 }
             }
+            if !viewModel.availableCategories.isEmpty {
+                Text(L10n.homeCategoryLabel).sheetLabel().padding(.top, LarderSpace.s3)
+                chipLayout {
+                    LarderChip(L10n.categoryFilterAll, isSelected: viewModel.selectedCategory == nil) {
+                        viewModel.selectedCategory = nil
+                    }
+                    ForEach(viewModel.availableCategories, id: \.self) { category in
+                        LarderChip(viewModel.categoryLabel(for: category), isSelected: viewModel.selectedCategory == category) {
+                            viewModel.selectedCategory = category
+                        }
+                    }
+                }
+            }
+            LarderDivider()
+                .padding(.horizontal, -LarderSpace.s4)
+                .padding(.top, LarderSpace.s3)
+            LarderListItem(L10n.sortSheetTitle, onTap: { page = .sort }) {
+                HStack(spacing: LarderSpace.s2) {
+                    Text(settingsStore.settings.sortOption.localizedTitle).larderFont(.bodySm)
+                    LarderIcon(.chevronRight)
+                }
+            }
+            .padding(.horizontal, -LarderSpace.s4)
+            HStack(spacing: LarderSpace.s2) {
+                Spacer(minLength: 0)
+                LarderButton(L10n.homeClearFilters, variant: .text) {
+                    viewModel.selectedLocation = nil
+                    viewModel.selectedCategory = nil
+                }
+                LarderButton(L10n.homeShowItems(viewModel.filteredItems.count), action: onDone)
+            }
+        }
+    }
+
+    private var sort: some View {
+        LarderSheet(L10n.sortSheetTitle) {
+            chipLayout {
+                ForEach(SortOption.allCases) { option in
+                    LarderChip(option.localizedTitle, isSelected: settingsStore.settings.sortOption == option) {
+                        var settings = settingsStore.settings
+                        settings.sortOption = option
+                        settingsStore.save(settings)
+                    }
+                }
+            }
+            HStack {
+                Spacer(minLength: 0)
+                LarderButton(L10n.homeDone, action: onDone)
+            }
+            .padding(.top, LarderSpace.s3)
         }
     }
 }
 
-private struct MetricBadge: View {
-    let title: String
-    let count: Int
-    let color: Color
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption2)
-                    .fontWeight(.medium)
-                    .foregroundColor(color)
-                Text("\(count)")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(color)
-                    .contentTransition(.numericText(value: Double(count)))
-                    .animation(.easeInOut(duration: 0.2), value: count)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(color.opacity(isSelected ? 0.22 : 0.12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(color, lineWidth: isSelected ? 2 : 0)
-            )
-            .cornerRadius(10)
-            .animation(.easeInOut(duration: 0.2), value: isSelected)
-        }
-        .buttonStyle(.plain)
+private extension Text {
+    func sheetLabel() -> some View {
+        larderFont(.label).foregroundStyle(LarderColor.onSurfaceVariant)
     }
 }
 
-private struct LocationChip: View {
-    let title: String
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(isSelected ? LarderColor.primaryContainer : LarderColor.surfaceContainer)
-                .foregroundColor(isSelected ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
-                .cornerRadius(14)
-                .animation(.easeInOut(duration: 0.15), value: isSelected)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-/// Mirrors the Android "Get recipe ideas" dialog: lets the user opt in to including the rest
-/// of their pantry (as extra ingredient names only) before the share sheet opens, since a plain
-/// `ShareLink` can't host a toggle.
-private struct ShareRecipeDialog: View {
+/// A sheet rather than the native alert the design's other dialogs use, because an alert can't
+/// hold the option. Names the items, and says the prompt only leaves the device when shared.
+private struct RecipeIdeasSheet: View {
+    let names: [String]
+    let otherCount: Int
     @Binding var includeOtherItems: Bool
     let onCancel: () -> Void
     let onShare: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text(L10n.shareRecipeDialogTitle)
-                .font(.headline)
-
-            Toggle(isOn: $includeOtherItems) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.shareRecipeIncludeOtherItemsTitle)
-                        .font(.body)
-                    Text(L10n.shareRecipeIncludeOtherItemsSubtitle)
-                        .font(.caption)
-                        .foregroundColor(LarderColor.onSurfaceVariant)
+        LarderSheet(L10n.shareRecipeDialogTitle) {
+            Text(L10n.recipeIntro(HomeSummary.recipeNames(names)))
+                .larderFont(.body)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+            if otherCount > 0 {
+                HStack(alignment: .top, spacing: LarderSpace.s1) {
+                    LarderTick(isOn: $includeOtherItems, label: L10n.shareRecipeIncludeOtherItemsTitle)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(L10n.shareRecipeIncludeOtherItemsTitle)
+                            .larderFont(.body)
+                            .foregroundStyle(LarderColor.onSurface)
+                        Text(
+                            includeOtherItems
+                                ? L10n.recipeIncludeOthersCount(otherCount)
+                                : L10n.shareRecipeIncludeOtherItemsSubtitle
+                        )
+                        .larderFont(.bodySm)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, LarderSpace.s2)
                 }
+                .padding(.leading, -LarderSpace.s2)
             }
-            .toggleStyle(.switch)
-
-            HStack {
-                Spacer()
-                Button(L10n.shareRecipeCancelButton, action: onCancel)
-                Button(L10n.shareRecipeShareButton, action: onShare)
-                    .fontWeight(.semibold)
+            HStack(spacing: LarderSpace.s2) {
+                Spacer(minLength: 0)
+                LarderButton(L10n.shareRecipeCancelButton, variant: .text, action: onCancel)
+                LarderButton(L10n.shareRecipeShareButton, icon: .share2, action: onShare)
             }
         }
-        .padding(20)
     }
 }
 
 /// Wraps `UIActivityViewController` so the share sheet can be triggered programmatically after
-/// `ShareRecipeDialog` is dismissed, rather than via `ShareLink`'s own tap gesture.
+/// `RecipeIdeasSheet` is dismissed, rather than via `ShareLink`'s own tap gesture.
 ///
 /// Internal rather than private because `RootTabView` presents the same sheet for the digest
 /// notification's "Recipe ideas" action, which arrives with no dashboard on screen.

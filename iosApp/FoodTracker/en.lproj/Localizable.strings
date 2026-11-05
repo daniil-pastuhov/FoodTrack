@@ -1,12 +1,12 @@
 "app_name" = "BestBefore";
 "nav_home" = "Home";
 
-"metric_expired" = "Expired";
-"metric_expiring_soon" = "Expiring Soon";
+"metric_expired" = "Past date";
+"metric_expiring_soon" = "Soon";
 "metric_fresh" = "Fresh";
 
-"location_filter_all" = "All";
-"category_filter_all" = "All Categories";
+"location_filter_all" = "All locations";
+"category_filter_all" = "All categories";
 
 "status_filter_all" = "All";
 "status_filter_expiring_soon" = "Expiring Soon";
@@ -14,11 +14,11 @@
 "status_filter_fresh" = "Fresh";
 
 "sort_button" = "Sort";
-"sort_sheet_title" = "Sort By";
-"sort_option_expiry_date" = "Expiry Date";
+"sort_sheet_title" = "Sort by";
+"sort_option_expiry_date" = "Expiry date";
 "sort_option_name" = "Name";
-"sort_option_date_added" = "Date Added";
-"sort_option_storage_location" = "Storage Location";
+"sort_option_date_added" = "Date added";
+"sort_option_storage_location" = "Storage location";
 
 "empty_state_title" = "No items found";
 "empty_state_subtitle" = "Scan a barcode or tap 'Add to Pantry' to track groceries.";
@@ -33,7 +33,6 @@
 "exit_selection_button" = "Cancel";
 "select_items_button" = "Select";
 "more_options_button" = "More";
-"delete_selected_dialog_title" = "Delete selected items?";
 "action_get_recipe_ideas" = "Get recipe ideas";
 "recipe_prompt_intro" = "I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:";
 "recipe_prompt_item_format" = "%@ (%@)";
@@ -41,11 +40,11 @@
 "recipe_prompt_other_items_omitted" = "(+%d more items not shown)";
 "share_recipe_dialog_title" = "Get recipe ideas";
 "share_recipe_include_other_items_title" = "Include other pantry items";
-"share_recipe_include_other_items_subtitle" = "Optional — lets the AI suggest recipes using more of what you already have";
+"share_recipe_include_other_items_subtitle" = "Optional. Lets the assistant suggest recipes using more of what you have.";
 "share_recipe_share_button" = "Share";
 "share_recipe_cancel_button" = "Cancel";
 
-"search_placeholder" = "Search products or brands...";
+"search_placeholder" = "Search products or brands";
 "scan_button" = "Scan";
 "status_picker_label" = "Status";
 "filters_sheet_title" = "Filters";
@@ -418,3 +417,66 @@
 "onboarding_placeholder_title" = "Reminds you before food goes off, not after.";
 "onboarding_placeholder_body" = "Your pantry stays on your device.";
 "onboarding_placeholder_continue" = "Get started";
+
+/* Pantry */
+"lede_next_up" = "Next up: %1$@ %2$@";
+"lede_nothing_this_week" = "Nothing needs using this week";
+"home_section_use_first" = "Use first";
+"home_section_later_this_week" = "Later this week";
+"home_section_later" = "Later";
+"home_clear_filters" = "Clear filters";
+"home_search_description" = "Search";
+"home_filters_on_description" = "Filters, on";
+"home_empty_title" = "Your shelves are empty";
+"home_empty_message" = "Scan your first product and it will show up here, soonest date first.";
+"home_empty_scan" = "Scan a product";
+"home_empty_add_by_hand" = "Add by hand";
+"home_no_results_title" = "Nothing matches “%1$@”";
+"home_no_results_message" = "Check the spelling, or try the brand name.";
+"home_clear_search" = "Clear search";
+"home_no_filter_results_title" = "Nothing matches these filters";
+"home_no_filter_results_message" = "Try another location or category.";
+"home_reminders_off_title" = "Reminders are off";
+"home_reminders_off_message" = "Notifications are turned off for BestBefore in your phone's settings.";
+"home_dismiss" = "Dismiss";
+"home_swipe_to_list" = "To list";
+"home_use_one_item" = "Use one: %1$@";
+"home_used_one_snackbar" = "Used one %1$@. %2$d left.";
+"home_location_label" = "Location";
+"home_category_label" = "Category";
+"home_best_before_label" = "Best before";
+"home_notes_label" = "Notes";
+"home_done" = "Done";
+"detail_close" = "Close";
+"detail_edit" = "Edit";
+"detail_to_shopping_list" = "To shopping list";
+"detail_nutri_caption" = "Nutri-Score %1$@";
+"detail_nova_caption" = "NOVA %1$d · %2$@";
+"detail_nova_description" = "NOVA %1$d, %2$@";
+"detail_nova_1" = "Unprocessed";
+"detail_nova_2" = "Culinary ingredients";
+"detail_nova_3" = "Processed";
+"detail_nova_4" = "Ultra-processed";
+"detail_credit" = "Product data from Open Food Facts";
+"detail_allergen_note" = "This matches your allergen list. Matching is loose, so check the label.";
+"detail_choose_item" = "Choose an item to see its details.";
+"recipe_intro" = "BestBefore writes a prompt from %1$@ for you to share with an AI assistant. Nothing leaves your device until you choose where to send it.";
+"recipe_names_two" = "%1$@ and %2$@";
+"recipe_names_three" = "%1$@, %2$@ and %3$@";
+"lede_number_1" = "One";
+"lede_number_2" = "Two";
+"lede_number_3" = "Three";
+"lede_number_4" = "Four";
+"lede_number_5" = "Five";
+"lede_number_6" = "Six";
+"lede_number_7" = "Seven";
+"lede_number_8" = "Eight";
+"lede_number_9" = "Nine";
+"lede_number_10" = "Ten";
+"lede_on_weekday_1" = "on Monday";
+"lede_on_weekday_2" = "on Tuesday";
+"lede_on_weekday_3" = "on Wednesday";
+"lede_on_weekday_4" = "on Thursday";
+"lede_on_weekday_5" = "on Friday";
+"lede_on_weekday_6" = "on Saturday";
+"lede_on_weekday_7" = "on Sunday";

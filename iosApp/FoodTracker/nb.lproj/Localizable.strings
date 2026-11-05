@@ -2,10 +2,10 @@
 "nav_home" = "Hjem";
 
 "metric_expired" = "Utløpt";
-"metric_expiring_soon" = "Utløper snart";
+"metric_expiring_soon" = "Snart";
 "metric_fresh" = "Fersk";
 
-"location_filter_all" = "Alle";
+"location_filter_all" = "Alle steder";
 "category_filter_all" = "Alle kategorier";
 
 "status_filter_all" = "Alle";
@@ -33,7 +33,6 @@
 "exit_selection_button" = "Avbryt";
 "select_items_button" = "Velg";
 "more_options_button" = "Mer";
-"delete_selected_dialog_title" = "Slette valgte varer?";
 "action_get_recipe_ideas" = "Få oppskriftsforslag";
 "recipe_prompt_intro" = "Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:";
 "recipe_prompt_item_format" = "%@ (%@)";
@@ -45,7 +44,7 @@
 "share_recipe_share_button" = "Del";
 "share_recipe_cancel_button" = "Avbryt";
 
-"search_placeholder" = "Søk etter produkter eller merker...";
+"search_placeholder" = "Søk etter produkter eller merker";
 "scan_button" = "Skann";
 "status_picker_label" = "Status";
 "filters_sheet_title" = "Filtre";
@@ -418,3 +417,66 @@
 "onboarding_placeholder_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
 "onboarding_placeholder_body" = "Matlageret ditt blir på enheten din.";
 "onboarding_placeholder_continue" = "Kom i gang";
+
+/* Pantry */
+"lede_next_up" = "Neste: %1$@ %2$@";
+"lede_nothing_this_week" = "Ingenting må brukes denne uken";
+"home_section_use_first" = "Bruk først";
+"home_section_later_this_week" = "Senere denne uken";
+"home_section_later" = "Senere";
+"home_clear_filters" = "Nullstill filtre";
+"home_search_description" = "Søk";
+"home_filters_on_description" = "Filtre, på";
+"home_empty_title" = "Hyllene er tomme";
+"home_empty_message" = "Skann det første produktet, så dukker det opp her med nærmeste dato først.";
+"home_empty_scan" = "Skann et produkt";
+"home_empty_add_by_hand" = "Legg til manuelt";
+"home_no_results_title" = "Ingen treff på «%1$@»";
+"home_no_results_message" = "Sjekk stavemåten, eller prøv merkenavnet.";
+"home_clear_search" = "Tøm søket";
+"home_no_filter_results_title" = "Ingenting passer med disse filtrene";
+"home_no_filter_results_message" = "Prøv et annet sted eller en annen kategori.";
+"home_reminders_off_title" = "Påminnelser er av";
+"home_reminders_off_message" = "Varsler er slått av for Matvakt i innstillingene på telefonen.";
+"home_dismiss" = "Lukk";
+"home_swipe_to_list" = "Til listen";
+"home_use_one_item" = "Bruk én: %1$@";
+"home_used_one_snackbar" = "Brukte én %1$@. %2$d igjen.";
+"home_location_label" = "Sted";
+"home_category_label" = "Kategori";
+"home_best_before_label" = "Best før";
+"home_notes_label" = "Notater";
+"home_done" = "Ferdig";
+"detail_close" = "Lukk";
+"detail_edit" = "Rediger";
+"detail_to_shopping_list" = "Til handlelisten";
+"detail_nutri_caption" = "Nutri-Score %1$@";
+"detail_nova_caption" = "NOVA %1$d · %2$@";
+"detail_nova_description" = "NOVA %1$d, %2$@";
+"detail_nova_1" = "Ubearbeidet";
+"detail_nova_2" = "Matlagingsingredienser";
+"detail_nova_3" = "Bearbeidet";
+"detail_nova_4" = "Ultrabearbeidet";
+"detail_credit" = "Produktdata fra Open Food Facts";
+"detail_allergen_note" = "Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.";
+"detail_choose_item" = "Velg en vare for å se detaljene.";
+"recipe_intro" = "Matvakt lager en ledetekst av %1$@ som du kan dele med en KI-assistent. Ingenting forlater enheten før du velger hvor den skal sendes.";
+"recipe_names_two" = "%1$@ og %2$@";
+"recipe_names_three" = "%1$@, %2$@ og %3$@";
+"lede_number_1" = "Én";
+"lede_number_2" = "To";
+"lede_number_3" = "Tre";
+"lede_number_4" = "Fire";
+"lede_number_5" = "Fem";
+"lede_number_6" = "Seks";
+"lede_number_7" = "Sju";
+"lede_number_8" = "Åtte";
+"lede_number_9" = "Ni";
+"lede_number_10" = "Ti";
+"lede_on_weekday_1" = "på mandag";
+"lede_on_weekday_2" = "på tirsdag";
+"lede_on_weekday_3" = "på onsdag";
+"lede_on_weekday_4" = "på torsdag";
+"lede_on_weekday_5" = "på fredag";
+"lede_on_weekday_6" = "på lørdag";
+"lede_on_weekday_7" = "på søndag";

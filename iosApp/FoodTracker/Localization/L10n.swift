@@ -28,7 +28,6 @@ public enum L10n {
 
     public static var swipeDelete: String { NSLocalizedString("swipe_delete", comment: "") }
     public static var swipeAddToShoppingList: String { NSLocalizedString("swipe_add_to_shopping_list", comment: "") }
-    public static var deleteSelectedDialogTitle: String { NSLocalizedString("delete_selected_dialog_title", comment: "") }
     public static func itemRemovedToast(_ name: String) -> String {
         String(format: NSLocalizedString("item_removed_toast_format", comment: ""), name)
     }
@@ -36,6 +35,102 @@ public enum L10n {
         String(format: NSLocalizedString("item_added_to_shopping_list_toast_format", comment: ""), name)
     }
     public static var undoAction: String { NSLocalizedString("undo_action", comment: "") }
+
+    // Pantry
+    public static func ledeNextUp(_ a1: String, _ a2: String) -> String {
+        String(format: NSLocalizedString("lede_next_up", comment: ""), a1, a2)
+    }
+    public static var ledeNothingThisWeek: String { NSLocalizedString("lede_nothing_this_week", comment: "") }
+    public static var homeSectionUseFirst: String { NSLocalizedString("home_section_use_first", comment: "") }
+    public static var homeSectionLaterThisWeek: String { NSLocalizedString("home_section_later_this_week", comment: "") }
+    public static var homeSectionLater: String { NSLocalizedString("home_section_later", comment: "") }
+    public static var homeClearFilters: String { NSLocalizedString("home_clear_filters", comment: "") }
+    public static var homeSearchDescription: String { NSLocalizedString("home_search_description", comment: "") }
+    public static var homeFiltersOnDescription: String { NSLocalizedString("home_filters_on_description", comment: "") }
+    public static var homeEmptyTitle: String { NSLocalizedString("home_empty_title", comment: "") }
+    public static var homeEmptyMessage: String { NSLocalizedString("home_empty_message", comment: "") }
+    public static var homeEmptyScan: String { NSLocalizedString("home_empty_scan", comment: "") }
+    public static var homeEmptyAddByHand: String { NSLocalizedString("home_empty_add_by_hand", comment: "") }
+    public static func homeNoResultsTitle(_ a1: String) -> String {
+        String(format: NSLocalizedString("home_no_results_title", comment: ""), a1)
+    }
+    public static var homeNoResultsMessage: String { NSLocalizedString("home_no_results_message", comment: "") }
+    public static var homeClearSearch: String { NSLocalizedString("home_clear_search", comment: "") }
+    public static var homeNoFilterResultsTitle: String { NSLocalizedString("home_no_filter_results_title", comment: "") }
+    public static var homeNoFilterResultsMessage: String { NSLocalizedString("home_no_filter_results_message", comment: "") }
+    public static var homeRemindersOffTitle: String { NSLocalizedString("home_reminders_off_title", comment: "") }
+    public static var homeRemindersOffMessage: String { NSLocalizedString("home_reminders_off_message", comment: "") }
+    public static var homeDismiss: String { NSLocalizedString("home_dismiss", comment: "") }
+    public static var homeSwipeToList: String { NSLocalizedString("home_swipe_to_list", comment: "") }
+    public static func homeUseOneItem(_ a1: String) -> String {
+        String(format: NSLocalizedString("home_use_one_item", comment: ""), a1)
+    }
+    public static func homeUsedOneSnackbar(_ a1: String, _ a2: Int) -> String {
+        String(format: NSLocalizedString("home_used_one_snackbar", comment: ""), a1, a2)
+    }
+    public static var homeLocationLabel: String { NSLocalizedString("home_location_label", comment: "") }
+    public static var homeCategoryLabel: String { NSLocalizedString("home_category_label", comment: "") }
+    public static var homeBestBeforeLabel: String { NSLocalizedString("home_best_before_label", comment: "") }
+    public static var homeNotesLabel: String { NSLocalizedString("home_notes_label", comment: "") }
+    public static var homeDone: String { NSLocalizedString("home_done", comment: "") }
+    public static var detailClose: String { NSLocalizedString("detail_close", comment: "") }
+    public static var detailEdit: String { NSLocalizedString("detail_edit", comment: "") }
+    public static var detailToShoppingList: String { NSLocalizedString("detail_to_shopping_list", comment: "") }
+    public static func detailNutriCaption(_ a1: String) -> String {
+        String(format: NSLocalizedString("detail_nutri_caption", comment: ""), a1)
+    }
+    public static func detailNovaCaption(_ a1: Int, _ a2: String) -> String {
+        String(format: NSLocalizedString("detail_nova_caption", comment: ""), a1, a2)
+    }
+    public static func detailNovaDescription(_ a1: Int, _ a2: String) -> String {
+        String(format: NSLocalizedString("detail_nova_description", comment: ""), a1, a2)
+    }
+    public static var detailNova1: String { NSLocalizedString("detail_nova_1", comment: "") }
+    public static var detailNova2: String { NSLocalizedString("detail_nova_2", comment: "") }
+    public static var detailNova3: String { NSLocalizedString("detail_nova_3", comment: "") }
+    public static var detailNova4: String { NSLocalizedString("detail_nova_4", comment: "") }
+    public static var detailCredit: String { NSLocalizedString("detail_credit", comment: "") }
+    public static var detailAllergenNote: String { NSLocalizedString("detail_allergen_note", comment: "") }
+    public static var detailChooseItem: String { NSLocalizedString("detail_choose_item", comment: "") }
+    public static func recipeIntro(_ a1: String) -> String {
+        String(format: NSLocalizedString("recipe_intro", comment: ""), a1)
+    }
+    public static func recipeNamesTwo(_ a1: String, _ a2: String) -> String {
+        String(format: NSLocalizedString("recipe_names_two", comment: ""), a1, a2)
+    }
+    public static func recipeNamesThree(_ a1: String, _ a2: String, _ a3: String) -> String {
+        String(format: NSLocalizedString("recipe_names_three", comment: ""), a1, a2, a3)
+    }
+    /// A pantry count as a word up to ten, as the sentence on Home writes it.
+    public static func ledeNumber(_ count: Int) -> String {
+        (1...10).contains(count) ? NSLocalizedString("lede_number_\(count)", comment: "") : "\(count)"
+    }
+    /// "on Friday". Takes 1 for Monday, because the words carry their own grammar in Russian.
+    public static func ledeOnWeekday(_ isoDay: Int) -> String {
+        NSLocalizedString("lede_on_weekday_\(isoDay)", comment: "")
+    }
+    private static func plural(_ key: String, _ count: Int, _ inserts: [String: String] = [:]) -> String {
+        var text = String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count)
+        for (name, value) in inserts { text = text.replacingOccurrences(of: "{\(name)}", with: value) }
+        return text
+    }
+    public static func ledeUseByTomorrow(_ count: Int) -> String {
+        plural("lede_use_by_tomorrow", count, ["n": ledeNumber(count)])
+    }
+    public static func ledePastDate(_ count: Int) -> String {
+        plural("lede_past_date", count, ["n": ledeNumber(count)])
+    }
+    public static func homeSearchResults(_ count: Int) -> String { plural("home_search_results", count) }
+    public static func homeShowItems(_ count: Int) -> String { plural("home_show_items", count) }
+    public static func homeActiveFilterCount(_ shown: Int, of total: Int) -> String {
+        plural("home_active_filter_count", total, ["n": "\(shown)"])
+    }
+    public static func recipeNamesMore(_ first: String, _ second: String, others: Int) -> String {
+        plural("recipe_names_more", others, ["a": first, "b": second])
+    }
+    public static func recipeIncludeOthersCount(_ count: Int) -> String {
+        plural("recipe_include_others_count", count)
+    }
 
     // Larder foundation
     public static var navShopping: String { NSLocalizedString("nav_shopping", comment: "") }
