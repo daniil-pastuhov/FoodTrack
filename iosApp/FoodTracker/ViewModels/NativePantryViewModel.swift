@@ -788,6 +788,51 @@ public class NativePantryViewModel: ObservableObject {
         batchQueue = []
     }
 
+    // MARK: - Scanner: queue Undo and lookup retry
+
+    /// Undoes `removeBatchEntry`. `index` is where the row was, so it comes back in place.
+    public func restoreBatchEntry(_ entry: BatchScanEntry, at index: Int) {
+        reinstateBatchEntry(entry, at: index)
+    }
+
+    /// Undoes `clearBatchQueue`. Anything scanned since stays, after the rows coming back.
+    public func restoreBatchQueue(_ entries: [BatchScanEntry]) {
+        for (index, entry) in entries.enumerated() {
+            reinstateBatchEntry(entry, at: index)
+        }
+    }
+
+    private func reinstateBatchEntry(_ entry: BatchScanEntry, at index: Int) {
+        if let rescanned = batchQueue.firstIndex(where: { $0.id == entry.id }) {
+            // The same product was scanned again after this row went: both scans count.
+            batchQueue[rescanned].quantity = min(batchQueue[rescanned].quantity + entry.quantity, maxItemQuantity)
+            return
+        }
+        if entry.isLookingUp, let barcode = entry.barcode {
+            // The lookup found no row to fill in when it finished, so this one would stay
+            // "looking up" for good. Enqueuing starts a new one.
+            enqueueBatchScan(barcode)
+            guard let queued = batchQueue.firstIndex(where: { $0.id == entry.id }) else { return }
+            var row = batchQueue.remove(at: queued)
+            row.quantity = entry.quantity
+            batchQueue.insert(row, at: min(max(index, 0), batchQueue.count))
+            return
+        }
+        batchQueue.insert(entry, at: min(max(index, 0), batchQueue.count))
+    }
+
+    /// Tries the held barcode again, for Try again on the offline result. Returns the barcode so
+    /// the scanner can repeat its duplicate check, or nil when nothing is held.
+    public func retryBarcodeLookup() -> String? {
+        guard let barcode = productNotFoundBarcode else { return nil }
+        clearScanResults()
+        if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
+            detectedDate = gs1Date
+        }
+        lookupBarcode(barcode)
+        return barcode
+    }
+
     /// Saves everything in the queue and empties it, returning how many items were added.
     ///
     /// Each row goes through `saveItem`, so a batch add still learns shelf lives, caches
