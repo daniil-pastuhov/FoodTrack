@@ -161,6 +161,7 @@ struct RootTabView: View {
         .overlay {
             if showOnboarding {
                 OnboardingView(onFinish: finishOnboarding)
+                    .accessibilityElement(children: .contain)
                     .accessibilityAddTraits(.isModal)
                     .transition(.opacity)
             }
