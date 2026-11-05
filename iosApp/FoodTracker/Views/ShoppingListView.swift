@@ -527,7 +527,17 @@ struct ShoppingListView: View {
     /// qr, import, reorder, move) opens that sheet and `-demoShoppingText <text>` fills the field.
     private func applyDemoOverlay() {
         let arguments = UserDefaults.standard
-        if let text = arguments.string(forKey: "demoShoppingText") { newEntryText = text }
+        if let text = arguments.string(forKey: "demoShoppingText") {
+            newEntryText = text
+            isInputFocused = true
+            // `-demoShoppingSubmit YES` then adds it, as Done on the keyboard would.
+            if arguments.bool(forKey: "demoShoppingSubmit") {
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(4))
+                    addEntry(newEntryText)
+                }
+            }
+        }
         switch arguments.string(forKey: "demoShoppingSheet") {
         case "share": sheet = .share
         case "qr": sheet = .qr
@@ -648,17 +658,25 @@ private struct ShoppingImportSheet: View {
     let onImport: (String) -> Void
     let onCancel: () -> Void
     @State private var text = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         LarderSheet(L10n.shoppingListImport) {
             ShoppingSheetLead(text: L10n.shoppingListImportMessage)
-            LarderTextField(
-                L10n.shoppingListImportLabel,
-                text: $text,
-                placeholder: L10n.shoppingListImportPlaceholder,
-                axis: .vertical
-            )
-            .lineLimit(4...8)
+            // The container rather than LarderTextField, so the line limit reaches only the
+            // input: on the whole field it makes the label reserve four lines too.
+            LarderFieldContainer(L10n.shoppingListImportLabel, isFocused: isFocused) {
+                TextField(
+                    L10n.shoppingListImportLabel,
+                    text: $text,
+                    prompt: Text(L10n.shoppingListImportPlaceholder).foregroundStyle(LarderColor.onSurfaceVariant),
+                    axis: .vertical
+                )
+                .lineLimit(4...8)
+                .larderFont(.body)
+                .focused($isFocused)
+                .padding(.vertical, LarderSpace.s3)
+            }
             ShoppingSheetActions {
                 LarderButton(L10n.cancelButton, variant: .text, action: onCancel)
                 LarderButton(L10n.shoppingListImportConfirm) { onImport(text) }
