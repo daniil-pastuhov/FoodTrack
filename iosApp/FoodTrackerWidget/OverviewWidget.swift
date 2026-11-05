@@ -43,8 +43,8 @@ struct OverviewWidgetView: View {
     @Environment(\.widgetFamily) private var family
     var entry: OverviewProvider.Entry
 
-    private var expiryLimit: Int { family == .systemLarge ? 5 : 2 }
-    private var shoppingLimit: Int { family == .systemLarge ? 6 : 3 }
+    private var expiryLimit: Int { family == .systemLarge ? 4 : 2 }
+    private var shoppingLimit: Int { 3 }
 
     private var expiringSection: some View {
         OverviewSectionView(

@@ -137,8 +137,9 @@ struct WidgetExpiringText: View {
 }
 
 /// The ring with a tick: an action, so it always shows its check. The button fills a 44pt square,
-/// and rows are spaced to match, so neighbouring ticks never share a tap. The square runs past the
-/// row's end into the widget's margin, which keeps the ring lined up with the text above.
+/// and rows are spaced to match, so neighbouring ticks never share a tap. Sideways it takes up only
+/// the ring's width: the square runs into the widget's margin on one side, which lines the ring up
+/// with the text above, and over the row's text on the other, which a small widget needs for names.
 struct WidgetTick<Intent: AppIntent>: View {
     static var size: CGFloat { 44 }
 
@@ -154,7 +155,7 @@ struct WidgetTick<Intent: AppIntent>: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.trailing, -11)
         .accessibilityLabel(label)
+        .padding(.horizontal, -11)
     }
 }

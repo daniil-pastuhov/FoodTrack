@@ -56,7 +56,7 @@ struct ExpiringItemsWidgetView: View {
                 WidgetEmptyLine(L10n.widgetExpiringEmpty)
             } else {
                 ForEach(entry.items.prefix(rowLimit)) { item in
-                    HStack(spacing: LarderSpace.s2) {
+                    HStack(spacing: LarderSpace.s1) {
                         WidgetExpiringText(item: item, expiringSoonDays: entry.expiringSoonDays)
                         Spacer(minLength: 0)
                         // Consumes a unit in place, without opening the app — seeing that
