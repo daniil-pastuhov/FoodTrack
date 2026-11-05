@@ -776,6 +776,33 @@ public enum L10n {
         }
     }
 
+    // MARK: Add item
+    public static var newItemPlaceholder: String { NSLocalizedString("new_item_placeholder", comment: "") }
+    public static var addNameMissing: String { NSLocalizedString("add_name_missing", comment: "") }
+    public static var addSeeDetails: String { NSLocalizedString("add_see_details", comment: "") }
+    public static var storageLocationTitle: String { NSLocalizedString("storage_location_title", comment: "") }
+    public static var updateItemButton: String { NSLocalizedString("update_item_button", comment: "") }
+    public static var discardNewMessage: String { NSLocalizedString("discard_new_message", comment: "") }
+    public static func discardEditMessage(_ name: String) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("discard_edit_message_format", comment: ""), name)
+    }
+    public static func saveItemButton(_ location: String) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("save_item_button_format", comment: ""), location)
+    }
+    /// "In 20 days", then "In 2 months", then "In 36 years", on the same thresholds as Android's
+    /// `daysRemainingLabel`. For two days or more.
+    public static func dateDistance(days: Int) -> String {
+        if days < 60 {
+            return String.localizedStringWithFormat(NSLocalizedString("expires_in_days_format", comment: ""), days)
+        }
+        let months = Int((Double(days) / 30.44).rounded())
+        if months < 12 {
+            return String.localizedStringWithFormat(NSLocalizedString("expires_in_months_format", comment: ""), months)
+        }
+        let years = max(Int((Double(days) / 365.25).rounded()), 1)
+        return String.localizedStringWithFormat(NSLocalizedString("expires_in_years_format", comment: ""), years)
+    }
+
     // MARK: Larder settings
     public static var settingsGroupReminders: String { NSLocalizedString("settings_group_reminders", comment: "") }
     public static var settingsGroupKitchen: String { NSLocalizedString("settings_group_kitchen", comment: "") }

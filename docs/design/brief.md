@@ -97,6 +97,7 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - 2026-11-04 · Nutri-Score uses its official colours on a dark plate, in both themes, so all five reach 3:1 · user decision
 - 2026-11-04 · Main navigation keeps the app's floating pill bar, restyled in Larder colours and shapes, on both platforms; it replaces the docked Material bar and iOS tab bar in the design · user decision
 - 2026-11-04 · No navigation rail or sidebar: tablets and foldables use the floating pill, with Scan at the bottom right in thumb reach · user decision; the rail took a column and put Scan in the least reachable corner
+- 2026-11-05 · iOS Add item: swiping down on a changed form is blocked and Cancel asks first; a swipe can't raise the dialog on iOS 27 · nothing is lost
 - 2026-11-04 · The user asked for a new design system, so the existing theme is replaced rather than extended · from the /design request
 
 ## Options history

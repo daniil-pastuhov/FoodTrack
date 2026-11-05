@@ -40,7 +40,7 @@
     <string name="back_content_description">Back</string>
 
     <string name="edit_item_title">Edit Item</string>
-    <string name="add_item_title">Add to Pantry</string>
+    <string name="add_item_title">Add item</string>
     <string name="barcode_format">Barcode: %1$s</string>
     <string name="new_item_placeholder">New Item</string>
     <string name="photo_suggestions_title">Looks like…</string>
@@ -114,16 +114,16 @@
     <string name="food_label_pizza">Pizza</string>
     <string name="food_label_sandwich">Sandwich</string>
     <string name="food_label_food">Food</string>
-    <string name="product_name_label">Product Name *</string>
-    <string name="brand_label">Brand / Manufacturer</string>
-    <string name="expiry_section_title">Best Before / Expiration Date</string>
+    <string name="product_name_label">Product name *</string>
+    <string name="brand_label">Brand</string>
+    <string name="expiry_section_title">Best before</string>
     <string name="expiry_suggestion_remembered">Same as last time · %1$s</string>
     <string name="expiry_suggestion_category">%1$s default · %2$s</string>
     <plurals name="expiry_suggestion_days">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
-    <string name="expiry_date_implausible_warning">This date is more than %1$d years from today. Please double-check the year.</string>
+    <string name="expiry_date_implausible_warning">This date is over %1$d years away. Check the year.</string>
     <string name="quick_date_3_days">+3 Days</string>
     <string name="quick_date_1_week">+1 Week</string>
     <string name="quick_date_2_weeks">+2 Weeks</string>
@@ -133,7 +133,6 @@
     <string name="quantity_label">Quantity</string>
     <string name="quantity_decrease_content_description">Decrease quantity</string>
     <string name="quantity_increase_content_description">Increase quantity</string>
-    <string name="notes_label">Notes (e.g. opened, quantity, shelf)</string>
     <string name="update_item_button">Update Item</string>
     <!-- %1$s is the selected storage location, e.g. "Fridge" -->
     <string name="save_item_button">Save to %1$s</string>
@@ -719,6 +718,16 @@
         <item quantity="one">Its %d item moves to the main list.</item>
         <item quantity="other">Its %d items move to the main list.</item>
     </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Add a name so you can find this later</string>
+    <string name="add_see_details">See details</string>
+    <string name="add_notes_placeholder">e.g. opened, quantity, shelf</string>
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_confirm">Discard changes</string>
+    <string name="discard_changes_keep">Keep editing</string>
+    <string name="discard_new_message">This item hasn\'t been saved, so it won\'t be added to your pantry.</string>
+    <string name="discard_edit_message">Your changes to %1$s won\'t be saved. The item stays as it was.</string>
+
 
     <!-- Larder: Calendar -->
     <string name="calendar_pane_title">What\'s due</string>

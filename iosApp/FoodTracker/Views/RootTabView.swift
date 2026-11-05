@@ -126,9 +126,6 @@ struct RootTabView: View {
                 prefillSuggestion: request.prefill.suggestion,
                 onDuplicateMerged: { updated in
                     viewModel.homeConfirmation = .oneMoreAdded(name: updated.name, quantity: updated.quantity)
-                },
-                onNewItemSaved: { item in
-                    viewModel.homeConfirmation = .saved(name: item.name, location: item.storageLocation)
                 }
             )
         }
