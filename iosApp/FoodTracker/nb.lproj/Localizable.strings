@@ -161,12 +161,13 @@
 "expires_today" = "Utløper i dag";
 "expires_tomorrow" = "Utløper i morgen";
 
-"notif_title_today" = "Produktet utløper i dag! ⚠️";
-"notif_title_soon" = "Produktet utløper snart! ⚠️";
+"notif_title_today" = "Best å bruke i dag";
+"notif_title_soon" = "Best å bruke snart";
+"notif_body_tomorrow_format" = "%@ når datoen sin i morgen.";
 "notif_title_past" = "Verdt en titt";
 
 "expiry_date_found_format" = "Utløpsdato funnet: %@";
-"notif_body_today_format" = "%@ utløper i dag. Husk å spise det!";
+"notif_body_today_format" = "%@ når datoen sin i dag.";
 "notif_action_remove" = "Fjern";
 "notif_digest_item_format" = "%1$@ — %2$@";
 "notif_action_recipe_ideas" = "Oppskriftsforslag";
@@ -232,8 +233,8 @@
 "widget_shopping_list_title" = "Handleliste";
 "widget_shopping_list_description" = "Viser den gjeldende handlelisten din";
 "widget_shopping_list_empty" = "Handlelisten din er tom";
-"widget_action_used" = "Brukt én";
-"widget_action_bought" = "Kjøpt";
+"widget_action_used_item_format" = "Brukt én: %@";
+"widget_action_bought_item_format" = "Kjøpt: %@";
 "widget_overview_title" = "Matskapoversikt";
 "widget_overview_description" = "Viser hva som er utløpt eller snart utløper, etterfulgt av handlelisten din";
 

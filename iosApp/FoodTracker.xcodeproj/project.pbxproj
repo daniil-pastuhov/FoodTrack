@@ -26,6 +26,7 @@
 		333BD43AE5A4BDA48CD004F6 /* CategoryPreferenceRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 678788BAF9C1B92544169F2B /* CategoryPreferenceRecord.swift */; };
 		34ABF7588B0A4445983CA756 /* ShoppingListEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F7119136C074AAB8D3B3F03 /* ShoppingListEntry.swift */; };
 		3ABD5F0FF74D43DDA10D1B95 /* ShoppingListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32F5E332BCAB482A98210E13 /* ShoppingListView.swift */; };
+		5A1C7E21D3F4418B9E6B0C12 /* WidgetComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1C7E20D3F4418B9E6B0C11 /* WidgetComponents.swift */; };
 		48CC2BD06E56FE3885A8256C /* WidgetSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */; };
 		4DAC83F3781747A699AB49AB /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = C653CCBC3A5E4983A37A2426 /* Localizable.strings */; };
 		4E470966499A5C5491E35A72 /* FoodTrackerApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 256EC053D9655FAF88299153 /* FoodTrackerApp.swift */; };
@@ -222,6 +223,7 @@
 		F1EBA5E00000000000000002 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		F44742679EBB5F68A83CFFCF /* PantryDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PantryDashboardView.swift; sourceTree = "<group>"; };
 		FD0B2C260A7C5D988F621408 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5A1C7E20D3F4418B9E6B0C11 /* WidgetComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetComponents.swift; sourceTree = "<group>"; };
 		FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSettings.swift; sourceTree = "<group>"; };
 		A6C294CFDDEF33BD2CF6A83F /* EmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmptyState.swift; sourceTree = "<group>"; };
 		63DE656FE485F11F50E66C98 /* FloatingNav.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingNav.swift; sourceTree = "<group>"; };
@@ -447,6 +449,7 @@
 				0A960B86C989A0AE9FF7FEB6 /* ExpiringItemsWidget.swift */,
 				DFD2556F3F0A0AA96F66473D /* ShoppingListWidget.swift */,
 				723335A444AE4795857A463B /* OverviewWidget.swift */,
+				5A1C7E20D3F4418B9E6B0C11 /* WidgetComponents.swift */,
 				FE71B6BC77544CC2AB692485 /* WidgetSettings.swift */,
 				B3568D45ABFFD1894E1B1FB6 /* Info.plist */,
 				C0FFEE0000000000000000B1 /* PrivacyInfo.xcprivacy */,
@@ -691,6 +694,7 @@
 				85D1219C4107167D7E51C5B1 /* ExpiringItemsWidget.swift in Sources */,
 				CEBF5842F3D9AB3B5D3A66B7 /* ShoppingListWidget.swift in Sources */,
 				179C8C5A38574F59B9805E1E /* OverviewWidget.swift in Sources */,
+				5A1C7E21D3F4418B9E6B0C12 /* WidgetComponents.swift in Sources */,
 				48CC2BD06E56FE3885A8256C /* WidgetSettings.swift in Sources */,
 				E46F0883E74B2FE248486CDE /* AppGroup.swift in Sources */,
 				82B02A6C423CD43BB2166C6D /* LocalModels.swift in Sources */,

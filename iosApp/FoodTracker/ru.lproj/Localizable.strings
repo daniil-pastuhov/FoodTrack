@@ -161,12 +161,13 @@
 "expires_today" = "Истекает сегодня";
 "expires_tomorrow" = "Истекает завтра";
 
-"notif_title_today" = "Продукт истекает сегодня! ⚠️";
-"notif_title_soon" = "Продукт скоро истекает! ⚠️";
+"notif_title_today" = "Лучше использовать сегодня";
+"notif_title_soon" = "Лучше использовать скоро";
+"notif_body_tomorrow_format" = "%@: срок годности заканчивается завтра.";
 "notif_title_past" = "Стоит проверить";
 
 "expiry_date_found_format" = "Найден срок годности: %@";
-"notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть его!";
+"notif_body_today_format" = "%@: срок годности заканчивается сегодня.";
 "notif_action_remove" = "Удалить";
 "notif_digest_item_format" = "%1$@ — %2$@";
 "notif_action_recipe_ideas" = "Идеи рецептов";
@@ -232,8 +233,8 @@
 "widget_shopping_list_title" = "Список покупок";
 "widget_shopping_list_description" = "Показывает ваш текущий список покупок";
 "widget_shopping_list_empty" = "Ваш список покупок пуст";
-"widget_action_used" = "Съел";
-"widget_action_bought" = "Куплено";
+"widget_action_used_item_format" = "Съел: %@";
+"widget_action_bought_item_format" = "Куплено: %@";
 "widget_overview_title" = "Обзор кладовой";
 "widget_overview_description" = "Показывает просроченные и скоро истекающие продукты, а затем список покупок";
 

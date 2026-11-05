@@ -5,6 +5,7 @@ import SwiftData
 struct ExpiringItemsEntry: TimelineEntry {
     let date: Date
     let items: [PantryItem]
+    var expiringSoonDays = WidgetSettings.expiringSoonDays
 }
 
 struct ExpiringItemsProvider: TimelineProvider {
@@ -45,40 +46,38 @@ struct ExpiringItemsProvider: TimelineProvider {
 struct ExpiringItemsWidgetView: View {
     var entry: ExpiringItemsProvider.Entry
 
+    /// What fits under the title with a full-size tick on each row.
+    private let rowLimit = 2
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L10n.widgetExpiringTitle)
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 0) {
+            WidgetTitle(L10n.widgetExpiringTitle)
             if entry.items.isEmpty {
-                Text(L10n.widgetExpiringEmpty)
-                    .font(.caption)
-                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                WidgetEmptyLine(L10n.widgetExpiringEmpty)
             } else {
-                ForEach(entry.items.prefix(4)) { item in
-                    HStack(spacing: 6) {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(item.name)
-                                .font(.subheadline)
-                                .lineLimit(1)
-                            Text(item.daysRemainingFormatted)
-                                .font(.caption2)
-                                .foregroundStyle(LarderColor.onSurfaceVariant)
-                        }
+                ForEach(entry.items.prefix(rowLimit)) { item in
+                    HStack(spacing: LarderSpace.s2) {
+                        WidgetExpiringText(item: item, expiringSoonDays: entry.expiringSoonDays)
                         Spacer(minLength: 0)
                         // Consumes a unit in place, without opening the app — seeing that
                         // something expires today and then having to go find it in the app is
                         // most of the friction the widget exists to remove.
-                        Button(intent: ConsumeItemIntent(itemId: item.id)) {
-                            Image(systemName: "checkmark")
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(L10n.widgetActionUsed)
+                        WidgetTick(
+                            intent: ConsumeItemIntent(itemId: item.id),
+                            label: L10n.widgetActionUsed(item.name)
+                        )
                     }
+                }
+                if entry.items.count > rowLimit {
+                    WidgetMoreLine(hidden: entry.items.count - rowLimit)
                 }
             }
             Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetContent()
+        // Needs the `home` route in `AppRoute(externalName:)`. Until it's there this opens the
+        // app where it was, as it always has.
+        .widgetURL(URL(string: "foodtracker://home"))
     }
 }
 

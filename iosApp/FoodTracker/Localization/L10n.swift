@@ -543,6 +543,10 @@ public enum L10n {
         String(format: NSLocalizedString("notif_body_today_format", comment: ""), nameWithBrand)
     }
 
+    public static func notifBodyTomorrow(_ nameWithBrand: String) -> String {
+        String(format: NSLocalizedString("notif_body_tomorrow_format", comment: ""), nameWithBrand)
+    }
+
     public static func notifBodySoon(_ nameWithBrand: String, days: Int) -> String {
         let format = NSLocalizedString("notif_body_soon_format", comment: "")
         return String.localizedStringWithFormat(format, nameWithBrand, days)
@@ -704,8 +708,12 @@ public enum L10n {
     public static var widgetShoppingListTitle: String { NSLocalizedString("widget_shopping_list_title", comment: "") }
     public static var widgetShoppingListDescription: String { NSLocalizedString("widget_shopping_list_description", comment: "") }
     public static var widgetShoppingListEmpty: String { NSLocalizedString("widget_shopping_list_empty", comment: "") }
-    public static var widgetActionUsed: String { NSLocalizedString("widget_action_used", comment: "") }
-    public static var widgetActionBought: String { NSLocalizedString("widget_action_bought", comment: "") }
+    public static func widgetActionUsed(_ name: String) -> String {
+        String(format: NSLocalizedString("widget_action_used_item_format", comment: ""), name)
+    }
+    public static func widgetActionBought(_ name: String) -> String {
+        String(format: NSLocalizedString("widget_action_bought_item_format", comment: ""), name)
+    }
     public static var widgetOverviewTitle: String { NSLocalizedString("widget_overview_title", comment: "") }
     public static var widgetOverviewDescription: String { NSLocalizedString("widget_overview_description", comment: "") }
 

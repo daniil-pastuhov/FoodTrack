@@ -53,7 +53,7 @@
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%1$@ %2$#@days@</string>
+        <string>%1$@ når datoen sin om %2$#@days@</string>
         <key>days</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
@@ -61,9 +61,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>utløper om %2$d dag. Husk å spise det!</string>
+            <string>%2$d dag.</string>
             <key>other</key>
-            <string>utløper om %2$d dager. Husk å spise det!</string>
+            <string>%2$d dager.</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>

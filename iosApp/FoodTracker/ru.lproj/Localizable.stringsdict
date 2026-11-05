@@ -65,7 +65,7 @@
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%1$@ %2$#@days@</string>
+        <string>%1$@: срок годности заканчивается через %2$#@days@</string>
         <key>days</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
@@ -73,13 +73,13 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>истекает через %2$d день. Не забудьте съесть его!</string>
+            <string>%2$d день.</string>
             <key>few</key>
-            <string>истекает через %2$d дня. Не забудьте съесть его!</string>
+            <string>%2$d дня.</string>
             <key>many</key>
-            <string>истекает через %2$d дней. Не забудьте съесть его!</string>
+            <string>%2$d дней.</string>
             <key>other</key>
-            <string>истекает через %2$d дня. Не забудьте съесть его!</string>
+            <string>%2$d дня.</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>
