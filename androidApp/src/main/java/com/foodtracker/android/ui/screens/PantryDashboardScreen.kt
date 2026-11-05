@@ -238,6 +238,10 @@ fun PantryDashboardScreen(
         }
     }
 
+    // The line saying what is hidden goes in above the row the list is anchored to, so without this
+    // it would sit just out of sight.
+    LaunchedEffect(filtersActive) { if (filtersActive) listState.scrollToItem(0) }
+
     ShellChromeEffect(hideNav = selecting, hideScan = selecting || pantryEmpty)
 
     val closeSearch = {
