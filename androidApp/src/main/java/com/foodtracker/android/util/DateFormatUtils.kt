@@ -55,3 +55,13 @@ fun narrowWeekdayNames(): List<String> {
         DayOfWeek.entries.map { it.getDisplayName(TextStyle.NARROW_STANDALONE, locale) }
     }
 }
+
+/** Day and month with no year, in the device's own order and wording (e.g. "18 Nov"). */
+@Composable
+fun formatDayMonth(date: LocalDate): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val formatter = remember(locale) {
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "dMMM"), locale)
+    }
+    return remember(date, formatter) { date.toJavaLocalDate().format(formatter) }
+}

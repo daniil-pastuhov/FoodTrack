@@ -906,6 +906,54 @@ class PantryStateHolder(
         _uiState.update { it.copy(batchQueue = emptyList()) }
     }
 
+    // ---- Scanner: queue Undo and lookup retry ------------------------------------------
+
+    /** Undoes [removeBatchEntry]. [index] is where the row was, so it comes back in place. */
+    fun restoreBatchEntry(entry: BatchScanEntry, index: Int) {
+        reinstateBatchEntry(entry, index)
+    }
+
+    /** Undoes [clearBatchQueue]. Anything scanned since stays, after the rows coming back. */
+    fun restoreBatchQueue(entries: List<BatchScanEntry>) {
+        entries.forEachIndexed { index, entry -> reinstateBatchEntry(entry, index) }
+    }
+
+    private fun reinstateBatchEntry(entry: BatchScanEntry, index: Int) {
+        val queue = _uiState.value.batchQueue
+        val rescanned = queue.find { it.id == entry.id }
+        if (rescanned != null) {
+            // The same product was scanned again after this row went: both scans count.
+            val quantity = (rescanned.quantity + entry.quantity).coerceAtMost(MAX_ITEM_QUANTITY)
+            updateBatchEntry(rescanned.copy(quantity = quantity))
+            return
+        }
+        val barcode = entry.barcode
+        if (entry.isLookingUp && barcode != null) {
+            // The lookup found no row to fill in when it finished, so this one would stay
+            // "looking up" for good. Enqueuing starts a new one.
+            enqueueBatchScan(barcode)
+            _uiState.update { state ->
+                val queued = state.batchQueue.find { it.id == entry.id } ?: return@update state
+                val others = state.batchQueue.filterNot { it.id == entry.id }
+                state.copy(batchQueue = others.inserted(queued.copy(quantity = entry.quantity), index))
+            }
+            return
+        }
+        _uiState.update { it.copy(batchQueue = it.batchQueue.inserted(entry, index)) }
+    }
+
+    private fun List<BatchScanEntry>.inserted(entry: BatchScanEntry, index: Int): List<BatchScanEntry> =
+        toMutableList().apply { add(index.coerceIn(0, size), entry) }
+
+    /** Tries the held barcode again, for Try again on the offline result. Returns the barcode so
+     *  the scanner can repeat its duplicate check, or null when nothing is held. */
+    fun retryBarcodeLookup(): String? {
+        val barcode = _uiState.value.productNotFoundBarcode ?: return null
+        clearScanResults()
+        onBarcodeScanned(barcode)
+        return barcode
+    }
+
     /**
      * Saves everything in the queue and empties it, reporting how many items were added.
      *
@@ -1192,6 +1240,24 @@ class PantryStateHolder(
         coroutineScope.launch {
             addToShoppingListIfAbsent(trimmed, barcode = null, category = null)
             recordProductName(trimmed)
+        }
+    }
+
+    /** As [addManualShoppingListEntry], but says when the name was on the list already, so the
+     *  screen can tell the person why no row appeared. [onDuplicate] gets the name as it is
+     *  written on the list, which may differ in case from what was typed. It runs on this
+     *  holder's scope, which is not the main thread. */
+    fun addManualShoppingListEntry(productName: String, onDuplicate: (existingName: String) -> Unit) {
+        val trimmed = productName.trim()
+        if (trimmed.isBlank()) return
+        coroutineScope.launch {
+            val existing = shoppingListRepository.findByName(trimmed)
+            if (existing != null) {
+                onDuplicate(existing.productName)
+            } else {
+                addToShoppingListIfAbsent(trimmed, barcode = null, category = null)
+                recordProductName(trimmed)
+            }
         }
     }
 

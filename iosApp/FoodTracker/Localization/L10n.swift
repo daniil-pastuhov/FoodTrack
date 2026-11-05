@@ -319,7 +319,6 @@ public enum L10n {
     public static func shoppingSectionDeleteTitle(_ name: String) -> String {
         String(format: NSLocalizedString("shopping_section_delete_title", comment: ""), name)
     }
-    public static var shoppingSectionDeleteMessage: String { NSLocalizedString("shopping_section_delete_message", comment: "") }
     public static var shoppingSectionSave: String { NSLocalizedString("shopping_section_save", comment: "") }
     public static var shoppingSectionNamePlaceholder: String { NSLocalizedString("shopping_section_name_placeholder", comment: "") }
     public static var shoppingSectionMoveTo: String { NSLocalizedString("shopping_section_move_to", comment: "") }
@@ -399,6 +398,32 @@ public enum L10n {
             count
         )
     }
+    public static var shoppingListBrand: String { NSLocalizedString("shopping_list_brand", comment: "") }
+    public static var shoppingListLedeEmpty: String { NSLocalizedString("shopping_list_lede_empty", comment: "") }
+    public static func shoppingListLede(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("shopping_list_lede_format", comment: ""), count)
+    }
+    public static func shoppingListAlreadyListed(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_list_already_listed", comment: ""), name)
+    }
+    public static func shoppingListMarkBought(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_list_mark_bought", comment: ""), name)
+    }
+    public static var shoppingListImportPlaceholder: String { NSLocalizedString("shopping_list_import_placeholder", comment: "") }
+    public static func shoppingListBarcode(_ barcode: String) -> String {
+        String(format: NSLocalizedString("shopping_list_barcode_format", comment: ""), barcode)
+    }
+    public static var shoppingListImportLabel: String { NSLocalizedString("shopping_list_import_label", comment: "") }
+    public static var shoppingListClose: String { NSLocalizedString("shopping_list_close", comment: "") }
+    public static var shoppingListQrDescription: String { NSLocalizedString("shopping_list_qr_description", comment: "") }
+    public static var shoppingListDragHandle: String { NSLocalizedString("shopping_list_drag_handle", comment: "") }
+    public static var shoppingSectionsLabel: String { NSLocalizedString("shopping_sections_label", comment: "") }
+    public static var shoppingSectionNameLabel: String { NSLocalizedString("shopping_section_name_label", comment: "") }
+    public static var shoppingSectionKeep: String { NSLocalizedString("shopping_section_keep", comment: "") }
+    public static var shoppingSectionDeleteConfirm: String { NSLocalizedString("shopping_section_delete_confirm", comment: "") }
+    public static func shoppingSectionDeleteCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("shopping_section_delete_count_format", comment: ""), count)
+    }
     public static var shoppingListScan: String { NSLocalizedString("shopping_list_scan", comment: "") }
     public static var shoppingListDidYouMeanTitle: String { NSLocalizedString("shopping_list_did_you_mean_title", comment: "") }
     public static var shoppingListDidYouMeanNoneOfThese: String { NSLocalizedString("shopping_list_did_you_mean_none_of_these", comment: "") }
@@ -438,7 +463,9 @@ public enum L10n {
         String.localizedStringWithFormat(NSLocalizedString("receipt_lines_added", comment: ""), count)
     }
     public static var batchQueueEmpty: String { NSLocalizedString("batch_queue_empty", comment: "") }
-    public static var batchQueueRemoveContentDescription: String { NSLocalizedString("batch_queue_remove_content_description", comment: "") }
+    public static func batchQueueRemove(_ name: String) -> String {
+        String(format: NSLocalizedString("batch_queue_remove_content_description", comment: ""), name)
+    }
     public static var batchQueueNeedsDate: String { NSLocalizedString("batch_queue_needs_date", comment: "") }
     public static var batchCommitButton: String { NSLocalizedString("batch_commit_button", comment: "") }
     public static var batchClearButton: String { NSLocalizedString("batch_clear_button", comment: "") }
@@ -468,6 +495,36 @@ public enum L10n {
     public static var batchDiscardKeep: String { NSLocalizedString("batch_discard_keep", comment: "") }
     public static func batchDiscardMessage(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("batch_discard_message_format", comment: ""), count)
+    }
+    // Scanner (Larder)
+    public static func barcodeFormat(_ barcode: String) -> String {
+        String(format: NSLocalizedString("barcode_format", comment: ""), barcode)
+    }
+    public static var closeScanner: String { NSLocalizedString("close_scanner", comment: "") }
+    public static var scanTorchOn: String { NSLocalizedString("scan_torch_on", comment: "") }
+    public static var scanTorchOff: String { NSLocalizedString("scan_torch_off", comment: "") }
+    public static var scanIdleResultsTitle: String { NSLocalizedString("scan_idle_results_title", comment: "") }
+    public static var scanIdleResultsMessage: String { NSLocalizedString("scan_idle_results_message", comment: "") }
+    public static var scanIdleDateTitle: String { NSLocalizedString("scan_idle_date_title", comment: "") }
+    public static var scanIdleDateMessage: String { NSLocalizedString("scan_idle_date_message", comment: "") }
+    public static var scanIdlePhotoTitle: String { NSLocalizedString("scan_idle_photo_title", comment: "") }
+    public static var scanIdlePhotoMessage: String { NSLocalizedString("scan_idle_photo_message", comment: "") }
+    public static var scanAllergenNote: String { NSLocalizedString("scan_allergen_note", comment: "") }
+    public static var scanOfflineTitle: String { NSLocalizedString("scan_offline_title", comment: "") }
+    public static var scanOfflineMessage: String { NSLocalizedString("scan_offline_message", comment: "") }
+    public static var scanTryAgain: String { NSLocalizedString("scan_try_again", comment: "") }
+    public static var scanContinueByHand: String { NSLocalizedString("scan_continue_by_hand", comment: "") }
+    public static func scanBestBefore(_ date: String) -> String {
+        String(format: NSLocalizedString("scan_best_before_format", comment: ""), date)
+    }
+    public static var scanDateFromBarcode: String { NSLocalizedString("scan_date_from_barcode", comment: "") }
+    public static var scanDateFromPackaging: String { NSLocalizedString("scan_date_from_packaging", comment: "") }
+    public static var scanUseThisDate: String { NSLocalizedString("scan_use_this_date", comment: "") }
+    public static var scanReadingReceipt: String { NSLocalizedString("scan_reading_receipt", comment: "") }
+    public static var receiptQueueEmpty: String { NSLocalizedString("receipt_queue_empty", comment: "") }
+    public static var scanQueueCleared: String { NSLocalizedString("scan_queue_cleared", comment: "") }
+    public static func batchQueueEstimated(_ date: String) -> String {
+        String(format: NSLocalizedString("batch_queue_estimated_format", comment: ""), date)
     }
     public static var torchToggleButton: String { NSLocalizedString("torch_toggle_button", comment: "") }
 

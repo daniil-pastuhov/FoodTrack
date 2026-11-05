@@ -283,6 +283,10 @@ private struct WireSettings: Codable {
     let lastUsedStorageLocation: String?
     let theme: String
     let sortOption: String
+    /// Optional so a backup from before these existed still decodes.
+    let allergens: [String]?
+    let stores: [StorePlace]?
+    let storeRemindersEnabled: Bool?
 
     init(from settings: AppSettings) {
         notifications = settings.notifications
@@ -293,6 +297,9 @@ private struct WireSettings: Codable {
         lastUsedStorageLocation = settings.lastUsedStorageLocation
         theme = WireSettings.themeNames[settings.theme] ?? "SYSTEM"
         sortOption = WireSettings.sortNames[settings.sortOption] ?? "EXPIRY_DATE"
+        allergens = settings.allergens.sorted()
+        stores = settings.stores
+        storeRemindersEnabled = settings.storeRemindersEnabled
     }
 
     var asSettings: AppSettings {
@@ -304,7 +311,10 @@ private struct WireSettings: Codable {
             rememberLastStorageLocation: rememberLastStorageLocation,
             lastUsedStorageLocation: lastUsedStorageLocation,
             theme: WireSettings.themeNames.first { $0.value == theme }?.key ?? .system,
-            sortOption: WireSettings.sortNames.first { $0.value == sortOption }?.key ?? .expiryDate
+            sortOption: WireSettings.sortNames.first { $0.value == sortOption }?.key ?? .expiryDate,
+            allergens: Set(allergens ?? []),
+            stores: stores ?? [],
+            storeRemindersEnabled: storeRemindersEnabled ?? false
         )
     }
 

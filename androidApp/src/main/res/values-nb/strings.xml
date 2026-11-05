@@ -138,7 +138,7 @@
     <string name="date_picker_ok">OK</string>
     <string name="date_picker_cancel">Avbryt</string>
 
-    <string name="manual_entry_button">Manuell registrering</string>
+    <string name="manual_entry_button">Skriv det inn</string>
     <string name="camera_off_title">Kameraet er av</string>
     <string name="camera_off_body">Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.</string>
     <string name="camera_off_open_settings">Åpne innstillinger</string>
@@ -154,7 +154,7 @@
         <item quantity="other">La til %1$d varer fra kvitteringen — sjekk dem under</item>
     </plurals>
     <string name="batch_queue_empty">Skann en vare for å starte listen</string>
-    <string name="batch_queue_remove_content_description">Fjern fra listen</string>
+    <string name="batch_queue_remove_content_description">Fjern fra listen: %1$s</string>
     <string name="batch_queue_needs_date">Sjekk dato</string>
     <string name="batch_commit_button">Legg til alle</string>
     <string name="batch_clear_button">Tøm</string>
@@ -212,7 +212,7 @@
     <string name="shopping_list_add_button">Legg til</string>
     <string name="shopping_list_scan_content_description">Skann produkt</string>    <string name="shopping_list_share_content_description">Del eller importer liste</string>
     <string name="shopping_list_share_dialog_title">Del liste</string>
-    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din — ingenting erstattes.</string>
+    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din, ingenting erstattes.</string>
     <string name="shopping_list_share_as_text">Del som tekst</string>
     <string name="shopping_list_share_as_qr">Vis QR-kode</string>
     <string name="shopping_list_share_qr_content_description">QR-kode med handlelisten</string>
@@ -236,7 +236,6 @@
     <string name="shopping_section_rename">Gi nytt navn</string>
     <string name="shopping_section_delete">Slett</string>
     <string name="shopping_section_delete_title">Slette «%1$s»?</string>
-    <string name="shopping_section_delete_message">Varene flyttes til hovedlisten.</string>
     <string name="shopping_section_save">Lagre</string>
     <string name="shopping_section_name_placeholder">f.eks. Meieri</string>
     <string name="shopping_section_move_to">Flytt til seksjon</string>
@@ -639,6 +638,30 @@
         <item>på lørdag</item>
         <item>på søndag</item>
     </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Lukk skanneren</string>
+    <string name="scan_torch_on">På</string>
+    <string name="scan_torch_off">Av</string>
+    <string name="scan_idle_results_title">Resultatet vises her</string>
+    <string name="scan_idle_results_message">Skann en strekkode, så vises varen på denne siden.</string>
+    <string name="scan_idle_date_title">Datoen vises her</string>
+    <string name="scan_idle_date_message">Hold kameraet rolig mot den trykte datoen.</string>
+    <string name="scan_idle_photo_title">Bildet vises her</string>
+    <string name="scan_idle_photo_message">Ta et bilde for å få forslag til navn.</string>
+    <string name="scan_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
+    <string name="scan_offline_title">Du er frakoblet</string>
+    <string name="scan_offline_message">Kunne ikke slå opp denne varen. Du kan fortsette for hånd, og strekkoden blir med varen.</string>
+    <string name="scan_try_again">Prøv igjen</string>
+    <string name="scan_continue_by_hand">Fortsett for hånd</string>
+    <string name="scan_best_before_format">Best før %1$s</string>
+    <string name="scan_date_from_barcode">Lest fra strekkoden</string>
+    <string name="scan_date_from_packaging">Lest fra emballasjen</string>
+    <string name="scan_use_this_date">Bruk denne datoen</string>
+    <string name="scan_reading_receipt">Leser kvitteringen …</string>
+    <string name="receipt_queue_empty">Les en kvittering for å starte listen</string>
+    <string name="scan_queue_cleared">Køen er tømt</string>
+    <string name="scan_capture_failed">Kunne ikke ta bildet. Prøv igjen.</string>
+    <string name="batch_queue_estimated_format">Anslått %1$s</string>
     <!-- Larder settings -->
     <string name="settings_group_reminders">Påminnelser</string>
     <string name="settings_group_kitchen">Kjøkkenet ditt</string>
@@ -674,5 +697,26 @@
     <plurals name="clear_data_dialog_count">
         <item quantity="one">Dette fjerner %1$d vare og avbryter påminnelsene for den. Dette kan ikke angres.</item>
         <item quantity="other">Dette fjerner alle %1$d varer og avbryter påminnelsene for dem. Dette kan ikke angres.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Handleliste</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d ting å kjøpe</item>
+        <item quantity="other">%d ting å kjøpe</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Ingenting å kjøpe</string>
+    <string name="shopping_list_already_listed">%1$s står allerede på listen</string>
+    <string name="shopping_list_check_off">Kryss av</string>
+    <string name="shopping_list_import_label">Listen din</string>
+    <string name="shopping_list_close">Lukk</string>
+    <string name="shopping_list_done">Ferdig</string>
+    <string name="shopping_sections_label">Seksjoner</string>
+    <string name="shopping_section_name_label">Navn på seksjon</string>
+    <string name="shopping_section_keep">Behold seksjonen</string>
+    <string name="shopping_section_delete_confirm">Slett seksjonen</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">%d vare flyttes til hovedlisten.</item>
+        <item quantity="other">%d varer flyttes til hovedlisten.</item>
     </plurals>
 </resources>

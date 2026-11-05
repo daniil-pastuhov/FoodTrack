@@ -77,9 +77,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Added %d item from the receipt — check it below</string>
+            <string>Added %d item from the receipt. Check it below</string>
             <key>other</key>
-            <string>Added %d items from the receipt — check them below</string>
+            <string>Added %d items from the receipt. Check them below</string>
         </dict>
     </dict>
     <key>store_reminder_title_format</key>
@@ -400,6 +400,38 @@
             <string>This removes %d item and cancels its reminders. You can't undo this.</string>
             <key>other</key>
             <string>This removes all %d items and cancels their reminders. You can't undo this.</string>
+        </dict>
+    </dict>
+    <key>shopping_list_lede_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d thing to buy</string>
+            <key>other</key>
+            <string>%d things to buy</string>
+        </dict>
+    </dict>
+    <key>shopping_section_delete_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Its %d item moves to the main list.</string>
+            <key>other</key>
+            <string>Its %d items move to the main list.</string>
         </dict>
     </dict>
     <key>lede_use_by_tomorrow</key>

@@ -31,6 +31,12 @@ public struct BatchScanEntry: Identifiable, Equatable {
     /// True when nothing better than the fallback was known, so the user should look at it.
     public var needsAttention: Bool { expirySource == .fallback }
 
+    /// The queue's Check date mark: a guess nothing better than the fallback backs up, and every
+    /// receipt row, because a receipt prints no dates. Only a date read off a pack is exempt.
+    public var showsCheckDate: Bool {
+        !isLookingUp && (needsAttention || (id.hasPrefix("receipt_") && expirySource != .detected))
+    }
+
     public init(
         id: String,
         barcode: String? = nil,

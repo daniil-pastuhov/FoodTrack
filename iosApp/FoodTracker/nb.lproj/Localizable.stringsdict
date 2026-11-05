@@ -402,6 +402,38 @@
             <string>Dette fjerner alle %d varer og avbryter påminnelsene for dem. Dette kan ikke angres.</string>
         </dict>
     </dict>
+    <key>shopping_list_lede_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d ting å kjøpe</string>
+            <key>other</key>
+            <string>%d ting å kjøpe</string>
+        </dict>
+    </dict>
+    <key>shopping_section_delete_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d vare flyttes til hovedlisten.</string>
+            <key>other</key>
+            <string>%d varer flyttes til hovedlisten.</string>
+        </dict>
+    </dict>
     <key>lede_use_by_tomorrow</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
