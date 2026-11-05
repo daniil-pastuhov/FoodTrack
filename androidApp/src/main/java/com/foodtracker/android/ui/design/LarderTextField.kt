@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
@@ -89,9 +91,20 @@ fun LarderTextField(
                 color = if (enabled) scheme.onSurface else muted
             )
         }
+        // Holds the selection itself, so a prefilled field opens with the cursor at the end, where
+        // backspace works, instead of before the first letter.
+        var fieldValue by remember { mutableStateOf(TextFieldValue(value, TextRange(value.length))) }
+        val shownValue = if (fieldValue.text == value) {
+            fieldValue
+        } else {
+            fieldValue.copy(text = value, selection = TextRange(value.length))
+        }
         BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
+            value = shownValue,
+            onValueChange = { next ->
+                fieldValue = next
+                if (next.text != value) onValueChange(next.text)
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .semantics {
