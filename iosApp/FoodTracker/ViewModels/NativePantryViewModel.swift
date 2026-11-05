@@ -1352,6 +1352,21 @@ public class NativePantryViewModel: ObservableObject {
         recordProductName(trimmed)
     }
 
+    /// As `addManualShoppingListEntry(_:)`, but says when the name was on the list already, so
+    /// the screen can tell the person why no row appeared. `onDuplicate` gets the name as it is
+    /// written on the list, which may differ in case from what was typed.
+    public func addManualShoppingListEntry(_ productName: String, onDuplicate: (String) -> Void) {
+        let normalized = productName.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !normalized.isEmpty else { return }
+        if let existing = shoppingList.first(where: {
+            $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == normalized
+        }) {
+            onDuplicate(existing.productName)
+        } else {
+            addManualShoppingListEntry(productName)
+        }
+    }
+
     /// Adds every entry in `raw` (a QR payload or pasted text - see `ShoppingListShare.parse`)
     /// that isn't on the list already, and returns how many were added and how many were
     /// understood.

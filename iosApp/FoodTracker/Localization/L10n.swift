@@ -224,7 +224,6 @@ public enum L10n {
     public static func shoppingSectionDeleteTitle(_ name: String) -> String {
         String(format: NSLocalizedString("shopping_section_delete_title", comment: ""), name)
     }
-    public static var shoppingSectionDeleteMessage: String { NSLocalizedString("shopping_section_delete_message", comment: "") }
     public static var shoppingSectionSave: String { NSLocalizedString("shopping_section_save", comment: "") }
     public static var shoppingSectionNamePlaceholder: String { NSLocalizedString("shopping_section_name_placeholder", comment: "") }
     public static var shoppingSectionMoveTo: String { NSLocalizedString("shopping_section_move_to", comment: "") }
@@ -303,6 +302,32 @@ public enum L10n {
             NSLocalizedString("shopping_list_import_added_format", comment: ""),
             count
         )
+    }
+    public static var shoppingListBrand: String { NSLocalizedString("shopping_list_brand", comment: "") }
+    public static var shoppingListLedeEmpty: String { NSLocalizedString("shopping_list_lede_empty", comment: "") }
+    public static func shoppingListLede(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("shopping_list_lede_format", comment: ""), count)
+    }
+    public static func shoppingListAlreadyListed(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_list_already_listed", comment: ""), name)
+    }
+    public static func shoppingListMarkBought(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_list_mark_bought", comment: ""), name)
+    }
+    public static var shoppingListImportPlaceholder: String { NSLocalizedString("shopping_list_import_placeholder", comment: "") }
+    public static func shoppingListBarcode(_ barcode: String) -> String {
+        String(format: NSLocalizedString("shopping_list_barcode_format", comment: ""), barcode)
+    }
+    public static var shoppingListImportLabel: String { NSLocalizedString("shopping_list_import_label", comment: "") }
+    public static var shoppingListClose: String { NSLocalizedString("shopping_list_close", comment: "") }
+    public static var shoppingListQrDescription: String { NSLocalizedString("shopping_list_qr_description", comment: "") }
+    public static var shoppingListDragHandle: String { NSLocalizedString("shopping_list_drag_handle", comment: "") }
+    public static var shoppingSectionsLabel: String { NSLocalizedString("shopping_sections_label", comment: "") }
+    public static var shoppingSectionNameLabel: String { NSLocalizedString("shopping_section_name_label", comment: "") }
+    public static var shoppingSectionKeep: String { NSLocalizedString("shopping_section_keep", comment: "") }
+    public static var shoppingSectionDeleteConfirm: String { NSLocalizedString("shopping_section_delete_confirm", comment: "") }
+    public static func shoppingSectionDeleteCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("shopping_section_delete_count_format", comment: ""), count)
     }
     public static var shoppingListScan: String { NSLocalizedString("shopping_list_scan", comment: "") }
     public static var shoppingListDidYouMeanTitle: String { NSLocalizedString("shopping_list_did_you_mean_title", comment: "") }

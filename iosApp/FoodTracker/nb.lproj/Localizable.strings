@@ -120,7 +120,6 @@
 "shopping_section_rename" = "Gi nytt navn";
 "shopping_section_delete" = "Slett";
 "shopping_section_delete_title" = "Slette «%@»?";
-"shopping_section_delete_message" = "Varene flyttes til hovedlisten.";
 "shopping_section_save" = "Lagre";
 "shopping_section_name_placeholder" = "f.eks. Meieri";
 "shopping_section_move_to" = "Flytt til seksjon";
@@ -248,7 +247,7 @@
 
 "shopping_list_share_content_description" = "Del eller importer liste";
 "shopping_list_share_dialog_title" = "Del liste";
-"shopping_list_share_dialog_message" = "Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din — ingenting erstattes.";
+"shopping_list_share_dialog_message" = "Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din, ingenting erstattes.";
 "shopping_list_share_as_text" = "Del som tekst";
 "shopping_list_share_as_qr" = "Vis QR-kode";
 "shopping_list_share_qr_hint" = "Skann denne fra handlelisten på den andre telefonen.";
@@ -475,3 +474,19 @@
 "category_settings_shelf_life_range" = "Fra 0 til 3650 dager";
 "category_settings_shelf_life_error" = "Skriv inn et tall fra 0 til 3650, det er omtrent 10 år";
 "category_settings_shelf_life_save" = "Lagre";
+
+/* Larder: Shopping */
+"shopping_list_brand" = "Handleliste";
+"shopping_list_lede_empty" = "Ingenting å kjøpe";
+"shopping_list_already_listed" = "%@ står allerede på listen";
+"shopping_list_mark_bought" = "Merk %@ som kjøpt";
+"shopping_list_import_placeholder" = "Melk\nBrød (2)";
+"shopping_list_barcode_format" = "Strekkode: %@";
+"shopping_list_import_label" = "Listen din";
+"shopping_list_close" = "Lukk";
+"shopping_list_qr_description" = "QR-kode med handlelisten";
+"shopping_list_drag_handle" = "Dra for å endre rekkefølgen";
+"shopping_sections_label" = "Seksjoner";
+"shopping_section_name_label" = "Navn på seksjon";
+"shopping_section_keep" = "Behold seksjonen";
+"shopping_section_delete_confirm" = "Slett seksjonen";

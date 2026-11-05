@@ -220,7 +220,7 @@
     <string name="shopping_list_add_button">Добавить</string>
     <string name="shopping_list_scan_content_description">Сканировать продукт</string>    <string name="shopping_list_share_content_description">Поделиться списком или импортировать</string>
     <string name="shopping_list_share_dialog_title">Поделиться списком</string>
-    <string name="shopping_list_share_dialog_message">Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку — ничего не заменяется.</string>
+    <string name="shopping_list_share_dialog_message">Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку, ничего не заменяется.</string>
     <string name="shopping_list_share_as_text">Отправить текстом</string>
     <string name="shopping_list_share_as_qr">Показать QR-код</string>
     <string name="shopping_list_share_qr_content_description">QR-код со списком покупок</string>
@@ -246,7 +246,6 @@
     <string name="shopping_section_rename">Переименовать раздел</string>
     <string name="shopping_section_delete">Удалить</string>
     <string name="shopping_section_delete_title">Удалить «%1$s»?</string>
-    <string name="shopping_section_delete_message">Товары из него перейдут в основной список.</string>
     <string name="shopping_section_save">Сохранить</string>
     <string name="shopping_section_name_placeholder">например, Молочный отдел</string>
     <string name="shopping_section_move_to">Переместить в раздел</string>
@@ -663,5 +662,30 @@
         <item quantity="few">Это удалит %1$d продукта и отменит напоминания о сроке годности. Это действие необратимо.</item>
         <item quantity="many">Это удалит %1$d продуктов и отменит напоминания о сроке годности. Это действие необратимо.</item>
         <item quantity="other">Это удалит %1$d продукта и отменит напоминания о сроке годности. Это действие необратимо.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Покупки</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">Купить: %d товар</item>
+        <item quantity="few">Купить: %d товара</item>
+        <item quantity="many">Купить: %d товаров</item>
+        <item quantity="other">Купить: %d товара</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Покупать нечего</string>
+    <string name="shopping_list_already_listed">%1$s уже в списке</string>
+    <string name="shopping_list_check_off">Отметить</string>
+    <string name="shopping_list_import_label">Ваш список</string>
+    <string name="shopping_list_close">Закрыть</string>
+    <string name="shopping_list_done">Готово</string>
+    <string name="shopping_sections_label">Разделы</string>
+    <string name="shopping_section_name_label">Название раздела</string>
+    <string name="shopping_section_keep">Оставить раздел</string>
+    <string name="shopping_section_delete_confirm">Удалить раздел</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">%d товар из него перейдёт в основной список.</item>
+        <item quantity="few">%d товара из него перейдут в основной список.</item>
+        <item quantity="many">%d товаров из него перейдут в основной список.</item>
+        <item quantity="other">%d товара из него перейдут в основной список.</item>
     </plurals>
 </resources>

@@ -120,7 +120,6 @@
 "shopping_section_rename" = "Rename section";
 "shopping_section_delete" = "Delete";
 "shopping_section_delete_title" = "Delete “%@”?";
-"shopping_section_delete_message" = "Its items move to the main list.";
 "shopping_section_save" = "Save";
 "shopping_section_name_placeholder" = "e.g. Dairy aisle";
 "shopping_section_move_to" = "Move to section";
@@ -248,7 +247,7 @@
 
 "shopping_list_share_content_description" = "Share or import list";
 "shopping_list_share_dialog_title" = "Share list";
-"shopping_list_share_dialog_message" = "Send your list to someone else, or bring one in. Imported items are added to your list — nothing is replaced.";
+"shopping_list_share_dialog_message" = "Send your list to someone else, or bring one in. Imported items are added to your list, nothing is replaced.";
 "shopping_list_share_as_text" = "Share as text";
 "shopping_list_share_as_qr" = "Show QR code";
 "shopping_list_share_qr_hint" = "Scan this from the other phone's shopping list.";
@@ -475,3 +474,19 @@
 "category_settings_shelf_life_range" = "From 0 to 3650 days";
 "category_settings_shelf_life_error" = "Enter a number from 0 to 3650, which is about 10 years";
 "category_settings_shelf_life_save" = "Save";
+
+/* Larder: Shopping */
+"shopping_list_brand" = "Shopping list";
+"shopping_list_lede_empty" = "Nothing to buy";
+"shopping_list_already_listed" = "%@ is already on your list";
+"shopping_list_mark_bought" = "Mark %@ as bought";
+"shopping_list_import_placeholder" = "Milk\nBread (2)";
+"shopping_list_barcode_format" = "Barcode: %@";
+"shopping_list_import_label" = "Your list";
+"shopping_list_close" = "Close";
+"shopping_list_qr_description" = "QR code containing the shopping list";
+"shopping_list_drag_handle" = "Drag to reorder";
+"shopping_sections_label" = "Sections";
+"shopping_section_name_label" = "Section name";
+"shopping_section_keep" = "Keep section";
+"shopping_section_delete_confirm" = "Delete section";
