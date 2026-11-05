@@ -7,9 +7,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import java.time.DayOfWeek
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
+import java.util.Date
 import java.util.Locale
 
 /** Renders [date] using the device's locale date order/format (e.g. DD/MM/YYYY vs MM/DD/YYYY), never a fixed one. */
@@ -53,8 +55,10 @@ fun formatDayHeading(date: LocalDate, currentYear: Int): String {
     val locale = LocalConfiguration.current.locales[0]
     return remember(date, currentYear, locale) {
         val skeleton = if (date.year == currentYear) "EEEEdMMMM" else "yEEEEdMMMM"
-        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
-            .format(date.toJavaLocalDate())
+        // ICU, because java.time gives the standalone "ноябрь" where a day needs "ноября".
+        val midnight = date.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        android.icu.text.DateFormat.getInstanceForSkeleton(skeleton, locale)
+            .format(Date.from(midnight))
             .replaceFirstChar { it.titlecase(locale) }
     }
 }
@@ -65,7 +69,7 @@ fun formatDayHeading(date: LocalDate, currentYear: Int): String {
 fun narrowWeekdayNames(): List<String> {
     val locale = LocalConfiguration.current.locales[0]
     return remember(locale) {
-        DayOfWeek.entries.map { it.getDisplayName(TextStyle.NARROW_STANDALONE, locale) }
+        DayOfWeek.entries.map { it.getDisplayName(TextStyle.NARROW_STANDALONE, locale).uppercase(locale) }
     }
 }
 
