@@ -120,7 +120,6 @@
 "shopping_section_rename" = "Переименовать раздел";
 "shopping_section_delete" = "Удалить";
 "shopping_section_delete_title" = "Удалить «%@»?";
-"shopping_section_delete_message" = "Товары из него перейдут в основной список.";
 "shopping_section_save" = "Сохранить";
 "shopping_section_name_placeholder" = "например, Молочный отдел";
 "shopping_section_move_to" = "Переместить в раздел";
@@ -248,7 +247,7 @@
 
 "shopping_list_share_content_description" = "Поделиться списком или импортировать";
 "shopping_list_share_dialog_title" = "Поделиться списком";
-"shopping_list_share_dialog_message" = "Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку — ничего не заменяется.";
+"shopping_list_share_dialog_message" = "Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку, ничего не заменяется.";
 "shopping_list_share_as_text" = "Отправить текстом";
 "shopping_list_share_as_qr" = "Показать QR-код";
 "shopping_list_share_qr_hint" = "Отсканируйте его со списка покупок на другом телефоне.";
@@ -418,3 +417,19 @@
 "onboarding_placeholder_title" = "Напоминает до того, как еда испортится, а не после.";
 "onboarding_placeholder_body" = "Ваши запасы остаются на вашем устройстве.";
 "onboarding_placeholder_continue" = "Начать";
+
+/* Larder: Shopping */
+"shopping_list_brand" = "Покупки";
+"shopping_list_lede_empty" = "Покупать нечего";
+"shopping_list_already_listed" = "%@ уже в списке";
+"shopping_list_mark_bought" = "Отметить «%@» как купленное";
+"shopping_list_import_placeholder" = "Молоко\nХлеб (2)";
+"shopping_list_barcode_format" = "Штрихкод: %@";
+"shopping_list_import_label" = "Ваш список";
+"shopping_list_close" = "Закрыть";
+"shopping_list_qr_description" = "QR-код со списком покупок";
+"shopping_list_drag_handle" = "Перетащите, чтобы изменить порядок";
+"shopping_sections_label" = "Разделы";
+"shopping_section_name_label" = "Название раздела";
+"shopping_section_keep" = "Оставить раздел";
+"shopping_section_delete_confirm" = "Удалить раздел";

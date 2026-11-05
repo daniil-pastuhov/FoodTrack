@@ -482,5 +482,45 @@
             <string>Просрочено %d дня назад</string>
         </dict>
     </dict>
+    <key>shopping_list_lede_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Купить: %d товар</string>
+            <key>few</key>
+            <string>Купить: %d товара</string>
+            <key>many</key>
+            <string>Купить: %d товаров</string>
+            <key>other</key>
+            <string>Купить: %d товара</string>
+        </dict>
+    </dict>
+    <key>shopping_section_delete_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d товар из него перейдёт в основной список.</string>
+            <key>few</key>
+            <string>%d товара из него перейдут в основной список.</string>
+            <key>many</key>
+            <string>%d товаров из него перейдут в основной список.</string>
+            <key>other</key>
+            <string>%d товара из него перейдут в основной список.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>
