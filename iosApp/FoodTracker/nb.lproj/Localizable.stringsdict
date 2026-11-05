@@ -354,5 +354,37 @@
             <string>Hver %d. dag</string>
         </dict>
     </dict>
+    <key>items_deleted_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d vare slettet</string>
+            <key>other</key>
+            <string>%d varer slettet</string>
+        </dict>
+    </dict>
+    <key>status_days_over_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Utløpt for %d dag siden</string>
+            <key>other</key>
+            <string>Utløpt for %d dager siden</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

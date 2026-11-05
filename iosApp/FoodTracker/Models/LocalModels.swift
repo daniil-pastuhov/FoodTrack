@@ -8,6 +8,9 @@ public enum ExpiryStatus: String, Codable {
     case fresh = "Fresh"
 }
 
+/// The most of one item the app keeps count of, the same on both platforms.
+public let maxItemQuantity = 99
+
 public struct PantryItem: Identifiable, Codable, Equatable, Sendable {
     public let id: String
     public var name: String
@@ -80,6 +83,15 @@ public struct PantryItem: Identifiable, Codable, Equatable, Sendable {
     public var daysRemainingFormatted: String {
         L10n.daysRemaining(daysRemaining)
     }
+
+    /// The words a status chip shows. See `L10n.expiryStatusLabel`.
+    public func statusLabel(expiringSoonDays: Int) -> String {
+        L10n.expiryStatusLabel(
+            status: expiryStatus(expiringSoonDays: expiringSoonDays),
+            daysRemaining: daysRemaining,
+            expiryDate: expiryDate
+        )
+    }
 }
 
 /// Swift port of `shared`'s `DateUtils.MAX_PLAUSIBLE_EXPIRY_YEARS` / `isPlausibleExpiryDate`:
@@ -97,7 +109,7 @@ public enum ExpiryDatePlausibility {
     }
 }
 
-public struct ProductInfo: Codable {
+public struct ProductInfo: Codable, Equatable {
     public let barcode: String
     public let name: String
     public let brand: String?
@@ -371,6 +383,10 @@ public struct AppSettings: Codable, Equatable {
     /// `stores` being non-empty: this is the switch that gates asking for background location,
     /// the most intrusive permission the app requests.
     public var storeRemindersEnabled: Bool
+    /// Whether first-run onboarding is finished. False on a fresh install. Someone upgrading
+    /// with items already in the pantry never sees it, and neither does anyone who restores a
+    /// backup with Replace: see `NativePantryViewModel.completeOnboardingIfPantryHasItems`.
+    public var onboardingCompleted: Bool
 
     public init(
         notifications: NotificationSettings = NotificationSettings(),
@@ -383,7 +399,8 @@ public struct AppSettings: Codable, Equatable {
         sortOption: SortOption = .expiryDate,
         allergens: Set<String> = [],
         stores: [StorePlace] = [],
-        storeRemindersEnabled: Bool = false
+        storeRemindersEnabled: Bool = false,
+        onboardingCompleted: Bool = false
     ) {
         self.notifications = notifications
         self.expiringSoonDays = expiringSoonDays
@@ -396,6 +413,7 @@ public struct AppSettings: Codable, Equatable {
         self.allergens = allergens
         self.stores = stores
         self.storeRemindersEnabled = storeRemindersEnabled
+        self.onboardingCompleted = onboardingCompleted
     }
 
     /// The storage location a freshly created item should be pre-filled with. Falls back to
@@ -428,5 +446,6 @@ public struct AppSettings: Codable, Equatable {
         allergens = try container.decodeIfPresent(Set<String>.self, forKey: .allergens) ?? []
         stores = try container.decodeIfPresent([StorePlace].self, forKey: .stores) ?? []
         storeRemindersEnabled = try container.decodeIfPresent(Bool.self, forKey: .storeRemindersEnabled) ?? false
+        onboardingCompleted = try container.decodeIfPresent(Bool.self, forKey: .onboardingCompleted) ?? false
     }
 }

@@ -37,6 +37,56 @@ public enum L10n {
     }
     public static var undoAction: String { NSLocalizedString("undo_action", comment: "") }
 
+    // Larder foundation
+    public static var navShopping: String { NSLocalizedString("nav_shopping", comment: "") }
+    public static var backButton: String { NSLocalizedString("back_button", comment: "") }
+
+    /// How many days ahead a fresh item still counts down rather than showing its date.
+    private static let relativeFreshDays = 7
+
+    /// The words a status chip shows: "1 day over", "Today", "Tomorrow", "In 4 days", "19 Nov",
+    /// and the year too when it isn't this one. Factual on purpose: a passed date is never
+    /// "Expired!". Mirrors Android's `expiryStatusLabel`.
+    public static func expiryStatusLabel(
+        status: ExpiryStatus,
+        daysRemaining: Int,
+        expiryDate: Date,
+        today: Date = Date(),
+        locale: Locale = .current
+    ) -> String {
+        if daysRemaining < 0 {
+            return String.localizedStringWithFormat(NSLocalizedString("status_days_over_format", comment: ""), -daysRemaining)
+        }
+        if daysRemaining == 0 { return NSLocalizedString("status_today", comment: "") }
+        if daysRemaining == 1 { return NSLocalizedString("status_tomorrow", comment: "") }
+        if status != .fresh || daysRemaining <= relativeFreshDays {
+            return String.localizedStringWithFormat(NSLocalizedString("expires_in_days_format", comment: ""), daysRemaining)
+        }
+        let calendar = Calendar.current
+        let sameYear = calendar.component(.year, from: expiryDate) == calendar.component(.year, from: today)
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate(sameYear ? "dMMM" : "dMMMy")
+        return formatter.string(from: expiryDate)
+    }
+
+    public static var clearFieldButton: String { NSLocalizedString("clear_field_button", comment: "") }
+    public static var dismissButton: String { NSLocalizedString("dismiss_button", comment: "") }
+    public static var quantityDecrease: String { NSLocalizedString("quantity_decrease", comment: "") }
+    public static var quantityIncrease: String { NSLocalizedString("quantity_increase", comment: "") }
+    public static func useOneLabel(_ name: String) -> String {
+        String(format: NSLocalizedString("use_one_label_format", comment: ""), name)
+    }
+    public static func itemSavedTo(_ name: String, _ location: String) -> String {
+        String(format: NSLocalizedString("item_saved_to_format", comment: ""), name, location)
+    }
+    public static func itemsDeleted(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("items_deleted_format", comment: ""), count)
+    }
+    public static var onboardingPlaceholderTitle: String { NSLocalizedString("onboarding_placeholder_title", comment: "") }
+    public static var onboardingPlaceholderBody: String { NSLocalizedString("onboarding_placeholder_body", comment: "") }
+    public static var onboardingPlaceholderContinue: String { NSLocalizedString("onboarding_placeholder_continue", comment: "") }
+
     public static var exitSelectionButton: String { NSLocalizedString("exit_selection_button", comment: "") }
     public static var selectItemsButton: String { NSLocalizedString("select_items_button", comment: "") }
     public static var moreOptionsButton: String { NSLocalizedString("more_options_button", comment: "") }

@@ -403,3 +403,18 @@
 "category_builtin_drinks" = "Drikke";
 "category_builtin_sweets" = "Søtsaker";
 "category_builtin_pantry" = "Tørrvarer";
+
+/* Larder foundation */
+"nav_shopping" = "Handleliste";
+"back_button" = "Tilbake";
+"status_today" = "Utløper i dag";
+"status_tomorrow" = "Utløper i morgen";
+"clear_field_button" = "Tøm";
+"dismiss_button" = "Lukk";
+"quantity_decrease" = "Reduser antall";
+"quantity_increase" = "Øk antall";
+"use_one_label_format" = "Bruk én: %@";
+"item_saved_to_format" = "%1$@ lagret i %2$@";
+"onboarding_placeholder_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
+"onboarding_placeholder_body" = "Matlageret ditt blir på enheten din.";
+"onboarding_placeholder_continue" = "Kom i gang";

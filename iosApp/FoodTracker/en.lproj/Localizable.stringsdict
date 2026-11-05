@@ -354,5 +354,37 @@
             <string>Every %d days</string>
         </dict>
     </dict>
+    <key>items_deleted_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d item deleted</string>
+            <key>other</key>
+            <string>%d items deleted</string>
+        </dict>
+    </dict>
+    <key>status_days_over_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d day over</string>
+            <key>other</key>
+            <string>%d days over</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

@@ -403,3 +403,18 @@
 "category_builtin_drinks" = "Drinks";
 "category_builtin_sweets" = "Sweets";
 "category_builtin_pantry" = "Pantry";
+
+/* Larder foundation */
+"nav_shopping" = "Shopping";
+"back_button" = "Back";
+"status_today" = "Today";
+"status_tomorrow" = "Tomorrow";
+"clear_field_button" = "Clear";
+"dismiss_button" = "Dismiss";
+"quantity_decrease" = "Decrease quantity";
+"quantity_increase" = "Increase quantity";
+"use_one_label_format" = "Use one: %@";
+"item_saved_to_format" = "%1$@ saved to %2$@";
+"onboarding_placeholder_title" = "Reminds you before food goes off, not after.";
+"onboarding_placeholder_body" = "Your pantry stays on your device.";
+"onboarding_placeholder_continue" = "Get started";

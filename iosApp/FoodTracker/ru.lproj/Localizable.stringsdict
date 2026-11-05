@@ -442,5 +442,45 @@
             <string>Каждые %d дня</string>
         </dict>
     </dict>
+    <key>items_deleted_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Удалён %d товар</string>
+            <key>few</key>
+            <string>Удалено %d товара</string>
+            <key>many</key>
+            <string>Удалено %d товаров</string>
+            <key>other</key>
+            <string>Удалено %d товара</string>
+        </dict>
+    </dict>
+    <key>status_days_over_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Просрочено %d день назад</string>
+            <key>few</key>
+            <string>Просрочено %d дня назад</string>
+            <key>many</key>
+            <string>Просрочено %d дней назад</string>
+            <key>other</key>
+            <string>Просрочено %d дня назад</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

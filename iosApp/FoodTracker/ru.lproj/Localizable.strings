@@ -403,3 +403,18 @@
 "category_builtin_drinks" = "Напитки";
 "category_builtin_sweets" = "Сладкое";
 "category_builtin_pantry" = "Бакалея";
+
+/* Larder foundation */
+"nav_shopping" = "Покупки";
+"back_button" = "Назад";
+"status_today" = "Истекает сегодня";
+"status_tomorrow" = "Истекает завтра";
+"clear_field_button" = "Очистить";
+"dismiss_button" = "Закрыть";
+"quantity_decrease" = "Уменьшить количество";
+"quantity_increase" = "Увеличить количество";
+"use_one_label_format" = "Использовать один: %@";
+"item_saved_to_format" = "%1$@: сохранено в «%2$@»";
+"onboarding_placeholder_title" = "Напоминает до того, как еда испортится, а не после.";
+"onboarding_placeholder_body" = "Ваши запасы остаются на вашем устройстве.";
+"onboarding_placeholder_continue" = "Начать";
