@@ -119,7 +119,8 @@
 		940B16F539B5A8BF294C9B45 /* PantryRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 151B0AA4A27AC4E981D60AE2 /* PantryRow.swift */; };
 		68B6A7B5E0B20FA1B7653101 /* ScanFab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C7820F87719E4003215C76E /* ScanFab.swift */; };
 		63EEE3E83E1D1C3EB79D1347 /* StatusChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = E37DEF240EE8A3FE4FF38568 /* StatusChip.swift */; };
-		6419956E33C023008B2DC1FD /* OnboardingPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F952A2D29AC53692297D236F /* OnboardingPlaceholderView.swift */; };
+		A1B0DE010000000000000001 /* OnboardingFlow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B0DE010000000000000002 /* OnboardingFlow.swift */; };
+		6419956E33C023008B2DC1FD /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F952A2D29AC53692297D236F /* OnboardingView.swift */; };
 		A34A3422BE0FD390012D5644 /* Vollkorn-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 334FD8C2913F33FFC6A646F1 /* Vollkorn-SemiBold.ttf */; };
 		0A1606EAEDC9830A250A3470 /* Lucide-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = CD07E74FFAB71DDB8410A165 /* Lucide-LICENSE.txt */; };
 		803ACDF7394596AB50B9EFD5 /* Vollkorn-OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = CDEAE32A6FA8767992E158F8 /* Vollkorn-OFL.txt */; };
@@ -244,7 +245,8 @@
 		151B0AA4A27AC4E981D60AE2 /* PantryRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PantryRow.swift; sourceTree = "<group>"; };
 		8C7820F87719E4003215C76E /* ScanFab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanFab.swift; sourceTree = "<group>"; };
 		E37DEF240EE8A3FE4FF38568 /* StatusChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusChip.swift; sourceTree = "<group>"; };
-		F952A2D29AC53692297D236F /* OnboardingPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingPlaceholderView.swift; sourceTree = "<group>"; };
+		A1B0DE010000000000000002 /* OnboardingFlow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingFlow.swift; sourceTree = "<group>"; };
+		F952A2D29AC53692297D236F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		334FD8C2913F33FFC6A646F1 /* Vollkorn-SemiBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Vollkorn-SemiBold.ttf; sourceTree = "<group>"; };
 		CD07E74FFAB71DDB8410A165 /* Lucide-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Lucide-LICENSE.txt; sourceTree = "<group>"; };
 		CDEAE32A6FA8767992E158F8 /* Vollkorn-OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = Vollkorn-OFL.txt; sourceTree = "<group>"; };
@@ -324,7 +326,8 @@
 		53503EEC67955D2B8E53CACE /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				F952A2D29AC53692297D236F /* OnboardingPlaceholderView.swift */,
+				A1B0DE010000000000000002 /* OnboardingFlow.swift */,
+				F952A2D29AC53692297D236F /* OnboardingView.swift */,
 				CFAF6C65508B5D0EB19E32A9 /* ItemRowView.swift */,
 				A1F10C0B7E3D4C5F9B2A6D02 /* FlowLayout.swift */,
 				A1F10C0B7E3D4C5F9B2A6E02 /* HomeSummary.swift */,
@@ -721,7 +724,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6419956E33C023008B2DC1FD /* OnboardingPlaceholderView.swift in Sources */,
+				A1B0DE010000000000000001 /* OnboardingFlow.swift in Sources */,
+				6419956E33C023008B2DC1FD /* OnboardingView.swift in Sources */,
 				63EEE3E83E1D1C3EB79D1347 /* StatusChip.swift in Sources */,
 				68B6A7B5E0B20FA1B7653101 /* ScanFab.swift in Sources */,
 				940B16F539B5A8BF294C9B45 /* PantryRow.swift in Sources */,

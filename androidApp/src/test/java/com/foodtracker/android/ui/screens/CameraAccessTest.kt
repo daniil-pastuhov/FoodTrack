@@ -43,6 +43,19 @@ class CameraAccessTest {
     }
 
     @Test
+    fun `a refusal given before the scanner opened does not ask again`() {
+        val refusedEarlier = CameraAccess(granted = false, refused = true)
+
+        assertFalse(refusedEarlier.shouldRequest)
+        assertFalse(refusedEarlier.resumed(false).shouldRequest)
+    }
+
+    @Test
+    fun `a refusal given earlier clears once the camera is allowed in settings`() {
+        assertEquals(CameraAccess(granted = true), CameraAccess(granted = false, refused = true).resumed(true))
+    }
+
+    @Test
     fun `allowing opens the camera`() {
         assertEquals(CameraAccess(granted = true), notAsked.requested().answered(true))
     }

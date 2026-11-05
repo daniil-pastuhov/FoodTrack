@@ -413,9 +413,6 @@
 "quantity_increase" = "Увеличить количество";
 "use_one_label_format" = "Использовать один: %@";
 "item_saved_to_format" = "%1$@: сохранено в «%2$@»";
-"onboarding_placeholder_title" = "Напоминает до того, как еда испортится, а не после.";
-"onboarding_placeholder_body" = "Ваши запасы остаются на вашем устройстве.";
-"onboarding_placeholder_continue" = "Начать";
 
 /* Pantry */
 "lede_next_up" = "Дальше: %1$@ %2$@";
@@ -557,3 +554,35 @@
 "calendar_used_snackbar" = "%1$@: использовано";
 "calendar_tossed_snackbar" = "%1$@: выброшено";
 "calendar_empty_message" = "Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.";
+
+/* Onboarding */
+"onboarding_get_started" = "Начать";
+"onboarding_welcome_title" = "Напоминает до того, как еда испортится, а не после.";
+"onboarding_private_title" = "Приватно по умолчанию";
+"onboarding_private_body" = "Без аккаунта и рекламы. Ваши запасы остаются на вашем устройстве.";
+"onboarding_notifications_title" = "Тихое напоминание накануне";
+"onboarding_notifications_body" = "Напомним в 09:00, за день до конца срока. Время можно изменить в настройках, там же напоминания можно отключить.";
+"onboarding_sample_source" = "%1$@ · 09:00";
+"onboarding_sample_title" = "Лучше использовать скоро";
+"onboarding_sample_body" = "Греческий йогурт: срок годности заканчивается завтра.";
+"onboarding_sample_description" = "Пример напоминания: %1$@. %2$s";
+"onboarding_notifications_allow" = "Включить напоминания";
+"onboarding_not_now" = "Не сейчас";
+"onboarding_camera_title" = "Сканируйте, а не вводите";
+"onboarding_camera_body" = "Наведите камеру на продукт, и %1$@ заполнит данные за вас. Фото остаются на вашем устройстве.";
+"onboarding_camera_barcodes_title" = "Штрихкоды";
+"onboarding_camera_barcodes_body" = "Находит продукт и его название";
+"onboarding_camera_dates_title" = "Напечатанные даты";
+"onboarding_camera_dates_body" = "Считывает дату с упаковки";
+"onboarding_camera_allow" = "Разрешить камеру";
+"onboarding_ready_title" = "Всё готово для первого продукта";
+"onboarding_ready_body" = "Возьмите что-нибудь из холодильника и отсканируйте. Это займёт несколько секунд.";
+"onboarding_skip" = "Пока пропустить";
+"onboarding_declined_title" = "Можно начать и без них";
+"onboarding_declined_body" = "Всё остальное работает. Передумать можно в любой момент.";
+"onboarding_declined_reminders_title" = "Напоминания выключены";
+"onboarding_declined_reminders_body" = "На главном экране появится подсказка, как их включить";
+"onboarding_declined_camera_title" = "Камера выключена";
+"onboarding_declined_camera_body" = "Сканер покажет, как её разрешить";
+"onboarding_add_by_hand" = "Добавить вручную";
+"reminders_not_asked_message" = "Включите их, и мы напомним за день до конца срока.";

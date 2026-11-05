@@ -41,9 +41,9 @@ struct RootTabView: View {
     /// Lets the tabs hide the pill or Scan. See `shellChromeEffect`.
     @StateObject private var shellChrome = ShellChrome()
 
-    /// Off until the real first-run flow lands, so nobody meets the placeholder. The same switch
-    /// as Android's `SHOW_ONBOARDING_ON_FIRST_RUN`.
-    private static let showOnboardingOnFirstRun = false
+    /// Sends a fresh install to onboarding. The same switch as Android's
+    /// `SHOW_ONBOARDING_ON_FIRST_RUN`.
+    private static let showOnboardingOnFirstRun = true
 
     private var isScanFloating: Bool {
         selectedTab.showsScan && !shellChrome.scanHidden && !(selectedTab == .home && barsInSideStrip)
@@ -155,10 +155,15 @@ struct RootTabView: View {
                     }
             }
         }
-        .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingPlaceholderView {
-                viewModel.completeOnboarding()
-                showOnboarding = false
+        // Over the shell rather than a cover of its own, so it is up from the first frame and the
+        // scanner or the add sheet can open as it goes, with no wait for a dismissal.
+        .accessibilityHidden(showOnboarding)
+        .overlay {
+            if showOnboarding {
+                OnboardingView(onFinish: finishOnboarding)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityAddTraits(.isModal)
+                    .transition(.opacity)
             }
         }
         .sheet(isPresented: Binding(
@@ -172,7 +177,8 @@ struct RootTabView: View {
         }
         .onChange(of: router.route) { _, route in
             guard let route else { return }
-            apply(route)
+            // First run finishes before anything else opens.
+            if !showOnboarding { apply(route) }
             router.route = nil
         }
         .onChange(of: viewModel.homeConfirmation) { _, confirmation in
@@ -186,13 +192,13 @@ struct RootTabView: View {
         .onAppear {
             // A quick action that launched the app cold arrives before any view exists to
             // observe the router, so it waits here until there is one.
+            let isFirstRun = Self.showOnboardingOnFirstRun && viewModel.needsOnboarding
+                && !FoodTrackerApp.isTakingScreenshots
             if let pending = router.pendingLaunchRoute {
                 router.pendingLaunchRoute = nil
-                apply(pending)
+                if !isFirstRun { apply(pending) }
             }
-            if Self.showOnboardingOnFirstRun, viewModel.needsOnboarding {
-                showOnboarding = true
-            }
+            if isFirstRun { showOnboarding = true }
         }
     }
 
@@ -405,6 +411,16 @@ struct RootTabView: View {
     private func readSafeArea(_ insets: EdgeInsets) {
         hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0
         bottomSafeArea = insets.bottom
+    }
+
+    private func finishOnboarding(_ exit: OnboardingExit) {
+        viewModel.completeOnboarding()
+        withAnimation { showOnboarding = false }
+        switch exit {
+        case .scanner: presentScanner(mode: .barcode)
+        case .addByHand: presentAddEdit(editing: nil)
+        case .home: break
+        }
     }
 
     private func presentScanner(mode: IOSCameraMode? = nil) {

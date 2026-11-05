@@ -541,8 +541,6 @@
         <item quantity="one">%d vare slettet</item>
         <item quantity="other">%d varer slettet</item>
     </plurals>
-    <string name="onboarding_placeholder_title">Velkommen til Matvakt</string>
-    <string name="onboarding_placeholder_continue">Kom i gang</string>
 
     <!-- Pantry -->
     <string name="lede_next_up">Neste: %1$s %2$s</string>
@@ -725,4 +723,35 @@
     <string name="calendar_used_snackbar">%1$s brukt</string>
     <string name="calendar_tossed_snackbar">%1$s kastet</string>
     <string name="calendar_empty_message">Legg til mat med dato, så dukker den opp her den dagen den går ut.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Kom i gang</string>
+    <string name="onboarding_welcome_title">Minner deg på det før maten blir dårlig, ikke etterpå.</string>
+    <string name="onboarding_private_title">Privat fra starten av</string>
+    <string name="onboarding_private_body">Ingen konto og ingen reklame. Matlageret ditt blir på enheten din.</string>
+    <string name="onboarding_notifications_title">Et stille hint dagen før</string>
+    <string name="onboarding_notifications_body">Vi minner deg på det klokken 09:00, dagen før en dato. Du kan endre tidspunktet eller slå av påminnelser i Innstillinger.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Bør brukes snart</string>
+    <string name="onboarding_sample_body">Gresk yoghurt når datoen sin i morgen.</string>
+    <string name="onboarding_sample_description">Eksempel på påminnelse: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Slå på påminnelser</string>
+    <string name="onboarding_not_now">Ikke nå</string>
+    <string name="onboarding_camera_title">Skann i stedet for å skrive</string>
+    <string name="onboarding_camera_body">Rett kameraet mot et produkt, så fyller %1$s inn opplysningene for deg. Bilder blir på enheten din.</string>
+    <string name="onboarding_camera_barcodes_title">Strekkoder</string>
+    <string name="onboarding_camera_barcodes_body">Finner produktet og navnet på det</string>
+    <string name="onboarding_camera_dates_title">Trykte datoer</string>
+    <string name="onboarding_camera_dates_body">Leser datoen på pakken</string>
+    <string name="onboarding_camera_allow">Tillat kameraet</string>
+    <string name="onboarding_ready_title">Klar for det første produktet</string>
+    <string name="onboarding_ready_body">Hent noe fra kjøleskapet og skann det. Det tar noen få sekunder.</string>
+    <string name="onboarding_skip">Hopp over for nå</string>
+    <string name="onboarding_declined_title">Du kan begynne uten dem</string>
+    <string name="onboarding_declined_body">Alt annet virker. Du kan ombestemme deg når som helst.</string>
+    <string name="onboarding_declined_reminders_title">Påminnelser er av</string>
+    <string name="onboarding_declined_reminders_body">Hjem viser en merknad om hvordan du slår dem på</string>
+    <string name="onboarding_declined_camera_title">Kameraet er av</string>
+    <string name="onboarding_declined_camera_body">Skanneren viser hvordan du tillater det</string>
+    <string name="onboarding_add_by_hand">Legg til et produkt manuelt</string>
 </resources>

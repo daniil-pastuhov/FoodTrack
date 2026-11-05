@@ -130,6 +130,8 @@ class MainActivity : ComponentActivity() {
      */
     private fun applyScreenFromIntent(intent: Intent) {
         if (shareRecipeFromIntent(intent)) return
+        // First run finishes before anything else opens.
+        if (currentScreenState.value == LarderRoute.Onboarding) return
         if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING_LIST, false)) {
             currentScreenState.value = LarderRoute.Shopping
             return

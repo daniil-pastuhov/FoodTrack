@@ -597,8 +597,6 @@
         <item quantity="many">Удалено %d товаров</item>
         <item quantity="other">Удалено %d товара</item>
     </plurals>
-    <string name="onboarding_placeholder_title">Добро пожаловать в Срокоед</string>
-    <string name="onboarding_placeholder_continue">Начать</string>
 
     <!-- Pantry -->
     <string name="lede_next_up">Дальше: %1$s %2$s</string>
@@ -801,4 +799,35 @@
     <string name="calendar_used_snackbar">%1$s: использовано</string>
     <string name="calendar_tossed_snackbar">%1$s: выброшено</string>
     <string name="calendar_empty_message">Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Начать</string>
+    <string name="onboarding_welcome_title">Напоминает до того, как еда испортится, а не после.</string>
+    <string name="onboarding_private_title">Приватно по умолчанию</string>
+    <string name="onboarding_private_body">Без аккаунта и рекламы. Ваши запасы остаются на вашем устройстве.</string>
+    <string name="onboarding_notifications_title">Тихое напоминание накануне</string>
+    <string name="onboarding_notifications_body">Напомним в 09:00, за день до конца срока. Время можно изменить в настройках, там же напоминания можно отключить.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Лучше использовать скоро</string>
+    <string name="onboarding_sample_body">Греческий йогурт: срок годности заканчивается завтра.</string>
+    <string name="onboarding_sample_description">Пример напоминания: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Включить напоминания</string>
+    <string name="onboarding_not_now">Не сейчас</string>
+    <string name="onboarding_camera_title">Сканируйте, а не вводите</string>
+    <string name="onboarding_camera_body">Наведите камеру на продукт, и %1$s заполнит данные за вас. Фото остаются на вашем устройстве.</string>
+    <string name="onboarding_camera_barcodes_title">Штрихкоды</string>
+    <string name="onboarding_camera_barcodes_body">Находит продукт и его название</string>
+    <string name="onboarding_camera_dates_title">Напечатанные даты</string>
+    <string name="onboarding_camera_dates_body">Считывает дату с упаковки</string>
+    <string name="onboarding_camera_allow">Разрешить камеру</string>
+    <string name="onboarding_ready_title">Всё готово для первого продукта</string>
+    <string name="onboarding_ready_body">Возьмите что-нибудь из холодильника и отсканируйте. Это займёт несколько секунд.</string>
+    <string name="onboarding_skip">Пока пропустить</string>
+    <string name="onboarding_declined_title">Можно начать и без них</string>
+    <string name="onboarding_declined_body">Всё остальное работает. Передумать можно в любой момент.</string>
+    <string name="onboarding_declined_reminders_title">Напоминания выключены</string>
+    <string name="onboarding_declined_reminders_body">На главном экране появится подсказка, как их включить</string>
+    <string name="onboarding_declined_camera_title">Камера выключена</string>
+    <string name="onboarding_declined_camera_body">Сканер покажет, как её разрешить</string>
+    <string name="onboarding_add_by_hand">Добавить вручную</string>
 </resources>
