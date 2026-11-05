@@ -29,9 +29,12 @@ import kotlinx.coroutines.launch
  *  of several, so the row slides back afterwards. */
 class LarderSwipeAction(
     val icon: LarderIcons,
-    val label: String,
+    /** Null shows the icon alone, for a reveal the row's own control already explains. */
+    val label: String?,
     val danger: Boolean = false,
     val keepsRow: Boolean = false,
+    /** A soft primary-container reveal, for actions that aren't the row's main story. */
+    val quiet: Boolean = false,
     val onSwipe: () -> Unit
 )
 
@@ -97,8 +100,16 @@ fun LarderSwipeRow(
 @Composable
 internal fun SwipeReveal(action: LarderSwipeAction, alignment: Alignment) {
     val scheme = MaterialTheme.colorScheme
-    val background = if (action.danger) scheme.error else scheme.primary
-    val foreground = if (action.danger) scheme.onError else scheme.onPrimary
+    val background = when {
+        action.danger -> scheme.error
+        action.quiet -> scheme.primaryContainer
+        else -> scheme.primary
+    }
+    val foreground = when {
+        action.danger -> scheme.onError
+        action.quiet -> scheme.onPrimaryContainer
+        else -> scheme.onPrimary
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -111,7 +122,9 @@ internal fun SwipeReveal(action: LarderSwipeAction, alignment: Alignment) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             LarderIcon(action.icon, contentDescription = null, tint = foreground)
-            Text(text = action.label, style = MaterialTheme.typography.labelLarge, color = foreground)
+            action.label?.let {
+                Text(text = it, style = MaterialTheme.typography.labelLarge, color = foreground)
+            }
         }
     }
 }

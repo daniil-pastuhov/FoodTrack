@@ -40,6 +40,7 @@ enum class LarderIcons(@DrawableRes val res: Int) {
     Info(R.drawable.lucide_info),
     Layers(R.drawable.lucide_layers),
     Leaf(R.drawable.lucide_leaf),
+    ListPlus(R.drawable.lucide_list_plus),
     MapPin(R.drawable.lucide_map_pin),
     Milk(R.drawable.lucide_milk),
     Minus(R.drawable.lucide_minus),

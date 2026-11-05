@@ -39,6 +39,7 @@ enum LarderIconName: String, CaseIterable {
     case info
     case layers
     case leaf
+    case listPlus = "list-plus"
     case mapPin = "map-pin"
     case milk
     case minus

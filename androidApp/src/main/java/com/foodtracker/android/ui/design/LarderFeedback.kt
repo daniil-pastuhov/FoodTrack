@@ -192,7 +192,8 @@ fun LarderSnackbar(data: SnackbarData, modifier: Modifier = Modifier) {
 @Composable
 fun LarderDialog(
     title: String,
-    confirmLabel: String,
+    /** Null for a dialog whose only button is [dismissLabel], or whose [content] holds its choices. */
+    confirmLabel: String?,
     onConfirm: () -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -201,11 +202,15 @@ fun LarderDialog(
     onDismiss: () -> Unit = onDismissRequest,
     destructive: Boolean = false,
     confirmEnabled: Boolean = true,
+    /** Overrides the confirm button's style, for a dialog whose confirm isn't the main action. */
+    confirmStyle: LarderButtonStyle? = null,
+    icon: LarderIcons? = null,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
+        icon = icon?.let { { LarderIcon(it, contentDescription = null) } },
         title = { Text(text = title, style = MaterialTheme.typography.titleLarge) },
         text = if (text != null || content != null) {
             {
@@ -224,12 +229,15 @@ fun LarderDialog(
             null
         },
         confirmButton = {
-            LarderButton(
-                text = confirmLabel,
-                onClick = onConfirm,
-                style = if (destructive) LarderButtonStyle.Danger else LarderButtonStyle.Primary,
-                enabled = confirmEnabled
-            )
+            if (confirmLabel != null) {
+                LarderButton(
+                    text = confirmLabel,
+                    onClick = onConfirm,
+                    style = confirmStyle
+                        ?: if (destructive) LarderButtonStyle.Danger else LarderButtonStyle.Primary,
+                    enabled = confirmEnabled
+                )
+            }
         },
         dismissButton = dismissLabel?.let { label ->
             { LarderButton(text = label, onClick = onDismiss, style = LarderButtonStyle.Text) }
