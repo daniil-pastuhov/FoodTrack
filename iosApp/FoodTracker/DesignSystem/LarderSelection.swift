@@ -217,10 +217,13 @@ private struct LarderSwitchStyle: ToggleStyle {
 struct LarderStepper: View {
     @Binding private var value: Int
     private let range: ClosedRange<Int>
+    private let outlined: Bool
 
-    init(value: Binding<Int>, range: ClosedRange<Int> = 1...maxItemQuantity) {
+    /// `outlined: false` is the compact form for dense rows: no border, a narrower count.
+    init(value: Binding<Int>, range: ClosedRange<Int> = 1...maxItemQuantity, outlined: Bool = true) {
         _value = value
         self.range = range
+        self.outlined = outlined
     }
 
     var body: some View {
@@ -231,10 +234,10 @@ struct LarderStepper: View {
             .disabled(value <= range.lowerBound)
 
             Text("\(value)")
-                .larderFont(.titleSm)
+                .larderFont(outlined ? .titleSm : .label)
                 .monospacedDigit()
                 .foregroundStyle(LarderColor.onSurface)
-                .frame(minWidth: 32)
+                .frame(minWidth: outlined ? 32 : 24)
                 .contentTransition(.numericText())
 
             LarderIconButton(.plus, label: L10n.quantityIncrease, color: LarderColor.primary) {
@@ -242,7 +245,7 @@ struct LarderStepper: View {
             }
             .disabled(value >= range.upperBound)
         }
-        .overlay { Capsule().strokeBorder(LarderColor.outline, lineWidth: 1) }
+        .overlay { Capsule().strokeBorder(outlined ? LarderColor.outline : Color.clear, lineWidth: 1) }
         .animation(.easeInOut(duration: 0.15), value: value)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(L10n.quantityLabel)
@@ -264,10 +267,13 @@ struct LarderSegmented<Option: Hashable>: View {
     @Binding private var selection: Option
     private let options: [Option]
     private let title: (Option) -> String
+    private let fill: Bool
 
-    init(selection: Binding<Option>, options: [Option], title: @escaping (Option) -> String) {
+    /// `fill: true` shares the full width equally between the segments.
+    init(selection: Binding<Option>, options: [Option], fill: Bool = false, title: @escaping (Option) -> String) {
         _selection = selection
         self.options = options
+        self.fill = fill
         self.title = title
     }
 
@@ -284,7 +290,7 @@ struct LarderSegmented<Option: Hashable>: View {
                         .minimumScaleFactor(0.8)
                         .foregroundStyle(isSelected ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
                         .padding(.horizontal, LarderSpace.s4)
-                        .frame(maxHeight: .infinity)
+                        .frame(maxWidth: fill ? .infinity : nil, maxHeight: .infinity)
                         .background(isSelected ? LarderColor.primaryContainer : Color.clear)
                         .contentShape(Rectangle())
                 }
