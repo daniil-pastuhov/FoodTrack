@@ -586,7 +586,11 @@ fun FoodTrackerRoot(
                     backProgress = 0f
                     when (currentScreen) {
                         is LarderRoute.Scanner -> navigateBackFromScanner()
-                        is LarderRoute.AddItem -> currentScreen = scanReturnScreen
+                        is LarderRoute.AddItem -> {
+                            stateHolder.clearScanState()
+                            scanningShoppingListEntry = null
+                            currentScreen = scanReturnScreen
+                        }
                         LarderRoute.Categories -> currentScreen = LarderRoute.Settings
                         LarderRoute.Settings, LarderRoute.Calendar, LarderRoute.Shopping -> navigateToDashboard()
                         is LarderRoute.ProductDetail, LarderRoute.Home, LarderRoute.Onboarding -> Unit
