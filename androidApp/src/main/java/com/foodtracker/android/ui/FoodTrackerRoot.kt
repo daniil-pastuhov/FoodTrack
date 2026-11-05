@@ -70,7 +70,9 @@ import com.foodtracker.android.ui.navigation.AddItemMode
 import com.foodtracker.android.ui.navigation.ItemPrefill
 import com.foodtracker.android.ui.navigation.LarderNavigator
 import com.foodtracker.android.ui.navigation.LarderRoute
+import com.foodtracker.android.ui.navigation.LarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalLarderNavigator
+import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
 import com.foodtracker.android.ui.navigation.route
 import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
@@ -356,6 +358,20 @@ fun FoodTrackerRoot(
             // entries.
             val snackbarHostState = remember { SnackbarHostState() }
             val snackbarScope = rememberCoroutineScope()
+            val larderSnackbars = remember(snackbarHostState, snackbarScope) {
+                LarderSnackbars { message, actionLabel, onAction ->
+                    snackbarScope.launch {
+                        // A second removal shouldn't queue behind the first one's long Undo.
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        val result = snackbarHostState.showSnackbar(
+                            message = message,
+                            actionLabel = actionLabel,
+                            duration = if (actionLabel != null) SnackbarDuration.Long else SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) onAction?.invoke()
+                    }
+                }
+            }
             // Shown wherever the person lands, once they're back on a tab. Launched on the
             // snackbar scope because consuming it ends this effect.
             LaunchedEffect(homeConfirmation, currentTab != null) {
@@ -412,7 +428,7 @@ fun FoodTrackerRoot(
             // Backup file I/O. Kept here rather than in SettingsScreen because it needs a
             // ContentResolver and a coroutine scope, and because the result has to reach
             // the same snackbar host everything else reports through.
-            val onExportBackup: (android.net.Uri) -> Unit = { uri ->
+            val onExportBackup: (android.net.Uri, (Boolean) -> Unit) -> Unit = { uri, onResult ->
                 stateHolder.exportBackup { json, _ ->
                     snackbarScope.launch(Dispatchers.IO) {
                         val ok = try {
@@ -422,11 +438,7 @@ fun FoodTrackerRoot(
                         } catch (_: Exception) {
                             false
                         }
-                        withContext(Dispatchers.Main) {
-                            snackbarHostState.showSnackbar(
-                                context.getString(if (ok) R.string.backup_export_success else R.string.backup_export_failed)
-                            )
-                        }
+                        withContext(Dispatchers.Main) { onResult(ok) }
                     }
                 }
             }
@@ -610,7 +622,10 @@ fun FoodTrackerRoot(
                 expanded = expanded
             )
 
-            CompositionLocalProvider(LocalLarderNavigator provides navigator) {
+            CompositionLocalProvider(
+                LocalLarderNavigator provides navigator,
+                LocalLarderSnackbars provides larderSnackbars
+            ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Background preview of the Dashboard, revealed as the current screen
                 // scales away during an in-progress predictive back gesture.
@@ -731,6 +746,7 @@ fun FoodTrackerRoot(
                                         },
                                         onManageCategories = { currentScreen = LarderRoute.Categories },
                                         onExportBackup = onExportBackup,
+                                        pantryItemCount = { stateHolder.uiState.value.items.size },
                                         onImportBackup = onImportBackup,
                                         backupFileName = BackupSerializer.suggestedFileName(
                                             DateUtils.today().toString()

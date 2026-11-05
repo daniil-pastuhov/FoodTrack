@@ -64,4 +64,11 @@ fun interface LarderNavigator {
 }
 
 /** Provided by the root around every screen. */
+/** Shows a snackbar through the Root's host, so a screen can offer Undo or Try again itself. */
+fun interface LarderSnackbars {
+    fun show(message: String, actionLabel: String?, onAction: (() -> Unit)?)
+}
+
+val LocalLarderSnackbars = staticCompositionLocalOf { LarderSnackbars { _, _, _ -> } }
+
 val LocalLarderNavigator = staticCompositionLocalOf { LarderNavigator { } }

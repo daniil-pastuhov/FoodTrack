@@ -71,6 +71,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -109,11 +110,13 @@ fun SettingsScreen(
     onClearAllData: () -> Unit,
     onManageCategories: () -> Unit,
     /** Writes a full backup to the document the user picked. */
-    onExportBackup: (Uri) -> Unit,
+    onExportBackup: (Uri, (Boolean) -> Unit) -> Unit,
     /** Restores from the document the user picked, in the chosen mode. */
     onImportBackup: (Uri, RestoreMode) -> Unit,
     /** Default filename offered in the save dialog, stamped with today's date. */
     backupFileName: String,
+    /** How many items a Clear all data would remove, read when that dialog opens. */
+    pantryItemCount: () -> Int = { 0 },
     /** Asks for location permission and, once granted, reports the device's current position so
      *  it can be saved as a store. Null coordinates mean the user declined or no fix arrived. */
     onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit = { _, onResolved -> onResolved(null, null) },
@@ -138,9 +141,20 @@ fun SettingsScreen(
     // user then backed out of the picker.
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
 
+    val snackbars = LocalLarderSnackbars.current
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
-    ) { uri -> uri?.let(onExportBackup) }
+    ) { uri ->
+        uri?.let {
+            onExportBackup(it) { ok ->
+                snackbars.show(
+                    context.getString(if (ok) R.string.backup_export_success else R.string.backup_export_failed),
+                    null,
+                    null
+                )
+            }
+        }
+    }
     val importLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> pendingImportUri = uri }
