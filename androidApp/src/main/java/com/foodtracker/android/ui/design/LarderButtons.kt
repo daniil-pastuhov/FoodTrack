@@ -43,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.LarderSize
@@ -86,9 +87,11 @@ fun LarderButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     leadingIcon: LarderIcons? = null,
-    interactionSource: MutableInteractionSource? = null
+    interactionSource: MutableInteractionSource? = null,
+    /** Set to 1 to truncate a long label rather than wrap it. */
+    maxLines: Int = Int.MAX_VALUE
 ) {
-    LarderButtonImpl(text, onClick, modifier, style, enabled, loading, leadingIcon, interactionSource, null)
+    LarderButtonImpl(text, onClick, modifier, style, enabled, loading, leadingIcon, interactionSource, maxLines, null)
 }
 
 @Composable
@@ -101,7 +104,8 @@ private fun LarderButtonImpl(
     loading: Boolean,
     leadingIcon: LarderIcons?,
     interactionSource: MutableInteractionSource?,
-    forced: ForcedInteraction?
+    forced: ForcedInteraction?,
+    maxLines: Int = Int.MAX_VALUE
 ) {
     val source = interactionSource ?: remember { MutableInteractionSource() }
     val hovered by source.collectIsHoveredAsState()
@@ -169,7 +173,12 @@ private fun LarderButtonImpl(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     leadingIcon?.let { LarderIcon(it, contentDescription = null) }
-                    Text(text = text, style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = maxLines,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
                 if (loading) {
                     CircularProgressIndicator(
