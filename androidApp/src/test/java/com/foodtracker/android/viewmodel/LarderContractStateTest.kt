@@ -193,6 +193,13 @@ class LarderContractStateTest {
     }
 
     @Test
+    fun testSomeoneWhoFinishedDoesNotSeeItAgainWithAnEmptyPantry() {
+        val fixture = Fixture(settings = AppSettings(onboardingCompleted = true))
+
+        assertFalse(fixture.state.needsOnboarding)
+    }
+
+    @Test
     fun testEmptyingThePantryDoesNotBringOnboardingBack() {
         val fixture = Fixture(items = listOf(item("a")))
 

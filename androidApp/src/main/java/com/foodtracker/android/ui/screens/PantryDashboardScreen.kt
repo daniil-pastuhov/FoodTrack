@@ -323,10 +323,23 @@ fun PantryDashboardScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     !loaded -> Unit
-                    pantryEmpty -> HomeEmptyState(
-                        onScan = { navigator.navigate(LarderRoute.Scanner()) },
-                        onAddByHand = { navigator.navigate(LarderRoute.AddItem(AddItemMode.New)) }
-                    )
+                    pantryEmpty -> Column(modifier = Modifier.fillMaxSize()) {
+                        // First run lands here, so this is where declining reminders has to show.
+                        val reminders = blockedNotificationsIntent
+                        if (reminders != null && !remindersCalloutDismissed) {
+                            RemindersOffCallout(
+                                onOpenSettings = { context.startActivity(reminders) },
+                                onDismiss = onDismissRemindersCallout,
+                                modifier = Modifier.padding(horizontal = LarderSpace.s4)
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f)) {
+                            HomeEmptyState(
+                                onScan = { navigator.navigate(LarderRoute.Scanner()) },
+                                onAddByHand = { navigator.navigate(LarderRoute.AddItem(AddItemMode.New)) }
+                            )
+                        }
+                    }
                     sections.isEmpty() && query.isNotEmpty() -> NoResults(
                         title = stringResource(R.string.home_no_results_title, query),
                         message = stringResource(R.string.home_no_results_message),
@@ -674,10 +687,14 @@ private fun NoResults(title: String, message: String, actionLabel: String, onAct
 }
 
 @Composable
-private fun RemindersOffCallout(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+private fun RemindersOffCallout(
+    onOpenSettings: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     LarderCallout(
         kind = LarderCalloutKind.Warning,
-        modifier = Modifier.padding(bottom = LarderSpace.s3),
+        modifier = modifier.padding(bottom = LarderSpace.s3),
         title = stringResource(R.string.home_reminders_off_title),
         message = stringResource(R.string.home_reminders_off_message),
         icon = LarderIcons.BellOff,

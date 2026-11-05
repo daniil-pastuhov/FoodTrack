@@ -1,12 +1,8 @@
 package com.foodtracker.android.ui
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import androidx.activity.BackEventCompat
 import androidx.activity.compose.PredictiveBackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -54,7 +50,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
 import com.foodtracker.android.location.StoreGeofenceManager
@@ -83,7 +78,9 @@ import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CalendarScreen
 import com.foodtracker.android.ui.screens.CategorySettingsScreen
 import com.foodtracker.android.ui.screens.HomeListPaneWidth
+import com.foodtracker.android.ui.screens.OnboardingExit
 import com.foodtracker.android.ui.screens.OnboardingScreen
+import com.foodtracker.android.ui.screens.holdsFirstScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
@@ -113,8 +110,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import com.foodtracker.android.ui.components.BackgroundLocationDisclosureDialog
 
-/** Off until the real first-run flow replaces the placeholder at [LarderRoute.Onboarding]. */
-private const val SHOW_ONBOARDING_ON_FIRST_RUN = false
+/** Sends a fresh install to [LarderRoute.Onboarding]. The same switch as iOS's
+ *  `showOnboardingOnFirstRun`. */
+private const val SHOW_ONBOARDING_ON_FIRST_RUN = true
 
 /** Holds a generic shopping-list scan's resolved result plus its ranked candidate entries
  *  while the "Did you mean?" dialog is up, so a tapped suggestion (or "None of these") can
@@ -196,6 +194,11 @@ fun FoodTrackerRoot(
         stateHolder.uiState.map { it.needsOnboarding }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.needsOnboarding)
 
+    // Settled once the pantry has loaded, since items in it mean onboarding is skipped.
+    val onboardingUndecided by remember(stateHolder) {
+        stateHolder.uiState.map { it.isLoading && !it.settings.onboardingCompleted }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(stateHolder.uiState.value.run { isLoading && !settings.onboardingCompleted })
+
     val darkTheme = when (settings.theme) {
         AppTheme.SYSTEM -> isSystemInDarkTheme()
         AppTheme.LIGHT -> false
@@ -251,19 +254,7 @@ fun FoodTrackerRoot(
                 currentScreen = LarderRoute.AddItem(AddItemMode.Prefilled(prefill))
             }
 
-            // Notification permission launcher (Android 13+)
-            val notificationPermissionLauncher = rememberLauncherForActivityResult(
-                contract = ActivityResultContracts.RequestPermission()
-            ) { _ -> }
-
             LaunchedEffect(Unit) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
-                        != PackageManager.PERMISSION_GRANTED
-                    ) {
-                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    }
-                }
                 com.foodtracker.android.notification.NotificationHelper.scheduleDigest(
                     context,
                     settings.notifications
@@ -377,11 +368,15 @@ fun FoodTrackerRoot(
                     }
                 }
             }
+            var routedToOnboarding by remember { mutableStateOf(false) }
             LaunchedEffect(needsOnboarding) {
                 if (SHOW_ONBOARDING_ON_FIRST_RUN && needsOnboarding) {
                     currentScreen = LarderRoute.Onboarding
+                    routedToOnboarding = true
                 }
             }
+            val holdFirstScreen = SHOW_ONBOARDING_ON_FIRST_RUN &&
+                holdsFirstScreen(onboardingUndecided, needsOnboarding, routedToOnboarding)
             // [addedToShoppingList] swaps the message to "added to shopping list" rather
             // than "removed" — the item still left the pantry, but calling that a
             // "removal" reads as if it just vanished, when it's actually sitting on the
@@ -576,7 +571,11 @@ fun FoodTrackerRoot(
             var backProgress by remember { mutableFloatStateOf(0f) }
             var backSwipeEdge by remember { mutableStateOf(BackEventCompat.EDGE_LEFT) }
 
-            PredictiveBackHandler(enabled = currentScreen != LarderRoute.Home) { progress ->
+            // Onboarding steps back through its own screens, and Back on its first leaves the app
+            // rather than reaching Home with the flow unfinished.
+            PredictiveBackHandler(
+                enabled = currentScreen != LarderRoute.Home && currentScreen != LarderRoute.Onboarding
+            ) { progress ->
                 try {
                     progress.collect { backEvent ->
                         inPredictiveBack = true
@@ -589,9 +588,8 @@ fun FoodTrackerRoot(
                         is LarderRoute.Scanner -> navigateBackFromScanner()
                         is LarderRoute.AddItem -> currentScreen = scanReturnScreen
                         LarderRoute.Categories -> currentScreen = LarderRoute.Settings
-                        LarderRoute.Settings, LarderRoute.Calendar, LarderRoute.Shopping,
-                        LarderRoute.Onboarding -> navigateToDashboard()
-                        is LarderRoute.ProductDetail, LarderRoute.Home -> Unit
+                        LarderRoute.Settings, LarderRoute.Calendar, LarderRoute.Shopping -> navigateToDashboard()
+                        is LarderRoute.ProductDetail, LarderRoute.Home, LarderRoute.Onboarding -> Unit
                     }
                 } catch (e: CancellationException) {
                     inPredictiveBack = false
@@ -659,7 +657,9 @@ fun FoodTrackerRoot(
                             }
                         )
                 ) {
-                    if (currentTab != null) {
+                    if (holdFirstScreen) {
+                        // Blank; see holdsFirstScreen.
+                    } else if (currentTab != null) {
                         // The floating pill and Scan overlay full-size, edge-to-edge tab content
                         // rather than reserving layout space like a Scaffold's bars, so lists
                         // scroll underneath them. Each tab keeps its last row reachable with the
@@ -925,9 +925,14 @@ fun FoodTrackerRoot(
 
                         LarderRoute.Onboarding -> {
                             OnboardingScreen(
-                                onFinished = {
+                                onFinished = { exit ->
                                     stateHolder.completeOnboarding()
-                                    navigateToDashboard()
+                                    scanReturnScreen = LarderRoute.Home
+                                    currentScreen = when (exit) {
+                                        OnboardingExit.Scanner -> LarderRoute.Scanner()
+                                        OnboardingExit.AddByHand -> LarderRoute.AddItem()
+                                        OnboardingExit.Home -> LarderRoute.Home
+                                    }
                                 }
                             )
                         }
