@@ -5,39 +5,28 @@ import android.content.Intent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
-import androidx.glance.ColorFilter
 import androidx.glance.GlanceModifier
-import androidx.glance.Image
-import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
-import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
-import androidx.glance.layout.height
 import androidx.glance.layout.padding
-import androidx.glance.layout.size
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.ShoppingSectionRepository
@@ -98,23 +87,17 @@ internal fun openShoppingListIntent(context: Context): Intent =
 @Composable
 private fun ShoppingListWidgetContent(list: WidgetShoppingList) {
     val context = LocalContext.current
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ColorProvider(R.color.widget_background))
-            .padding(12.dp)
-    ) {
-        Text(
-            text = context.getString(R.string.widget_shopping_list_title),
-            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background)),
-            modifier = GlanceModifier.clickable(actionStartActivity(openShoppingListIntent(context)))
-        )
-        Spacer(modifier = GlanceModifier.height(8.dp))
-        if (list.isEmpty) {
-            Text(
-                text = context.getString(R.string.widget_shopping_list_empty),
-                style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
+    // Every row ends in a tick, whose target runs out to the card's edge; the rest stays inset.
+    val inset = LarderSpace.s3
+    WidgetSurface(endPadding = 0.dp) {
+        Box(modifier = GlanceModifier.padding(end = inset)) {
+            WidgetTitle(
+                text = context.getString(R.string.widget_shopping_list_title),
+                onClick = actionStartActivity(openShoppingListIntent(context))
             )
+        }
+        if (list.isEmpty) {
+            WidgetEmptyText(context.getString(R.string.widget_shopping_list_empty), GlanceModifier.padding(end = inset))
         } else {
             val rows = list.rows.take(MAX_WIDGET_ROWS)
             // defaultWeight() gives the list a bounded height (rather than wrap-content), which
@@ -122,11 +105,11 @@ private fun ShoppingListWidgetContent(list: WidgetShoppingList) {
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 itemsIndexed(rows, itemId = { _, row -> row.key.hashCode().toLong() }) { index, row ->
                     when (row) {
-                        is ShoppingRow.Header -> ShoppingSectionWidgetHeader(row)
+                        is ShoppingRow.Header -> ShoppingSectionWidgetHeader(row, inset)
                         is ShoppingRow.Item -> Column {
                             ShoppingListRow(row.entry, showAction = true)
                             if (rows.getOrNull(index + 1) is ShoppingRow.Item) {
-                                WidgetRowDivider()
+                                WidgetRowDivider(endPadding = inset)
                             }
                         }
                     }
@@ -136,40 +119,23 @@ private fun ShoppingListWidgetContent(list: WidgetShoppingList) {
     }
 }
 
-/** A section's header on the widget: chevron, name and count, tapping it folds or unfolds the
- *  section (persisted, so the app follows). */
+/** A section's header on the widget: tapping it folds or unfolds the section (persisted, so the
+ *  app follows). */
 @Composable
-private fun ShoppingSectionWidgetHeader(header: ShoppingRow.Header) {
+private fun ShoppingSectionWidgetHeader(header: ShoppingRow.Header, endPadding: Dp) {
     val context = LocalContext.current
     val section = header.section
-    val label = if (section.isDefault) {
-        context.getString(R.string.shopping_section_default)
-    } else {
-        categoryLabel(context.resources, section.name)
-    }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = GlanceModifier
-            .fillMaxWidth()
-            .padding(top = 6.dp, bottom = 2.dp)
-            .clickable(toggleShoppingSectionAction(section.id, collapse = !section.collapsed))
-    ) {
-        Text(
-            text = if (section.collapsed) "▸" else "▾",
-            style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
-        )
-        Spacer(modifier = GlanceModifier.width(6.dp))
-        Text(
-            text = label,
-            maxLines = 1,
-            modifier = GlanceModifier.defaultWeight(),
-            style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background_muted))
-        )
-        Text(
-            text = header.itemCount.toString(),
-            style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
-        )
-    }
+    WidgetFoldHeader(
+        label = if (section.isDefault) {
+            context.getString(R.string.shopping_section_default)
+        } else {
+            categoryLabel(context.resources, section.name)
+        },
+        count = header.itemCount,
+        collapsed = section.collapsed,
+        onClick = toggleShoppingSectionAction(section.id, collapse = !section.collapsed),
+        endPadding = endPadding
+    )
 }
 
 /** Glance's LazyColumn is backed by a RemoteViews collection; well past any realistic list, but
@@ -188,48 +154,19 @@ internal fun ShoppingListRow(entry: ShoppingListEntry, showAction: Boolean = fal
     val context = LocalContext.current
     Row(
         // The tick's touch target already gives the row its height.
-        modifier = GlanceModifier.fillMaxWidth().padding(vertical = if (showAction) 0.dp else 6.dp),
+        modifier = GlanceModifier.fillMaxWidth().padding(vertical = if (showAction) 0.dp else LarderSpace.s1),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Spacer(modifier = GlanceModifier.height(6.dp))
-            Box(modifier = GlanceModifier.width(6.dp).height(6.dp).background(ColorProvider(R.color.notification_accent))) {}
-        }
-        Spacer(modifier = GlanceModifier.width(8.dp))
-        Text(
-            text = entry.productName,
-            maxLines = 1,
-            modifier = GlanceModifier.defaultWeight(),
-            style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = ColorProvider(R.color.widget_on_background))
-        )
+        WidgetItemName(entry.productName, GlanceModifier.defaultWeight())
         if (entry.quantity > 1) {
-            Text(
-                text = context.getString(R.string.quantity_format, entry.quantity),
-                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background_muted))
-            )
+            Spacer(modifier = GlanceModifier.width(LarderSpace.s2))
+            WidgetQuantity(context.getString(R.string.quantity_format, entry.quantity))
         }
         if (showAction) {
-            BoughtTick(entry)
+            WidgetTick(
+                description = context.getString(R.string.widget_action_mark_bought, entry.productName),
+                onClick = widgetRowAction<TickOffShoppingEntryAction>(entry.id)
+            )
         }
-    }
-}
-
-/** The tick on a shopping-list row: a 24dp icon in a 48dp touch target. The description names the
- *  product because every row's tick would otherwise read the same. */
-@Composable
-private fun BoughtTick(entry: ShoppingListEntry) {
-    val context = LocalContext.current
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = GlanceModifier
-            .size(48.dp)
-            .clickable(widgetRowAction<TickOffShoppingEntryAction>(entry.id))
-    ) {
-        Image(
-            provider = ImageProvider(R.drawable.ic_widget_check),
-            contentDescription = context.getString(R.string.widget_action_mark_bought, entry.productName),
-            colorFilter = ColorFilter.tint(ColorProvider(R.color.widget_on_background_muted)),
-            modifier = GlanceModifier.size(24.dp)
-        )
     }
 }

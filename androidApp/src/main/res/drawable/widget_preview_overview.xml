@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Static mock of OverviewWidget's layout for the widget picker's android:previewImage:
-     the "Expiring" section header/row followed by the "Shopping List" section header,
-     matching what the default (compact, scrollable) widget size actually shows. Uses the
-     same widget_* / notification_accent color resources the real widget draws with, so it
-     follows light/dark automatically instead of needing a separate night-mode preview. -->
+<!-- Static mock of OverviewWidget's layout for the widget picker's android:previewImage.
+     Uses the same larder_* colours the real widget draws with, so it follows light and dark
+     instead of needing a separate night-mode preview. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="180dp"
     android:height="110dp"
@@ -11,24 +9,15 @@
     android:viewportHeight="122">
 
     <path
-        android:pathData="M8,0 H192 A8,8 0 0 1 200,8 V114 A8,8 0 0 1 192,122 H8 A8,8 0 0 1 0,114 V8 A8,8 0 0 1 8,0 Z"
-        android:fillColor="@color/widget_background" />
+        android:pathData="M26,0 H174 A26,26 0 0 1 200,26 V96 A26,26 0 0 1 174,122 H26 A26,26 0 0 1 0,96 V26 A26,26 0 0 1 26,0 Z"
+        android:fillColor="@color/larder_surface_container_high" />
 
-    <!-- "Expiring" section header -->
-    <path android:pathData="M14,12 h46 v7 h-46 Z" android:fillColor="@color/widget_on_background_muted" />
-
-    <!-- One expiring row -->
-    <path android:pathData="M20,34 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expiring" />
-    <path android:pathData="M32,29 h108 v8 h-108 Z" android:fillColor="@color/widget_on_background" />
-    <path android:pathData="M32,41 h50 v6 h-50 Z" android:fillColor="@color/widget_status_expiring" />
-
-    <!-- Divider -->
-    <path android:pathData="M14,56 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
-
-    <!-- "Shopping List" section header -->
-    <path android:pathData="M14,64 h64 v7 h-64 Z" android:fillColor="@color/widget_on_background_muted" />
-
-    <!-- One shopping-list row (partial, hints at more content below the fold) -->
-    <path android:pathData="M20,88 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" android:fillColor="@color/notification_accent" />
-    <path android:pathData="M30,84 h96 v8 h-96 Z" android:fillColor="@color/widget_on_background_muted" />
+    <path android:pathData="M14,14 h50 v6 h-50 Z" android:fillColor="@color/larder_on_surface_variant" />
+    <path android:pathData="M14,28 h96 v8 h-96 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M17,40 h48 a3,3 0 0 1 3,3 v6 a3,3 0 0 1 -3,3 h-48 a3,3 0 0 1 -3,-3 v-6 a3,3 0 0 1 3,-3 Z" android:fillColor="@color/larder_expired_container" />
+    <path android:pathData="M14,58 h172 v1 h-172 Z" android:fillColor="@color/larder_outline_variant" />
+    <path android:pathData="M14,66 h80 v8 h-80 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M17,78 h34 a3,3 0 0 1 3,3 v6 a3,3 0 0 1 -3,3 h-34 a3,3 0 0 1 -3,-3 v-6 a3,3 0 0 1 3,-3 Z" android:fillColor="@color/larder_soon_container" />
+    <path android:pathData="M14,98 h60 v6 h-60 Z" android:fillColor="@color/larder_on_surface_variant" />
+    <path android:pathData="M14,110 h100 v8 h-100 Z" android:fillColor="@color/larder_on_surface" />
 </vector>

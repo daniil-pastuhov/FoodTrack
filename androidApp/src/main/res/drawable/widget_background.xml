@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A widget card, at radius-xl. A drawable because cornerRadius only works from API 31. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/larder_surface_container_high" />
+    <corners android:radius="26dp" />
+</shape>

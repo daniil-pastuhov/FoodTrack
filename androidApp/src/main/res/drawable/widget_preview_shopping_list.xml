@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Static mock of ShoppingListWidget's layout for the widget picker's android:previewImage.
-     Uses the same widget_* / notification_accent color resources the real widget draws
-     with, so it follows light/dark automatically instead of needing a separate night-mode
-     preview. -->
+     Uses the same larder_* colours the real widget draws with, so it follows light and dark
+     instead of needing a separate night-mode preview. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="180dp"
     android:height="110dp"
@@ -10,29 +9,17 @@
     android:viewportHeight="122">
 
     <path
-        android:pathData="M8,0 H192 A8,8 0 0 1 200,8 V114 A8,8 0 0 1 192,122 H8 A8,8 0 0 1 0,114 V8 A8,8 0 0 1 8,0 Z"
-        android:fillColor="@color/widget_background" />
+        android:pathData="M26,0 H174 A26,26 0 0 1 200,26 V96 A26,26 0 0 1 174,122 H26 A26,26 0 0 1 0,96 V26 A26,26 0 0 1 26,0 Z"
+        android:fillColor="@color/larder_surface_container_high" />
 
-    <!-- Title -->
-    <path android:pathData="M14,14 h84 v9 h-84 Z" android:fillColor="@color/widget_on_background" />
-
-    <!-- Row 1 -->
-    <path android:pathData="M20,38 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" android:fillColor="@color/notification_accent" />
-    <path android:pathData="M30,34 h96 v8 h-96 Z" android:fillColor="@color/widget_on_background" />
-    <path android:pathData="M168,34 h18 v8 h-18 Z" android:fillColor="@color/widget_on_background_muted" />
-
-    <!-- Divider -->
-    <path android:pathData="M14,54 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
-
-    <!-- Row 2 -->
-    <path android:pathData="M20,68 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" android:fillColor="@color/notification_accent" />
-    <path android:pathData="M30,64 h72 v8 h-72 Z" android:fillColor="@color/widget_on_background" />
-
-    <!-- Divider -->
-    <path android:pathData="M14,84 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
-
-    <!-- Row 3 -->
-    <path android:pathData="M20,98 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0 Z" android:fillColor="@color/notification_accent" />
-    <path android:pathData="M30,94 h110 v8 h-110 Z" android:fillColor="@color/widget_on_background" />
-    <path android:pathData="M168,94 h18 v8 h-18 Z" android:fillColor="@color/widget_on_background_muted" />
+    <path android:pathData="M14,14 h84 v9 h-84 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M14,34 h60 v6 h-60 Z" android:fillColor="@color/larder_on_surface_variant" />
+    <path android:pathData="M14,50 h100 v8 h-100 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M169,54 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" android:strokeColor="@color/larder_on_surface_variant" android:strokeWidth="1.75" />
+    <path android:pathData="M14,70 h172 v1 h-172 Z" android:fillColor="@color/larder_outline_variant" />
+    <path android:pathData="M14,82 h76 v8 h-76 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M169,86 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" android:strokeColor="@color/larder_on_surface_variant" android:strokeWidth="1.75" />
+    <path android:pathData="M14,102 h172 v1 h-172 Z" android:fillColor="@color/larder_outline_variant" />
+    <path android:pathData="M14,112 h90 v8 h-90 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M169,116 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" android:strokeColor="@color/larder_on_surface_variant" android:strokeWidth="1.75" />
 </vector>

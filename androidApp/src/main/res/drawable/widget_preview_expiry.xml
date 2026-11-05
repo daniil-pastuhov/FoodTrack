@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Static mock of ExpiryWidget's layout for the widget picker's android:previewImage.
-     Uses the same widget_* color resources the real widget draws with, so it follows
-     light/dark automatically instead of needing a separate night-mode preview. -->
+     Uses the same larder_* colours the real widget draws with, so it follows light and dark
+     instead of needing a separate night-mode preview. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="180dp"
     android:height="110dp"
@@ -9,29 +9,17 @@
     android:viewportHeight="122">
 
     <path
-        android:pathData="M8,0 H192 A8,8 0 0 1 200,8 V114 A8,8 0 0 1 192,122 H8 A8,8 0 0 1 0,114 V8 A8,8 0 0 1 8,0 Z"
-        android:fillColor="@color/widget_background" />
+        android:pathData="M26,0 H174 A26,26 0 0 1 200,26 V96 A26,26 0 0 1 174,122 H26 A26,26 0 0 1 0,96 V26 A26,26 0 0 1 26,0 Z"
+        android:fillColor="@color/larder_surface_container_high" />
 
-    <!-- Title -->
-    <path android:pathData="M14,14 h64 v9 h-64 Z" android:fillColor="@color/widget_on_background" />
-
-    <!-- Row 1: expired -->
-    <path android:pathData="M20,38 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expired" />
-    <path android:pathData="M32,33 h96 v8 h-96 Z" android:fillColor="@color/widget_on_background" />
-    <path android:pathData="M32,45 h62 v6 h-62 Z" android:fillColor="@color/widget_status_expired" />
-
-    <!-- Divider -->
-    <path android:pathData="M14,58 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
-
-    <!-- Row 2: expiring soon -->
-    <path android:pathData="M20,72 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expiring" />
-    <path android:pathData="M32,67 h112 v8 h-112 Z" android:fillColor="@color/widget_on_background" />
-    <path android:pathData="M32,79 h54 v6 h-54 Z" android:fillColor="@color/widget_status_expiring" />
-
-    <!-- Divider -->
-    <path android:pathData="M14,92 h172 v1 h-172 Z" android:fillColor="@color/widget_divider" />
-
-    <!-- Row 3 (partial, hints at more content below the fold) -->
-    <path android:pathData="M20,106 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 Z" android:fillColor="@color/widget_status_expiring" />
-    <path android:pathData="M32,101 h80 v8 h-80 Z" android:fillColor="@color/widget_on_background_muted" />
+    <path android:pathData="M14,14 h64 v9 h-64 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M14,32 h96 v8 h-96 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M17,44 h48 a3,3 0 0 1 3,3 v6 a3,3 0 0 1 -3,3 h-48 a3,3 0 0 1 -3,-3 v-6 a3,3 0 0 1 3,-3 Z" android:fillColor="@color/larder_expired_container" />
+    <path android:pathData="M169,44 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" android:strokeColor="@color/larder_on_surface_variant" android:strokeWidth="1.75" />
+    <path android:pathData="M14,62 h172 v1 h-172 Z" android:fillColor="@color/larder_outline_variant" />
+    <path android:pathData="M14,70 h112 v8 h-112 Z" android:fillColor="@color/larder_on_surface" />
+    <path android:pathData="M17,82 h34 a3,3 0 0 1 3,3 v6 a3,3 0 0 1 -3,3 h-34 a3,3 0 0 1 -3,-3 v-6 a3,3 0 0 1 3,-3 Z" android:fillColor="@color/larder_today_container" />
+    <path android:pathData="M169,82 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0 Z" android:strokeColor="@color/larder_on_surface_variant" android:strokeWidth="1.75" />
+    <path android:pathData="M14,100 h172 v1 h-172 Z" android:fillColor="@color/larder_outline_variant" />
+    <path android:pathData="M14,108 h80 v8 h-80 Z" android:fillColor="@color/larder_on_surface_variant" />
 </vector>
