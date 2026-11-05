@@ -604,4 +604,60 @@ public enum L10n {
             return String.localizedStringWithFormat(format, days)
         }
     }
+
+    // MARK: Larder settings
+    public static var settingsGroupReminders: String { NSLocalizedString("settings_group_reminders", comment: "") }
+    public static var settingsGroupKitchen: String { NSLocalizedString("settings_group_kitchen", comment: "") }
+    public static var settingsNotificationsBlockedTitle: String { NSLocalizedString("settings_notifications_blocked_title", comment: "") }
+    public static var settingsOff: String { NSLocalizedString("settings_off", comment: "") }
+    public static var settingsAllergensNone: String { NSLocalizedString("settings_allergens_none", comment: "") }
+    public static var settingsAddAllergenLabel: String { NSLocalizedString("settings_add_allergen_label", comment: "") }
+    public static var settingsDataSummary: String { NSLocalizedString("settings_data_summary", comment: "") }
+    public static var settingsLocationDefault: String { NSLocalizedString("settings_location_default", comment: "") }
+    public static func settingsLocationTaken(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_location_taken", comment: ""), value1)
+    }
+    public static func settingsRenameLocationFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_rename_location_format", comment: ""), value1)
+    }
+    public static func settingsDeleteLocationFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_delete_location_format", comment: ""), value1)
+    }
+    public static func settingsSetDefaultLocationFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_set_default_location_format", comment: ""), value1)
+    }
+    public static func settingsRemoveFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_remove_format", comment: ""), value1)
+    }
+    public static var settingsTryAgain: String { NSLocalizedString("settings_try_again", comment: "") }
+    public static var restoreModeCancel: String { NSLocalizedString("restore_mode_cancel", comment: "") }
+    public static var clearDataKeep: String { NSLocalizedString("clear_data_keep", comment: "") }
+    public static var categorySettingsEmptyTitle: String { NSLocalizedString("category_settings_empty_title", comment: "") }
+    public static var categorySettingsScan: String { NSLocalizedString("category_settings_scan", comment: "") }
+    public static var categorySettingsMoveUp: String { NSLocalizedString("category_settings_move_up", comment: "") }
+    public static var categorySettingsMoveDown: String { NSLocalizedString("category_settings_move_down", comment: "") }
+    public static var categorySettingsMoveDone: String { NSLocalizedString("category_settings_move_done", comment: "") }
+    public static var categorySettingsRenameFieldLabel: String { NSLocalizedString("category_settings_rename_field_label", comment: "") }
+    public static var categorySettingsRenameConfirm: String { NSLocalizedString("category_settings_rename_confirm", comment: "") }
+    public static func categorySettingsRenameFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_rename_format", comment: ""), value1)
+    }
+    public static func categorySettingsDragHandleFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_drag_handle_format", comment: ""), value1)
+    }
+    public static func categorySettingsShowFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_show_format", comment: ""), value1)
+    }
+    public static func categorySettingsShelfLifeFormat(_ value1: String, _ value2: String) -> String {
+        String(format: NSLocalizedString("category_settings_shelf_life_format", comment: ""), value1, value2)
+    }
+    public static func categorySettingsShelfLifeTitleFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_shelf_life_title_format", comment: ""), value1)
+    }
+    public static var categorySettingsShelfLifeRange: String { NSLocalizedString("category_settings_shelf_life_range", comment: "") }
+    public static var categorySettingsShelfLifeError: String { NSLocalizedString("category_settings_shelf_life_error", comment: "") }
+    public static var categorySettingsShelfLifeSave: String { NSLocalizedString("category_settings_shelf_life_save", comment: "") }
+    public static func clearDataDialogCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("clear_data_dialog_count", comment: ""), count)
+    }
 }

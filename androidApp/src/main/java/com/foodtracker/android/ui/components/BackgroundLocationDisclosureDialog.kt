@@ -1,15 +1,12 @@
 package com.foodtracker.android.ui.components
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.design.LarderDialog
+import com.foodtracker.android.ui.design.LarderIcons
+import com.foodtracker.android.ui.design.LarderPreview
 
 /**
  * Google Play's "prominent disclosure" for background location: shown in the app, right before
@@ -20,20 +17,19 @@ import com.foodtracker.android.R
  */
 @Composable
 fun BackgroundLocationDisclosureDialog(onContinue: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    LarderDialog(
+        title = stringResource(R.string.background_location_disclosure_title),
+        text = stringResource(R.string.background_location_disclosure_message),
+        confirmLabel = stringResource(R.string.background_location_disclosure_continue),
+        onConfirm = onContinue,
         onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-        title = { Text(stringResource(R.string.background_location_disclosure_title)) },
-        text = { Text(stringResource(R.string.background_location_disclosure_message)) },
-        confirmButton = {
-            TextButton(onClick = onContinue) {
-                Text(stringResource(R.string.background_location_disclosure_continue), color = MaterialTheme.colorScheme.primary)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.background_location_disclosure_not_now))
-            }
-        }
+        dismissLabel = stringResource(R.string.background_location_disclosure_not_now),
+        icon = LarderIcons.MapPin
     )
+}
+
+@PreviewLightDark
+@Composable
+internal fun BackgroundLocationDisclosureDialogPreview() = LarderPreview {
+    BackgroundLocationDisclosureDialog({}, {})
 }
