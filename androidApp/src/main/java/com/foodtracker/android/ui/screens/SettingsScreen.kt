@@ -118,6 +118,9 @@ private val SectionListWidth = 300.dp
 /** The widest a form gets, so fields don't stretch across a tablet. */
 private val FormMaxWidth = 640.dp
 
+/** The longest label that fits on one line in a third of a phone-width card. */
+private const val MAX_EQUAL_SEGMENT_LABEL = 10
+
 /** One page of the expanded layout. Categories isn't one: it opens its own screen. */
 private enum class SettingsSection { Notifications, Shops, Threshold, Locations, Allergens, Appearance, Data }
 
@@ -795,6 +798,8 @@ private fun NotificationsSection(
             }
 
             ControlLabel(stringResource(R.string.settings_reminder_style_label))
+            // Equal thirds, unless a label as long as Russian's "По продуктам" would wrap in one.
+            val sharesWidth = stringResource(R.string.settings_reminder_style_each_item).length <= MAX_EQUAL_SEGMENT_LABEL
             LarderSegmented(
                 options = listOf(ReminderStyle.EACH_ITEM, ReminderStyle.SUMMARY, ReminderStyle.BOTH),
                 selected = notifications.reminderStyle,
@@ -808,8 +813,8 @@ private fun NotificationsSection(
                         }
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
-                fill = true
+                modifier = if (sharesWidth) Modifier.fillMaxWidth() else Modifier,
+                fill = sharesWidth
             )
 
             ExpandingBlock(visible = notifications.individualEnabled) {
