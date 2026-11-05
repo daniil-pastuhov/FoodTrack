@@ -640,7 +640,7 @@
     <string name="detail_nova_3">Обработанный</string>
     <string name="detail_nova_4">Ультраобработанный</string>
     <string name="detail_credit">Данные о продукте из Open Food Facts</string>
-    <string name="detail_allergen_note">Этот аллерген есть в вашем списке.</string>
+    <string name="detail_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
     <string name="detail_choose_item">Выберите продукт, чтобы увидеть подробности.</string>
     <string name="recipe_intro">Запрос для ИИ-помощника из выбранных продуктов: %1$s. Он покинет устройство, только если вы им поделитесь.</string>
     <string name="recipe_names_two">%1$s и %2$s</string>
