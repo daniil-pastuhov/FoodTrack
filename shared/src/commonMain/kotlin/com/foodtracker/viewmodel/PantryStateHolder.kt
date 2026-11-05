@@ -1197,7 +1197,8 @@ class PantryStateHolder(
 
     /** As [addManualShoppingListEntry], but says when the name was on the list already, so the
      *  screen can tell the person why no row appeared. [onDuplicate] gets the name as it is
-     *  written on the list, which may differ in case from what was typed. */
+     *  written on the list, which may differ in case from what was typed. It runs on this
+     *  holder's scope, which is not the main thread. */
     fun addManualShoppingListEntry(productName: String, onDuplicate: (existingName: String) -> Unit) {
         val trimmed = productName.trim()
         if (trimmed.isBlank()) return
