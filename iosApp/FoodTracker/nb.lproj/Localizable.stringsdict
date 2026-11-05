@@ -189,9 +189,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d d</string>
+            <string>%d dag</string>
             <key>other</key>
-            <string>%d d</string>
+            <string>%d dager</string>
         </dict>
     </dict>
     <key>shopping_list_import_added_format</key>
@@ -384,6 +384,22 @@
             <string>Utløpt for %d dag siden</string>
             <key>other</key>
             <string>Utløpt for %d dager siden</string>
+        </dict>
+    </dict>
+    <key>clear_data_dialog_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dette fjerner %d vare og avbryter påminnelsene for den. Dette kan ikke angres.</string>
+            <key>other</key>
+            <string>Dette fjerner alle %d varer og avbryter påminnelsene for dem. Dette kan ikke angres.</string>
         </dict>
     </dict>
     <key>shopping_list_lede_format</key>

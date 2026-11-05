@@ -338,7 +338,7 @@
 "restore_mode_replace_title" = "Erstatt alt";
 "backup_export_success" = "Sikkerhetskopi lagret";
 "backup_export_failed" = "Kunne ikke lagre sikkerhetskopien";
-"backup_import_malformed" = "Den filen er ikke en Matvakt-sikkerhetskopi";
+"backup_import_malformed" = "Den filen er ikke en Matvakt-sikkerhetskopi. Ingenting ble endret.";
 "backup_import_unsupported" = "Den sikkerhetskopien er laget av en nyere versjon av appen";
 "backup_import_empty" = "Den sikkerhetskopien har ingenting å gjenopprette";
 
@@ -417,6 +417,39 @@
 "onboarding_placeholder_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
 "onboarding_placeholder_body" = "Matlageret ditt blir på enheten din.";
 "onboarding_placeholder_continue" = "Kom i gang";
+
+/* Larder settings */
+"settings_group_reminders" = "Påminnelser";
+"settings_group_kitchen" = "Kjøkkenet ditt";
+"settings_notifications_blocked_title" = "Påminnelser er av";
+"settings_off" = "Av";
+"settings_allergens_none" = "Ingen ennå";
+"settings_add_allergen_label" = "Legg til et allergen";
+"settings_data_summary" = "Sikkerhetskopi og tømming";
+"settings_location_default" = "Standard";
+"settings_location_taken" = "Du har allerede et sted som heter %1$@";
+"settings_rename_location_format" = "Endre navn: %1$@";
+"settings_delete_location_format" = "Slett: %1$@";
+"settings_set_default_location_format" = "Sett som standard: %1$@";
+"settings_remove_format" = "Fjern: %1$@";
+"settings_try_again" = "Prøv igjen";
+"restore_mode_cancel" = "Ikke importer";
+"clear_data_keep" = "Behold matskapet";
+"category_settings_empty_title" = "Ingen kategorier ennå";
+"category_settings_scan" = "Skann en vare";
+"category_settings_move_up" = "Flytt opp";
+"category_settings_move_down" = "Flytt ned";
+"category_settings_move_done" = "Ferdig";
+"category_settings_rename_field_label" = "Kategorinavn";
+"category_settings_rename_confirm" = "Endre navn";
+"category_settings_rename_format" = "Endre navn på kategori: %1$@";
+"category_settings_drag_handle_format" = "Dra for å endre rekkefølge: %1$@";
+"category_settings_show_format" = "Vis: %1$@";
+"category_settings_shelf_life_format" = "Angi standard holdbarhet: %1$@, %2$@";
+"category_settings_shelf_life_title_format" = "Standard holdbarhet for %1$@";
+"category_settings_shelf_life_range" = "Fra 0 til 3650 dager";
+"category_settings_shelf_life_error" = "Skriv inn et tall fra 0 til 3650, det er omtrent 10 år";
+"category_settings_shelf_life_save" = "Lagre";
 
 /* Larder: Shopping */
 "shopping_list_brand" = "Handleliste";

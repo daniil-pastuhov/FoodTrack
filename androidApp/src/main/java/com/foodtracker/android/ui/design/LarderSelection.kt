@@ -304,7 +304,9 @@ fun <T> LarderSegmented(
             val endPercent = if (index == options.lastIndex) 50 else 0
             Box(
                 modifier = Modifier
-                    .weight(1f, fill = fill)
+                    // Without fill each segment is as wide as its label, so a long one stays on
+                    // one line rather than being capped at an equal share.
+                    .then(if (fill) Modifier.weight(1f) else Modifier)
                     .fillMaxHeight()
                     .heightIn(min = LarderSize.touch)
                     .selectable(

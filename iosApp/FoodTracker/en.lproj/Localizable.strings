@@ -193,10 +193,10 @@
 "settings_notifications_blocked" = "Notifications are turned off for this app in your phone's settings, so reminders won't arrive.";
 "settings_notifications_open_settings" = "Open settings";
 
-"settings_section_expiring_soon" = "Expiring Soon Threshold";
+"settings_section_expiring_soon" = "Expiring soon threshold";
 "settings_expiring_soon_desc" = "Items expiring within this many days are flagged as 'Expiring Soon'";
 
-"settings_section_locations" = "Storage Locations";
+"settings_section_locations" = "Storage locations";
 "settings_locations_desc" = "Tap the star to set the default for new items";
 "settings_remember_last_location" = "Remember last storage location";
 "settings_remember_last_location_desc" = "Products you haven't added before start in the storage location you picked last time";
@@ -206,7 +206,7 @@
 
 "settings_section_categories" = "Categories";
 "settings_categories_desc" = "Rename, reorder, or hide the categories detected from your products";
-"settings_manage_categories_button" = "Manage Categories";
+"settings_manage_categories_button" = "Manage categories";
 
 "category_settings_title" = "Categories";
 "category_settings_description" = "Drag to reorder. Tap the pencil to rename a category, or turn it off to hide it everywhere.";
@@ -222,10 +222,10 @@
 "settings_theme_dark" = "Dark";
 
 "settings_section_data" = "Data";
-"settings_clear_data_button" = "Clear All Pantry Data";
+"settings_clear_data_button" = "Clear all pantry data";
 "clear_data_dialog_title" = "Clear all pantry data?";
 "clear_data_dialog_message" = "This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.";
-"clear_data_confirm" = "Clear Data";
+"clear_data_confirm" = "Clear all data";
 
 "widget_expiring_title" = "Expiring";
 "widget_expiring_description" = "Shows what's expired or expiring soon in your pantry";
@@ -338,7 +338,7 @@
 "restore_mode_replace_title" = "Replace everything";
 "backup_export_success" = "Backup saved";
 "backup_export_failed" = "Couldn't save the backup";
-"backup_import_malformed" = "That file isn't a BestBefore backup";
+"backup_import_malformed" = "That file isn't a BestBefore backup. Nothing was changed.";
 "backup_import_unsupported" = "That backup was made by a newer version of the app";
 "backup_import_empty" = "That backup has nothing to restore";
 
@@ -417,6 +417,39 @@
 "onboarding_placeholder_title" = "Reminds you before food goes off, not after.";
 "onboarding_placeholder_body" = "Your pantry stays on your device.";
 "onboarding_placeholder_continue" = "Get started";
+
+/* Larder settings */
+"settings_group_reminders" = "Reminders";
+"settings_group_kitchen" = "Your kitchen";
+"settings_notifications_blocked_title" = "Reminders are off";
+"settings_off" = "Off";
+"settings_allergens_none" = "None yet";
+"settings_add_allergen_label" = "Add an allergen";
+"settings_data_summary" = "Backup and clear data";
+"settings_location_default" = "Default";
+"settings_location_taken" = "You already have a location called %1$@";
+"settings_rename_location_format" = "Rename: %1$@";
+"settings_delete_location_format" = "Delete: %1$@";
+"settings_set_default_location_format" = "Set as default: %1$@";
+"settings_remove_format" = "Remove: %1$@";
+"settings_try_again" = "Try again";
+"restore_mode_cancel" = "Don't import";
+"clear_data_keep" = "Keep my pantry";
+"category_settings_empty_title" = "No categories yet";
+"category_settings_scan" = "Scan a product";
+"category_settings_move_up" = "Move up";
+"category_settings_move_down" = "Move down";
+"category_settings_move_done" = "Done";
+"category_settings_rename_field_label" = "Category name";
+"category_settings_rename_confirm" = "Rename";
+"category_settings_rename_format" = "Rename category: %1$@";
+"category_settings_drag_handle_format" = "Drag to reorder: %1$@";
+"category_settings_show_format" = "Show: %1$@";
+"category_settings_shelf_life_format" = "Set default shelf life: %1$@, %2$@";
+"category_settings_shelf_life_title_format" = "Default shelf life for %1$@";
+"category_settings_shelf_life_range" = "From 0 to 3650 days";
+"category_settings_shelf_life_error" = "Enter a number from 0 to 3650, which is about 10 years";
+"category_settings_shelf_life_save" = "Save";
 
 /* Larder: Shopping */
 "shopping_list_brand" = "Shopping list";
