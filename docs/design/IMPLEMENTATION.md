@@ -39,3 +39,16 @@ Tabs: home, calendar, shopping, settings. Pushed or modal: productDetail(itemId)
 
 ## Approved defaults
 `found` hides "In your pantry" at zero. Quantity limit 99 on both platforms. iOS Add item stays a modal with Cancel. Add item title is "Add item". Per-item notification channel gets a new id at default importance. Widget tick stays a ring with a check; in-app tick keeps its empty-ring off state. Blank Save and Import in Shopping stay disabled. A duplicate shopping name shows a T3 message. Scan is on Home and Calendar only. Later, not now: fixing Check date from the queue, validating restore files on pick, the T4 after declining location, shop-arrival actions.
+
+## Wave 1 and 2 notes
+The foundation is merged. Read the source in `androidApp/.../ui/design/`, `ui/navigation/`, `iosApp/FoodTracker/DesignSystem/` and `AppRouter.swift` for component APIs before writing screens. Don't rebuild a component that exists.
+
+Ownership, relaxed: you may ADD new methods and state to `PantryStateHolder.kt`, `NativePantryViewModel.swift` and the data layer, and add new files to `project.pbxproj`, without asking. Keep additions in one block. Changing or removing anything existing there, or anything in `ui/theme/`, `ui/design/`, `DesignSystem/`, routes, or the Root files, goes through the coordinator (message `main`), who applies it on `feat/larder-design` and tells everyone. The only exception is listed in your own brief. If a component needs a small new option, ask rather than forking it.
+
+Useful:
+- Android: `LocalLarderNavigator.current.navigate(route)`, `ShellChromeEffect(hideNav, hideScan)` to hide the pill or Scan, `LarderSwipeRow`, `shellClearance(...)`. Debug gallery: `adb shell am start -n com.foodtracker.android/.ui.design.DesignGalleryActivity`.
+- iOS: `AppRouter.shared.navigate(to:)`, `.shellChromeEffect(hideNav:hideScan:)`, `@Environment(\.showSnackbar)`, `@Environment(\.isExpanded)`, `.larderSheet`, `.larderDialog`, `.larderDatePicker`, `.larderList()` with `.larderGroupRow`. Screens reserve no bottom padding; `RootTabView` applies it. Demo data and routes: `-demoBackup`, `-demoTab`, `-demoRoute`.
+- After booting a new simulator, the app can show a blank window for about 2 minutes. Relaunch until it draws before trusting a screenshot.
+- Use a new emulator or simulator for your own runs and delete it when done. Don't touch emulator-5554 or existing simulators.
+- Scratch files go in your own uniquely named folder, because the scratchpad is shared.
+- The design's mock-ups are the look; a platform's native sheet, alert and picker behaviour stays native (see the table on the App shell page).
