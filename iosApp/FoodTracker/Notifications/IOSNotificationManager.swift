@@ -28,7 +28,9 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         super.init()
     }
 
-    public func requestAuthorization() {
+    /// Runs on every launch, so a reminder's actions work whether or not the app has asked for
+    /// permission yet. Asking is `requestAuthorization()`, from onboarding or the reminders note.
+    public func configure() {
         UNUserNotificationCenter.current().delegate = self
 
         // These cover what a user actually does at the moment the reminder fires. Until now
@@ -74,12 +76,25 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             options: []
         )
         UNUserNotificationCenter.current().setNotificationCategories([expiryCategory, digestCategory])
+    }
 
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if let error = error {
-                print("Notification permission error: \(error.localizedDescription)")
-            }
+    /// Puts the system prompt up, if it hasn't been answered. Returns the answer, or nil when the
+    /// request failed, which isn't anyone saying no.
+    public func requestAuthorization() async -> Bool? {
+        do {
+            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+        } catch {
+            print("Notification permission error: \(error.localizedDescription)")
+            return nil
         }
+    }
+
+    /// For the "reminders are off" notes, when the prompt is still unanswered because of Not now
+    /// in onboarding. Anything saved since was refused by the system, so it is scheduled again.
+    public func requestAuthorization(thenSchedule items: [PantryItem]) async {
+        guard await requestAuthorization() == true else { return }
+        rescheduleAll(items: items)
+        scheduleDigestNotification(items: items)
     }
 
     public func scheduleNotification(for item: PantryItem) {

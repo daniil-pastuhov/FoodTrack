@@ -6,88 +6,114 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.contentColorFor
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxDefaults
-import androidx.compose.material3.SwipeToDismissBoxState
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
+import com.foodtracker.android.notification.NotificationHelper
+import com.foodtracker.android.ui.design.EmptyState
+import com.foodtracker.android.ui.design.LarderArt
+import com.foodtracker.android.ui.design.LarderButton
+import com.foodtracker.android.ui.design.LarderButtonStyle
+import com.foodtracker.android.ui.design.LarderDivider
+import com.foodtracker.android.ui.design.LarderGroupPosition
+import com.foodtracker.android.ui.design.LarderIcon
+import com.foodtracker.android.ui.design.LarderIconButton
+import com.foodtracker.android.ui.design.LarderIcons
+import com.foodtracker.android.ui.design.LarderPreview
+import com.foodtracker.android.ui.design.LarderSwipeAction
+import com.foodtracker.android.ui.design.LarderSwipeRow
+import com.foodtracker.android.ui.design.LarderTabularNumbers
+import com.foodtracker.android.ui.design.PantryRow as PantryRowView
+import com.foodtracker.android.ui.design.ShellChromeEffect
+import com.foodtracker.android.ui.design.categoryIcon
+import com.foodtracker.android.ui.design.expiryStatusLabel
+import com.foodtracker.android.ui.design.isExpanded
+import com.foodtracker.android.ui.design.larderGroupItem
+import com.foodtracker.android.ui.navigation.LarderRoute
+import com.foodtracker.android.ui.navigation.LocalLarderNavigator
+import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
+import com.foodtracker.android.ui.theme.LarderRadius
+import com.foodtracker.android.ui.theme.LarderSize
+import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
-import com.foodtracker.android.ui.components.ExpiryBadge
+import com.foodtracker.android.util.categoryLabel
+import com.foodtracker.android.util.formatDayHeading
 import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.android.util.formatMonthYear
 import com.foodtracker.android.util.formatWeekdayDay
 import com.foodtracker.android.util.narrowWeekdayNames
+import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.util.monthGrid
@@ -98,15 +124,10 @@ import com.foodtracker.viewmodel.AgendaSection
 import com.foodtracker.viewmodel.PantryRow
 import com.foodtracker.viewmodel.PantryStateHolder
 import java.time.format.FormatStyle
-import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
-import com.foodtracker.android.util.storageLocationLabel
-
-/** Below this width the agenda stacks under the week strip / month grid instead of beside it. */
-private val WIDE_LAYOUT_BREAKPOINT = 600.dp
 
 /** The week strip pages over a fixed window of weeks centred on the current one — about ten
  *  years either way, which no pantry item plausibly outlives. */
@@ -121,18 +142,28 @@ private val MULTI_DAY_BUCKETS = setOf(
     AgendaBucket.LATER
 )
 
+/** The month grid's pane on expanded windows. */
+private val NavigatorPaneWidth = 360.dp
+
+private val LocalDateSaver = Saver<LocalDate?, String>(
+    save = { it?.toString() ?: "" },
+    restore = { saved -> saved.takeIf { it.isNotEmpty() }?.let(LocalDate::parse) }
+)
+
 /**
- * The Calendar tab: a swipeable week strip (or, from the title, the full month grid) over an
- * agenda of everything in the pantry bucketed by when it expires — Overdue first, then Today,
- * Tomorrow, the rest of this week, next week and later. Tapping a day narrows the agenda to that
- * day; tapping it again (or "Show all") widens it back.
+ * The Calendar tab. On phones a swipeable week strip, or from the title the month grid, over an
+ * agenda of everything in the pantry bucketed by when it's due. On expanded windows the month
+ * grid sits beside the agenda and there is no week strip. Tapping a day narrows the agenda to
+ * that day; tapping it again, or Show all, widens it back.
  *
- * Agenda rows are the same actions as elsewhere: tap to edit, swipe right to use one, swipe left
- * to throw it away. Both swipes go through the root's handlers, so they get the same undo
- * snackbar, notification cancelling and essential-item shopping list behaviour as the dashboard
- * and scanner.
+ * A row opens the product detail, swipe right uses one and swipe left tosses the whole item, each
+ * with Undo. Those two say "used" and "tossed" rather than the "removed" of the Root's handlers,
+ * so the last unit and the toss run here; a use that leaves the row in place goes through
+ * [onUseOne], which shares its wording with Home.
+ *
+ * [onEditItem] and [onToss] are unused now, until the Root stops passing them.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun CalendarScreen(
     stateHolder: PantryStateHolder,
@@ -144,129 +175,256 @@ fun CalendarScreen(
     bottomOverlayClearance: Dp = 160.dp
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val navigator = LocalLarderNavigator.current
+    val snackbars = LocalLarderSnackbars.current
+    val expanded = isExpanded()
     // From state, not remembered locally: it has to move at midnight together with the agenda.
     val today = state.today
-    var showMonth by remember { mutableStateOf(false) }
+    var showMonth by rememberSaveable { mutableStateOf(false) }
     // Some date inside the week or month currently on screen; the title shows its month.
-    var anchor by remember { mutableStateOf(today) }
+    var anchor by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf<LocalDate?>(today) }
     // Null means the whole agenda; a date narrows it to that day.
-    var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
+    var pickedDay by rememberSaveable(stateSaver = LocalDateSaver) { mutableStateOf<LocalDate?>(null) }
 
+    val pantryEmpty = !state.isLoading && state.items.isEmpty()
+    val selectedDay = pickedDay.takeUnless { pantryEmpty }
+    val shownDate = anchor ?: today
     val onSelectDay: (LocalDate) -> Unit = { date ->
-        selectedDay = if (date == selectedDay) null else date
+        if (!pantryEmpty) pickedDay = toggledDay(pickedDay, date)
+    }
+    val onPageMonth: (Int) -> Unit = { months -> anchor = pagedAnchor(shownDate, months, today) }
+
+    ShellChromeEffect(hideScan = pantryEmpty)
+
+    val onUsed: (PantryItem) -> Unit = { item ->
+        if (item.quantity > 1) {
+            onUseOne(item)
+        } else {
+            stateHolder.decrementQuantity(item.id) { removed ->
+                NotificationHelper.cancelNotification(context, removed.id)
+                snackbars.show(
+                    context.getString(usedSnackbarText(removed.essential), removed.name),
+                    context.getString(R.string.undo_action)
+                ) {
+                    stateHolder.restoreItem(removed, removedFromShoppingList = removed.essential)
+                    NotificationHelper.scheduleNotification(context, removed)
+                }
+            }
+        }
+    }
+    val onTossed: (PantryItem) -> Unit = { item ->
+        stateHolder.deleteItem(item.id) { removed ->
+            NotificationHelper.cancelNotification(context, removed.id)
+            snackbars.show(
+                context.getString(R.string.calendar_tossed_snackbar, removed.name),
+                context.getString(R.string.undo_action)
+            ) {
+                stateHolder.restoreItem(removed)
+                NotificationHelper.scheduleNotification(context, removed)
+            }
+        }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    MonthToggleTitle(
-                        month = anchor,
-                        showMonth = showMonth,
-                        onToggle = {
-                            // Open the other view on whatever the user is looking at.
-                            selectedDay?.let { anchor = it }
-                            showMonth = !showMonth
-                        }
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
+    val monthPane: @Composable () -> Unit = {
+        MonthGrid(
+            month = shownDate,
+            today = today,
+            selectedDay = selectedDay,
+            itemsByDate = state.itemsByExpiryDate,
+            statusByDate = state.statusByExpiryDate,
+            expanded = expanded,
+            showKey = !pantryEmpty,
+            onSelectDay = onSelectDay
+        )
+    }
+    val agenda: @Composable (Modifier, (@Composable () -> Unit)?) -> Unit = { agendaModifier, leading ->
+        when {
+            state.isLoading -> Unit
+            pantryEmpty -> EmptyAgenda(
+                leading = leading,
+                onScan = { navigator.navigate(LarderRoute.Scanner()) },
+                bottomOverlayClearance = bottomOverlayClearance,
+                modifier = agendaModifier
             )
-        },
-        // Bottom nav-bar inset is already baked into bottomOverlayClearance (see FoodTrackerRoot),
-        // so the Scaffold must not reserve it a second time as innerPadding.
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        modifier = modifier.fillMaxSize()
-    ) { innerPadding ->
-        BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            val isWideLayout = maxWidth >= WIDE_LAYOUT_BREAKPOINT
+            else -> AgendaList(
+                sections = state.agenda,
+                today = today,
+                selectedDay = selectedDay,
+                selectedDayRows = selectedDay?.let { day ->
+                    state.itemsByExpiryDate[day].orEmpty().sortedBy { it.sortName }
+                },
+                leading = leading,
+                onShowAll = { pickedDay = null },
+                onOpen = { navigator.navigate(LarderRoute.ProductDetail(it.id)) },
+                onUsed = onUsed,
+                onTossed = onTossed,
+                bottomOverlayClearance = bottomOverlayClearance,
+                modifier = agendaModifier
+            )
+        }
+    }
 
-            val navigator: @Composable (Modifier) -> Unit = { navModifier ->
-                AnimatedContent(
-                    targetState = showMonth,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    modifier = navModifier,
-                    label = "calendarNavigator"
-                ) { month ->
-                    if (month) {
-                        MonthGrid(
-                            month = anchor,
-                            today = today,
-                            selectedDay = selectedDay,
-                            itemsByDate = state.itemsByExpiryDate,
-                            statusByDate = state.statusByExpiryDate,
-                            onPrevMonth = { anchor = firstOfMonth(anchor).plus(DatePeriod(months = -1)) },
-                            onNextMonth = { anchor = firstOfMonth(anchor).plus(DatePeriod(months = 1)) },
-                            onSelectDay = onSelectDay
-                        )
-                    } else {
-                        WeekStrip(
-                            today = today,
-                            initialDate = anchor,
-                            selectedDay = selectedDay,
-                            itemsByDate = state.itemsByExpiryDate,
-                            statusByDate = state.statusByExpiryDate,
-                            onWeekShown = { anchor = it },
-                            onSelectDay = onSelectDay
-                        )
+    val background = MaterialTheme.colorScheme.background
+    if (expanded) {
+        Row(modifier = modifier.fillMaxSize().background(background)) {
+            Column(
+                modifier = Modifier
+                    .width(NavigatorPaneWidth)
+                    .fillMaxHeight()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                CalendarHeader(
+                    month = shownDate,
+                    expanded = true,
+                    showMonth = true,
+                    onToggle = {},
+                    onPageMonth = onPageMonth
+                )
+                monthPane()
+                // The Scan button and pill sit over the agenda's side; this pane only needs to
+                // clear the pill when the grid runs long.
+                Spacer(modifier = Modifier.height(bottomOverlayClearance))
+            }
+            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+            ) {
+                if (selectedDay == null && !pantryEmpty) {
+                    Text(
+                        text = stringResource(R.string.calendar_pane_title),
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier
+                            .padding(start = LarderSpace.s4, end = LarderSpace.s4, top = LarderSpace.s5)
+                            .heightIn(min = LarderSize.touch)
+                            .semantics { heading() }
+                    )
+                }
+                agenda(Modifier.weight(1f).fillMaxWidth(), null)
+            }
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(background)
+                .windowInsetsPadding(WindowInsets.statusBars)
+        ) {
+            CalendarHeader(
+                month = shownDate,
+                expanded = false,
+                showMonth = showMonth,
+                onToggle = {
+                    // Open the other view on whatever the user is looking at.
+                    selectedDay?.let { anchor = it }
+                    showMonth = !showMonth
+                },
+                onPageMonth = onPageMonth
+            )
+            if (showMonth) {
+                // Taller than a short phone has room for beside a list, so it scrolls with the
+                // agenda rather than squeezing it behind the pill and Scan.
+                agenda(Modifier.weight(1f).fillMaxWidth()) {
+                    Column {
+                        monthPane()
+                        LarderDivider()
                     }
                 }
-            }
-            val agenda: @Composable (Modifier) -> Unit = { agendaModifier ->
-                AgendaList(
-                    sections = state.agenda,
-                    selectedDay = selectedDay,
-                    selectedDayRows = selectedDay?.let { day ->
-                        state.itemsByExpiryDate[day].orEmpty().sortedBy { it.sortName }
-                    },
-                    onShowAll = { selectedDay = null },
-                    onEditItem = onEditItem,
-                    onUseOne = onUseOne,
-                    onToss = onToss,
-                    bottomOverlayClearance = bottomOverlayClearance,
-                    modifier = agendaModifier
-                )
-            }
-
-            if (isWideLayout) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    navigator(Modifier.weight(1f).fillMaxHeight())
-                    Divider(modifier = Modifier.fillMaxHeight().width(1.dp))
-                    agenda(Modifier.weight(1f).fillMaxHeight())
-                }
             } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    navigator(Modifier.fillMaxWidth())
-                    Divider()
-                    agenda(Modifier.weight(1f).fillMaxWidth())
-                }
+                WeekStrip(
+                    today = today,
+                    initialDate = shownDate,
+                    selectedDay = selectedDay,
+                    itemsByDate = state.itemsByExpiryDate,
+                    statusByDate = state.statusByExpiryDate,
+                    onWeekShown = { anchor = it },
+                    onSelectDay = onSelectDay
+                )
+                LarderDivider()
+                agenda(Modifier.weight(1f).fillMaxWidth(), null)
             }
         }
     }
 }
 
-private fun firstOfMonth(date: LocalDate): LocalDate = LocalDate(date.year, date.month, 1)
-
+/** The month, which is also the week and month switch on phones. Expanded windows always show
+ *  the month, so there it's a plain title. The chevrons go wherever the month grid is showing. */
 @Composable
-private fun MonthToggleTitle(month: LocalDate, showMonth: Boolean, onToggle: () -> Unit) {
-    val toggleLabel = stringResource(if (showMonth) R.string.calendar_show_week else R.string.calendar_show_month)
+private fun CalendarHeader(
+    month: LocalDate,
+    expanded: Boolean,
+    showMonth: Boolean,
+    onToggle: () -> Unit,
+    onPageMonth: (Int) -> Unit
+) {
+    val title = formatMonthYear(month)
     Row(
-        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClickLabel = toggleLabel, onClick = onToggle)
-            .semantics { contentDescription = toggleLabel }
-            .padding(horizontal = 4.dp, vertical = 2.dp)
+            .fillMaxWidth()
+            .padding(
+                start = LarderSpace.s4,
+                end = LarderSpace.s2,
+                top = if (expanded) LarderSpace.s5 else LarderSpace.s3
+            )
+            .heightIn(min = LarderSize.touch),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = formatMonthYear(month), fontWeight = FontWeight.Bold)
-        Icon(
-            imageVector = if (showMonth) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-            contentDescription = null
-        )
+        if (expanded) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() }
+            )
+        } else {
+            val toggleLabel = stringResource(if (showMonth) R.string.calendar_show_week else R.string.calendar_show_month)
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(LarderRadius.sm))
+                    .clickable(onClickLabel = toggleLabel, onClick = onToggle)
+                    .clearAndSetSemantics {
+                        contentDescription = "$title, $toggleLabel"
+                        role = Role.Button
+                    }
+                    .heightIn(min = LarderSize.touch),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s1)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                LarderIcon(
+                    LarderIcons.ChevronDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.rotate(if (showMonth) 180f else 0f)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        if (showMonth) {
+            LarderIconButton(
+                LarderIcons.ChevronLeft,
+                stringResource(R.string.calendar_previous_month),
+                onClick = { onPageMonth(-1) }
+            )
+            LarderIconButton(
+                LarderIcons.ChevronRight,
+                stringResource(R.string.calendar_next_month),
+                onClick = { onPageMonth(1) }
+            )
+        }
     }
 }
 
@@ -296,7 +454,7 @@ private fun WeekStrip(
         }
     }
 
-    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+    Column(modifier = Modifier.padding(start = LarderSpace.s2, end = LarderSpace.s2, bottom = LarderSpace.s2)) {
         WeekdayHeaderRow()
         HorizontalPager(state = pagerState, modifier = Modifier.fillMaxWidth()) { page ->
             val days = remember(page, currentWeekStart) {
@@ -306,21 +464,22 @@ private fun WeekStrip(
                 days.forEach { date ->
                     CalendarDayCell(
                         date = date,
-                        dimmed = false,
+                        outsideMonth = false,
                         isToday = date == today,
                         isSelected = date == selectedDay,
                         count = itemsByDate[date]?.size ?: 0,
                         status = statusByDate[date],
+                        expanded = false,
                         onClick = { onSelectDay(date) },
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
     }
 }
 
+/** Six rows always, so the height holds when paging months. */
 @Composable
 private fun MonthGrid(
     month: LocalDate,
@@ -328,43 +487,43 @@ private fun MonthGrid(
     selectedDay: LocalDate?,
     itemsByDate: Map<LocalDate, List<PantryRow>>,
     statusByDate: Map<LocalDate, ExpiryStatus>,
-    onPrevMonth: () -> Unit,
-    onNextMonth: () -> Unit,
+    expanded: Boolean,
+    showKey: Boolean,
     onSelectDay: (LocalDate) -> Unit
 ) {
     // Remembered on the month: monthGrid allocates 42 CalendarDay + 42 LocalDate objects.
     val weeks = remember(month.year, month.month) { monthGrid(month).chunked(7) }
-    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            IconButton(onClick = onPrevMonth) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.calendar_previous_month))
-            }
-            IconButton(onClick = onNextMonth) {
-                Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.calendar_next_month))
-            }
-        }
+    Column(
+        modifier = Modifier.padding(
+            start = LarderSpace.s2,
+            end = LarderSpace.s2,
+            top = if (expanded) LarderSpace.s2 else 0.dp,
+            bottom = if (expanded) LarderSpace.s4 else LarderSpace.s2
+        )
+    ) {
         WeekdayHeaderRow()
         weeks.forEach { week ->
             Row(modifier = Modifier.fillMaxWidth()) {
                 week.forEach { day ->
                     CalendarDayCell(
                         date = day.date,
-                        dimmed = !day.inCurrentMonth,
+                        outsideMonth = !day.inCurrentMonth,
                         isToday = day.date == today,
                         isSelected = day.date == selectedDay,
                         count = itemsByDate[day.date]?.size ?: 0,
                         status = statusByDate[day.date],
+                        expanded = expanded,
                         onClick = { onSelectDay(day.date) },
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
-        Spacer(modifier = Modifier.height(4.dp))
+        if (showKey) {
+            CalendarKey(
+                modifier = Modifier.padding(top = if (expanded) LarderSpace.s4 else LarderSpace.s1)
+            )
+        }
     }
 }
 
@@ -374,31 +533,31 @@ private fun WeekdayHeaderRow() {
         narrowWeekdayNames().forEach { label ->
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = LarderSpace.s1)
             )
         }
     }
 }
 
 /**
- * A day number over a count of the items expiring that day, coloured by the most urgent of them
- * ([status], already reduced in PantryStateHolder). A count rather than a dot, so a day with six
- * things to deal with doesn't look the same as a day with one.
+ * One day, for the week strip and the month grid alike: its number over a mark. [count] is pantry
+ * rows, not units, and is read aloud with the date. The selected day gets a ring, and today keeps
+ * its fill with a second ring outside it.
  */
 @Composable
 private fun CalendarDayCell(
     date: LocalDate,
-    dimmed: Boolean,
+    outsideMonth: Boolean,
     isToday: Boolean,
     isSelected: Boolean,
     count: Int,
     status: ExpiryStatus?,
+    expanded: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -407,142 +566,247 @@ private fun CalendarDayCell(
     } else {
         null
     }
-    val dateDescription = formatLocalDate(date, FormatStyle.LONG)
+    val dateDescription = formatLocalDate(date, FormatStyle.FULL)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (expanded) LarderSpace.s1 else 2.dp),
         modifier = modifier
-            .aspectRatio(0.9f)
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(LarderRadius.md))
             .clickable(onClick = onClick)
             .clearAndSetSemantics {
                 contentDescription = listOfNotNull(dateDescription, countDescription).joinToString(", ")
                 selected = isSelected
+                role = Role.Button
             }
-            .padding(vertical = 2.dp)
+            .heightIn(min = if (expanded) 84.dp else 56.dp)
+            // Room for today's outer ring, which reaches 4dp past the number.
+            .padding(top = if (expanded) LarderSpace.s2 else LarderSpace.s1, bottom = 2.dp)
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .then(
-                    when {
-                        isToday -> Modifier.background(MaterialTheme.colorScheme.primary)
-                        isSelected -> Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f))
-                        else -> Modifier
-                    }
-                )
-        ) {
-            Text(
-                text = date.day.toString(),
-                color = when {
-                    isToday -> MaterialTheme.colorScheme.onPrimary
-                    dimmed -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
-                    else -> MaterialTheme.colorScheme.onBackground
-                },
-                fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
-                fontSize = 14.sp
-            )
-        }
-        Spacer(modifier = Modifier.height(2.dp))
-        val badgeColor = statusColor(status)
-        if (count > 0 && badgeColor != null) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .height(14.dp)
-                    .widthIn(min = 14.dp)
-                    .clip(CircleShape)
-                    .background(if (dimmed) badgeColor.copy(alpha = 0.4f) else badgeColor)
-                    .padding(horizontal = 3.dp)
-            ) {
-                Text(
-                    text = if (count > 9) "9+" else count.toString(),
-                    color = MaterialTheme.colorScheme.surface,
-                    fontSize = 9.sp,
-                    lineHeight = 9.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+        DayNumber(date.day, outsideMonth, isToday, isSelected, if (expanded) 36.dp else 32.dp)
+        Box(modifier = Modifier.heightIn(min = 16.dp), contentAlignment = Alignment.Center) {
+            if (count > 0 && status != null) DayMark(dayMarkShape(status), dayCountLabel(count))
         }
     }
 }
 
 @Composable
-private fun statusColor(status: ExpiryStatus?): Color? =
-    when (status) {
-        null -> null
-        ExpiryStatus.EXPIRED -> LarderTheme.colors.onExpiredContainer
-        ExpiryStatus.EXPIRING_TODAY, ExpiryStatus.EXPIRING_SOON -> LarderTheme.colors.onSoonContainer
-        ExpiryStatus.FRESH -> MaterialTheme.colorScheme.onSurfaceVariant
+private fun DayNumber(day: Int, outsideMonth: Boolean, isToday: Boolean, isSelected: Boolean, size: Dp) {
+    val scheme = MaterialTheme.colorScheme
+    val ring = scheme.primary
+    val fill = when {
+        isToday -> scheme.primary
+        isSelected -> scheme.primaryContainer
+        else -> Color.Transparent
     }
+    val text = when {
+        isToday -> scheme.onPrimary
+        isSelected -> scheme.onPrimaryContainer
+        outsideMonth -> scheme.onSurfaceVariant
+        else -> scheme.onSurface
+    }
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(size)
+            .drawBehind {
+                if (isSelected) {
+                    val stroke = 2.dp.toPx()
+                    // Sits outside the fill, and a ring's width further out around today's.
+                    val gap = if (isToday) stroke else 0f
+                    drawCircle(
+                        color = ring,
+                        radius = this.size.minDimension / 2 + gap + stroke / 2,
+                        center = Offset(this.size.width / 2, this.size.height / 2),
+                        style = Stroke(stroke)
+                    )
+                }
+            }
+            .background(fill, CircleShape)
+    ) {
+        Text(
+            text = day.toString(),
+            style = MaterialTheme.typography.labelLarge.merge(LarderTabularNumbers),
+            fontWeight = if (outsideMonth && !isToday && !isSelected) FontWeight.Normal else null,
+            color = text
+        )
+    }
+}
+
+/** A shape and a count, or only a count for a fresh day. */
+@Composable
+private fun DayMark(shape: DayMarkShape, count: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (shape != DayMarkShape.None) MarkShape(shape)
+        Text(
+            text = count,
+            style = MaterialTheme.typography.labelMedium.merge(LarderTabularNumbers),
+            color = if (shape == DayMarkShape.None) {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
+        )
+    }
+}
+
+@Composable
+private fun MarkShape(shape: DayMarkShape) {
+    val colors = LarderTheme.colors
+    val square = RoundedCornerShape(2.dp)
+    when (shape) {
+        DayMarkShape.Square -> MarkOutline(11.dp, square, colors.expiredContainer, colors.onExpiredContainer)
+        DayMarkShape.Circle -> MarkOutline(11.dp, CircleShape, colors.todayContainer, colors.onTodayContainer)
+        DayMarkShape.Diamond -> MarkOutline(
+            size = 9.dp,
+            shape = RoundedCornerShape(0.dp),
+            fill = colors.soonContainer,
+            line = colors.onSoonContainer,
+            modifier = Modifier.padding(1.dp).rotate(45f)
+        )
+        DayMarkShape.None -> Unit
+    }
+}
+
+@Composable
+private fun MarkOutline(size: Dp, shape: Shape, fill: Color, line: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .background(fill, shape)
+            .border(1.5.dp, line, shape)
+    )
+}
+
+/** What the marks mean. Hidden on an empty pantry, when there is nothing to explain. */
+@Composable
+private fun CalendarKey(modifier: Modifier = Modifier) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s4, Alignment.CenterHorizontally),
+        verticalArrangement = Arrangement.spacedBy(LarderSpace.s1)
+    ) {
+        KeyEntry(stringResource(R.string.metric_expired)) { MarkShape(DayMarkShape.Square) }
+        KeyEntry(stringResource(R.string.calendar_section_today)) { MarkShape(DayMarkShape.Circle) }
+        KeyEntry(stringResource(R.string.metric_soon)) { MarkShape(DayMarkShape.Diamond) }
+        KeyEntry(stringResource(R.string.metric_fresh)) { DayMark(DayMarkShape.None, "1") }
+    }
+}
+
+@Composable
+private fun KeyEntry(label: String, mark: @Composable () -> Unit) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s1),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        mark()
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** First use. [leading] is the month grid when it scrolls with the page; the body offers Scan,
+ *  so the floating one steps aside and the screen keeps one primary action. */
+@Composable
+private fun EmptyAgenda(
+    leading: (@Composable () -> Unit)?,
+    onScan: () -> Unit,
+    bottomOverlayClearance: Dp,
+    modifier: Modifier = Modifier
+) {
+    BoxWithConstraints(modifier = modifier) {
+        val available = maxHeight
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = bottomOverlayClearance)
+        ) {
+            leading?.invoke()
+            EmptyState(
+                title = stringResource(R.string.calendar_agenda_empty),
+                message = stringResource(R.string.calendar_empty_message),
+                art = LarderArt.Shelf,
+                modifier = Modifier.heightIn(min = (available - bottomOverlayClearance).coerceAtLeast(0.dp))
+            ) {
+                LarderButton(text = stringResource(R.string.home_empty_scan), onClick = onScan)
+            }
+        }
+    }
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun AgendaList(
     sections: List<AgendaSection>,
+    today: LocalDate,
     selectedDay: LocalDate?,
     selectedDayRows: List<PantryRow>?,
+    leading: (@Composable () -> Unit)?,
     onShowAll: () -> Unit,
-    onEditItem: (PantryItem) -> Unit,
-    onUseOne: (PantryItem) -> Unit,
-    onToss: (String) -> Unit,
+    onOpen: (PantryItem) -> Unit,
+    onUsed: (PantryItem) -> Unit,
+    onTossed: (PantryItem) -> Unit,
     bottomOverlayClearance: Dp,
     modifier: Modifier = Modifier
 ) {
-    // Bottom padding clears the floating pill nav bar that overlays this screen (see
-    // FoodTrackerRoot).
     LazyColumn(
         modifier = modifier,
-        contentPadding = PaddingValues(bottom = bottomOverlayClearance)
+        contentPadding = PaddingValues(
+            top = if (leading == null) LarderSpace.s2 else 0.dp,
+            bottom = bottomOverlayClearance
+        )
     ) {
         val rowItems: LazyListScope.(List<PantryRow>, Boolean) -> Unit = { rows, showDate ->
-            items(rows, key = { it.id }) { row ->
+            itemsIndexed(rows, key = { _, row -> row.id }, contentType = { _, _ -> "row" }) { index, row ->
                 AgendaRow(
                     row = row,
+                    today = today,
                     showDate = showDate,
-                    onClick = { onEditItem(row.item) },
-                    onUseOne = { onUseOne(row.item) },
-                    onToss = { onToss(row.id) },
-                    modifier = Modifier.animateItem()
+                    position = LarderGroupPosition.of(index, rows.size),
+                    onOpen = { onOpen(row.item) },
+                    onUsed = { onUsed(row.item) },
+                    onTossed = { onTossed(row.item) },
+                    modifier = Modifier
+                        .animateItem()
+                        .padding(horizontal = LarderSpace.s4)
                 )
             }
         }
 
+        leading?.let { content ->
+            item(key = "navigator", contentType = "navigator") {
+                Column(modifier = Modifier.padding(bottom = LarderSpace.s2)) { content() }
+            }
+        }
+
         if (selectedDay != null) {
-            item(key = "dayHeader") {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 8.dp, top = 4.dp)
-                ) {
-                    Text(
-                        text = formatLocalDate(selectedDay, FormatStyle.FULL),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                    TextButton(onClick = onShowAll) {
-                        Text(stringResource(R.string.calendar_show_all))
-                    }
-                }
+            item(key = "dayHeading", contentType = "dayHeading") {
+                DayHeading(selectedDay, today, onShowAll)
             }
             if (selectedDayRows.isNullOrEmpty()) {
-                item(key = "dayEmpty") { EmptyMessage(stringResource(R.string.calendar_no_items_for_day)) }
+                item(key = "dayEmpty", contentType = "dayEmpty") {
+                    Text(
+                        text = stringResource(R.string.calendar_no_items_for_day),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = LarderSpace.s4, vertical = LarderSpace.s2)
+                    )
+                }
             } else {
                 rowItems(selectedDayRows, false)
             }
             return@LazyColumn
         }
 
-        if (sections.isEmpty()) {
-            item(key = "agendaEmpty") { EmptyMessage(stringResource(R.string.calendar_agenda_empty)) }
-            return@LazyColumn
-        }
-        sections.forEach { section ->
-            stickyHeader(key = "header_${section.bucket}") {
-                AgendaSectionHeader(bucket = section.bucket, count = section.rows.size)
+        sections.forEachIndexed { index, section ->
+            stickyHeader(key = "header_${section.bucket}", contentType = "header") {
+                AgendaHeading(bucket = section.bucket, count = section.rows.size, first = index == 0)
             }
             rowItems(section.rows, section.bucket in MULTI_DAY_BUCKETS)
         }
@@ -550,17 +814,34 @@ private fun AgendaList(
 }
 
 @Composable
-private fun EmptyMessage(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-    )
+private fun DayHeading(day: LocalDate, today: LocalDate, onShowAll: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = LarderSpace.s4, end = LarderSpace.s1, bottom = LarderSpace.s2)
+            .heightIn(min = LarderSize.touch)
+    ) {
+        Text(
+            text = formatDayHeading(day, today.year),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() }
+        )
+        LarderButton(
+            text = stringResource(R.string.calendar_show_all),
+            onClick = onShowAll,
+            style = LarderButtonStyle.Text
+        )
+    }
 }
 
+/** Sticks to the top of the list, so it paints the page behind itself. The count is rows. */
 @Composable
-private fun AgendaSectionHeader(bucket: AgendaBucket, count: Int) {
+private fun AgendaHeading(bucket: AgendaBucket, count: Int, first: Boolean) {
     val title = stringResource(
         when (bucket) {
             AgendaBucket.OVERDUE -> R.string.calendar_section_overdue
@@ -571,157 +852,129 @@ private fun AgendaSectionHeader(bucket: AgendaBucket, count: Int) {
             AgendaBucket.LATER -> R.string.calendar_section_later
         }
     )
-    val color = when (bucket) {
-        AgendaBucket.OVERDUE -> LarderTheme.colors.onExpiredContainer
-        AgendaBucket.TODAY, AgendaBucket.TOMORROW -> LarderTheme.colors.onSoonContainer
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
     Row(
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
-            .semantics(mergeDescendants = true) {}
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .semantics(mergeDescendants = true) { heading() }
+            .padding(
+                start = LarderSpace.s4,
+                end = LarderSpace.s4,
+                top = if (first) LarderSpace.s2 else LarderSpace.s4,
+                bottom = LarderSpace.s2
+            )
     ) {
         Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            color = color
+            text = title,
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = count.toString(),
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge.merge(LarderTabularNumbers),
+            fontWeight = FontWeight.Normal,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
 
 /**
- * One agenda item. Swipe right uses one unit, swipe left throws the whole item away; both are
- * also offered as accessibility actions, since a swipe alone isn't reachable from TalkBack.
+ * One item. Rows under a heading of several days lead with their date; a row under one day drops
+ * it, since the heading gives it. The chip stays relative at any distance for the same reason:
+ * the date is already there.
+ *
+ * Swipe right uses one, swipe left tosses the item. Both are accessibility actions too, and on the
+ * detail sheet, so nothing depends on the gesture.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AgendaRow(
     row: PantryRow,
+    today: LocalDate,
     showDate: Boolean,
-    onClick: () -> Unit,
-    onUseOne: () -> Unit,
-    onToss: () -> Unit,
+    position: LarderGroupPosition,
+    onOpen: () -> Unit,
+    onUsed: () -> Unit,
+    onTossed: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val item = row.item
-    // A plain `remember`, not `rememberSwipeToDismissBoxState` — see ItemCard for why a saveable
-    // state brings an undone row back already dismissed.
-    val positionalThreshold = SwipeToDismissBoxDefaults.positionalThreshold
-    val dismissState = remember {
-        SwipeToDismissBoxState(
-            initialValue = SwipeToDismissBoxValue.Settled,
-            positionalThreshold = positionalThreshold
-        )
+    val resources = LocalContext.current.resources
+    val locale = LocalConfiguration.current.locales[0]
+    val statusText = remember(resources, locale, row.daysRemaining, item.expiryDate, today) {
+        // Any status but fresh counts the days, whatever the distance.
+        expiryStatusLabel(resources, locale, ExpiryStatus.EXPIRING_SOON, row.daysRemaining, item.expiryDate, today)
     }
-    val scope = rememberCoroutineScope()
-    val currentItem by rememberUpdatedState(item)
-    val currentOnUseOne by rememberUpdatedState(onUseOne)
-    val currentOnToss by rememberUpdatedState(onToss)
-    // Stable identity, as in ItemCard: SwipeToDismissBox keys its dismissal effect on it.
-    val onDismiss = remember {
-        { value: SwipeToDismissBoxValue ->
-            when (value) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    // Using one of several leaves the row in place with a lower count, so it
-                    // has to slide back rather than stay swiped away.
-                    val staysInList = currentItem.quantity > 1
-                    currentOnUseOne()
-                    if (staysInList) scope.launch { dismissState.reset() }
-                }
-                SwipeToDismissBoxValue.EndToStart -> currentOnToss()
-                SwipeToDismissBoxValue.Settled -> {}
-            }
-        }
-    }
+    val location = item.storageLocation.takeIf { it.isNotBlank() }?.let { storageLocationLabel(it) }
+    val place = if (showDate) {
+        listOfNotNull(formatWeekdayDay(item.expiryDate), location)
+    } else {
+        listOfNotNull(location, row.categoryDisplayName?.takeIf { it.isNotBlank() }?.let { categoryLabel(it) })
+    }.joinToString(" · ").ifEmpty { null }
     val usedLabel = stringResource(R.string.calendar_swipe_used)
     val tossedLabel = stringResource(R.string.calendar_swipe_tossed)
+    val currentOnUsed by rememberUpdatedState(onUsed)
+    val currentOnTossed by rememberUpdatedState(onTossed)
 
-    SwipeToDismissBox(
-        state = dismissState,
-        onDismiss = onDismiss,
-        backgroundContent = { AgendaSwipeBackground(dismissState.dismissDirection) },
-        modifier = modifier.semantics {
-            customActions = listOf(
-                CustomAccessibilityAction(usedLabel) { currentOnUseOne(); true },
-                CustomAccessibilityAction(tossedLabel) { currentOnToss(); true }
-            )
-        }
+    LarderSwipeRow(
+        startAction = LarderSwipeAction(
+            icon = LarderIcons.Check,
+            label = usedLabel,
+            quiet = true,
+            keepsRow = item.quantity > 1,
+            onSwipe = onUsed
+        ),
+        endAction = LarderSwipeAction(LarderIcons.Trash2, tossedLabel, danger = true, onSwipe = onTossed),
+        modifier = modifier.larderGroupItem(position)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
+        PantryRowView(
+            name = item.name,
+            status = row.status,
+            statusText = statusText,
+            place = place,
+            quantity = item.quantity,
+            onClick = onOpen,
+            // The swipe slides this over its reveal, so it can't be see-through.
             modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 10.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = item.name,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
+                .background(MaterialTheme.colorScheme.surface)
+                .semantics {
+                    customActions = listOf(
+                        CustomAccessibilityAction(usedLabel) { currentOnUsed(); true },
+                        CustomAccessibilityAction(tossedLabel) { currentOnTossed(); true }
                     )
-                    if (item.quantity > 1) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = stringResource(R.string.quantity_format, item.quantity),
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                val details = listOfNotNull(
-                    if (showDate) formatWeekdayDay(item.expiryDate) else null,
-                    item.storageLocation.takeIf { it.isNotBlank() }?.let { storageLocationLabel(it) },
-                    item.brand?.takeIf { it.isNotBlank() }
-                )
-                if (details.isNotEmpty()) {
-                    Text(
-                        text = details.joinToString(" · "),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.width(8.dp))
-            ExpiryBadge(daysRemaining = row.daysRemaining, status = row.status)
-        }
+                },
+            imageUrl = item.imageUrl?.takeIf { it.isNotBlank() },
+            fallbackIcon = categoryIcon(row.categoryDisplayName ?: item.category)
+        )
     }
 }
 
-/** Green + check leading (swipe right) for "used", red + trash trailing (swipe left) for
- *  "tossed". Blank while settled. */
-@OptIn(ExperimentalMaterial3Api::class)
+@PreviewLightDark
 @Composable
-private fun AgendaSwipeBackground(direction: SwipeToDismissBoxValue) {
-    val (color, alignment, icon) = when (direction) {
-        SwipeToDismissBoxValue.StartToEnd -> Triple(MaterialTheme.colorScheme.primary, Alignment.CenterStart, Icons.Default.Check)
-        SwipeToDismissBoxValue.EndToStart -> Triple(MaterialTheme.colorScheme.error, Alignment.CenterEnd, Icons.Default.DeleteOutline)
-        SwipeToDismissBoxValue.Settled -> Triple(Color.Transparent, Alignment.Center, null)
+internal fun CalendarDayCellPreview() = LarderPreview {
+    val day = LocalDate(2026, 11, 4)
+    Row(modifier = Modifier.fillMaxWidth()) {
+        val cell: @Composable (Boolean, Boolean, Boolean, Int, ExpiryStatus?) -> Unit =
+            { outside, today, selected, count, status ->
+                CalendarDayCell(day, outside, today, selected, count, status, false, {}, Modifier.weight(1f))
+            }
+        cell(false, false, false, 0, null)
+        cell(false, false, false, 1, ExpiryStatus.EXPIRED)
+        cell(false, true, false, 1, ExpiryStatus.EXPIRING_TODAY)
+        cell(false, false, false, 12, ExpiryStatus.EXPIRING_SOON)
+        cell(false, false, false, 2, ExpiryStatus.FRESH)
+        cell(false, false, true, 1, ExpiryStatus.EXPIRING_SOON)
+        cell(false, true, true, 1, ExpiryStatus.EXPIRING_TODAY)
+        cell(true, false, false, 0, null)
     }
-    Box(
-        contentAlignment = alignment,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(color)
-            .padding(horizontal = 20.dp)
-    ) {
-        icon?.let { Icon(imageVector = it, contentDescription = null, tint = contentColorFor(color)) }
-    }
+}
+
+@PreviewLightDark
+@Composable
+internal fun CalendarKeyPreview() = LarderPreview { CalendarKey() }
+
+@PreviewLightDark
+@Composable
+internal fun EmptyAgendaPreview() = LarderPreview {
+    EmptyAgenda(leading = null, onScan = {}, bottomOverlayClearance = 0.dp, modifier = Modifier.height(420.dp))
 }

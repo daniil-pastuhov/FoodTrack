@@ -178,9 +178,44 @@ public enum L10n {
     public static func itemsDeleted(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("items_deleted_format", comment: ""), count)
     }
-    public static var onboardingPlaceholderTitle: String { NSLocalizedString("onboarding_placeholder_title", comment: "") }
-    public static var onboardingPlaceholderBody: String { NSLocalizedString("onboarding_placeholder_body", comment: "") }
-    public static var onboardingPlaceholderContinue: String { NSLocalizedString("onboarding_placeholder_continue", comment: "") }
+
+    // MARK: - Onboarding
+    public static var onboardingGetStarted: String { NSLocalizedString("onboarding_get_started", comment: "") }
+    public static var onboardingWelcomeTitle: String { NSLocalizedString("onboarding_welcome_title", comment: "") }
+    public static var onboardingPrivateTitle: String { NSLocalizedString("onboarding_private_title", comment: "") }
+    public static var onboardingPrivateBody: String { NSLocalizedString("onboarding_private_body", comment: "") }
+    public static var onboardingNotificationsTitle: String { NSLocalizedString("onboarding_notifications_title", comment: "") }
+    public static var onboardingNotificationsBody: String { NSLocalizedString("onboarding_notifications_body", comment: "") }
+    public static func onboardingSampleSource(_ appName: String) -> String {
+        String(format: NSLocalizedString("onboarding_sample_source", comment: ""), appName)
+    }
+    public static var onboardingSampleTitle: String { NSLocalizedString("onboarding_sample_title", comment: "") }
+    public static var onboardingSampleBody: String { NSLocalizedString("onboarding_sample_body", comment: "") }
+    public static func onboardingSampleDescription(_ title: String, _ body: String) -> String {
+        String(format: NSLocalizedString("onboarding_sample_description", comment: ""), title, body)
+    }
+    public static var onboardingNotificationsAllow: String { NSLocalizedString("onboarding_notifications_allow", comment: "") }
+    public static var onboardingNotNow: String { NSLocalizedString("onboarding_not_now", comment: "") }
+    public static var onboardingCameraTitle: String { NSLocalizedString("onboarding_camera_title", comment: "") }
+    public static func onboardingCameraBody(_ appName: String) -> String {
+        String(format: NSLocalizedString("onboarding_camera_body", comment: ""), appName)
+    }
+    public static var onboardingCameraBarcodesTitle: String { NSLocalizedString("onboarding_camera_barcodes_title", comment: "") }
+    public static var onboardingCameraBarcodesBody: String { NSLocalizedString("onboarding_camera_barcodes_body", comment: "") }
+    public static var onboardingCameraDatesTitle: String { NSLocalizedString("onboarding_camera_dates_title", comment: "") }
+    public static var onboardingCameraDatesBody: String { NSLocalizedString("onboarding_camera_dates_body", comment: "") }
+    public static var onboardingCameraAllow: String { NSLocalizedString("onboarding_camera_allow", comment: "") }
+    public static var onboardingReadyTitle: String { NSLocalizedString("onboarding_ready_title", comment: "") }
+    public static var onboardingReadyBody: String { NSLocalizedString("onboarding_ready_body", comment: "") }
+    public static var onboardingSkip: String { NSLocalizedString("onboarding_skip", comment: "") }
+    public static var onboardingDeclinedTitle: String { NSLocalizedString("onboarding_declined_title", comment: "") }
+    public static var onboardingDeclinedBody: String { NSLocalizedString("onboarding_declined_body", comment: "") }
+    public static var onboardingDeclinedRemindersTitle: String { NSLocalizedString("onboarding_declined_reminders_title", comment: "") }
+    public static var onboardingDeclinedRemindersBody: String { NSLocalizedString("onboarding_declined_reminders_body", comment: "") }
+    public static var onboardingDeclinedCameraTitle: String { NSLocalizedString("onboarding_declined_camera_title", comment: "") }
+    public static var onboardingDeclinedCameraBody: String { NSLocalizedString("onboarding_declined_camera_body", comment: "") }
+    public static var onboardingAddByHand: String { NSLocalizedString("onboarding_add_by_hand", comment: "") }
+    public static var remindersNotAskedMessage: String { NSLocalizedString("reminders_not_asked_message", comment: "") }
 
     public static var exitSelectionButton: String { NSLocalizedString("exit_selection_button", comment: "") }
     public static var selectItemsButton: String { NSLocalizedString("select_items_button", comment: "") }
@@ -242,6 +277,14 @@ public enum L10n {
     public static var calendarSwipeTossed: String { NSLocalizedString("calendar_swipe_tossed", comment: "") }
     public static var calendarShowMonth: String { NSLocalizedString("calendar_show_month", comment: "") }
     public static var calendarShowWeek: String { NSLocalizedString("calendar_show_week", comment: "") }
+    public static var calendarPaneTitle: String { NSLocalizedString("calendar_pane_title", comment: "") }
+    public static var calendarEmptyMessage: String { NSLocalizedString("calendar_empty_message", comment: "") }
+    public static func calendarUsedSnackbar(_ name: String) -> String {
+        String(format: NSLocalizedString("calendar_used_snackbar", comment: ""), name)
+    }
+    public static func calendarTossedSnackbar(_ name: String) -> String {
+        String(format: NSLocalizedString("calendar_tossed_snackbar", comment: ""), name)
+    }
     public static func calendarDayItemCount(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("calendar_day_item_count", comment: ""), count)
     }

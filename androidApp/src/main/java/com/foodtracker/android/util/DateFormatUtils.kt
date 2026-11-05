@@ -7,9 +7,11 @@ import androidx.compose.ui.platform.LocalConfiguration
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import java.time.DayOfWeek
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.time.format.TextStyle
+import java.util.Date
 import java.util.Locale
 
 /** Renders [date] using the device's locale date order/format (e.g. DD/MM/YYYY vs MM/DD/YYYY), never a fixed one. */
@@ -46,13 +48,28 @@ fun formatWeekdayDay(date: LocalDate): String {
     return remember(date, formatter) { date.toJavaLocalDate().format(formatter) }
 }
 
+/** "Friday 6 November", in the device's own order and wording and always with a capital, for a
+ *  heading over one day's rows. The year joins it when the day isn't in [currentYear]. */
+@Composable
+fun formatDayHeading(date: LocalDate, currentYear: Int): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(date, currentYear, locale) {
+        val skeleton = if (date.year == currentYear) "EEEEdMMMM" else "yEEEEdMMMM"
+        // ICU, because java.time gives the standalone "ноябрь" where a day needs "ноября".
+        val midnight = date.toJavaLocalDate().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        android.icu.text.DateFormat.getInstanceForSkeleton(skeleton, locale)
+            .format(Date.from(midnight))
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+}
+
 /** Single-letter (or locale-appropriate narrow) weekday names, Monday first, to head the
  *  Monday-start week strip and month grid. */
 @Composable
 fun narrowWeekdayNames(): List<String> {
     val locale = LocalConfiguration.current.locales[0]
     return remember(locale) {
-        DayOfWeek.entries.map { it.getDisplayName(TextStyle.NARROW_STANDALONE, locale) }
+        DayOfWeek.entries.map { it.getDisplayName(TextStyle.NARROW_STANDALONE, locale).uppercase(locale) }
     }
 }
 
