@@ -1,759 +1,909 @@
 package com.foodtracker.android.ui.screens
 
+import android.content.Intent
+import android.content.res.Resources
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.RestaurantMenu
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SwapVert
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.lerp
-import kotlin.math.roundToInt
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.LarderTheme
+import com.foodtracker.android.notification.NotificationHelper
 import com.foodtracker.android.ui.components.ItemCard
+import com.foodtracker.android.ui.components.fullBleed
+import com.foodtracker.android.ui.design.EmptyState
+import com.foodtracker.android.ui.design.LarderArt
+import com.foodtracker.android.ui.design.LarderButton
+import com.foodtracker.android.ui.design.LarderButtonStyle
+import com.foodtracker.android.ui.design.LarderCallout
+import com.foodtracker.android.ui.design.LarderCalloutKind
+import com.foodtracker.android.ui.design.LarderChip
+import com.foodtracker.android.ui.design.LarderDialog
+import com.foodtracker.android.ui.design.LarderDivider
+import com.foodtracker.android.ui.design.LarderGroupPosition
+import com.foodtracker.android.ui.design.LarderIcon
+import com.foodtracker.android.ui.design.LarderIconButton
+import com.foodtracker.android.ui.design.LarderIcons
+import com.foodtracker.android.ui.design.LarderListItem
+import com.foodtracker.android.ui.design.LarderSheet
+import com.foodtracker.android.ui.design.LarderTextField
+import com.foodtracker.android.ui.design.LedeHeader
+import com.foodtracker.android.ui.design.SectionHeader
+import com.foodtracker.android.ui.design.ShellChromeEffect
+import com.foodtracker.android.ui.design.isExpanded
+import com.foodtracker.android.ui.navigation.AddItemMode
+import com.foodtracker.android.ui.navigation.LarderRoute
+import com.foodtracker.android.ui.navigation.LocalLarderNavigator
+import com.foodtracker.android.ui.theme.LarderSize
+import com.foodtracker.android.ui.theme.LarderSpace
+import com.foodtracker.android.util.categoryLabel
 import com.foodtracker.android.util.shareRecipePrompt
-import com.foodtracker.model.CategoryPreference
+import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.SortOption
-import com.foodtracker.model.categoryPreferenceSortOrder
+import com.foodtracker.viewmodel.HomeLede
+import com.foodtracker.viewmodel.HomeSection
+import com.foodtracker.viewmodel.HomeSectionTitle
+import com.foodtracker.viewmodel.HomeSummary
+import com.foodtracker.viewmodel.PantryRow
 import com.foodtracker.viewmodel.PantryStateHolder
+import com.foodtracker.viewmodel.PantryUiState
 import com.foodtracker.viewmodel.StatusFilter
-import com.foodtracker.android.util.storageLocationLabel
-import com.foodtracker.android.util.categoryLabel
+import kotlinx.coroutines.launch
+import kotlinx.datetime.isoDayNumber
+import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** The list's width when the product detail sits beside it. The root lines snackbars up with it. */
+val HomeListPaneWidth = 380.dp
+
+/** Numbers up to ten are words, because the sentence should read like one. */
+internal fun ledeNumber(resources: Resources, count: Int): String {
+    val words = resources.getStringArray(R.array.lede_number_words)
+    return words.getOrNull(count - 1) ?: count.toString()
+}
+
+/** Words the sentence at the top of Home, or null when there isn't one. */
+internal fun homeLedeText(resources: Resources, lede: HomeLede): String? = when (lede) {
+    HomeLede.None -> null
+    is HomeLede.UseByTomorrow -> resources.getQuantityString(
+        R.plurals.lede_use_by_tomorrow, lede.count, ledeNumber(resources, lede.count)
+    )
+    is HomeLede.PastDate -> resources.getQuantityString(
+        R.plurals.lede_past_date, lede.count, ledeNumber(resources, lede.count)
+    )
+    // The weekday carries its preposition because Russian changes both: "в среду", "во вторник".
+    is HomeLede.NextUp -> resources.getString(
+        R.string.lede_next_up,
+        lede.name,
+        resources.getStringArray(R.array.lede_on_weekday)[lede.date.dayOfWeek.isoDayNumber - 1]
+    )
+    HomeLede.NothingThisWeek -> resources.getString(R.string.lede_nothing_this_week)
+}
+
+/** "A and B", "A, B and C", then "A, B and 3 others", so the dialog stays short. */
+internal fun recipeNames(resources: Resources, names: List<String>): String = when (names.size) {
+    0 -> ""
+    1 -> names[0]
+    2 -> resources.getString(R.string.recipe_names_two, names[0], names[1])
+    3 -> resources.getString(R.string.recipe_names_three, names[0], names[1], names[2])
+    else -> resources.getQuantityString(R.plurals.recipe_names_more, names.size - 2, names[0], names[1], names.size - 2)
+}
+
+/**
+ * Which product the right-hand pane shows: the one picked, while it is still in the list, else the
+ * first row. Nothing is picked for you while searching, and selecting always leaves the pane blank.
+ */
+internal fun homePaneItemId(
+    pickedId: String?,
+    sections: List<HomeSection>,
+    searching: Boolean,
+    selecting: Boolean
+): String? {
+    if (selecting) return null
+    if (pickedId != null && sections.any { section -> section.rows.any { it.id == pickedId } }) return pickedId
+    if (searching) return null
+    return sections.firstOrNull()?.rows?.firstOrNull()?.id
+}
+
 @Composable
 fun PantryDashboardScreen(
     stateHolder: PantryStateHolder,
-    onNavigateToAddEdit: (PantryItem?) -> Unit,
+    onUseOne: (PantryItem) -> Unit,
     onDeleteItem: (String) -> Unit,
     onDeleteItems: (Set<String>) -> Unit,
-    onDecrementQuantity: (String) -> Unit,
     onMoveToShoppingList: (String) -> Unit,
     modifier: Modifier = Modifier,
-    gridState: LazyGridState = rememberLazyGridState(),
+    listState: LazyListState = rememberLazyListState(),
     // Distance content must clear at the bottom so it can scroll out from under the floating
-    // pill nav bar and scan/add buttons (see MainActivity, which measures the overlay and
-    // computes this). Defaults to a rough guess for previews/standalone use.
-    bottomOverlayClearance: Dp = 160.dp
+    // pill nav bar and Scan. Defaults to a rough guess for previews and standalone use.
+    bottomOverlayClearance: Dp = 160.dp,
+    /** The row picked for the right-hand pane on expanded windows. */
+    pickedItemId: String? = null,
+    /** Held by the root, so a dismissal outlasts a trip to another tab. */
+    remindersCalloutDismissed: Boolean = false,
+    onDismissRemindersCallout: () -> Unit = {},
+    /** Draws the product detail in the right-hand pane on expanded windows. */
+    detailPane: @Composable (itemId: String) -> Unit = {}
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var showFilterSheet by remember { mutableStateOf(false) }
-    var showShareDialog by remember { mutableStateOf(false) }
-    var showDeleteSelectedDialog by remember { mutableStateOf(false) }
-    var includeOtherItemsInShare by remember { mutableStateOf(false) }
-    var selectedIds by remember { mutableStateOf(setOf<String>()) }
-    val selectionMode = selectedIds.isNotEmpty()
-    val filtersActive = state.selectedLocation != null ||
-            state.selectedCategory != null ||
-            state.selectedStatusFilter != StatusFilter.ALL ||
-            state.searchQuery.isNotBlank()
+    val resources = context.resources
+    val navigator = LocalLarderNavigator.current
+    val scope = rememberCoroutineScope()
+    val expanded = isExpanded()
 
-    // Drives the collapsing header (TopBar + metric row): 0f is fully expanded,
-    // -(topBar + metrics) is fully collapsed. Consumed eagerly in onPreScroll (not on
-    // post-scroll/at list boundaries) so the header reacts to any upward drag immediately,
-    // from anywhere in the list, rather than only once the list hits its top.
-    //
-    // The TopBar and the metric row are two separate CollapsingHeaders driven by this one
-    // offset: normally they scroll away together (TopBar first, since it's on top), but in
-    // selection mode the TopBar is pinned so its share/delete actions stay reachable no matter
-    // how far down the list the user long-pressed. Only the metric row keeps collapsing then.
+    var filterSheet by remember { mutableStateOf<FilterSheetPage?>(null) }
+    var showRecipeDialog by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
+    // Opens with the query still set when coming back from another tab, so the list is never
+    // filtered by a search nobody can see.
+    var searching by remember { mutableStateOf(state.searchQuery.isNotEmpty()) }
+    var blockedNotificationsIntent by remember { mutableStateOf<Intent?>(null) }
+
+    val selecting = selectedIds.isNotEmpty()
+    val loaded = !state.isLoading
+    val pantryEmpty = loaded && state.items.isEmpty()
+    val query = state.searchQuery.trim()
+    val showingResults = searching && query.isNotEmpty()
+    val filtersActive = state.selectedLocation != null || state.selectedCategory != null
+    val sortOption = state.settings.sortOption
+    val sections = remember(state.filteredItems, sortOption, showingResults) {
+        if (showingResults) {
+            listOf(HomeSection(null, state.filteredItems)).filter { it.rows.isNotEmpty() }
+        } else {
+            HomeSummary.sections(state.filteredItems, sortOption)
+        }
+    }
+    val lede = remember(state.allRows) { HomeSummary.lede(state.allRows) }
+
+    LifecycleResumeEffect(state.settings.notifications) {
+        blockedNotificationsIntent =
+            NotificationHelper.blockedNotificationsSettingsIntent(context, state.settings.notifications)
+        onPauseOrDispose {}
+    }
+
+    // Clear data can empty the pantry under a search or filter, which would then hide the first
+    // thing added.
+    LaunchedEffect(pantryEmpty) {
+        if (pantryEmpty) {
+            searching = false
+            selectedIds = emptySet()
+            stateHolder.onSearchQueryChanged("")
+            stateHolder.onLocationSelected(null)
+            stateHolder.onCategorySelected(null)
+            stateHolder.onStatusFilterSelected(StatusFilter.ALL)
+        }
+    }
+
+    ShellChromeEffect(hideNav = selecting, hideScan = selecting || pantryEmpty)
+
+    val closeSearch = {
+        searching = false
+        stateHolder.onSearchQueryChanged("")
+    }
+    BackHandler(enabled = selecting) { selectedIds = emptySet() }
+    BackHandler(enabled = searching && !selecting) { closeSearch() }
+
+    // Scrolled away as one piece, reacting to any drag rather than only at the top of the list.
+    val headerCollapses by rememberUpdatedState(!selecting && !searching && !pantryEmpty)
     var headerOffsetPx by remember { mutableFloatStateOf(0f) }
-    var topBarNaturalHeightPx by remember { mutableFloatStateOf(0f) }
-    var metricsNaturalHeightPx by remember { mutableFloatStateOf(0f) }
-    val topBarPinnedFraction by animateFloatAsState(
-        targetValue = if (selectionMode) 1f else 0f,
-        animationSpec = tween(200),
-        label = "topBarPinnedFraction"
-    )
-    val headerNestedScrollConnection = remember {
+    var headerHeightPx by remember { mutableFloatStateOf(0f) }
+    val headerScroll = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                val headerNaturalHeightPx = topBarNaturalHeightPx + metricsNaturalHeightPx
-                if (headerNaturalHeightPx <= 0f) return Offset.Zero
-                val newOffset = (headerOffsetPx + available.y).coerceIn(-headerNaturalHeightPx, 0f)
+                if (!headerCollapses || headerHeightPx <= 0f) return Offset.Zero
+                val newOffset = (headerOffsetPx + available.y).coerceIn(-headerHeightPx, 0f)
                 val consumed = newOffset - headerOffsetPx
                 headerOffsetPx = newOffset
                 return Offset(0f, consumed)
             }
         }
     }
+    LaunchedEffect(headerCollapses) { if (headerCollapses) headerOffsetPx = 0f }
 
-    fun toggleMetricFilter(filter: StatusFilter) {
-        stateHolder.onStatusFilterSelected(
-            if (state.selectedStatusFilter == filter) StatusFilter.ALL else filter
+    val twoPane = expanded && loaded && !pantryEmpty
+    val paneItemId = homePaneItemId(pickedItemId, sections, searching, selecting)
+
+    Row(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(
+            modifier = Modifier
+                .then(if (twoPane) Modifier.width(HomeListPaneWidth) else Modifier.weight(1f))
+                .fillMaxHeight()
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .clipToBounds()
+                .nestedScroll(headerScroll)
+        ) {
+            when {
+                !loaded -> Unit
+                pantryEmpty -> BrandBar()
+                selecting -> SelectionBar(selectedIds.size, onExit = { selectedIds = emptySet() })
+                searching -> SearchBar(
+                    query = state.searchQuery,
+                    onQueryChange = stateHolder::onSearchQueryChanged,
+                    onClose = closeSearch
+                )
+                else -> CollapsingHeader(
+                    heightOffsetPx = { headerOffsetPx },
+                    onNaturalHeightMeasured = { headerHeightPx = it }
+                ) {
+                    LedeHeader(
+                        lede = remember(resources, lede) { homeLedeText(resources, lede).orEmpty() },
+                        brand = stringResource(R.string.app_name),
+                        actions = {
+                            LarderIconButton(
+                                LarderIcons.Search,
+                                stringResource(R.string.home_search_description),
+                                onClick = { searching = true }
+                            )
+                            FilterButton(filtersActive, onClick = { filterSheet = FilterSheetPage.Filters })
+                        },
+                        below = {
+                            StatusChips(state) { filter ->
+                                stateHolder.onStatusFilterSelected(
+                                    if (state.selectedStatusFilter == filter) StatusFilter.ALL else filter
+                                )
+                                scope.launch { listState.scrollToItem(0) }
+                            }
+                        }
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                when {
+                    !loaded -> Unit
+                    pantryEmpty -> HomeEmptyState(
+                        onScan = { navigator.navigate(LarderRoute.Scanner()) },
+                        onAddByHand = { navigator.navigate(LarderRoute.AddItem(AddItemMode.New)) }
+                    )
+                    sections.isEmpty() && query.isNotEmpty() -> NoResults(
+                        title = stringResource(R.string.home_no_results_title, query),
+                        message = stringResource(R.string.home_no_results_message),
+                        actionLabel = stringResource(R.string.home_clear_search),
+                        onAction = { stateHolder.onSearchQueryChanged("") }
+                    )
+                    sections.isEmpty() -> NoResults(
+                        title = stringResource(R.string.home_no_filter_results_title),
+                        message = stringResource(R.string.home_no_filter_results_message),
+                        actionLabel = stringResource(R.string.home_clear_filters),
+                        onAction = {
+                            stateHolder.onLocationSelected(null)
+                            stateHolder.onCategorySelected(null)
+                            stateHolder.onStatusFilterSelected(StatusFilter.ALL)
+                        }
+                    )
+                    else -> {
+                        val keyboard = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+                        val bottomPadding = if (selecting) LarderSpace.s4 else maxOf(bottomOverlayClearance, keyboard)
+                        LazyColumn(
+                            state = listState,
+                            contentPadding = PaddingValues(
+                                start = LarderSpace.s4,
+                                end = LarderSpace.s4,
+                                bottom = bottomPadding
+                            ),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            val reminders = blockedNotificationsIntent
+                            if (reminders != null && !remindersCalloutDismissed && !selecting && !searching) {
+                                item(key = "reminders-off", contentType = "callout") {
+                                    RemindersOffCallout(
+                                        onOpenSettings = { context.startActivity(reminders) },
+                                        onDismiss = onDismissRemindersCallout
+                                    )
+                                }
+                            }
+                            if (filtersActive && !selecting && !searching) {
+                                item(key = "active-filter", contentType = "filter") {
+                                    ActiveFilterLine(state, onClear = {
+                                        stateHolder.onLocationSelected(null)
+                                        stateHolder.onCategorySelected(null)
+                                    })
+                                }
+                            }
+                            if (showingResults) {
+                                item(key = "results", contentType = "header") {
+                                    SectionHeader(
+                                        text = pluralStringResource(
+                                            R.plurals.home_search_results,
+                                            state.filteredItems.size,
+                                            state.filteredItems.size
+                                        ),
+                                        first = true
+                                    )
+                                }
+                            }
+                            sections.forEachIndexed { sectionIndex, section ->
+                                section.title?.let { title ->
+                                    item(key = "section-$title", contentType = "header") {
+                                        SectionHeader(
+                                            text = sectionTitleText(title),
+                                            modifier = Modifier.animateItem(),
+                                            first = sectionIndex == 0
+                                        )
+                                    }
+                                }
+                                itemsIndexed(
+                                    items = section.rows,
+                                    key = { _, row -> row.id },
+                                    contentType = { _, _ -> "row" }
+                                ) { index, row ->
+                                    ItemCard(
+                                        row = row,
+                                        today = state.today,
+                                        position = LarderGroupPosition.of(index, section.rows.size),
+                                        onDelete = { onDeleteItem(row.id) },
+                                        onUseOne = { onUseOne(row.item) },
+                                        onMoveToShoppingList = { onMoveToShoppingList(row.id) },
+                                        onClick = {
+                                            if (selecting) {
+                                                selectedIds = selectedIds.toggled(row.id)
+                                            } else {
+                                                navigator.navigate(LarderRoute.ProductDetail(row.id))
+                                            }
+                                        },
+                                        onLongClick = { selectedIds = selectedIds.toggled(row.id) },
+                                        selectionMode = selecting,
+                                        selected = row.id in selectedIds,
+                                        current = twoPane && row.id == paneItemId,
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (selecting) {
+                SelectionActions(
+                    onRecipeIdeas = { showRecipeDialog = true },
+                    onDelete = {
+                        onDeleteItems(selectedIds)
+                        selectedIds = emptySet()
+                    }
+                )
+            }
+        }
+
+        if (twoPane) {
+            VerticalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.surfaceContainer)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+            ) {
+                if (paneItemId != null) detailPane(paneItemId) else NothingChosen()
+            }
+        }
+    }
+
+    if (showRecipeDialog) {
+        RecipeIdeasDialog(
+            selected = state.items.filter { it.id in selectedIds },
+            others = state.items.filter { it.id !in selectedIds },
+            onShare = { selected, others ->
+                showRecipeDialog = false
+                shareRecipePrompt(context, selected, others)
+                selectedIds = emptySet()
+            },
+            onDismiss = { showRecipeDialog = false }
         )
     }
 
-    fun toggleSelected(id: String) {
-        selectedIds = if (id in selectedIds) selectedIds - id else selectedIds + id
+    filterSheet?.let { page ->
+        FilterSheet(
+            page = page,
+            state = state,
+            onPageChange = { filterSheet = it },
+            onLocationSelected = stateHolder::onLocationSelected,
+            onCategorySelected = stateHolder::onCategorySelected,
+            onSortSelected = stateHolder::onSortOptionSelected,
+            onDismiss = { filterSheet = null }
+        )
     }
+}
 
-    fun shareSelectedRecipePrompt(includeOtherItems: Boolean) {
-        val selectedItems = state.items.filter { it.id in selectedIds }
-        if (selectedItems.isEmpty()) return
-        val otherItems = if (includeOtherItems) {
-            state.items.filter { it.id !in selectedIds }
-        } else {
-            emptyList()
+private fun Set<String>.toggled(id: String): Set<String> = if (id in this) this - id else this + id
+
+@Composable
+private fun sectionTitleText(title: HomeSectionTitle): String = when (title) {
+    HomeSectionTitle.UseFirst -> stringResource(R.string.home_section_use_first)
+    HomeSectionTitle.LaterThisWeek -> stringResource(R.string.home_section_later_this_week)
+    HomeSectionTitle.Later -> stringResource(R.string.home_section_later)
+    is HomeSectionTitle.Place -> storageLocationLabel(title.location)
+}
+
+/** The header of an empty pantry: search and filters hide until there is something to find. */
+@Composable
+private fun BrandBar() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = LarderSize.touch)
+            .padding(horizontal = LarderSpace.s4, vertical = LarderSpace.s3),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
+}
+
+@Composable
+private fun FilterButton(active: Boolean, onClick: () -> Unit) {
+    Box {
+        LarderIconButton(
+            LarderIcons.SlidersHorizontal,
+            stringResource(if (active) R.string.home_filters_on_description else R.string.filter_content_description),
+            onClick = onClick
+        )
+        if (active) {
+            val dotRing = MaterialTheme.colorScheme.background
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(LarderSpace.s2)
+                    .size(LarderSpace.s3)
+                    .background(dotRing, CircleShape)
+                    .padding(2.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
         }
-        shareRecipePrompt(context, selectedItems, otherItems)
-        selectedIds = emptySet()
-        includeOtherItemsInShare = false
     }
+}
 
-    fun deleteSelectedItems() {
-        onDeleteItems(selectedIds)
-        selectedIds = emptySet()
-    }
-
-    BackHandler(enabled = selectionMode) {
-        selectedIds = emptySet()
-    }
-
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        modifier = modifier.fillMaxSize(),
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .nestedScroll(headerNestedScrollConnection)
-        ) {
-            CollapsingHeader(
-                // Deferred reads — see CollapsingHeader. Passing `headerOffsetPx` directly would
-                // put the state read in this scope and recompose the whole screen per frame.
-                heightOffsetPx = {
-                    lerp(headerOffsetPx.coerceAtLeast(-topBarNaturalHeightPx), 0f, topBarPinnedFraction)
-                },
-                onNaturalHeightMeasured = { topBarNaturalHeightPx = it }
-            ) {
-                TopAppBar(
-                    title = {
-                        AnimatedContent(
-                            targetState = selectionMode,
-                            transitionSpec = {
-                                (fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 3 }) togetherWith
-                                    (fadeOut(tween(120)) + slideOutVertically(tween(120)) { -it / 3 })
-                            },
-                            label = "topBarTitle"
-                        ) { inSelectionMode ->
-                            if (inSelectionMode) {
-                                Text(
-                                    text = stringResource(R.string.selection_count_format, selectedIds.size),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            } else {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(MaterialTheme.colorScheme.primary)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Fastfood,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.onPrimary,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Column {
-                                        Text(
-                                            text = stringResource(R.string.app_name),
-                                            style = MaterialTheme.typography.titleLarge,
-                                            fontWeight = FontWeight.Bold,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = stringResource(R.string.app_subtitle),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    navigationIcon = {
-                        AnimatedVisibility(
-                            visible = selectionMode,
-                            enter = fadeIn() + scaleIn(),
-                            exit = fadeOut() + scaleOut()
-                        ) {
-                            IconButton(onClick = { selectedIds = emptySet() }) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = stringResource(R.string.exit_selection_content_description)
-                                )
-                            }
-                        }
-                    },
-                    actions = {
-                        AnimatedContent(
-                            targetState = selectionMode,
-                            transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(120)) },
-                            label = "topBarActions"
-                        ) { inSelectionMode ->
-                            if (inSelectionMode) {
-                                Row {
-                                    IconButton(onClick = { showShareDialog = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.RestaurantMenu,
-                                            contentDescription = stringResource(R.string.action_get_recipe_ideas)
-                                        )
-                                    }
-                                    IconButton(onClick = { showDeleteSelectedDialog = true }) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = stringResource(R.string.delete)
-                                        )
-                                    }
-                                }
-                            } else {
-                                Row {
-                                    IconButton(onClick = { showFilterSheet = true }) {
-                                        BadgedBox(
-                                            badge = {
-                                                AnimatedDotBadge(visible = filtersActive)
-                                            }
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Tune,
-                                                contentDescription = stringResource(R.string.filter_content_description)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background
-                    )
-                )
+/** Chips with nothing to show hide, except All and whichever is on, so a filter can be turned off. */
+@Composable
+private fun StatusChips(state: PantryUiState, onSelect: (StatusFilter) -> Unit) {
+    val selected = state.selectedStatusFilter
+    Row(
+        modifier = Modifier
+            .fullBleed(LarderSpace.s4)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = LarderSpace.s4),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)
+    ) {
+        StatusChip(stringResource(R.string.tab_all), state.items.size, selected == StatusFilter.ALL) {
+            onSelect(StatusFilter.ALL)
+        }
+        listOf(
+            Triple(R.string.metric_expired, state.expiredCount, StatusFilter.EXPIRED),
+            Triple(R.string.metric_soon, state.expiringSoonCount, StatusFilter.EXPIRING_SOON),
+            Triple(R.string.metric_fresh, state.freshCount, StatusFilter.FRESH)
+        ).forEach { (label, count, filter) ->
+            if (count > 0 || selected == filter) {
+                StatusChip(stringResource(label), count, selected == filter) { onSelect(filter) }
             }
+        }
+    }
+}
 
-            CollapsingHeader(
-                heightOffsetPx = { (headerOffsetPx + topBarNaturalHeightPx).coerceAtMost(0f) },
-                onNaturalHeightMeasured = { metricsNaturalHeightPx = it }
-            ) {
-                // Urgency Metrics Row — also acts as the primary status filter
+@Composable
+private fun StatusChip(label: String, count: Int, selected: Boolean, onClick: () -> Unit) {
+    LarderChip(
+        label = label,
+        selected = selected,
+        onClick = onClick,
+        // The chip caps at 999+; a screen reader still gets the real number.
+        modifier = Modifier.semantics { contentDescription = "$label, $count" },
+        count = HomeSummary.cappedCount(count)
+    )
+}
+
+@Composable
+private fun SelectionBar(count: Int, onExit: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 64.dp)
+            .padding(horizontal = LarderSpace.s1),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s1)
+    ) {
+        LarderIconButton(LarderIcons.X, stringResource(R.string.exit_selection_content_description), onExit)
+        Text(
+            text = stringResource(R.string.selection_count_format, count),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun SelectionActions(onRecipeIdeas: () -> Unit, onDelete: () -> Unit) {
+    Column(modifier = Modifier.background(MaterialTheme.colorScheme.surface)) {
+        LarderDivider()
+        Row(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = LarderSpace.s4, vertical = LarderSpace.s3),
+            horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LarderButton(
+                text = stringResource(R.string.action_get_recipe_ideas),
+                onClick = onRecipeIdeas,
+                modifier = Modifier.weight(1f),
+                style = LarderButtonStyle.Secondary,
+                leadingIcon = LarderIcons.Sparkles
+            )
+            LarderButton(
+                text = stringResource(R.string.delete),
+                onClick = onDelete,
+                style = LarderButtonStyle.DangerText,
+                leadingIcon = LarderIcons.Trash2
+            )
+        }
+    }
+}
+
+@Composable
+private fun SearchBar(query: String, onQueryChange: (String) -> Unit, onClose: () -> Unit) {
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = LarderSpace.s1, end = LarderSpace.s4, top = LarderSpace.s3, bottom = LarderSpace.s3),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LarderIconButton(LarderIcons.ArrowLeft, stringResource(R.string.back_content_description), onClose)
+        LarderTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            label = null,
+            modifier = Modifier.weight(1f).focusRequester(focusRequester),
+            placeholder = stringResource(R.string.search_placeholder),
+            trailing = {
+                if (query.isNotEmpty()) {
+                    LarderIconButton(
+                        LarderIcons.X,
+                        stringResource(R.string.clear_content_description),
+                        onClick = { onQueryChange("") }
+                    )
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun HomeEmptyState(onScan: () -> Unit, onAddByHand: () -> Unit) {
+    EmptyState(
+        title = stringResource(R.string.home_empty_title),
+        message = stringResource(R.string.home_empty_message),
+        art = LarderArt.Shelf
+    ) {
+        LarderButton(
+            text = stringResource(R.string.home_empty_scan),
+            onClick = onScan,
+            leadingIcon = LarderIcons.ScanBarcode
+        )
+        LarderButton(
+            text = stringResource(R.string.home_empty_add_by_hand),
+            onClick = onAddByHand,
+            style = LarderButtonStyle.Text
+        )
+    }
+}
+
+/** A dead end to step out of, not a first-use moment, so no illustration. */
+@Composable
+private fun NoResults(title: String, message: String, actionLabel: String, onAction: () -> Unit) {
+    EmptyState(title = title, message = message, art = null) {
+        LarderButton(text = actionLabel, onClick = onAction, style = LarderButtonStyle.Secondary)
+    }
+}
+
+@Composable
+private fun RemindersOffCallout(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
+    LarderCallout(
+        kind = LarderCalloutKind.Warning,
+        modifier = Modifier.padding(bottom = LarderSpace.s3),
+        title = stringResource(R.string.home_reminders_off_title),
+        message = stringResource(R.string.home_reminders_off_message),
+        icon = LarderIcons.BellOff,
+        actionLabel = stringResource(R.string.settings_notifications_open_settings),
+        onAction = onOpenSettings,
+        onDismiss = onDismiss,
+        dismissDescription = stringResource(R.string.home_dismiss)
+    )
+}
+
+/** Says what the filter sheet is hiding: "Fridge · 8 of 13 items". */
+@Composable
+private fun ActiveFilterLine(state: PantryUiState, onClear: () -> Unit) {
+    val text = listOfNotNull(
+        state.selectedLocation?.let { storageLocationLabel(it) },
+        state.selectedCategory?.let { categoryLabel(it) },
+        pluralStringResource(
+            R.plurals.home_active_filter_count,
+            state.items.size,
+            state.filteredItems.size,
+            state.items.size
+        )
+    ).joinToString(" · ")
+    SectionHeader(text = text, first = true, trailing = {
+        LarderButton(
+            text = stringResource(R.string.home_clear_filters),
+            onClick = onClear,
+            style = LarderButtonStyle.Text
+        )
+    })
+}
+
+@Composable
+private fun NothingChosen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(LarderSpace.s6),
+        verticalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        LarderIcon(LarderIcons.Package, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = stringResource(R.string.detail_choose_item),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun RecipeIdeasDialog(
+    selected: List<PantryItem>,
+    others: List<PantryItem>,
+    onShare: (selected: List<PantryItem>, others: List<PantryItem>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val resources = LocalContext.current.resources
+    var includeOthers by remember { mutableStateOf(false) }
+    LarderDialog(
+        title = stringResource(R.string.share_recipe_dialog_title),
+        text = stringResource(R.string.recipe_intro, recipeNames(resources, selected.map { it.name })),
+        confirmLabel = stringResource(R.string.share_recipe_share_button),
+        onConfirm = { onShare(selected, if (includeOthers) others else emptyList()) },
+        onDismissRequest = onDismiss,
+        dismissLabel = stringResource(R.string.share_recipe_cancel_button),
+        content = if (others.isEmpty()) {
+            null
+        } else {
+            {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        .toggleable(includeOthers, role = Role.Checkbox, onValueChange = { includeOthers = it }),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(LarderSpace.s1)
                 ) {
-                    MetricCard(
-                        title = stringResource(R.string.metric_expired),
-                        count = state.expiredCount,
-                        color = LarderTheme.colors.onExpiredContainer,
-                        bgColor = LarderTheme.colors.expiredContainer,
-                        icon = Icons.Default.Error,
-                        selected = state.selectedStatusFilter == StatusFilter.EXPIRED,
-                        onClick = { toggleMetricFilter(StatusFilter.EXPIRED) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        title = stringResource(R.string.metric_soon),
-                        count = state.expiringSoonCount,
-                        color = LarderTheme.colors.onSoonContainer,
-                        bgColor = LarderTheme.colors.soonContainer,
-                        icon = Icons.Default.Warning,
-                        selected = state.selectedStatusFilter == StatusFilter.EXPIRING_SOON,
-                        onClick = { toggleMetricFilter(StatusFilter.EXPIRING_SOON) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        title = stringResource(R.string.metric_fresh),
-                        count = state.freshCount,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        bgColor = MaterialTheme.colorScheme.surfaceContainer,
-                        icon = Icons.Default.Schedule,
-                        selected = state.selectedStatusFilter == StatusFilter.FRESH,
-                        onClick = { toggleMetricFilter(StatusFilter.FRESH) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // List of Items
-            val dashboardContentKey = when {
-                state.isLoading -> "loading"
-                state.filteredItems.isEmpty() -> "empty"
-                else -> "grid"
-            }
-            AnimatedContent(
-                targetState = dashboardContentKey,
-                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
-                modifier = Modifier.fillMaxSize(),
-                label = "dashboardContent"
-            ) { contentKey ->
-                when (contentKey) {
-                    "loading" -> Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                    }
-                    "empty" -> Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Fastfood,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = stringResource(R.string.empty_state_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = stringResource(R.string.empty_state_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                modifier = Modifier.padding(horizontal = 24.dp)
-                            )
-                        }
-                    }
-                    else -> {
-                        // Adaptive: 1 column on phones, more columns as width allows (tablets,
-                        // landscape, foldables) — driven by available width, not a device check.
-                        // 340dp keeps room for image + expiry badge + location chip + menu button
-                        // on one line even for long day counts ("624 days expired") — below that,
-                        // the info row wraps and the grid stretches every card in the row to match.
-                        LazyVerticalGrid(
-                            state = gridState,
-                            columns = GridCells.Adaptive(minSize = 340.dp),
-                            // Bottom padding clears the floating pill nav bar and scan/add
-                            // buttons that overlay this screen (see MainActivity), so the last
-                            // row can still scroll fully into view above them.
-                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = bottomOverlayClearance),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            gridItems(state.filteredItems, key = { it.id }) { row ->
-                                ItemCard(
-                                    row = row,
-                                    onDelete = { onDeleteItem(row.id) },
-                                    onDecrement = { onDecrementQuantity(row.id) },
-                                    onMoveToShoppingList = { onMoveToShoppingList(row.id) },
-                                    onClick = {
-                                        if (selectionMode) toggleSelected(row.id) else onNavigateToAddEdit(row.item)
-                                    },
-                                    onLongClick = { toggleSelected(row.id) },
-                                    selectionMode = selectionMode,
-                                    selected = row.id in selectedIds,
-                                    modifier = Modifier.animateItem()
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showShareDialog) {
-        AlertDialog(
-            onDismissRequest = { showShareDialog = false },
-            title = { Text(stringResource(R.string.share_recipe_dialog_title)) },
-            text = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = includeOtherItemsInShare,
-                        onCheckedChange = { includeOtherItemsInShare = it }
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Column {
+                    Checkbox(checked = includeOthers, onCheckedChange = null, modifier = Modifier.size(LarderSize.touch))
+                    Column(modifier = Modifier.padding(vertical = LarderSpace.s2)) {
                         Text(
                             text = stringResource(R.string.share_recipe_include_other_items_title),
-                            style = MaterialTheme.typography.bodyLarge
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = stringResource(R.string.share_recipe_include_other_items_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
+                            text = if (includeOthers) {
+                                pluralStringResource(R.plurals.recipe_include_others_count, others.size, others.size)
+                            } else {
+                                stringResource(R.string.share_recipe_include_other_items_subtitle)
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showShareDialog = false
-                    shareSelectedRecipePrompt(includeOtherItemsInShare)
-                }) {
-                    Text(stringResource(R.string.share_recipe_share_button), color = MaterialTheme.colorScheme.primary)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showShareDialog = false }) {
-                    Text(stringResource(R.string.share_recipe_cancel_button))
-                }
             }
-        )
-    }
-
-    if (showDeleteSelectedDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteSelectedDialog = false },
-            title = { Text(stringResource(R.string.delete_selected_dialog_title)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteSelectedDialog = false
-                    deleteSelectedItems()
-                }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteSelectedDialog = false }) {
-                    Text(stringResource(R.string.share_recipe_cancel_button))
-                }
-            }
-        )
-    }
-
-    if (showFilterSheet) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(
-            onDismissRequest = { showFilterSheet = false },
-            sheetState = sheetState
-        ) {
-            FilterSheetContent(
-                stateHolder = stateHolder,
-                searchQuery = state.searchQuery,
-                selectedLocation = state.selectedLocation,
-                storageLocations = state.settings.storageLocations,
-                selectedCategory = state.selectedCategory,
-                // Derived in PantryStateHolder alongside the rest of the pantry state. The
-                // version that lived here rescanned every preference inside the sort
-                // comparator's selector, so the lookup ran on every comparison.
-                categories = state.availableCategories,
-                selectedStatusFilter = state.selectedStatusFilter,
-                sortOption = state.settings.sortOption
-            )
         }
-    }
+    )
 }
 
-@Composable
-private fun FilterSheetContent(
-    stateHolder: PantryStateHolder,
-    searchQuery: String,
-    selectedLocation: String?,
-    storageLocations: List<String>,
-    selectedCategory: String?,
-    categories: List<String>,
-    selectedStatusFilter: StatusFilter,
-    sortOption: SortOption
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(bottom = 16.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.filters_sheet_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
+private enum class FilterSheetPage { Filters, Sort }
 
-        // Search Bar
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { stateHolder.onSearchQueryChanged(it) },
-            placeholder = { Text(stringResource(R.string.search_placeholder)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { stateHolder.onSearchQueryChanged("") }) {
-                        Icon(Icons.Default.Close, contentDescription = stringResource(R.string.clear_content_description))
+@Composable
+private fun sortLabel(option: SortOption): String = stringResource(
+    when (option) {
+        SortOption.EXPIRY_DATE -> R.string.sort_option_expiry_date
+        SortOption.NAME -> R.string.sort_option_name
+        SortOption.DATE_ADDED -> R.string.sort_option_date_added
+        SortOption.STORAGE_LOCATION -> R.string.sort_option_storage_location
+    }
+)
+
+/** Filters and sort share one sheet, with sort a step on from the filters. Choices apply as they
+ *  are tapped, so the button can say how many items they leave. */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterSheet(
+    page: FilterSheetPage,
+    state: PantryUiState,
+    onPageChange: (FilterSheetPage) -> Unit,
+    onLocationSelected: (String?) -> Unit,
+    onCategorySelected: (String?) -> Unit,
+    onSortSelected: (SortOption) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sortOption = state.settings.sortOption
+    LarderSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(
+            if (page == FilterSheetPage.Filters) R.string.filters_sheet_title else R.string.sort_sheet_title
+        )
+    ) {
+        when (page) {
+            FilterSheetPage.Filters -> {
+                SectionHeader(stringResource(R.string.home_location_label), first = true)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                    LarderChip(
+                        label = stringResource(R.string.filter_all_locations),
+                        selected = state.selectedLocation == null,
+                        onClick = { onLocationSelected(null) }
+                    )
+                    state.settings.storageLocations.forEach { location ->
+                        LarderChip(
+                            label = storageLocationLabel(location),
+                            selected = state.selectedLocation == location,
+                            onClick = { onLocationSelected(location) }
+                        )
                     }
                 }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(12.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-        )
-
-        // Storage Location Filter Chips
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 4.dp)
-        ) {
-            item {
-                FilterChip(
-                    selected = selectedLocation == null,
-                    onClick = { stateHolder.onLocationSelected(null) },
-                    label = { Text(stringResource(R.string.filter_all_locations)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        selectedLabelColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-            items(storageLocations) { location ->
-                FilterChip(
-                    selected = selectedLocation == location,
-                    onClick = { stateHolder.onLocationSelected(location) },
-                    label = { Text(storageLocationLabel(location)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        selectedLabelColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-        }
-
-        // Category Filter Chips — derived from categories present on current items (filtered to
-        // enabled ones and ordered per user preference; see CategorySettingsScreen), rather than
-        // a fixed settings list the way storage locations are.
-        AnimatedVisibility(
-            visible = categories.isNotEmpty(),
-            enter = fadeIn() + expandVertically(),
-            exit = fadeOut() + shrinkVertically()
-        ) {
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(vertical = 4.dp)
-            ) {
-                item {
-                    FilterChip(
-                        selected = selectedCategory == null,
-                        onClick = { stateHolder.onCategorySelected(null) },
-                        label = { Text(stringResource(R.string.filter_all_categories)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            selectedLabelColor = MaterialTheme.colorScheme.primary
+                if (state.availableCategories.isNotEmpty()) {
+                    SectionHeader(stringResource(R.string.home_category_label))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                        LarderChip(
+                            label = stringResource(R.string.filter_all_categories),
+                            selected = state.selectedCategory == null,
+                            onClick = { onCategorySelected(null) }
                         )
-                    )
+                        state.availableCategories.forEach { category ->
+                            LarderChip(
+                                label = categoryLabel(category),
+                                selected = state.selectedCategory == category,
+                                onClick = { onCategorySelected(category) }
+                            )
+                        }
+                    }
                 }
-                items(categories) { category ->
-                    FilterChip(
-                        selected = selectedCategory == category,
-                        onClick = { stateHolder.onCategorySelected(category) },
-                        label = { Text(categoryLabel(category)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            selectedLabelColor = MaterialTheme.colorScheme.primary
+                Spacer(Modifier.padding(top = LarderSpace.s4))
+                LarderDivider(Modifier.fullBleed(LarderSpace.s4))
+                LarderListItem(
+                    title = stringResource(R.string.sort_sheet_title),
+                    modifier = Modifier.fullBleed(LarderSpace.s4),
+                    trailing = {
+                        Text(
+                            text = sortLabel(sortOption),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        LarderIcon(
+                            LarderIcons.ChevronRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    },
+                    onClick = { onPageChange(FilterSheetPage.Sort) }
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = LarderSpace.s3),
+                    horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LarderButton(
+                        text = stringResource(R.string.home_clear_filters),
+                        onClick = {
+                            onLocationSelected(null)
+                            onCategorySelected(null)
+                        },
+                        style = LarderButtonStyle.Text
+                    )
+                    LarderButton(
+                        text = pluralStringResource(
+                            R.plurals.home_show_items,
+                            state.filteredItems.size,
+                            state.filteredItems.size
+                        ),
+                        onClick = onDismiss
                     )
                 }
             }
-        }
-
-        // Status Filter Chips. FRESH has no dedicated chip (it's only reachable via the
-        // metric card above), so it simply falls outside this row's selection.
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 4.dp)
-        ) {
-            item {
-                FilterChip(
-                    selected = selectedStatusFilter == StatusFilter.ALL,
-                    onClick = { stateHolder.onStatusFilterSelected(StatusFilter.ALL) },
-                    label = { Text(stringResource(R.string.tab_all)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        selectedLabelColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-            item {
-                FilterChip(
-                    selected = selectedStatusFilter == StatusFilter.EXPIRING_SOON,
-                    onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRING_SOON) },
-                    label = { Text(stringResource(R.string.tab_expiring_soon)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        selectedLabelColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-            item {
-                FilterChip(
-                    selected = selectedStatusFilter == StatusFilter.EXPIRED,
-                    onClick = { stateHolder.onStatusFilterSelected(StatusFilter.EXPIRED) },
-                    label = { Text(stringResource(R.string.tab_expired)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        selectedLabelColor = MaterialTheme.colorScheme.primary
-                    )
-                )
+            FilterSheetPage.Sort -> {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                    SortOption.entries.forEach { option ->
+                        LarderChip(
+                            label = sortLabel(option),
+                            selected = sortOption == option,
+                            onClick = { onSortSelected(option) }
+                        )
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = LarderSpace.s3),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    LarderButton(text = stringResource(R.string.home_done), onClick = onDismiss)
+                }
             }
         }
-
-        // Sort Order
-        Text(
-            text = stringResource(R.string.sort_sheet_title),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-        )
-        // Remembered rather than rebuilt: this list was allocated afresh on every
-        // recomposition of the sheet, including while a sort chip animates its selection.
-        val expiryLabel = stringResource(R.string.sort_option_expiry_date)
-        val nameLabel = stringResource(R.string.sort_option_name)
-        val dateAddedLabel = stringResource(R.string.sort_option_date_added)
-        val locationLabel = stringResource(R.string.sort_option_storage_location)
-        val sortLabels = remember(expiryLabel, nameLabel, dateAddedLabel, locationLabel) {
-            listOf(
-                SortOption.EXPIRY_DATE to expiryLabel,
-                SortOption.NAME to nameLabel,
-                SortOption.DATE_ADDED to dateAddedLabel,
-                SortOption.STORAGE_LOCATION to locationLabel
-            )
-        }
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(vertical = 4.dp)
-        ) {
-            items(sortLabels) { (option, label) ->
-                FilterChip(
-                    selected = sortOption == option,
-                    onClick = { stateHolder.onSortOptionSelected(option) },
-                    label = { Text(label) },
-                    leadingIcon = if (sortOption == option) {
-                        { Icon(Icons.Default.SwapVert, contentDescription = null, modifier = Modifier.size(16.dp)) }
-                    } else null,
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        selectedLabelColor = MaterialTheme.colorScheme.primary
-                    )
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AnimatedDotBadge(visible: Boolean) {
-    AnimatedVisibility(
-        visible = visible,
-        enter = fadeIn() + scaleIn(),
-        exit = fadeOut() + scaleOut()
-    ) {
-        Badge(containerColor = MaterialTheme.colorScheme.primary)
     }
 }
 
@@ -763,8 +913,8 @@ private fun AnimatedDotBadge(visible: Boolean) {
 //
 // The offset arrives as a lambda rather than a value on purpose. Taken as a `Float`, the caller
 // has to read the offset state in its own composable scope, so every scroll frame invalidated
-// the entire dashboard — top bar, all three metric cards, and the grid's content lambda.
-// Reading it here, inside the measure block, means a scroll re-runs layout only.
+// the entire dashboard. Reading it here, inside the measure block, means a scroll re-runs layout
+// only.
 @Composable
 private fun CollapsingHeader(
     heightOffsetPx: () -> Float,
@@ -779,78 +929,6 @@ private fun CollapsingHeader(
         val height = (placeable.height + offset).roundToInt().coerceIn(0, placeable.height)
         layout(placeable.width, height) {
             placeable.placeRelative(0, offset.roundToInt())
-        }
-    }
-}
-
-@Composable
-private fun MetricCard(
-    title: String,
-    count: Int,
-    color: Color,
-    bgColor: Color,
-    icon: ImageVector,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val containerColor by animateColorAsState(
-        targetValue = if (selected) bgColor else bgColor.copy(alpha = 0.55f),
-        label = "metricCardContainerColor"
-    )
-    val borderWidth by animateDpAsState(targetValue = if (selected) 2.dp else 0.dp, label = "metricCardBorderWidth")
-
-    Card(
-        onClick = onClick,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        modifier = modifier.border(borderWidth, color, RoundedCornerShape(12.dp))
-    ) {
-        Column(
-            modifier = Modifier.padding(10.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 12.sp,
-                    color = color,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            AnimatedContent(
-                targetState = count,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        (fadeIn(tween(180)) + slideInVertically(tween(180)) { it }) togetherWith
-                            (fadeOut(tween(180)) + slideOutVertically(tween(180)) { -it })
-                    } else {
-                        (fadeIn(tween(180)) + slideInVertically(tween(180)) { -it }) togetherWith
-                            (fadeOut(tween(180)) + slideOutVertically(tween(180)) { it })
-                    }
-                },
-                label = "metricCardCount"
-            ) { animatedCount ->
-                Text(
-                    text = animatedCount.toString(),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = color
-                )
-            }
         }
     }
 }

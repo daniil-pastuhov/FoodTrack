@@ -14,7 +14,7 @@
     <string name="metric_soon">Скоро</string>
     <string name="metric_fresh">Свежее</string>
 
-    <string name="search_placeholder">Поиск по названию или бренду...</string>
+    <string name="search_placeholder">Поиск по названию или бренду</string>
     <string name="clear_content_description">Очистить</string>
 
     <string name="filter_all_locations">Все места</string>
@@ -264,7 +264,6 @@
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
     <string name="action_get_recipe_ideas">Идеи рецептов</string>
-    <string name="delete_selected_dialog_title">Удалить выбранные продукты?</string>
     <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:</string>
@@ -601,4 +600,113 @@
     </plurals>
     <string name="onboarding_placeholder_title">Добро пожаловать в Срокоед</string>
     <string name="onboarding_placeholder_continue">Начать</string>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Дальше: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">На этой неделе ничего не истекает</string>
+    <string name="home_section_use_first">Сначала это</string>
+    <string name="home_section_later_this_week">Позже на этой неделе</string>
+    <string name="home_section_later">Потом</string>
+    <string name="home_clear_filters">Сбросить фильтры</string>
+    <string name="home_search_description">Поиск</string>
+    <string name="home_filters_on_description">Фильтры включены</string>
+    <string name="home_empty_title">Полки пусты</string>
+    <string name="home_empty_message">Отсканируйте первый продукт, и он появится здесь. Сначала идут самые близкие сроки.</string>
+    <string name="home_empty_scan">Сканировать продукт</string>
+    <string name="home_empty_add_by_hand">Добавить вручную</string>
+    <string name="home_no_results_title">Ничего не найдено по запросу «%1$s»</string>
+    <string name="home_no_results_message">Проверьте написание или попробуйте название бренда.</string>
+    <string name="home_clear_search">Очистить поиск</string>
+    <string name="home_no_filter_results_title">Под эти фильтры ничего не подходит</string>
+    <string name="home_no_filter_results_message">Попробуйте другое место или категорию.</string>
+    <string name="home_reminders_off_title">Напоминания выключены</string>
+    <string name="home_reminders_off_message">Уведомления для Срокоеда выключены в настройках телефона.</string>
+    <string name="home_dismiss">Закрыть</string>
+    <string name="home_swipe_to_list">В список</string>
+    <string name="home_use_one_item">Использовать один: %1$s</string>
+    <string name="home_used_one_snackbar">Использован один: %1$s. Осталось: %2$d.</string>
+    <string name="home_location_label">Место хранения</string>
+    <string name="home_category_label">Категория</string>
+    <string name="home_best_before_label">Годен до</string>
+    <string name="home_notes_label">Заметки</string>
+    <string name="home_done">Готово</string>
+    <string name="detail_close">Закрыть</string>
+    <string name="detail_edit">Изменить</string>
+    <string name="detail_to_shopping_list">В список покупок</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Без обработки</string>
+    <string name="detail_nova_2">Кулинарные ингредиенты</string>
+    <string name="detail_nova_3">Обработанный</string>
+    <string name="detail_nova_4">Ультраобработанный</string>
+    <string name="detail_credit">Данные о продукте из Open Food Facts</string>
+    <string name="detail_allergen_note">Этот аллерген есть в вашем списке.</string>
+    <string name="detail_choose_item">Выберите продукт, чтобы увидеть подробности.</string>
+    <string name="recipe_intro">Запрос для ИИ-помощника из выбранных продуктов: %1$s. Он покинет устройство, только если вы им поделитесь.</string>
+    <string name="recipe_names_two">%1$s и %2$s</string>
+    <string name="recipe_names_three">%1$s, %2$s и %3$s</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s продукт лучше использовать до завтра</item>
+        <item quantity="few">%1$s продукта лучше использовать до завтра</item>
+        <item quantity="many">%1$s продуктов лучше использовать до завтра</item>
+        <item quantity="other">%1$s продукта лучше использовать до завтра</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s продукт с истёкшим сроком</item>
+        <item quantity="few">%1$s продукта с истёкшим сроком</item>
+        <item quantity="many">%1$s продуктов с истёкшим сроком</item>
+        <item quantity="other">%1$s продукта с истёкшим сроком</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d результат</item>
+        <item quantity="few">%d результата</item>
+        <item quantity="many">%d результатов</item>
+        <item quantity="other">%d результата</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d из %2$d</item>
+        <item quantity="few">%1$d из %2$d</item>
+        <item quantity="many">%1$d из %2$d</item>
+        <item quantity="other">%1$d из %2$d</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Показать %d продукт</item>
+        <item quantity="few">Показать %d продукта</item>
+        <item quantity="many">Показать %d продуктов</item>
+        <item quantity="other">Показать %d продукта</item>
+    </plurals>
+    <plurals name="recipe_names_more">
+        <item quantity="one">%1$s, %2$s и ещё %3$d</item>
+        <item quantity="few">%1$s, %2$s и ещё %3$d</item>
+        <item quantity="many">%1$s, %2$s и ещё %3$d</item>
+        <item quantity="other">%1$s, %2$s и ещё %3$d</item>
+    </plurals>
+    <plurals name="recipe_include_others_count">
+        <item quantity="one">Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+        <item quantity="few">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+        <item quantity="many">Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+        <item quantity="other">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>Один</item>
+        <item>Два</item>
+        <item>Три</item>
+        <item>Четыре</item>
+        <item>Пять</item>
+        <item>Шесть</item>
+        <item>Семь</item>
+        <item>Восемь</item>
+        <item>Девять</item>
+        <item>Десять</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>в понедельник</item>
+        <item>во вторник</item>
+        <item>в среду</item>
+        <item>в четверг</item>
+        <item>в пятницу</item>
+        <item>в субботу</item>
+        <item>в воскресенье</item>
+    </string-array>
 </resources>

@@ -14,7 +14,7 @@
     <string name="metric_soon">Snart</string>
     <string name="metric_fresh">Fersk</string>
 
-    <string name="search_placeholder">Søk etter produkter eller merker...</string>
+    <string name="search_placeholder">Søk etter produkter eller merker</string>
     <string name="clear_content_description">Fjern</string>
 
     <string name="filter_all_locations">Alle steder</string>
@@ -254,7 +254,6 @@
     <string name="selection_count_format">%1$d valgt</string>
     <string name="exit_selection_content_description">Avslutt utvalg</string>
     <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>
-    <string name="delete_selected_dialog_title">Slette valgte varer?</string>
     <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:</string>
@@ -545,4 +544,99 @@
     </plurals>
     <string name="onboarding_placeholder_title">Velkommen til Matvakt</string>
     <string name="onboarding_placeholder_continue">Kom i gang</string>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Neste: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">Ingenting må brukes denne uken</string>
+    <string name="home_section_use_first">Bruk først</string>
+    <string name="home_section_later_this_week">Senere denne uken</string>
+    <string name="home_section_later">Senere</string>
+    <string name="home_clear_filters">Nullstill filtre</string>
+    <string name="home_search_description">Søk</string>
+    <string name="home_filters_on_description">Filtre, på</string>
+    <string name="home_empty_title">Hyllene er tomme</string>
+    <string name="home_empty_message">Skann det første produktet, så dukker det opp her med nærmeste dato først.</string>
+    <string name="home_empty_scan">Skann et produkt</string>
+    <string name="home_empty_add_by_hand">Legg til manuelt</string>
+    <string name="home_no_results_title">Ingen treff på «%1$s»</string>
+    <string name="home_no_results_message">Sjekk stavemåten, eller prøv merkenavnet.</string>
+    <string name="home_clear_search">Tøm søket</string>
+    <string name="home_no_filter_results_title">Ingenting passer med disse filtrene</string>
+    <string name="home_no_filter_results_message">Prøv et annet sted eller en annen kategori.</string>
+    <string name="home_reminders_off_title">Påminnelser er av</string>
+    <string name="home_reminders_off_message">Varsler er slått av for Matvakt i innstillingene på telefonen.</string>
+    <string name="home_dismiss">Lukk</string>
+    <string name="home_swipe_to_list">Til listen</string>
+    <string name="home_use_one_item">Bruk én: %1$s</string>
+    <string name="home_used_one_snackbar">Brukte én %1$s. %2$d igjen.</string>
+    <string name="home_location_label">Sted</string>
+    <string name="home_category_label">Kategori</string>
+    <string name="home_best_before_label">Best før</string>
+    <string name="home_notes_label">Notater</string>
+    <string name="home_done">Ferdig</string>
+    <string name="detail_close">Lukk</string>
+    <string name="detail_edit">Rediger</string>
+    <string name="detail_to_shopping_list">Til handlelisten</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Ubearbeidet</string>
+    <string name="detail_nova_2">Matlagingsingredienser</string>
+    <string name="detail_nova_3">Bearbeidet</string>
+    <string name="detail_nova_4">Ultrabearbeidet</string>
+    <string name="detail_credit">Produktdata fra Open Food Facts</string>
+    <string name="detail_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
+    <string name="detail_choose_item">Velg en vare for å se detaljene.</string>
+    <string name="recipe_intro">Matvakt lager en ledetekst av %1$s som du kan dele med en KI-assistent. Ingenting forlater enheten før du velger hvor den skal sendes.</string>
+    <string name="recipe_names_two">%1$s og %2$s</string>
+    <string name="recipe_names_three">%1$s, %2$s og %3$s</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s ting å bruke innen i morgen</item>
+        <item quantity="other">%1$s ting å bruke innen i morgen</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s ting er over datoen</item>
+        <item quantity="other">%1$s ting er over datoen</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d treff</item>
+        <item quantity="other">%d treff</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d av %2$d vare</item>
+        <item quantity="other">%1$d av %2$d varer</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Vis %d vare</item>
+        <item quantity="other">Vis %d varer</item>
+    </plurals>
+    <plurals name="recipe_names_more">
+        <item quantity="one">%1$s, %2$s og %3$d til</item>
+        <item quantity="other">%1$s, %2$s og %3$d til</item>
+    </plurals>
+    <plurals name="recipe_include_others_count">
+        <item quantity="one">Legger til den andre varen din, så assistenten kan bruke mer av det du har.</item>
+        <item quantity="other">Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>Én</item>
+        <item>To</item>
+        <item>Tre</item>
+        <item>Fire</item>
+        <item>Fem</item>
+        <item>Seks</item>
+        <item>Sju</item>
+        <item>Åtte</item>
+        <item>Ni</item>
+        <item>Ti</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>på mandag</item>
+        <item>på tirsdag</item>
+        <item>på onsdag</item>
+        <item>på torsdag</item>
+        <item>på fredag</item>
+        <item>på lørdag</item>
+        <item>på søndag</item>
+    </string-array>
 </resources>

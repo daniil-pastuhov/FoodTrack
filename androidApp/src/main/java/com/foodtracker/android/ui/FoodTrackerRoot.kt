@@ -23,7 +23,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
@@ -39,9 +40,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -57,7 +58,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
 import com.foodtracker.android.location.StoreGeofenceManager
 import com.foodtracker.android.camera.CameraScanMode
-import com.foodtracker.android.ui.components.ProductDetailSheet
+import com.foodtracker.android.ui.components.ProductDetailActions
+import com.foodtracker.android.ui.components.ProductDetailPane
+import com.foodtracker.android.ui.components.ProductDetailRoute
 import com.foodtracker.android.ui.design.FloatingNav
 import com.foodtracker.android.ui.design.LarderSnackbar
 import com.foodtracker.android.ui.design.LarderTab
@@ -78,6 +81,7 @@ import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CalendarScreen
 import com.foodtracker.android.ui.screens.CategorySettingsScreen
+import com.foodtracker.android.ui.screens.HomeListPaneWidth
 import com.foodtracker.android.ui.screens.OnboardingScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
@@ -94,8 +98,6 @@ import com.foodtracker.match.ShoppingListMatchResult
 import com.foodtracker.match.ShoppingListMatcher
 import com.foodtracker.model.AppTheme
 import com.foodtracker.model.PantryItem
-import com.foodtracker.model.ProductInfo
-import com.foodtracker.model.ProductNutrition
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.util.DateUtils
@@ -145,26 +147,6 @@ private fun confirmationMessage(context: Context, confirmation: HomeConfirmation
             confirmation.quantity
         )
     }
-
-/** The product detail route, on the sheet that exists today. */
-@Composable
-private fun ProductDetailRoute(stateHolder: PantryStateHolder, itemId: String, onDismiss: () -> Unit) {
-    val item = remember(itemId) { stateHolder.uiState.value.items.find { it.id == itemId } }
-    val product by produceState<ProductInfo?>(null, item) {
-        value = item?.barcode?.let { stateHolder.cachedProduct(it) }
-    }
-    if (item == null) {
-        LaunchedEffect(Unit) { onDismiss() }
-        return
-    }
-    val nutrition = product?.nutrition ?: ProductNutrition()
-    ProductDetailSheet(
-        productName = item.name,
-        nutrition = nutrition,
-        warnings = nutrition.matchedAllergens(stateHolder.uiState.value.settings.allergens),
-        onDismiss = onDismiss
-    )
-}
 
 // Material predictive-back visual treatment for the screen being swiped away: it shrinks
 // slightly, shifts toward the swipe edge, and gains rounded corners as the gesture progresses.
@@ -239,7 +221,7 @@ fun FoodTrackerRoot(
             // Hoisted above the Dashboard so it survives navigating away to Add/Edit
             // and back — the Dashboard composable itself is torn down and rebuilt by
             // the `when` below, which would otherwise reset scroll position on return.
-            val dashboardGridState = rememberLazyGridState()
+            val dashboardListState = rememberLazyListState()
             // Set when the scanner was launched from a specific shopping list row,
             // so a product-not-found result can still prefill the name/category the
             // user already typed there, instead of leaving Add/Edit blank.
@@ -259,6 +241,11 @@ fun FoodTrackerRoot(
             var pendingShoppingListMatch by remember { mutableStateOf<PendingShoppingListMatch?>(null) }
             // The item whose product detail is showing, over whatever screen is underneath.
             var detailItemId by remember { mutableStateOf<String?>(null) }
+            // The row picked for the right-hand pane on expanded Home. Separate from the sheet's
+            // item, so leaving Home with a pane open doesn't pop a sheet up on the next tab.
+            var homePaneItemId by remember { mutableStateOf<String?>(null) }
+            var remindersCalloutDismissed by rememberSaveable { mutableStateOf(false) }
+            val expanded = isExpanded()
             val openPrefilledItem: (ItemPrefill) -> Unit = { prefill ->
                 currentScreen = LarderRoute.AddItem(AddItemMode.Prefilled(prefill))
             }
@@ -340,7 +327,13 @@ fun FoodTrackerRoot(
             }
             val navigate by rememberUpdatedState<(LarderRoute) -> Unit> { route ->
                 when (route) {
-                    is LarderRoute.ProductDetail -> detailItemId = route.itemId
+                    is LarderRoute.ProductDetail -> {
+                        if (expanded && currentScreen == LarderRoute.Home) {
+                            homePaneItemId = route.itemId
+                        } else {
+                            detailItemId = route.itemId
+                        }
+                    }
                     is LarderRoute.Scanner -> onNavigateToScannerGlobal(route.mode)
                     is LarderRoute.AddItem -> {
                         scanReturnScreen = currentScreen
@@ -531,25 +524,18 @@ fun FoodTrackerRoot(
                     }
                 }
             }
-            // The scanner's "Use one": the last unit goes through the same removal as
-            // the row's "-" button (essential items land on the shopping list, with an
-            // undo), while any other unit gets its own undo, since leaving the scanner
-            // gives no other sign that the count changed.
+            // "Use one", from a row, the product detail or the scanner: the last unit goes through
+            // the same removal (essential items land on the shopping list, with an undo), and any
+            // other unit gets its own undo, since a count changing is easy to miss.
             val onUseOneHandler: (PantryItem) -> Unit = { item ->
                 if (item.quantity <= 1) {
                     onDecrementQuantityHandler(item.id)
                 } else {
                     stateHolder.decrementQuantity(item.id)
-                    snackbarScope.launch {
-                        val result = snackbarHostState.showSnackbar(
-                            message = context.getString(R.string.duplicate_added_snackbar, item.name, item.quantity - 1),
-                            actionLabel = context.getString(R.string.undo_action),
-                            duration = SnackbarDuration.Long
-                        )
-                        if (result == SnackbarResult.ActionPerformed) {
-                            stateHolder.incrementQuantity(item.id)
-                        }
-                    }
+                    larderSnackbars.show(
+                        context.getString(R.string.home_used_one_snackbar, item.name, item.quantity - 1),
+                        context.getString(R.string.undo_action)
+                    ) { stateHolder.incrementQuantity(item.id) }
                 }
             }
             val onMoveToShoppingListHandler: (String) -> Unit = { id ->
@@ -561,6 +547,12 @@ fun FoodTrackerRoot(
                     }
                 }
             }
+            val productDetailActions = ProductDetailActions(
+                onUseOne = onUseOneHandler,
+                onEdit = { onNavigateToAddEdit(it) },
+                onMoveToShoppingList = onMoveToShoppingListHandler,
+                onDelete = onDeleteItemHandler
+            )
             val onCheckOffShoppingListEntryHandler: (String) -> Unit = { id ->
                 stateHolder.deleteShoppingListEntry(id) { removedEntry ->
                     showUndoRemovalSnackbar(removedEntry.productName, false) {
@@ -609,7 +601,6 @@ fun FoodTrackerRoot(
             // Measured rather than assumed, because both grow with font scale. Read from the
             // composables themselves, so no surrounding padding is folded into the numbers.
             val density = LocalDensity.current
-            val expanded = isExpanded()
             var pillHeightPx by remember { mutableIntStateOf(0) }
             var scanHeightPx by remember { mutableIntStateOf(0) }
             val scanVisible = (currentTab == LarderTab.Home || currentTab == LarderTab.Calendar) &&
@@ -632,12 +623,11 @@ fun FoodTrackerRoot(
                 if (inPredictiveBack && currentScreen != LarderRoute.Home) {
                     PantryDashboardScreen(
                         stateHolder = stateHolder,
-                        onNavigateToAddEdit = {},
+                        onUseOne = onUseOneHandler,
                         onDeleteItem = onDeleteItemHandler,
                         onDeleteItems = onDeleteItemsHandler,
-                        onDecrementQuantity = onDecrementQuantityHandler,
                         onMoveToShoppingList = onMoveToShoppingListHandler,
-                        gridState = dashboardGridState
+                        listState = dashboardListState
                     )
                 }
 
@@ -685,13 +675,23 @@ fun FoodTrackerRoot(
                                 LarderRoute.Home -> {
                                     PantryDashboardScreen(
                                         stateHolder = stateHolder,
-                                        onNavigateToAddEdit = onNavigateToAddEdit,
+                                        onUseOne = onUseOneHandler,
                                         onDeleteItem = onDeleteItemHandler,
                                         onDeleteItems = onDeleteItemsHandler,
-                                        onDecrementQuantity = onDecrementQuantityHandler,
                                         onMoveToShoppingList = onMoveToShoppingListHandler,
-                                        gridState = dashboardGridState,
-                                        bottomOverlayClearance = clearance.content
+                                        listState = dashboardListState,
+                                        bottomOverlayClearance = clearance.content,
+                                        pickedItemId = homePaneItemId,
+                                        remindersCalloutDismissed = remindersCalloutDismissed,
+                                        onDismissRemindersCallout = { remindersCalloutDismissed = true },
+                                        detailPane = { itemId ->
+                                            ProductDetailPane(
+                                                stateHolder = stateHolder,
+                                                itemId = itemId,
+                                                actions = productDetailActions,
+                                                bottomClearance = clearance.content
+                                            )
+                                        }
                                     )
                                 }
                                 LarderRoute.Calendar -> {
@@ -976,14 +976,18 @@ fun FoodTrackerRoot(
                     ProductDetailRoute(
                         stateHolder = stateHolder,
                         itemId = itemId,
+                        actions = productDetailActions,
                         onDismiss = { detailItemId = null }
                     )
                 }
 
+                // Over the list on expanded Home, so it never covers the product pane's buttons.
+                val snackbarOverList = expanded && currentScreen == LarderRoute.Home
                 SnackbarHost(
                     hostState = snackbarHostState,
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
+                        .align(if (snackbarOverList) Alignment.BottomStart else Alignment.BottomCenter)
+                        .then(if (snackbarOverList) Modifier.width(HomeListPaneWidth) else Modifier)
                         .padding(
                             start = LarderSpace.s4,
                             end = LarderSpace.s4,
