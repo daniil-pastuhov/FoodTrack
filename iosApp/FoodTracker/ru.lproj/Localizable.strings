@@ -338,7 +338,7 @@
 "restore_mode_replace_title" = "Заменить всё";
 "backup_export_success" = "Копия сохранена";
 "backup_export_failed" = "Не удалось сохранить копию";
-"backup_import_malformed" = "Этот файл не является резервной копией Срокоеда";
+"backup_import_malformed" = "Этот файл не является резервной копией Срокоеда. Ничего не изменилось.";
 "backup_import_unsupported" = "Эта копия создана более новой версией приложения";
 "backup_import_empty" = "В этой копии нечего восстанавливать";
 
@@ -480,3 +480,35 @@
 "lede_on_weekday_5" = "в пятницу";
 "lede_on_weekday_6" = "в субботу";
 "lede_on_weekday_7" = "в воскресенье";
+/* Larder settings */
+"settings_group_reminders" = "Напоминания";
+"settings_group_kitchen" = "Ваша кухня";
+"settings_notifications_blocked_title" = "Напоминания выключены";
+"settings_off" = "Выкл.";
+"settings_allergens_none" = "Нет";
+"settings_add_allergen_label" = "Добавить аллерген";
+"settings_data_summary" = "Экспорт и импорт копии";
+"settings_location_default" = "По умолчанию";
+"settings_location_taken" = "Место «%1$@» уже есть";
+"settings_rename_location_format" = "Переименовать: %1$@";
+"settings_delete_location_format" = "Удалить: %1$@";
+"settings_set_default_location_format" = "Сделать по умолчанию: %1$@";
+"settings_remove_format" = "Убрать: %1$@";
+"settings_try_again" = "Повторить";
+"restore_mode_cancel" = "Не импортировать";
+"clear_data_keep" = "Отмена";
+"category_settings_empty_title" = "Категорий пока нет";
+"category_settings_scan" = "Сканировать продукт";
+"category_settings_move_up" = "Переместить выше";
+"category_settings_move_down" = "Переместить ниже";
+"category_settings_move_done" = "Готово";
+"category_settings_rename_field_label" = "Название категории";
+"category_settings_rename_confirm" = "Переименовать";
+"category_settings_rename_format" = "Переименовать категорию: %1$@";
+"category_settings_drag_handle_format" = "Перетащить: %1$@";
+"category_settings_show_format" = "Показать: %1$@";
+"category_settings_shelf_life_format" = "Задать срок по умолчанию: %1$@, %2$@";
+"category_settings_shelf_life_title_format" = "Срок хранения по умолчанию: %1$@";
+"category_settings_shelf_life_range" = "От 0 до 3650 дней";
+"category_settings_shelf_life_error" = "Введите число от 0 до 3650, это примерно 10 лет";
+"category_settings_shelf_life_save" = "Сохранить";

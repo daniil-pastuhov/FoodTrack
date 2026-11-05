@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
+import androidx.compose.foundation.layout.ime
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -991,7 +992,11 @@ fun FoodTrackerRoot(
                         .padding(
                             start = LarderSpace.s4,
                             end = LarderSpace.s4,
-                            bottom = if (currentTab != null) clearance.snackbar else navBarInset + 88.dp
+                            // Above the keyboard when it's up, so Undo stays reachable.
+                            bottom = maxOf(
+                                if (currentTab != null) clearance.snackbar else navBarInset + 88.dp,
+                                with(LocalDensity.current) { WindowInsets.ime.getBottom(this).toDp() } + LarderSpace.s2
+                            )
                         )
                 ) { data ->
                     LarderSnackbar(data)

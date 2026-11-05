@@ -392,10 +392,10 @@
     <string name="settings_notifications_blocked">Notifications are turned off for this app in your phone\'s settings, so reminders won\'t arrive.</string>
     <string name="settings_notifications_open_settings">Open settings</string>
 
-    <string name="settings_section_expiring_soon">Expiring Soon Threshold</string>
+    <string name="settings_section_expiring_soon">Expiring soon threshold</string>
     <string name="settings_expiring_soon_desc">Items expiring within this many days are flagged as \'Expiring Soon\'</string>
 
-    <string name="settings_section_locations">Storage Locations</string>
+    <string name="settings_section_locations">Storage locations</string>
     <string name="settings_locations_desc">Tap the star to set the default for new items</string>
     <string name="settings_remember_last_location">Remember last storage location</string>
     <string name="settings_remember_last_location_desc">Products you haven\'t added before start in the storage location you picked last time</string>
@@ -421,7 +421,7 @@
 
     <string name="settings_section_categories">Categories</string>
     <string name="settings_categories_desc">Rename, reorder, or hide the categories detected from your products</string>
-    <string name="settings_manage_categories_button">Manage Categories</string>
+    <string name="settings_manage_categories_button">Manage categories</string>
 
     <string name="category_settings_title">Categories</string>
     <string name="category_settings_description">Drag to reorder. Tap the pencil to rename a category, or turn it off to hide it everywhere.</string>
@@ -437,8 +437,8 @@
     <string name="category_settings_shelf_life_field_label">Days</string>
     <string name="category_settings_shelf_life_clear">Clear</string>
     <plurals name="category_settings_shelf_life_days_format">
-        <item quantity="one">%1$d d</item>
-        <item quantity="other">%1$d d</item>
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
     </plurals>
     <string name="category_settings_rename_content_description">Rename category</string>
 
@@ -484,17 +484,17 @@
     <string name="restore_mode_replace_subtitle">Deletes what\'s on this device first, settings included.</string>
     <string name="backup_export_success">Backup saved</string>
     <string name="backup_export_failed">Couldn\'t save the backup</string>
-    <string name="backup_import_malformed">That file isn\'t a BestBefore backup</string>
+    <string name="backup_import_malformed">That file isn\'t a BestBefore backup. Nothing was changed.</string>
     <string name="backup_import_unsupported">That backup was made by a newer version of the app</string>
     <string name="backup_import_empty">That backup has nothing to restore</string>
     <plurals name="backup_import_success">
         <item quantity="one">Restored %1$d item</item>
         <item quantity="other">Restored %1$d items</item>
     </plurals>
-    <string name="settings_clear_data_button">Clear All Pantry Data</string>
+    <string name="settings_clear_data_button">Clear all pantry data</string>
     <string name="clear_data_dialog_title">Clear all pantry data?</string>
     <string name="clear_data_dialog_message">This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.</string>
-    <string name="clear_data_confirm">Clear Data</string>
+    <string name="clear_data_confirm">Clear all data</string>
     <string name="settings_section_stores">Shopping reminders</string>
     <string name="settings_store_reminders_enabled">Remind me near a shop</string>
     <string name="settings_store_reminders_desc">Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; BestBefore doesn\'t send it to us or share it with anyone.</string>
@@ -643,4 +643,40 @@
         <item>on Saturday</item>
         <item>on Sunday</item>
     </string-array>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Reminders</string>
+    <string name="settings_group_kitchen">Your kitchen</string>
+    <string name="settings_notifications_blocked_title">Reminders are off</string>
+    <string name="settings_off">Off</string>
+    <string name="settings_allergens_none">None yet</string>
+    <string name="settings_add_allergen_label">Add an allergen</string>
+    <string name="settings_data_summary">Backup and clear data</string>
+    <string name="settings_location_default">Default</string>
+    <string name="settings_location_taken">You already have a location called %1$s</string>
+    <string name="settings_rename_location_format">Rename: %1$s</string>
+    <string name="settings_delete_location_format">Delete: %1$s</string>
+    <string name="settings_set_default_location_format">Set as default: %1$s</string>
+    <string name="settings_remove_format">Remove: %1$s</string>
+    <string name="settings_try_again">Try again</string>
+    <string name="restore_mode_cancel">Don\'t import</string>
+    <string name="clear_data_keep">Keep my pantry</string>
+    <string name="category_settings_empty_title">No categories yet</string>
+    <string name="category_settings_scan">Scan a product</string>
+    <string name="category_settings_move_up">Move up</string>
+    <string name="category_settings_move_down">Move down</string>
+    <string name="category_settings_move_done">Done</string>
+    <string name="category_settings_rename_field_label">Category name</string>
+    <string name="category_settings_rename_confirm">Rename</string>
+    <string name="category_settings_rename_format">Rename category: %1$s</string>
+    <string name="category_settings_drag_handle_format">Drag to reorder: %1$s</string>
+    <string name="category_settings_show_format">Show: %1$s</string>
+    <string name="category_settings_shelf_life_format">Set default shelf life: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Default shelf life for %1$s</string>
+    <string name="category_settings_shelf_life_range">From 0 to 3650 days</string>
+    <string name="category_settings_shelf_life_error">Enter a number from 0 to 3650, which is about 10 years</string>
+    <string name="category_settings_shelf_life_save">Save</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">This removes %1$d item and cancels its reminders. You can\'t undo this.</item>
+        <item quantity="other">This removes all %1$d items and cancels their reminders. You can\'t undo this.</item>
+    </plurals>
 </resources>

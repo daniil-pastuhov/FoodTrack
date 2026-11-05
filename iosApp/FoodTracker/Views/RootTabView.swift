@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Root of the app: hosts the four peer tabs (Home/Calendar/Shopping/Settings) behind the
 /// `FloatingNav` pill, with `ScanFab` on Home and Calendar and snackbars above both. Owns the
@@ -21,6 +22,7 @@ struct RootTabView: View {
     @Environment(\.isExpanded) private var isExpanded
 
     /// What the scanner should open in, or nil while it is closed.
+    @State private var isKeyboardVisible = false
     @State private var scannerRequest: ScannerRequest?
     /// What the add/edit sheet should open with, or nil while it is closed. See `AddEditRequest`.
     @State private var addEditRequest: AddEditRequest?
@@ -241,6 +243,28 @@ struct RootTabView: View {
     /// Pill, Scan and snackbar. Left out of the keyboard's safe area, so the keyboard covers
     /// them rather than pushing them up the screen.
     private var floatingLayer: some View {
+        ZStack(alignment: .bottom) {
+            floatingChrome
+
+            // Outside the chrome, which ignores the keyboard: a snackbar has to stay above it,
+            // or its Undo sits out of reach behind the keys.
+            // Over the list on expanded Home, so it never covers the product pane's buttons.
+            let overList = isExpanded && selectedTab == .home
+            LarderSnackbarHost(content: $snackbar)
+                .frame(maxWidth: overList ? HomeLayout.listPaneWidth : .infinity)
+                .frame(maxWidth: .infinity, alignment: overList ? .leading : .center)
+                .padding(.bottom, isKeyboardVisible ? LarderSpace.s2 : metrics.snackbarBottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            isKeyboardVisible = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isKeyboardVisible = false
+        }
+    }
+
+    private var floatingChrome: some View {
         let metrics = metrics
         return ZStack(alignment: .bottom) {
             if isScanFloating {
@@ -259,14 +283,6 @@ struct RootTabView: View {
                     .padding(.bottom, metrics.pillBottom)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-
-            // Last, so it renders above the pill and Scan rather than underneath them.
-            // Over the list on expanded Home, so it never covers the product pane's buttons.
-            let overList = isExpanded && selectedTab == .home
-            LarderSnackbarHost(content: $snackbar)
-                .frame(maxWidth: overList ? HomeLayout.listPaneWidth : .infinity)
-                .frame(maxWidth: .infinity, alignment: overList ? .leading : .center)
-                .padding(.bottom, metrics.snackbarBottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .ignoresSafeArea(.keyboard, edges: .bottom)
