@@ -39,7 +39,7 @@
     <string name="back_content_description">Tilbake</string>
 
     <string name="edit_item_title">Rediger vare</string>
-    <string name="add_item_title">Legg til i matskapet</string>
+    <string name="add_item_title">Legg til vare</string>
     <string name="barcode_format">Strekkode: %1$s</string>
     <string name="new_item_placeholder">Ny vare</string>
     <string name="photo_suggestions_title">Ser ut som…</string>
@@ -115,14 +115,14 @@
     <string name="food_label_food">Mat</string>
     <string name="product_name_label">Produktnavn *</string>
     <string name="brand_label">Merke / produsent</string>
-    <string name="expiry_section_title">Best før / utløpsdato</string>
+    <string name="expiry_section_title">Best før</string>
     <string name="expiry_suggestion_remembered">Som sist · %1$s</string>
     <string name="expiry_suggestion_category">Standard for %1$s · %2$s</string>
     <plurals name="expiry_suggestion_days">
         <item quantity="one">%1$d dag</item>
         <item quantity="other">%1$d dager</item>
     </plurals>
-    <string name="expiry_date_implausible_warning">Denne datoen er mer enn %1$d år fra i dag. Dobbeltsjekk året.</string>
+    <string name="expiry_date_implausible_warning">Denne datoen er over %1$d år unna. Sjekk året.</string>
     <string name="quick_date_3_days">+3 dager</string>
     <string name="quick_date_1_week">+1 uke</string>
     <string name="quick_date_2_weeks">+2 uker</string>
@@ -132,7 +132,6 @@
     <string name="quantity_label">Antall</string>
     <string name="quantity_decrease_content_description">Reduser antall</string>
     <string name="quantity_increase_content_description">Øk antall</string>
-    <string name="notes_label">Notater (f.eks. åpnet, mengde, hylle)</string>
     <string name="update_item_button">Oppdater vare</string>
     <string name="save_item_button">Lagre i %1$s</string>
     <string name="date_picker_ok">OK</string>
@@ -719,4 +718,13 @@
         <item quantity="one">%d vare flyttes til hovedlisten.</item>
         <item quantity="other">%d varer flyttes til hovedlisten.</item>
     </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Legg til et navn, så finner du varen igjen senere</string>
+    <string name="add_see_details">Se detaljer</string>
+    <string name="add_notes_placeholder">f.eks. åpnet, mengde, hylle</string>
+    <string name="discard_changes_title">Forkaste endringene?</string>
+    <string name="discard_changes_confirm">Forkast endringene</string>
+    <string name="discard_changes_keep">Fortsett å redigere</string>
+    <string name="discard_new_message">Denne varen er ikke lagret, så den blir ikke lagt til i matskapet.</string>
+    <string name="discard_edit_message">Endringene i %1$s blir ikke lagret. Varen forblir som den var.</string>
 </resources>

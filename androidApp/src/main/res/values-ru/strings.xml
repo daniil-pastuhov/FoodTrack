@@ -39,7 +39,7 @@
     <string name="back_content_description">Назад</string>
 
     <string name="edit_item_title">Изменить продукт</string>
-    <string name="add_item_title">Добавить в кладовую</string>
+    <string name="add_item_title">Добавить продукт</string>
     <string name="barcode_format">Штрихкод: %1$s</string>
     <string name="new_item_placeholder">Новый продукт</string>
     <string name="photo_suggestions_title">Похоже на…</string>
@@ -124,7 +124,7 @@
         <item quantity="many">%1$d дней</item>
         <item quantity="other">%1$d дня</item>
     </plurals>
-    <string name="expiry_date_implausible_warning">Эта дата отстоит от сегодняшней более чем на %1$d лет. Проверьте год.</string>
+    <string name="expiry_date_implausible_warning">Эта дата отстоит более чем на %1$d лет. Проверьте год.</string>
     <string name="quick_date_3_days">+3 дня</string>
     <string name="quick_date_1_week">+1 неделя</string>
     <string name="quick_date_2_weeks">+2 недели</string>
@@ -134,7 +134,6 @@
     <string name="quantity_label">Количество</string>
     <string name="quantity_decrease_content_description">Уменьшить количество</string>
     <string name="quantity_increase_content_description">Увеличить количество</string>
-    <string name="notes_label">Заметки (напр. вскрыто, количество, полка)</string>
     <string name="update_item_button">Обновить продукт</string>
     <string name="save_item_button">Сохранить: %1$s</string>
     <string name="date_picker_ok">ОК</string>
@@ -795,4 +794,13 @@
         <item quantity="many">%d товаров из него перейдут в основной список.</item>
         <item quantity="other">%d товара из него перейдут в основной список.</item>
     </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Добавьте название, чтобы потом найти продукт</string>
+    <string name="add_see_details">Подробнее</string>
+    <string name="add_notes_placeholder">напр. вскрыто, количество, полка</string>
+    <string name="discard_changes_title">Отменить изменения?</string>
+    <string name="discard_changes_confirm">Не сохранять</string>
+    <string name="discard_changes_keep">Продолжить редактирование</string>
+    <string name="discard_new_message">Этот продукт не сохранён, поэтому в кладовую он не попадёт.</string>
+    <string name="discard_edit_message">Изменения в «%1$s» не сохранятся. Продукт останется прежним.</string>
 </resources>
