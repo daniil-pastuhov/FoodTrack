@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -507,7 +509,8 @@ private fun BodyText(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
 }
 
-/** Use one leads, and the rest wrap under it when the labels run long, as Russian ones do. */
+/** Use one leads, and the rest wrap under it when the labels run long, as Russian ones do. The
+ *  intrinsic width stops FlowRow fitting each button to its longest word before it grows them. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProductDetailButtons(
@@ -525,27 +528,27 @@ private fun ProductDetailButtons(
         LarderButton(
             text = stringResource(R.string.use_one_content_description),
             onClick = onUseOne,
-            modifier = Modifier.weight(2f),
+            modifier = Modifier.weight(2f).width(IntrinsicSize.Max),
             leadingIcon = LarderIcons.CircleMinus
         )
         LarderButton(
             text = stringResource(R.string.detail_edit),
             onClick = onEdit,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
             style = LarderButtonStyle.Outline,
             leadingIcon = LarderIcons.Pencil
         )
         LarderButton(
             text = stringResource(R.string.detail_to_shopping_list),
             onClick = onMoveToShoppingList,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
             style = LarderButtonStyle.Outline,
             leadingIcon = LarderIcons.ShoppingBasket
         )
         LarderButton(
             text = stringResource(R.string.delete),
             onClick = onDelete,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
             style = LarderButtonStyle.DangerText,
             leadingIcon = LarderIcons.Trash2
         )
