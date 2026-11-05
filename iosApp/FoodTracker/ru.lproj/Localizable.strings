@@ -551,3 +551,9 @@
 "shopping_section_name_label" = "Название раздела";
 "shopping_section_keep" = "Оставить раздел";
 "shopping_section_delete_confirm" = "Удалить раздел";
+
+/* Larder: Calendar */
+"calendar_pane_title" = "Что истекает";
+"calendar_used_snackbar" = "%1$@: использовано";
+"calendar_tossed_snackbar" = "%1$@: выброшено";
+"calendar_empty_message" = "Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.";

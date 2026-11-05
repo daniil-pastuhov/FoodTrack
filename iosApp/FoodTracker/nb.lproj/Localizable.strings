@@ -551,3 +551,9 @@
 "shopping_section_name_label" = "Navn på seksjon";
 "shopping_section_keep" = "Behold seksjonen";
 "shopping_section_delete_confirm" = "Slett seksjonen";
+
+/* Larder: Calendar */
+"calendar_pane_title" = "Hva som går ut";
+"calendar_used_snackbar" = "%1$@ brukt";
+"calendar_tossed_snackbar" = "%1$@ kastet";
+"calendar_empty_message" = "Legg til mat med dato, så dukker den opp her den dagen den går ut.";

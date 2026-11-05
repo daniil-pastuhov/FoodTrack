@@ -551,3 +551,9 @@
 "shopping_section_name_label" = "Section name";
 "shopping_section_keep" = "Keep section";
 "shopping_section_delete_confirm" = "Delete section";
+
+/* Larder: Calendar */
+"calendar_pane_title" = "What's due";
+"calendar_used_snackbar" = "%1$@ used";
+"calendar_tossed_snackbar" = "%1$@ tossed";
+"calendar_empty_message" = "Add food with its date and it will show up here, on the day it is due.";

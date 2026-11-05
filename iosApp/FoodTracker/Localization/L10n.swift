@@ -242,6 +242,14 @@ public enum L10n {
     public static var calendarSwipeTossed: String { NSLocalizedString("calendar_swipe_tossed", comment: "") }
     public static var calendarShowMonth: String { NSLocalizedString("calendar_show_month", comment: "") }
     public static var calendarShowWeek: String { NSLocalizedString("calendar_show_week", comment: "") }
+    public static var calendarPaneTitle: String { NSLocalizedString("calendar_pane_title", comment: "") }
+    public static var calendarEmptyMessage: String { NSLocalizedString("calendar_empty_message", comment: "") }
+    public static func calendarUsedSnackbar(_ name: String) -> String {
+        String(format: NSLocalizedString("calendar_used_snackbar", comment: ""), name)
+    }
+    public static func calendarTossedSnackbar(_ name: String) -> String {
+        String(format: NSLocalizedString("calendar_tossed_snackbar", comment: ""), name)
+    }
     public static func calendarDayItemCount(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("calendar_day_item_count", comment: ""), count)
     }
