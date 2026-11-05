@@ -719,4 +719,10 @@
         <item quantity="one">%d vare flyttes til hovedlisten.</item>
         <item quantity="other">%d varer flyttes til hovedlisten.</item>
     </plurals>
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">Hva som går ut</string>
+    <string name="calendar_used_snackbar">%1$s brukt</string>
+    <string name="calendar_tossed_snackbar">%1$s kastet</string>
+    <string name="calendar_empty_message">Legg til mat med dato, så dukker den opp her den dagen den går ut.</string>
 </resources>

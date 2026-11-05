@@ -723,4 +723,10 @@
         <item quantity="one">Its %d item moves to the main list.</item>
         <item quantity="other">Its %d items move to the main list.</item>
     </plurals>
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">What\'s due</string>
+    <string name="calendar_used_snackbar">%1$s used</string>
+    <string name="calendar_tossed_snackbar">%1$s tossed</string>
+    <string name="calendar_empty_message">Add food with its date and it will show up here, on the day it is due.</string>
 </resources>

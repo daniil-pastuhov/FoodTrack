@@ -46,6 +46,19 @@ fun formatWeekdayDay(date: LocalDate): String {
     return remember(date, formatter) { date.toJavaLocalDate().format(formatter) }
 }
 
+/** "Friday 6 November", in the device's own order and wording and always with a capital, for a
+ *  heading over one day's rows. The year joins it when the day isn't in [currentYear]. */
+@Composable
+fun formatDayHeading(date: LocalDate, currentYear: Int): String {
+    val locale = LocalConfiguration.current.locales[0]
+    return remember(date, currentYear, locale) {
+        val skeleton = if (date.year == currentYear) "EEEEdMMMM" else "yEEEEdMMMM"
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+            .format(date.toJavaLocalDate())
+            .replaceFirstChar { it.titlecase(locale) }
+    }
+}
+
 /** Single-letter (or locale-appropriate narrow) weekday names, Monday first, to head the
  *  Monday-start week strip and month grid. */
 @Composable

@@ -795,4 +795,10 @@
         <item quantity="many">%d товаров из него перейдут в основной список.</item>
         <item quantity="other">%d товара из него перейдут в основной список.</item>
     </plurals>
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">Что истекает</string>
+    <string name="calendar_used_snackbar">%1$s: использовано</string>
+    <string name="calendar_tossed_snackbar">%1$s: выброшено</string>
+    <string name="calendar_empty_message">Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.</string>
 </resources>
