@@ -26,19 +26,19 @@ struct ProductDetailView: View {
                     if !warnings.isEmpty {
                         Label(L10n.allergenWarning(warnings.joined(separator: ", ")), systemImage: "exclamationmark.triangle.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(LarderColor.onErrorContainer)
                             .padding(12)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red.opacity(0.12))
+                            .background(LarderColor.errorContainer)
                             .cornerRadius(12)
                     }
 
                     HStack(spacing: 16) {
                         if let grade = nutrition.nutriScore {
-                            ScoreBadge(text: grade.uppercased(), caption: L10n.productDetailNutriScore, color: nutriScoreColor(grade))
+                            ScoreBadge(text: grade.uppercased(), caption: L10n.productDetailNutriScore, colors: nutriScoreColors(grade))
                         }
                         if let nova = nutrition.novaGroup {
-                            ScoreBadge(text: "\(nova)", caption: L10n.productDetailNova, color: novaColor(nova))
+                            ScoreBadge(text: "\(nova)", caption: L10n.productDetailNova, colors: novaColors(nova))
                         }
                     }
 
@@ -51,7 +51,7 @@ struct ProductDetailView: View {
                                         .font(.caption)
                                         .padding(.horizontal, 10)
                                         .padding(.vertical, 6)
-                                        .background(Color(.secondarySystemFill))
+                                        .background(LarderColor.surfaceContainer)
                                         .cornerRadius(8)
                                 }
                             }
@@ -63,7 +63,7 @@ struct ProductDetailView: View {
                             Text(L10n.productDetailIngredients).font(.headline)
                             Text(ingredients)
                                 .font(.subheadline)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(LarderColor.onSurfaceVariant)
                         }
                     }
                 }
@@ -83,23 +83,23 @@ struct ProductDetailView: View {
 
     /// Green-to-red the way the official scale is — the letter alone means nothing to someone
     /// who hasn't seen the scale before.
-    private func nutriScoreColor(_ grade: String) -> Color {
+    private func nutriScoreColors(_ grade: String) -> (Color, Color) {
         switch grade.lowercased() {
-        case "a": return Color(red: 0x03 / 255, green: 0x81 / 255, blue: 0x41 / 255)
-        case "b": return Color(red: 0x85 / 255, green: 0xBB / 255, blue: 0x2F / 255)
-        case "c": return Color(red: 0xFE / 255, green: 0xCB / 255, blue: 0x02 / 255)
-        case "d": return Color(red: 0xEE / 255, green: 0x81 / 255, blue: 0x00 / 255)
-        default: return .red
+        case "a": return (LarderColor.nutriA, LarderColor.onNutriA)
+        case "b": return (LarderColor.nutriB, LarderColor.onNutriB)
+        case "c": return (LarderColor.nutriC, LarderColor.onNutriC)
+        case "d": return (LarderColor.nutriD, LarderColor.onNutriD)
+        default: return (LarderColor.nutriE, LarderColor.onNutriE)
         }
     }
 
     /// NOVA 1...4, least to most processed.
-    private func novaColor(_ group: Int) -> Color {
+    private func novaColors(_ group: Int) -> (Color, Color) {
         switch group {
-        case 1: return .green
-        case 2: return Color(red: 0x85 / 255, green: 0xBB / 255, blue: 0x2F / 255)
-        case 3: return Color(red: 0xEE / 255, green: 0x81 / 255, blue: 0x00 / 255)
-        default: return .red
+        case 1: return (LarderColor.nutriA, LarderColor.onNutriA)
+        case 2: return (LarderColor.nutriB, LarderColor.onNutriB)
+        case 3: return (LarderColor.nutriD, LarderColor.onNutriD)
+        default: return (LarderColor.nutriE, LarderColor.onNutriE)
         }
     }
 }
@@ -107,19 +107,19 @@ struct ProductDetailView: View {
 private struct ScoreBadge: View {
     let text: String
     let caption: String
-    let color: Color
+    let colors: (background: Color, foreground: Color)
 
     var body: some View {
         VStack(spacing: 4) {
             Text(text)
                 .font(.title2.weight(.bold))
-                .foregroundColor(.white)
+                .foregroundColor(colors.foreground)
                 .frame(width: 44, height: 44)
-                .background(color)
+                .background(colors.background)
                 .clipShape(Circle())
             Text(caption)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
         }
     }
 }

@@ -55,9 +55,9 @@ private enum AgendaBucket: CaseIterable {
 
     var color: Color {
         switch self {
-        case .overdue: return .red
-        case .today, .tomorrow: return .orange
-        default: return .secondary
+        case .overdue: return LarderColor.error
+        case .today, .tomorrow: return LarderColor.onSoonContainer
+        default: return LarderColor.onSurfaceVariant
         }
     }
 
@@ -154,6 +154,7 @@ struct CalendarView: View {
                     }
                 }
             }
+            .background(LarderColor.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) { monthToggleTitle }
@@ -178,7 +179,7 @@ struct CalendarView: View {
                 Image(systemName: showMonth ? "chevron.up" : "chevron.down")
                     .font(.caption.weight(.semibold))
             }
-            .foregroundColor(.primary)
+            .foregroundColor(LarderColor.onSurface)
         }
         .accessibilityLabel(showMonth ? L10n.calendarShowWeek : L10n.calendarShowMonth)
     }
@@ -266,7 +267,7 @@ struct CalendarView: View {
                 Text(symbol)
                     .font(.caption2)
                     .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(LarderColor.onSurfaceVariant)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -317,7 +318,7 @@ struct CalendarView: View {
                     HStack {
                         Text(dayDetailFormatter.string(from: selectedDay))
                             .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
+                            .foregroundColor(LarderColor.onSurface)
                             .textCase(nil)
                         Spacer()
                         Button(L10n.calendarShowAll) {
@@ -342,7 +343,7 @@ struct CalendarView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(section.bucket.color)
                             Text("\(section.items.count)")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                         }
                         .font(.caption)
                         .accessibilityElement(children: .combine)
@@ -352,15 +353,14 @@ struct CalendarView: View {
             }
         }
         .listStyle(.plain)
+        .larderListBackground()
         .animation(.default, value: viewModel.items)
-        // Clears the floating pill nav bar that overlays this screen (see RootTabView).
-        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
     }
 
     private func emptyMessage(_ text: String) -> some View {
         Text(text)
             .font(.subheadline)
-            .foregroundColor(.secondary)
+            .foregroundColor(LarderColor.onSurfaceVariant)
             .listRowSeparator(.hidden)
             .agendaLeadingInset()
     }
@@ -371,7 +371,7 @@ struct CalendarView: View {
                 Text(rowDateFormatter.string(from: item.expiryDate))
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(LarderColor.onSurfaceVariant)
             }
             ItemRowView(
                 item: item,
@@ -380,6 +380,7 @@ struct CalendarView: View {
             )
         }
         .contentShape(Rectangle())
+        .listRowBackground(Color.clear)
         .onTapGesture { onEditItem(item) }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
@@ -387,7 +388,7 @@ struct CalendarView: View {
             } label: {
                 Label(L10n.calendarSwipeUsed, systemImage: "checkmark")
             }
-            .tint(.green)
+            .tint(LarderColor.primary)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             Button(role: .destructive) {
@@ -456,9 +457,19 @@ private struct CalendarDayCell: View {
     private var badgeColor: Color? {
         switch status {
         case .none: return nil
-        case .expired: return .red
-        case .expiringToday, .expiringSoon: return .orange
-        case .fresh: return .green
+        case .expired: return LarderColor.expiredContainer
+        case .expiringToday: return LarderColor.todayContainer
+        case .expiringSoon: return LarderColor.soonContainer
+        case .fresh: return LarderColor.surfaceContainer
+        }
+    }
+
+    private var badgeTextColor: Color {
+        switch status {
+        case .none, .fresh: return LarderColor.onSurfaceVariant
+        case .expired: return LarderColor.onExpiredContainer
+        case .expiringToday: return LarderColor.onTodayContainer
+        case .expiringSoon: return LarderColor.onSoonContainer
         }
     }
 
@@ -475,7 +486,7 @@ private struct CalendarDayCell: View {
             if count > 0, let badgeColor {
                 Text(count > 9 ? "9+" : "\(count)")
                     .font(.system(size: 9, weight: .bold))
-                    .foregroundColor(.white)
+                    .foregroundColor(badgeTextColor)
                     .padding(.horizontal, 4)
                     .frame(minWidth: 14, minHeight: 14)
                     .background(Capsule().fill(dimmed ? badgeColor.opacity(0.4) : badgeColor))
@@ -495,15 +506,15 @@ private struct CalendarDayCell: View {
     }
 
     private var background: Color {
-        if isToday { return .accentColor }
-        if isSelected { return Color.accentColor.opacity(0.18) }
+        if isToday { return LarderColor.primary }
+        if isSelected { return LarderColor.primaryContainer }
         return .clear
     }
 
     private var textColor: Color {
-        if isToday { return .white }
-        if dimmed { return .secondary.opacity(0.4) }
-        return .primary
+        if isToday { return LarderColor.onPrimary }
+        if dimmed { return LarderColor.onSurfaceVariant.opacity(0.4) }
+        return LarderColor.onSurface
     }
 }
 

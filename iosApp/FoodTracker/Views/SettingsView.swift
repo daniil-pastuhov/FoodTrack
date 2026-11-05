@@ -33,6 +33,8 @@ public struct SettingsView: View {
         self.onDataCleared = onDataCleared
     }
 
+    @Environment(\.showSnackbar) private var showSnackbar
+
     private var settings: AppSettings { store.settings }
 
     private func update(_ transform: (inout AppSettings) -> Void) {
@@ -44,19 +46,19 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             Form {
-                notificationsSection
+                notificationsSection.larderListRow()
                 expiringSoonSection
-                locationsSection
+                locationsSection.larderListRow()
                 allergensSection
-                storeRemindersSection
+                storeRemindersSection.larderListRow()
                 categoriesSection
-                appearanceSection
+                appearanceSection.larderListRow()
                 dataSection
             }
+            .larderListBackground()
             .navigationTitle(L10n.settingsTitle)
             .navigationBarTitleDisplayMode(.inline)
             // Clears the floating pill nav bar that overlays this screen (see RootTabView).
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
             .confirmationDialog(
                 L10n.clearDataDialogTitle,
                 isPresented: $showClearConfirm,
@@ -105,23 +107,10 @@ public struct SettingsView: View {
             } message: {
                 Text(L10n.restoreModeMessage)
             }
-            .overlay(alignment: .bottom) {
-                if let backupMessage {
-                    Text(backupMessage)
-                        .font(.footnote.weight(.medium))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(.thinMaterial, in: Capsule())
-                        .padding(.bottom, 200)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: backupMessage)
-            .task(id: backupMessage) {
-                guard backupMessage != nil else { return }
-                try? await Task.sleep(for: .seconds(3))
-                if !Task.isCancelled { backupMessage = nil }
+            .onChange(of: backupMessage) { _, message in
+                guard let message else { return }
+                showSnackbar(message)
+                backupMessage = nil
             }
         }
     }
@@ -173,7 +162,7 @@ public struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.settingsReminderStyleLabel)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                     Picker(L10n.settingsReminderStyleLabel, selection: Binding<ReminderStyle?>(
                         get: { settings.notifications.reminderStyle },
                         set: { newValue in
@@ -261,7 +250,7 @@ public struct SettingsView: View {
                     .font(.subheadline)
             } icon: {
                 Image(systemName: "bell.slash.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(LarderColor.error)
             }
             Button(L10n.settingsNotificationsOpenSettings) {
                 if let url = URL(string: UIApplication.openNotificationSettingsURLString) {
@@ -354,7 +343,7 @@ public struct SettingsView: View {
                     Text(L10n.settingsRememberLastLocation)
                     Text(L10n.settingsRememberLastLocationDesc)
                         .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                 }
             }
 
@@ -373,7 +362,7 @@ public struct SettingsView: View {
                             update { $0.defaultStorageLocation = location }
                         } label: {
                             Image(systemName: settings.defaultStorageLocation == location ? "star.fill" : "star")
-                                .foregroundColor(.accentColor)
+                                .foregroundColor(LarderColor.primary)
                         }
                         .buttonStyle(.plain)
 
@@ -490,7 +479,7 @@ public struct SettingsView: View {
                 if storeLocationFailed {
                     Text(L10n.settingsStoreLocationFailed)
                         .font(.caption)
-                        .foregroundStyle(.red)
+                        .foregroundStyle(LarderColor.error)
                 }
 
                 TextField(L10n.settingsAddStorePlaceholder, text: $newStoreText)

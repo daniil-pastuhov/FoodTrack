@@ -64,7 +64,7 @@ struct ShoppingListWidgetView: View {
             if entry.isEmpty {
                 Text(L10n.widgetShoppingListEmpty)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
             } else {
                 ForEach(visible) { row in
                     switch row {
@@ -81,7 +81,7 @@ struct ShoppingListWidgetView: View {
                                 Text("\(count)")
                                     .font(.caption2)
                             }
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(LarderColor.onSurfaceVariant)
                         }
                         .buttonStyle(.plain)
                     case .item(let item, _):
@@ -93,7 +93,7 @@ struct ShoppingListWidgetView: View {
                             if item.quantity > 1 {
                                 Text(L10n.quantityFormat(item.quantity))
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(LarderColor.onSurfaceVariant)
                             }
                             // Ticks the entry off in the aisle, which is exactly where the widget
                             // gets looked at and where opening the app is most annoying.
@@ -108,7 +108,7 @@ struct ShoppingListWidgetView: View {
                 if hiddenItems > 0 {
                     Text(L10n.widgetShoppingListMore(hiddenItems))
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
                 }
             }
             Spacer(minLength: 0)
@@ -126,7 +126,7 @@ struct ShoppingListWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ShoppingListWidgetProvider()) { entry in
             ShoppingListWidgetView(entry: entry)
-                .containerBackground(.background, for: .widget)
+                .containerBackground(LarderColor.surfaceContainerHigh, for: .widget)
         }
         .configurationDisplayName(L10n.widgetShoppingListTitle)
         .description(L10n.widgetShoppingListDescription)

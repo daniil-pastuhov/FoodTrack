@@ -55,6 +55,7 @@ public struct ScannerSheetView: View {
         viewModel: NativePantryViewModel,
         showManualEntryShortcut: Bool = true,
         enabledModes: [IOSCameraMode] = ScannerSheetView.defaultModes,
+        initialMode: IOSCameraMode? = nil,
         checkDuplicates: Bool = true,
         onUseOne: ((PantryItem) -> Void)? = nil,
         onShoppingListScanned: ((String) -> Void)? = nil,
@@ -69,7 +70,7 @@ public struct ScannerSheetView: View {
         self.onShoppingListScanned = onShoppingListScanned
         self.onBatchCommitted = onBatchCommitted
         self.onProceedToAdd = onProceedToAdd
-        _mode = State(initialValue: enabledModes.first ?? .barcode)
+        _mode = State(initialValue: initialMode ?? enabledModes.first ?? .barcode)
     }
 
     /// Chip order for the mode row: the plain barcode scan first, the two "unpack a whole shop"
@@ -310,15 +311,14 @@ public struct ScannerSheetView: View {
 
                     HStack(spacing: 6) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.white)
                         Text(L10n.expiryDateFound(dateStr))
                             .font(.subheadline)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
                     }
+                    .foregroundColor(LarderColor.onSuccessContainer)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
-                    .background(Color.green)
+                    .background(LarderColor.successContainer)
                     .cornerRadius(20)
                     .padding(.top, 12)
                 }
@@ -328,7 +328,7 @@ public struct ScannerSheetView: View {
                 // Center Reticle
                 VStack(spacing: 12) {
                     RoundedRectangle(cornerRadius: 16)
-                        .stroke(Color.accentColor, lineWidth: 2.5)
+                        .stroke(LarderColor.primary, lineWidth: 2.5)
                         .frame(width: reticleSize.width, height: reticleSize.height)
 
                     Text(guideText)
@@ -346,10 +346,10 @@ public struct ScannerSheetView: View {
                     Text(L10n.photoCaptureFailedMessage)
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(LarderColor.onError)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(Color.red.opacity(0.85))
+                        .background(LarderColor.error)
                         .cornerRadius(20)
                         .padding(.bottom, 8)
                 }
@@ -401,10 +401,10 @@ public struct ScannerSheetView: View {
                             Circle()
                                 .fill(Color.white)
                                 .frame(width: 72, height: 72)
-                                .overlay(Circle().stroke(Color.accentColor, lineWidth: 3))
+                                .overlay(Circle().stroke(LarderColor.primary, lineWidth: 3))
                             if isReadingReceipt {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: LarderColor.primary))
                             } else {
                                 Image(systemName: "doc.text.viewfinder")
                                     .font(.system(size: 26))
@@ -435,10 +435,10 @@ public struct ScannerSheetView: View {
                             Circle()
                                 .fill(Color.white)
                                 .frame(width: 72, height: 72)
-                                .overlay(Circle().stroke(Color.accentColor, lineWidth: 3))
+                                .overlay(Circle().stroke(LarderColor.primary, lineWidth: 3))
                             if isCapturingPhoto {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: LarderColor.primary))
                             } else {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 26))
@@ -469,7 +469,7 @@ public struct ScannerSheetView: View {
                         if viewModel.isLookingUpBarcode {
                             HStack(spacing: 12) {
                                 ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .accentColor))
+                                    .progressViewStyle(CircularProgressViewStyle(tint: LarderColor.primary))
                                 Text(L10n.lookingUpProduct)
                                     .font(.subheadline)
                             }
@@ -482,7 +482,7 @@ public struct ScannerSheetView: View {
                                             .resizable()
                                             .aspectRatio(contentMode: .fill)
                                     } else {
-                                        Color.gray.opacity(0.3)
+                                        LarderColor.surfaceContainer
                                     }
                                 }
                                 .frame(width: 50, height: 50)
@@ -499,7 +499,7 @@ public struct ScannerSheetView: View {
                                         ?? viewModel.productNotFoundBarcode
                                         ?? L10n.photoCapturedMessage)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(LarderColor.onSurfaceVariant)
                                         .lineLimit(2)
                                 }
                                 Spacer()
@@ -515,7 +515,7 @@ public struct ScannerSheetView: View {
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(Color(.secondarySystemFill))
+                                    .background(LarderColor.surfaceContainer)
                                     .cornerRadius(10)
                                 }
 
@@ -536,10 +536,10 @@ public struct ScannerSheetView: View {
                                 }) {
                                     Text(L10n.continueButton)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(LarderColor.onPrimary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
-                                        .background(Color.accentColor)
+                                        .background(LarderColor.primary)
                                         .cornerRadius(10)
                                 }
                             }
@@ -553,7 +553,7 @@ public struct ScannerSheetView: View {
                             HStack(spacing: 12) {
                                 if let imgUrl = product.imageUrl, !imgUrl.isEmpty {
                                     ProductImageView(reference: imgUrl) {
-                                        Color.gray.opacity(0.3)
+                                        LarderColor.surfaceContainer
                                     }
                                     .frame(width: 50, height: 50)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -566,12 +566,12 @@ public struct ScannerSheetView: View {
                                     if let brand = product.brand {
                                         Text(brand)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(LarderColor.onSurfaceVariant)
                                     }
                                     if let inPantry {
                                         Text(L10n.inPantryCount(inPantry.quantity))
                                             .font(.caption.weight(.semibold))
-                                            .foregroundColor(.accentColor)
+                                            .foregroundColor(LarderColor.primary)
                                     }
                                 }
                                 Spacer()
@@ -590,7 +590,7 @@ public struct ScannerSheetView: View {
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(Color(.secondarySystemFill))
+                                    .background(LarderColor.surfaceContainer)
                                     .cornerRadius(10)
                                 }
                             }
@@ -608,7 +608,7 @@ public struct ScannerSheetView: View {
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(Color(.secondarySystemFill))
+                                    .background(LarderColor.surfaceContainer)
                                     .cornerRadius(10)
                                 }
 
@@ -626,10 +626,10 @@ public struct ScannerSheetView: View {
                                 }) {
                                     Text(L10n.continueButton)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(LarderColor.onPrimary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
-                                        .background(Color.accentColor)
+                                        .background(LarderColor.primary)
                                         .cornerRadius(10)
                                 }
                             }
@@ -639,13 +639,13 @@ public struct ScannerSheetView: View {
                             HStack(spacing: 10) {
                                 Image(systemName: "info.circle")
                                     .font(.system(size: 17))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(LarderColor.onSurfaceVariant)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(L10n.productNotFoundTitle)
                                         .font(.subheadline.weight(.semibold))
                                     Text(notFoundBarcode)
                                         .font(.caption2)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(LarderColor.onSurfaceVariant)
                                 }
                                 Spacer()
                                 scanAgainButton
@@ -665,7 +665,7 @@ public struct ScannerSheetView: View {
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(Color(.secondarySystemFill))
+                                    .background(LarderColor.surfaceContainer)
                                     .cornerRadius(10)
                                 }
 
@@ -675,10 +675,10 @@ public struct ScannerSheetView: View {
                                 }) {
                                     Text(L10n.continueButton)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(LarderColor.onPrimary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
-                                        .background(Color.accentColor)
+                                        .background(LarderColor.primary)
                                         .cornerRadius(10)
                                 }
                             }
@@ -689,13 +689,13 @@ public struct ScannerSheetView: View {
                             HStack(alignment: .top, spacing: 12) {
                                 Image(systemName: "calendar.badge.checkmark")
                                     .font(.system(size: 22))
-                                    .foregroundColor(.green)
+                                    .foregroundColor(LarderColor.primary)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(L10n.dateCapturedTitle)
                                         .font(.headline)
                                     Text(date, style: .date)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(LarderColor.onSurfaceVariant)
                                 }
                                 Spacer()
                             }
@@ -710,7 +710,7 @@ public struct ScannerSheetView: View {
                                     }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
-                                    .background(Color(.secondarySystemFill))
+                                    .background(LarderColor.surfaceContainer)
                                     .cornerRadius(10)
                                 }
 
@@ -720,17 +720,17 @@ public struct ScannerSheetView: View {
                                 }) {
                                     Text(L10n.continueButton)
                                         .fontWeight(.bold)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(LarderColor.onPrimary)
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 10)
-                                        .background(Color.accentColor)
+                                        .background(LarderColor.primary)
                                         .cornerRadius(10)
                                 }
                             }
                         }
                     }
                     .padding(16)
-                    .background(Color(.systemBackground))
+                    .background(LarderColor.surface)
                     .cornerRadius(20)
                     .padding(.horizontal, 16)
                     .padding(.bottom, 24)
@@ -817,9 +817,10 @@ private struct CameraOffView: View {
                     Button(action: onOpenSettings) {
                         Text(L10n.cameraOffOpenSettings)
                             .fontWeight(.semibold)
+                            .foregroundColor(LarderColor.onPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(Color.accentColor)
+                            .background(LarderColor.primary)
                             .cornerRadius(12)
                     }
                     .padding(.top, 12)
@@ -873,7 +874,7 @@ private struct BatchQueuePanel: View {
                 if !entries.isEmpty {
                     Button(L10n.batchClearButton, action: onClear)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
                 }
             }
 
@@ -890,7 +891,7 @@ private struct BatchQueuePanel: View {
                                     Text(subtitle(for: entry))
                                         .font(.caption)
                                         .foregroundStyle(
-                                            entry.needsAttention && !entry.isLookingUp ? Color.red : Color.secondary
+                                            entry.needsAttention && !entry.isLookingUp ? LarderColor.error : LarderColor.onSurfaceVariant
                                         )
                                 }
                                 Spacer()
@@ -899,7 +900,7 @@ private struct BatchQueuePanel: View {
                                 } label: {
                                     Image(systemName: "xmark")
                                         .font(.caption)
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(LarderColor.onSurfaceVariant)
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel(L10n.batchQueueRemoveContentDescription)
@@ -912,16 +913,16 @@ private struct BatchQueuePanel: View {
                 Button(action: onCommit) {
                     Text(L10n.batchCommitButton)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(LarderColor.onPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.accentColor)
+                        .background(LarderColor.primary)
                         .cornerRadius(14)
                 }
             }
         }
         .padding(16)
-        .background(Color(.systemBackground))
+        .background(LarderColor.surface)
         .cornerRadius(20)
         .padding(.horizontal, 16)
         .padding(.bottom, 24)
@@ -955,10 +956,10 @@ private struct ScanModeChip: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
             }
-            .foregroundColor(.white)
+            .foregroundColor(selected ? LarderColor.onPrimary : .white)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(selected ? Color.accentColor : Color.black.opacity(0.6))
+            .background(selected ? LarderColor.primary : Color.black.opacity(0.6))
             .clipShape(Capsule())
             // An unselected chip's translucent black reads as nothing against a dark scene, so
             // outline it - otherwise the other modes look like bare text rather than buttons.

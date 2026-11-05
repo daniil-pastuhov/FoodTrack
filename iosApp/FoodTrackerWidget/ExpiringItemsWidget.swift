@@ -52,7 +52,7 @@ struct ExpiringItemsWidgetView: View {
             if entry.items.isEmpty {
                 Text(L10n.widgetExpiringEmpty)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
             } else {
                 ForEach(entry.items.prefix(4)) { item in
                     HStack(spacing: 6) {
@@ -62,7 +62,7 @@ struct ExpiringItemsWidgetView: View {
                                 .lineLimit(1)
                             Text(item.daysRemainingFormatted)
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(LarderColor.onSurfaceVariant)
                         }
                         Spacer(minLength: 0)
                         // Consumes a unit in place, without opening the app — seeing that
@@ -88,7 +88,7 @@ struct ExpiringItemsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: ExpiringItemsProvider()) { entry in
             ExpiringItemsWidgetView(entry: entry)
-                .containerBackground(.background, for: .widget)
+                .containerBackground(LarderColor.surfaceContainerHigh, for: .widget)
         }
         .configurationDisplayName(L10n.widgetExpiringTitle)
         .description(L10n.widgetExpiringDescription)

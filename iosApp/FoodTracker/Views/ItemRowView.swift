@@ -25,14 +25,14 @@ public struct ItemRowView: View {
                 if let brand = item.brand, !brand.isEmpty {
                     Text(brand)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                         .lineLimit(1)
                 }
 
                 // Chips flow onto a new row when they don't fit instead of an HStack
                 // squeezing each one into multi-line text.
                 FlowLayout(spacing: 6) {
-                    badgeView
+                    StatusChip(item: item, expiringSoonDays: expiringSoonDays)
 
                     chip(L10n.storageLocationName(item.storageLocation))
 
@@ -47,14 +47,14 @@ public struct ItemRowView: View {
                 HStack(spacing: 4) {
                     Button(action: onDecrement) {
                         Image(systemName: "minus.circle")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(L10n.useOneButton)
                     Text(L10n.quantityFormat(item.quantity))
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                         .contentTransition(.numericText())
                         .animation(.easeInOut(duration: 0.2), value: item.quantity)
                 }
@@ -67,10 +67,9 @@ public struct ItemRowView: View {
 
     private var placeholderImage: some View {
         ZStack {
-            Color(.secondarySystemFill)
-            Image(systemName: "takeoutbag.and.cup.and.straw.fill")
-                .foregroundColor(.accentColor)
-                .font(.system(size: 24))
+            LarderColor.surfaceContainer
+            LarderIcon(.forCategory(item.category), size: .large)
+                .foregroundColor(LarderColor.onSurfaceVariant)
         }
     }
 
@@ -82,36 +81,7 @@ public struct ItemRowView: View {
             .fixedSize()
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color(.secondarySystemFill))
+            .background(LarderColor.surfaceContainer)
             .cornerRadius(6)
-    }
-
-    private var badgeView: some View {
-        let (bg, fg, icon) = statusColorsAndIcon(for: item.expiryStatus(expiringSoonDays: expiringSoonDays))
-        return HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.system(size: 10, weight: .bold))
-            Text(item.daysRemainingFormatted)
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-        }
-        .fixedSize()
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .background(bg)
-        .foregroundColor(fg)
-        .cornerRadius(6)
-    }
-
-    private func statusColorsAndIcon(for status: ExpiryStatus) -> (Color, Color, String) {
-        switch status {
-        case .expired:
-            return (Color.red.opacity(0.15), Color.red, "exclamationmark.triangle.fill")
-        case .expiringToday, .expiringSoon:
-            return (Color.orange.opacity(0.15), Color.orange, "clock.fill")
-        case .fresh:
-            return (Color.green.opacity(0.15), Color.green, "checkmark.circle.fill")
-        }
     }
 }

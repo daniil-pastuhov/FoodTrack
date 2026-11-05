@@ -37,7 +37,7 @@ struct CategorySettingsView: View {
             Section(footer: Text(L10n.categorySettingsDescription)) {
                 if groupedPreferences.isEmpty {
                     Text(L10n.categorySettingsEmpty)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                 } else {
                     Toggle(L10n.categorySettingsToggleAll, isOn: Binding(
                         get: { allEnabled },
@@ -50,12 +50,12 @@ struct CategorySettingsView: View {
                             // Decorative affordance only: the row itself is reorderable by
                             // long-press-and-drag via .onMove below (mirrors ShoppingListView).
                             Image(systemName: "line.3.horizontal")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                                 .accessibilityHidden(true)
 
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(L10n.categoryName(pref.displayName))
-                                    .foregroundColor(pref.enabled ? .primary : .secondary)
+                                    .foregroundColor(pref.enabled ? LarderColor.onSurface : LarderColor.onSurfaceVariant)
                                 
                                 // Show original names if different, comma-separated if multiple
                                 let allOrigins = viewModel.categoryPreferences
@@ -67,7 +67,7 @@ struct CategorySettingsView: View {
                                 if !allOrigins.isEmpty {
                                     Text(L10n.categorySettingsOriginalNameFormat(allOrigins.joined(separator: ", ")))
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(LarderColor.onSurfaceVariant)
                                 }
                             }
                             Spacer()
@@ -82,11 +82,11 @@ struct CategorySettingsView: View {
                                 if let days = pref.defaultShelfLifeDays {
                                     Text(L10n.categorySettingsShelfLifeDaysFormat(days))
                                         .font(.caption)
-                                        .foregroundColor(.accentColor)
+                                        .foregroundColor(LarderColor.primary)
                                 } else {
                                     Text(L10n.categorySettingsShelfLifeNone)
                                         .font(.caption)
-                                        .foregroundColor(.secondary)
+                                        .foregroundColor(LarderColor.onSurfaceVariant)
                                 }
                             }
                             .buttonStyle(.plain)
@@ -111,12 +111,11 @@ struct CategorySettingsView: View {
                     .onMove(perform: moveCategories)
                 }
             }
+            .larderListRow()
         }
+        .larderListBackground()
         .navigationTitle(L10n.categorySettingsTitle)
         .navigationBarTitleDisplayMode(.inline)
-        // Clears the floating pill nav bar that overlays this screen (see RootTabView)
-        // so the last row can still scroll fully into view above them.
-        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
         .sheet(isPresented: Binding(
             get: { editingOrigin != nil },
             set: { if !$0 { editingOrigin = nil } }
@@ -149,8 +148,8 @@ struct CategorySettingsView: View {
                                             .fontWeight(.medium)
                                             .padding(.horizontal, 10)
                                             .padding(.vertical, 6)
-                                            .background(Color.accentColor.opacity(0.12))
-                                            .foregroundColor(.accentColor)
+                                            .background(LarderColor.primaryContainer)
+                                            .foregroundColor(LarderColor.onPrimaryContainer)
                                             .cornerRadius(8)
                                     }
                                     .buttonStyle(.plain)
@@ -208,6 +207,7 @@ struct CategorySettingsView: View {
                     } footer: {
                         Text(L10n.categorySettingsShelfLifeDialogMessage)
                     }
+                    .larderListRow()
 
                     Section {
                         Button(L10n.categorySettingsShelfLifeClear, role: .destructive) {
@@ -217,6 +217,7 @@ struct CategorySettingsView: View {
                             shelfLifeOrigin = nil
                         }
                     }
+                    .larderListRow()
                 }
                 .navigationTitle(L10n.categorySettingsShelfLifeDialogTitle)
                 .navigationBarTitleDisplayMode(.inline)

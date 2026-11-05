@@ -35,6 +35,7 @@ struct ShoppingListView: View {
     @State private var importText = ""
     @State private var importResult: String?
     @FocusState private var isInputFocused: Bool
+    @Environment(\.showSnackbar) private var showSnackbar
     @State private var showNewSection = false
     @State private var showReorderSections = false
     @State private var sectionNameText = ""
@@ -83,7 +84,7 @@ struct ShoppingListView: View {
                                         .font(.subheadline)
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(Color(.secondarySystemFill))
+                                        .background(LarderColor.surfaceContainer)
                                         .clipShape(Capsule())
                                 }
                                 .buttonStyle(.plain)
@@ -101,13 +102,13 @@ struct ShoppingListView: View {
                         Spacer()
                         Image(systemName: "cart")
                             .font(.system(size: 48))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                         Text(L10n.shoppingListEmptyTitle)
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                         Text(L10n.shoppingListEmptySubtitle)
                             .font(.subheadline)
-                            .foregroundColor(.secondary.opacity(0.8))
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 24)
                         Spacer()
@@ -125,13 +126,12 @@ struct ShoppingListView: View {
                         },
                         onDeleteSection: { deletingSection = $0 }
                     )
-                    // Clears the floating pill nav bar that overlays this screen (see RootTabView).
-                    .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
                     .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: suggestions)
             .animation(.easeInOut(duration: 0.25), value: viewModel.shoppingList.isEmpty)
+            .background(LarderColor.background.ignoresSafeArea())
             .navigationTitle(L10n.shoppingListTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -253,22 +253,10 @@ struct ShoppingListView: View {
                     }
                 }
             }
-            .overlay(alignment: .bottom) {
-                if let importResult {
-                    Text(importResult)
-                        .font(.footnote.weight(.medium))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .background(.thinMaterial, in: Capsule())
-                        .padding(.bottom, 200)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-            }
-            .animation(.easeInOut(duration: 0.25), value: importResult)
-            .task(id: importResult) {
-                guard importResult != nil else { return }
-                try? await Task.sleep(for: .seconds(3))
-                if !Task.isCancelled { importResult = nil }
+            .onChange(of: importResult) { _, message in
+                guard let message else { return }
+                showSnackbar(message)
+                importResult = nil
             }
             .sheet(isPresented: $showScanner, onDismiss: {
                 // Covers the scanner's own "x" cancel button, which dismisses without ever
@@ -480,7 +468,7 @@ private struct ShoppingListQrSheet: View {
                         .cornerRadius(12)
                     Text(L10n.shoppingListShareQrHint)
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
                         .multilineTextAlignment(.center)
                 } else {
                     // A QR code has a hard capacity limit and the generator refuses rather than

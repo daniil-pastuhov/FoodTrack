@@ -19,6 +19,8 @@ public struct AddEditItemView: View {
     /// Called instead of a save when the user chose to add a unit to an item they already have,
     /// so the host can report it.
     var onDuplicateMerged: (PantryItem) -> Void = { _ in }
+    /// Called with a newly added item once it is saved. Not called for an edit.
+    var onNewItemSaved: (PantryItem) -> Void = { _ in }
 
     @State private var name: String = ""
     @State private var brand: String = ""
@@ -107,7 +109,8 @@ public struct AddEditItemView: View {
         prefillDate: Date? = nil,
         prefillCategory: String? = nil,
         prefillSuggestion: ShelfLifeSuggestion? = nil,
-        onDuplicateMerged: @escaping (PantryItem) -> Void = { _ in }
+        onDuplicateMerged: @escaping (PantryItem) -> Void = { _ in },
+        onNewItemSaved: @escaping (PantryItem) -> Void = { _ in }
     ) {
         self.viewModel = viewModel
         self.editingItem = editingItem
@@ -119,6 +122,7 @@ public struct AddEditItemView: View {
         self.prefillCategory = prefillCategory
         self.prefillSuggestion = prefillSuggestion
         self.onDuplicateMerged = onDuplicateMerged
+        self.onNewItemSaved = onNewItemSaved
     }
 
     public var body: some View {
@@ -129,12 +133,13 @@ public struct AddEditItemView: View {
                         Spacer()
                         imagePreviewContent
                             .frame(width: 96, height: 96)
-                            .background(Color(.secondarySystemFill))
+                            .background(LarderColor.surfaceContainer)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                         Spacer()
                     }
                     .listRowBackground(Color.clear)
                 }
+                .larderListRow()
                 .listRowSeparator(.hidden)
 
                 // Allergen warning, above everything else on the form: it is the one thing on
@@ -149,9 +154,10 @@ public struct AddEditItemView: View {
                                 systemImage: "exclamationmark.triangle.fill"
                             )
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.red)
+                            .foregroundStyle(LarderColor.error)
                         }
                     }
+                    .larderListRow()
                 }
 
                 Section(header: Text(L10n.sectionProductDetails)) {
@@ -163,7 +169,7 @@ public struct AddEditItemView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(viewModel.isLabelingPhoto ? L10n.photoSuggestionsAnalyzing : L10n.photoSuggestionsTitle)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(LarderColor.onSurfaceVariant)
                             if !viewModel.isLabelingPhoto {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
@@ -185,8 +191,8 @@ public struct AddEditItemView: View {
                                                         .fontWeight(.medium)
                                                         .padding(.horizontal, 10)
                                                         .padding(.vertical, 6)
-                                                        .background(Color.accentColor.opacity(0.12))
-                                                        .foregroundColor(.accentColor)
+                                                        .background(LarderColor.primaryContainer)
+                                                        .foregroundColor(LarderColor.onPrimaryContainer)
                                                         .cornerRadius(8)
                                                 }
                                                 .buttonStyle(.plain)
@@ -210,21 +216,22 @@ public struct AddEditItemView: View {
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(LarderColor.onSurfaceVariant)
                             }
                         }
                     }
                     if !barcode.isEmpty {
                         HStack {
                             Text(L10n.barcodeWord)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                             Spacer()
                             Text(barcode)
                                 .font(.footnote)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                         }
                     }
                 }
+                .larderListRow()
 
                 Section(header: Text(L10n.sectionExpirationDate)) {
                     // The wheel lives in its own small sheet rather than inline: inside this
@@ -235,10 +242,10 @@ public struct AddEditItemView: View {
                     } label: {
                         HStack {
                             Text(L10n.expiryPickerLabel)
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(LarderColor.onSurface)
                             Spacer()
                             Text(expiryDate.formatted(date: .abbreviated, time: .omitted))
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(LarderColor.primary)
                         }
                     }
 
@@ -253,10 +260,10 @@ public struct AddEditItemView: View {
                                     : L10n.expirySuggestionRemembered(days: days)
                             )
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(LarderColor.onSurfaceVariant)
                         } icon: {
                             Image(systemName: "sparkles")
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(LarderColor.primary)
                         }
                     }
 
@@ -266,7 +273,7 @@ public struct AddEditItemView: View {
                             systemImage: "exclamationmark.triangle.fill"
                         )
                         .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.red)
+                        .foregroundStyle(LarderColor.error)
                     }
 
                     // Quick offset buttons
@@ -278,6 +285,7 @@ public struct AddEditItemView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .larderListRow()
 
                 Section(header: Text(L10n.sectionStorage)) {
                     FlowLayout(spacing: 8) {
@@ -293,6 +301,7 @@ public struct AddEditItemView: View {
                     }
                     .padding(.vertical, 4)
                 }
+                .larderListRow()
 
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
@@ -320,8 +329,8 @@ public struct AddEditItemView: View {
                                                 .fontWeight(.medium)
                                                 .padding(.horizontal, 10)
                                                 .padding(.vertical, 6)
-                                                .background(Color.accentColor.opacity(0.12))
-                                                .foregroundColor(.accentColor)
+                                                .background(LarderColor.primaryContainer)
+                                                .foregroundColor(LarderColor.onPrimaryContainer)
                                                 .cornerRadius(8)
                                         }
                                         .buttonStyle(.plain)
@@ -336,17 +345,19 @@ public struct AddEditItemView: View {
                             Text(L10n.quantityLabel)
                             Spacer()
                             Text("\(quantity)")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                                 .contentTransition(.numericText())
                                 .animation(.easeInOut(duration: 0.2), value: quantity)
                         }
                     }
                 }
+                .larderListRow()
 
                 Section(header: Text(L10n.sectionNotes)) {
                     TextField(L10n.notesFieldPlaceholder, text: $notes, axis: .vertical)
                         .lineLimit(2...4)
                 }
+                .larderListRow()
 
                 Section {
                     Toggle(isOn: $essential) {
@@ -354,7 +365,7 @@ public struct AddEditItemView: View {
                             Text(L10n.essentialItemLabel)
                             Text(L10n.essentialItemDescription)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                         }
                     }
                     Toggle(isOn: $notificationsEnabled) {
@@ -362,11 +373,13 @@ public struct AddEditItemView: View {
                             Text(L10n.itemNotificationsLabel)
                             Text(L10n.itemNotificationsDescription)
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                         }
                     }
                 }
+                .larderListRow()
             }
+            .larderListBackground()
             .navigationTitle(editingItem != nil ? L10n.editItemTitle : L10n.addItemTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -411,6 +424,7 @@ public struct AddEditItemView: View {
                             notificationsEnabled: notificationsEnabled
                         )
                         viewModel.saveItem(item)
+                        if editingItem == nil { onNewItemSaved(item) }
                         dismiss()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -451,9 +465,7 @@ public struct AddEditItemView: View {
                     initialSnapshot = currentSnapshot
                 }
             }
-            .sheet(isPresented: $showDatePicker) {
-                ExpiryDatePickerSheet(expiryDate: $expiryDate)
-            }
+            .larderDatePicker(isPresented: $showDatePicker, date: $expiryDate, title: L10n.expiryPickerLabel)
             // Offered when the scan matched something already in the pantry. Adding a unit to
             // the existing item is almost always what a re-scan of the same product means;
             // creating a second row for it is the exception, so it is the secondary action.
@@ -545,7 +557,7 @@ public struct AddEditItemView: View {
     private var placeholderIcon: some View {
         Image(systemName: "takeoutbag.and.cup.and.straw.fill")
             .font(.system(size: 32))
-            .foregroundColor(.accentColor)
+            .foregroundColor(LarderColor.primary)
     }
 }
 
@@ -564,33 +576,6 @@ private struct FormSnapshot: Equatable {
     var notificationsEnabled: Bool
 }
 
-/// Day/month/year wheels: the graphical calendar collapses into a month/year-only wheel when
-/// its header is tapped, and users got stuck there with no obvious way to pick the day.
-/// Nothing else on this sheet scrolls, so a drag on the wheel always spins the wheel.
-private struct ExpiryDatePickerSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Binding var expiryDate: Date
-
-    var body: some View {
-        NavigationStack {
-            DatePicker(L10n.expiryPickerLabel, selection: $expiryDate, displayedComponents: [.date])
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-                .frame(maxWidth: .infinity)
-                .navigationTitle(L10n.expiryPickerLabel)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(L10n.doneButton) { dismiss() }
-                            .fontWeight(.bold)
-                    }
-                }
-        }
-        .presentationDetents([.height(320)])
-        .presentationDragIndicator(.visible)
-    }
-}
-
 private struct StorageLocationChip: View {
     let title: String
     let isSelected: Bool
@@ -604,8 +589,8 @@ private struct StorageLocationChip: View {
                 .lineLimit(1)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.accentColor : Color(.secondarySystemFill))
-                .foregroundColor(isSelected ? .white : .primary)
+                .background(isSelected ? LarderColor.primaryContainer : LarderColor.surfaceContainer)
+                .foregroundColor(isSelected ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
                 .cornerRadius(16)
         }
         .buttonStyle(.plain)
@@ -626,8 +611,8 @@ private struct QuickOffsetButton: View {
                 .fontWeight(.medium)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
-                .background(Color.accentColor.opacity(0.12))
-                .foregroundColor(.accentColor)
+                .background(LarderColor.primaryContainer)
+                .foregroundColor(LarderColor.onPrimaryContainer)
                 .cornerRadius(8)
         }
         .buttonStyle(.plain)

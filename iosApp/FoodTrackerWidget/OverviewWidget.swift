@@ -59,7 +59,7 @@ struct OverviewWidgetView: View {
                             .lineLimit(1)
                         Text(item.daysRemainingFormatted)
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(LarderColor.onSurfaceVariant)
                     }
                 }
             }
@@ -78,7 +78,7 @@ struct OverviewWidgetView: View {
                         if item.quantity > 1 {
                             Text(L10n.quantityFormat(item.quantity))
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(LarderColor.onSurfaceVariant)
                         }
                     }
                 }
@@ -103,11 +103,11 @@ private struct OverviewSectionView<Rows: View>: View {
             Text(title)
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
             if isEmpty {
                 Text(emptyText)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
             } else {
                 rows
             }
@@ -121,7 +121,7 @@ struct OverviewWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OverviewProvider()) { entry in
             OverviewWidgetView(entry: entry)
-                .containerBackground(.background, for: .widget)
+                .containerBackground(LarderColor.surfaceContainerHigh, for: .widget)
         }
         .configurationDisplayName(L10n.widgetOverviewTitle)
         .description(L10n.widgetOverviewDescription)

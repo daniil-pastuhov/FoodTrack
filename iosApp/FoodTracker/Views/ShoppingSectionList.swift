@@ -63,8 +63,10 @@ struct ShoppingSectionedList: View {
                         ))
                 }
             }
+            .listRowBackground(Color.clear)
         }
         .listStyle(.plain)
+        .larderListBackground()
         // A drop in the gaps between rows still lands where the entry currently sits.
         .onDrop(of: [.text], delegate: RowDropDelegate(onEnter: {}, onDrop: commitDrag))
         .animation(.easeInOut(duration: 0.25), value: rows.map(\.id))
@@ -103,10 +105,10 @@ struct ShoppingSectionedList: View {
                         .lineLimit(1)
                     Text("\(count)")
                         .font(.footnote)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
                     Spacer(minLength: 0)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -119,7 +121,7 @@ struct ShoppingSectionedList: View {
                     Button(L10n.shoppingSectionDelete, role: .destructive) { onDeleteSection(section) }
                 } label: {
                     Image(systemName: "ellipsis")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
                         .frame(width: 32, height: 28)
                         .contentShape(Rectangle())
                 }
@@ -137,7 +139,7 @@ struct ShoppingSectionedList: View {
             // Decorative affordance: the row itself is picked up with a long press.
             Image(systemName: "line.3.horizontal")
                 .font(.title3)
-                .foregroundColor(.secondary)
+                .foregroundColor(LarderColor.onSurfaceVariant)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
@@ -146,7 +148,7 @@ struct ShoppingSectionedList: View {
                 if let barcode = entry.barcode {
                     Text(barcode)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                 }
             }
             Spacer()
@@ -313,6 +315,7 @@ struct ShoppingSectionReorderSheet: View {
                 }
             }
             .environment(\.editMode, .constant(.active))
+            .larderListBackground()
             .navigationTitle(L10n.shoppingSectionReorder)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

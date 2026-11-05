@@ -6,9 +6,9 @@ public struct PantryDashboardView: View {
     @ObservedObject private var settingsStore = SettingsStore.shared
     /// Row tap notifies the root (`RootTabView`) to open the shared Add/Edit sheet, since
     /// scanning and adding/editing are handled globally now rather than by this tab itself
-    /// — see `FloatingTabBar`/`ScanAndAddButtons`.
+    /// — see `FloatingNav`/`ScanFab`.
     var onEditItem: (PantryItem) -> Void
-    /// Reports scroll direction so the root can collapse the scan/add buttons on the same
+    /// Reports scroll direction so the root can collapse the Scan button on the same
     /// downward scroll that scrolls the metrics row out of view, and bring them back on the
     /// way up — matching the large-title's own native collapse behavior.
     var onScrollingDownChanged: (Bool) -> Void
@@ -18,9 +18,11 @@ public struct PantryDashboardView: View {
     /// that reverses both — hosted at the root (rather than here) so it renders above the
     /// floating nav bar/scan buttons that overlay this screen, instead of underneath them.
     var onItemRemoved: (PantryItem, Bool) -> Void
-    /// Scan/Add as toolbar buttons, when the root has them here rather than floating over the
-    /// list (see `RootTabView.barsInSideStrip`); nil leaves them out of the toolbar.
-    var toolbarScanAndAdd: ScanAndAddActions?
+    /// Fires after a multi-select delete, with what the root needs for its one Undo.
+    var onItemsDeleted: (DeletedItems) -> Void
+    /// Scan as a toolbar button, when the root has it here rather than floating over the list
+    /// (see `RootTabView.barsInSideStrip`); nil leaves it out of the toolbar.
+    var toolbarScan: (() -> Void)?
     @State private var showFilters: Bool = false
     @State private var isSelecting: Bool = false
     @State private var selectedItemIDs: Set<String> = []
@@ -34,15 +36,17 @@ public struct PantryDashboardView: View {
     public init(
         viewModel: NativePantryViewModel,
         onEditItem: @escaping (PantryItem) -> Void,
-        toolbarScanAndAdd: ScanAndAddActions? = nil,
+        toolbarScan: (() -> Void)? = nil,
         onScrollingDownChanged: @escaping (Bool) -> Void = { _ in },
-        onItemRemoved: @escaping (PantryItem, Bool) -> Void = { _, _ in }
+        onItemRemoved: @escaping (PantryItem, Bool) -> Void = { _, _ in },
+        onItemsDeleted: @escaping (DeletedItems) -> Void = { _ in }
     ) {
         self.viewModel = viewModel
         self.onEditItem = onEditItem
-        self.toolbarScanAndAdd = toolbarScanAndAdd
+        self.toolbarScan = toolbarScan
         self.onScrollingDownChanged = onScrollingDownChanged
         self.onItemRemoved = onItemRemoved
+        self.onItemsDeleted = onItemsDeleted
     }
 
     public var body: some View {
@@ -58,7 +62,7 @@ public struct PantryDashboardView: View {
                         MetricBadge(
                             title: L10n.metricExpired,
                             count: viewModel.expiredCount,
-                            color: .red,
+                            color: LarderColor.onExpiredContainer,
                             isSelected: viewModel.selectedFilter == .expired
                         ) {
                             viewModel.toggleMetricFilter(.expired)
@@ -66,7 +70,7 @@ public struct PantryDashboardView: View {
                         MetricBadge(
                             title: L10n.metricExpiringSoon,
                             count: viewModel.expiringSoonCount,
-                            color: .orange,
+                            color: LarderColor.onSoonContainer,
                             isSelected: viewModel.selectedFilter == .expiringSoon
                         ) {
                             viewModel.toggleMetricFilter(.expiringSoon)
@@ -74,7 +78,7 @@ public struct PantryDashboardView: View {
                         MetricBadge(
                             title: L10n.metricFresh,
                             count: viewModel.freshCount,
-                            color: .green,
+                            color: LarderColor.onSuccessContainer,
                             isSelected: viewModel.selectedFilter == .fresh
                         ) {
                             viewModel.toggleMetricFilter(.fresh)
@@ -95,13 +99,13 @@ public struct PantryDashboardView: View {
                         Spacer()
                         Image(systemName: "takeoutbag.and.cup.and.straw")
                             .font(.system(size: 48))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                         Text(L10n.emptyStateTitle)
                             .font(.headline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                         Text(L10n.emptyStateSubtitle)
                             .font(.subheadline)
-                            .foregroundColor(.secondary.opacity(0.8))
+                            .foregroundColor(LarderColor.onSurfaceVariant)
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
@@ -115,7 +119,7 @@ public struct PantryDashboardView: View {
                         HStack(spacing: 10) {
                             if isSelecting {
                                 Image(systemName: selectedItemIDs.contains(item.id) ? "checkmark.circle.fill" : "circle")
-                                    .foregroundColor(selectedItemIDs.contains(item.id) ? .accentColor : .secondary)
+                                    .foregroundColor(selectedItemIDs.contains(item.id) ? LarderColor.primary : LarderColor.onSurfaceVariant)
                                     .font(.system(size: 20))
                                     .contentTransition(.symbolEffect(.replace))
                                     .transition(.scale.combined(with: .opacity))
@@ -144,6 +148,7 @@ public struct PantryDashboardView: View {
                                 selectedItemIDs.insert(item.id)
                             }
                         }
+                        .larderListRow()
                         .swipeActions(edge: .trailing) {
                             if !isSelecting {
                                 Button(role: .destructive) {
@@ -160,7 +165,7 @@ public struct PantryDashboardView: View {
                                 } label: {
                                     Label(L10n.swipeAddToShoppingList, systemImage: "cart.badge.plus")
                                 }
-                                .tint(.blue)
+                                .tint(LarderColor.primary)
                             }
                         }
                     }
@@ -169,9 +174,7 @@ public struct PantryDashboardView: View {
             .animation(.default, value: viewModel.filteredItems)
             .animation(.easeInOut(duration: 0.2), value: isSelecting)
             .listStyle(.insetGrouped)
-            // Clears the floating pill nav bar and scan/add buttons that overlay this screen
-            // (see RootTabView) so the last row can still scroll fully into view above them.
-            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 170) }
+            .larderListBackground()
             // `.onScrollGeometryChange` needs iOS 18, so scroll direction is inferred from the
             // drag gesture instead — `.simultaneousGesture` lets it coexist with the List's own
             // scrolling and the row taps/long-presses/swipe actions above.
@@ -218,16 +221,10 @@ public struct PantryDashboardView: View {
                         }
                         .accessibilityLabel(L10n.filtersButton)
                     }
-                    if let toolbarScanAndAdd {
+                    if let toolbarScan {
                         ToolbarItem(placement: .navigationBarTrailing) {
-                            Button(action: toolbarScanAndAdd.onAdd) {
-                                Image(systemName: "plus")
-                            }
-                            .accessibilityLabel(L10n.addItemTitle)
-                        }
-                        ToolbarItem(placement: .navigationBarTrailing) {
-                            Button(action: toolbarScanAndAdd.onScan) {
-                                Image(systemName: "barcode.viewfinder")
+                            Button(action: toolbarScan) {
+                                LarderIcon(.scanBarcode)
                             }
                             .accessibilityLabel(L10n.scanButton)
                         }
@@ -274,12 +271,7 @@ public struct PantryDashboardView: View {
     }
 
     private func deleteSelectedItems() {
-        // Goes through the same `deleteItem` the row's own swipe-to-delete uses, so each
-        // removal still fires `onItemRemoved` for its usual undo toast — there's no separate
-        // bulk-undo, just one toast per item.
-        for id in selectedItemIDs {
-            viewModel.deleteItem(id, onItemRemoved: onItemRemoved)
-        }
+        onItemsDeleted(viewModel.deleteItems(selectedItemIDs))
         selectedItemIDs = []
         isSelecting = false
     }
@@ -324,19 +316,19 @@ private struct FilterSheetView: View {
                 // Search
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                     TextField(L10n.searchPlaceholder, text: $viewModel.searchQuery)
                     if !viewModel.searchQuery.isEmpty {
                         Button {
                             viewModel.searchQuery = ""
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
+                                .foregroundColor(LarderColor.onSurfaceVariant)
                         }
                     }
                 }
                 .padding(10)
-                .background(Color(.secondarySystemFill))
+                .background(LarderColor.surfaceContainer)
                 .cornerRadius(12)
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
@@ -476,8 +468,8 @@ private struct LocationChip: View {
                 .fontWeight(.semibold)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(isSelected ? Color.accentColor : Color(.secondarySystemFill))
-                .foregroundColor(isSelected ? .white : .primary)
+                .background(isSelected ? LarderColor.primaryContainer : LarderColor.surfaceContainer)
+                .foregroundColor(isSelected ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
                 .cornerRadius(14)
                 .animation(.easeInOut(duration: 0.15), value: isSelected)
         }
@@ -504,7 +496,7 @@ private struct ShareRecipeDialog: View {
                         .font(.body)
                     Text(L10n.shareRecipeIncludeOtherItemsSubtitle)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(LarderColor.onSurfaceVariant)
                 }
             }
             .toggleStyle(.switch)
