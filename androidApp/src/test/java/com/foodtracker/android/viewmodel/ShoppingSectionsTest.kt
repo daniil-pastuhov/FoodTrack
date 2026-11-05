@@ -87,6 +87,45 @@ class ShoppingSectionsTest {
     }
 
     @Test
+    fun addingANewNameDoesNotReportADuplicate() {
+        val fixture = Fixture()
+        try {
+            val duplicates = mutableListOf<String>()
+            fixture.stateHolder.addManualShoppingListEntry("Milk") { duplicates += it }
+            assertEquals(listOf("# default", "Milk"), fixture.rows)
+            assertEquals(emptyList<String>(), duplicates)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun addingANameAlreadyOnTheListReportsItAsWrittenThereAndAddsNothing() {
+        val fixture = Fixture(entries = listOf(entry("a", "Oat milk", 1.0)))
+        try {
+            val duplicates = mutableListOf<String>()
+            fixture.stateHolder.addManualShoppingListEntry("  OAT MILK ") { duplicates += it }
+            assertEquals(listOf("# default", "Oat milk"), fixture.rows)
+            assertEquals(listOf("Oat milk"), duplicates)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
+    fun aBlankNameIsNeitherAddedNorReported() {
+        val fixture = Fixture()
+        try {
+            val duplicates = mutableListOf<String>()
+            fixture.stateHolder.addManualShoppingListEntry("   ") { duplicates += it }
+            assertEquals(listOf("# default"), fixture.rows)
+            assertEquals(emptyList<String>(), duplicates)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun movingAnEntryToAnotherSectionPlacesItBetweenItsNewNeighbours() {
         val fixture = Fixture(
             entries = listOf(

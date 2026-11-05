@@ -560,6 +560,7 @@
     <string name="shopping_list_check_off">Check off</string>
     <string name="shopping_list_import_label">Your list</string>
     <string name="shopping_list_close">Close</string>
+    <string name="shopping_list_done">Done</string>
     <string name="shopping_sections_label">Sections</string>
     <string name="shopping_section_name_label">Section name</string>
     <string name="shopping_section_keep">Keep section</string>
