@@ -212,7 +212,7 @@
     <string name="shopping_list_add_button">Legg til</string>
     <string name="shopping_list_scan_content_description">Skann produkt</string>    <string name="shopping_list_share_content_description">Del eller importer liste</string>
     <string name="shopping_list_share_dialog_title">Del liste</string>
-    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din — ingenting erstattes.</string>
+    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din, ingenting erstattes.</string>
     <string name="shopping_list_share_as_text">Del som tekst</string>
     <string name="shopping_list_share_as_qr">Vis QR-kode</string>
     <string name="shopping_list_share_qr_content_description">QR-kode med handlelisten</string>
@@ -236,7 +236,6 @@
     <string name="shopping_section_rename">Gi nytt navn</string>
     <string name="shopping_section_delete">Slett</string>
     <string name="shopping_section_delete_title">Slette «%1$s»?</string>
-    <string name="shopping_section_delete_message">Varene flyttes til hovedlisten.</string>
     <string name="shopping_section_save">Lagre</string>
     <string name="shopping_section_name_placeholder">f.eks. Meieri</string>
     <string name="shopping_section_move_to">Flytt til seksjon</string>
@@ -545,4 +544,24 @@
     </plurals>
     <string name="onboarding_placeholder_title">Velkommen til Matvakt</string>
     <string name="onboarding_placeholder_continue">Kom i gang</string>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Handleliste</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d ting å kjøpe</item>
+        <item quantity="other">%d ting å kjøpe</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Ingenting å kjøpe</string>
+    <string name="shopping_list_already_listed">%1$s står allerede på listen</string>
+    <string name="shopping_list_check_off">Kryss av</string>
+    <string name="shopping_list_import_label">Listen din</string>
+    <string name="shopping_list_close">Lukk</string>
+    <string name="shopping_sections_label">Seksjoner</string>
+    <string name="shopping_section_name_label">Navn på seksjon</string>
+    <string name="shopping_section_keep">Behold seksjonen</string>
+    <string name="shopping_section_delete_confirm">Slett seksjonen</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">%d vare flyttes til hovedlisten.</item>
+        <item quantity="other">%d varer flyttes til hovedlisten.</item>
+    </plurals>
 </resources>
