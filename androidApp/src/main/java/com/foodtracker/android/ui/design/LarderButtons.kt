@@ -91,7 +91,7 @@ fun LarderButton(
     /** Set to 1 to truncate a long label rather than wrap it. */
     maxLines: Int = Int.MAX_VALUE
 ) {
-    LarderButtonImpl(text, onClick, modifier, style, enabled, loading, leadingIcon, interactionSource, maxLines, null)
+    LarderButtonImpl(text, onClick, modifier, style, enabled, loading, leadingIcon, interactionSource, null, maxLines)
 }
 
 @Composable
