@@ -133,21 +133,21 @@
 "shopping_list_did_you_mean_title" = "Did you mean one of these?";
 "shopping_list_did_you_mean_none_of_these" = "None of these, add new item";
 
-"manual_entry_button" = "Manual";
+"manual_entry_button" = "Type it in";
 "camera_off_title" = "The camera is off";
 "camera_off_body" = "BestBefore needs the camera to scan. You can still add food by hand.";
 "camera_off_open_settings" = "Open settings";
 "camera_off_add_by_hand" = "Type it in";
 "scanner_mode_picker_label" = "Scanner Mode";
 "scan_mode_barcode" = "Barcode";
-"scan_mode_date_ocr" = "Date OCR";
+"scan_mode_date_ocr" = "Date";
 "scan_mode_photo" = "Photo";
-"looking_up_product" = "Looking up product in Open Food Facts...";
-"scan_date_button" = "Scan Date";
+"looking_up_product" = "Looking up this product…";
+"scan_date_button" = "Scan date";
 "continue_button" = "Continue";
 
 "product_not_found_title" = "Product not found";
-"switch_to_photo_button" = "Try Photo";
+"switch_to_photo_button" = "Photo mode";
 
 "take_photo_button" = "Take photo";
 "photo_captured_title" = "Photo captured";
@@ -155,10 +155,10 @@
 "retake_photo_button" = "Retake";
 "photo_capture_failed_message" = "Couldn't capture photo. Try again.";
 
-"reticle_hint_barcode" = "Align product barcode within frame";
-"reticle_hint_date_ocr" = "Point camera at printed expiration date stamp";
-"reticle_hint_photo" = "Center item to capture photo";
-"torch_toggle_button" = "Toggle flashlight";
+"reticle_hint_barcode" = "Line up the barcode inside the frame";
+"reticle_hint_date_ocr" = "Point at the printed date, like EXP 24.11.2026";
+"reticle_hint_photo" = "Put the product in the middle, then take the picture";
+"torch_toggle_button" = "Torch";
 
 "expires_today" = "Expires today";
 "expires_tomorrow" = "Expires tomorrow";
@@ -347,18 +347,18 @@
 "notif_action_snooze" = "Tomorrow";
 
 "scan_mode_batch" = "Batch";
-"reticle_hint_batch" = "Keep scanning — everything lands in the list below";
+"reticle_hint_batch" = "Keep scanning. Everything lands in the list below";
 "scan_mode_receipt" = "Receipt";
-"reticle_hint_receipt" = "Fit the whole receipt in frame, then tap to read it";
+"reticle_hint_receipt" = "Fit the whole receipt in the frame, then tap to read it";
 "scan_receipt_button" = "Read receipt";
-"receipt_nothing_found" = "No products found on that receipt — try again with the whole receipt in frame";
+"receipt_nothing_found" = "No products found on that receipt. Try again with the whole receipt in frame";
 "batch_queue_empty" = "Scan a product to start the list";
-"batch_queue_remove_content_description" = "Remove from list";
+"batch_queue_remove_content_description" = "Remove from list: %@";
 "batch_queue_needs_date" = "Check date";
 "batch_commit_button" = "Add all";
 "batch_clear_button" = "Clear";
 "duplicate_dialog_title" = "Already in your pantry";
-"duplicate_dialog_message" = "You already have %@. Add one more to it, or create a separate entry?";
+"duplicate_dialog_message" = "You already have %@. Add one more to it, or keep this one separate?";
 "duplicate_dialog_add_one" = "Add one more";
 "duplicate_dialog_separate" = "Keep separate";
 "duplicate_added" = "%1$@ is now %2$d";
@@ -385,7 +385,7 @@
 
 /* Scanner mode workflow */
 "date_captured_title" = "Expiry date read";
-"scan_again_button" = "Scan Again";
+"scan_again_button" = "Scan again";
 "shopping_list_scan_unsupported" = "Open the scanner from your pantry to import a shared list";
 "batch_discard_title" = "Discard scanned items?";
 "batch_discard_confirm" = "Discard";
@@ -418,3 +418,28 @@
 "onboarding_placeholder_title" = "Reminds you before food goes off, not after.";
 "onboarding_placeholder_body" = "Your pantry stays on your device.";
 "onboarding_placeholder_continue" = "Get started";
+
+/* Scanner (Larder) */
+"barcode_format" = "Barcode: %@";
+"close_scanner" = "Close scanner";
+"scan_torch_on" = "On";
+"scan_torch_off" = "Off";
+"scan_idle_results_title" = "Results show up here";
+"scan_idle_results_message" = "Scan a barcode and the product appears on this side.";
+"scan_idle_date_title" = "The date shows up here";
+"scan_idle_date_message" = "Hold the camera steady on the printed date.";
+"scan_idle_photo_title" = "Your photo shows up here";
+"scan_idle_photo_message" = "Take a picture to get name suggestions.";
+"scan_allergen_note" = "This matches your allergen list. Matching is loose, so check the label.";
+"scan_offline_title" = "You're offline";
+"scan_offline_message" = "Couldn't look this product up. You can carry on by hand, and the barcode stays with the item.";
+"scan_try_again" = "Try again";
+"scan_continue_by_hand" = "Continue by hand";
+"scan_best_before_format" = "Best before %@";
+"scan_date_from_barcode" = "Read from the barcode";
+"scan_date_from_packaging" = "Read from the packaging";
+"scan_use_this_date" = "Use this date";
+"scan_reading_receipt" = "Reading the receipt…";
+"receipt_queue_empty" = "Read a receipt to start the list";
+"scan_queue_cleared" = "Queue cleared";
+"batch_queue_estimated_format" = "Estimated %@";

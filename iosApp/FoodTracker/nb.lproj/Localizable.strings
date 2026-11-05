@@ -133,7 +133,7 @@
 "shopping_list_did_you_mean_title" = "Mente du en av disse?";
 "shopping_list_did_you_mean_none_of_these" = "Ingen av disse, legg til ny vare";
 
-"manual_entry_button" = "Manuelt";
+"manual_entry_button" = "Skriv det inn";
 "camera_off_title" = "Kameraet er av";
 "camera_off_body" = "Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.";
 "camera_off_open_settings" = "Åpne innstillinger";
@@ -147,7 +147,7 @@
 "continue_button" = "Fortsett";
 
 "product_not_found_title" = "Fant ikke produktet";
-"switch_to_photo_button" = "Prøv bilde";
+"switch_to_photo_button" = "Prøv bildemodus";
 
 "take_photo_button" = "Ta bilde";
 "photo_captured_title" = "Bilde tatt";
@@ -156,7 +156,7 @@
 "photo_capture_failed_message" = "Kunne ikke ta bilde. Prøv igjen.";
 
 "reticle_hint_barcode" = "Plasser produktets strekkode innenfor rammen";
-"reticle_hint_date_ocr" = "Rett kameraet mot den trykte utløpsdatoen";
+"reticle_hint_date_ocr" = "Rett kameraet mot den trykte utløpsdatoen (f.eks. «EXP 24.11.2026»)";
 "reticle_hint_photo" = "Plasser varen midt i bildet for å ta et bilde";
 "torch_toggle_button" = "Slå av/på lommelykt";
 
@@ -353,7 +353,7 @@
 "scan_receipt_button" = "Les kvittering";
 "receipt_nothing_found" = "Fant ingen varer på kvitteringen — prøv igjen med hele kvitteringen i bildet";
 "batch_queue_empty" = "Skann en vare for å starte listen";
-"batch_queue_remove_content_description" = "Fjern fra listen";
+"batch_queue_remove_content_description" = "Fjern fra listen: %@";
 "batch_queue_needs_date" = "Sjekk dato";
 "batch_commit_button" = "Legg til alle";
 "batch_clear_button" = "Tøm";
@@ -418,3 +418,28 @@
 "onboarding_placeholder_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
 "onboarding_placeholder_body" = "Matlageret ditt blir på enheten din.";
 "onboarding_placeholder_continue" = "Kom i gang";
+
+/* Scanner (Larder) */
+"barcode_format" = "Strekkode: %@";
+"close_scanner" = "Lukk skanneren";
+"scan_torch_on" = "På";
+"scan_torch_off" = "Av";
+"scan_idle_results_title" = "Resultatet vises her";
+"scan_idle_results_message" = "Skann en strekkode, så vises varen på denne siden.";
+"scan_idle_date_title" = "Datoen vises her";
+"scan_idle_date_message" = "Hold kameraet rolig mot den trykte datoen.";
+"scan_idle_photo_title" = "Bildet vises her";
+"scan_idle_photo_message" = "Ta et bilde for å få forslag til navn.";
+"scan_allergen_note" = "Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.";
+"scan_offline_title" = "Du er frakoblet";
+"scan_offline_message" = "Kunne ikke slå opp denne varen. Du kan fortsette for hånd, og strekkoden blir med varen.";
+"scan_try_again" = "Prøv igjen";
+"scan_continue_by_hand" = "Fortsett for hånd";
+"scan_best_before_format" = "Best før %@";
+"scan_date_from_barcode" = "Lest fra strekkoden";
+"scan_date_from_packaging" = "Lest fra emballasjen";
+"scan_use_this_date" = "Bruk denne datoen";
+"scan_reading_receipt" = "Leser kvitteringen …";
+"receipt_queue_empty" = "Les en kvittering for å starte listen";
+"scan_queue_cleared" = "Køen er tømt";
+"batch_queue_estimated_format" = "Anslått %@";

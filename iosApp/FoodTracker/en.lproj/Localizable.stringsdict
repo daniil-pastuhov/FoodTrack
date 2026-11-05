@@ -77,9 +77,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Added %d item from the receipt — check it below</string>
+            <string>Added %d item from the receipt. Check it below</string>
             <key>other</key>
-            <string>Added %d items from the receipt — check them below</string>
+            <string>Added %d items from the receipt. Check them below</string>
         </dict>
     </dict>
     <key>store_reminder_title_format</key>

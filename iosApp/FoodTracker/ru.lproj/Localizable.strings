@@ -133,7 +133,7 @@
 "shopping_list_did_you_mean_title" = "Вы имели в виду одно из этих?";
 "shopping_list_did_you_mean_none_of_these" = "Ни один из них, добавить новый товар";
 
-"manual_entry_button" = "Вручную";
+"manual_entry_button" = "Ввести вручную";
 "camera_off_title" = "Камера выключена";
 "camera_off_body" = "Срокоеду нужна камера для сканирования. Продукты можно добавить и вручную.";
 "camera_off_open_settings" = "Открыть настройки";
@@ -156,7 +156,7 @@
 "photo_capture_failed_message" = "Не удалось сделать фото. Попробуйте снова.";
 
 "reticle_hint_barcode" = "Совместите штрихкод продукта с рамкой";
-"reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности";
+"reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности (например, «EXP 24.11.2026»)";
 "reticle_hint_photo" = "Расположите продукт по центру, чтобы сделать снимок";
 "torch_toggle_button" = "Включить/выключить фонарик";
 
@@ -353,7 +353,7 @@
 "scan_receipt_button" = "Считать чек";
 "receipt_nothing_found" = "На чеке не найдено товаров — попробуйте снять чек целиком";
 "batch_queue_empty" = "Отсканируйте товар, чтобы начать список";
-"batch_queue_remove_content_description" = "Убрать из списка";
+"batch_queue_remove_content_description" = "Убрать из списка: %@";
 "batch_queue_needs_date" = "Проверьте дату";
 "batch_commit_button" = "Добавить все";
 "batch_clear_button" = "Очистить";
@@ -418,3 +418,28 @@
 "onboarding_placeholder_title" = "Напоминает до того, как еда испортится, а не после.";
 "onboarding_placeholder_body" = "Ваши запасы остаются на вашем устройстве.";
 "onboarding_placeholder_continue" = "Начать";
+
+/* Scanner (Larder) */
+"barcode_format" = "Штрихкод: %@";
+"close_scanner" = "Закрыть сканер";
+"scan_torch_on" = "Включён";
+"scan_torch_off" = "Выключен";
+"scan_idle_results_title" = "Результат появится здесь";
+"scan_idle_results_message" = "Отсканируйте штрихкод, и товар появится на этой стороне.";
+"scan_idle_date_title" = "Дата появится здесь";
+"scan_idle_date_message" = "Держите камеру ровно, наведя её на напечатанную дату.";
+"scan_idle_photo_title" = "Фото появится здесь";
+"scan_idle_photo_message" = "Сделайте снимок, чтобы получить варианты названия.";
+"scan_allergen_note" = "Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.";
+"scan_offline_title" = "Нет подключения к сети";
+"scan_offline_message" = "Не удалось найти этот товар. Можно продолжить вручную, штрихкод останется у товара.";
+"scan_try_again" = "Повторить";
+"scan_continue_by_hand" = "Продолжить вручную";
+"scan_best_before_format" = "Годен до %@";
+"scan_date_from_barcode" = "Считано со штрихкода";
+"scan_date_from_packaging" = "Считано с упаковки";
+"scan_use_this_date" = "Использовать эту дату";
+"scan_reading_receipt" = "Считываем чек…";
+"receipt_queue_empty" = "Отсканируйте товар, чтобы начать список";
+"scan_queue_cleared" = "Очередь очищена";
+"batch_queue_estimated_format" = "%@";
