@@ -103,6 +103,9 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - Round 1: A Larder, B Enamel, C Preserves → A Larder chosen by the user, the closest fit to warm and calm
 
 ## Open questions
+- Shopping: the row grip is 28dp wide as designed, below the 48dp and 44pt minimum.
+- Android has no non-drag way to reorder Shopping sections (WCAG 2.5.7).
+- Scanner: the Batch hint says "the list below", but on tablet the list is on the right.
 - Pantry: To shopping list moves the item out of the pantry, as it does today, which may surprise someone who only wants to buy more.
 - Reconcile at final build: scanner `found` shows "In your pantry: 0"; hide the line at zero, as the app does.
 - Scanner: Check date has no way to fix the date from the queue, in the app or here.

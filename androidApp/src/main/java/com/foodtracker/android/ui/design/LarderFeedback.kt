@@ -385,7 +385,12 @@ fun ScreenError(
         verticalArrangement = Arrangement.spacedBy(LarderSpace.s3, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LarderIcon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        LarderIcon(
+            icon,
+            contentDescription = null,
+            size = 40.dp,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
         CenteredHeading(title)
         message?.let { CenteredBody(it) }
         actions?.invoke(this)

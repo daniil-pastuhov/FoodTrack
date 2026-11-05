@@ -54,4 +54,4 @@ Useful:
 - The design's mock-ups are the look; a platform's native sheet, alert and picker behaviour stays native (see the table on the App shell page).
 
 ## Devices (from wave 1)
-This Mac can't carry many booted devices: a blank iPad and failed runs came from load averages over 800. Keep at most one simulator and one emulator running, shut them down when idle, and delete them before you report. Check the AVD or device name before every `adb` or `simctl` use: agents share this machine. iOS taps aren't available unless the tooling can drive them, so say what you couldn't exercise.
+This Mac can't carry many booted devices: a blank iPad and failed runs came from load averages over 800. Keep at most one simulator and one emulator running, shut them down when idle, and delete them before you report. Check the AVD or device name before every `adb` or `simctl` use: agents share this machine. Maestro is installed (`maestro test flow.yaml`, set `JAVA_HOME` to JDK 17 if needed), so iOS flows can be tapped: use it for your feature's main interactions on a simulator. Say what you couldn't exercise.

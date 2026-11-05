@@ -159,7 +159,7 @@ struct ScreenError<Actions: View>: View {
         WholeAreaMessage(
             title: title,
             message: message,
-            header: LarderIcon(icon).foregroundStyle(LarderColor.onSurfaceVariant),
+            header: LarderIcon(icon, size: .custom(40)).foregroundStyle(LarderColor.onSurfaceVariant),
             actions: actions
         )
     }
