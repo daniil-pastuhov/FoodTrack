@@ -293,30 +293,27 @@
         <item quantity="other">%d years expired</item>
     </plurals>
 
-    <string name="notification_channel_name">Expiry alerts for each item</string>
+    <string name="notification_channel_name">Reminders for each item</string>
     <string name="notification_channel_desc">One notification per product, shortly before it expires</string>
     <string name="notification_digest_channel_name">Expiry summary</string>
     <string name="notification_digest_channel_desc">One notification listing what expires in the coming week</string>
-    <string name="notif_title_today">Product Expires Today! ⚠️</string>
-    <string name="notif_title_soon">Product Expiring Soon! ⚠️</string>
+    <string name="notif_title_today">Best used today</string>
+    <string name="notif_title_soon">Best used soon</string>
     <string name="notif_title_past">Worth a look</string>
-    <string name="notif_body_today_format">%1$s expires today. Make sure to consume it!</string>
+    <string name="notif_body_today_format">%1$s reaches its date today.</string>
+    <string name="notif_body_tomorrow_format">%1$s reaches its date tomorrow.</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s expires in %2$d day. Make sure to consume it!</item>
-        <item quantity="other">%1$s expires in %2$d days. Make sure to consume it!</item>
+        <item quantity="one">%1$s reaches its date in %2$d day.</item>
+        <item quantity="other">%1$s reaches its date in %2$d days.</item>
     </plurals>
     <plurals name="notif_body_past_format">
         <item quantity="one">%1$s is %2$d day past its date.</item>
         <item quantity="other">%1$s is %2$d days past its date.</item>
     </plurals>
-    <string name="notif_fallback_title">Food Expiration Alert</string>
-    <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>
+    <string name="notif_fallback_title">Reminder from your pantry</string>
+    <string name="notif_fallback_body">Something in your pantry reaches its date soon.</string>
     <string name="notif_action_used">Used it</string>
     <string name="notif_action_snooze">Tomorrow</string>
-    <plurals name="notif_action_still_good">
-        <item quantity="one">Still good +%1$dd</item>
-        <item quantity="other">Still good +%1$dd</item>
-    </plurals>
     <string name="shortcut_scan_barcode_short">Scan</string>
     <string name="shortcut_scan_barcode_long">Scan a barcode</string>
     <string name="shortcut_add_item_short">Add item</string>
@@ -468,6 +465,7 @@
     <string name="widget_shopping_list_title">Shopping List</string>
     <string name="widget_shopping_list_empty">Your shopping list is empty</string>
     <string name="widget_action_used">Used one</string>
+    <string name="widget_action_used_item">Used one: %1$s</string>
     <string name="widget_action_mark_bought">Mark %1$s as bought</string>
 
     <string name="widget_overview_label">Pantry Overview</string>

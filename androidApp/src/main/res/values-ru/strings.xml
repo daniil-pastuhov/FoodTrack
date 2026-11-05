@@ -313,19 +313,20 @@
         <item quantity="other">Просрочено %d года назад</item>
     </plurals>
 
-    <string name="notification_channel_name">Уведомления по каждому продукту</string>
+    <string name="notification_channel_name">Напоминания о каждом продукте</string>
     <string name="notification_channel_desc">Отдельное уведомление для каждого продукта незадолго до истечения срока</string>
     <string name="notification_digest_channel_name">Сводка по срокам годности</string>
     <string name="notification_digest_channel_desc">Одно уведомление со списком продуктов, срок которых истекает на этой неделе</string>
-    <string name="notif_title_today">Продукт истекает сегодня! ⚠️</string>
-    <string name="notif_title_soon">Продукт скоро истекает! ⚠️</string>
+    <string name="notif_title_today">Лучше использовать сегодня</string>
+    <string name="notif_title_soon">Лучше использовать скоро</string>
     <string name="notif_title_past">Стоит проверить</string>
-    <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть его!</string>
+    <string name="notif_body_today_format">%1$s: срок годности заканчивается сегодня.</string>
+    <string name="notif_body_tomorrow_format">%1$s: срок годности заканчивается завтра.</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s истекает через %2$d день. Не забудьте съесть его!</item>
-        <item quantity="few">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
-        <item quantity="many">%1$s истекает через %2$d дней. Не забудьте съесть его!</item>
-        <item quantity="other">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
+        <item quantity="one">%1$s: срок годности заканчивается через %2$d день.</item>
+        <item quantity="few">%1$s: срок годности заканчивается через %2$d дня.</item>
+        <item quantity="many">%1$s: срок годности заканчивается через %2$d дней.</item>
+        <item quantity="other">%1$s: срок годности заканчивается через %2$d дня.</item>
     </plurals>
     <plurals name="notif_body_past_format">
         <item quantity="one">%1$s: срок годности прошёл %2$d день назад.</item>
@@ -333,16 +334,10 @@
         <item quantity="many">%1$s: срок годности прошёл %2$d дней назад.</item>
         <item quantity="other">%1$s: срок годности прошёл %2$d дня назад.</item>
     </plurals>
-    <string name="notif_fallback_title">Уведомление о сроке годности</string>
-    <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>
+    <string name="notif_fallback_title">Напоминание о продуктах</string>
+    <string name="notif_fallback_body">Срок годности одного из продуктов скоро закончится.</string>
     <string name="notif_action_used">Съедено</string>
     <string name="notif_action_snooze">Завтра</string>
-    <plurals name="notif_action_still_good">
-        <item quantity="one">Ещё годен +%1$dд</item>
-        <item quantity="few">Ещё годен +%1$dд</item>
-        <item quantity="many">Ещё годен +%1$dд</item>
-        <item quantity="other">Ещё годен +%1$dд</item>
-    </plurals>
     <string name="shortcut_scan_barcode_short">Сканер</string>
     <string name="shortcut_scan_barcode_long">Сканировать штрихкод</string>
     <string name="shortcut_add_item_short">Добавить</string>
@@ -505,6 +500,7 @@
     <string name="widget_shopping_list_title">Список покупок</string>
     <string name="widget_shopping_list_empty">Ваш список покупок пуст</string>
     <string name="widget_action_used">Съел</string>
+    <string name="widget_action_used_item">Съел: %1$s</string>
     <string name="widget_action_mark_bought">Отметить «%1$s» как купленное</string>
 
     <string name="widget_overview_label">Обзор кладовой</string>

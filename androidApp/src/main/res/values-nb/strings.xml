@@ -291,30 +291,27 @@
         <item quantity="other">Utløpt for %d år siden</item>
     </plurals>
 
-    <string name="notification_channel_name">Utløpsvarsler for hver vare</string>
+    <string name="notification_channel_name">Påminnelser for hver vare</string>
     <string name="notification_channel_desc">Ett varsel per vare, kort tid før den går ut på dato</string>
     <string name="notification_digest_channel_name">Utløpsoppsummering</string>
     <string name="notification_digest_channel_desc">Ett varsel med det som går ut på dato den kommende uken</string>
-    <string name="notif_title_today">Produktet utløper i dag! ⚠️</string>
-    <string name="notif_title_soon">Produktet utløper snart! ⚠️</string>
+    <string name="notif_title_today">Best å bruke i dag</string>
+    <string name="notif_title_soon">Best å bruke snart</string>
     <string name="notif_title_past">Verdt en titt</string>
-    <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise det!</string>
+    <string name="notif_body_today_format">%1$s når datoen sin i dag.</string>
+    <string name="notif_body_tomorrow_format">%1$s når datoen sin i morgen.</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s utløper om %2$d dag. Husk å spise det!</item>
-        <item quantity="other">%1$s utløper om %2$d dager. Husk å spise det!</item>
+        <item quantity="one">%1$s når datoen sin om %2$d dag.</item>
+        <item quantity="other">%1$s når datoen sin om %2$d dager.</item>
     </plurals>
     <plurals name="notif_body_past_format">
         <item quantity="one">%1$s er %2$d dag over datoen.</item>
         <item quantity="other">%1$s er %2$d dager over datoen.</item>
     </plurals>
-    <string name="notif_fallback_title">Varsel om utløpsdato</string>
-    <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>
+    <string name="notif_fallback_title">Påminnelse fra matskapet</string>
+    <string name="notif_fallback_body">Noe i matskapet når datoen sin snart.</string>
     <string name="notif_action_used">Brukt</string>
     <string name="notif_action_snooze">I morgen</string>
-    <plurals name="notif_action_still_good">
-        <item quantity="one">Fortsatt god +%1$dd</item>
-        <item quantity="other">Fortsatt god +%1$dd</item>
-    </plurals>
     <string name="shortcut_scan_barcode_short">Skann</string>
     <string name="shortcut_scan_barcode_long">Skann en strekkode</string>
     <string name="shortcut_add_item_short">Legg til</string>
@@ -463,6 +460,7 @@
     <string name="widget_shopping_list_title">Handleliste</string>
     <string name="widget_shopping_list_empty">Handlelisten din er tom</string>
     <string name="widget_action_used">Brukt én</string>
+    <string name="widget_action_used_item">Brukt én: %1$s</string>
     <string name="widget_action_mark_bought">Merk %1$s som kjøpt</string>
 
     <string name="widget_overview_label">Matskapoversikt</string>

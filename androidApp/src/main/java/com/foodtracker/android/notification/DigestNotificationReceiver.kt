@@ -112,7 +112,7 @@ class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
 
         val notification = NotificationCompat.Builder(context, NotificationHelper.DIGEST_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(ContextCompat.getColor(context, R.color.notification_accent))
+            .setColor(ContextCompat.getColor(context, R.color.larder_primary))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
