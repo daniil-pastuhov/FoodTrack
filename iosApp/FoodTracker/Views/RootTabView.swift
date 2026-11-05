@@ -1,192 +1,154 @@
 import SwiftUI
 
-/// Root of the app: hosts the four peer tabs (Home/Calendar/Shopping List/Settings) behind a
-/// floating pill nav bar, plus the two floating round buttons (scan / add item) that hover
-/// above it and stay reachable from every tab. Owns the single shared `NativePantryViewModel`
-/// so all four tabs (and the scan/add sheets) operate on the same pantry state.
+/// Root of the app: hosts the four peer tabs (Home/Calendar/Shopping/Settings) behind the
+/// `FloatingNav` pill, with `ScanFab` on Home and Calendar and snackbars above both. Owns the
+/// single shared `NativePantryViewModel` so all four tabs (and the scan/add sheets) operate on
+/// the same pantry state.
 struct RootTabView: View {
     @StateObject private var viewModel = NativePantryViewModel()
     @ObservedObject private var router = AppRouter.shared
     @State private var selectedTab: RootTab = .home
     @State private var isDashboardScrollingDown: Bool = false
     /// Whether the system has moved the status bar and navigation bar into a strip down the
-    /// side of the screen, as iPhone Duo does on its folded display. Scan/Add then join the
+    /// side of the screen, as iPhone Duo does on its folded display. Scan then joins the
     /// dashboard's toolbar in that strip instead of floating over the list.
     private var barsInSideStrip: Bool { hasSideSafeAreaInset && horizontalSizeClass == .compact }
-    /// See `sideBarStripReader`.
+    /// See `safeAreaReader`.
     @State private var hasSideSafeAreaInset: Bool = false
+    @State private var bottomSafeArea: CGFloat = 0
+    @State private var pillHeight: CGFloat = ShellMetrics.defaultPillHeight
+    @State private var scanHeight: CGFloat = ScanFab.minHeight
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.isExpanded) private var isExpanded
 
-    @State private var showScanner: Bool = false
+    /// What the scanner should open in, or nil while it is closed.
+    @State private var scannerRequest: ScannerRequest?
     /// What the add/edit sheet should open with, or nil while it is closed. See `AddEditRequest`.
     @State private var addEditRequest: AddEditRequest?
-    /// Outcome of a shared-list QR scanned from the dashboard's scanner, shown as a
-    /// transient toast - this screen has no snackbar of its own.
-    @State private var importResult: String? = nil
-    /// The most recently removed pantry item or shopping list entry (via a "-" button, swipe
-    /// action, or check-off), offered back through an undo toast since each of those is a
-    /// single tap/swipe that's easy to trigger by mistake. Hosted here — rather than inside
-    /// `PantryDashboardView`/`ShoppingListView` — so it renders above the floating pill nav bar
-    /// and scan/add buttons below, instead of underneath them. Cleared automatically after a
-    /// few seconds by the `.task(id:)` below.
-    @State private var pendingUndo: PendingUndo? = nil
+    @State private var productDetailItem: PantryItem?
+    @State private var showCategories: Bool = false
+    @State private var showOnboarding: Bool = false
+    /// The one snackbar on screen. Hosted here, rather than in each tab, so it sits above the
+    /// pill and Scan; tabs reach it through `\.showSnackbar`.
+    @State private var snackbar: LarderSnackbarContent?
+    /// Lets the tabs hide the pill or Scan. See `shellChromeEffect`.
+    @StateObject private var shellChrome = ShellChrome()
+
+    /// Off until the real first-run flow lands, so nobody meets the placeholder. The same switch
+    /// as Android's `SHOW_ONBOARDING_ON_FIRST_RUN`.
+    private static let showOnboardingOnFirstRun = false
+
+    private var isScanFloating: Bool {
+        selectedTab.showsScan && !shellChrome.scanHidden && !(selectedTab == .home && barsInSideStrip)
+    }
+
+    private var metrics: ShellMetrics {
+        ShellMetrics(
+            pillHeight: pillHeight,
+            bottomSafeArea: bottomSafeArea,
+            scanHeight: scanHeight,
+            isNavVisible: !shellChrome.navHidden,
+            isScanVisible: isScanFloating,
+            isExpanded: isExpanded
+        )
+    }
+
+    private var showSnackbar: ShowSnackbarAction {
+        ShowSnackbarAction { content in
+            withAnimation { snackbar = content }
+        }
+    }
 
     var body: some View {
-        // Full-size, edge-to-edge tab content with the pill nav bar and (Home-only) scan/add
-        // buttons overlaid on top in a ZStack — not a `.safeAreaInset`, which under-reserved
-        // space here because the buttons' `.offset` (a purely visual shift) doesn't change the
-        // height SwiftUI accounts for. Each screen reserves its own bottom content padding
-        // (see their `.safeAreaInset` on their List/Form) so the last row still scrolls clear.
+        // The tabs run edge to edge with the floating parts over them. Their clearance is one
+        // safe area inset around all of them, which a screen's List or ScrollView takes up as
+        // content inset, so everything scrolls under the pill and still clears it at the end.
         ZStack(alignment: .bottom) {
-            Group {
-                switch selectedTab {
-                case .home:
-                    PantryDashboardView(
-                        viewModel: viewModel,
-                        onEditItem: { presentAddEdit(editing: $0) },
-                        toolbarScanAndAdd: barsInSideStrip
-                            ? ScanAndAddActions(onScan: presentScanner, onAdd: { presentAddEdit(editing: nil) })
-                            : nil,
-                        onScrollingDownChanged: { isDashboardScrollingDown = $0 },
-                        onItemRemoved: offerItemUndo
-                    )
-                    .readableContentWidth(background: Color(.systemGroupedBackground))
-                    .transition(.opacity)
-                case .calendar:
-                    CalendarView(
-                        viewModel: viewModel,
-                        onEditItem: { presentAddEdit(editing: $0) },
-                        onUseOne: { useOne($0) },
-                        onToss: { viewModel.deleteItem($0.id, onItemRemoved: offerItemUndo) }
-                    )
-                        .transition(.opacity)
-                case .shoppingList:
-                    ShoppingListView(
-                        viewModel: viewModel,
-                        onItemRemoved: { removed in
-                            withAnimation {
-                                pendingUndo = PendingUndo(
-                                    id: removed.id,
-                                    itemName: removed.productName,
-                                    addedToShoppingList: false
-                                ) {
-                                    viewModel.restoreShoppingListEntry(removed)
-                                }
-                            }
-                        }
-                    )
-                    .readableContentWidth(background: Color(.systemBackground))
-                    .transition(.opacity)
-                case .settings:
-                    SettingsView(viewModel: viewModel, onDataCleared: { selectedTab = .home })
-                        .readableContentWidth(background: Color(.systemGroupedBackground))
-                        .transition(.opacity)
+            tabContent
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear
+                        .frame(height: metrics.contentClearance)
+                        .allowsHitTesting(false)
                 }
-            }
-            .animation(.easeInOut(duration: 0.2), value: selectedTab)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            FloatingTabBar(selectedTab: $selectedTab, shoppingListCount: viewModel.shoppingList.count)
-                .padding(.bottom, 8)
-
-            // Scan/Add are only meaningful from the pantry list, so they only show on Home —
-            // floating out (fade + slide toward the corner they hover over) on every other tab,
-            // and also collapsing on the same downward scroll that collapses the dashboard's
-            // own metrics row, reappearing on the way back up. With the bars in a side strip
-            // they sit in the dashboard's toolbar instead (see `barsInSideStrip`).
-            if selectedTab == .home && !barsInSideStrip {
-                HStack {
-                    Spacer()
-                    ScanAndAddButtons(
-                        onScan: { presentScanner() },
-                        onAdd: { presentAddEdit(editing: nil) }
-                    )
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 72)
-                }
-                .transition(.move(edge: .trailing).combined(with: .opacity))
-            }
-
-            // Last in the ZStack (topmost), so it renders above the pill nav bar and the
-            // scan/add buttons above it rather than underneath them.
-            if let pendingUndo {
-                UndoToastView(itemName: pendingUndo.itemName, addedToShoppingList: pendingUndo.addedToShoppingList, message: pendingUndo.message) {
-                    pendingUndo.restore()
-                    self.pendingUndo = nil
-                }
-                .padding(.bottom, 200)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-
-            if let importResult {
-                Text(importResult)
-                    .font(.footnote.weight(.medium))
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .background(.thinMaterial, in: Capsule())
-                    .padding(.bottom, 200)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
+            floatingLayer
         }
-        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: selectedTab == .home)
-        .background(sideBarStripReader)
+        .background(LarderColor.background.ignoresSafeArea())
+        .environment(\.showSnackbar, showSnackbar)
+        .environment(\.shellChrome, shellChrome)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isScanFloating)
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shellChrome.navHidden)
+        .background(safeAreaReader)
         .animation(.easeInOut(duration: 0.2), value: isDashboardScrollingDown)
         #if DEBUG
         .onAppear(perform: applyScreenshotLaunchArguments)
         #endif
-        .animation(.easeInOut(duration: 0.25), value: pendingUndo?.id)
-        .task(id: pendingUndo?.id) {
-            guard pendingUndo != nil else { return }
-            try? await Task.sleep(for: .seconds(4))
-            if !Task.isCancelled {
-                withAnimation { pendingUndo = nil }
-            }
-        }
-        .animation(.easeInOut(duration: 0.25), value: importResult)
-        .task(id: importResult) {
-            guard importResult != nil else { return }
-            try? await Task.sleep(for: .seconds(3))
-            if !Task.isCancelled { importResult = nil }
-        }
-        .sheet(isPresented: $showScanner) {
+        .sheet(item: $scannerRequest) { request in
             ScannerSheetView(
                 viewModel: viewModel,
+                initialMode: request.mode,
                 onUseOne: { item in useOne(item) },
                 onShoppingListScanned: { payload in
                     let result = viewModel.importShoppingList(payload)
-                    importResult = if result.added > 0 {
-                        L10n.shoppingListImportAdded(result.added)
-                    } else if result.found > 0 {
-                        L10n.shoppingListImportAllPresent
-                    } else {
-                        L10n.shoppingListImportNothing
-                    }
+                    showSnackbar(
+                        result.added > 0 ? L10n.shoppingListImportAdded(result.added)
+                            : result.found > 0 ? L10n.shoppingListImportAllPresent
+                            : L10n.shoppingListImportNothing
+                    )
                 },
                 onBatchCommitted: { added in
-                    importResult = L10n.batchAdded(added)
+                    viewModel.homeConfirmation = .batchAdded(count: added)
                 }
             ) { barcode, name, brand, imageUrl, date, category, suggestion in
-                addEditRequest = AddEditRequest(
+                addEditRequest = AddEditRequest(prefill: AddItemPrefill(
                     barcode: barcode, name: name, brand: brand, imageUrl: imageUrl,
                     date: date, category: category, suggestion: suggestion
-                )
+                ))
             }
         }
         .sheet(item: $addEditRequest) { request in
             AddEditItemView(
                 viewModel: viewModel,
                 editingItem: request.editing,
-                prefillBarcode: request.barcode,
-                prefillName: request.name,
-                prefillBrand: request.brand,
-                prefillImageUrl: request.imageUrl,
-                prefillDate: request.date,
-                prefillCategory: request.category,
-                prefillSuggestion: request.suggestion,
+                prefillBarcode: request.prefill.barcode,
+                prefillName: request.prefill.name,
+                prefillBrand: request.prefill.brand,
+                prefillImageUrl: request.prefill.imageUrl,
+                prefillDate: request.prefill.date,
+                prefillCategory: request.prefill.category,
+                prefillSuggestion: request.prefill.suggestion,
                 onDuplicateMerged: { updated in
-                    importResult = L10n.duplicateAdded(updated.name, updated.quantity)
+                    viewModel.homeConfirmation = .oneMoreAdded(name: updated.name, quantity: updated.quantity)
+                },
+                onNewItemSaved: { item in
+                    viewModel.homeConfirmation = .saved(name: item.name, location: item.storageLocation)
                 }
             )
+        }
+        .sheet(item: $productDetailItem) { item in
+            let nutrition = viewModel.nutrition(for: item)
+            ProductDetailView(
+                productName: item.name,
+                nutrition: nutrition,
+                warnings: nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
+            )
+        }
+        .sheet(isPresented: $showCategories) {
+            NavigationStack {
+                CategorySettingsView(viewModel: viewModel)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(L10n.doneButton) { showCategories = false }
+                        }
+                    }
+            }
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingPlaceholderView {
+                viewModel.completeOnboarding()
+                showOnboarding = false
+            }
         }
         .sheet(isPresented: Binding(
             get: { router.pendingRecipeShare != nil },
@@ -197,31 +159,126 @@ struct RootTabView: View {
             // still re-evaluate the body after the prompt has been cleared.
             ActivityView(activityItems: [router.pendingRecipeShare ?? ""])
         }
-        .onChange(of: router.destination) { _, destination in
-            guard let destination else { return }
-            apply(destination)
-            router.destination = nil
+        .onChange(of: router.route) { _, route in
+            guard let route else { return }
+            apply(route)
+            router.route = nil
+        }
+        .onChange(of: viewModel.homeConfirmation) { _, confirmation in
+            guard let confirmation else { return }
+            selectedTab = .home
+            showSnackbar(confirmation.message)
+            viewModel.homeConfirmation = nil
         }
         .onAppear {
             // A quick action that launched the app cold arrives before any view exists to
             // observe the router, so it waits here until there is one.
-            if let pending = router.pendingLaunchDestination {
-                router.pendingLaunchDestination = nil
+            if let pending = router.pendingLaunchRoute {
+                router.pendingLaunchRoute = nil
                 apply(pending)
+            }
+            if Self.showOnboardingOnFirstRun, viewModel.needsOnboarding {
+                showOnboarding = true
             }
         }
     }
 
-    private func apply(_ destination: AppDestination) {
-        switch destination {
-        case .shoppingList:
-            selectedTab = .shoppingList
-        case .scanner:
+    @ViewBuilder
+    private var tabContent: some View {
+        Group {
+            switch selectedTab {
+            case .home:
+                PantryDashboardView(
+                    viewModel: viewModel,
+                    onEditItem: { presentAddEdit(editing: $0) },
+                    toolbarScan: barsInSideStrip ? { presentScanner() } : nil,
+                    onScrollingDownChanged: { isDashboardScrollingDown = $0 },
+                    onItemRemoved: offerItemUndo,
+                    onItemsDeleted: offerDeletedItemsUndo
+                )
+                .readableContentWidth(background: LarderColor.background)
+                .transition(.opacity)
+            case .calendar:
+                CalendarView(
+                    viewModel: viewModel,
+                    onEditItem: { presentAddEdit(editing: $0) },
+                    onUseOne: { useOne($0) },
+                    onToss: { viewModel.deleteItem($0.id, onItemRemoved: offerItemUndo) }
+                )
+                .transition(.opacity)
+            case .shopping:
+                ShoppingListView(
+                    viewModel: viewModel,
+                    onItemRemoved: { removed in
+                        showSnackbar(L10n.itemRemovedToast(removed.productName)) {
+                            viewModel.restoreShoppingListEntry(removed)
+                        }
+                    }
+                )
+                .readableContentWidth(background: LarderColor.background)
+                .transition(.opacity)
+            case .settings:
+                SettingsView(viewModel: viewModel, onDataCleared: { selectedTab = .home })
+                    .readableContentWidth(background: LarderColor.background)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: selectedTab)
+    }
+
+    /// Pill, Scan and snackbar. Left out of the keyboard's safe area, so the keyboard covers
+    /// them rather than pushing them up the screen.
+    private var floatingLayer: some View {
+        let metrics = metrics
+        return ZStack(alignment: .bottom) {
+            if isScanFloating {
+                ScanFab { presentScanner() }
+                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { scanHeight = $0 }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.trailing, metrics.scanTrailing)
+                    .padding(.bottom, metrics.scanBottom)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+
+            if !shellChrome.navHidden {
+                FloatingNav(selection: $selectedTab, shoppingCount: viewModel.shoppingList.count)
+                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { pillHeight = $0 }
+                    .padding(.horizontal, LarderSpace.s3)
+                    .padding(.bottom, metrics.pillBottom)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            // Last, so it renders above the pill and Scan rather than underneath them.
+            LarderSnackbarHost(content: $snackbar)
+                .padding(.bottom, metrics.snackbarBottom)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
+    }
+
+    private func apply(_ route: AppRoute) {
+        switch route {
+        case .tab(let tab):
+            selectedTab = tab
+        case .scanner(let mode):
             selectedTab = .home
-            presentScanner()
-        case .addItem:
+            presentScanner(mode: mode)
+        case .addItem(.new):
             selectedTab = .home
             addEditRequest = AddEditRequest()
+        case .addItem(.prefilled(let prefill)):
+            selectedTab = .home
+            addEditRequest = AddEditRequest(prefill: prefill)
+        case .addItem(.edit(let itemId)):
+            if let item = viewModel.items.first(where: { $0.id == itemId }) {
+                presentAddEdit(editing: item)
+            }
+        case .productDetail(let itemId):
+            productDetailItem = viewModel.items.first { $0.id == itemId }
+        case .categories:
+            showCategories = true
+        case .onboarding:
+            showOnboarding = true
         }
     }
 
@@ -233,30 +290,26 @@ struct RootTabView: View {
             viewModel.decrementQuantity(item.id, onItemRemoved: offerItemUndo)
         } else {
             viewModel.decrementQuantity(item.id)
-            withAnimation {
-                pendingUndo = PendingUndo(
-                    id: "\(item.id)-\(item.quantity - 1)",
-                    itemName: item.name,
-                    addedToShoppingList: false,
-                    message: L10n.duplicateAdded(item.name, item.quantity - 1)
-                ) {
-                    viewModel.incrementQuantity(item.id)
-                }
+            showSnackbar(L10n.duplicateAdded(item.name, item.quantity - 1)) {
+                viewModel.incrementQuantity(item.id)
             }
         }
     }
 
-    /// Offers a removed pantry item back through the undo toast, reversing the shopping-list add
+    /// Offers a removed pantry item back through the snackbar, reversing the shopping-list add
     /// too when the removal made one (per the flag every removal hands its `onItemRemoved`).
     private func offerItemUndo(_ removed: PantryItem, _ removedFromShoppingList: Bool) {
-        withAnimation {
-            pendingUndo = PendingUndo(
-                id: removed.id,
-                itemName: removed.name,
-                addedToShoppingList: removedFromShoppingList
-            ) {
-                viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
-            }
+        let message = removedFromShoppingList
+            ? L10n.itemAddedToShoppingListToast(removed.name)
+            : L10n.itemRemovedToast(removed.name)
+        showSnackbar(message) {
+            viewModel.restoreItem(removed, removedFromShoppingList: removedFromShoppingList)
+        }
+    }
+
+    private func offerDeletedItemsUndo(_ deleted: DeletedItems) {
+        showSnackbar(L10n.itemsDeleted(deleted.items.count)) {
+            viewModel.restoreItems(deleted)
         }
     }
 
@@ -265,24 +318,48 @@ struct RootTabView: View {
     /// (the app is portrait-only on other iPhones, and iPads have no side insets). Only in
     /// compact width does the toolbar move into the strip with the status bar; iPhone Duo's open
     /// display held sideways has a strip too, but with just the status bar in it.
-    private var sideBarStripReader: some View {
+    ///
+    /// Reads the bottom inset for `ShellMetrics` too, keyboard left out.
+    private var safeAreaReader: some View {
         GeometryReader { geometry in
             let insets = geometry.safeAreaInsets
             Color.clear
-                .onAppear { hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0 }
-                .onChange(of: insets) { _, insets in
-                    hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0
-                }
+                .onAppear { readSafeArea(insets) }
+                .onChange(of: insets) { _, insets in readSafeArea(insets) }
         }
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 
-    private func presentScanner() {
-        showScanner = true
+    private func readSafeArea(_ insets: EdgeInsets) {
+        hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0
+        bottomSafeArea = insets.bottom
+    }
+
+    private func presentScanner(mode: IOSCameraMode? = nil) {
+        scannerRequest = ScannerRequest(mode: mode)
     }
 
     private func presentAddEdit(editing item: PantryItem?) {
         addEditRequest = AddEditRequest(editing: item)
     }
+}
+
+private extension HomeConfirmation {
+    var message: String {
+        switch self {
+        case .saved(let name, let location):
+            return L10n.itemSavedTo(name, L10n.storageLocationName(location))
+        case .batchAdded(let count):
+            return L10n.batchAdded(count)
+        case .oneMoreAdded(let name, let quantity):
+            return L10n.duplicateAdded(name, quantity)
+        }
+    }
+}
+
+private struct ScannerRequest: Identifiable {
+    let id = UUID()
+    var mode: IOSCameraMode?
 }
 
 /// Everything the add/edit sheet opens with, presented with `.sheet(item:)`.
@@ -294,62 +371,8 @@ struct RootTabView: View {
 private struct AddEditRequest: Identifiable {
     let id = UUID()
     var editing: PantryItem? = nil
-    var barcode: String? = nil
-    var name: String? = nil
-    var brand: String? = nil
-    var imageUrl: String? = nil
-    /// Expiry printed on the packaging, when the scan read one.
-    var date: Date? = nil
-    var category: String? = nil
-    /// Expiry to start a new item from when the scan produced no date of its own: the shelf life
-    /// this barcode was last given, or its category's default.
-    var suggestion: ShelfLifeSuggestion? = nil
+    var prefill = AddItemPrefill()
 }
-
-/// A pending undo offer, generic over what was removed (a `PantryItem` or a
-/// `ShoppingListEntry`) so `RootTabView` can host one toast for both. `id` identifies the
-/// specific removal (for `.task(id:)`'s auto-dismiss timer), `itemName` is what the toast
-/// displays, `addedToShoppingList` picks which toast message to show (it left the pantry for
-/// the shopping list, not just "removed"), `message` replaces that wording for an undo that
-/// isn't a removal (one unit used, the rest still there), and `restore` puts the removed thing
-/// back when the user taps Undo.
-private struct PendingUndo {
-    let id: String
-    let itemName: String
-    let addedToShoppingList: Bool
-    var message: String? = nil
-    let restore: () -> Void
-}
-
-private struct UndoToastView: View {
-    let itemName: String
-    let addedToShoppingList: Bool
-    let message: String?
-    let onUndo: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(message ?? (addedToShoppingList ? L10n.itemAddedToShoppingListToast(itemName) : L10n.itemRemovedToast(itemName)))
-                .font(.subheadline)
-                .foregroundColor(.white)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            Button(action: onUndo) {
-                Text(L10n.undoAction)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.accentColor)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Color(white: 0.15)))
-        .padding(.horizontal, 16)
-        .shadow(radius: 6)
-    }
-}
-
 
 /// Caps a tab's content at a comfortable reading width on iPad and centres it, filling the sides
 /// with the screen's own background. Full-width rows on a 13" screen put a product's name and
@@ -383,8 +406,9 @@ private extension View {
 #if DEBUG
 extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
-    /// `-demoBackup <path>` replaces the pantry with a backup file, and `-demoTab <name>`
-    /// (home, calendar, shopping, settings) opens that tab.
+    /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
+    /// calendar, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
+    /// an Undo, and `-demoRoute <name>` (onboarding, categories) goes to that route.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
@@ -393,8 +417,16 @@ extension RootTabView {
         }
         switch arguments.string(forKey: "demoTab") {
         case "calendar": selectedTab = .calendar
-        case "shopping": selectedTab = .shoppingList
+        case "shopping": selectedTab = .shopping
         case "settings": selectedTab = .settings
+        default: break
+        }
+        if let text = arguments.string(forKey: "demoSnackbar") {
+            snackbar = LarderSnackbarContent(message: text, actionTitle: L10n.undoAction, action: {})
+        }
+        switch arguments.string(forKey: "demoRoute") {
+        case "onboarding": apply(.onboarding)
+        case "categories": apply(.categories)
         default: break
         }
     }

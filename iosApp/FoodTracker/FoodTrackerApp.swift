@@ -21,12 +21,14 @@ struct FoodTrackerApp: App {
         #if !DEBUG
         FirebaseApp.configure()
         #endif
+        LarderTheme.applyGlobalAppearance()
     }
 
     var body: some Scene {
         WindowGroup {
             RootTabView()
-                .tint(Color(red: 13/255, green: 148/255, blue: 136/255)) // Teal Brand color
+                .readsWindowWidth()
+                .tint(LarderColor.primary)
                 .preferredColorScheme(settingsStore.settings.theme.colorScheme)
                 .onAppear {
                     // The permission alert would cover the store screenshots.

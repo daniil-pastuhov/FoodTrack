@@ -329,7 +329,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         if userInfo["openShoppingList"] as? Bool == true {
             Task { @MainActor in
                 #if !WIDGET_EXTENSION
-                AppRouter.shared.destination = .shoppingList
+                AppRouter.shared.navigate(to: .tab(.shopping))
                 #endif
                 completionHandler()
             }
