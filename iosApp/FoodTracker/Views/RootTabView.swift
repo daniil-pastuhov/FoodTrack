@@ -177,7 +177,9 @@ struct RootTabView: View {
         }
         .onChange(of: viewModel.homeConfirmation) { _, confirmation in
             guard let confirmation else { return }
-            selectedTab = .home
+            // A save confirms where the person already is, such as Shopping's scans. The
+            // scanner's Add all and Add one more land on Home.
+            if case .saved = confirmation {} else { selectedTab = .home }
             showSnackbar(confirmation.message)
             viewModel.homeConfirmation = nil
         }

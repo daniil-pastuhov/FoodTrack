@@ -48,6 +48,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSpace
@@ -205,11 +206,14 @@ fun LarderDialog(
     /** Overrides the confirm button's style, for a dialog whose confirm isn't the main action. */
     confirmStyle: LarderButtonStyle? = null,
     icon: LarderIcons? = null,
+    /** False when an outside tap could lose work. System back still calls [onDismissRequest]. */
+    dismissOnClickOutside: Boolean = true,
     content: (@Composable ColumnScope.() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         modifier = modifier,
+        properties = DialogProperties(dismissOnClickOutside = dismissOnClickOutside),
         icon = icon?.let { { LarderIcon(it, contentDescription = null) } },
         title = { Text(text = title, style = MaterialTheme.typography.titleLarge) },
         text = if (text != null || content != null) {
