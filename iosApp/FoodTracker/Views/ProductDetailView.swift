@@ -80,6 +80,8 @@ struct PantryProductDetail: View {
         }
     }
 
+    /// Only the second column flexes. A Grid sizes flexible columns to the widest of them, so with
+    /// both flexible a long Russian status chip pushed the sheet past the screen.
     private var facts: some View {
         Grid(alignment: .topLeading, horizontalSpacing: LarderSpace.s4, verticalSpacing: LarderSpace.s3) {
             GridRow {
@@ -88,12 +90,14 @@ struct PantryProductDetail: View {
                         .padding(.top, LarderSpace.s1)
                 }
                 fact(L10n.homeLocationLabel, L10n.storageLocationName(item.storageLocation))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             GridRow {
                 if let categoryName {
                     fact(L10n.homeCategoryLabel, categoryName)
                 }
                 fact(quantityLabel, L10n.quantityFormat(item.quantity))
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(.horizontal, LarderSpace.s4)
@@ -121,39 +125,74 @@ struct PantryProductDetail: View {
             Text(value).larderFont(.titleSm).foregroundStyle(LarderColor.onSurface)
             extra()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Use one leads, and each row stacks when its labels run long, as Russian ones do.
+    /// Use one leads, and each pair stacks when its labels run long, as Russian ones do.
     private var buttons: some View {
         VStack(spacing: LarderSpace.s2) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: LarderSpace.s2) { useOneButton; editButton }
-                VStack(spacing: LarderSpace.s2) { useOneButton; editButton }
+            ButtonPair {
+                LarderButton(L10n.useOneButton, icon: .circleMinus, fullWidth: true, action: actions.useOne)
+                LarderButton(L10n.detailEdit, icon: .pencil, variant: .outline, action: actions.edit)
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: LarderSpace.s2) { moveButton; deleteButton }
-                VStack(spacing: LarderSpace.s2) { moveButton; deleteButton }
+            ButtonPair {
+                LarderButton(
+                    L10n.detailToShoppingList,
+                    icon: .shoppingBasket,
+                    variant: .outline,
+                    fullWidth: true,
+                    action: actions.moveToShoppingList
+                )
+                LarderButton(L10n.swipeDelete, icon: .trash2, variant: .dangerText, action: actions.delete)
             }
         }
     }
+}
 
-    private var useOneButton: some View {
-        LarderButton(L10n.useOneButton, icon: .circleMinus, fullWidth: true, action: actions.useOne)
-            .layoutPriority(1)
+/// Two buttons side by side, the first taking the spare width, or stacked when they don't fit.
+/// Never wider than it is offered: `ViewThatFits` reported more when neither option fitted, which
+/// widened the whole sheet.
+private struct ButtonPair: Layout {
+    private let gap = LarderSpace.s2
+
+    private func arrangement(_ subviews: Subviews, width: CGFloat) -> (stacked: Bool, sizes: [CGSize]) {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        return (sizes.map(\.width).reduce(gap, +) > width, sizes)
     }
 
-    private var editButton: some View {
-        LarderButton(L10n.detailEdit, icon: .pencil, variant: .outline, action: actions.edit)
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let (stacked, sizes) = arrangement(subviews, width: proposal.width ?? .infinity)
+        let width = proposal.width ?? sizes.map(\.width).reduce(gap, +)
+        let heights = sizes.map(\.height)
+        return CGSize(
+            width: width,
+            height: stacked ? heights.reduce(gap, +) : heights.max() ?? 0
+        )
     }
 
-    private var moveButton: some View {
-        LarderButton(L10n.detailToShoppingList, icon: .shoppingBasket, variant: .outline, fullWidth: true, action: actions.moveToShoppingList)
-            .layoutPriority(1)
-    }
-
-    private var deleteButton: some View {
-        LarderButton(L10n.swipeDelete, icon: .trash2, variant: .dangerText, action: actions.delete)
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard subviews.count == 2 else { return }
+        let (stacked, sizes) = arrangement(subviews, width: bounds.width)
+        if stacked {
+            subviews[0].place(
+                at: bounds.origin,
+                proposal: ProposedViewSize(width: bounds.width, height: sizes[0].height)
+            )
+            subviews[1].place(
+                at: CGPoint(x: bounds.midX, y: bounds.minY + sizes[0].height + gap),
+                anchor: .top,
+                proposal: ProposedViewSize(sizes[1])
+            )
+        } else {
+            subviews[0].place(
+                at: bounds.origin,
+                proposal: ProposedViewSize(width: bounds.width - sizes[1].width - gap, height: sizes[0].height)
+            )
+            subviews[1].place(
+                at: CGPoint(x: bounds.maxX, y: bounds.minY),
+                anchor: .topTrailing,
+                proposal: ProposedViewSize(sizes[1])
+            )
+        }
     }
 }
 

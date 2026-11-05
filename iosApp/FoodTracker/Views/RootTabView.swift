@@ -450,12 +450,17 @@ extension RootTabView {
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
     /// calendar, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
     /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`)
-    /// goes to that route.
+    /// goes to that route, and `-demoAllergen <name>` adds to the allergen list.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
            let raw = try? String(contentsOfFile: path, encoding: .utf8) {
             _ = viewModel.restoreBackup(raw, mode: .replace)
+        }
+        if let allergen = arguments.string(forKey: "demoAllergen") {
+            var settings = SettingsStore.shared.settings
+            settings.allergens.insert(allergen)
+            SettingsStore.shared.save(settings)
         }
         switch arguments.string(forKey: "demoTab") {
         case "calendar": selectedTab = .calendar
