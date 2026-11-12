@@ -93,6 +93,7 @@ import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderPreview
 import com.foodtracker.android.ui.design.LarderSwipeAction
 import com.foodtracker.android.ui.design.LarderSwipeRow
+import com.foodtracker.android.ui.design.LarderSwipeStyle
 import com.foodtracker.android.ui.design.LarderTabularNumbers
 import com.foodtracker.android.ui.design.PantryRow as PantryRowView
 import com.foodtracker.android.ui.design.ShellChromeEffect
@@ -160,16 +161,11 @@ private val LocalDateSaver = Saver<LocalDate?, String>(
  * with Undo. Those two say "used" and "tossed" rather than the "removed" of the Root's handlers,
  * so the last unit and the toss run here; a use that leaves the row in place goes through
  * [onUseOne], which shares its wording with Home.
- *
- * [onEditItem] and [onToss] are unused now, until the Root stops passing them.
  */
-@Suppress("UNUSED_PARAMETER")
 @Composable
 fun CalendarScreen(
     stateHolder: PantryStateHolder,
-    onEditItem: (PantryItem) -> Unit,
     onUseOne: (PantryItem) -> Unit,
-    onToss: (String) -> Unit,
     modifier: Modifier = Modifier,
     // See PantryDashboardScreen's parameter of the same name.
     bottomOverlayClearance: Dp = 160.dp
@@ -920,11 +916,16 @@ private fun AgendaRow(
         startAction = LarderSwipeAction(
             icon = LarderIcons.Check,
             label = usedLabel,
-            quiet = true,
+            style = LarderSwipeStyle.SuccessStacked,
             keepsRow = item.quantity > 1,
             onSwipe = onUsed
         ),
-        endAction = LarderSwipeAction(LarderIcons.Trash2, tossedLabel, danger = true, onSwipe = onTossed),
+        endAction = LarderSwipeAction(
+            icon = LarderIcons.Trash2,
+            label = tossedLabel,
+            style = LarderSwipeStyle.ErrorStacked,
+            onSwipe = onTossed
+        ),
         modifier = modifier.larderGroupItem(position)
     ) {
         PantryRowView(

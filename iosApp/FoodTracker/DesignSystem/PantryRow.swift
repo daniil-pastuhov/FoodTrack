@@ -140,6 +140,17 @@ struct PantryRow: View {
         .animation(.easeInOut(duration: 0.2), value: quantity)
     }
 
+    private var statusChip: some View {
+        StatusChip(status: status, text: statusText, isOnSelectedRow: isSelected)
+    }
+
+    private var placeText: some View {
+        Text(place)
+            .larderFont(.caption)
+            .lineLimit(2)
+            .foregroundStyle(secondaryText)
+    }
+
     private var summary: some View {
         HStack(spacing: LarderSpace.s3) {
             LarderThumb(
@@ -153,12 +164,17 @@ struct PantryRow: View {
                     .larderFont(.titleSm)
                     .lineLimit(1)
                     .foregroundStyle(isSelected ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
-                HStack(spacing: LarderSpace.s2) {
-                    StatusChip(status: status, text: statusText, isOnSelectedRow: isSelected)
-                    Text(place)
-                        .larderFont(.caption)
-                        .lineLimit(1)
-                        .foregroundStyle(secondaryText)
+                // The place sits beside the status while it fits whole, and wraps under it
+                // otherwise, rather than cutting "Kjøleskap · Meieri" down to "K…".
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: LarderSpace.s2) {
+                        statusChip
+                        placeText.fixedSize()
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        statusChip
+                        placeText.fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

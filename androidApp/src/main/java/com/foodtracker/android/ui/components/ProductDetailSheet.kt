@@ -60,8 +60,10 @@ import com.foodtracker.android.ui.design.LarderIconButton
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderSheet
 import com.foodtracker.android.ui.design.LarderThumb
+import com.foodtracker.android.ui.design.LarderThumbSize
 import com.foodtracker.android.ui.design.StatusChip
 import com.foodtracker.android.ui.design.categoryIcon
+import com.foodtracker.android.ui.design.isExpanded
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
@@ -242,8 +244,8 @@ private fun ProductDetailBody(
             LarderThumb(
                 imageUrl = item.imageUrl?.takeIf { it.isNotBlank() },
                 fallbackIcon = categoryIcon(row.categoryDisplayName ?: item.category),
-                modifier = Modifier.size(72.dp).clip(RoundedCornerShape(LarderRadius.lg)),
-                background = thumbBackground
+                background = thumbBackground,
+                size = LarderThumbSize.Hero
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -520,6 +522,10 @@ private fun ProductDetailButtons(
     onMoveToShoppingList: () -> Unit,
     onDelete: () -> Unit
 ) {
+    // In a tablet's detail pane the row is narrow enough for a label to break inside its
+    // button, "To shopping list" over two lines. One line there sends the button down a row
+    // instead. Phones keep wrapping, so a large font size never cuts a label short.
+    val labelLines = if (isExpanded()) 1 else Int.MAX_VALUE
     FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
@@ -529,28 +535,32 @@ private fun ProductDetailButtons(
             text = stringResource(R.string.use_one_content_description),
             onClick = onUseOne,
             modifier = Modifier.weight(2f).width(IntrinsicSize.Max),
-            leadingIcon = LarderIcons.CircleMinus
+            leadingIcon = LarderIcons.CircleMinus,
+            maxLines = labelLines
         )
         LarderButton(
             text = stringResource(R.string.detail_edit),
             onClick = onEdit,
             modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
             style = LarderButtonStyle.Outline,
-            leadingIcon = LarderIcons.Pencil
+            leadingIcon = LarderIcons.Pencil,
+            maxLines = labelLines
         )
         LarderButton(
             text = stringResource(R.string.detail_to_shopping_list),
             onClick = onMoveToShoppingList,
             modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
             style = LarderButtonStyle.Outline,
-            leadingIcon = LarderIcons.ShoppingBasket
+            leadingIcon = LarderIcons.ShoppingBasket,
+            maxLines = labelLines
         )
         LarderButton(
             text = stringResource(R.string.delete),
             onClick = onDelete,
             modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
             style = LarderButtonStyle.DangerText,
-            leadingIcon = LarderIcons.Trash2
+            leadingIcon = LarderIcons.Trash2,
+            maxLines = labelLines
         )
     }
 }

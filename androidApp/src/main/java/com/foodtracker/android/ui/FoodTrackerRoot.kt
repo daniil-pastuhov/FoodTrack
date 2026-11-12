@@ -382,6 +382,9 @@ fun FoodTrackerRoot(
             // "removal" reads as if it just vanished, when it's actually sitting on the
             // shopping list now.
             val showUndoRemovalSnackbar: (String, Boolean, () -> Unit) -> Unit = { removedName, addedToShoppingList, onUndo ->
+                // A second removal replaces the first message rather than queueing behind it
+                // for ten seconds. The first one's Undo is lost, as on Home.
+                snackbarHostState.currentSnackbarData?.dismiss()
                 snackbarScope.launch {
                     val messageRes = if (addedToShoppingList) {
                         R.string.item_added_to_shopping_list_snackbar
@@ -525,7 +528,22 @@ fun FoodTrackerRoot(
             // other unit gets its own undo, since a count changing is easy to miss.
             val onUseOneHandler: (PantryItem) -> Unit = { item ->
                 if (item.quantity <= 1) {
-                    onDecrementQuantityHandler(item.id)
+                    // Same removal as the stepper's minus, but this was a use, so it says "used".
+                    stateHolder.decrementQuantity(item.id) { removedItem ->
+                        com.foodtracker.android.notification.NotificationHelper.cancelNotification(context, removedItem.id)
+                        val messageRes = if (removedItem.essential) {
+                            R.string.item_added_to_shopping_list_snackbar
+                        } else {
+                            R.string.calendar_used_snackbar
+                        }
+                        larderSnackbars.show(
+                            context.getString(messageRes, removedItem.name),
+                            context.getString(R.string.undo_action)
+                        ) {
+                            stateHolder.restoreItem(removedItem, removedFromShoppingList = removedItem.essential)
+                            com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, removedItem)
+                        }
+                    }
                 } else {
                     stateHolder.decrementQuantity(item.id)
                     larderSnackbars.show(
@@ -702,9 +720,7 @@ fun FoodTrackerRoot(
                                 LarderRoute.Calendar -> {
                                     CalendarScreen(
                                         stateHolder = stateHolder,
-                                        onEditItem = onNavigateToAddEdit,
                                         onUseOne = onUseOneHandler,
-                                        onToss = onDeleteItemHandler,
                                         bottomOverlayClearance = clearance.content
                                     )
                                 }

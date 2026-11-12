@@ -346,7 +346,7 @@
 "notif_action_snooze" = "Завтра";
 
 "scan_mode_batch" = "Пакет";
-"reticle_hint_batch" = "Продолжайте сканировать — всё попадёт в список ниже";
+"reticle_hint_batch" = "Продолжайте сканировать — всё попадёт в список";
 "scan_mode_receipt" = "Чек";
 "reticle_hint_receipt" = "Поместите чек целиком в кадр и нажмите, чтобы считать";
 "scan_receipt_button" = "Считать чек";

@@ -15,6 +15,7 @@ public enum AppRoute: Equatable {
     /// The name a widget URL or a home-screen quick action gives for its target.
     init?(externalName: String) {
         switch externalName {
+        case "home": self = .tab(.home)
         case "shopping-list": self = .tab(.shopping)
         case "scan": self = .scanner(.barcode)
         case "add-item": self = .addItem(.new)

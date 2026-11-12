@@ -354,12 +354,11 @@ struct PantryDashboardView<DetailPane: View>: View {
         .padding(.horizontal, -LarderSpace.s4)
     }
 
-    /// `LarderChip` prints its count as given, so a capped one goes in with the title. A screen
-    /// reader still gets the real number.
+    /// A count over the cap reads "999+" on the chip. A screen reader still gets the real number.
     @ViewBuilder
     private func statusChip(_ title: String, _ count: Int, isOn: Bool, action: @escaping () -> Void) -> some View {
         if HomeSummary.isCapped(count) {
-            LarderChip("\(title) \(HomeSummary.cappedLabel)", isSelected: isOn, action: action)
+            LarderChip(title, countText: HomeSummary.cappedLabel, isSelected: isOn, action: action)
                 .accessibilityLabel("\(title), \(count)")
         } else {
             LarderChip(title, count: count, isSelected: isOn, action: action)
@@ -404,7 +403,13 @@ struct PantryDashboardView<DetailPane: View>: View {
                     viewModel.searchQuery = ""
                 }
             }
-            LarderTextField(nil, text: $viewModel.searchQuery, placeholder: L10n.searchPlaceholder, showsClear: true)
+            LarderTextField(
+                nil,
+                text: $viewModel.searchQuery,
+                placeholder: L10n.searchPlaceholder,
+                showsClear: true,
+                focusesOnAppear: true
+            )
                 .accessibilityLabel(L10n.searchPlaceholder)
         }
         .padding(.leading, LarderSpace.s1)

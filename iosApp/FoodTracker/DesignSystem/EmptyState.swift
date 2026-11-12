@@ -80,16 +80,29 @@ private struct WholeAreaMessage<Header: View, Actions: View>: View {
     let actions: Actions
 
     var body: some View {
+        // When the area is short, as with the keyboard up, the message scrolls rather than
+        // squeezing its text onto one cut-off line.
+        ViewThatFits(in: .vertical) {
+            content
+            ScrollView { content }
+                .scrollBounceBehavior(.basedOnSize)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var content: some View {
         VStack(spacing: LarderSpace.s3) {
             header
             Text(title)
                 .larderFont(.title)
                 .foregroundStyle(LarderColor.onSurface)
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             if let message {
                 Text(message)
                     .larderFont(.body)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 320)
             }
             actions
@@ -97,7 +110,7 @@ private struct WholeAreaMessage<Header: View, Actions: View>: View {
         .multilineTextAlignment(.center)
         .padding(.vertical, LarderSpace.s8)
         .padding(.horizontal, LarderSpace.s6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
     }
 }
 

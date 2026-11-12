@@ -29,6 +29,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.foodtracker.android.R
@@ -58,26 +59,33 @@ fun categoryIcon(category: String?): LarderIcons {
         ?: LarderIcons.Package
 }
 
-/** A 44dp product thumbnail. The icon shows until the photo loads, and stays if it never does,
- *  so a failed image is never a broken-image mark. */
+/** The thumbnail sizes the design uses: 44dp in rows, 72dp at the head of a product. */
+enum class LarderThumbSize(val side: Dp, val icon: Dp, val radius: Dp) {
+    Regular(44.dp, LarderIconSize.Large, LarderRadius.md),
+    Hero(72.dp, LarderIconSize.Hero, LarderRadius.lg)
+}
+
+/** A product thumbnail. The icon shows until the photo loads, and stays if it never does, so a
+ *  failed image is never a broken-image mark. */
 @Composable
 fun LarderThumb(
     imageUrl: String?,
     fallbackIcon: LarderIcons,
     modifier: Modifier = Modifier,
-    background: Color = MaterialTheme.colorScheme.surfaceContainer
+    background: Color = MaterialTheme.colorScheme.surfaceContainer,
+    size: LarderThumbSize = LarderThumbSize.Regular
 ) {
     Box(
         modifier = modifier
-            .size(44.dp)
-            .clip(RoundedCornerShape(LarderRadius.md))
+            .size(size.side)
+            .clip(RoundedCornerShape(size.radius))
             .background(background),
         contentAlignment = Alignment.Center
     ) {
         LarderIcon(
             fallbackIcon,
             contentDescription = null,
-            size = LarderIconSize.Large,
+            size = size.icon,
             tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (imageUrl != null) {

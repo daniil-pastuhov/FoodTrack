@@ -118,6 +118,7 @@ struct LarderTextField: View {
     private let count: String?
     private let axis: Axis
     private let onEditingEnded: (() -> Void)?
+    private let focusesOnAppear: Bool
 
     @FocusState private var isFocused: Bool
     @Environment(\.larderForcedState) private var forcedState
@@ -133,6 +134,9 @@ struct LarderTextField: View {
         message: LarderFieldMessage? = nil,
         count: String? = nil,
         axis: Axis = .horizontal,
+        /// Takes focus, and so the keyboard, as soon as it shows: for a field the person opened
+        /// on purpose, such as search.
+        focusesOnAppear: Bool = false,
         onEditingEnded: (() -> Void)? = nil
     ) {
         self.label = label
@@ -144,6 +148,7 @@ struct LarderTextField: View {
         self.count = count
         self.axis = axis
         self.onEditingEnded = onEditingEnded
+        self.focusesOnAppear = focusesOnAppear
     }
 
     var body: some View {
@@ -172,6 +177,12 @@ struct LarderTextField: View {
         }
         .onChange(of: isFocused) { _, focused in
             if !focused { onEditingEnded?() }
+        }
+        .task {
+            guard focusesOnAppear else { return }
+            // Focus set in the same pass as the field's insertion is dropped, so wait a frame.
+            try? await Task.sleep(for: .milliseconds(50))
+            isFocused = true
         }
     }
 }

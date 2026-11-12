@@ -143,7 +143,7 @@
     <string name="camera_off_open_settings">Åpne innstillinger</string>
     <string name="camera_off_add_by_hand">Skriv det inn</string>
     <string name="scan_mode_batch">Flere</string>
-    <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen under</string>
+    <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen</string>
     <string name="scan_mode_receipt">Kvittering</string>
     <string name="reticle_hint_receipt">Få hele kvitteringen i bildet, og trykk for å lese den</string>
     <string name="scan_receipt_button">Les kvittering</string>

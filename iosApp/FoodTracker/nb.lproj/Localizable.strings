@@ -346,7 +346,7 @@
 "notif_action_snooze" = "I morgen";
 
 "scan_mode_batch" = "Flere";
-"reticle_hint_batch" = "Fortsett å skanne — alt havner i listen under";
+"reticle_hint_batch" = "Fortsett å skanne — alt havner i listen";
 "scan_mode_receipt" = "Kvittering";
 "reticle_hint_receipt" = "Få hele kvitteringen i bildet, og trykk for å lese den";
 "scan_receipt_button" = "Les kvittering";

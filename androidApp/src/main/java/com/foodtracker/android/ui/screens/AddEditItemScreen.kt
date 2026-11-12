@@ -78,6 +78,7 @@ import com.foodtracker.android.ui.design.LarderSwitch
 import com.foodtracker.android.ui.design.LarderTabularNumbers
 import com.foodtracker.android.ui.design.LarderTextField
 import com.foodtracker.android.ui.design.LarderThumb
+import com.foodtracker.android.ui.design.LarderThumbSize
 import com.foodtracker.android.ui.design.LarderTopBar
 import com.foodtracker.android.ui.design.StatusChip
 import com.foodtracker.android.ui.design.categoryIcon
@@ -103,9 +104,6 @@ import kotlinx.datetime.LocalDate
 
 /** The centred column on tablets and foldables. */
 private val AddItemColumnWidth = 640.dp
-
-/** The photo in the header, larger than a list row's. */
-private val AddItemHeroThumb = 72.dp
 
 @Composable
 fun AddEditItemScreen(
@@ -709,9 +707,7 @@ private fun AddItemHero(
         LarderThumb(
             imageUrl = imageUrl?.ifBlank { null },
             fallbackIcon = fallbackIcon,
-            modifier = Modifier
-                .clip(RoundedCornerShape(LarderRadius.lg))
-                .size(AddItemHeroThumb)
+            size = LarderThumbSize.Hero
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(

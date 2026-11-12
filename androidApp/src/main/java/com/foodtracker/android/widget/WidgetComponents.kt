@@ -247,7 +247,8 @@ internal fun WidgetUsedButton(label: String, description: String, onClick: Actio
     }
 }
 
-private val FoldHeaderHeight = 28.dp
+/** A full touch target: the header is the only way to fold a section from the widget. */
+private val FoldHeaderHeight = 48.dp
 private val StatusIconSize = 14.dp
 private val TickIconSize = 24.dp
 private val UsedButtonHeight = 32.dp

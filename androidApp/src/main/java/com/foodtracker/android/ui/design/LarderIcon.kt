@@ -30,6 +30,9 @@ object LarderIconSize {
     /** Scan and product thumbnails. */
     val Large = 24.dp
 
+    /** The large product thumbnail at the head of the detail sheet and Add item. */
+    val Hero = 32.dp
+
     /** Inline with caption text: status chips and field messages. */
     val Small = 14.dp
 }

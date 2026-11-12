@@ -141,7 +141,7 @@ fun LarderTextField(
                                 text = placeholder,
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = scheme.onSurfaceVariant,
-                                maxLines = 1
+                                maxLines = maxLines
                             )
                         }
                         innerTextField()
@@ -197,6 +197,14 @@ internal fun LarderTextFieldPreview() = LarderPreview {
             label = "Search",
             leadingIcon = LarderIcons.Search,
             trailing = { LarderIconButton(LarderIcons.X, "Clear", {}) }
+        )
+        LarderTextField(
+            value = "",
+            onValueChange = {},
+            label = "Items",
+            placeholder = "Milk\nBread (2)",
+            singleLine = false,
+            minLines = 4
         )
         LarderTextField(
             value = "Keep the lid on",

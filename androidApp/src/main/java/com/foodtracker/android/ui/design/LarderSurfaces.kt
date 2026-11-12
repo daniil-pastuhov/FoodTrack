@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -35,12 +34,15 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSize
@@ -248,7 +250,7 @@ fun LedeHeader(
         Row(
             modifier = Modifier
                 .heightIn(min = LarderSize.touch)
-                .offset(x = LarderSpace.s2),
+                .bleedEnd(LarderSpace.s2),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -271,6 +273,14 @@ fun LedeHeader(
         )
         below?.invoke(this)
     }
+}
+
+/** Runs [bleed] past the parent's end edge and no further at the start, so an action's touch
+ *  target can overhang the padding while the brand lines up with the lede below. */
+private fun Modifier.bleedEnd(bleed: Dp): Modifier = layout { measurable, constraints ->
+    val extra = bleed.roundToPx()
+    val placeable = measurable.measure(constraints.offset(horizontal = extra))
+    layout(placeable.width - extra, placeable.height) { placeable.placeRelative(0, 0) }
 }
 
 /** The bar on pushed screens such as Add item: back, a serif title, then [actions]. On the page

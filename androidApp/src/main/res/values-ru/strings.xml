@@ -145,7 +145,7 @@
     <string name="camera_off_open_settings">Открыть настройки</string>
     <string name="camera_off_add_by_hand">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
-    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список ниже</string>
+    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список</string>
     <string name="scan_mode_receipt">Чек</string>
     <string name="reticle_hint_receipt">Поместите чек целиком в кадр и нажмите, чтобы считать</string>
     <string name="scan_receipt_button">Считать чек</string>

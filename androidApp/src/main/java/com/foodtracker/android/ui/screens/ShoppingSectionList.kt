@@ -59,6 +59,7 @@ import com.foodtracker.android.ui.design.LarderPreview
 import com.foodtracker.android.ui.design.LarderStepper
 import com.foodtracker.android.ui.design.LarderSwipeAction
 import com.foodtracker.android.ui.design.LarderSwipeRow
+import com.foodtracker.android.ui.design.LarderSwipeStyle
 import com.foodtracker.android.ui.design.LarderTick
 import com.foodtracker.android.ui.design.larderGroupItem
 import com.foodtracker.android.ui.theme.LarderRadius
@@ -82,9 +83,9 @@ import sh.calvin.reorderable.rememberReorderableLazyListState
 /** From shopping.css: a row is at least this tall, since a name may take two lines. */
 private val ShoppingRowMinHeight = 64.dp
 
-/** From shopping.css: narrower than a full target so the name keeps its room on a phone. The
- *  handle still spans the row's height, and Move to section does the same job without a drag. */
-private val ShoppingGripWidth = 28.dp
+/** A full touch target, so the handle is as easy to catch as the stepper beside it. Move to
+ *  section, and Move up and down on a section's menu, do the same jobs without a drag. */
+private val ShoppingGripWidth = LarderSize.touch
 
 /** From shopping.css: the chevron and grip are a size down from [LarderIcons]'s default. */
 private val ShoppingSmallIcon = 18.dp
@@ -277,6 +278,14 @@ internal fun ShoppingSectionedList(
     }
 
     val canMove = state.shoppingSections.size > 1
+    val movableSectionIds = rows.filterIsInstance<ShoppingRow.Header>()
+        .map { it.section }
+        .filterNot { it.isDefault }
+        .map { it.id }
+    fun moveSection(sectionId: String, delta: Int) {
+        val reordered = movedSectionOrder(movableSectionIds, sectionId, delta) ?: return
+        stateHolder.reorderShoppingSections(reordered)
+    }
 
     LazyColumn(
         state = lazyListState,
@@ -320,6 +329,16 @@ internal fun ShoppingSectionedList(
                             onToggle = { stateHolder.setShoppingSectionCollapsed(section.id, !section.collapsed) },
                             onRename = { onRenameSection(section) },
                             onDelete = { onDeleteSection(section, row.itemCount) },
+                            onMoveUp = if (movedSectionOrder(movableSectionIds, section.id, -1) != null) {
+                                { moveSection(section.id, -1) }
+                            } else {
+                                null
+                            },
+                            onMoveDown = if (movedSectionOrder(movableSectionIds, section.id, 1) != null) {
+                                { moveSection(section.id, 1) }
+                            } else {
+                                null
+                            },
                             modifier = Modifier
                                 .animateItem()
                                 .padding(top = if (shoppingHeaderHasGap(rows, index)) LarderSpace.s2 else 0.dp)
@@ -383,7 +402,7 @@ private fun ShoppingListRow(
     val swipe = LarderSwipeAction(
         icon = LarderIcons.Check,
         label = null,
-        quiet = true,
+        style = LarderSwipeStyle.Quiet,
         onSwipe = onCheckOff
     )
     val dragShape = RoundedCornerShape(LarderRadius.md)
@@ -524,7 +543,10 @@ private fun ShoppingSectionHeader(
     onToggle: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Null when the section is already at that end. The drag's equivalent without a drag. */
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null
 ) {
     val scheme = MaterialTheme.colorScheme
     val chevronRotation by animateFloatAsState(if (collapsed) -90f else 0f, label = "sectionChevron")
@@ -602,6 +624,36 @@ private fun ShoppingSectionHeader(
                             onRename()
                         }
                     )
+                    onMoveUp?.let { move ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.category_settings_move_up),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = scheme.onSurface
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                move()
+                            }
+                        )
+                    }
+                    onMoveDown?.let { move ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.category_settings_move_down),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = scheme.onSurface
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                move()
+                            }
+                        )
+                    }
                     DropdownMenuItem(
                         text = {
                             Text(
@@ -623,6 +675,16 @@ private fun ShoppingSectionHeader(
             )
         }
     }
+}
+
+/** [ids] with [sectionId] moved [delta] places, or null when it's missing or already at that
+ *  end, so the menu can leave the item out. */
+internal fun movedSectionOrder(ids: List<String>, sectionId: String, delta: Int): List<String>? {
+    val from = ids.indexOf(sectionId)
+    if (from < 0 || delta == 0) return null
+    val to = from + delta
+    if (to !in ids.indices) return null
+    return ids.toMutableList().apply { add(to, removeAt(from)) }
 }
 
 private fun previewEntry(name: String, quantity: Int = 1, barcode: String? = null) = ShoppingListEntry(

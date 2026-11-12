@@ -14,6 +14,7 @@ import com.foodtracker.android.ui.design.LarderGroupPosition
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderSwipeAction
 import com.foodtracker.android.ui.design.LarderSwipeRow
+import com.foodtracker.android.ui.design.LarderSwipeStyle
 import com.foodtracker.android.ui.design.PantryRow
 import com.foodtracker.android.ui.design.categoryIcon
 import com.foodtracker.android.ui.design.expiryStatusLabel
@@ -62,7 +63,7 @@ fun ItemCard(
 
     LarderSwipeRow(
         startAction = LarderSwipeAction(LarderIcons.ShoppingBasket, toList, onSwipe = onMoveToShoppingList),
-        endAction = LarderSwipeAction(LarderIcons.Trash2, delete, danger = true, onSwipe = onDelete),
+        endAction = LarderSwipeAction(LarderIcons.Trash2, delete, LarderSwipeStyle.Danger, onSwipe = onDelete),
         modifier = modifier.larderGroupItem(position),
         enabled = !selectionMode
     ) {

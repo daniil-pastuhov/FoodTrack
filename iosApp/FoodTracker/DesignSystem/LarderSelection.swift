@@ -11,7 +11,7 @@ struct LarderChip: View {
 
     private let title: String
     private let icon: LarderIconName?
-    private let count: Int?
+    private let count: String?
     private let isSelected: Bool
     private let action: () -> Void
 
@@ -25,9 +25,20 @@ struct LarderChip: View {
         isSelected: Bool = false,
         action: @escaping () -> Void
     ) {
+        self.init(title, icon: icon, countText: count.map { "\($0)" }, isSelected: isSelected, action: action)
+    }
+
+    /// For a count that isn't a plain number, such as a capped "999+".
+    init(
+        _ title: String,
+        icon: LarderIconName? = nil,
+        countText: String?,
+        isSelected: Bool = false,
+        action: @escaping () -> Void
+    ) {
         self.title = title
         self.icon = icon
-        self.count = count
+        self.count = countText
         self.isSelected = isSelected
         self.action = action
     }
@@ -37,7 +48,7 @@ struct LarderChip: View {
             HStack(spacing: LarderSpace.s1) {
                 if let icon { LarderIcon(icon, size: .custom(16)) }
                 Text(title)
-                if let count { Text("\(count)").monospacedDigit() }
+                if let count { Text(count).monospacedDigit() }
             }
             .larderFont(.label)
             .lineLimit(1)
