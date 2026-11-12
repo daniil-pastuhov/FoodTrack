@@ -280,7 +280,9 @@ struct LarderSegmented<Option: Hashable>: View {
     private let title: (Option) -> String
     private let fill: Bool
 
-    /// `fill: true` shares the full width equally between the segments.
+    /// `fill: true` spreads the segments over the full width. Each gets its label's width plus an
+    /// equal share of what's left, so a long label such as "По продуктам" isn't cut short to
+    /// keep the segments equal.
     init(selection: Binding<Option>, options: [Option], fill: Bool = false, title: @escaping (Option) -> String) {
         _selection = selection
         self.options = options
@@ -289,7 +291,7 @@ struct LarderSegmented<Option: Hashable>: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
+        SegmentRow(fill: fill) {
             ForEach(options, id: \.self) { option in
                 let isSelected = option == selection
                 Button {
@@ -301,7 +303,7 @@ struct LarderSegmented<Option: Hashable>: View {
                         .minimumScaleFactor(0.8)
                         .foregroundStyle(isSelected ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
                         .padding(.horizontal, LarderSpace.s4)
-                        .frame(maxWidth: fill ? .infinity : nil, maxHeight: .infinity)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .background(isSelected ? LarderColor.primaryContainer : Color.clear)
                         .contentShape(Rectangle())
                 }
@@ -313,6 +315,45 @@ struct LarderSegmented<Option: Hashable>: View {
         .fixedSize(horizontal: false, vertical: true)
         .clipShape(Capsule())
         .overlay { Capsule().strokeBorder(LarderColor.outline, lineWidth: 1) }
+    }
+}
+
+/// Lays segments out at their ideal widths. With `fill`, the spare width is shared equally;
+/// when there isn't enough, each shrinks in proportion to its ideal width.
+private struct SegmentRow: Layout {
+    let fill: Bool
+
+    private func widths(for proposal: ProposedViewSize, subviews: Subviews) -> [CGFloat] {
+        let ideal = subviews.map { $0.sizeThatFits(.unspecified).width }
+        let total = ideal.reduce(0, +)
+        guard let available = proposal.width, available.isFinite, total > 0, !subviews.isEmpty else {
+            return ideal
+        }
+        if total > available {
+            return ideal.map { $0 * available / total }
+        }
+        guard fill else { return ideal }
+        let extra = (available - total) / CGFloat(subviews.count)
+        return ideal.map { $0 + extra }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let widths = widths(for: proposal, subviews: subviews)
+        let height = zip(subviews, widths)
+            .map { $0.sizeThatFits(ProposedViewSize(width: $1, height: proposal.height)).height }
+            .max() ?? 0
+        return CGSize(width: widths.reduce(0, +), height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        for (subview, width) in zip(subviews, widths(for: ProposedViewSize(width: bounds.width, height: bounds.height), subviews: subviews)) {
+            subview.place(
+                at: CGPoint(x: x, y: bounds.minY),
+                proposal: ProposedViewSize(width: width, height: bounds.height)
+            )
+            x += width
+        }
     }
 }
 
