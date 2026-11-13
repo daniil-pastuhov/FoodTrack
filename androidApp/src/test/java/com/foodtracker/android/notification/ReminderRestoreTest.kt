@@ -56,9 +56,12 @@ class ReminderRestoreTest {
     @Before
     fun setUp() {
         alarms().toList().forEach { alarm -> alarm.operation?.let(alarmManager::cancel) }
-        // Lead of one day at 09:00, so an item due today or tomorrow is already past or close.
-        AndroidSettingsRepository(context).saveSettings(AppSettings(notifications = NotificationSettings()))
+        // Lead of one day at 09:00 unless a test says otherwise.
+        saveNotifications(NotificationSettings())
     }
+
+    private fun saveNotifications(notifications: NotificationSettings) =
+        AndroidSettingsRepository(context).saveSettings(AppSettings(notifications = notifications))
 
     @Test
     fun setsAReminderStillToCome() = runTest {
@@ -71,6 +74,24 @@ class ReminderRestoreTest {
     fun doesNotFireAgainAReminderWhoseTimeHasPassed() = runTest {
         // Due today: its reminder day was yesterday, so a normal schedule would fire it at once.
         NotificationHelper.restoreReminders(context, Items(listOf(item("today", daysOut = 0))))
+        assertEquals(0, alarms().size)
+    }
+
+    @Test
+    fun doesNotMoveAPassedReminderDayToLaterToday() = runTest {
+        // Reminders at 23:59, three days ahead. Due tomorrow, so its reminder day was two days
+        // ago: a normal schedule moves it to today at 23:59, still to come. A restore must not,
+        // or the reminder already shown comes back every evening until the date.
+        saveNotifications(NotificationSettings(leadDays = 3, hour = 23, minute = 59))
+        NotificationHelper.restoreReminders(context, Items(listOf(item("tomorrow", daysOut = 1))))
+        assertEquals(0, alarms().size)
+    }
+
+    @Test
+    fun skipsTodaysReminderOnceItsTimeHasGone() = runTest {
+        // Reminders at 00:00, a day ahead: due tomorrow, so today's reminder time has gone by.
+        saveNotifications(NotificationSettings(leadDays = 1, hour = 0, minute = 0))
+        NotificationHelper.restoreReminders(context, Items(listOf(item("tomorrow", daysOut = 1))))
         assertEquals(0, alarms().size)
     }
 

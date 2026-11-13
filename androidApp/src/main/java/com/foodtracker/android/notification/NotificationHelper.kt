@@ -186,6 +186,11 @@ object NotificationHelper {
             hour = notificationSettings.hour,
             minute = notificationSettings.minute
         ) ?: return
+        // Past its own day, the calculator moves a reminder to today so a late addition still
+        // gets one. A restore must not: that reminder has been shown already, and re-arming it
+        // would show it again every morning until the date.
+        val reminderDay = LocalDate.fromEpochDays(item.expiryDate.toEpochDays() - notificationSettings.leadDays)
+        if (!fireIfPast && payload.triggerDate != reminderDay) return
 
         val (title, body) = notificationCopy(
             context,
