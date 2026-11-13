@@ -16,16 +16,20 @@ screenshot sets, four each, in App Store Connect's media sections of the same na
 iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product page, and from
 April 2027 they are required for apps built with the iOS 27.1 SDK.
 
-Retake them after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry in
-every language, then `scripts/frame_screenshots.py <raw-dir> <folder>` adds the captions and
-device frame (the captions live in that script). Pick the simulator with `DEVICE_NAME`:
+Retake them after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
+(`scripts/demo_backup.py`) in every language, then `scripts/frame_screenshots.py <raw-dir>
+<folder>` adds the captions and device frame in Larder's colours (the captions live in that
+script). The Google Play set is made the same way: `ANDROID_SERIAL=<emulator>
+scripts/android_screenshots.sh <raw-dir>`, then `scripts/frame_screenshots.py <raw-dir>
+phone-screenshots`. On a slow machine, `SETTLE=<seconds>` waits longer before each capture. Pick the simulator with `DEVICE_NAME`:
 
 - `screenshots/`: the default, iPhone 17 Pro Max.
 - `medium-screenshots/`: `DEVICE_NAME="iPhone 17 Pro"`. Not an iOS 27.0 simulator: there the app
   hangs on its launch screen, waiting on the notification service, so every capture is blank.
-- `duo-inner-screenshots/`: `DEVICE_NAME="iPhone Duo"`, with the simulator open and upright.
-- `duo-outer-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=1`, with the simulator folded. The
-  pose is set in Xcode's Device Hub; simctl can't change it.
+- `duo-inner-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=3`, with the simulator unfolded.
+- `duo-outer-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=1`. A simulator booted without a
+  window comes up folded. The pose is set in Xcode's Device Hub (Xcode 27 has no Simulator app);
+  simctl can't change it. `xcrun simctl io <udid> enumerate` lists the screen IDs.
 - `ipad-screenshots/`: `DEVICE_NAME="iPad Pro 13-inch (M5)"`.
 
 Each folder also has the two images for the version page's "Header and Search Results" section,
