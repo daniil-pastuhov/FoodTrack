@@ -522,10 +522,12 @@ private fun ProductDetailButtons(
     onMoveToShoppingList: () -> Unit,
     onDelete: () -> Unit
 ) {
-    // In a tablet's detail pane the row is narrow enough for a label to break inside its
-    // button, "To shopping list" over two lines. One line there sends the button down a row
-    // instead. Phones keep wrapping, so a large font size never cuts a label short.
-    val labelLines = if (isExpanded()) 1 else Int.MAX_VALUE
+    // On a tablet the pane is wide: Use one takes the spare width and the rest keep their
+    // labels' own width, so "To shopping list" stays whole on one line instead of getting a
+    // fifth of the row. A button that doesn't fit moves down a row. Phones share the row by
+    // weight and let a label wrap, so a large font size never cuts one short.
+    val expanded = isExpanded()
+    val labelLines = if (expanded) 1 else Int.MAX_VALUE
     FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
@@ -541,7 +543,7 @@ private fun ProductDetailButtons(
         LarderButton(
             text = stringResource(R.string.detail_edit),
             onClick = onEdit,
-            modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
+            modifier = (if (expanded) Modifier else Modifier.weight(1f)).width(IntrinsicSize.Max),
             style = LarderButtonStyle.Outline,
             leadingIcon = LarderIcons.Pencil,
             maxLines = labelLines
@@ -549,7 +551,7 @@ private fun ProductDetailButtons(
         LarderButton(
             text = stringResource(R.string.detail_to_shopping_list),
             onClick = onMoveToShoppingList,
-            modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
+            modifier = (if (expanded) Modifier else Modifier.weight(1f)).width(IntrinsicSize.Max),
             style = LarderButtonStyle.Outline,
             leadingIcon = LarderIcons.ShoppingBasket,
             maxLines = labelLines
@@ -557,7 +559,7 @@ private fun ProductDetailButtons(
         LarderButton(
             text = stringResource(R.string.delete),
             onClick = onDelete,
-            modifier = Modifier.weight(1f).width(IntrinsicSize.Max),
+            modifier = (if (expanded) Modifier else Modifier.weight(1f)).width(IntrinsicSize.Max),
             style = LarderButtonStyle.DangerText,
             leadingIcon = LarderIcons.Trash2,
             maxLines = labelLines
