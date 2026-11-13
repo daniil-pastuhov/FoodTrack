@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Срокоед</string>
     <string name="nav_label_home">Главная</string>
-    <string name="nav_label_calendar">Календарь</string>
+    <string name="nav_label_recipe">Рецепт</string>
     <string name="nav_label_shopping_list">Покупки</string>
     <string name="nav_label_settings">Настройки</string>
     <string name="app_subtitle">Учёт продуктов и сроков годности</string>
@@ -267,10 +267,6 @@
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:</string>
     <string name="recipe_prompt_other_items_omitted">(+ещё %1$d продуктов не показано)</string>
-    <string name="share_recipe_dialog_title">Идеи рецептов</string>
-    <string name="share_recipe_include_other_items_title">Включить остальные продукты</string>
-    <string name="share_recipe_include_other_items_subtitle">Необязательно — поможет ИИ предложить рецепты с учётом того, что у вас уже есть</string>
-    <string name="share_recipe_share_button">Поделиться</string>
     <string name="share_recipe_cancel_button">Отмена</string>
 
     <string name="expires_today">Истекает сегодня</string>
@@ -363,28 +359,6 @@
     <string name="settings_content_description">Настройки</string>
     <string name="settings_title">Настройки</string>
 
-    <string name="calendar_content_description">Календарь</string>
-    <string name="calendar_previous_month">Предыдущий месяц</string>
-    <string name="calendar_next_month">Следующий месяц</string>
-    <string name="calendar_no_items_for_day">В этот день ничего не истекает</string>
-    <string name="calendar_section_overdue">Просрочено</string>
-    <string name="calendar_section_today">Сегодня</string>
-    <string name="calendar_section_tomorrow">Завтра</string>
-    <string name="calendar_section_this_week">Позже на этой неделе</string>
-    <string name="calendar_section_next_week">На следующей неделе</string>
-    <string name="calendar_section_later">Позже</string>
-    <string name="calendar_agenda_empty">В кладовой пока пусто</string>
-    <string name="calendar_show_all">Показать все</string>
-    <string name="calendar_swipe_used">Использовано</string>
-    <string name="calendar_swipe_tossed">Выброшено</string>
-    <string name="calendar_show_month">Показать месяц</string>
-    <string name="calendar_show_week">Показать неделю</string>
-    <plurals name="calendar_day_item_count">
-        <item quantity="one">Истекает %1$d продукт</item>
-        <item quantity="few">Истекает %1$d продукта</item>
-        <item quantity="many">Истекает %1$d продуктов</item>
-        <item quantity="other">Истекает %1$d продукта</item>
-    </plurals>
 
     <string name="settings_section_notifications">Уведомления</string>
     <string name="settings_notifications_enabled">Напоминать о сроке годности</string>
@@ -636,9 +610,6 @@
     <string name="detail_credit">Данные о продукте из Open Food Facts</string>
     <string name="detail_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
     <string name="detail_choose_item">Выберите продукт, чтобы увидеть подробности.</string>
-    <string name="recipe_intro">Запрос для ИИ-помощника из выбранных продуктов: %1$s. Он покинет устройство, только если вы им поделитесь.</string>
-    <string name="recipe_names_two">%1$s и %2$s</string>
-    <string name="recipe_names_three">%1$s, %2$s и %3$s</string>
     <plurals name="lede_use_by_tomorrow">
         <item quantity="one">%1$s продукт лучше использовать до завтра</item>
         <item quantity="few">%1$s продукта лучше использовать до завтра</item>
@@ -668,18 +639,6 @@
         <item quantity="few">Показать %d продукта</item>
         <item quantity="many">Показать %d продуктов</item>
         <item quantity="other">Показать %d продукта</item>
-    </plurals>
-    <plurals name="recipe_names_more">
-        <item quantity="one">%1$s, %2$s и ещё %3$d</item>
-        <item quantity="few">%1$s, %2$s и ещё %3$d</item>
-        <item quantity="many">%1$s, %2$s и ещё %3$d</item>
-        <item quantity="other">%1$s, %2$s и ещё %3$d</item>
-    </plurals>
-    <plurals name="recipe_include_others_count">
-        <item quantity="one">Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</item>
-        <item quantity="few">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
-        <item quantity="many">Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</item>
-        <item quantity="other">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
     </plurals>
     <string-array name="lede_number_words">
         <item>Один</item>
@@ -800,11 +759,8 @@
     <string name="discard_edit_message">Изменения в «%1$s» не сохранятся. Продукт останется прежним.</string>
 
 
-    <!-- Larder: Calendar -->
-    <string name="calendar_pane_title">Что истекает</string>
-    <string name="calendar_used_snackbar">%1$s: использовано</string>
-    <string name="calendar_tossed_snackbar">%1$s: выброшено</string>
-    <string name="calendar_empty_message">Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.</string>
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s: использовано</string>
 
     <!-- Onboarding -->
     <string name="onboarding_get_started">Начать</string>
@@ -836,4 +792,117 @@
     <string name="onboarding_declined_camera_title">Камера выключена</string>
     <string name="onboarding_declined_camera_body">Сканер покажет, как её разрешить</string>
     <string name="onboarding_add_by_hand">Добавить вручную</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Что приготовить</string>
+    <string name="recipe_saved_action">Сохранённые рецепты</string>
+    <string name="recipe_settings_action">Настройки рецептов</string>
+    <string name="recipe_cook_with">Готовим из</string>
+    <string name="recipe_add_other">Добавить другие продукты</string>
+    <string name="recipe_difficulty">Сложность</string>
+    <string name="recipe_difficulty_easy">Просто</string>
+    <string name="recipe_difficulty_medium">Средне</string>
+    <string name="recipe_difficulty_ambitious">Сложно</string>
+    <string name="recipe_servings">Порции</string>
+    <string name="recipe_servings_fewer">Меньше</string>
+    <string name="recipe_servings_more">Больше</string>
+    <string name="recipe_time">Время</string>
+    <string name="recipe_time_minutes">%1$d мин</string>
+    <string name="recipe_time_hour">1 час</string>
+    <string name="recipe_time_any">Любое</string>
+    <string name="recipe_more_options">Другие параметры</string>
+    <string name="recipe_detail_summary_brief">Краткая подробность</string>
+    <string name="recipe_detail_summary_standard">Обычная подробность</string>
+    <string name="recipe_detail_summary_step_by_step">Пошагово</string>
+    <string name="recipe_meal_summary_any">Любой приём пищи</string>
+    <string name="recipe_diet_summary_none">Без диеты</string>
+    <string name="recipe_share_prompt">Поделиться запросом</string>
+    <string name="recipe_copy_prompt">Скопировать запрос</string>
+    <string name="recipe_prompt_copied">Запрос скопирован</string>
+    <string name="recipe_prompt_clip_label">Запрос для рецепта</string>
+    <string name="recipe_generate_on_phone">Составить на этом телефоне</string>
+    <string name="recipe_cost_free">Бесплатно</string>
+    <string name="recipe_prompt_hint">Бесплатно: отправьте запрос в ИИ-приложение, которым вы уже пользуетесь.</string>
+    <string name="recipe_tick_hint">Отметьте хотя бы один продукт.</string>
+    <string name="recipe_writing_phone_title">Составляем на этом телефоне</string>
+    <string name="recipe_writing_phone_body">Ничего никуда не отправляется. Это может занять минуту.</string>
+    <string name="recipe_stop">Остановить</string>
+    <string name="recipe_failed_phone">Не удалось составить рецепт на этом телефоне.</string>
+    <string name="recipe_try_again">Повторить</string>
+    <string name="recipe_preparing_title">Телефон готовится</string>
+    <string name="recipe_preparing_body">Его собственная модель ещё загружается. А пока поделитесь запросом.</string>
+    <string name="recipe_empty_title">Пока не из чего готовить</string>
+    <string name="recipe_empty_body">Добавьте то, что есть дома, и продукты с ближайшим сроком будут выбраны за вас.</string>
+    <string name="recipe_done">Готово</string>
+    <string name="recipe_result_title">Рецепт</string>
+    <string name="recipe_share_recipe">Поделиться рецептом</string>
+    <string name="recipe_duration_hours">%1$d ч</string>
+    <string name="recipe_duration_hours_minutes">%1$d ч %2$d мин</string>
+    <string name="recipe_ingredients">Ингредиенты</string>
+    <string name="recipe_method">Приготовление</string>
+    <string name="recipe_in_pantry">Есть дома</string>
+    <string name="recipe_tip">Совет</string>
+    <string name="recipe_source_phone">Составлено на этом телефоне · Ничего не отправлялось</string>
+    <string name="recipe_source_server">Составлено нашим сервером · Сохранено на этом телефоне</string>
+    <string name="recipe_not_found">Этот рецепт больше не сохранён.</string>
+    <string name="recipe_saved_today">Сегодня</string>
+    <string name="recipe_saved_yesterday">Вчера</string>
+    <string name="recipe_saved_from_phone">Составлено на этом телефоне</string>
+    <string name="recipe_saved_from_pack">Из вашего пакета</string>
+    <string name="recipe_saved_empty_title">Пока нет рецептов</string>
+    <string name="recipe_saved_empty_body">Здесь хранятся рецепты и меню, составленные в приложении.</string>
+    <string name="recipe_deleted">Рецепт удалён</string>
+    <string name="recipe_cooking">Готовка</string>
+    <string name="recipe_cooking_desc">Применяются ко всем рецептам, запросам и меню, пока вы их не измените.</string>
+    <string name="recipe_detail">Подробность</string>
+    <string name="recipe_detail_brief">Кратко</string>
+    <string name="recipe_detail_standard">Обычно</string>
+    <string name="recipe_detail_step_by_step">Пошагово</string>
+    <string name="recipe_meal_and_diet">Приём пищи и диета</string>
+    <string name="recipe_meal">Приём пищи</string>
+    <string name="recipe_meal_any">Любой</string>
+    <string name="recipe_meal_breakfast">Завтрак</string>
+    <string name="recipe_meal_lunch">Обед</string>
+    <string name="recipe_meal_dinner">Ужин</string>
+    <string name="recipe_meal_snack">Перекус</string>
+    <string name="recipe_meal_dessert">Десерт</string>
+    <string name="recipe_diet">Диета</string>
+    <string name="recipe_diet_none">Нет</string>
+    <string name="recipe_diet_vegetarian">Вегетарианская</string>
+    <string name="recipe_diet_vegan">Веганская</string>
+    <string name="recipe_diet_pescatarian">Пескетарианская</string>
+    <string name="recipe_diet_gluten_free">Без глютена</string>
+    <string name="recipe_diet_dairy_free">Без молочного</string>
+    <string name="recipe_allergens_note">Список аллергенов из настроек применяется всегда: %1$s.</string>
+    <string name="recipe_allergens_none">пока пуст</string>
+    <string name="recipe_language">Язык</string>
+    <string name="recipe_write_in">Язык рецептов</string>
+    <string name="recipe_language_same_as_app">Как в приложении (%1$s)</string>
+    <string name="recipe_account">Аккаунт</string>
+    <string name="recipe_account_none">Аккаунта нет. Решать нужно только при покупке пакета, а бесплатные способы его никогда не используют.</string>
+    <string name="recipe_prompt_preferences_intro">Пожалуйста, учти:</string>
+    <string name="recipe_prompt_difficulty_easy">Простой рецепт, по силам новичку</string>
+    <string name="recipe_prompt_difficulty_medium">Средней сложности</string>
+    <string name="recipe_prompt_difficulty_ambitious">Посложнее, для увлечённого повара</string>
+    <string name="recipe_prompt_detail_brief">Коротко, в несколько шагов</string>
+    <string name="recipe_prompt_detail_standard">Обычная подробность</string>
+    <string name="recipe_prompt_detail_step_by_step">Подробно, каждый шаг</string>
+    <string name="recipe_prompt_servings">Порций: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Не дольше %1$d минут</string>
+    <string name="recipe_prompt_meal">Приём пищи: %1$s</string>
+    <string name="recipe_prompt_diet">Диета: %1$s</string>
+    <string name="recipe_prompt_allergens">Без продуктов, содержащих: %1$s</string>
+    <string name="recipe_prompt_language">Напиши рецепты на языке: %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">Ещё %1$d в ваших запасах</item>
+        <item quantity="few">Ещё %1$d в ваших запасах</item>
+        <item quantity="many">Ещё %1$d в ваших запасах</item>
+        <item quantity="other">Ещё %1$d в ваших запасах</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d порция</item>
+        <item quantity="few">%1$d порции</item>
+        <item quantity="many">%1$d порций</item>
+        <item quantity="other">%1$d порции</item>
+    </plurals>
 </resources>

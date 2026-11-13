@@ -172,6 +172,9 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.image.labeling)
+    // Gemini Nano through AICore, for writing recipes on the phone. Its minSdk is 26; the app's
+    // is 24, so the manifest overrides it and GeminiNanoRecipeModel checks the API level first.
+    implementation(libs.mlkit.genai.prompt)
 
     implementation(libs.zxing.core)
 

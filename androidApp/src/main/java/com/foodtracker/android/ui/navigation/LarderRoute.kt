@@ -9,7 +9,7 @@ import kotlinx.datetime.LocalDate
 /** Everywhere the app can go. The same list as iOS; see docs/design/IMPLEMENTATION.md. */
 sealed interface LarderRoute {
     data object Home : LarderRoute
-    data object Calendar : LarderRoute
+    data object Recipe : LarderRoute
     data object Shopping : LarderRoute
     data object Settings : LarderRoute
 
@@ -18,6 +18,11 @@ sealed interface LarderRoute {
     data class AddItem(val mode: AddItemMode = AddItemMode.New) : LarderRoute
     data class Scanner(val mode: CameraScanMode = CameraScanMode.BARCODE) : LarderRoute
     data object Categories : LarderRoute
+
+    /** A saved recipe or menu, by its saved row's id. */
+    data class RecipeResult(val savedId: String) : LarderRoute
+    data object SavedRecipes : LarderRoute
+    data object RecipeSettings : LarderRoute
     data object Onboarding : LarderRoute
 }
 
@@ -44,7 +49,7 @@ data class ItemPrefill(
 val LarderRoute.tab: LarderTab?
     get() = when (this) {
         LarderRoute.Home -> LarderTab.Home
-        LarderRoute.Calendar -> LarderTab.Calendar
+        LarderRoute.Recipe -> LarderTab.Recipe
         LarderRoute.Shopping -> LarderTab.Shopping
         LarderRoute.Settings -> LarderTab.Settings
         else -> null
@@ -53,7 +58,7 @@ val LarderRoute.tab: LarderTab?
 val LarderTab.route: LarderRoute
     get() = when (this) {
         LarderTab.Home -> LarderRoute.Home
-        LarderTab.Calendar -> LarderRoute.Calendar
+        LarderTab.Recipe -> LarderRoute.Recipe
         LarderTab.Shopping -> LarderRoute.Shopping
         LarderTab.Settings -> LarderRoute.Settings
     }

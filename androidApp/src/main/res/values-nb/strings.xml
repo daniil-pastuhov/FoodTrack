@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Matvakt</string>
     <string name="nav_label_home">Hjem</string>
-    <string name="nav_label_calendar">Kalender</string>
+    <string name="nav_label_recipe">Oppskrift</string>
     <string name="nav_label_shopping_list">Handleliste</string>
     <string name="nav_label_settings">Innstillinger</string>
     <string name="app_subtitle">Sporing av matvarer og utløpsdatoer</string>
@@ -257,10 +257,6 @@
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:</string>
     <string name="recipe_prompt_other_items_omitted">(+%1$d flere varer vises ikke)</string>
-    <string name="share_recipe_dialog_title">Få oppskriftsforslag</string>
-    <string name="share_recipe_include_other_items_title">Inkluder andre varer i matskapet</string>
-    <string name="share_recipe_include_other_items_subtitle">Valgfritt – lar AI-en foreslå oppskrifter med mer av det du allerede har</string>
-    <string name="share_recipe_share_button">Del</string>
     <string name="share_recipe_cancel_button">Avbryt</string>
 
     <string name="expires_today">Utløper i dag</string>
@@ -333,26 +329,6 @@
     <string name="settings_content_description">Innstillinger</string>
     <string name="settings_title">Innstillinger</string>
 
-    <string name="calendar_content_description">Kalender</string>
-    <string name="calendar_previous_month">Forrige måned</string>
-    <string name="calendar_next_month">Neste måned</string>
-    <string name="calendar_no_items_for_day">Ingen varer utløper denne dagen</string>
-    <string name="calendar_section_overdue">Utløpt</string>
-    <string name="calendar_section_today">I dag</string>
-    <string name="calendar_section_tomorrow">I morgen</string>
-    <string name="calendar_section_this_week">Senere denne uken</string>
-    <string name="calendar_section_next_week">Neste uke</string>
-    <string name="calendar_section_later">Senere</string>
-    <string name="calendar_agenda_empty">Ingenting i spiskammeret ennå</string>
-    <string name="calendar_show_all">Vis alle</string>
-    <string name="calendar_swipe_used">Brukt</string>
-    <string name="calendar_swipe_tossed">Kastet</string>
-    <string name="calendar_show_month">Vis måned</string>
-    <string name="calendar_show_week">Vis uke</string>
-    <plurals name="calendar_day_item_count">
-        <item quantity="one">%1$d vare utløper</item>
-        <item quantity="other">%1$d varer utløper</item>
-    </plurals>
 
     <string name="settings_section_notifications">Varsler</string>
     <string name="settings_notifications_enabled">Minn meg på før maten går ut på dato</string>
@@ -582,9 +558,6 @@
     <string name="detail_credit">Produktdata fra Open Food Facts</string>
     <string name="detail_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
     <string name="detail_choose_item">Velg en vare for å se detaljene.</string>
-    <string name="recipe_intro">Matvakt lager en ledetekst av %1$s som du kan dele med en KI-assistent. Ingenting forlater enheten før du velger hvor den skal sendes.</string>
-    <string name="recipe_names_two">%1$s og %2$s</string>
-    <string name="recipe_names_three">%1$s, %2$s og %3$s</string>
     <plurals name="lede_use_by_tomorrow">
         <item quantity="one">%1$s ting å bruke innen i morgen</item>
         <item quantity="other">%1$s ting å bruke innen i morgen</item>
@@ -604,14 +577,6 @@
     <plurals name="home_show_items">
         <item quantity="one">Vis %d vare</item>
         <item quantity="other">Vis %d varer</item>
-    </plurals>
-    <plurals name="recipe_names_more">
-        <item quantity="one">%1$s, %2$s og %3$d til</item>
-        <item quantity="other">%1$s, %2$s og %3$d til</item>
-    </plurals>
-    <plurals name="recipe_include_others_count">
-        <item quantity="one">Legger til den andre varen din, så assistenten kan bruke mer av det du har.</item>
-        <item quantity="other">Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</item>
     </plurals>
     <string-array name="lede_number_words">
         <item>Én</item>
@@ -726,11 +691,8 @@
     <string name="discard_edit_message">Endringene i %1$s blir ikke lagret. Varen forblir som den var.</string>
 
 
-    <!-- Larder: Calendar -->
-    <string name="calendar_pane_title">Hva som går ut</string>
-    <string name="calendar_used_snackbar">%1$s brukt</string>
-    <string name="calendar_tossed_snackbar">%1$s kastet</string>
-    <string name="calendar_empty_message">Legg til mat med dato, så dukker den opp her den dagen den går ut.</string>
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s brukt</string>
 
     <!-- Onboarding -->
     <string name="onboarding_get_started">Kom i gang</string>
@@ -762,4 +724,113 @@
     <string name="onboarding_declined_camera_title">Kameraet er av</string>
     <string name="onboarding_declined_camera_body">Skanneren viser hvordan du tillater det</string>
     <string name="onboarding_add_by_hand">Legg til et produkt manuelt</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Hva skal vi lage</string>
+    <string name="recipe_saved_action">Lagrede oppskrifter</string>
+    <string name="recipe_settings_action">Oppskriftsinnstillinger</string>
+    <string name="recipe_cook_with">Lag mat med</string>
+    <string name="recipe_add_other">Legg til andre varer</string>
+    <string name="recipe_difficulty">Vanskelighetsgrad</string>
+    <string name="recipe_difficulty_easy">Enkel</string>
+    <string name="recipe_difficulty_medium">Middels</string>
+    <string name="recipe_difficulty_ambitious">Ambisiøs</string>
+    <string name="recipe_servings">Porsjoner</string>
+    <string name="recipe_servings_fewer">Færre</string>
+    <string name="recipe_servings_more">Flere</string>
+    <string name="recipe_time">Tid</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 time</string>
+    <string name="recipe_time_any">Uansett</string>
+    <string name="recipe_more_options">Flere valg</string>
+    <string name="recipe_detail_summary_brief">Kort detaljnivå</string>
+    <string name="recipe_detail_summary_standard">Vanlig detaljnivå</string>
+    <string name="recipe_detail_summary_step_by_step">Steg for steg</string>
+    <string name="recipe_meal_summary_any">Alle måltider</string>
+    <string name="recipe_diet_summary_none">Ingen diett</string>
+    <string name="recipe_share_prompt">Del ledeteksten</string>
+    <string name="recipe_copy_prompt">Kopier ledeteksten</string>
+    <string name="recipe_prompt_copied">Ledeteksten er kopiert</string>
+    <string name="recipe_prompt_clip_label">Ledetekst for oppskrift</string>
+    <string name="recipe_generate_on_phone">Lag på denne telefonen</string>
+    <string name="recipe_cost_free">Gratis</string>
+    <string name="recipe_prompt_hint">Gratis: send ledeteksten til en KI-app du allerede bruker.</string>
+    <string name="recipe_tick_hint">Kryss av minst én vare å lage mat med.</string>
+    <string name="recipe_writing_phone_title">Skriver på denne telefonen</string>
+    <string name="recipe_writing_phone_body">Ingenting sendes noe sted. Dette kan ta et minutt.</string>
+    <string name="recipe_stop">Stopp</string>
+    <string name="recipe_failed_phone">Klarte ikke å lage oppskriften på denne telefonen.</string>
+    <string name="recipe_try_again">Prøv igjen</string>
+    <string name="recipe_preparing_title">Telefonen gjør seg klar</string>
+    <string name="recipe_preparing_body">Den egne modellen lastes fortsatt ned. Til da kan du dele ledeteksten.</string>
+    <string name="recipe_empty_title">Ingenting å lage mat med ennå</string>
+    <string name="recipe_empty_body">Legg til det du har hjemme, så velges varene som er nærmest datoen for deg.</string>
+    <string name="recipe_done">Ferdig</string>
+    <string name="recipe_result_title">Oppskrift</string>
+    <string name="recipe_share_recipe">Del oppskriften</string>
+    <string name="recipe_duration_hours">%1$d t</string>
+    <string name="recipe_duration_hours_minutes">%1$d t %2$d min</string>
+    <string name="recipe_ingredients">Ingredienser</string>
+    <string name="recipe_method">Fremgangsmåte</string>
+    <string name="recipe_in_pantry">I matskapet</string>
+    <string name="recipe_tip">Tips</string>
+    <string name="recipe_source_phone">Laget på denne telefonen · Ingenting ble sendt</string>
+    <string name="recipe_source_server">Laget av serveren vår · Lagret på denne telefonen</string>
+    <string name="recipe_not_found">Denne oppskriften er ikke lagret lenger.</string>
+    <string name="recipe_saved_today">I dag</string>
+    <string name="recipe_saved_yesterday">I går</string>
+    <string name="recipe_saved_from_phone">Laget på denne telefonen</string>
+    <string name="recipe_saved_from_pack">Fra pakken din</string>
+    <string name="recipe_saved_empty_title">Ingen oppskrifter ennå</string>
+    <string name="recipe_saved_empty_body">Oppskrifter og menyer laget i appen lagres her.</string>
+    <string name="recipe_deleted">Oppskriften er slettet</string>
+    <string name="recipe_cooking">Matlaging</string>
+    <string name="recipe_cooking_desc">Brukes for hver oppskrift, ledetekst og meny til du endrer dem.</string>
+    <string name="recipe_detail">Detaljnivå</string>
+    <string name="recipe_detail_brief">Kort</string>
+    <string name="recipe_detail_standard">Vanlig</string>
+    <string name="recipe_detail_step_by_step">Steg for steg</string>
+    <string name="recipe_meal_and_diet">Måltid og diett</string>
+    <string name="recipe_meal">Måltid</string>
+    <string name="recipe_meal_any">Alle</string>
+    <string name="recipe_meal_breakfast">Frokost</string>
+    <string name="recipe_meal_lunch">Lunsj</string>
+    <string name="recipe_meal_dinner">Middag</string>
+    <string name="recipe_meal_snack">Mellommåltid</string>
+    <string name="recipe_meal_dessert">Dessert</string>
+    <string name="recipe_diet">Diett</string>
+    <string name="recipe_diet_none">Ingen</string>
+    <string name="recipe_diet_vegetarian">Vegetarisk</string>
+    <string name="recipe_diet_vegan">Vegansk</string>
+    <string name="recipe_diet_pescatarian">Pescetariansk</string>
+    <string name="recipe_diet_gluten_free">Glutenfri</string>
+    <string name="recipe_diet_dairy_free">Melkefri</string>
+    <string name="recipe_allergens_note">Allergenlisten din fra Innstillinger brukes alltid: %1$s.</string>
+    <string name="recipe_allergens_none">ingen ennå</string>
+    <string name="recipe_language">Språk</string>
+    <string name="recipe_write_in">Skriv oppskrifter på</string>
+    <string name="recipe_language_same_as_app">Samme som appen (%1$s)</string>
+    <string name="recipe_account">Konto</string>
+    <string name="recipe_account_none">Ingen konto. Du trenger bare å bestemme deg når du kjøper en pakke, og de gratis måtene bruker aldri en konto.</string>
+    <string name="recipe_prompt_preferences_intro">Ta hensyn til dette:</string>
+    <string name="recipe_prompt_difficulty_easy">Enkel å lage, for en nybegynner</string>
+    <string name="recipe_prompt_difficulty_medium">Middels vanskelig</string>
+    <string name="recipe_prompt_difficulty_ambitious">Ambisiøs, for en ivrig kokk</string>
+    <string name="recipe_prompt_detail_brief">En kort fremgangsmåte i noen få steg</string>
+    <string name="recipe_prompt_detail_standard">Vanlig detaljnivå</string>
+    <string name="recipe_prompt_detail_step_by_step">Hvert steg forklart</string>
+    <string name="recipe_prompt_servings">Porsjoner: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Klar på %1$d minutter eller mindre</string>
+    <string name="recipe_prompt_meal">Måltid: %1$s</string>
+    <string name="recipe_prompt_diet">Diett: %1$s</string>
+    <string name="recipe_prompt_allergens">Ingenting som inneholder: %1$s</string>
+    <string name="recipe_prompt_language">Skriv oppskriftene på %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d til i matskapet</item>
+        <item quantity="other">%1$d til i matskapet</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d porsjon</item>
+        <item quantity="other">%1$d porsjoner</item>
+    </plurals>
 </resources>

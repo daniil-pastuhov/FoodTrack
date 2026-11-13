@@ -32,9 +32,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,7 +59,6 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -81,7 +78,6 @@ import com.foodtracker.android.ui.design.LarderButtonStyle
 import com.foodtracker.android.ui.design.LarderCallout
 import com.foodtracker.android.ui.design.LarderCalloutKind
 import com.foodtracker.android.ui.design.LarderChip
-import com.foodtracker.android.ui.design.LarderDialog
 import com.foodtracker.android.ui.design.LarderDivider
 import com.foodtracker.android.ui.design.LarderGroupPosition
 import com.foodtracker.android.ui.design.LarderIcon
@@ -100,7 +96,6 @@ import com.foodtracker.android.ui.navigation.LocalLarderNavigator
 import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.util.categoryLabel
-import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.SortOption
@@ -143,15 +138,6 @@ internal fun homeLedeText(resources: Resources, lede: HomeLede): String? = when 
     HomeLede.NothingThisWeek -> resources.getString(R.string.lede_nothing_this_week)
 }
 
-/** "A and B", "A, B and C", then "A, B and 3 others", so the dialog stays short. */
-internal fun recipeNames(resources: Resources, names: List<String>): String = when (names.size) {
-    0 -> ""
-    1 -> names[0]
-    2 -> resources.getString(R.string.recipe_names_two, names[0], names[1])
-    3 -> resources.getString(R.string.recipe_names_three, names[0], names[1], names[2])
-    else -> resources.getQuantityString(R.plurals.recipe_names_more, names.size - 2, names[0], names[1], names.size - 2)
-}
-
 /**
  * Which product the right-hand pane shows: the one picked, while it is still in the list, else the
  * first row. Nothing is picked for you while searching, and selecting always leaves the pane blank.
@@ -186,7 +172,9 @@ fun PantryDashboardScreen(
     remindersCalloutDismissed: Boolean = false,
     onDismissRemindersCallout: () -> Unit = {},
     /** Draws the product detail in the right-hand pane on expanded windows. */
-    detailPane: @Composable (itemId: String) -> Unit = {}
+    detailPane: @Composable (itemId: String) -> Unit = {},
+    /** Multi-select's Get recipe ideas: opens the Recipe tab with these items ticked. */
+    onRecipeIdeas: (Set<String>) -> Unit = {}
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -196,7 +184,6 @@ fun PantryDashboardScreen(
     val expanded = isExpanded()
 
     var filterSheet by remember { mutableStateOf<FilterSheetPage?>(null) }
-    var showRecipeDialog by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
     // Opens with the query still set when coming back from another tab, so the list is never
     // filtered by a search nobody can see.
@@ -441,7 +428,10 @@ fun PantryDashboardScreen(
 
             if (selecting) {
                 SelectionActions(
-                    onRecipeIdeas = { showRecipeDialog = true },
+                    onRecipeIdeas = {
+                        onRecipeIdeas(selectedIds)
+                        selectedIds = emptySet()
+                    },
                     onDelete = {
                         onDeleteItems(selectedIds)
                         selectedIds = emptySet()
@@ -462,19 +452,6 @@ fun PantryDashboardScreen(
                 if (paneItemId != null) detailPane(paneItemId) else NothingChosen()
             }
         }
-    }
-
-    if (showRecipeDialog) {
-        RecipeIdeasDialog(
-            selected = state.items.filter { it.id in selectedIds },
-            others = state.items.filter { it.id !in selectedIds },
-            onShare = { selected, others ->
-                showRecipeDialog = false
-                shareRecipePrompt(context, selected, others)
-                selectedIds = emptySet()
-            },
-            onDismiss = { showRecipeDialog = false }
-        )
     }
 
     filterSheet?.let { page ->
@@ -743,56 +720,6 @@ private fun NothingChosen() {
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-}
-
-@Composable
-private fun RecipeIdeasDialog(
-    selected: List<PantryItem>,
-    others: List<PantryItem>,
-    onShare: (selected: List<PantryItem>, others: List<PantryItem>) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val resources = LocalContext.current.resources
-    var includeOthers by remember { mutableStateOf(false) }
-    LarderDialog(
-        title = stringResource(R.string.share_recipe_dialog_title),
-        text = stringResource(R.string.recipe_intro, recipeNames(resources, selected.map { it.name })),
-        confirmLabel = stringResource(R.string.share_recipe_share_button),
-        onConfirm = { onShare(selected, if (includeOthers) others else emptyList()) },
-        onDismissRequest = onDismiss,
-        dismissLabel = stringResource(R.string.share_recipe_cancel_button),
-        content = if (others.isEmpty()) {
-            null
-        } else {
-            {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .toggleable(includeOthers, role = Role.Checkbox, onValueChange = { includeOthers = it }),
-                    verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(LarderSpace.s1)
-                ) {
-                    Checkbox(checked = includeOthers, onCheckedChange = null, modifier = Modifier.size(LarderSize.touch))
-                    Column(modifier = Modifier.padding(vertical = LarderSpace.s2)) {
-                        Text(
-                            text = stringResource(R.string.share_recipe_include_other_items_title),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (includeOthers) {
-                                pluralStringResource(R.plurals.recipe_include_others_count, others.size, others.size)
-                            } else {
-                                stringResource(R.string.share_recipe_include_other_items_subtitle)
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        }
-    )
 }
 
 private enum class FilterSheetPage { Filters, Sort }

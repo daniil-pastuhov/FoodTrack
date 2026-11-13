@@ -24,7 +24,7 @@ import com.foodtracker.repository.PantryRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
-import com.foodtracker.android.util.shareRecipePrompt
+import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -33,6 +33,7 @@ import org.koin.android.ext.android.inject
 class MainActivity : ComponentActivity() {
 
     private val stateHolder: PantryStateHolder by inject()
+    private val recipeStateHolder: RecipeStateHolder by inject()
     private val pantryRepository: PantryRepository by inject()
 
     // Hoisted out of the composable (rather than `remember`ed) so the Shopping List widget's
@@ -90,6 +91,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             FoodTrackerRoot(
                 stateHolder = stateHolder,
+                recipeStateHolder = recipeStateHolder,
                 currentScreenState = currentScreenState,
                 onAddCurrentLocationAsStore = ::resolveCurrentLocation,
                 backgroundLocationDisclosureState = backgroundLocationDisclosureState,
@@ -103,7 +105,7 @@ class MainActivity : ComponentActivity() {
     /**
      * Debug builds only, for scripts/android_screenshots.sh: `--es demoBackup <path>` replaces
      * everything with that backup file, as Settings' Replace restore does, and `--es demoTab
-     * <home|calendar|shopping|settings>` opens that tab, or `edit:<item id>` that item's Edit
+     * <home|recipe|shopping|settings>` opens that tab, or `edit:<item id>` that item's Edit
      * screen. The counterpart of iOS's `-demoBackup` and `-demoTab` launch arguments. A restore
      * also marks onboarding done, so onboarding is skipped from the next launch on.
      */
@@ -124,7 +126,7 @@ class MainActivity : ComponentActivity() {
             tab.startsWith("edit:") ->
                 currentScreenState.value = LarderRoute.AddItem(AddItemMode.Edit(tab.removePrefix("edit:")))
             tab == "home" -> currentScreenState.value = LarderRoute.Home
-            tab == "calendar" -> currentScreenState.value = LarderRoute.Calendar
+            tab == "recipe" -> currentScreenState.value = LarderRoute.Recipe
             tab == "shopping" -> currentScreenState.value = LarderRoute.Shopping
             tab == "settings" -> currentScreenState.value = LarderRoute.Settings
         }
@@ -177,9 +179,9 @@ class MainActivity : ComponentActivity() {
      * for no benefit.
      */
     private fun applyScreenFromIntent(intent: Intent) {
-        if (shareRecipeFromIntent(intent)) return
         // First run finishes before anything else opens.
         if (currentScreenState.value == LarderRoute.Onboarding) return
+        if (openRecipeFromIntent(intent)) return
         if (intent.getBooleanExtra(EXTRA_OPEN_SHOPPING_LIST, false)) {
             currentScreenState.value = LarderRoute.Shopping
             return
@@ -197,25 +199,22 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Handles the digest notification's "Recipe ideas" action, which carries the ids of the
-     * items it reported. Returns true when it consumed the intent, so the caller leaves the
-     * current screen alone — this action isn't a navigation request, it raises a share sheet
-     * over whatever the user was already looking at.
+     * items it reported: opens the Recipe tab with those ticked. Nothing is written or shared by
+     * itself; the person still chooses a route.
      *
-     * The ids are resolved against live pantry state rather than trusting names baked into the
-     * intent, so anything eaten between the notification firing and the button being tapped
-     * simply drops out of the prompt. If nothing resolves (the whole set is gone), the share is
-     * skipped by [shareRecipePrompt] itself.
+     * The ids are resolved against the live pantry by the Recipe tab, so anything eaten between
+     * the notification firing and the tap simply drops out (and ids work before the pantry has
+     * loaded, on a cold start).
      *
      * The extra is cleared afterwards because [setIntent] makes this intent the activity's
-     * current one: without that, a later configuration change or a return from the chooser
-     * re-runs [applyScreenFromIntent] and raises the share sheet a second time.
+     * current one: without that, a later configuration change re-runs [applyScreenFromIntent]
+     * and resets the person's ticks.
      */
-    private fun shareRecipeFromIntent(intent: Intent): Boolean {
+    private fun openRecipeFromIntent(intent: Intent): Boolean {
         val ids = intent.getStringArrayListExtra(EXTRA_RECIPE_FOR_IDS) ?: return false
         intent.removeExtra(EXTRA_RECIPE_FOR_IDS)
-        val requested = ids.toSet()
-        val items = stateHolder.uiState.value.items.filter { it.id in requested }
-        shareRecipePrompt(this, items)
+        recipeStateHolder.selectItems(ids)
+        currentScreenState.value = LarderRoute.Recipe
         return true
     }
 
@@ -294,8 +293,8 @@ class MainActivity : ComponentActivity() {
         const val EXTRA_OPEN_DASHBOARD = "com.foodtracker.android.EXTRA_OPEN_DASHBOARD"
         const val EXTRA_SHORTCUT = "com.foodtracker.android.EXTRA_SHORTCUT"
 
-        /** Pantry item ids the digest notification's "Recipe ideas" action asks to build a
-         *  prompt for. See [shareRecipeFromIntent]. */
+        /** Pantry item ids the digest notification's "Recipe ideas" action opens the Recipe tab
+         *  with. See [openRecipeFromIntent]. */
         const val EXTRA_RECIPE_FOR_IDS = "com.foodtracker.android.EXTRA_RECIPE_FOR_IDS"
         const val SHORTCUT_SCAN = "scan"
         const val SHORTCUT_ADD_ITEM = "add_item"

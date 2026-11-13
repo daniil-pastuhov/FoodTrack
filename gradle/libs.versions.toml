@@ -12,6 +12,7 @@ camerax = "1.6.2"
 mlkit-barcode = "17.3.0"
 mlkit-text = "16.0.1"
 mlkit-image-labeling = "17.0.9"
+mlkit-genai-prompt = "1.0.0-beta5"
 coil = "2.7.0"
 desugar-jdk = "2.1.5"
 room = "2.8.4"
@@ -78,6 +79,7 @@ zxing-core = { module = "com.google.zxing:core", version.ref = "zxing-core" }
 mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkit-barcode" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text" }
 mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkit-image-labeling" }
+mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
 
 # Geofencing for the "you are near a shop" shopping-list reminder (StoreGeofenceManager).
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
