@@ -35,6 +35,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -276,15 +278,15 @@ fun <T> LarderSegmented(
     onSelect: (T) -> Unit,
     label: @Composable (T) -> String,
     modifier: Modifier = Modifier,
-    /** Shares the full width equally between the segments, rather than hugging their labels. */
+    /** Spreads the segments over the full width: each gets its label's width plus an equal share
+     *  of what's left, so a long label such as "По продуктам" stays on one line. */
     fill: Boolean = false
 ) {
     val scheme = MaterialTheme.colorScheme
     val outline = scheme.outline
-    Row(
+    Layout(
         modifier = modifier
             .then(if (fill) Modifier.fillMaxWidth() else Modifier)
-            .height(IntrinsicSize.Min)
             .drawBehind {
                 val inset = LarderSpace.s1.toPx()
                 val height = size.height - inset * 2
@@ -296,17 +298,14 @@ fun <T> LarderSegmented(
                     style = Stroke(1.dp.toPx())
                 )
             }
-            .selectableGroup()
-    ) {
+            .selectableGroup(),
+        content = {
         options.forEachIndexed { index, option ->
             val isSelected = option == selected
             val startPercent = if (index == 0) 50 else 0
             val endPercent = if (index == options.lastIndex) 50 else 0
             Box(
                 modifier = Modifier
-                    // Without fill each segment is as wide as its label, so a long one stays on
-                    // one line rather than being capped at an equal share.
-                    .then(if (fill) Modifier.weight(1f) else Modifier)
                     .fillMaxHeight()
                     .heightIn(min = LarderSize.touch)
                     .selectable(
@@ -328,7 +327,36 @@ fun <T> LarderSegmented(
                 )
             }
         }
+        }
+    ) { measurables, constraints ->
+        val ideal = measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) }
+        val widths = segmentWidths(ideal, if (constraints.hasBoundedWidth) constraints.maxWidth else null, fill)
+        // One height for all, so the selected fill and the outline line up.
+        val height = measurables.zip(widths) { m, w -> m.minIntrinsicHeight(w) }
+            .maxOrNull()
+            ?.coerceIn(constraints.minHeight, constraints.maxHeight) ?: constraints.minHeight
+        val placeables = measurables.zip(widths) { m, w -> m.measure(Constraints.fixed(w, height)) }
+        layout(widths.sum().coerceIn(constraints.minWidth, constraints.maxWidth), height) {
+            var x = 0
+            placeables.forEach { it.placeRelative(x, 0); x += it.width }
+        }
     }
+}
+
+/** Segment widths from their labels' [ideal] widths. With [fill], the spare width up to
+ *  [available] is shared equally; when there isn't enough, each shrinks in proportion. */
+internal fun segmentWidths(ideal: List<Int>, available: Int?, fill: Boolean): List<Int> {
+    val total = ideal.sum()
+    if (available == null || total <= 0 || ideal.isEmpty()) return ideal
+    if (total > available) {
+        val scaled = ideal.map { it * available / total }
+        // Rounding leftovers go to the first segment, so the row fills exactly.
+        return scaled.mapIndexed { i, w -> if (i == 0) w + available - scaled.sum() else w }
+    }
+    if (!fill) return ideal
+    val extra = available - total
+    val share = extra / ideal.size
+    return ideal.mapIndexed { i, w -> w + share + if (i == 0) extra - share * ideal.size else 0 }
 }
 
 /** A small count, such as the shopping list's on the nav. Shows 99+ above 99. Callers put the
