@@ -159,6 +159,13 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Purchases paid while the app was away (a pending payment that cleared, a server that
+        // was unreachable) are sent again here. Nothing happens for someone who never bought.
+        recipeStateHolder.onAppResume()
+    }
+
     override fun onStop() {
         unregisterReceiver(dateChangeReceiver)
         super.onStop()

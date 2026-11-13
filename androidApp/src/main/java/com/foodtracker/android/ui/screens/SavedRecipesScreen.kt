@@ -55,9 +55,18 @@ import kotlin.time.Instant
 internal fun savedRecipeDate(saved: SavedRecipe, zone: TimeZone = TimeZone.currentSystemDefault()): LocalDate =
     Instant.fromEpochMilliseconds(saved.createdAtEpochMillis).toLocalDateTime(zone).date
 
-/** "15 min · Written on this phone" after the day; the day itself is formatted by the caller. */
+/** A recipe's own title; a menu in the app's words, whatever language it was saved under. */
+internal fun savedRecipeTitle(resources: Resources, saved: SavedRecipe): String =
+    if (saved.kind == SavedRecipeKind.MENU) resources.getString(R.string.recipe_menu_title) else saved.title
+
+/** "15 min · Written on this phone", or "9 dishes · From your pack" for a menu, after the day;
+ *  the day itself is formatted by the caller. */
 internal fun savedRecipeDetails(resources: Resources, saved: SavedRecipe): List<String> = listOfNotNull(
-    saved.recipe?.minutes?.takeIf { it > 0 }?.let { recipeDurationLabel(resources, it) },
+    if (saved.kind == SavedRecipeKind.MENU) {
+        resources.getQuantityString(R.plurals.recipe_saved_dishes, saved.dishCount, saved.dishCount)
+    } else {
+        saved.recipe?.minutes?.takeIf { it > 0 }?.let { recipeDurationLabel(resources, it) }
+    },
     resources.getString(
         if (saved.source == RecipeSource.DEVICE) R.string.recipe_saved_from_phone else R.string.recipe_saved_from_pack
     )
@@ -72,8 +81,8 @@ fun SavedRecipesScreen(
     onDelete: (String) -> Unit
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
-    // Menus come with the paid step; until then only recipes can be opened.
-    val saved = state.saved.filter { it.kind == SavedRecipeKind.RECIPE }
+    // Recipes and menus alike, newest first.
+    val saved = state.saved
     Scaffold(
         topBar = { LarderTopBar(title = stringResource(R.string.recipe_saved_action), onBack = onBack) },
         modifier = Modifier.fillMaxSize()
@@ -131,11 +140,11 @@ private fun SavedRecipesList(
                         .larderGroupItem(LarderGroupPosition.of(index, saved.size))
                 ) {
                     LarderListItem(
-                        title = item.title,
+                        title = savedRecipeTitle(resources, item),
                         supporting = (listOf(day) + savedRecipeDetails(resources, item)).joinToString(" · "),
                         // The swipe slides this over its reveal, so it can't be see-through.
                         modifier = Modifier.background(MaterialTheme.colorScheme.surface),
-                        leading = { LarderThumb(imageUrl = null, fallbackIcon = LarderIcons.Utensils) },
+                        leading = { LarderThumb(imageUrl = null, fallbackIcon = if (item.kind == SavedRecipeKind.MENU) LarderIcons.CalendarRange else LarderIcons.Utensils) },
                         trailing = {
                             LarderIcon(
                                 LarderIcons.ChevronRight,

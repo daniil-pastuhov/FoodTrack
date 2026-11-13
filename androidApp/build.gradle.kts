@@ -45,6 +45,14 @@ android {
 
         // Read by the firebase_crashlytics_collection_enabled meta-data in AndroidManifest.xml.
         manifestPlaceholders["crashlyticsCollectionEnabled"] = true
+
+        // The paid Recipe route in builds not installed from Google Play, which can't pass Play
+        // Integrity. Debug builds only (see the debug block): -PrecipeEmulatorHost=10.0.2.2
+        // points them at the Firebase emulator suite (functions/README.md), and
+        // -PrecipePaidRoute=true turns the route on against the real project, with a debug App
+        // Check token registered in the console. Neither is ever set for a release build.
+        buildConfigField("String", "RECIPE_EMULATOR_HOST", "\"\"")
+        buildConfigField("boolean", "RECIPE_PAID_ROUTE_IN_DEBUG", "false")
     }
 
     signingConfigs {
@@ -65,6 +73,13 @@ android {
         // Crashes hit while developing would only bury the ones real users run into.
         debug {
             manifestPlaceholders["crashlyticsCollectionEnabled"] = false
+            val emulatorHost = providers.gradleProperty("recipeEmulatorHost").getOrElse("")
+            buildConfigField("String", "RECIPE_EMULATOR_HOST", "\"$emulatorHost\"")
+            buildConfigField(
+                "boolean",
+                "RECIPE_PAID_ROUTE_IN_DEBUG",
+                (emulatorHost.isNotEmpty() || providers.gradleProperty("recipePaidRoute").getOrElse("false") == "true").toString()
+            )
         }
         release {
             isMinifyEnabled = true
@@ -94,6 +109,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -182,6 +198,16 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
+    // The paid Recipe route. Nothing from these runs until a purchase starts (see
+    // FirebaseRecipeServices); the debug App Check provider is in debug builds only.
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
+    implementation(libs.play.billing.ktx)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.datetime)

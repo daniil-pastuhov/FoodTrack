@@ -905,4 +905,158 @@
         <item quantity="many">%1$d порций</item>
         <item quantity="other">%1$d порции</item>
     </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Осталось рецептов: %1$d. Купить ещё</string>
+    <string name="recipe_mode_label">Что составить</string>
+    <string name="recipe_mode_recipe">Рецепт</string>
+    <string name="recipe_mode_menu">Меню на 3 дня</string>
+    <string name="recipe_courses">Блюд в день</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d блюдо</item>
+        <item quantity="few">%1$d блюда</item>
+        <item quantity="many">%1$d блюд</item>
+        <item quantity="other">%1$d блюда</item>
+    </plurals>
+    <string name="recipe_generate">Составить рецепт</string>
+    <string name="recipe_generate_menu">Составить меню</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d рецепт</item>
+        <item quantity="few">%1$d рецепта</item>
+        <item quantity="many">%1$d рецептов</item>
+        <item quantity="other">%1$d рецепта</item>
+    </plurals>
+    <string name="recipe_buy">Купить рецепты</string>
+    <string name="recipe_menu_hint">Меню составляется на нашем сервере и стоит 3 рецепта из пакета.</string>
+    <string name="recipe_menu_short_title">Для меню нужно 3 рецепта</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">У вас остался %1$d. Отдельный рецепт составить можно.</item>
+        <item quantity="few">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
+        <item quantity="many">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
+        <item quantity="other">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
+    </plurals>
+    <string name="recipe_writing_server_title">Составляем рецепт</string>
+    <string name="recipe_writing_server_body">Несколько секунд. Рецепт списывается, только когда он готов.</string>
+    <string name="recipe_writing_menu_title">Планируем три дня</string>
+    <string name="recipe_writing_menu_body">Это может занять до двух минут. С экрана можно уйти: меню появится в сохранённых рецептах.</string>
+    <string name="recipe_offline_title">Нет соединения</string>
+    <string name="recipe_offline_body">Рецептам из пакета нужен интернет. Бесплатные способы ниже работают.</string>
+    <string name="recipe_failed_server">Не удалось составить рецепт. Рецепт не списан.</string>
+    <plurals name="recipe_refused">
+        <item quantity="one">Не получилось составить рецепт из этих продуктов. Списан %1$d рецепт.</item>
+        <item quantity="few">Не получилось составить рецепт из этих продуктов. Списано %1$d рецепта.</item>
+        <item quantity="many">Не получилось составить рецепт из этих продуктов. Списано %1$d рецептов.</item>
+        <item quantity="other">Не получилось составить рецепт из этих продуктов. Списано %1$d рецепта.</item>
+    </plurals>
+    <string name="recipe_paused_title">Рецепты из пакетов приостановлены</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Ваш %1$d рецепт сохранён. Бесплатные способы ниже работают.</item>
+        <item quantity="few">Ваши %1$d рецепта сохранены. Бесплатные способы ниже работают.</item>
+        <item quantity="many">Ваши %1$d рецептов сохранены. Бесплатные способы ниже работают.</item>
+        <item quantity="other">Ваши %1$d рецепта сохранены. Бесплатные способы ниже работают.</item>
+    </plurals>
+    <plurals name="recipe_added">
+        <item quantity="one">Добавлен %1$d рецепт</item>
+        <item quantity="few">Добавлено %1$d рецепта</item>
+        <item quantity="many">Добавлено %1$d рецептов</item>
+        <item quantity="other">Добавлено %1$d рецепта</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Сохранено. Остался %1$d рецепт</item>
+        <item quantity="few">Сохранено. Осталось %1$d рецепта</item>
+        <item quantity="many">Сохранено. Осталось %1$d рецептов</item>
+        <item quantity="other">Сохранено. Осталось %1$d рецепта</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Покупка подтверждается</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Вы оплатили %1$d рецепт, он ещё не добавлен. Мы продолжаем попытки, покупать заново не нужно.</item>
+        <item quantity="few">Вы оплатили %1$d рецепта, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</item>
+        <item quantity="many">Вы оплатили %1$d рецептов, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</item>
+        <item quantity="other">Вы оплатили %1$d рецепта, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</item>
+    </plurals>
+    <string name="recipe_try_now">Повторить сейчас</string>
+    <string name="recipe_pending_title">Ожидаем оплату</string>
+    <string name="recipe_pending_body">Рецепты добавятся, когда магазин подтвердит оплату. Это может занять время.</string>
+    <string name="recipe_packs_body">Один рецепт — одно блюдо от нашего сервера. Меню на 3 дня стоит 3. Срок у рецептов не ограничен.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d рецепт</item>
+        <item quantity="few">%1$d рецепта</item>
+        <item quantity="many">%1$d рецептов</item>
+        <item quantity="other">%1$d рецепта</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s за рецепт</string>
+    <string name="recipe_cancel">Отмена</string>
+    <string name="recipe_back">Назад</string>
+    <string name="recipe_close">Закрыть</string>
+    <string name="recipe_ok">ОК</string>
+    <string name="recipe_choice_title">Где хранить ваши рецепты?</string>
+    <string name="recipe_choice_body">Выбор делается один раз. Войти можно и позже, в настройках рецептов.</string>
+    <string name="recipe_choice_phone_title">На этом телефоне, без аккаунта</string>
+    <string name="recipe_choice_phone_body">Входить никуда не нужно. Рецепты привязаны к этой установке приложения: если удалить приложение или сменить телефон, неиспользованные пропадут.</string>
+    <string name="recipe_choice_account_title">В аккаунте</string>
+    <string name="recipe_choice_account_body">Войдите через Apple или Google. Рецепты переедут с вами на новый телефон и работают и на Android, и на iPhone. Мы храним идентификатор аккаунта и адрес почты.</string>
+    <string name="recipe_sign_in_apple">Войти через Apple</string>
+    <string name="recipe_sign_in_google">Войти через Google</string>
+    <string name="recipe_store_error_title">Нет связи с магазином</string>
+    <string name="recipe_store_error_body">Проверьте подключение и попробуйте ещё раз. Деньги не списаны.</string>
+    <string name="recipe_rejected_title">Эту покупку не удалось добавить</string>
+    <string name="recipe_rejected_body">По данным магазина, за неё вернули деньги или она уже использована. Если деньги списаны, а рецептов нет, обратитесь в магазин за возвратом.</string>
+    <string name="recipe_your_recipes">Ваши рецепты</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">рецепт на этом телефоне</item>
+        <item quantity="few">рецепта на этом телефоне</item>
+        <item quantity="many">рецептов на этом телефоне</item>
+        <item quantity="other">рецепта на этом телефоне</item>
+    </plurals>
+    <string name="recipe_on_phone_body">Они привязаны к этой установке приложения. Если удалить приложение или сменить телефон, неиспользованные пропадут. Войдите, чтобы хранить их в аккаунте: они перенесутся сразу.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">рецепт в вашем аккаунте</item>
+        <item quantity="few">рецепта в вашем аккаунте</item>
+        <item quantity="many">рецептов в вашем аккаунте</item>
+        <item quantity="other">рецепта в вашем аккаунте</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Вход через %1$s</string>
+    <string name="recipe_signed_in_add_apple">Войдите так же на другом телефоне, чтобы пользоваться ими там. Чтобы пользоваться и на iPhone, добавьте Apple.</string>
+    <string name="recipe_signed_in_add_google">Войдите так же на другом телефоне, чтобы пользоваться ими там. Чтобы входить и через Google, добавьте Google.</string>
+    <string name="recipe_signed_in_both">Войдите любым из способов на другом телефоне, Android или iPhone, чтобы пользоваться ими там.</string>
+    <string name="recipe_add_sign_in">Добавить вход через %1$s</string>
+    <string name="recipe_sign_out">Выйти</string>
+    <string name="recipe_delete_account">Удалить аккаунт</string>
+    <string name="recipe_sign_out_title">Выйти?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Ваш %1$d рецепт останется в аккаунте. Войдите снова, чтобы им пользоваться. Сохранённые рецепты останутся на телефоне.</item>
+        <item quantity="few">Ваши %1$d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на телефоне.</item>
+        <item quantity="many">Ваши %1$d рецептов останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на телефоне.</item>
+        <item quantity="other">Ваши %1$d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на телефоне.</item>
+    </plurals>
+    <string name="recipe_delete_title">Удалить аккаунт?</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Ваш %1$d неиспользованный рецепт пропадёт, его нельзя вернуть или восстановить. Идентификатор аккаунта и адрес почты будут удалены с нашего сервера. Сохранённые рецепты и запасы останутся на телефоне.</item>
+        <item quantity="few">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Идентификатор аккаунта и адрес почты будут удалены с нашего сервера. Сохранённые рецепты и запасы останутся на телефоне.</item>
+        <item quantity="many">Ваши %1$d неиспользованных рецептов пропадут, их нельзя вернуть или восстановить. Идентификатор аккаунта и адрес почты будут удалены с нашего сервера. Сохранённые рецепты и запасы останутся на телефоне.</item>
+        <item quantity="other">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Идентификатор аккаунта и адрес почты будут удалены с нашего сервера. Сохранённые рецепты и запасы останутся на телефоне.</item>
+    </plurals>
+    <string name="recipe_merge_title">Добавить рецепты с этого телефона в аккаунт?</string>
+    <string name="recipe_merge_body">В аккаунте уже есть рецептов: %1$d. Ещё %2$d с этого телефона добавятся к ним, всего станет %3$d. Это нельзя отменить.</string>
+    <string name="recipe_merge_body_unknown">Рецепты с этого телефона (%1$d) добавятся в ваш аккаунт. Это нельзя отменить.</string>
+    <string name="recipe_merge_confirm">Добавить и войти</string>
+    <string name="recipe_sign_in_failed">Не удалось войти. Ваши рецепты не изменились.</string>
+    <string name="recipe_sign_in_in_use">Этот вход уже привязан к другому аккаунту. Ваши рецепты не изменились.</string>
+    <string name="recipe_account_deleted">Аккаунт удалён</string>
+    <string name="recipe_account_action_failed">Нет связи с нашим сервером. Ничего не изменилось.</string>
+    <string name="recipe_menu_bar_title">Меню</string>
+    <string name="recipe_menu_title">Меню на три дня</string>
+    <string name="recipe_menu_summary">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</string>
+    <string name="recipe_menu_today">Сегодня, %1$s</string>
+    <string name="recipe_menu_uses">Используем: %1$s</string>
+    <string name="recipe_course_starter">Закуска</string>
+    <string name="recipe_course_main">Основное</string>
+    <string name="recipe_course_dessert">Десерт</string>
+    <string name="recipe_part_of_menu">Из меню на три дня</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d блюдо</item>
+        <item quantity="few">%1$d блюда</item>
+        <item quantity="many">%1$d блюд</item>
+        <item quantity="other">%1$d блюда</item>
+    </plurals>
 </resources>

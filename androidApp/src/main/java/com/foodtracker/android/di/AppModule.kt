@@ -15,9 +15,21 @@ import com.foodtracker.android.settings.AndroidRecipeConfigRepository
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
-import com.foodtracker.recipe.NotAvailableCreditsGateway
+import com.foodtracker.android.recipe.paid.FirebaseRecipeAccount
+import com.foodtracker.android.recipe.paid.FirebaseRecipeBackend
+import com.foodtracker.android.recipe.paid.PlayRecipeStore
+import com.foodtracker.android.recipe.paid.RecipeFirebase
+import com.foodtracker.android.recipe.paid.emulatorRecipeStore
+import com.foodtracker.android.recipe.paid.recipePaidRouteBuildAllowed
+import com.foodtracker.android.settings.AndroidRecipePaidRepository
+import com.foodtracker.recipe.NoRecipeAccount
 import com.foodtracker.recipe.NotAvailableRecipeBackend
+import com.foodtracker.recipe.NotAvailableRecipeStore
 import com.foodtracker.recipe.OnDeviceRecipeModel
+import com.foodtracker.recipe.RecipeAccount
+import com.foodtracker.recipe.RecipeBackend
+import com.foodtracker.recipe.RecipePaidRepository
+import com.foodtracker.recipe.RecipeStore
 import com.foodtracker.recipe.RecipeConfigRepository
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.SavedRecipeRepository
@@ -88,16 +100,34 @@ val appModule = module {
             openFoodFactsApi = get()
         )
     }
-    // The paid route is not there yet: the backend and credits stay at their "not available"
-    // defaults until the step that adds sign-in and purchases plugs them in here.
+    // The paid route. Builds that can't pass App Check (forks, sideloads, debug builds that
+    // didn't ask for it) get the stand-ins, so the tab shows only the free routes and nothing
+    // here is ever created. Where it is allowed, nothing runs before a purchase starts either.
+    single { RecipeFirebase(androidContext()) }
+    single<RecipePaidRepository> { AndroidRecipePaidRepository(androidContext()) }
+    single<RecipeBackend> {
+        if (recipePaidRouteBuildAllowed(androidContext())) FirebaseRecipeBackend(get(), isAvailable = true) else NotAvailableRecipeBackend
+    }
+    single<RecipeStore> {
+        if (recipePaidRouteBuildAllowed(androidContext())) {
+            emulatorRecipeStore(androidContext()) ?: PlayRecipeStore(androidContext())
+        } else {
+            NotAvailableRecipeStore
+        }
+    }
+    single<RecipeAccount> {
+        if (recipePaidRouteBuildAllowed(androidContext())) FirebaseRecipeAccount(androidContext(), get()) else NoRecipeAccount
+    }
     single {
         RecipeStateHolder(
             pantry = get<PantryStateHolder>().uiState,
             onDeviceModel = get(),
             savedRecipeRepository = get(),
             configRepository = get(),
-            backend = NotAvailableRecipeBackend,
-            credits = NotAvailableCreditsGateway,
+            backend = get(),
+            store = get(),
+            account = get(),
+            paidRepository = get(),
             appLanguage = { Locale.getDefault().toLanguageTag() }
         )
     }

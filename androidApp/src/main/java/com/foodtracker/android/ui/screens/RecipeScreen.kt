@@ -50,6 +50,7 @@ import com.foodtracker.android.ui.design.LarderIcon
 import com.foodtracker.android.ui.design.LarderIconButton
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderListItem
+import com.foodtracker.android.ui.design.LarderSegmented
 import com.foodtracker.android.ui.design.LarderSheet
 import com.foodtracker.android.ui.design.LarderSpinner
 import com.foodtracker.android.ui.design.LedeHeader
@@ -69,26 +70,39 @@ import com.foodtracker.android.util.copyRecipePrompt
 import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
+import com.foodtracker.recipe.AccountKind
+import com.foodtracker.recipe.AccountState
+import com.foodtracker.recipe.MENU_COST
+import com.foodtracker.recipe.MENU_COURSE_OPTIONS
 import com.foodtracker.recipe.OnDeviceAvailability
-import com.foodtracker.recipe.RECIPE_SHOWN_ITEMS
 import com.foodtracker.recipe.OnDeviceRoute
+import com.foodtracker.recipe.PaidUiState
+import com.foodtracker.recipe.RECIPE_SHOWN_ITEMS
 import com.foodtracker.recipe.RecipeConfig
 import com.foodtracker.recipe.RecipeEvent
+import com.foodtracker.recipe.RecipeMode
 import com.foodtracker.recipe.RecipeSelection
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.RecipeUiState
+import com.foodtracker.recipe.ServerIssue
 import com.foodtracker.viewmodel.PantryRow
 import kotlinx.datetime.LocalDate
 
-/** What the tab's pinned action does, worked out from the state. With no paid route yet, the
- *  phone's own model leads where it is ready, and the shared prompt everywhere else. */
-internal enum class RecipePrimary { OnDevice, Share }
+/** What the tab's pinned action does, worked out from the state. The server leads when there are
+ *  recipes left and nothing stands in its way, as its recipes are the most reliable; then the
+ *  phone's own model; then the shared prompt. A menu has only the server. */
+internal enum class RecipePrimary { Server, OnDevice, Share, None }
 
-internal fun recipePrimary(state: RecipeUiState): RecipePrimary =
-    if (state.onDeviceRoute == OnDeviceRoute.READY) RecipePrimary.OnDevice else RecipePrimary.Share
+internal fun recipePrimary(state: RecipeUiState): RecipePrimary = when {
+    state.mode == RecipeMode.MENU -> if (state.canGenerateOnServer) RecipePrimary.Server else RecipePrimary.None
+    // Offline, the free routes move up; the count stays in the bar.
+    state.canGenerateOnServer && state.paid.issue == null -> RecipePrimary.Server
+    state.onDeviceRoute == OnDeviceRoute.READY -> RecipePrimary.OnDevice
+    else -> RecipePrimary.Share
+}
 
 /**
- * The Recipe tab: the soonest items ticked, a short form, and the free routes. The primary
+ * The Recipe tab: the soonest items ticked, a short form, and the three routes. The primary
  * action is pinned where Scan sits on Home; the root measures it through [onPinnedActionHeight]
  * so content, the pill and snackbars clear it.
  */
@@ -103,7 +117,7 @@ fun RecipeScreen(
     val context = LocalContext.current
     val navigator = LocalLarderNavigator.current
     val snackbars = LocalLarderSnackbars.current
-    val failedMessage = stringResource(R.string.recipe_failed_phone)
+    val resources = context.resources
     val tryAgain = stringResource(R.string.recipe_try_again)
     val copiedMessage = stringResource(R.string.recipe_prompt_copied)
 
@@ -118,11 +132,24 @@ fun RecipeScreen(
         when (event) {
             is RecipeEvent.Written -> {
                 stateHolder.consumeEvent()
+                val saved = stateHolder.savedRecipe(event.savedId)
                 navigator.navigate(LarderRoute.RecipeResult(event.savedId))
+                // T3, and the moment the count drops.
+                event.recipesLeft?.let { left ->
+                    if (saved != null) snackbars.show(resources.getQuantityString(R.plurals.recipe_saved_left, left, left), null, null)
+                }
             }
             RecipeEvent.Failed -> {
                 stateHolder.consumeEvent()
-                snackbars.show(failedMessage, tryAgain) { stateHolder.generateOnDevice() }
+                snackbars.show(resources.getString(R.string.recipe_failed_phone), tryAgain) { stateHolder.generateOnDevice() }
+            }
+            RecipeEvent.ServerFailed -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_server), tryAgain) { stateHolder.generateOnServer() }
+            }
+            is RecipeEvent.ServerRefused -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getQuantityString(R.plurals.recipe_refused, event.taken, event.taken), null, null)
             }
             null -> Unit
         }
@@ -143,6 +170,12 @@ fun RecipeScreen(
         actions = RecipeTabActions(
             onToggle = stateHolder::toggleItem,
             onConfigChange = stateHolder::updateConfig,
+            onMode = stateHolder::setMode,
+            onCourses = stateHolder::setCourses,
+            onGenerateServer = stateHolder::generateOnServer,
+            onRetryServer = stateHolder::retryServer,
+            onRetryPurchases = stateHolder::retryPurchases,
+            onBuy = stateHolder::openPacks,
             onGenerateOnDevice = stateHolder::generateOnDevice,
             onStop = stateHolder::stopWriting,
             onShare = { shareRecipePrompt(context, prompt()) },
@@ -156,11 +189,19 @@ fun RecipeScreen(
             onScan = { navigator.navigate(LarderRoute.Scanner()) }
         )
     )
+
+    RecipePaidOverlays(state, stateHolder)
 }
 
 internal class RecipeTabActions(
     val onToggle: (String) -> Unit = {},
     val onConfigChange: ((RecipeConfig) -> RecipeConfig) -> Unit = {},
+    val onMode: (RecipeMode) -> Unit = {},
+    val onCourses: (Int) -> Unit = {},
+    val onGenerateServer: () -> Unit = {},
+    val onRetryServer: () -> Unit = {},
+    val onRetryPurchases: () -> Unit = {},
+    val onBuy: () -> Unit = {},
     val onGenerateOnDevice: () -> Unit = {},
     val onStop: () -> Unit = {},
     val onShare: () -> Unit = {},
@@ -180,13 +221,17 @@ internal fun RecipeTabContent(
 ) {
     val expanded = isExpanded()
     var showingOthers by remember { mutableStateOf(false) }
-    val showForm = !state.isLoading && state.rows.isNotEmpty() && !state.isWriting
+    val showForm = !state.isLoading && state.rows.isNotEmpty() && !state.isBusy
+    val paid = state.paid
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             LedeHeader(
                 lede = stringResource(R.string.recipe_lede),
                 actions = {
+                    if (paid.available) {
+                        RecipeBalanceChip(paid.balance ?: 0, onClick = if (paid.canBuy) actions.onBuy else null)
+                    }
                     LarderIconButton(
                         icon = LarderIcons.Bookmark,
                         contentDescription = stringResource(R.string.recipe_saved_action),
@@ -213,7 +258,23 @@ internal fun RecipeTabContent(
                         )
                     }
                 )
-                state.isWriting -> WritingOnPhone(onStop = actions.onStop, bottom = bottomOverlayClearance)
+                state.isWriting -> Writing(
+                    title = stringResource(R.string.recipe_writing_phone_title),
+                    body = stringResource(R.string.recipe_writing_phone_body),
+                    bottom = bottomOverlayClearance,
+                    onStop = actions.onStop
+                )
+                paid.writing == RecipeMode.MENU -> Writing(
+                    title = stringResource(R.string.recipe_writing_menu_title),
+                    body = stringResource(R.string.recipe_writing_menu_body),
+                    bottom = bottomOverlayClearance
+                )
+                // No Stop for the server: a recipe is taken only when it arrives.
+                paid.writing == RecipeMode.RECIPE -> Writing(
+                    title = stringResource(R.string.recipe_writing_server_title),
+                    body = stringResource(R.string.recipe_writing_server_body),
+                    bottom = bottomOverlayClearance
+                )
                 else -> RecipeForm(
                     state = state,
                     expanded = expanded,
@@ -224,17 +285,33 @@ internal fun RecipeTabContent(
             }
         }
 
-        if (showForm) {
-            val primary = recipePrimary(state)
+        val primary = recipePrimary(state)
+        if (showForm && primary != RecipePrimary.None) {
             val nothingTicked = state.selectedIds.isEmpty()
             DisposableEffect(Unit) { onDispose { onPinnedActionHeight(0) } }
             PinnedAction(
-                text = stringResource(
-                    if (primary == RecipePrimary.OnDevice) R.string.recipe_generate_on_phone else R.string.recipe_share_prompt
-                ),
-                icon = if (primary == RecipePrimary.OnDevice) LarderIcons.Smartphone else LarderIcons.Share2,
-                onClick = if (primary == RecipePrimary.OnDevice) actions.onGenerateOnDevice else actions.onShare,
-                cost = if (primary == RecipePrimary.OnDevice) stringResource(R.string.recipe_cost_free) else null,
+                text = when (primary) {
+                    RecipePrimary.Server -> stringResource(
+                        if (state.mode == RecipeMode.MENU) R.string.recipe_generate_menu else R.string.recipe_generate
+                    )
+                    RecipePrimary.OnDevice -> stringResource(R.string.recipe_generate_on_phone)
+                    else -> stringResource(R.string.recipe_share_prompt)
+                },
+                icon = when (primary) {
+                    RecipePrimary.Server -> LarderIcons.Sparkles
+                    RecipePrimary.OnDevice -> LarderIcons.Smartphone
+                    else -> LarderIcons.Share2
+                },
+                onClick = when (primary) {
+                    RecipePrimary.Server -> actions.onGenerateServer
+                    RecipePrimary.OnDevice -> actions.onGenerateOnDevice
+                    else -> actions.onShare
+                },
+                cost = when (primary) {
+                    RecipePrimary.Server -> pluralStringResource(R.plurals.recipe_cost_recipes, state.serverCost, state.serverCost)
+                    RecipePrimary.OnDevice -> stringResource(R.string.recipe_cost_free)
+                    else -> null
+                },
                 enabled = !nothingTicked,
                 modifier = Modifier
                     .align(if (expanded) Alignment.BottomEnd else Alignment.BottomCenter)
@@ -246,6 +323,9 @@ internal fun RecipeTabContent(
                     .then(if (expanded) Modifier.widthIn(max = 440.dp).fillMaxWidth(0.5f) else Modifier.fillMaxWidth())
                     .onSizeChanged { onPinnedActionHeight(it.height) }
             )
+        } else if (showForm) {
+            // No pinned action (a menu without enough recipes): nothing for the root to clear.
+            LaunchedEffect(Unit) { onPinnedActionHeight(0) }
         }
     }
 
@@ -278,14 +358,19 @@ private fun RecipeForm(
             modifier = Modifier.widthIn(max = 960.dp).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)
         ) {
-            if (state.onDeviceRoute == OnDeviceRoute.PREPARING) {
-                LarderCallout(
-                    kind = LarderCalloutKind.Info,
-                    icon = LarderIcons.Download,
-                    title = stringResource(R.string.recipe_preparing_title),
-                    message = stringResource(R.string.recipe_preparing_body)
+            if (state.paid.available) {
+                val resources = LocalContext.current.resources
+                LarderSegmented(
+                    options = RecipeMode.entries,
+                    selected = state.mode,
+                    onSelect = actions.onMode,
+                    label = {
+                        resources.getString(if (it == RecipeMode.MENU) R.string.recipe_mode_menu else R.string.recipe_mode_recipe)
+                    },
+                    fill = true
                 )
             }
+            RecipeCallouts(state, actions)
             if (expanded) {
                 Row(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s6)) {
                     Column(modifier = Modifier.weight(1f)) {
@@ -297,15 +382,68 @@ private fun RecipeForm(
                         verticalArrangement = Arrangement.spacedBy(LarderSpace.s4)
                     ) {
                         QuickForm(state, actions)
-                        FreeActions(state, actions)
+                        RouteActions(state, actions)
                     }
                 }
             } else {
                 CookWith(state, actions.onToggle, onAddOthers)
                 QuickForm(state, actions)
-                FreeActions(state, actions)
+                RouteActions(state, actions)
             }
         }
+    }
+}
+
+/** The lasting conditions (T4) at the top of the form, most pressing first. */
+@Composable
+private fun RecipeCallouts(state: RecipeUiState, actions: RecipeTabActions) {
+    val paid = state.paid
+    if (paid.available) {
+        if (paid.unconfirmedRecipes > 0) {
+            LarderCallout(
+                kind = LarderCalloutKind.Warning,
+                icon = LarderIcons.Clock,
+                title = stringResource(R.string.recipe_unconfirmed_title),
+                message = pluralStringResource(R.plurals.recipe_unconfirmed_body, paid.unconfirmedRecipes, paid.unconfirmedRecipes),
+                actionLabel = if (paid.verifying) null else stringResource(R.string.recipe_try_now),
+                onAction = actions.onRetryPurchases
+            )
+        } else if (paid.paymentPending) {
+            LarderCallout(
+                kind = LarderCalloutKind.Info,
+                icon = LarderIcons.Clock,
+                title = stringResource(R.string.recipe_pending_title),
+                message = stringResource(R.string.recipe_pending_body)
+            )
+        }
+        when (paid.issue) {
+            ServerIssue.OFFLINE -> LarderCallout(
+                kind = LarderCalloutKind.Warning,
+                icon = LarderIcons.WifiOff,
+                title = stringResource(R.string.recipe_offline_title),
+                message = stringResource(R.string.recipe_offline_body),
+                actionLabel = stringResource(R.string.recipe_try_again),
+                onAction = actions.onRetryServer
+            )
+            ServerIssue.PAUSED -> {
+                val count = paid.balance ?: 0
+                LarderCallout(
+                    kind = LarderCalloutKind.Warning,
+                    icon = LarderIcons.TriangleAlert,
+                    title = stringResource(R.string.recipe_paused_title),
+                    message = pluralStringResource(R.plurals.recipe_paused_body, count, count)
+                )
+            }
+            null -> Unit
+        }
+    }
+    if (state.mode == RecipeMode.RECIPE && state.onDeviceRoute == OnDeviceRoute.PREPARING) {
+        LarderCallout(
+            kind = LarderCalloutKind.Info,
+            icon = LarderIcons.Download,
+            title = stringResource(R.string.recipe_preparing_title),
+            message = stringResource(R.string.recipe_preparing_body)
+        )
     }
 }
 
@@ -362,6 +500,18 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
     val resources = LocalContext.current.resources
     val config = state.config
     RecipeFormCard {
+        if (state.mode == RecipeMode.MENU) {
+            Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                RecipeControlLabel(stringResource(R.string.recipe_courses))
+                LarderSegmented(
+                    options = MENU_COURSE_OPTIONS,
+                    selected = state.courses,
+                    onSelect = actions.onCourses,
+                    label = { resources.getQuantityString(R.plurals.recipe_courses_count, it, it) },
+                    fill = true
+                )
+            }
+        }
         DifficultyControl(config.difficulty) { value -> actions.onConfigChange { it.copy(difficulty = value) } }
         ServingsControl(config.servings) { value -> actions.onConfigChange { it.copy(servings = value) } }
         TimeControl(config.maxMinutes) { value -> actions.onConfigChange { it.copy(maxMinutes = value) } }
@@ -377,39 +527,94 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
     }
 }
 
-/** What sits under the form: the free routes that aren't the pinned action, or why the pinned
- *  action is off. */
+/** What sits under the form: the routes that aren't the pinned action, or why it is off. */
 @Composable
-private fun ColumnScope.FreeActions(state: RecipeUiState, actions: RecipeTabActions) {
+private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabActions) {
+    val paid = state.paid
     when {
         state.selectedIds.isEmpty() -> RecipeHint(stringResource(R.string.recipe_tick_hint))
-        recipePrimary(state) == RecipePrimary.OnDevice -> Row(
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)
-        ) {
-            LarderButton(
-                text = stringResource(R.string.recipe_share_prompt),
-                onClick = actions.onShare,
-                style = LarderButtonStyle.Text,
-                leadingIcon = LarderIcons.Share2
-            )
-            LarderButton(
-                text = stringResource(R.string.recipe_copy_prompt),
-                onClick = actions.onCopy,
-                style = LarderButtonStyle.Text,
-                leadingIcon = LarderIcons.Copy
-            )
+        state.mode == RecipeMode.MENU -> MenuActions(state, actions)
+        else -> when (recipePrimary(state)) {
+            RecipePrimary.Server -> {
+                if (state.onDeviceRoute == OnDeviceRoute.READY) {
+                    LarderButton(
+                        text = stringResource(R.string.recipe_generate_on_phone) + " · " + stringResource(R.string.recipe_cost_free),
+                        onClick = actions.onGenerateOnDevice,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = LarderButtonStyle.Outline,
+                        leadingIcon = LarderIcons.Smartphone
+                    )
+                }
+                ShareAndCopy(actions)
+            }
+            RecipePrimary.OnDevice -> {
+                if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Outline)
+                ShareAndCopy(actions)
+            }
+            else -> {
+                LarderButton(
+                    text = stringResource(R.string.recipe_copy_prompt),
+                    onClick = actions.onCopy,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = LarderButtonStyle.Outline,
+                    leadingIcon = LarderIcons.Copy
+                )
+                RecipeHint(stringResource(R.string.recipe_prompt_hint))
+                if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Text)
+            }
         }
-        else -> {
-            LarderButton(
-                text = stringResource(R.string.recipe_copy_prompt),
-                onClick = actions.onCopy,
-                modifier = Modifier.fillMaxWidth(),
-                style = LarderButtonStyle.Outline,
-                leadingIcon = LarderIcons.Copy
+    }
+}
+
+/** A menu has only the server: the cost, or how to get enough for one. */
+@Composable
+private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions) {
+    val paid = state.paid
+    val balance = paid.balance ?: 0
+    when {
+        paid.issue == ServerIssue.PAUSED -> Unit
+        balance < MENU_COST -> {
+            // T4: lasts until a pack is bought, so it takes the button's place.
+            LarderCallout(
+                kind = LarderCalloutKind.Info,
+                title = stringResource(R.string.recipe_menu_short_title),
+                message = pluralStringResource(R.plurals.recipe_menu_short_body, balance, balance)
             )
-            RecipeHint(stringResource(R.string.recipe_prompt_hint))
+            if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Primary)
         }
+        else -> RecipeHint(stringResource(R.string.recipe_menu_hint))
+    }
+}
+
+@Composable
+private fun BuyButton(actions: RecipeTabActions, style: LarderButtonStyle) {
+    LarderButton(
+        text = stringResource(R.string.recipe_buy),
+        onClick = actions.onBuy,
+        modifier = Modifier.fillMaxWidth(),
+        style = style,
+        leadingIcon = LarderIcons.Ticket
+    )
+}
+
+@Composable
+private fun ColumnScope.ShareAndCopy(actions: RecipeTabActions) {
+    Row(
+        modifier = Modifier.align(Alignment.CenterHorizontally),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)
+    ) {
+        LarderButton(
+            text = stringResource(R.string.recipe_share_prompt),
+            onClick = actions.onShare,
+            style = LarderButtonStyle.Text,
+            leadingIcon = LarderIcons.Share2
+        )
+        LarderButton(
+            text = stringResource(R.string.recipe_copy_prompt),
+            onClick = actions.onCopy,
+            style = LarderButtonStyle.Text,
+            leadingIcon = LarderIcons.Copy
+        )
     }
 }
 
@@ -424,8 +629,10 @@ private fun RecipeHint(text: String) {
     )
 }
 
+/** The only loading state outside the scanner. [onStop] only for the phone's own model:
+ *  nothing was paid, so nothing is lost by stopping. */
 @Composable
-private fun WritingOnPhone(onStop: () -> Unit, bottom: Dp) {
+private fun Writing(title: String, body: String, bottom: Dp, onStop: (() -> Unit)? = null) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -435,24 +642,26 @@ private fun WritingOnPhone(onStop: () -> Unit, bottom: Dp) {
     ) {
         LarderSpinner()
         Text(
-            text = stringResource(R.string.recipe_writing_phone_title),
+            text = title,
             modifier = Modifier.padding(top = LarderSpace.s2),
             style = MaterialTheme.typography.titleLarge,
             color = MaterialTheme.colorScheme.onBackground,
             textAlign = TextAlign.Center
         )
         Text(
-            text = stringResource(R.string.recipe_writing_phone_body),
+            text = body,
             modifier = Modifier.widthIn(max = 340.dp),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        LarderButton(
-            text = stringResource(R.string.recipe_stop),
-            onClick = onStop,
-            style = LarderButtonStyle.Outline
-        )
+        onStop?.let {
+            LarderButton(
+                text = stringResource(R.string.recipe_stop),
+                onClick = it,
+                style = LarderButtonStyle.Outline
+            )
+        }
     }
 }
 
@@ -512,18 +721,30 @@ private val previewRows = listOf(
     previewRow("7", "Free-range eggs", 15, "Dairy", 6)
 )
 
+private fun previewPaid(balance: Int?, issue: ServerIssue? = null, writing: RecipeMode? = null) = PaidUiState(
+    available = true,
+    balance = balance,
+    account = AccountState(if (balance == null) AccountKind.NONE else AccountKind.ANONYMOUS),
+    issue = issue,
+    writing = writing
+)
+
 private fun previewState(
     availability: OnDeviceAvailability = OnDeviceAvailability.UNSUPPORTED,
     selection: RecipeSelection = RecipeSelection.Default,
     rows: List<PantryRow> = previewRows,
-    writing: Boolean = false
+    writing: Boolean = false,
+    paid: PaidUiState = PaidUiState(),
+    mode: RecipeMode = RecipeMode.RECIPE
 ) = RecipeUiState(
     isLoading = false,
     rows = rows,
     selection = selection,
     onDeviceAvailability = availability,
     onDeviceSupportsLanguage = true,
-    isWriting = writing
+    isWriting = writing,
+    paid = paid,
+    mode = mode
 )
 
 @Composable
@@ -540,6 +761,44 @@ internal fun RecipeTabPromptOnlyPreview() = RecipeTabPreview(previewState())
 @PreviewLightDark
 @Composable
 internal fun RecipeTabPhoneCanWritePreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE))
+
+@PreviewLightDark
+@Composable
+internal fun RecipeTabWithRecipesPreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE, paid = previewPaid(12)))
+
+@Preview
+@Composable
+internal fun RecipeTabNoRecipesPreview() = RecipeTabPreview(previewState(paid = previewPaid(0)))
+
+@Preview
+@Composable
+internal fun RecipeTabMenuPreview() = RecipeTabPreview(previewState(paid = previewPaid(12), mode = RecipeMode.MENU))
+
+@Preview
+@Composable
+internal fun RecipeTabMenuShortPreview() = RecipeTabPreview(previewState(paid = previewPaid(2), mode = RecipeMode.MENU))
+
+@Preview
+@Composable
+internal fun RecipeTabOfflinePreview() = RecipeTabPreview(
+    previewState(OnDeviceAvailability.AVAILABLE, paid = previewPaid(12, issue = ServerIssue.OFFLINE))
+)
+
+@Preview
+@Composable
+internal fun RecipeTabPausedPreview() = RecipeTabPreview(previewState(paid = previewPaid(12, issue = ServerIssue.PAUSED)))
+
+@Preview
+@Composable
+internal fun RecipeTabUnconfirmedPreview() = RecipeTabPreview(previewState(paid = previewPaid(0).copy(unconfirmedRecipes = 50)))
+
+@Preview
+@Composable
+internal fun RecipeTabServerWritingPreview() = RecipeTabPreview(previewState(paid = previewPaid(12, writing = RecipeMode.RECIPE)))
+
+@Preview
+@Composable
+internal fun RecipeTabMenuWritingPreview() = RecipeTabPreview(previewState(paid = previewPaid(12, writing = RecipeMode.MENU)))
 
 @Preview
 @Composable
@@ -559,8 +818,12 @@ internal fun RecipeTabEmptyPreview() = RecipeTabPreview(previewState(rows = empt
 
 @Preview(locale = "ru")
 @Composable
-internal fun RecipeTabRussianPreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE))
+internal fun RecipeTabRussianPreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE, paid = previewPaid(12)))
+
+@Preview(locale = "ru")
+@Composable
+internal fun RecipeTabRussianMenuPreview() = RecipeTabPreview(previewState(paid = previewPaid(12), mode = RecipeMode.MENU))
 
 @Preview(widthDp = 820, heightDp = 1180)
 @Composable
-internal fun RecipeTabTabletPreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE))
+internal fun RecipeTabTabletPreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE, paid = previewPaid(12)))

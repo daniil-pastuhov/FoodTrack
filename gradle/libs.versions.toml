@@ -33,6 +33,9 @@ play-services-location = "21.3.0"
 firebase-bom = "34.19.0"
 google-services = "4.5.0"
 firebase-crashlytics-plugin = "3.0.8"
+play-billing = "9.1.0"
+credentials = "1.6.0"
+googleid = "1.2.1"
 
 [libraries]
 # KotlinX
@@ -87,6 +90,15 @@ play-services-location = { module = "com.google.android.gms:play-services-locati
 # Crash reporting (Firebase Crashlytics, configured by androidApp/google-services.json)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+# The paid Recipe route: Auth, the callables and App Check (see functions/CONTRACT.md).
+firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-functions = { module = "com.google.firebase:firebase-functions" }
+firebase-appcheck-playintegrity = { module = "com.google.firebase:firebase-appcheck-playintegrity" }
+firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
+play-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "play-billing" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
 # Coil image loading
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

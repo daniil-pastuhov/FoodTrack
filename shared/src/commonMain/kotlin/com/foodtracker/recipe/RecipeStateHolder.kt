@@ -8,6 +8,7 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,8 +19,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import kotlin.random.Random
 import kotlin.time.Clock
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /** How many of the soonest items the tab ticks by itself. */
 const val RECIPE_DEFAULT_TICKED = 3
@@ -49,12 +55,24 @@ enum class OnDeviceRoute {
 }
 
 sealed interface RecipeEvent {
-    /** A recipe was written and saved; open it. */
-    data class Written(val savedId: String) : RecipeEvent
+    /** A recipe or a menu was written and saved; open it. [recipesLeft] is the pack's new count
+     *  when the server wrote it. */
+    data class Written(val savedId: String, val recipesLeft: Int? = null) : RecipeEvent
 
     /** The phone's model failed or returned something that isn't a recipe. */
     data object Failed : RecipeEvent
+
+    /** The server couldn't write it, and nothing was taken. */
+    data object ServerFailed : RecipeEvent
+
+    /** The server declined these items once too often today, and [taken] recipes were counted. */
+    data class ServerRefused(val taken: Int) : RecipeEvent
 }
+
+/** What the tab writes: one recipe, or a menu for three days (server only). */
+enum class RecipeMode { RECIPE, MENU }
+
+const val DEFAULT_MENU_COURSES = 3
 
 data class RecipeUiState(
     val isLoading: Boolean = true,
@@ -67,19 +85,29 @@ data class RecipeUiState(
     val onDeviceAvailability: OnDeviceAvailability? = null,
     /** Whether the on-device model knows [language]; see [OnDeviceRecipeModel.supportsLanguage]. */
     val onDeviceSupportsLanguage: Boolean = false,
+    /** The phone's own model is writing. */
     val isWriting: Boolean = false,
+    val mode: RecipeMode = RecipeMode.RECIPE,
+    /** Courses a day for a menu: 2 or 3. */
+    val courses: Int = DEFAULT_MENU_COURSES,
     /** Newest first. */
     val saved: List<SavedRecipe> = emptyList(),
     /** False until the saved list has been read once, so "nothing saved" doesn't flash. */
     val savedLoaded: Boolean = false,
     /** From app Settings, already cleaned; always applied. */
     val allergens: List<String> = emptyList(),
-    /** Whether the server route can be offered. False until the paid step plugs it in. */
-    val paidRouteAvailable: Boolean = false,
+    /** The server route, the packs and the account behind them. */
+    val paid: PaidUiState = PaidUiState(),
     val event: RecipeEvent? = null
 ) {
     /** The language recipes are written in. */
     val language: String = config.language ?: appLanguage
+
+    /** Whether the server route can be offered on this build. */
+    val paidRouteAvailable: Boolean get() = paid.available
+
+    /** Something is being written, on the phone or on the server. */
+    val isBusy: Boolean get() = isWriting || paid.writing != null
 
     val selectedIds: Set<String> = when (selection) {
         RecipeSelection.Default -> rows.take(RECIPE_DEFAULT_TICKED).mapTo(LinkedHashSet()) { it.id }
@@ -104,42 +132,66 @@ data class RecipeUiState(
             else -> OnDeviceRoute.PREPARING
         }
     }
+
+    /** What the current mode takes from a pack. */
+    val serverCost: Int get() = if (mode == RecipeMode.MENU) MENU_COST else RECIPE_COST
+
+    /** Whether the server can be asked now: a pack with enough left, nothing in the way. */
+    val canGenerateOnServer: Boolean
+        get() = paid.available && paid.issue != ServerIssue.PAUSED && (paid.balance ?: 0) >= serverCost
 }
 
 /**
- * The Recipe tab: which items to cook with, the form, the free routes (the phone's own model and
- * the shared prompt), and the recipes kept on this phone. Separate from `PantryStateHolder`,
- * which it only reads.
- *
- * The server route is a seam for a later step: [backend] and [credits] are taken now so it can
- * plug in, but with [NotAvailableRecipeBackend] the tab never offers it.
+ * The Recipe tab: which items to cook with, the form, the three routes (our server, the phone's
+ * own model, the shared prompt), and the recipes kept on this phone. Separate from
+ * `PantryStateHolder`, which it only reads. The server route, packs and account live in
+ * [RecipePaid]; this class hands its calls through.
  *
  * iOS reimplements this in `RecipeViewModel.swift`; a change to its rules is ported there.
  */
+@OptIn(ExperimentalUuidApi::class)
 class RecipeStateHolder(
     pantry: Flow<PantryUiState>,
     private val onDeviceModel: OnDeviceRecipeModel,
     private val savedRecipeRepository: SavedRecipeRepository,
     private val configRepository: RecipeConfigRepository,
-    private val backend: RecipeBackend = NotAvailableRecipeBackend,
-    private val credits: CreditsGateway = NotAvailableCreditsGateway,
+    backend: RecipeBackend = NotAvailableRecipeBackend,
+    store: RecipeStore = NotAvailableRecipeStore,
+    account: RecipeAccount = NoRecipeAccount,
+    paidRepository: RecipePaidRepository = InMemoryRecipePaidRepository(),
     /** The app's current language, such as "en" or "nb-NO". Read again on [refresh], since the
      *  person can change the app's language while it runs. */
     private val appLanguage: () -> String = { "en" },
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
     private val nowMillis: () -> Long = { Clock.System.now().toEpochMilliseconds() },
-    private val newId: () -> String = { "recipe_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt().toUInt()}" }
+    private val newId: () -> String = { "recipe_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt().toUInt()}" },
+    newRequestId: () -> String = { Uuid.random().toString() },
+    today: () -> LocalDate = { Clock.System.todayIn(TimeZone.currentSystemDefault()) },
+    /** How long to wait before asking again about a generation the server is still writing. */
+    pollDelay: suspend () -> Unit = { delay(3_000) }
 ) {
     private val _uiState = MutableStateFlow(
         configRepository.get().normalized().let { config ->
-            RecipeUiState(
-                config = config,
-                appLanguage = appRecipeLanguage(appLanguage()),
-                paidRouteAvailable = backend.isAvailable && credits.canBuy
-            ).withLanguageSupport()
+            RecipeUiState(config = config, appLanguage = appRecipeLanguage(appLanguage()))
+                .withLanguageSupport()
         }
     )
     val uiState: StateFlow<RecipeUiState> = _uiState.asStateFlow()
+
+    private val paid = RecipePaid(
+        state = _uiState,
+        backend = backend,
+        store = store,
+        account = account,
+        repository = paidRepository,
+        savedRecipeRepository = savedRecipeRepository,
+        scope = coroutineScope,
+        nowMillis = nowMillis,
+        newSavedId = newId,
+        newRequestId = newRequestId,
+        today = today,
+        pollDelay = pollDelay
+    )
 
     private var writingJob: Job? = null
     private val downloadLock = Mutex()
@@ -159,6 +211,7 @@ class RecipeStateHolder(
         coroutineScope.launch {
             savedRecipeRepository.getAllFlow().collect { saved -> _uiState.update { it.copy(saved = saved, savedLoaded = true) } }
         }
+        paid.start()
         refresh()
     }
 
@@ -168,7 +221,7 @@ class RecipeStateHolder(
     /**
      * Asks the phone again whether its model is there, and picks up a change of app language.
      * Called when the tab opens. Starts the model's download when it is needed, so it can be
-     * ready by the next visit.
+     * ready by the next visit. Also catches up on the paid route (see [onAppResume]).
      */
     fun refresh() {
         _uiState.update { it.copy(appLanguage = appRecipeLanguage(appLanguage())).withLanguageSupport() }
@@ -188,7 +241,13 @@ class RecipeStateHolder(
                 }
             }
         }
+        paid.resume()
     }
+
+    /** The app came to the front: resubmits purchases the server hasn't confirmed, asks again
+     *  about a generation whose answer was lost, and refreshes the count. Does nothing for
+     *  someone who never started a purchase. */
+    fun onAppResume() = paid.resume()
 
     // --- Items -------------------------------------------------------------------------------
 
@@ -215,13 +274,24 @@ class RecipeStateHolder(
         _uiState.update { it.copy(config = updated).withLanguageSupport() }
     }
 
+    /** Recipe or Menu for 3 days. The menu is offered only with the paid route. */
+    fun setMode(mode: RecipeMode) {
+        if (mode == RecipeMode.MENU && !_uiState.value.paid.available) return
+        _uiState.update { it.copy(mode = mode) }
+    }
+
+    fun setCourses(courses: Int) {
+        if (courses !in MENU_COURSE_OPTIONS) return
+        _uiState.update { it.copy(courses = courses) }
+    }
+
     // --- On-device route ---------------------------------------------------------------------
 
     /** Writes a recipe with the phone's own model from the ticked items. Saved when it arrives,
      *  then [RecipeEvent.Written]; [RecipeEvent.Failed] when the model fails twice over. */
     fun generateOnDevice() {
         val state = _uiState.value
-        if (state.isWriting || state.selectedRows.isEmpty() || state.onDeviceRoute != OnDeviceRoute.READY) return
+        if (state.isBusy || state.selectedRows.isEmpty() || state.onDeviceRoute != OnDeviceRoute.READY) return
         val items = state.selectedRows.map { RecipePromptItem(it.item.name, it.daysRemaining) }
         val prompt = buildOnDeviceRecipePrompt(items, state.config, state.language, state.allergens)
         val names = items.map { it.name }
@@ -274,6 +344,46 @@ class RecipeStateHolder(
         _uiState.update { it.copy(event = null) }
     }
 
+    // --- Server route ------------------------------------------------------------------------
+
+    /** Asks the server for a recipe, or a menu in [RecipeMode.MENU], from the ticked items. The
+     *  count changes only when the answer arrives. */
+    fun generateOnServer() = paid.generate()
+
+    /** The offline callout's Try again: sends the unanswered request again with its own id, or
+     *  asks for the count. */
+    fun retryServer() = paid.retry()
+
+    // --- Packs -------------------------------------------------------------------------------
+
+    fun openPacks() = paid.openPacks()
+    fun selectPack(productId: String) = paid.selectPack(productId)
+
+    /** Continue in the pack sheet: the first time, the choice of where recipes live; after that
+     *  straight to the store. */
+    fun continuePurchase() = paid.continuePurchase()
+
+    /** The choice's "On this phone, no account". */
+    fun buyWithoutAccount() = paid.buyWithoutAccount()
+
+    /** The choice's "In an account". */
+    fun buyWithAccount(provider: SignInProvider) = paid.buyWithAccount(provider)
+    fun backToPacks() = paid.backToPacks()
+    fun dismissPacks() = paid.dismissPacks()
+
+    /** "Try now" on a purchase that hasn't been added yet. */
+    fun retryPurchases() = paid.retryPurchases()
+    fun dismissRejectedPurchase() = paid.dismissRejected()
+
+    // --- Account -----------------------------------------------------------------------------
+
+    fun signIn(provider: SignInProvider) = paid.signIn(provider)
+    fun confirmMerge() = paid.confirmMerge()
+    fun cancelMerge() = paid.cancelMerge()
+    fun signOut() = paid.signOut()
+    fun deleteAccount() = paid.deleteAccount()
+    fun consumePaidEvent() = paid.consumeEvent()
+
     // --- Saved recipes -----------------------------------------------------------------------
 
     fun savedRecipe(id: String): SavedRecipe? = _uiState.value.saved.firstOrNull { it.id == id }
@@ -292,8 +402,20 @@ class RecipeStateHolder(
         coroutineScope.launch { savedRecipeRepository.save(saved) }
     }
 
-    /** Settings' Clear all data. */
-    fun clearSaved() {
+    /**
+     * Settings' Clear all data: the saved recipes and the form go back to how a new install has
+     * them. What was bought is not touched: the count lives on our server, and a purchase still
+     * waiting to be confirmed must not be forgotten.
+     */
+    fun clearAll() {
+        configRepository.save(RecipeConfig())
+        _uiState.update {
+            it.copy(config = RecipeConfig(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, selection = RecipeSelection.Default)
+                .withLanguageSupport()
+        }
         coroutineScope.launch { savedRecipeRepository.clearAll() }
     }
 }
+
+/** The courses a day a menu can have. */
+val MENU_COURSE_OPTIONS: List<Int> = listOf(2, 3)

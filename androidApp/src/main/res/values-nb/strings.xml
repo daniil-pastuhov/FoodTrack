@@ -833,4 +833,130 @@
         <item quantity="one">%1$d porsjon</item>
         <item quantity="other">%1$d porsjoner</item>
     </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Oppskrifter igjen: %1$d. Kjøp flere</string>
+    <string name="recipe_mode_label">Hva skal lages</string>
+    <string name="recipe_mode_recipe">Oppskrift</string>
+    <string name="recipe_mode_menu">Meny for 3 dager</string>
+    <string name="recipe_courses">Retter per dag</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d rett</item>
+        <item quantity="other">%1$d retter</item>
+    </plurals>
+    <string name="recipe_generate">Lag oppskrift</string>
+    <string name="recipe_generate_menu">Lag meny</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d oppskrift</item>
+        <item quantity="other">%1$d oppskrifter</item>
+    </plurals>
+    <string name="recipe_buy">Kjøp oppskrifter</string>
+    <string name="recipe_menu_hint">En meny skrives på serveren vår og bruker 3 oppskrifter fra en pakke.</string>
+    <string name="recipe_menu_short_title">En meny bruker 3 oppskrifter</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
+        <item quantity="other">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
+    </plurals>
+    <string name="recipe_writing_server_title">Skriver oppskriften din</string>
+    <string name="recipe_writing_server_body">Noen sekunder. En oppskrift trekkes først når den er klar.</string>
+    <string name="recipe_writing_menu_title">Planlegger tre dager</string>
+    <string name="recipe_writing_menu_body">Dette kan ta opptil to minutter. Du kan gå fra denne skjermen; menyen havner i Lagrede oppskrifter.</string>
+    <string name="recipe_offline_title">Ingen tilkobling</string>
+    <string name="recipe_offline_body">Oppskrifter fra pakken trenger internett. De gratis valgene nedenfor virker fortsatt.</string>
+    <string name="recipe_failed_server">Kunne ikke skrive oppskriften. Ingen oppskrift ble trukket.</string>
+    <plurals name="recipe_refused">
+        <item quantity="one">Kunne ikke lage en oppskrift av disse varene. %1$d oppskrift ble trukket.</item>
+        <item quantity="other">Kunne ikke lage en oppskrift av disse varene. %1$d oppskrifter ble trukket.</item>
+    </plurals>
+    <string name="recipe_paused_title">Oppskrifter fra pakker er satt på pause</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Den %1$d oppskriften din er trygg. De gratis valgene nedenfor virker fortsatt.</item>
+        <item quantity="other">De %1$d oppskriftene dine er trygge. De gratis valgene nedenfor virker fortsatt.</item>
+    </plurals>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d oppskrift lagt til</item>
+        <item quantity="other">%1$d oppskrifter lagt til</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Lagret. %1$d oppskrift igjen</item>
+        <item quantity="other">Lagret. %1$d oppskrifter igjen</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Kjøpet ditt bekreftes</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Du har betalt for %1$d oppskrift, og den er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</item>
+        <item quantity="other">Du har betalt for %1$d oppskrifter, og de er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</item>
+    </plurals>
+    <string name="recipe_try_now">Prøv nå</string>
+    <string name="recipe_pending_title">Venter på betaling</string>
+    <string name="recipe_pending_body">Oppskriftene legges til når butikken bekrefter betalingen. Det kan ta litt tid.</string>
+    <string name="recipe_packs_body">Én oppskrift er én rett skrevet av serveren vår. En meny for 3 dager bruker 3. De utløper ikke.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d oppskrift</item>
+        <item quantity="other">%1$d oppskrifter</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s per oppskrift</string>
+    <string name="recipe_cancel">Avbryt</string>
+    <string name="recipe_back">Tilbake</string>
+    <string name="recipe_close">Lukk</string>
+    <string name="recipe_ok">OK</string>
+    <string name="recipe_choice_title">Hvor skal oppskriftene dine ligge?</string>
+    <string name="recipe_choice_body">Du velger én gang. Du kan logge inn senere fra Oppskriftsinnstillinger.</string>
+    <string name="recipe_choice_phone_title">På denne telefonen, uten konto</string>
+    <string name="recipe_choice_phone_body">Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter telefon, går de du ikke har brukt tapt.</string>
+    <string name="recipe_choice_account_title">I en konto</string>
+    <string name="recipe_choice_account_body">Logg inn med Apple eller Google. Oppskriftene følger deg til en ny telefon og virker på både Android og iPhone. Vi lagrer konto-ID-en og e-postadressen din.</string>
+    <string name="recipe_sign_in_apple">Logg inn med Apple</string>
+    <string name="recipe_sign_in_google">Logg inn med Google</string>
+    <string name="recipe_store_error_title">Får ikke kontakt med butikken</string>
+    <string name="recipe_store_error_body">Sjekk tilkoblingen og prøv igjen. Ingenting ble belastet.</string>
+    <string name="recipe_rejected_title">Dette kjøpet kunne ikke legges til</string>
+    <string name="recipe_rejected_body">Butikken melder at det er refundert eller allerede brukt. Hvis du ble belastet og ikke har fått oppskrifter, kontakt butikken for refusjon.</string>
+    <string name="recipe_your_recipes">Oppskriftene dine</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">oppskrift på denne telefonen</item>
+        <item quantity="other">oppskrifter på denne telefonen</item>
+    </plurals>
+    <string name="recipe_on_phone_body">De hører til denne installasjonen av appen. Sletter du appen eller bytter telefon, går de du ikke har brukt tapt. Logg inn for å ha dem i en konto i stedet; de flyttes over med en gang.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">oppskrift i kontoen din</item>
+        <item quantity="other">oppskrifter i kontoen din</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Logget inn med %1$s</string>
+    <string name="recipe_signed_in_add_apple">Logg inn på samme måte på en annen telefon for å bruke dem der. For å bruke en iPhone også, legg til Apple.</string>
+    <string name="recipe_signed_in_add_google">Logg inn på samme måte på en annen telefon for å bruke dem der. For å logge inn med Google også, legg til Google.</string>
+    <string name="recipe_signed_in_both">Logg inn med én av dem på en annen telefon, Android eller iPhone, for å bruke dem der.</string>
+    <string name="recipe_add_sign_in">Legg til innlogging med %1$s</string>
+    <string name="recipe_sign_out">Logg ut</string>
+    <string name="recipe_delete_account">Slett konto</string>
+    <string name="recipe_sign_out_title">Logge ut?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Den %1$d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne telefonen.</item>
+        <item quantity="other">De %1$d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne telefonen.</item>
+    </plurals>
+    <string name="recipe_delete_title">Slette kontoen din?</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Konto-ID-en og e-postadressen din slettes fra serveren vår. Lagrede oppskrifter og matlageret blir på denne telefonen.</item>
+        <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Konto-ID-en og e-postadressen din slettes fra serveren vår. Lagrede oppskrifter og matlageret blir på denne telefonen.</item>
+    </plurals>
+    <string name="recipe_merge_title">Legge oppskriftene på denne telefonen til kontoen din?</string>
+    <string name="recipe_merge_body">Kontoen din har allerede %1$d oppskrifter. De %2$d på denne telefonen legges til, så det blir %3$d. Dette kan ikke angres.</string>
+    <string name="recipe_merge_body_unknown">De %1$d oppskriftene på denne telefonen legges til kontoen din. Dette kan ikke angres.</string>
+    <string name="recipe_merge_confirm">Legg til og logg inn</string>
+    <string name="recipe_sign_in_failed">Kunne ikke logge inn. Oppskriftene dine er uendret.</string>
+    <string name="recipe_sign_in_in_use">Den innloggingen hører allerede til en annen konto. Oppskriftene dine er uendret.</string>
+    <string name="recipe_account_deleted">Kontoen er slettet</string>
+    <string name="recipe_account_action_failed">Fikk ikke kontakt med serveren vår. Ingenting ble endret.</string>
+    <string name="recipe_menu_bar_title">Meny</string>
+    <string name="recipe_menu_title">Meny for tre dager</string>
+    <string name="recipe_menu_summary">%1$d retter per dag for %2$d, med det som går ut først.</string>
+    <string name="recipe_menu_today">I dag, %1$s</string>
+    <string name="recipe_menu_uses">Bruker %1$s</string>
+    <string name="recipe_course_starter">Forrett</string>
+    <string name="recipe_course_main">Hovedrett</string>
+    <string name="recipe_course_dessert">Dessert</string>
+    <string name="recipe_part_of_menu">Del av Meny for tre dager</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d rett</item>
+        <item quantity="other">%1$d retter</item>
+    </plurals>
 </resources>

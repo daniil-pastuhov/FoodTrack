@@ -21,6 +21,9 @@ sealed interface LarderRoute {
 
     /** A saved recipe or menu, by its saved row's id. */
     data class RecipeResult(val savedId: String) : LarderRoute
+
+    /** One dish of a saved menu: its day and course by position. */
+    data class MenuDish(val savedId: String, val day: Int, val course: Int) : LarderRoute
     data object SavedRecipes : LarderRoute
     data object RecipeSettings : LarderRoute
     data object Onboarding : LarderRoute
