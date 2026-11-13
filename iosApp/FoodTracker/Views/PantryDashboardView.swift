@@ -23,6 +23,8 @@ struct PantryDashboardView<DetailPane: View>: View {
     let onItemsDeleted: (DeletedItems) -> Void
     let onScan: () -> Void
     let onAddByHand: () -> Void
+    /// Multi-select's Get recipe ideas: the Recipe tab, with these items ticked.
+    let onGetRecipeIdeas: ([String]) -> Void
     /// Scan beside search, when the root can't float it over the list (see
     /// `RootTabView.barsInSideStrip`).
     let showsHeaderScan: Bool
@@ -32,11 +34,6 @@ struct PantryDashboardView<DetailPane: View>: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var filterSheet: FilterSheetPage?
-    @State private var showRecipeSheet = false
-    @State private var shareAfterRecipeSheet = false
-    @State private var includeOtherItems = false
-    @State private var showActivitySheet = false
-    @State private var shareText = ""
     @State private var isSelecting = false
     @State private var selectedItemIDs: Set<String> = []
     @State private var isSearching = false
@@ -93,28 +90,6 @@ struct PantryDashboardView<DetailPane: View>: View {
             FilterSheetView(viewModel: viewModel, settingsStore: settingsStore, page: page) {
                 filterSheet = nil
             }
-        }
-        // `onDismiss` waits for this sheet to finish going before the share sheet presents:
-        // presenting two sheets in the same action is unreliable.
-        .larderSheet(isPresented: $showRecipeSheet, onDismiss: {
-            if shareAfterRecipeSheet {
-                shareAfterRecipeSheet = false
-                performShare()
-            }
-        }) {
-            RecipeIdeasSheet(
-                names: viewModel.items.filter { selectedItemIDs.contains($0.id) }.map(\.name),
-                otherCount: viewModel.items.count - selectedItemIDs.count,
-                includeOtherItems: $includeOtherItems,
-                onCancel: { showRecipeSheet = false },
-                onShare: {
-                    shareAfterRecipeSheet = true
-                    showRecipeSheet = false
-                }
-            )
-        }
-        .sheet(isPresented: $showActivitySheet) {
-            ActivityView(activityItems: [shareText])
         }
         // Re-checked on return to the foreground: the fix happens in the system Settings app.
         .task(id: scenePhase) {
@@ -385,7 +360,7 @@ struct PantryDashboardView<DetailPane: View>: View {
             LarderDivider()
             HStack(spacing: LarderSpace.s2) {
                 LarderButton(L10n.actionGetRecipeIdeas, icon: .sparkles, variant: .secondary, fullWidth: true) {
-                    showRecipeSheet = true
+                    getRecipeIdeas()
                 }
                 LarderButton(L10n.swipeDelete, icon: .trash2, variant: .dangerText) {
                     deleteSelectedItems()
@@ -482,16 +457,10 @@ struct PantryDashboardView<DetailPane: View>: View {
         }
     }
 
-    private func performShare() {
-        let selectedItems = viewModel.items.filter { selectedItemIDs.contains($0.id) }
-        guard !selectedItems.isEmpty else { return }
-        let otherItems = includeOtherItems
-            ? viewModel.items.filter { !selectedItemIDs.contains($0.id) }
-            : []
-        shareText = NativePantryViewModel.recipePrompt(for: selectedItems, otherItems: otherItems)
-        showActivitySheet = true
+    private func getRecipeIdeas() {
+        let ids = viewModel.items.map(\.id).filter { selectedItemIDs.contains($0) }
         endSelection()
-        includeOtherItems = false
+        onGetRecipeIdeas(ids)
     }
 
     private func toggleSelection(_ id: String) {
@@ -518,10 +487,9 @@ struct PantryDashboardView<DetailPane: View>: View {
         case "sort": filterSheet = .sort
         case "filtered": viewModel.selectedLocation = "Fridge"
         case "soon": viewModel.selectedFilter = .expiringSoon
-        case "select", "recipe":
+        case "select":
             isSelecting = true
             selectedItemIDs = Set(rows.prefix(2).map(\.id))
-            showRecipeSheet = UserDefaults.standard.string(forKey: "demoHome") == "recipe"
         default: break
         }
     }
@@ -663,55 +631,8 @@ private extension Text {
     }
 }
 
-/// A sheet rather than the native alert the design's other dialogs use, because an alert can't
-/// hold the option. Names the items, and says the prompt only leaves the device when shared.
-private struct RecipeIdeasSheet: View {
-    let names: [String]
-    let otherCount: Int
-    @Binding var includeOtherItems: Bool
-    let onCancel: () -> Void
-    let onShare: () -> Void
-
-    var body: some View {
-        LarderSheet(L10n.shareRecipeDialogTitle) {
-            Text(L10n.recipeIntro(HomeSummary.recipeNames(names)))
-                .larderFont(.body)
-                .foregroundStyle(LarderColor.onSurfaceVariant)
-                .fixedSize(horizontal: false, vertical: true)
-            if otherCount > 0 {
-                HStack(alignment: .top, spacing: LarderSpace.s1) {
-                    LarderTick(isOn: $includeOtherItems, label: L10n.shareRecipeIncludeOtherItemsTitle)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(L10n.shareRecipeIncludeOtherItemsTitle)
-                            .larderFont(.body)
-                            .foregroundStyle(LarderColor.onSurface)
-                        Text(
-                            includeOtherItems
-                                ? L10n.recipeIncludeOthersCount(otherCount)
-                                : L10n.shareRecipeIncludeOtherItemsSubtitle
-                        )
-                        .larderFont(.bodySm)
-                        .foregroundStyle(LarderColor.onSurfaceVariant)
-                        .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.top, LarderSpace.s2)
-                }
-                .padding(.leading, -LarderSpace.s2)
-            }
-            HStack(spacing: LarderSpace.s2) {
-                Spacer(minLength: 0)
-                LarderButton(L10n.shareRecipeCancelButton, variant: .text, action: onCancel)
-                LarderButton(L10n.shareRecipeShareButton, icon: .share2, action: onShare)
-            }
-        }
-    }
-}
-
-/// Wraps `UIActivityViewController` so the share sheet can be triggered programmatically after
-/// `RecipeIdeasSheet` is dismissed, rather than via `ShareLink`'s own tap gesture.
-///
-/// Internal rather than private because `RootTabView` presents the same sheet for the digest
-/// notification's "Recipe ideas" action, which arrives with no dashboard on screen.
+/// Wraps `UIActivityViewController`, so a share sheet can be presented from state, as Shopping's
+/// share and the Recipe tab's Share prompt do, rather than through `ShareLink`'s own tap.
 struct ActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
 

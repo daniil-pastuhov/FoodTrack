@@ -1,12 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// Root of the app: hosts the four peer tabs (Home/Calendar/Shopping/Settings) behind the
-/// `FloatingNav` pill, with `ScanFab` on Home and Calendar and snackbars above both. Owns the
-/// single shared `NativePantryViewModel` so all four tabs (and the scan/add sheets) operate on
-/// the same pantry state.
+/// Root of the app: hosts the four peer tabs (Home/Recipe/Shopping/Settings) behind the
+/// `FloatingNav` pill, with `ScanFab` on Home and snackbars above both. Owns the single shared
+/// `NativePantryViewModel` so all four tabs (and the scan/add sheets) operate on the same pantry
+/// state, and the Recipe tab's `RecipeViewModel`, so a recipe being written outlives a trip to
+/// another tab.
 struct RootTabView: View {
     @StateObject private var viewModel = NativePantryViewModel()
+    @StateObject private var recipeViewModel = RecipeViewModel()
     @ObservedObject private var router = AppRouter.shared
     @State private var selectedTab: RootTab = .home
     /// Whether the system has moved the status bar and navigation bar into a strip down the
@@ -56,7 +58,8 @@ struct RootTabView: View {
             scanHeight: scanHeight,
             isNavVisible: !shellChrome.navHidden,
             isScanVisible: isScanFloating,
-            isExpanded: isExpanded
+            isExpanded: isExpanded,
+            pinnedActionHeight: shellChrome.pinnedActionHeight
         )
     }
 
@@ -84,6 +87,7 @@ struct RootTabView: View {
         .background(LarderColor.background.ignoresSafeArea())
         .environment(\.showSnackbar, showSnackbar)
         .environment(\.shellChrome, shellChrome)
+        .environment(\.shellClearance, metrics.contentClearance)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isScanFloating)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shellChrome.navHidden)
         .background(safeAreaReader)
@@ -163,15 +167,6 @@ struct RootTabView: View {
                     .transition(.opacity)
             }
         }
-        .sheet(isPresented: Binding(
-            get: { router.pendingRecipeShare != nil },
-            set: { if !$0 { router.pendingRecipeShare = nil } }
-        )) {
-            // Non-nil whenever the sheet is up, per the binding above; the fallback keeps this
-            // total rather than force-unwrapping during the dismiss animation, when SwiftUI can
-            // still re-evaluate the body after the prompt has been cleared.
-            ActivityView(activityItems: [router.pendingRecipeShare ?? ""])
-        }
         .onChange(of: router.route) { _, route in
             guard let route else { return }
             // First run finishes before anything else opens.
@@ -195,6 +190,12 @@ struct RootTabView: View {
                 router.pendingLaunchRoute = nil
                 if !isFirstRun { apply(pending) }
             }
+            // A route set before this view was observing, such as a notification action that
+            // started the app, would otherwise wait for the next one.
+            if let pending = router.route {
+                router.route = nil
+                if !isFirstRun { apply(pending) }
+            }
             if isFirstRun { showOnboarding = true }
         }
     }
@@ -214,19 +215,15 @@ struct RootTabView: View {
                     onItemsDeleted: offerDeletedItemsUndo,
                     onScan: { presentScanner() },
                     onAddByHand: { presentAddEdit(editing: nil) },
+                    onGetRecipeIdeas: { apply(.recipeIdeas(itemIds: $0)) },
                     showsHeaderScan: barsInSideStrip
                 ) { item in
                     productDetail(item, actions: productDetailActions(item) { $0() })
                 }
                 .transition(.opacity)
-            case .calendar:
-                CalendarView(
-                    viewModel: viewModel,
-                    onEditItem: { presentAddEdit(editing: $0) },
-                    onUseOne: { useOne($0) },
-                    onToss: { viewModel.deleteItem($0.id, onItemRemoved: offerItemUndo) }
-                )
-                .transition(.opacity)
+            case .recipe:
+                RecipeView(pantry: viewModel, model: recipeViewModel, onScan: { presentScanner() })
+                    .transition(.opacity)
             case .shopping:
                 ShoppingListView(
                     viewModel: viewModel,
@@ -320,6 +317,10 @@ struct RootTabView: View {
             showCategories = true
         case .onboarding:
             showOnboarding = true
+        case .recipeIdeas(let itemIds):
+            recipeViewModel.select(itemIds, from: viewModel.items)
+            recipeViewModel.path = []
+            selectedTab = .recipe
         }
     }
 
@@ -463,9 +464,10 @@ private struct AddEditRequest: Identifiable {
 extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
-    /// calendar, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
-    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`)
-    /// goes to that route, and `-demoAllergen <name>` adds to the allergen list.
+    /// recipe, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
+    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`,
+    /// recipeSettings, savedRecipes, recipeResult, which saves a sample recipe first) goes to that
+    /// route, and `-demoAllergen <name>` adds to the allergen list.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
@@ -478,7 +480,7 @@ extension RootTabView {
             SettingsStore.shared.save(settings)
         }
         switch arguments.string(forKey: "demoTab") {
-        case "calendar": selectedTab = .calendar
+        case "recipe": selectedTab = .recipe
         case "shopping": selectedTab = .shopping
         case "settings": selectedTab = .settings
         default: break
@@ -492,6 +494,15 @@ extension RootTabView {
         case "productDetail":
             let item = viewModel.items.first { $0.name == arguments.string(forKey: "demoItem") }
             apply(.productDetail(itemId: (item ?? viewModel.filteredItems.first)?.id ?? ""))
+        case "recipeSettings":
+            selectedTab = .recipe
+            recipeViewModel.path = [.settings]
+        case "savedRecipes":
+            selectedTab = .recipe
+            recipeViewModel.path = [.saved]
+        case "recipeResult":
+            selectedTab = .recipe
+            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe())]
         default: break
         }
     }

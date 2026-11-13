@@ -181,7 +181,11 @@ struct PantryRow: View {
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel([name, spokenStatus ?? statusText, place, L10n.quantityFormat(quantity)].joined(separator: ", "))
+        .accessibilityLabel(
+            [name, spokenStatus ?? statusText, place, L10n.quantityFormat(quantity)]
+                .filter { !$0.isEmpty }
+                .joined(separator: ", ")
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

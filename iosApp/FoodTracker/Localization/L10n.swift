@@ -92,15 +92,6 @@ public enum L10n {
     public static var detailCredit: String { NSLocalizedString("detail_credit", comment: "") }
     public static var detailAllergenNote: String { NSLocalizedString("detail_allergen_note", comment: "") }
     public static var detailChooseItem: String { NSLocalizedString("detail_choose_item", comment: "") }
-    public static func recipeIntro(_ a1: String) -> String {
-        String(format: NSLocalizedString("recipe_intro", comment: ""), a1)
-    }
-    public static func recipeNamesTwo(_ a1: String, _ a2: String) -> String {
-        String(format: NSLocalizedString("recipe_names_two", comment: ""), a1, a2)
-    }
-    public static func recipeNamesThree(_ a1: String, _ a2: String, _ a3: String) -> String {
-        String(format: NSLocalizedString("recipe_names_three", comment: ""), a1, a2, a3)
-    }
     /// A pantry count as a word up to ten, as the sentence on Home writes it.
     public static func ledeNumber(_ count: Int) -> String {
         (1...10).contains(count) ? NSLocalizedString("lede_number_\(count)", comment: "") : "\(count)"
@@ -124,12 +115,6 @@ public enum L10n {
     public static func homeShowItems(_ count: Int) -> String { plural("home_show_items", count) }
     public static func homeActiveFilterCount(_ shown: Int, of total: Int) -> String {
         plural("home_active_filter_count", total, ["n": "\(shown)"])
-    }
-    public static func recipeNamesMore(_ first: String, _ second: String, others: Int) -> String {
-        plural("recipe_names_more", others, ["a": first, "b": second])
-    }
-    public static func recipeIncludeOthersCount(_ count: Int) -> String {
-        plural("recipe_include_others_count", count)
     }
 
     // Larder foundation
@@ -222,12 +207,6 @@ public enum L10n {
     public static var moreOptionsButton: String { NSLocalizedString("more_options_button", comment: "") }
     public static var actionGetRecipeIdeas: String { NSLocalizedString("action_get_recipe_ideas", comment: "") }
     public static var recipePromptIntro: String { NSLocalizedString("recipe_prompt_intro", comment: "") }
-    public static var recipePromptOtherItemsIntro: String { NSLocalizedString("recipe_prompt_other_items_intro", comment: "") }
-    public static var shareRecipeDialogTitle: String { NSLocalizedString("share_recipe_dialog_title", comment: "") }
-    public static var shareRecipeIncludeOtherItemsTitle: String { NSLocalizedString("share_recipe_include_other_items_title", comment: "") }
-    public static var shareRecipeIncludeOtherItemsSubtitle: String { NSLocalizedString("share_recipe_include_other_items_subtitle", comment: "") }
-    public static var shareRecipeShareButton: String { NSLocalizedString("share_recipe_share_button", comment: "") }
-    public static var shareRecipeCancelButton: String { NSLocalizedString("share_recipe_cancel_button", comment: "") }
 
     public static func selectionCount(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("selection_count_format", comment: ""), count)
@@ -235,10 +214,6 @@ public enum L10n {
 
     public static func recipePromptItem(name: String, expiry: String) -> String {
         String(format: NSLocalizedString("recipe_prompt_item_format", comment: ""), name, expiry)
-    }
-
-    public static func recipePromptOtherItemsOmitted(_ count: Int) -> String {
-        String(format: NSLocalizedString("recipe_prompt_other_items_omitted", comment: ""), count)
     }
 
     public static var searchPlaceholder: String { NSLocalizedString("search_placeholder", comment: "") }
@@ -258,35 +233,6 @@ public enum L10n {
     public static var settingsAddAllergen: String { NSLocalizedString("settings_add_allergen", comment: "") }
     public static func allergenWarning(_ allergens: String) -> String {
         String(format: NSLocalizedString("allergen_warning", comment: ""), allergens)
-    }
-
-    public static var calendarButton: String { NSLocalizedString("calendar_button", comment: "") }
-    public static var calendarTitle: String { NSLocalizedString("calendar_title", comment: "") }
-    public static var calendarPreviousMonth: String { NSLocalizedString("calendar_previous_month", comment: "") }
-    public static var calendarNextMonth: String { NSLocalizedString("calendar_next_month", comment: "") }
-    public static var calendarNoItemsForDay: String { NSLocalizedString("calendar_no_items_for_day", comment: "") }
-    public static var calendarSectionOverdue: String { NSLocalizedString("calendar_section_overdue", comment: "") }
-    public static var calendarSectionToday: String { NSLocalizedString("calendar_section_today", comment: "") }
-    public static var calendarSectionTomorrow: String { NSLocalizedString("calendar_section_tomorrow", comment: "") }
-    public static var calendarSectionThisWeek: String { NSLocalizedString("calendar_section_this_week", comment: "") }
-    public static var calendarSectionNextWeek: String { NSLocalizedString("calendar_section_next_week", comment: "") }
-    public static var calendarSectionLater: String { NSLocalizedString("calendar_section_later", comment: "") }
-    public static var calendarAgendaEmpty: String { NSLocalizedString("calendar_agenda_empty", comment: "") }
-    public static var calendarShowAll: String { NSLocalizedString("calendar_show_all", comment: "") }
-    public static var calendarSwipeUsed: String { NSLocalizedString("calendar_swipe_used", comment: "") }
-    public static var calendarSwipeTossed: String { NSLocalizedString("calendar_swipe_tossed", comment: "") }
-    public static var calendarShowMonth: String { NSLocalizedString("calendar_show_month", comment: "") }
-    public static var calendarShowWeek: String { NSLocalizedString("calendar_show_week", comment: "") }
-    public static var calendarPaneTitle: String { NSLocalizedString("calendar_pane_title", comment: "") }
-    public static var calendarEmptyMessage: String { NSLocalizedString("calendar_empty_message", comment: "") }
-    public static func calendarUsedSnackbar(_ name: String) -> String {
-        String(format: NSLocalizedString("calendar_used_snackbar", comment: ""), name)
-    }
-    public static func calendarTossedSnackbar(_ name: String) -> String {
-        String(format: NSLocalizedString("calendar_tossed_snackbar", comment: ""), name)
-    }
-    public static func calendarDayItemCount(_ count: Int) -> String {
-        String.localizedStringWithFormat(NSLocalizedString("calendar_day_item_count", comment: ""), count)
     }
 
     public static var sectionProductDetails: String { NSLocalizedString("section_product_details", comment: "") }

@@ -362,26 +362,6 @@
 			<string>%d товара в очереди ещё не добавлены.</string>
 		</dict>
 	</dict>
-    <key>calendar_day_item_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@items@</string>
-        <key>items</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Истекает %d продукт</string>
-            <key>few</key>
-            <string>Истекает %d продукта</string>
-            <key>many</key>
-            <string>Истекает %d продуктов</string>
-            <key>other</key>
-            <string>Истекает %d продукта</string>
-        </dict>
-    </dict>
     <key>settings_lead_days_phrase</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -642,46 +622,6 @@
             <string>Показать %d продукта</string>
         </dict>
     </dict>
-    <key>recipe_names_more</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>{a}, {b} и ещё %d</string>
-            <key>few</key>
-            <string>{a}, {b} и ещё %d</string>
-            <key>many</key>
-            <string>{a}, {b} и ещё %d</string>
-            <key>other</key>
-            <string>{a}, {b} и ещё %d</string>
-        </dict>
-    </dict>
-    <key>recipe_include_others_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-            <key>few</key>
-            <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-            <key>many</key>
-            <string>Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-            <key>other</key>
-            <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-        </dict>
-    </dict>
     <key>expires_in_months_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -720,6 +660,46 @@
             <string>Через %d лет</string>
             <key>other</key>
             <string>Через %d года</string>
+        </dict>
+    </dict>
+    <key>recipe_more_in_pantry</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ещё %d в ваших запасах</string>
+            <key>few</key>
+            <string>Ещё %d в ваших запасах</string>
+            <key>many</key>
+            <string>Ещё %d в ваших запасах</string>
+            <key>other</key>
+            <string>Ещё %d в ваших запасах</string>
+        </dict>
+    </dict>
+    <key>recipe_servings_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d порция</string>
+            <key>few</key>
+            <string>%d порции</string>
+            <key>many</key>
+            <string>%d порций</string>
+            <key>other</key>
+            <string>%d порции</string>
         </dict>
     </dict>
 </dict>

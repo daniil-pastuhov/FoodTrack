@@ -130,7 +130,10 @@ public class NativePantryViewModel: ObservableObject {
             ProductNameRecord.self,
             LocalProductRecord.self,
             CategoryPreferenceRecord.self,
-            ShoppingSectionRecord.self
+            ShoppingSectionRecord.self,
+            // The Recipe tab's saved recipes. A new entity with defaults on every property, so
+            // an existing store gains its table in place.
+            SavedRecipeRecord.self
         ])
         guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
             fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see \"Setup\" in CONTRIBUTING.md")
@@ -1992,45 +1995,5 @@ public class NativePantryViewModel: ObservableObject {
         items = []
         IOSNotificationManager.shared.cancelAll()
         WidgetCenter.shared.reloadAllTimelines()
-    }
-
-    /// The share sheet payload rides in-process (no IPC size ceiling like Android's Binder
-    /// transaction buffer), but a pantry-sized dump of "other items" is still capped so a huge
-    /// pantry can't balloon the prompt without bound.
-    private static let maxOtherItemsChars = 20_000
-
-    /// Builds a device-language prompt asking an AI assistant (ChatGPT/Gemini/Claude, via the
-    /// share sheet) for recipe ideas using the given items, ordered soonest-to-expire first.
-    ///
-    /// `otherItems` is an optional list of additional pantry items (e.g. everything not
-    /// explicitly selected) offered to the AI as extra ingredients it could also use. Only names
-    /// are listed, and the list is silently truncated at `maxOtherItemsChars`.
-    public static func recipePrompt(for items: [PantryItem], otherItems: [PantryItem] = []) -> String {
-        let lines = items
-            .sorted { $0.daysRemaining < $1.daysRemaining }
-            .map { "- " + L10n.recipePromptItem(name: $0.name, expiry: $0.daysRemainingFormatted) }
-            .joined(separator: "\n")
-        var prompt = L10n.recipePromptIntro + "\n\n" + lines
-
-        if !otherItems.isEmpty {
-            let names = otherItems.map { $0.name }.sorted()
-            var otherNames = ""
-            var includedCount = 0
-            for name in names {
-                let lengthIfAdded = otherNames.count + (otherNames.isEmpty ? 0 : 2) + name.count
-                if lengthIfAdded > maxOtherItemsChars { break }
-                if !otherNames.isEmpty { otherNames += ", " }
-                otherNames += name
-                includedCount += 1
-            }
-            if includedCount > 0 {
-                prompt += "\n\n" + L10n.recipePromptOtherItemsIntro + " " + otherNames
-                let omittedCount = otherItems.count - includedCount
-                if omittedCount > 0 {
-                    prompt += " " + L10n.recipePromptOtherItemsOmitted(omittedCount)
-                }
-            }
-        }
-        return prompt
     }
 }
