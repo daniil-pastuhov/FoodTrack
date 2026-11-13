@@ -74,6 +74,30 @@ class BuiltInNamesTest {
         assertEquals("Бытовая химия", categoryForFieldText("Бытовая химия", null, emptyList(), label))
     }
 
+    @Test
+    fun testEditorShowsACategoryWithNoPreferenceYetTranslated() {
+        assertEquals("Молочное", categoryFieldText(FoodLabels.CATEGORY_DAIRY, emptyList(), label))
+    }
+
+    @Test
+    fun testEditorLeavesADisabledCategoryBlank() {
+        val prefs = listOf(CategoryPreference(FoodLabels.CATEGORY_DAIRY, FoodLabels.CATEGORY_DAIRY, 0.0, enabled = false))
+        assertEquals("", categoryFieldText(FoodLabels.CATEGORY_DAIRY, prefs, label))
+    }
+
+    @Test
+    fun testSavingTheBlankOfADisabledCategoryKeepsIt() {
+        val prefs = listOf(CategoryPreference(FoodLabels.CATEGORY_DAIRY, FoodLabels.CATEGORY_DAIRY, 0.0, enabled = false))
+        assertEquals(FoodLabels.CATEGORY_DAIRY, categoryForFieldText("", FoodLabels.CATEGORY_DAIRY, prefs, label))
+    }
+
+    @Test
+    fun testClearingAnEnabledCategoryMeansNoCategory() {
+        val prefs = listOf(CategoryPreference(FoodLabels.CATEGORY_DAIRY, FoodLabels.CATEGORY_DAIRY, 0.0))
+        assertEquals("", categoryForFieldText("", FoodLabels.CATEGORY_DAIRY, prefs, label))
+        assertEquals("", categoryForFieldText("", null, prefs, label))
+    }
+
     // Settings: category rename
 
     @Test

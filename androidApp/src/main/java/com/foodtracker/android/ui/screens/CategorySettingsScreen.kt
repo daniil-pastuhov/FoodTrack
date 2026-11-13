@@ -81,6 +81,8 @@ import com.foodtracker.android.ui.theme.larderShadow
 import com.foodtracker.android.util.categoryLabel
 import com.foodtracker.android.util.categoryRename
 import com.foodtracker.model.CategoryPreference
+import com.foodtracker.model.suggestableDisplayNames
+import com.foodtracker.viewmodel.PantryDerivation
 import com.foodtracker.viewmodel.PantryStateHolder
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -123,7 +125,7 @@ fun CategorySettingsScreen(
         val fromIndex = from.index - HEADER_ROWS
         val toIndex = to.index - HEADER_ROWS
 
-        if (fromIndex in localPreferences.indices && toIndex in localPreferences.indices) {
+        if (PantryDerivation.canMoveCategoryRow(localPreferences, fromIndex, toIndex)) {
             localPreferences = localPreferences.toMutableList().apply {
                 add(toIndex, removeAt(fromIndex))
             }
@@ -230,8 +232,8 @@ fun CategorySettingsScreen(
                                 allOrigins = row.mergedOrigins,
                                 isDragging = isDragging,
                                 isMoving = movingOrigin == pref.originName,
-                                canMoveUp = index > 0,
-                                canMoveDown = index < localPreferences.lastIndex,
+                                canMoveUp = PantryDerivation.canMoveCategoryRow(localPreferences, index, index - 1),
+                                canMoveDown = PantryDerivation.canMoveCategoryRow(localPreferences, index, index + 1),
                                 position = LarderGroupPosition.of(index, localPreferences.size),
                                 dragHandleModifier = Modifier.draggableHandle(
                                     onDragStarted = {
@@ -434,7 +436,8 @@ private fun RenameCategoryDialog(
             emptyList()
         } else {
             allPreferences
-                .map { labelOf(it.displayName) }
+                .suggestableDisplayNames()
+                .map(labelOf)
                 .distinct()
                 .filter { it.contains(text, ignoreCase = true) && !it.equals(text, ignoreCase = true) }
                 .take(5)

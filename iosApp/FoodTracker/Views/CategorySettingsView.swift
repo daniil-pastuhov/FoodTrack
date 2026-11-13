@@ -34,7 +34,10 @@ struct CategorySettingsView: View {
         // between launches: `Dictionary(grouping:)` above has no defined iteration order and
         // `sorted(by:)` is not stable. Ties are only possible on a database written before
         // reordering renumbered the list, but that is exactly the state an existing install is in.
-        .sorted { ($0.sortOrder, $0.displayName) < ($1.sortOrder, $1.displayName) }
+        // Disabled categories go after every enabled one, as on Android.
+        .sorted {
+            ($0.enabled ? 0 : 1, $0.sortOrder, $0.displayName) < ($1.enabled ? 0 : 1, $1.sortOrder, $1.displayName)
+        }
     }
 
     private var allEnabled: Bool {
@@ -113,6 +116,9 @@ struct CategorySettingsView: View {
             .onMove { source, destination in
                 var reordered = rows
                 reordered.move(fromOffsets: source, toOffset: destination)
+                // Enabled rows always come before disabled ones, so a drop across the two would
+                // save a new order and then snap straight back.
+                guard !zip(reordered, reordered.dropFirst()).contains(where: { !$0.enabled && $1.enabled }) else { return }
                 saveOrder(reordered)
             }
         }
@@ -122,8 +128,8 @@ struct CategorySettingsView: View {
 
     private func row(_ pref: CategoryPreference, index: Int, rows: [CategoryPreference], isMoving: Bool) -> some View {
         let name = L10n.categoryName(pref.displayName)
-        let canMoveUp = index > 0
-        let canMoveDown = index < rows.count - 1
+        let canMoveUp = Self.canMove(index, to: index - 1, in: rows)
+        let canMoveDown = Self.canMove(index, to: index + 1, in: rows)
         return VStack(spacing: 0) {
             HStack(spacing: LarderSpace.s1) {
                 LarderIconButton(.gripVertical, label: L10n.categorySettingsDragHandleFormat(name)) {
@@ -226,6 +232,7 @@ struct CategorySettingsView: View {
                 LarderTextField(L10n.categorySettingsRenameFieldLabel, text: $editingText)
 
                 let suggestions = viewModel.categoryPreferences
+                    .filter(\.enabled)
                     .map { L10n.categoryName($0.displayName) }
                     .filter {
                         let current = editingText.trimmingCharacters(in: .whitespaces)
@@ -344,10 +351,17 @@ struct CategorySettingsView: View {
 
     private func move(_ index: Int, by offset: Int, in rows: [CategoryPreference]) {
         let target = index + offset
-        guard rows.indices.contains(index), rows.indices.contains(target) else { return }
+        guard Self.canMove(index, to: target, in: rows) else { return }
         var reordered = rows
         reordered.swapAt(index, target)
         saveOrder(reordered)
+    }
+
+    /// Whether the row at `index` may take the place of the row at `target`: only within its own
+    /// part, since enabled rows always come before disabled ones. Mirrors Android's
+    /// `PantryDerivation.canMoveCategoryRow`.
+    private static func canMove(_ index: Int, to target: Int, in rows: [CategoryPreference]) -> Bool {
+        rows.indices.contains(index) && rows.indices.contains(target) && rows[index].enabled == rows[target].enabled
     }
 
     /// The whole visible order is what gets persisted, not just where the dragged row landed

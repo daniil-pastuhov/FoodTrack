@@ -78,6 +78,11 @@ fun categoryPreferenceSortOrder(origin: String?, index: CategoryPreferenceIndex)
     return if (pref.enabled) pref.sortOrder else Double.MAX_VALUE
 }
 
+/** The display names a category field may suggest: a disabled category is hidden everywhere but
+ *  the Settings list of all categories, so it is never offered. */
+fun List<CategoryPreference>.suggestableDisplayNames(): List<String> =
+    filter { it.enabled }.map { it.displayName }.distinct()
+
 /** Resolves a possibly freehand-typed category name against existing preferences: if [typed]
  *  exactly matches a known category's [CategoryPreference.displayName] (case-insensitively),
  *  returns that category's [CategoryPreference.originName] instead - so typing a name that

@@ -76,7 +76,6 @@ public struct AddEditItemView: View {
     /// stored key (an empty result is the "Other" bucket, i.e. no category).
     private var savedCategory: String? {
         let text = category.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return nil }
         let stored = categoryForFieldText(text, original: categorySource, viewModel.categoryPreferences)
         return stored.isEmpty ? nil : stored
     }
@@ -137,7 +136,9 @@ public struct AddEditItemView: View {
     private var categorySuggestions: [String] {
         let current = category.trimmingCharacters(in: .whitespaces)
         guard !current.isEmpty else { return [] }
+        // A disabled category is hidden everywhere but Settings' list of all categories.
         let matches = viewModel.categoryPreferences
+            .filter(\.enabled)
             .map { L10n.categoryName($0.displayName) }
             .filter {
                 $0.localizedCaseInsensitiveContains(current) &&
