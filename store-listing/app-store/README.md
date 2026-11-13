@@ -9,7 +9,7 @@ screenshot sets, four each, in App Store Connect's media sections of the same na
 |---|---|---|
 | `screenshots/` | 1320×2868 | iPhone with Dynamic Island (large display), 6.9" |
 | `medium-screenshots/` | 1206×2622 | iPhone with Dynamic Island (medium display), 6.3"; at least one is required |
-| `duo-inner-screenshots/` | 2007×2853 | iPhone Duo, inner display |
+| `duo-inner-screenshots/` | 2853×2007 | iPhone Duo, inner display, held sideways (2007×2853 upright works too) |
 | `duo-outer-screenshots/` | 1398×2034 | iPhone Duo, outer display |
 | `ipad-screenshots/` | 2064×2752 | iPad 13" |
 
