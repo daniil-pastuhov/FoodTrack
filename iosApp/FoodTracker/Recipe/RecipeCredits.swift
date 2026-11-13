@@ -47,6 +47,14 @@ struct RecipeCreditsStorage {
         static let generation = "com.foodtracker.recipe.pending_generation"
         static let generationSavedAt = "com.foodtracker.recipe.pending_generation_saved_at"
         static let courses = "com.foodtracker.recipe.menu_courses"
+        static let costs = "com.foodtracker.recipe.costs"
+    }
+
+    /// The last costs the server sent, whichever account it sent them to: they are the same for
+    /// everyone. Nil until the first answer that carried them.
+    var costs: RecipeCosts? {
+        get { decode(RecipeCosts.self, Key.costs) }
+        nonmutating set { encode(newValue, Key.costs) }
     }
 
     var unconfirmed: [UnconfirmedPurchase] {
@@ -116,6 +124,8 @@ struct RecipeCreditsStorage {
 final class RecipeCredits: ObservableObject {
     /// Nil while there is no user, which is the state of anyone who never bought.
     @Published private(set) var balance: Int?
+    /// What a recipe and a menu take, as the server last said; 1, 4 and 5 until it has.
+    @Published private(set) var costs: RecipeCosts
     @Published private(set) var account: RecipeAccountState = .none
     @Published private(set) var packs: RecipePacksState = .idle
     @Published private(set) var unconfirmed: [UnconfirmedPurchase] = []
@@ -153,6 +163,7 @@ final class RecipeCredits: ObservableObject {
     init(backend: RecipeBackend = FirebaseRecipeBackend(), storage: RecipeCreditsStorage = RecipeCreditsStorage()) {
         self.backend = backend
         self.storage = storage
+        costs = storage.costs ?? .fallback
         unconfirmed = storage.unconfirmed
         paymentPending = Self.isPending(since: storage.paymentPendingSince, now: Date())
     }
@@ -252,7 +263,8 @@ final class RecipeCredits: ObservableObject {
         if demoMode { return }
         #endif
         do {
-            apply(balance: try await backend.balance())
+            let response = try await backend.balance()
+            apply(balance: response.balance, costs: response.costs)
             connectionLost = false
         } catch {
             note(error)
@@ -261,9 +273,19 @@ final class RecipeCredits: ObservableObject {
 
     // MARK: Results of server calls
 
-    func apply(balance newBalance: Int) {
+    /// A server answer's balance, and its costs when it carried readable ones.
+    func apply(balance newBalance: Int, costs newCosts: WireCosts? = nil) {
         balance = newBalance
         if let uid = account.uid { storage.cache(balance: newBalance, for: uid) }
+        if let received = newCosts?.value {
+            storage.costs = received
+            if received != costs { costs = received }
+        }
+    }
+
+    /// What a recipe, or a menu of `courses` courses a day, takes.
+    func cost(of kind: RecipeKind, courses: Int) -> Int {
+        costs.cost(of: kind, courses: courses)
     }
 
     func callSucceeded() {
@@ -369,7 +391,7 @@ final class RecipeCredits: ObservableObject {
             }
             guard let response else { return notAddedYet() }
             callSucceeded()
-            apply(balance: response.balance)
+            apply(balance: response.balance, costs: response.costs)
             guard response.status.finishesTransaction else { return notAddedYet() }
             await transaction.finish()
             forget(transaction.id)
@@ -497,9 +519,9 @@ final class RecipeCredits: ObservableObject {
         isSigningIn = true
         defer { isSigningIn = false }
         do {
-            let newBalance = try await accountService.completeMerge(merge)
+            let response = try await accountService.completeMerge(merge)
             account = accountService.state
-            apply(balance: newBalance)
+            apply(balance: response.balance, costs: response.costs)
             callSucceeded()
         } catch {
             await accountService.cancelMerge()

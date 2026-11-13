@@ -34,8 +34,12 @@ enum RecipeFailure: Equatable {
     /// Failed, nothing taken. `sameRequest` retries under the same id (a server error), else a
     /// new attempt (the generation itself failed).
     case serverFailed(RecipeKind, sameRequest: Bool)
-    /// Failed and counted: an input-caused failure past the day's free ones.
-    case serverRefused(RecipeKind)
+    /// Failed and counted: a failure caused by the request itself, past the ones the server
+    /// gives back. `taken` is what that kind of write takes.
+    case serverRefused(RecipeKind, taken: Int)
+    /// The server refused for a reason this version doesn't know. `taken` is 0 when nothing was
+    /// taken.
+    case serverUnrecognised(RecipeKind, taken: Int)
     case busy
     case rateLimited
     case dailyCap
@@ -193,8 +197,13 @@ final class RecipeViewModel: ObservableObject {
     var serverCanWriteRecipe: Bool { serverCanWrite(.recipe) }
     var serverCanWriteMenu: Bool { serverCanWrite(.menu) }
 
+    /// What a recipe, or a menu of the chosen number of courses, takes, from the server's costs.
+    var recipeCost: Int { credits.cost(of: .recipe, courses: menuCourses) }
+    var menuCost: Int { credits.cost(of: .menu, courses: menuCourses) }
+
     private func serverCanWrite(_ kind: RecipeKind) -> Bool {
-        credits.isPaidRouteAvailable && !credits.serverPaused && (credits.balance ?? 0) >= kind.cost
+        credits.isPaidRouteAvailable && !credits.serverPaused
+            && (credits.balance ?? 0) >= credits.cost(of: kind, courses: menuCourses)
     }
 
     func writeOnServer(from items: [PantryItem]) {
@@ -233,7 +242,7 @@ final class RecipeViewModel: ObservableObject {
                 while true {
                     let response = try await backend.generate(wire)
                     if response.status == .inProgress, Date() < deadline {
-                        credits.apply(balance: response.balance)
+                        credits.apply(balance: response.balance, costs: response.costs)
                         try await Task.sleep(for: .seconds(3))
                         continue
                     }
@@ -251,9 +260,9 @@ final class RecipeViewModel: ObservableObject {
     private func finishServerWrite(_ wire: GenerateRequest, _ response: GenerateResponse) {
         writeTask = nil
         phase = .idle
-        credits.apply(balance: response.balance)
+        credits.apply(balance: response.balance, costs: response.costs)
         credits.callSucceeded()
-        let outcome = Self.outcome(of: response, kind: wire.kind)
+        let outcome = Self.outcome(of: response, for: wire, costs: credits.costs)
         if outcome.clearsRequest { credits.storage.pendingGeneration = nil }
         switch outcome {
         case .saved(let content):
@@ -289,6 +298,8 @@ final class RecipeViewModel: ObservableObject {
             failure = .serverFailed(wire.kind, sameRequest: true)
         case .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed:
             failure = .serverFailed(wire.kind, sameRequest: false)
+        case .unrecognised(let charged):
+            failure = .serverUnrecognised(wire.kind, taken: charged ? credits.costs.cost(of: wire) : 0)
         }
     }
 
@@ -306,7 +317,9 @@ final class RecipeViewModel: ObservableObject {
     /// What one `generateRecipe` answer means for the screen. A DONE without the right payload,
     /// or an answer still IN_PROGRESS past the wait, reads as a failure retried under the same
     /// id: the server holds the charge until it settles, and the same id never pays twice.
-    static func outcome(of response: GenerateResponse, kind: RecipeKind) -> ServerOutcome {
+    /// `costs` says how many a counted failure took.
+    static func outcome(of response: GenerateResponse, for wire: GenerateRequest, costs: RecipeCosts) -> ServerOutcome {
+        let kind = wire.kind
         switch response.status {
         case .done:
             switch kind {
@@ -326,7 +339,11 @@ final class RecipeViewModel: ObservableObject {
         case .inProgress:
             return .failure(.serverFailed(kind, sameRequest: true))
         case .failed:
-            return .failure(response.charged ? .serverRefused(kind) : .serverFailed(kind, sameRequest: false))
+            return .failure(
+                response.charged
+                    ? .serverRefused(kind, taken: costs.cost(of: wire))
+                    : .serverFailed(kind, sameRequest: false)
+            )
         }
     }
 

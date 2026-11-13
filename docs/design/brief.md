@@ -112,6 +112,10 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - 2026-11-13 · The first purchase asks where the recipes should live, on this phone with no account or in an Apple or Google account, with the consequence of each spelled out · owner decision
 - 2026-11-13 · On the Recipe tab the primary action is pinned above the nav where Scan sits on Home, and Scan is on Home only · the form is taller than a phone screen
 - 2026-11-13 · A recipe is taken only when a result arrives; the count changes when the result is shown · trust
+- 2026-11-13 · A menu for 3 days takes 4 recipes with two courses a day and 5 with three, not 3; a single recipe still takes 1. Supersedes the "takes 3 recipes" line above. The button, hint and too-few callout follow the selected course count · owner decision
+- 2026-11-13 · What a recipe and a menu take comes from the server with every balance (`costs`); the apps keep the last value and never hard-code it, falling back to 1 / 4 / 5 only before the first answer · owner decision; prices can change without an app release
+- 2026-11-13 · Failures on our side are always given back, but after several in one day the server stops writing until the next day. A recipe that fails because of the request itself (the model refuses it, or it comes back incomplete) is given back a limited number of times, one for every ten recipes bought; after that such failures count. Replaces "three a day" · owner decision; limits abuse without charging honest failures
+- 2026-11-13 · Packs of 10, 50 and 100 recipes cost USD 3.99, 10.99 and 18.99, converted by each store; the page shows them as £3.99, £10.99 and £18.99 samples · owner decision
 
 ## Options history
 - Round 1: A Larder, B Enamel, C Preserves → A Larder chosen by the user, the closest fit to warm and calm

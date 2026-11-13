@@ -20,7 +20,7 @@ A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Andr
 - 🍳 **Recipes from what's expiring**: the Recipe tab picks the items closest to their date and writes a recipe in one of three ways:
   - **Shared prompt** (free): the prompt is copied or shared to an AI app the user already has. Nothing comes back to the app.
   - **On this phone** (free): Gemini Nano through ML Kit's Prompt API on supported Android phones, Apple Foundation Models on iOS 26 and later. Nothing is sent.
-  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A 3-day menu (2 or 3 courses a day) is server-only and takes 3 recipes.
+  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A 3-day menu (2 or 3 courses a day) is server-only and takes 4 or 5 recipes, by the number of courses.
 
 ## Project Structure
 

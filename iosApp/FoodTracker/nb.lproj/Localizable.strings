@@ -658,8 +658,6 @@
 "recipe_generate_recipe" = "Lag oppskrift";
 "recipe_generate_menu" = "Lag meny";
 "recipe_buy" = "Kjøp oppskrifter";
-"recipe_menu_server_hint" = "En meny lages på serveren vår og bruker 3 oppskrifter fra en pakke.";
-"recipe_menu_short_title" = "En meny bruker 3 oppskrifter";
 "recipe_menu_short_message" = "Du har %d igjen. En enkelt oppskrift går fortsatt.";
 "recipe_menu_short_none" = "Du har ingen oppskrifter igjen.";
 "recipe_writing_server_title" = "Skriver oppskriften din";
@@ -670,8 +668,8 @@
 "recipe_offline_message" = "Oppskrifter fra pakken trenger internett. De gratis måtene nedenfor virker fortsatt.";
 "recipe_server_failed" = "Klarte ikke å lage oppskriften. Ingen oppskrift ble trukket.";
 "recipe_server_failed_menu" = "Klarte ikke å lage menyen. Ingen oppskrifter ble trukket.";
-"recipe_server_refused" = "Klarte ikke å lage en oppskrift av disse varene. 1 oppskrift ble trukket.";
-"recipe_server_refused_menu" = "Klarte ikke å lage en meny av disse varene. 3 oppskrifter ble trukket.";
+"recipe_server_unknown" = "Klarte ikke å lage oppskriften nå. Prøv igjen senere; ingen oppskrift ble trukket.";
+"recipe_server_unknown_menu" = "Klarte ikke å lage menyen nå. Prøv igjen senere; ingen oppskrifter ble trukket.";
 "recipe_server_busy" = "En annen oppskrift skrives fortsatt. Prøv igjen om et minutt.";
 "recipe_server_rate_limited" = "For mange oppskrifter på kort tid. Prøv igjen om et minutt.";
 "recipe_server_daily_cap" = "Oppskrifter fra pakker har nådd dagens grense. Prøv igjen i morgen; ingenting ble trukket.";
@@ -681,7 +679,7 @@
 "recipe_try_now" = "Prøv nå";
 "recipe_payment_pending_title" = "Venter på betaling";
 "recipe_payment_pending_message" = "Oppskriftene legges til når butikken bekrefter betalingen. Det kan ta litt tid.";
-"recipe_buy_message" = "Én oppskrift er én rett laget av serveren vår. En meny for 3 dager bruker 3. De utløper ikke.";
+"recipe_buy_message" = "Én oppskrift er én rett laget av serveren vår. En meny for 3 dager bruker %1$d med to retter om dagen, eller %2$d med tre. De utløper ikke.";
 "recipe_pack_each" = "%@ per oppskrift";
 "recipe_continue" = "Fortsett";
 "recipe_close" = "Lukk";

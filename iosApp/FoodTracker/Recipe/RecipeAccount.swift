@@ -158,7 +158,7 @@ final class RecipeAccount {
         }
         let accountBalance: Int
         do {
-            accountBalance = try await FirebaseRecipeBackend(appName: Self.mergeAppName).balance()
+            accountBalance = try await FirebaseRecipeBackend(appName: Self.mergeAppName).balance().balance
         } catch {
             await deleteMergeApp()
             throw error
@@ -172,13 +172,13 @@ final class RecipeAccount {
     }
 
     /// "Add and sign in": moves this install's recipes into the account, then makes the account
-    /// the current user. Returns the account's new balance.
-    func completeMerge(_ pending: RecipePendingMerge) async throws -> Int {
+    /// the current user. Returns the server's answer, with the account's new balance.
+    func completeMerge(_ pending: RecipePendingMerge) async throws -> MergeBalanceResponse {
         guard let source = auth?.currentUser, source.isAnonymous else { throw RecipeAccountError.failed }
         let token = try await source.getIDToken()
         let response = try await FirebaseRecipeBackend(appName: pending.appName).mergeBalance(sourceIdToken: token)
         try await adopt(pending.user)
-        return response.balance
+        return response
     }
 
     func cancelMerge() async {

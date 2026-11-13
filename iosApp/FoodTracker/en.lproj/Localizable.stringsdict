@@ -754,5 +754,101 @@
             <string>Your %d unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</string>
         </dict>
     </dict>
+    <key>recipe_menu_server_hint</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>A menu is written on our server and takes %d recipe from a pack.</string>
+            <key>other</key>
+            <string>A menu is written on our server and takes %d recipes from a pack.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>This menu takes %d recipe</string>
+            <key>other</key>
+            <string>This menu takes %d recipes</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Couldn't make a recipe from these items. %d recipe was taken.</string>
+            <key>other</key>
+            <string>Couldn't make a recipe from these items. %d recipes were taken.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Couldn't make a menu from these items. %d recipe was taken.</string>
+            <key>other</key>
+            <string>Couldn't make a menu from these items. %d recipes were taken.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Couldn't write the recipe right now. Try again later. %d recipe was taken.</string>
+            <key>other</key>
+            <string>Couldn't write the recipe right now. Try again later. %d recipes were taken.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Couldn't write the menu right now. Try again later. %d recipe was taken.</string>
+            <key>other</key>
+            <string>Couldn't write the menu right now. Try again later. %d recipes were taken.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

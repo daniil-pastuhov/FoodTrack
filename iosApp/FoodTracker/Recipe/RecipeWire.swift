@@ -8,9 +8,60 @@ import Foundation
 
 enum RecipeKind: String, Codable, Sendable {
     case recipe, menu
+}
 
-    /// What the server takes for one; it decides, the app only says it.
-    var cost: Int { self == .menu ? 3 : 1 }
+/// What the server takes for a recipe and for a menu of two or three courses a day. The server
+/// decides and sends it beside every `balance`; the app only says it, from the last value it
+/// received, or from `fallback` before it has received one.
+struct RecipeCosts: Codable, Equatable, Sendable {
+    var recipe: Int
+    var menu2: Int
+    var menu3: Int
+
+    static let fallback = RecipeCosts(recipe: 1, menu2: 4, menu3: 5)
+
+    init(recipe: Int, menu2: Int, menu3: Int) {
+        self.recipe = recipe
+        self.menu2 = menu2
+        self.menu3 = menu3
+    }
+
+    /// Leniently: a field that is missing, not a whole number or below 1 takes its fallback
+    /// value. Throws only when `costs` isn't an object at all.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        func read(_ key: CodingKeys, _ fallback: Int) -> Int {
+            guard let value = (try? container.decodeIfPresent(Int.self, forKey: key)) ?? nil, value >= 1 else {
+                return fallback
+            }
+            return value
+        }
+        recipe = read(.recipe, Self.fallback.recipe)
+        menu2 = read(.menu2, Self.fallback.menu2)
+        menu3 = read(.menu3, Self.fallback.menu3)
+    }
+
+    func cost(of kind: RecipeKind, courses: Int) -> Int {
+        switch kind {
+        case .recipe: return recipe
+        case .menu: return courses == 3 ? menu3 : menu2
+        }
+    }
+
+    /// What `request` takes, by its own kind and course count.
+    func cost(of request: GenerateRequest) -> Int {
+        cost(of: request.kind, courses: request.courses ?? 2)
+    }
+}
+
+/// `costs` as a response carries it. Anything unreadable there reads as nil rather than failing
+/// the call it came with.
+struct WireCosts: Decodable, Sendable {
+    let value: RecipeCosts?
+
+    init(from decoder: Decoder) throws {
+        value = try? RecipeCosts(from: decoder)
+    }
 }
 
 struct WireRecipeConfig: Codable, Equatable, Sendable {
@@ -80,6 +131,7 @@ struct GenerateResponse: Decodable, Sendable {
     var menu: RecipeMenu?
     var balance: Int
     var charged: Bool
+    var costs: WireCosts?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -95,15 +147,18 @@ enum VerifyStatus: String, Decodable, Sendable {
 struct VerifyPurchaseResponse: Decodable, Sendable {
     var status: VerifyStatus
     var balance: Int
+    var costs: WireCosts?
 }
 
 struct BalanceResponse: Decodable, Sendable {
     var balance: Int
+    var costs: WireCosts?
 }
 
 struct MergeBalanceResponse: Decodable, Sendable {
     var balance: Int
     var moved: Int
+    var costs: WireCosts?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable {
@@ -129,10 +184,13 @@ enum RecipeServerError: Error, Equatable, Sendable {
     case server
     /// No Auth user, or no valid App Check token: this build can't use the paid route.
     case unauthenticated
+    /// A `details.reason` this version doesn't know, such as a limit added on the server since.
+    /// `charged` is `details.charged`, false when absent. A new attempt needs a new id.
+    case unrecognised(charged: Bool)
 
     /// `code` is the callable's error code name ("failed-precondition"), `reason` its
-    /// `details.reason`.
-    static func from(code: String, reason: String?) -> RecipeServerError {
+    /// `details.reason` and `charged` its `details.charged`.
+    static func from(code: String, reason: String?, charged: Bool? = nil) -> RecipeServerError {
         switch reason {
         case "INSUFFICIENT_CREDITS": return .insufficientCredits
         case "BUSY": return .busy
@@ -143,7 +201,8 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "RECENT_SIGN_IN_REQUIRED": return .recentSignInRequired
         case "MERGE_NOT_ALLOWED": return .mergeNotAllowed
         case "INVALID_REQUEST": return .invalidRequest
-        default: break
+        case nil: break
+        default: return .unrecognised(charged: charged ?? false)
         }
         switch code {
         case "unauthenticated": return .unauthenticated

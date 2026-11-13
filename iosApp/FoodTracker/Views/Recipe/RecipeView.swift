@@ -326,8 +326,10 @@ struct RecipeView: View {
                     model.writeOnServer(from: pantry.items)
                 }
             }
-        case .serverRefused(let kind):
-            showSnackbar(L10n.recipeServerRefused(kind))
+        case .serverRefused(let kind, let taken):
+            showSnackbar(L10n.recipeServerRefused(kind, taken: taken))
+        case .serverUnrecognised(let kind, let taken):
+            showSnackbar(L10n.recipeServerUnrecognised(kind, taken: taken))
         case .busy:
             showSnackbar(L10n.recipeServerBusy)
         case .rateLimited:
@@ -467,12 +469,12 @@ struct RecipeView: View {
     @ViewBuilder
     private var menuActions: some View {
         if model.serverCanWriteMenu {
-            hint(nothingTicked ? L10n.recipeNoneSelectedHint : L10n.recipeMenuServerHint)
+            hint(nothingTicked ? L10n.recipeNoneSelectedHint : L10n.recipeMenuServerHint(model.menuCost))
         } else if !credits.serverPaused {
             LarderCallout(
                 .info,
-                title: L10n.recipeMenuShortTitle,
-                message: L10n.recipeMenuShortMessage(credits.balance ?? 0)
+                title: L10n.recipeMenuShortTitle(model.menuCost),
+                message: L10n.recipeMenuShortMessage(credits.balance ?? 0, recipeCost: model.recipeCost)
             )
             if credits.canBuy { buyButton }
         }
@@ -508,12 +510,12 @@ struct RecipeView: View {
     @ViewBuilder
     private var pinnedAction: some View {
         if isMenu {
-            RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(RecipeKind.menu.cost)) {
+            RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(model.menuCost)) {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
         } else if model.serverCanWriteRecipe {
-            RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(RecipeKind.recipe.cost)) {
+            RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(model.recipeCost)) {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
