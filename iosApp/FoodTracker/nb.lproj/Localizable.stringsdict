@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Konto-ID-en og e-postadressen din slettes fra serveren vår. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
+            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Innloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir værende, men er ikke lenger knyttet til deg. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
             <key>other</key>
-            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Konto-ID-en og e-postadressen din slettes fra serveren vår. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
+            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Innloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir værende, men er ikke lenger knyttet til deg. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
         </dict>
     </dict>
 </dict>

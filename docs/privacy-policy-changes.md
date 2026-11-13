@@ -122,10 +122,11 @@ it.
 
 ## Found in the code, worth fixing before the policy goes live
 
-- The delete-account confirmation in both apps says "Your account ID and email address are deleted
-  from our server". The email is deleted, but a closed record under the account ID is kept (see
-  above). Suggested text: "Your sign-in and email address are deleted from our server; a record of
-  your purchases is kept without them." (en; ru and nb to follow).
+- The delete-account confirmation said "Your account ID and email address are deleted from our
+  server". The email is deleted, but a closed record under the account ID is kept, and the
+  purchase records stay with the user reference removed (see above). iOS (en, ru, nb) and the
+  design now say: "Your sign-in and email address are deleted from our server; a record of the
+  purchases stays, no longer linked to you." Android's strings still need the same change.
 - On Android, Sign in with Apple asks Apple for the name as well as the email
   (`FirebaseRecipeAccount.appleProvider`), while iOS asks for the email only. Either drop the name
   scope on Android or declare the name for Apple sign-ins too.
