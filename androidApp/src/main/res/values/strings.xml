@@ -837,4 +837,130 @@
         <item quantity="one">%1$d serving</item>
         <item quantity="other">%1$d servings</item>
     </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Recipes left: %1$d. Buy more</string>
+    <string name="recipe_mode_label">What to make</string>
+    <string name="recipe_mode_recipe">Recipe</string>
+    <string name="recipe_mode_menu">Menu for 3 days</string>
+    <string name="recipe_courses">Courses a day</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d course</item>
+        <item quantity="other">%1$d courses</item>
+    </plurals>
+    <string name="recipe_generate">Generate recipe</string>
+    <string name="recipe_generate_menu">Generate menu</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d recipe</item>
+        <item quantity="other">%1$d recipes</item>
+    </plurals>
+    <string name="recipe_buy">Buy recipes</string>
+    <string name="recipe_menu_hint">A menu is written on our server and takes 3 recipes from a pack.</string>
+    <string name="recipe_menu_short_title">A menu takes 3 recipes</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">You have %1$d left. A single recipe still works.</item>
+        <item quantity="other">You have %1$d left. A single recipe still works.</item>
+    </plurals>
+    <string name="recipe_writing_server_title">Writing your recipe</string>
+    <string name="recipe_writing_server_body">A few seconds. A recipe is taken only when it arrives.</string>
+    <string name="recipe_writing_menu_title">Planning three days</string>
+    <string name="recipe_writing_menu_body">This can take up to two minutes. You can leave this screen; the menu will be in Saved recipes.</string>
+    <string name="recipe_offline_title">No connection</string>
+    <string name="recipe_offline_body">Recipes from your pack need the internet. The free routes below still work.</string>
+    <string name="recipe_failed_server">Couldn\'t write the recipe. No recipe was taken.</string>
+    <plurals name="recipe_refused">
+        <item quantity="one">Couldn\'t make a recipe from these items. %1$d recipe was taken.</item>
+        <item quantity="other">Couldn\'t make a recipe from these items. %1$d recipes were taken.</item>
+    </plurals>
+    <string name="recipe_paused_title">Recipes from packs are paused</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Your %1$d recipe is safe. The free routes below still work.</item>
+        <item quantity="other">Your %1$d recipes are safe. The free routes below still work.</item>
+    </plurals>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d recipe added</item>
+        <item quantity="other">%1$d recipes added</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Saved. %1$d recipe left</item>
+        <item quantity="other">Saved. %1$d recipes left</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Your purchase is being confirmed</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">You paid for %1$d recipe and it is not added yet. We keep trying; you don\'t need to buy again.</item>
+        <item quantity="other">You paid for %1$d recipes and they are not added yet. We keep trying; you don\'t need to buy again.</item>
+    </plurals>
+    <string name="recipe_try_now">Try now</string>
+    <string name="recipe_pending_title">Waiting for payment</string>
+    <string name="recipe_pending_body">Your recipes will be added when the store confirms the payment. That can take a while.</string>
+    <string name="recipe_packs_body">One recipe is one dish written by our server. A menu for 3 days takes 3. They don\'t expire.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d recipe</item>
+        <item quantity="other">%1$d recipes</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s each</string>
+    <string name="recipe_cancel">Cancel</string>
+    <string name="recipe_back">Back</string>
+    <string name="recipe_close">Close</string>
+    <string name="recipe_ok">OK</string>
+    <string name="recipe_choice_title">Where should your recipes live?</string>
+    <string name="recipe_choice_body">Choose once. You can sign in later from Recipe settings.</string>
+    <string name="recipe_choice_phone_title">On this phone, no account</string>
+    <string name="recipe_choice_phone_body">Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change phone, the ones you haven\'t used are lost.</string>
+    <string name="recipe_choice_account_title">In an account</string>
+    <string name="recipe_choice_account_body">Sign in with Apple or Google. Your recipes follow you to a new phone and work on both Android and iPhone. We keep your account ID and email address.</string>
+    <string name="recipe_sign_in_apple">Sign in with Apple</string>
+    <string name="recipe_sign_in_google">Sign in with Google</string>
+    <string name="recipe_store_error_title">Can\'t reach the store</string>
+    <string name="recipe_store_error_body">Check your connection and try again. Nothing was charged.</string>
+    <string name="recipe_rejected_title">This purchase couldn\'t be added</string>
+    <string name="recipe_rejected_body">The store reports it as refunded or already used. If you were charged and have no recipes, contact the store for a refund.</string>
+    <string name="recipe_your_recipes">Your recipes</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">recipe on this phone</item>
+        <item quantity="other">recipes on this phone</item>
+    </plurals>
+    <string name="recipe_on_phone_body">They stay with this install of the app. If you delete the app or change phone, the ones you haven\'t used are lost. Sign in to keep them in an account instead; they move over at once.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">recipe in your account</item>
+        <item quantity="other">recipes in your account</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Signed in with %1$s</string>
+    <string name="recipe_signed_in_add_apple">Sign in the same way on another phone to use them there. To use an iPhone too, add Apple.</string>
+    <string name="recipe_signed_in_add_google">Sign in the same way on another phone to use them there. To sign in with Google too, add Google.</string>
+    <string name="recipe_signed_in_both">Sign in with either on another phone, Android or iPhone, to use them there.</string>
+    <string name="recipe_add_sign_in">Add %1$s sign-in</string>
+    <string name="recipe_sign_out">Sign out</string>
+    <string name="recipe_delete_account">Delete account</string>
+    <string name="recipe_sign_out_title">Sign out?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Your %1$d recipe stays in your account. Sign in again to use it. Saved recipes stay on this phone.</item>
+        <item quantity="other">Your %1$d recipes stay in your account. Sign in again to use them. Saved recipes stay on this phone.</item>
+    </plurals>
+    <string name="recipe_delete_title">Delete your account?</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your account ID and email address are deleted from our server. Saved recipes and your pantry stay on this phone.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your account ID and email address are deleted from our server. Saved recipes and your pantry stay on this phone.</item>
+    </plurals>
+    <string name="recipe_merge_title">Add this phone\'s recipes to your account?</string>
+    <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this phone will be added to it, making %3$d. This can\'t be undone.</string>
+    <string name="recipe_merge_body_unknown">The %1$d recipes on this phone will be added to your account. This can\'t be undone.</string>
+    <string name="recipe_merge_confirm">Add and sign in</string>
+    <string name="recipe_sign_in_failed">Couldn\'t sign in. Your recipes are unchanged.</string>
+    <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your recipes are unchanged.</string>
+    <string name="recipe_account_deleted">Account deleted</string>
+    <string name="recipe_account_action_failed">Couldn\'t reach our server. Nothing was changed.</string>
+    <string name="recipe_menu_bar_title">Menu</string>
+    <string name="recipe_menu_title">Menu for three days</string>
+    <string name="recipe_menu_summary">%1$d courses a day for %2$d, using what expires first.</string>
+    <string name="recipe_menu_today">Today, %1$s</string>
+    <string name="recipe_menu_uses">Uses %1$s</string>
+    <string name="recipe_course_starter">Starter</string>
+    <string name="recipe_course_main">Main</string>
+    <string name="recipe_course_dessert">Dessert</string>
+    <string name="recipe_part_of_menu">Part of Menu for three days</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d dish</item>
+        <item quantity="other">%1$d dishes</item>
+    </plurals>
 </resources>

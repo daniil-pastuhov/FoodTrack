@@ -55,6 +55,17 @@ import com.foodtracker.recipe.RecipeDifficulty
 import com.foodtracker.recipe.RecipeIngredient
 import com.foodtracker.recipe.RecipeSource
 import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.recipe.Menu
+import com.foodtracker.recipe.MenuCourseKind
+import com.foodtracker.recipe.MenuCourse
+import com.foodtracker.recipe.MenuDay
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import com.foodtracker.util.DateUtils
+import android.text.format.DateFormat
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toJavaLocalDate
+import java.time.format.DateTimeFormatter
 
 /** A recipe as plain text, for Share: what another app or a message can hold. */
 fun recipeShareText(resources: Resources, recipe: Recipe): String = buildString {
@@ -73,25 +84,70 @@ fun recipeShareText(resources: Resources, recipe: Recipe): String = buildString 
     recipe.tip?.let { append("\n\n").append(resources.getString(R.string.recipe_tip)).append(": ").append(it) }
 }
 
-/** A saved recipe, read on a counter at arm's length: large type, numbered steps. Saved already,
- *  so there is no Save button; Delete is here as the visible twin of the saved list's swipe. */
+/** A menu's day as its section says it: "Today, Wed 4 Nov", then "Thu 5 Nov". With no [today],
+ *  never "Today". */
+internal fun menuDayLabel(resources: Resources, date: LocalDate, today: LocalDate?): String {
+    val locale = resources.configuration.locales[0]
+    val formatter = DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, "EEEdMMM"), locale)
+    val day = date.toJavaLocalDate().format(formatter)
+    return if (date == today) resources.getString(R.string.recipe_menu_today, day) else day
+}
+
+internal fun menuCourseLabel(resources: Resources, course: MenuCourseKind): String = resources.getString(
+    when (course) {
+        MenuCourseKind.STARTER -> R.string.recipe_course_starter
+        MenuCourseKind.MAIN -> R.string.recipe_course_main
+        MenuCourseKind.DESSERT -> R.string.recipe_course_dessert
+    }
+)
+
+/** A menu as plain text, for Share: each day with its dishes, then every recipe in full. */
+fun menuShareText(resources: Resources, menu: Menu, today: LocalDate): String = buildString {
+    append(resources.getString(R.string.recipe_menu_title))
+    menu.days.forEach { day ->
+        append("\n\n").append(menuDayLabel(resources, day.date, today))
+        day.courses.forEach { append("\n- ").append(menuCourseLabel(resources, it.course)).append(": ").append(it.recipe.title) }
+    }
+    menu.days.forEach { day ->
+        day.courses.forEach { course ->
+            append("\n\n---\n").append(menuDayLabel(resources, day.date, today)).append(" · ").append(menuCourseLabel(resources, course.course))
+            append("\n").append(recipeShareText(resources, course.recipe))
+        }
+    }
+}
+
+private fun share(context: android.content.Context, text: String) {
+    val send = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, text)
+    }
+    context.startActivity(Intent.createChooser(send, null))
+}
+
+/** A saved recipe or menu, read on a counter at arm's length: large type, numbered steps. Saved
+ *  already, so there is no Save button; Delete is here as the visible twin of the saved list's
+ *  swipe. A menu lists its days and dishes; each dish opens on its own. */
 @Composable
 fun RecipeResultScreen(
     stateHolder: RecipeStateHolder,
     savedId: String,
     onBack: () -> Unit,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    onOpenDish: (day: Int, course: Int) -> Unit = { _, _ -> }
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val recipe = state.saved.firstOrNull { it.id == savedId }?.recipe
+    val saved = state.saved.firstOrNull { it.id == savedId }
+    val recipe = saved?.recipe
+    val menu = saved?.menu
+    val today = DateUtils.today()
     Scaffold(
         topBar = {
             LarderTopBar(
-                title = stringResource(R.string.recipe_result_title),
+                title = stringResource(if (menu != null) R.string.recipe_menu_bar_title else R.string.recipe_result_title),
                 onBack = onBack,
                 actions = {
-                    if (recipe != null) {
+                    if (saved != null) {
                         LarderIconButton(
                             icon = LarderIcons.Trash2,
                             contentDescription = stringResource(R.string.delete),
@@ -101,11 +157,12 @@ fun RecipeResultScreen(
                             icon = LarderIcons.Share2,
                             contentDescription = stringResource(R.string.recipe_share_recipe),
                             onClick = {
-                                val send = Intent(Intent.ACTION_SEND).apply {
-                                    type = "text/plain"
-                                    putExtra(Intent.EXTRA_TEXT, recipeShareText(context.resources, recipe))
+                                val text = when {
+                                    recipe != null -> recipeShareText(context.resources, recipe)
+                                    menu != null -> menuShareText(context.resources, menu, today)
+                                    else -> return@LarderIconButton
                                 }
-                                context.startActivity(Intent.createChooser(send, null))
+                                share(context, text)
                             }
                         )
                     }
@@ -115,18 +172,129 @@ fun RecipeResultScreen(
         modifier = Modifier.fillMaxSize()
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            if (recipe == null) {
+            when {
+                recipe != null -> RecipeDocument(recipe)
+                menu != null -> MenuDocument(menu, today, onOpenDish)
                 // Still loading, or deleted from another screen.
-                if (state.savedLoaded) EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
-            } else {
-                RecipeDocument(recipe)
+                state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
+            }
+        }
+    }
+}
+
+/** One dish of a saved menu, in the recipe's own layout; its day and course in the bar. */
+@Composable
+fun MenuDishScreen(
+    stateHolder: RecipeStateHolder,
+    savedId: String,
+    day: Int,
+    course: Int,
+    onBack: () -> Unit
+) {
+    val state by stateHolder.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val resources = context.resources
+    val menuDay = state.saved.firstOrNull { it.id == savedId }?.menu?.days?.getOrNull(day)
+    val dish = menuDay?.courses?.getOrNull(course)
+    Scaffold(
+        topBar = {
+            LarderTopBar(
+                title = if (menuDay != null && dish != null) {
+                    menuDayLabel(resources, menuDay.date, today = null) + " · " + menuCourseLabel(resources, dish.course)
+                } else {
+                    stringResource(R.string.recipe_result_title)
+                },
+                onBack = onBack,
+                actions = {
+                    if (dish != null) {
+                        LarderIconButton(
+                            icon = LarderIcons.Share2,
+                            contentDescription = stringResource(R.string.recipe_share_recipe),
+                            onClick = { share(context, recipeShareText(resources, dish.recipe)) }
+                        )
+                    }
+                }
+            )
+        },
+        modifier = Modifier.fillMaxSize()
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            when {
+                dish != null -> RecipeDocument(dish.recipe, partOfMenu = true)
+                state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
+            }
+        }
+    }
+}
+
+/** Three day sections of course rows, each day saying which dated items it uses. */
+@Composable
+internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, course: Int) -> Unit) {
+    val resources = LocalContext.current.resources
+    val courses = menu.days.maxOfOrNull { it.courses.size } ?: 0
+    val servings = menu.days.firstOrNull()?.courses?.firstOrNull()?.recipe?.servings ?: 0
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = LarderSpace.s4),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Column(modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(top = LarderSpace.s2, bottom = LarderSpace.s8)) {
+            Text(
+                text = stringResource(R.string.recipe_menu_title),
+                modifier = Modifier.semantics { heading() },
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            if (courses > 0 && servings > 0) {
+                Text(
+                    text = stringResource(R.string.recipe_menu_summary, courses, servings),
+                    modifier = Modifier.padding(top = LarderSpace.s2),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            menu.days.forEachIndexed { dayIndex, day ->
+                SectionHeader(menuDayLabel(resources, day.date, today))
+                if (day.uses.isNotEmpty()) {
+                    Text(
+                        text = stringResource(R.string.recipe_menu_uses, day.uses.joinToString(", ")),
+                        modifier = Modifier.padding(bottom = LarderSpace.s2),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                LarderGroup {
+                    day.courses.forEachIndexed { courseIndex, course ->
+                        if (courseIndex > 0) LarderDivider()
+                        DishRow(
+                            course = menuCourseLabel(resources, course.course),
+                            title = course.recipe.title,
+                            minutes = course.recipe.minutes.takeIf { it > 0 }?.let { recipeDurationLabel(resources, it) },
+                            onClick = { onOpenDish(dayIndex, courseIndex) }
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.padding(top = LarderSpace.s6),
+                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LarderIcon(LarderIcons.Cloud, contentDescription = null, size = 16.dp, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = stringResource(R.string.recipe_source_server),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
 }
 
 @Composable
-internal fun RecipeDocument(recipe: Recipe) {
+internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false) {
     val resources = LocalContext.current.resources
     Column(
         modifier = Modifier
@@ -214,18 +382,47 @@ internal fun RecipeDocument(recipe: Recipe) {
             ) {
                 val fromPhone = recipe.source == RecipeSource.DEVICE
                 LarderIcon(
-                    icon = if (fromPhone) LarderIcons.Smartphone else LarderIcons.Cloud,
+                    icon = if (partOfMenu) LarderIcons.Utensils else if (fromPhone) LarderIcons.Smartphone else LarderIcons.Cloud,
                     contentDescription = null,
                     size = 16.dp,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = stringResource(if (fromPhone) R.string.recipe_source_phone else R.string.recipe_source_server),
+                    text = stringResource(
+                        when {
+                            partOfMenu -> R.string.recipe_part_of_menu
+                            fromPhone -> R.string.recipe_source_phone
+                            else -> R.string.recipe_source_server
+                        }
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
+
+/** A dish in a menu: its course over its name, the time at the end. */
+@Composable
+private fun DishRow(course: String, title: String, minutes: String?, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 64.dp)
+            .padding(horizontal = LarderSpace.s4, vertical = LarderSpace.s2),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = course, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(text = title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+        }
+        minutes?.let {
+            Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        LarderIcon(LarderIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -327,4 +524,28 @@ internal fun RecipeDocumentLongPreview() = LarderTheme {
             )
         )
     }
+}
+
+@PreviewLightDark
+@Composable
+internal fun MenuDocumentPreview() = LarderTheme {
+    val today = LocalDate(2026, 11, 4)
+    val menu = Menu(
+        (0 until 3).map { offset ->
+            MenuDay(
+                date = LocalDate.fromEpochDays(today.toEpochDays() + offset),
+                uses = listOf("bread", "spinach", "yoghurt").take(3 - offset),
+                courses = MenuCourseKind.entries.map { kind ->
+                    MenuCourse(kind, previewRecipe.copy(title = "${kind.name.lowercase()} on day ${offset + 1}", source = RecipeSource.SERVER))
+                }
+            )
+        }
+    )
+    Surface(color = MaterialTheme.colorScheme.background) { MenuDocument(menu, today) { _, _ -> } }
+}
+
+@Preview
+@Composable
+internal fun MenuDishPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) { RecipeDocument(previewRecipe.copy(source = RecipeSource.SERVER), partOfMenu = true) }
 }

@@ -81,6 +81,7 @@ import com.foodtracker.android.ui.screens.OnboardingExit
 import com.foodtracker.android.ui.screens.OnboardingScreen
 import com.foodtracker.android.ui.screens.holdsFirstScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
+import com.foodtracker.android.ui.screens.MenuDishScreen
 import com.foodtracker.android.ui.screens.RecipeResultScreen
 import com.foodtracker.android.ui.screens.RecipeScreen
 import com.foodtracker.android.ui.screens.RecipeSettingsScreen
@@ -339,7 +340,7 @@ fun FoodTrackerRoot(
                         currentScreen = route
                     }
                     is LarderRoute.RecipeResult -> {
-                        if (currentScreen !is LarderRoute.RecipeResult) recipeResultReturn = currentScreen
+                        if (currentScreen !is LarderRoute.RecipeResult && currentScreen !is LarderRoute.MenuDish) recipeResultReturn = currentScreen
                         currentScreen = route
                     }
                     else -> currentScreen = route
@@ -635,6 +636,7 @@ fun FoodTrackerRoot(
                         }
                         LarderRoute.Categories -> currentScreen = LarderRoute.Settings
                         is LarderRoute.RecipeResult -> currentScreen = recipeResultReturn
+                        is LarderRoute.MenuDish -> currentScreen = LarderRoute.RecipeResult((currentScreen as LarderRoute.MenuDish).savedId)
                         LarderRoute.SavedRecipes, LarderRoute.RecipeSettings -> currentScreen = LarderRoute.Recipe
                         LarderRoute.Settings, LarderRoute.Recipe, LarderRoute.Shopping -> navigateToDashboard()
                         is LarderRoute.ProductDetail, LarderRoute.Home, LarderRoute.Onboarding -> Unit
@@ -807,7 +809,7 @@ fun FoodTrackerRoot(
                                                 com.foodtracker.android.notification.NotificationHelper.cancelNotification(context, item.id)
                                             }
                                             stateHolder.clearAllData()
-                                            recipeStateHolder.clearSaved()
+                                            recipeStateHolder.clearAll()
                                             currentScreen = LarderRoute.Home
                                         },
                                         onManageCategories = { currentScreen = LarderRoute.Categories },
@@ -996,7 +998,18 @@ fun FoodTrackerRoot(
                                 onDelete = { id ->
                                     currentScreen = recipeResultReturn
                                     onDeleteSavedRecipe(id)
-                                }
+                                },
+                                onOpenDish = { day, course -> currentScreen = LarderRoute.MenuDish(route.savedId, day, course) }
+                            )
+                        }
+
+                        is LarderRoute.MenuDish -> {
+                            MenuDishScreen(
+                                stateHolder = recipeStateHolder,
+                                savedId = route.savedId,
+                                day = route.day,
+                                course = route.course,
+                                onBack = { currentScreen = LarderRoute.RecipeResult(route.savedId) }
                             )
                         }
 

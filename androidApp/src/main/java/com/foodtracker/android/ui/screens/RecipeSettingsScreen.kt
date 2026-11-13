@@ -42,6 +42,7 @@ import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.recipeDietLabel
 import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.RECIPE_LANGUAGES
+import com.foodtracker.recipe.PaidUiState
 import com.foodtracker.recipe.RecipeConfig
 import com.foodtracker.recipe.RecipeDiet
 import com.foodtracker.recipe.RecipeMealType
@@ -64,9 +65,17 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit) {
             appLanguage = state.appLanguage,
             allergens = state.allergens,
             onChange = stateHolder::updateConfig,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(padding),
+            paid = state.paid,
+            accountActions = AccountActions(
+                onSignIn = stateHolder::signIn,
+                onBuy = stateHolder::openPacks,
+                onSignOut = stateHolder::signOut,
+                onDelete = stateHolder::deleteAccount
+            )
         )
     }
+    RecipePaidOverlays(state, stateHolder)
 }
 
 @Composable
@@ -75,7 +84,9 @@ private fun RecipeSettingsContent(
     appLanguage: String,
     allergens: List<String>,
     onChange: ((RecipeConfig) -> RecipeConfig) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    paid: PaidUiState = PaidUiState(),
+    accountActions: AccountActions = AccountActions()
 ) {
     val resources = LocalContext.current.resources
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -127,9 +138,8 @@ private fun RecipeSettingsContent(
                 )
             }
 
-            RecipeFormCard(title = stringResource(R.string.recipe_account), icon = LarderIcons.UserRound) {
-                SettingsDescription(stringResource(R.string.recipe_account_none))
-            }
+            // Builds without the paid route have no account to speak of.
+            if (paid.available) AccountCard(paid, accountActions)
         }
     }
 

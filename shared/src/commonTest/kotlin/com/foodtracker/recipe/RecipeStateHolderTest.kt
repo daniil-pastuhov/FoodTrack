@@ -351,7 +351,7 @@ class RecipeStateHolderTest {
         holder.restoreSaved(removed!!)
         assertEquals(listOf("b", "a"), holder.uiState.value.saved.map { it.id })
 
-        holder.clearSaved()
+        holder.clearAll()
         assertTrue(holder.uiState.value.saved.isEmpty())
     }
 

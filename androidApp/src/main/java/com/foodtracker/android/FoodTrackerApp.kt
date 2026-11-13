@@ -11,6 +11,8 @@ class FoodTrackerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // The activity in front, for Play's payment sheet and the sign-in flows.
+        registerActivityLifecycleCallbacks(com.foodtracker.android.recipe.paid.CurrentActivity)
         // Create notification channel for expiry alerts
         com.foodtracker.android.notification.NotificationHelper.createNotificationChannel(this)
 
