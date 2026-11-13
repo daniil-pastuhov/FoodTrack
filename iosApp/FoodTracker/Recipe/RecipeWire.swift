@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 // The paid route's wire format, as `functions/CONTRACT.md` states it, and the pure rules around
@@ -100,11 +101,21 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     var ingredients: [WireIngredient]
     var allergens: [String]
     var today: String
+
+    /// Everything the server binds a `requestId` to: the whole body but the id.
+    func hasSameInputs(as other: GenerateRequest) -> Bool {
+        var other = other
+        other.requestId = requestId
+        return self == other
+    }
 }
 
 struct VerifyPurchaseRequest: Encodable, Sendable {
     let store = "appstore"
     var signedTransaction: String
+    /// The person saw, before paying, that a refund request makes us tell Apple how many of
+    /// the recipes were used. False when that isn't known (a purchase from an older build).
+    var consumptionConsent: Bool
 }
 
 struct MergeBalanceRequest: Encodable, Sendable {
@@ -117,7 +128,30 @@ struct DeleteAccountRequest: Encodable, Sendable {
 
 struct EmptyRequest: Encodable, Sendable {}
 
+/// `getGeneration`: an existing generation's state, by its id. Never starts one.
+struct GetGenerationRequest: Encodable, Sendable {
+    var requestId: String
+}
+
 // MARK: Responses
+
+/// `purchasesBlocked` as a response may carry it: true only when it says exactly `true`.
+/// Anything unreadable there reads as false rather than failing the call.
+struct WireFlag: Decodable, Sendable {
+    let value: Bool
+
+    init(from decoder: Decoder) throws {
+        value = (try? decoder.singleValueContainer().decode(Bool.self)) ?? false
+    }
+}
+
+/// Every answer that carries `balance` also carries the costs and, for an account whose
+/// earlier purchases were refunded after the recipes were used, `purchasesBlocked`.
+protocol BalanceCarrying {
+    var balance: Int { get }
+    var costs: WireCosts? { get }
+    var purchasesBlocked: WireFlag? { get }
+}
 
 enum GenerateStatus: String, Decodable, Sendable {
     case done = "DONE"
@@ -125,13 +159,14 @@ enum GenerateStatus: String, Decodable, Sendable {
     case failed = "FAILED"
 }
 
-struct GenerateResponse: Decodable, Sendable {
+struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var status: GenerateStatus
     var recipe: Recipe?
     var menu: RecipeMenu?
     var balance: Int
     var charged: Bool
     var costs: WireCosts?
+    var purchasesBlocked: WireFlag?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -144,21 +179,25 @@ enum VerifyStatus: String, Decodable, Sendable {
     var finishesTransaction: Bool { self != .retry }
 }
 
-struct VerifyPurchaseResponse: Decodable, Sendable {
+struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var status: VerifyStatus
     var balance: Int
     var costs: WireCosts?
+    var purchasesBlocked: WireFlag?
 }
 
-struct BalanceResponse: Decodable, Sendable {
+struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var balance: Int
     var costs: WireCosts?
+    var purchasesBlocked: WireFlag?
 }
 
-struct MergeBalanceResponse: Decodable, Sendable {
+/// `moved` can be negative: a store refund's debt moves with the recipes.
+struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var balance: Int
     var moved: Int
     var costs: WireCosts?
+    var purchasesBlocked: WireFlag?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable {
@@ -173,8 +212,26 @@ enum RecipeServerError: Error, Equatable, Sendable {
     case busy
     case generationDisabled
     case accountClosed
+    /// Too many calls in a minute (`RATE_LIMITED`).
     case rateLimited
+    /// This account's generations, or its estimated usage, for the UTC day (`USER_DAILY_LIMIT`).
+    case userDailyLimit
+    /// Three refunded technical failures today on this account (`INFRA_FAILURE_LIMIT`).
+    case infraFailureLimit
+    /// The whole service's daily limit (`DAILY_CAP`).
     case dailyCap
+    /// The id was first sent with other inputs (`REQUEST_ID_REUSED`). A bug on our side; nothing
+    /// was charged, and a new attempt needs a new id.
+    case requestIdReused
+    /// The App Check token was already used (`APP_CHECK_REPLAYED`). Unlike `unauthenticated` it
+    /// says nothing about whether this build can attest: the next call carries a new token.
+    case appCheckReplayed
+    /// `getGeneration` knows no generation with this id (`UNKNOWN_REQUEST`): it never reached
+    /// the server, so it is sent again with `generateRecipe` under the same id.
+    case unknownRequest
+    /// The callable itself doesn't exist (`not-found` or `unimplemented` with no reason): a
+    /// server from before `getGeneration`. `generateRecipe` does its work there.
+    case callableMissing
     case recentSignInRequired
     case mergeNotAllowed
     case invalidRequest
@@ -197,7 +254,12 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "GENERATION_DISABLED": return .generationDisabled
         case "ACCOUNT_CLOSED": return .accountClosed
         case "RATE_LIMITED": return .rateLimited
+        case "USER_DAILY_LIMIT": return .userDailyLimit
+        case "INFRA_FAILURE_LIMIT": return .infraFailureLimit
         case "DAILY_CAP": return .dailyCap
+        case "REQUEST_ID_REUSED": return .requestIdReused
+        case "APP_CHECK_REPLAYED": return .appCheckReplayed
+        case "UNKNOWN_REQUEST": return .unknownRequest
         case "RECENT_SIGN_IN_REQUIRED": return .recentSignInRequired
         case "MERGE_NOT_ALLOWED": return .mergeNotAllowed
         case "INVALID_REQUEST": return .invalidRequest
@@ -208,12 +270,30 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "unauthenticated": return .unauthenticated
         case "unavailable", "deadline-exceeded": return .offline
         case "invalid-argument": return .invalidRequest
+        case "not-found", "unimplemented": return .callableMissing
         default: return .server
         }
     }
 
-    /// Whether the same request may be sent again under the same id.
-    var isRetryableWithSameID: Bool { self == .offline || self == .server }
+    /// Whether the same request may be sent again under the same id. A replayed App Check token
+    /// is refused before anything is reserved, so the same id is still unused or still held.
+    var isRetryableWithSameID: Bool {
+        switch self {
+        case .offline, .server, .appCheckReplayed, .unknownRequest, .callableMissing: return true
+        default: return false
+        }
+    }
+
+    /// Whether a `getGeneration` that failed this way is answered by sending the request itself
+    /// with `generateRecipe` (same id, same inputs, a fresh limited-use token): the id is unknown
+    /// to the server, or the server predates `getGeneration`.
+    var fallsBackToGenerate: Bool { self == .unknownRequest || self == .callableMissing }
+
+    /// Whether a call that failed this way is sent once more at once. Only a replayed App Check
+    /// token: the Functions SDK fetches a new limited-use token for every call.
+    static func retriesImmediately(_ error: RecipeServerError, attempt: Int) -> Bool {
+        error == .appCheckReplayed && attempt == 0
+    }
 }
 
 // MARK: Pure rules
@@ -278,6 +358,16 @@ enum RecipeWire {
         )
     }
 
+    /// What Generate sends while an interrupted request is still held: the held one, under its
+    /// own id, when the form still asks for exactly the same thing (so a second tap fetches the
+    /// first answer instead of paying again); otherwise the fresh one under its new id. An id is
+    /// only ever stored and sent with the body it was made for, so the server never sees it
+    /// with other inputs (REQUEST_ID_REUSED).
+    static func requestToSend(fresh: GenerateRequest, held: GenerateRequest?) -> GenerateRequest {
+        guard let held, held.hasSameInputs(as: fresh) else { return fresh }
+        return held
+    }
+
     /// Credits in a pack, from its product id; the server keeps its own table.
     static func credits(forProductID id: String) -> Int? {
         switch id {
@@ -289,6 +379,27 @@ enum RecipeWire {
     }
 
     static let productIDs = ["recipes_10", "recipes_50", "recipes_100"]
+
+    /// The namespace of `appAccountToken(forUID:)`. Must match the server's (CONTRACT.md); a
+    /// purchase whose token doesn't match is still accepted, so a mismatch loses only the binding.
+    static let appAccountTokenNamespace = UUID(uuidString: "6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48")!
+
+    /// The StoreKit `appAccountToken` that ties a purchase to the Firebase user making it: a
+    /// name-based UUID, version 5 (RFC 9562: SHA-1 over the namespace's 16 bytes and the uid's
+    /// UTF-8 bytes, first 16 bytes, version and variant bits set), so the server can work out the
+    /// same value from the uid.
+    static func appAccountToken(forUID uid: String) -> UUID {
+        let namespace = appAccountTokenNamespace.uuid
+        var data = withUnsafeBytes(of: namespace) { Data($0) }
+        data.append(Data(uid.utf8))
+        var bytes = Array(Insecure.SHA1.hash(data: data).prefix(16))
+        bytes[6] = (bytes[6] & 0x0F) | 0x50
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+    }
 
     /// Server recipes are written by the server, whatever the JSON says.
     static func markedServer(_ recipe: Recipe) -> Recipe {

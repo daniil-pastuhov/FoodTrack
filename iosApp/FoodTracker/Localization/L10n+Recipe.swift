@@ -250,6 +250,8 @@ extension L10n {
     static var recipeServerBusy: String { paid("recipe_server_busy") }
     static var recipeServerRateLimited: String { paid("recipe_server_rate_limited") }
     static var recipeServerDailyCap: String { paid("recipe_server_daily_cap") }
+    static var recipeServerUserDailyLimit: String { paid("recipe_server_user_daily_limit") }
+    static var recipeServerInfraFailureLimit: String { paid("recipe_server_infra_failure_limit") }
     static func recipeArrived(balance: Int) -> String { plural("recipe_arrived", balance) }
 
     // Lasting conditions
@@ -325,6 +327,9 @@ extension L10n {
     static var recipeProviderInUse: String { paid("recipe_provider_in_use") }
     static var recipeAccountDeleted: String { paid("recipe_account_deleted") }
     static var recipeAccountActionFailed: String { paid("recipe_account_action_failed") }
+    static var recipeAccountBusy: String { paid("recipe_account_busy") }
+    static var recipePurchasesBlocked: String { paid("recipe_purchases_blocked") }
+    static var recipeConsumptionNote: String { paid("recipe_consumption_note") }
 
     // Menu
     static var recipeMenuResultTitle: String { paid("recipe_menu_result_title") }

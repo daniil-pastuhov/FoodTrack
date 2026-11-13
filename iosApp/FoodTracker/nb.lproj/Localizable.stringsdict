@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Klarte ikke å lage en oppskrift av disse varene. %d oppskrift ble trukket.</string>
+            <string>Klarte ikke å lage en oppskrift av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
             <key>other</key>
-            <string>Klarte ikke å lage en oppskrift av disse varene. %d oppskrifter ble trukket.</string>
+            <string>Klarte ikke å lage en oppskrift av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Klarte ikke å lage en meny av disse varene. %d oppskrift ble trukket.</string>
+            <string>Klarte ikke å lage en meny av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
             <key>other</key>
-            <string>Klarte ikke å lage en meny av disse varene. %d oppskrifter ble trukket.</string>
+            <string>Klarte ikke å lage en meny av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>

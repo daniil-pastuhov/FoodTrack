@@ -673,6 +673,8 @@
 "recipe_server_busy" = "Another recipe is still being written. Try again in a minute.";
 "recipe_server_rate_limited" = "Too many recipes in a short time. Try again in a minute.";
 "recipe_server_daily_cap" = "Recipes from packs have reached today's limit. Try again tomorrow; nothing was taken.";
+"recipe_server_user_daily_limit" = "You've made as many recipes as one account can today. Try again tomorrow; nothing was taken.";
+"recipe_server_infra_failure_limit" = "We're having trouble writing recipes for you today. Try again tomorrow; nothing was taken.";
 "recipe_paused_title" = "Recipes from packs are paused";
 "recipe_paused_message_none" = "The free routes below still work.";
 "recipe_unconfirmed_title" = "Your purchase is being confirmed";
@@ -717,6 +719,9 @@
 "recipe_provider_in_use" = "That sign-in already belongs to another account, so it can't be added here.";
 "recipe_account_deleted" = "Account deleted";
 "recipe_account_action_failed" = "Couldn't delete the account. Check your connection and try again.";
+"recipe_account_busy" = "A recipe is still being written. Try again in a moment; nothing was changed.";
+"recipe_purchases_blocked" = "Buying recipes isn't available for this account because earlier purchases were refunded after the recipes were used.";
+"recipe_consumption_note" = "If you ask Apple for a refund, we tell Apple how many of these recipes you have used.";
 "recipe_menu_result_title" = "Menu";
 "recipe_menu_heading" = "Menu for three days";
 "recipe_menu_summary_2" = "Two courses a day for %d, using what expires first.";

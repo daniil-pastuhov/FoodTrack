@@ -56,6 +56,11 @@ struct BuyRecipesSheet: View {
                         packRow(pack, isSelected: pack.id == (selectedID ?? Self.defaultSelection(packs)))
                     }
                 }
+                // Seeing this and continuing is the consent the server passes on to Apple.
+                Text(L10n.recipeConsumptionNote)
+                    .larderFont(.bodySm)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
                 buttons(selected: packs.first { $0.id == (selectedID ?? Self.defaultSelection(packs)) })
             } else {
                 LarderSpinner()
@@ -136,7 +141,9 @@ struct BuyRecipesSheet: View {
         step = .packs
         let purchase = purchase
         Task {
-            let outcome = await credits.buy(pack) { product in try await purchase(product) }
+            let outcome = await credits.buy(pack, consumptionConsent: true) { product, options in
+                try await purchase(product, options: options)
+            }
             switch outcome {
             case .added, .notAddedYet, .pending, .rejected:
                 onClose()

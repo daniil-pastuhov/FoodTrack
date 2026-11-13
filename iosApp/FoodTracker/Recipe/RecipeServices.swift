@@ -39,9 +39,13 @@ protocol OnDeviceRecipeModel: Sendable {
 /// one; errors are `RecipeServerError`. `RecipeCredits` builds the purchase and account flows on
 /// it, and `RecipeViewModel` the generation.
 protocol RecipeBackend: Sendable {
+    /// Starts a generation, or answers for one already started under the same id. Each call
+    /// spends a limited-use App Check token.
     func generate(_ request: GenerateRequest) async throws -> GenerateResponse
+    /// An existing generation's state, without starting one or spending a limited-use token.
+    func generation(requestId: String) async throws -> GenerateResponse
     func balance() async throws -> BalanceResponse
-    func verifyPurchase(signedTransaction: String) async throws -> VerifyPurchaseResponse
+    func verifyPurchase(signedTransaction: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse
     func mergeBalance(sourceIdToken: String) async throws -> MergeBalanceResponse
     func deleteAccount(appleAuthorizationCode: String?) async throws
 }

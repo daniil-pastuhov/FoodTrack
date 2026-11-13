@@ -673,6 +673,8 @@
 "recipe_server_busy" = "En annen oppskrift skrives fortsatt. Prøv igjen om et minutt.";
 "recipe_server_rate_limited" = "For mange oppskrifter på kort tid. Prøv igjen om et minutt.";
 "recipe_server_daily_cap" = "Oppskrifter fra pakker har nådd dagens grense. Prøv igjen i morgen; ingenting ble trukket.";
+"recipe_server_user_daily_limit" = "Du har laget så mange oppskrifter som én konto kan i dag. Prøv igjen i morgen; ingenting ble trukket.";
+"recipe_server_infra_failure_limit" = "Vi har problemer med å skrive oppskrifter for deg i dag. Prøv igjen i morgen; ingenting ble trukket.";
 "recipe_paused_title" = "Oppskrifter fra pakker er satt på pause";
 "recipe_paused_message_none" = "De gratis måtene nedenfor virker fortsatt.";
 "recipe_unconfirmed_title" = "Kjøpet ditt bekreftes";
@@ -717,6 +719,9 @@
 "recipe_provider_in_use" = "Den påloggingen hører allerede til en annen konto, så den kan ikke legges til her.";
 "recipe_account_deleted" = "Kontoen er slettet";
 "recipe_account_action_failed" = "Klarte ikke å slette kontoen. Sjekk tilkoblingen og prøv igjen.";
+"recipe_account_busy" = "En oppskrift skrives fortsatt. Prøv igjen om litt; ingenting ble endret.";
+"recipe_purchases_blocked" = "Du kan ikke kjøpe oppskrifter med denne kontoen, fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.";
+"recipe_consumption_note" = "Hvis du ber Apple om refusjon, forteller vi Apple hvor mange av disse oppskriftene du har brukt.";
 "recipe_menu_result_title" = "Meny";
 "recipe_menu_heading" = "Meny for tre dager";
 "recipe_menu_summary_2" = "To retter om dagen for %d, med det som går ut først.";

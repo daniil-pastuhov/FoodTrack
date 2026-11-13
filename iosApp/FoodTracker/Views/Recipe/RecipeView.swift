@@ -93,7 +93,7 @@ struct RecipeView: View {
             credits.notice = nil
             show(notice)
         }
-        .larderSheet(isPresented: $model.showsBuySheet, detents: [.large]) {
+        .larderSheet(isPresented: $model.showsBuySheet, fitsContent: true) {
             BuyRecipesSheet(model: model) { model.showsBuySheet = false }
         }
         .larderDialog(
@@ -288,6 +288,16 @@ struct RecipeView: View {
         }
     }
 
+    /// Buy recipes, or where it would be, the line saying why this account can't buy.
+    @ViewBuilder
+    private var buyOrBlocked: some View {
+        if credits.canBuy {
+            buyButton
+        } else if credits.showsPurchasesBlocked {
+            hint(L10n.recipePurchasesBlocked)
+        }
+    }
+
     private func writingOnServer(_ kind: RecipeKind) -> some View {
         VStack(spacing: LarderSpace.s3) {
             LarderSpinner()
@@ -334,6 +344,10 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeServerBusy)
         case .rateLimited:
             showSnackbar(L10n.recipeServerRateLimited)
+        case .userDailyLimit:
+            showSnackbar(L10n.recipeServerUserDailyLimit)
+        case .infraFailureLimit:
+            showSnackbar(L10n.recipeServerInfraFailureLimit)
         case .dailyCap:
             showSnackbar(L10n.recipeServerDailyCap)
         case .arrived(let balance):
@@ -348,6 +362,7 @@ struct RecipeView: View {
         case .providerInUse: showSnackbar(L10n.recipeProviderInUse)
         case .accountDeleted: showSnackbar(L10n.recipeAccountDeleted)
         case .accountActionFailed: showSnackbar(L10n.recipeAccountActionFailed)
+        case .accountBusy: showSnackbar(L10n.recipeAccountBusy)
         }
     }
 
@@ -452,14 +467,14 @@ struct RecipeView: View {
             }
         } else if routes.onDevice {
             VStack(spacing: LarderSpace.s2) {
-                if credits.canBuy { buyButton }
+                buyOrBlocked
                 shareAndCopy
             }
         } else {
             VStack(spacing: LarderSpace.s2) {
                 LarderButton(L10n.recipeCopyPrompt, icon: .copy, variant: .outline, fullWidth: true, action: copyPrompt)
                 hint(L10n.recipePromptOnlyHint)
-                if credits.canBuy { buyButton }
+                buyOrBlocked
             }
         }
     }
@@ -476,7 +491,7 @@ struct RecipeView: View {
                 title: L10n.recipeMenuShortTitle(model.menuCost),
                 message: L10n.recipeMenuShortMessage(credits.balance ?? 0, recipeCost: model.recipeCost)
             )
-            if credits.canBuy { buyButton }
+            buyOrBlocked
         }
     }
 
