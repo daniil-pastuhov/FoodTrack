@@ -290,22 +290,6 @@
 			<string>%d varer står i kø og er ikke lagt til ennå.</string>
 		</dict>
 	</dict>
-    <key>calendar_day_item_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@items@</string>
-        <key>items</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d vare utløper</string>
-            <key>other</key>
-            <string>%d varer utløper</string>
-        </dict>
-    </dict>
     <key>settings_lead_days_phrase</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -514,38 +498,6 @@
             <string>Vis %d varer</string>
         </dict>
     </dict>
-    <key>recipe_names_more</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>{a}, {b} og %d til</string>
-            <key>other</key>
-            <string>{a}, {b} og %d til</string>
-        </dict>
-    </dict>
-    <key>recipe_include_others_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Legger til den andre varen din, så assistenten kan bruke mer av det du har.</string>
-            <key>other</key>
-            <string>Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</string>
-        </dict>
-    </dict>
     <key>expires_in_months_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -576,6 +528,38 @@
             <string>Om %d år</string>
             <key>other</key>
             <string>Om %d år</string>
+        </dict>
+    </dict>
+    <key>recipe_more_in_pantry</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d til i matskapet</string>
+            <key>other</key>
+            <string>%d til i matskapet</string>
+        </dict>
+    </dict>
+    <key>recipe_servings_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d porsjon</string>
+            <key>other</key>
+            <string>%d porsjoner</string>
         </dict>
     </dict>
 </dict>

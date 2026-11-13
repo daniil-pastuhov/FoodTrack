@@ -290,22 +290,6 @@
 			<string>%d items are queued and have not been added yet.</string>
 		</dict>
 	</dict>
-    <key>calendar_day_item_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@items@</string>
-        <key>items</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d item expiring</string>
-            <key>other</key>
-            <string>%d items expiring</string>
-        </dict>
-    </dict>
     <key>settings_lead_days_phrase</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -514,38 +498,6 @@
             <string>Show %d items</string>
         </dict>
     </dict>
-    <key>recipe_names_more</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>{a}, {b} and %d other</string>
-            <key>other</key>
-            <string>{a}, {b} and %d others</string>
-        </dict>
-    </dict>
-    <key>recipe_include_others_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Adds your other item, so the assistant can use more of what you have.</string>
-            <key>other</key>
-            <string>Adds your other %d items, so the assistant can use more of what you have.</string>
-        </dict>
-    </dict>
     <key>expires_in_months_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -576,6 +528,38 @@
             <string>In %d year</string>
             <key>other</key>
             <string>In %d years</string>
+        </dict>
+    </dict>
+    <key>recipe_more_in_pantry</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d more in your pantry</string>
+            <key>other</key>
+            <string>%d more in your pantry</string>
+        </dict>
+    </dict>
+    <key>recipe_servings_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d serving</string>
+            <key>other</key>
+            <string>%d servings</string>
         </dict>
     </dict>
 </dict>
