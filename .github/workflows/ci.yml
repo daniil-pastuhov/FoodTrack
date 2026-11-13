@@ -1,7 +1,8 @@
 name: CI
 
-# Every push and pull request: Android and shared unit tests, an Android debug build, and an iOS
-# build, each only when its files changed (see the "changes" job), and none where another run
+# Every push and pull request: Android and shared unit tests, an Android debug build, an iOS build,
+# and the Cloud Functions lint and emulator tests, each only when its files changed (see the
+# "changes" job), and none where another run
 # already built the same code:
 # - a release/v* pull request from this repository (not a fork, whose pushes run nothing here): the
 #   push run of the same commit builds it, and must, as the publish jobs need it;
@@ -54,6 +55,7 @@ jobs:
     outputs:
       android: ${{ steps.decide.outputs.android }}
       ios: ${{ steps.decide.outputs.ios }}
+      functions: ${{ steps.decide.outputs.functions }}
     env:
       BUILD_ALL: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/v') }}
     steps:
@@ -78,6 +80,12 @@ jobs:
               - 'iosApp/**'
               - 'Version.xcconfig'
               - '.github/workflows/ci.yml'
+            functions:
+              - 'functions/**'
+              - 'firebase.json'
+              - 'firestore.rules'
+              - 'firestore.indexes.json'
+              - '.github/workflows/ci.yml'
       - name: Decide
         id: decide
         env:
@@ -87,10 +95,12 @@ jobs:
             ${{ (env.BUILD_ALL == 'true' || steps.filter.outputs.ios == 'true') &&
             !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') &&
               vars.IOS_PUBLISH == 'true') }}
+          FUNCTIONS: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.functions == 'true' }}
         run: |
           echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
           echo "ios=$IOS" >> "$GITHUB_OUTPUT"
-          echo "Android: $ANDROID, iOS: $IOS"
+          echo "functions=$FUNCTIONS" >> "$GITHUB_OUTPUT"
+          echo "Android: $ANDROID, iOS: $IOS, functions: $FUNCTIONS"
 
   android:
     name: Android tests and build
@@ -125,6 +135,41 @@ jobs:
             androidApp/build/reports/tests/
             shared/build/reports/tests/
           retention-days: 7
+
+  # Cloud Functions (functions/): lint, typecheck, build, and the tests against the Firestore and
+  # Auth emulators, which need Java. Stores and the LLM are faked, and the demo- project id keeps
+  # the emulators from reaching any real Firebase project. Nothing here deploys.
+  functions:
+    name: Functions lint and tests
+    needs: changes
+    if: needs.changes.outputs.functions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Cache the emulator binaries
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('functions/package-lock.json') }}
+          restore-keys: firebase-emulators-
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
 
   ios:
     name: iOS build

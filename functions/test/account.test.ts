@@ -1,0 +1,161 @@
+import { HttpsError } from "firebase-functions/v2/https";
+import { randomUUID } from "node:crypto";
+import { deleteAccount, getBalance, mergeBalance } from "../src/core/account";
+import { generateRecipe } from "../src/core/generation";
+import { handlePlayNotification } from "../src/core/notifications";
+import { playPurchaseId, verifyPurchase } from "../src/core/purchases";
+import { emptyUser } from "../src/model";
+import {
+  anonymousUser,
+  auth,
+  balanceOf,
+  callerFor,
+  db,
+  makeDeps,
+  passwordUser,
+  playToken,
+  resetEmulators,
+  type TestDeps,
+} from "./helpers";
+
+let deps: TestDeps;
+beforeEach(async () => {
+  await resetEmulators();
+  deps = makeDeps();
+});
+
+async function reason(p: Promise<unknown>): Promise<string> {
+  try {
+    await p;
+  } catch (e) {
+    if (e instanceof HttpsError) return (e.details as { reason: string }).reason;
+    throw e;
+  }
+  return "no error";
+}
+
+const give = (uid: string, balance: number) => db.collection("users").doc(uid).set({ ...emptyUser(), balance });
+
+describe("getBalance", () => {
+  test("is 0 for an unknown, deleted or merged account", async () => {
+    expect(await getBalance(deps, callerFor("nobody"))).toEqual({ balance: 0 });
+    await give("u1", 4);
+    expect(await getBalance(deps, callerFor("u1"))).toEqual({ balance: 4 });
+    await db.collection("users").doc("u1").update({ mergedInto: "u2" });
+    expect(await getBalance(deps, callerFor("u1"))).toEqual({ balance: 0 });
+  });
+});
+
+describe("mergeBalance", () => {
+  test("moves an anonymous install's credits into the signed-in account and closes the source", async () => {
+    const anon = await anonymousUser();
+    const signed = await passwordUser();
+    await give(anon.uid, 7);
+    await give(signed.uid, 2);
+    const res = await mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken });
+    expect(res).toEqual({ balance: 9, moved: 7 });
+    expect(await balanceOf(anon.uid)).toBe(0);
+    expect((await db.collection("users").doc(anon.uid).get()).data()?.mergedInto).toBe(signed.uid);
+    await expect(auth.getUser(anon.uid)).rejects.toMatchObject({ code: "auth/user-not-found" });
+    // The source cannot be merged again.
+    expect(await reason(mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken }))).toBe("MERGE_NOT_ALLOWED");
+    expect(await balanceOf(signed.uid)).toBe(9);
+  });
+
+  test("a merged source is closed for every mutating call", async () => {
+    const anon = await anonymousUser();
+    const signed = await passwordUser();
+    await give(anon.uid, 3);
+    await mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken });
+    const req = {
+      requestId: randomUUID(), kind: "recipe", today: new Date().toISOString().slice(0, 10), allergens: [],
+      ingredients: [{ name: "eggs", expiresOn: null, quantity: 1 }],
+      config: { difficulty: "easy", detail: "brief", servings: 1, maxMinutes: null, mealType: "any", diet: "none", language: "en" },
+    };
+    expect(await reason(generateRecipe(deps, callerFor(anon.uid, "anonymous"), req))).toBe("ACCOUNT_CLOSED");
+    const token = deps.play.add(playToken());
+    expect(await reason(verifyPurchase(deps, callerFor(anon.uid, "anonymous"), { store: "play", purchaseToken: token }))).toBe("ACCOUNT_CLOSED");
+  });
+
+  test("refuses an anonymous caller, a non-anonymous source, itself and a bad token", async () => {
+    const anon = await anonymousUser();
+    const anon2 = await anonymousUser();
+    const signed = await passwordUser();
+    const other = await passwordUser();
+    await give(anon.uid, 5);
+    await give(other.uid, 5);
+    expect(await reason(mergeBalance(deps, callerFor(anon2.uid, "anonymous"), { sourceIdToken: anon.idToken }))).toBe("MERGE_NOT_ALLOWED");
+    expect(await reason(mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: other.idToken }))).toBe("MERGE_NOT_ALLOWED");
+    expect(await reason(mergeBalance(deps, callerFor(anon.uid), { sourceIdToken: anon.idToken }))).toBe("MERGE_NOT_ALLOWED");
+    expect(await reason(mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: "not-a-token" }))).toBe("MERGE_NOT_ALLOWED");
+    expect(await reason(mergeBalance(deps, callerFor(signed.uid), {}))).toBe("INVALID_REQUEST");
+    expect(await balanceOf(other.uid)).toBe(5);
+    expect(await balanceOf(anon.uid)).toBe(5);
+  });
+
+  test("deleting a merged-away source keeps its purchases attached, so refunds still reach the target", async () => {
+    const anon = await anonymousUser();
+    const signed = await passwordUser();
+    const token = deps.play.add(playToken());
+    await verifyPurchase(deps, callerFor(anon.uid, "anonymous"), { store: "play", purchaseToken: token });
+    await mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken });
+    expect(await balanceOf(signed.uid)).toBe(10);
+    expect(await deleteAccount(deps, callerFor(anon.uid, "anonymous", 0), {})).toEqual({ deleted: true, balance: 0 });
+    expect((await db.collection("purchases").doc(playPurchaseId(token)).get()).data()?.uid).toBe(anon.uid);
+    await handlePlayNotification(deps, {
+      packageName: "com.foodtracker.android",
+      eventTimeMillis: String(Date.now()),
+      voidedPurchaseNotification: { purchaseToken: token, productType: 2, refundType: 1 },
+    });
+    expect(await balanceOf(signed.uid)).toBe(0);
+  });
+
+  test("refuses while the source has a generation in flight", async () => {
+    const anon = await anonymousUser();
+    const signed = await passwordUser();
+    await db.collection("users").doc(anon.uid).set({ ...emptyUser(), balance: 2, inFlight: 1 });
+    expect(await reason(mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken }))).toBe("BUSY");
+  });
+
+  test("a merge into a deleted account is refused", async () => {
+    const anon = await anonymousUser();
+    const signed = await passwordUser();
+    await give(anon.uid, 2);
+    await db.collection("users").doc(signed.uid).set({ ...emptyUser(), deletedAt: new Date() });
+    expect(await reason(mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken }))).toBe("ACCOUNT_CLOSED");
+    expect(await balanceOf(anon.uid)).toBe(2);
+  });
+});
+
+describe("deleteAccount", () => {
+  test("needs a recent sign-in for a signed-in account", async () => {
+    const user = await passwordUser();
+    const stale = callerFor(user.uid, "password", Math.floor(Date.now() / 1000) - 3600);
+    expect(await reason(deleteAccount(deps, stale, {}))).toBe("RECENT_SIGN_IN_REQUIRED");
+  });
+
+  test("tombstones the user, detaches purchases, deletes generations, revokes Apple and deletes the Auth user", async () => {
+    const user = await passwordUser();
+    const caller = callerFor(user.uid, "apple.com");
+    const token = deps.play.add(playToken());
+    await verifyPurchase(deps, caller, { store: "play", purchaseToken: token });
+    await db.collection("users").doc(user.uid).collection("generations").doc("g1").set({ state: "done" });
+    expect(await deleteAccount(deps, caller, { appleAuthorizationCode: "apple-code" })).toEqual({ deleted: true, balance: 0 });
+
+    const doc = (await db.collection("users").doc(user.uid).get()).data();
+    expect(doc).toMatchObject({ balance: 0, forfeitedBalance: 10 });
+    expect(doc?.deletedAt).toBeDefined();
+    expect((await db.collection("purchases").doc(playPurchaseId(token)).get()).data()).toMatchObject({ uid: null });
+    expect((await db.collection("users").doc(user.uid).collection("generations").get()).empty).toBe(true);
+    expect(deps.appleRevoker.codes).toEqual(["apple-code"]);
+    await expect(auth.getUser(user.uid)).rejects.toMatchObject({ code: "auth/user-not-found" });
+    // Deleting again is harmless.
+    expect(await deleteAccount(deps, caller, {})).toEqual({ deleted: true, balance: 0 });
+  });
+
+  test("an anonymous install can delete itself without re-authenticating", async () => {
+    const anon = await anonymousUser();
+    const old = callerFor(anon.uid, "anonymous", 0);
+    expect(await deleteAccount(deps, old, {})).toEqual({ deleted: true, balance: 0 });
+  });
+});
