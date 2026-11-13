@@ -40,7 +40,7 @@ protocol OnDeviceRecipeModel: Sendable {
 /// it, and `RecipeViewModel` the generation.
 protocol RecipeBackend: Sendable {
     func generate(_ request: GenerateRequest) async throws -> GenerateResponse
-    func balance() async throws -> Int
+    func balance() async throws -> BalanceResponse
     func verifyPurchase(signedTransaction: String) async throws -> VerifyPurchaseResponse
     func mergeBalance(sourceIdToken: String) async throws -> MergeBalanceResponse
     func deleteAccount(appleAuthorizationCode: String?) async throws

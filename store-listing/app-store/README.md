@@ -163,13 +163,13 @@ BestBefore needs no account; the pantry stays on the device. Apart from barcode 
 To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by hand), then open the Recipe and Shopping List tabs.
 
 RECIPE TAB AND IN-APP PURCHASES
-The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions), and "Menu for 3 days" takes 3.
+The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions), and "Menu for 3 days" takes 4 recipes with two courses a day, or 5 with three.
 To test the purchase with a sandbox account:
 1. Add an item or two (scan, or "+").
 2. Open the Recipe tab and tap "Buy recipes".
 3. Choose "On this phone, no account", or sign in with Apple to keep the recipes in an account.
 4. Buy the 10-recipe pack with the sandbox account. The balance shows 10.
-5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A failed attempt is not charged.
+5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A failed attempt is not charged, apart from repeated requests the model itself refuses.
 Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
 
 Location is optional and only used for "Shop reminders": Settings → Shopping reminders → turn on "Remind me near a shop", name a shop and tap the location button to save your current position. With "Always" location access, the app shows the shopping list when you arrive at that shop (iOS region monitoring); with "While Using" it only works while the app is open. The app never sends the location anywhere.

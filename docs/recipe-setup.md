@@ -142,7 +142,8 @@ Platform (free tier 50,000 monthly active users for these providers).
 - [ ] Payments profile and merchant account (Play Console > Monetisation setup), if not already
       there; paid products need it.
 - [ ] **Products** (Monetise with Play > Products > In-app products): consumables `recipes_10`,
-      `recipes_50`, `recipes_100`. Set the prices yourself; the server only reads the product id
+      `recipes_50`, `recipes_100`, priced USD 3.99 / 10.99 / 18.99 (decided 2026-11-13), with
+      Play converting the other countries from the US price. The server only reads the product id
       and the signed quantity. Multi-quantity purchases are allowed if you want them (the server
       multiplies by the quantity).
 - [ ] **Service account access**: Users and permissions > invite
@@ -169,8 +170,9 @@ Platform (free tier 50,000 monthly active users for these providers).
 
 - [ ] Sign the **Paid Apps agreement** and fill in banking and tax forms (Business).
 - [ ] **In-app purchases**: three **consumables** with product ids `recipes_10`, `recipes_50`,
-      `recipes_100`, each with a price, a display name and description in en-GB, ru and no, and a
-      review screenshot. The first ones are submitted together with an app version.
+      `recipes_100`, each with a price (USD 3.99 / 10.99 / 18.99 as the base price, the App Store
+      converting the other storefronts), a display name and description in en-GB, ru and no, and
+      a review screenshot. The first ones are submitted together with an app version.
 - [ ] **In-App Purchase key** (Users and Access > Integrations > In-App Purchase): generate a key
       and note its key id and the issuer id. The `.p8` becomes the secret `APPSTORE_PRIVATE_KEY`.
 - [x] Note the app's **Apple ID** (App Information), for the parameter `APPLE_APP_ID`:
@@ -274,5 +276,5 @@ What no API could do, or what was not allowed in that session, roughly in order:
    by API), set the RTDN topic, link the Cloud project for Play Integrity, add licence testers
    (sections 3 and 5).
 5. App Store Connect: Paid Apps agreement, In-App Purchase key, sandbox testers (section 6).
-   The in-app purchases and the notification URL can be set by API once prices are decided and
-   the backend is deployed.
+   The in-app purchases (prices now decided: USD 3.99 / 10.99 / 18.99) and the notification URL
+   can be set by API once the backend is deployed.

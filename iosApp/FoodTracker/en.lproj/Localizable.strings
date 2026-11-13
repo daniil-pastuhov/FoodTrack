@@ -658,8 +658,6 @@
 "recipe_generate_recipe" = "Generate recipe";
 "recipe_generate_menu" = "Generate menu";
 "recipe_buy" = "Buy recipes";
-"recipe_menu_server_hint" = "A menu is written on our server and takes 3 recipes from a pack.";
-"recipe_menu_short_title" = "A menu takes 3 recipes";
 "recipe_menu_short_message" = "You have %d left. A single recipe still works.";
 "recipe_menu_short_none" = "You have no recipes left.";
 "recipe_writing_server_title" = "Writing your recipe";
@@ -670,8 +668,8 @@
 "recipe_offline_message" = "Recipes from your pack need the internet. The free routes below still work.";
 "recipe_server_failed" = "Couldn't write the recipe. No recipe was taken.";
 "recipe_server_failed_menu" = "Couldn't write the menu. No recipes were taken.";
-"recipe_server_refused" = "Couldn't make a recipe from these items. 1 recipe was taken.";
-"recipe_server_refused_menu" = "Couldn't make a menu from these items. 3 recipes were taken.";
+"recipe_server_unknown" = "Couldn't write the recipe right now. Try again later; no recipe was taken.";
+"recipe_server_unknown_menu" = "Couldn't write the menu right now. Try again later; no recipes were taken.";
 "recipe_server_busy" = "Another recipe is still being written. Try again in a minute.";
 "recipe_server_rate_limited" = "Too many recipes in a short time. Try again in a minute.";
 "recipe_server_daily_cap" = "Recipes from packs have reached today's limit. Try again tomorrow; nothing was taken.";
@@ -681,7 +679,7 @@
 "recipe_try_now" = "Try now";
 "recipe_payment_pending_title" = "Waiting for payment";
 "recipe_payment_pending_message" = "Your recipes will be added when the store confirms the payment. That can take a while.";
-"recipe_buy_message" = "One recipe is one dish written by our server. A menu for 3 days takes 3. They don't expire.";
+"recipe_buy_message" = "One recipe is one dish written by our server. A menu for 3 days takes %1$d with two courses a day, or %2$d with three. They don't expire.";
 "recipe_pack_each" = "%@ each";
 "recipe_continue" = "Continue";
 "recipe_close" = "Close";

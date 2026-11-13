@@ -942,5 +942,125 @@
             <string>Ваши %d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Данные для входа и адрес почты удаляются с нашего сервера; запись о покупках остаётся, но больше не связана с вами. Сохранённые рецепты и запасы останутся на этом телефоне.</string>
         </dict>
     </dict>
+    <key>recipe_menu_server_hint</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Меню составляется на нашем сервере и стоит %d рецепт из пакета.</string>
+            <key>few</key>
+            <string>Меню составляется на нашем сервере и стоит %d рецепта из пакета.</string>
+            <key>many</key>
+            <string>Меню составляется на нашем сервере и стоит %d рецептов из пакета.</string>
+            <key>other</key>
+            <string>Меню составляется на нашем сервере и стоит %d рецепта из пакета.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Для этого меню нужен %d рецепт</string>
+            <key>few</key>
+            <string>Для этого меню нужно %d рецепта</string>
+            <key>many</key>
+            <string>Для этого меню нужно %d рецептов</string>
+            <key>other</key>
+            <string>Для этого меню нужно %d рецепта</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списан %d рецепт.</string>
+            <key>few</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списано %d рецепта.</string>
+            <key>many</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списано %d рецептов.</string>
+            <key>other</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списано %d рецепта.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Не получилось составить меню из этих продуктов. Списан %d рецепт.</string>
+            <key>few</key>
+            <string>Не получилось составить меню из этих продуктов. Списано %d рецепта.</string>
+            <key>many</key>
+            <string>Не получилось составить меню из этих продуктов. Списано %d рецептов.</string>
+            <key>other</key>
+            <string>Не получилось составить меню из этих продуктов. Списано %d рецепта.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списан %d рецепт.</string>
+            <key>few</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списано %d рецепта.</string>
+            <key>many</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списано %d рецептов.</string>
+            <key>other</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списано %d рецепта.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списан %d рецепт.</string>
+            <key>few</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецепта.</string>
+            <key>many</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецептов.</string>
+            <key>other</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецепта.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

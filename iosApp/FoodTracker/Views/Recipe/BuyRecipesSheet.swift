@@ -47,7 +47,7 @@ struct BuyRecipesSheet: View {
                 )
                 LarderButton(L10n.recipeClose, variant: .outline, fullWidth: true, action: onClose)
             } else if case .loaded(let packs) = credits.packs {
-                Text(L10n.recipeBuyMessage)
+                Text(L10n.recipeBuyMessage(credits.costs))
                     .larderFont(.body)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)

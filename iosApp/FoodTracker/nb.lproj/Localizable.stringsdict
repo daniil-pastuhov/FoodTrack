@@ -754,5 +754,101 @@
             <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Innloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir værende, men er ikke lenger knyttet til deg. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
         </dict>
     </dict>
+    <key>recipe_menu_server_hint</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>En meny lages på serveren vår og bruker %d oppskrift fra en pakke.</string>
+            <key>other</key>
+            <string>En meny lages på serveren vår og bruker %d oppskrifter fra en pakke.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Denne menyen bruker %d oppskrift</string>
+            <key>other</key>
+            <string>Denne menyen bruker %d oppskrifter</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Klarte ikke å lage en oppskrift av disse varene. %d oppskrift ble trukket.</string>
+            <key>other</key>
+            <string>Klarte ikke å lage en oppskrift av disse varene. %d oppskrifter ble trukket.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Klarte ikke å lage en meny av disse varene. %d oppskrift ble trukket.</string>
+            <key>other</key>
+            <string>Klarte ikke å lage en meny av disse varene. %d oppskrifter ble trukket.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Klarte ikke å lage oppskriften nå. Prøv igjen senere. %d oppskrift ble trukket.</string>
+            <key>other</key>
+            <string>Klarte ikke å lage oppskriften nå. Prøv igjen senere. %d oppskrifter ble trukket.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d oppskrift ble trukket.</string>
+            <key>other</key>
+            <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d oppskrifter ble trukket.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

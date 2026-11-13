@@ -215,14 +215,18 @@ extension L10n {
     static func recipeCourses(_ count: Int) -> String { plural("recipe_courses_count", count) }
     static var recipeGenerateRecipe: String { paid("recipe_generate_recipe") }
     static var recipeGenerateMenu: String { paid("recipe_generate_menu") }
-    /// "1 recipe", "3 recipes": what an action takes, and a pack's size.
+    /// "1 recipe", "5 recipes": what an action takes, and a pack's size.
     static func recipeCost(_ count: Int) -> String { plural("recipe_cost_count", count) }
     static func recipeBalanceLeft(_ count: Int) -> String { plural("recipe_balance_left", count) }
     static var recipeBuy: String { paid("recipe_buy") }
-    static var recipeMenuServerHint: String { paid("recipe_menu_server_hint") }
-    static var recipeMenuShortTitle: String { paid("recipe_menu_short_title") }
-    static func recipeMenuShortMessage(_ balance: Int) -> String {
-        balance > 0 ? String(format: paid("recipe_menu_short_message"), balance) : paid("recipe_menu_short_none")
+    /// `cost` is what a menu of the chosen number of courses takes.
+    static func recipeMenuServerHint(_ cost: Int) -> String { plural("recipe_menu_server_hint", cost) }
+    static func recipeMenuShortTitle(_ cost: Int) -> String { plural("recipe_menu_short_title", cost) }
+    /// Under the title: what is left, and whether a single recipe still fits in it.
+    static func recipeMenuShortMessage(_ balance: Int, recipeCost: Int) -> String {
+        if balance <= 0 { return paid("recipe_menu_short_none") }
+        if balance >= recipeCost { return String(format: paid("recipe_menu_short_message"), balance) }
+        return recipeBalanceLeft(balance)
     }
 
     // Writing on the server
@@ -235,8 +239,13 @@ extension L10n {
     static func recipeServerFailed(_ kind: RecipeKind) -> String {
         paid(kind == .menu ? "recipe_server_failed_menu" : "recipe_server_failed")
     }
-    static func recipeServerRefused(_ kind: RecipeKind) -> String {
-        paid(kind == .menu ? "recipe_server_refused_menu" : "recipe_server_refused")
+    static func recipeServerRefused(_ kind: RecipeKind, taken: Int) -> String {
+        plural(kind == .menu ? "recipe_server_refused_menu" : "recipe_server_refused", taken)
+    }
+    /// A refusal this version can't name: try later, and whether anything was taken.
+    static func recipeServerUnrecognised(_ kind: RecipeKind, taken: Int) -> String {
+        guard taken > 0 else { return paid(kind == .menu ? "recipe_server_unknown_menu" : "recipe_server_unknown") }
+        return plural(kind == .menu ? "recipe_server_unknown_taken_menu" : "recipe_server_unknown_taken", taken)
     }
     static var recipeServerBusy: String { paid("recipe_server_busy") }
     static var recipeServerRateLimited: String { paid("recipe_server_rate_limited") }
@@ -258,7 +267,10 @@ extension L10n {
     static var recipePaymentPendingMessage: String { paid("recipe_payment_pending_message") }
 
     // Buying
-    static var recipeBuyMessage: String { paid("recipe_buy_message") }
+    /// What a menu takes with two and with three courses a day, from the server's costs.
+    static func recipeBuyMessage(_ costs: RecipeCosts) -> String {
+        String(format: paid("recipe_buy_message"), costs.menu2, costs.menu3)
+    }
     static func recipePackEach(_ price: String) -> String { String(format: paid("recipe_pack_each"), price) }
     static var recipeContinue: String { paid("recipe_continue") }
     static var recipeClose: String { paid("recipe_close") }

@@ -519,6 +519,10 @@ extension RootTabView {
                 state: arguments.string(forKey: "demoRecipeState")
             )
             if arguments.string(forKey: "demoRecipeMode") == "menu" { recipeViewModel.mode = .menu }
+            // `-demoRecipeCourses 2|3`: the menu's course count, and so what it takes.
+            if arguments.object(forKey: "demoRecipeCourses") != nil {
+                recipeViewModel.setMenuCourses(arguments.integer(forKey: "demoRecipeCourses"))
+            }
         }
     }
 }

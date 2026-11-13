@@ -18,9 +18,8 @@ struct FirebaseRecipeBackend: RecipeBackend {
         try await call("generateRecipe", request, timeout: request.kind == .menu ? 190 : 70)
     }
 
-    func balance() async throws -> Int {
-        let response: BalanceResponse = try await call("getBalance", EmptyRequest())
-        return response.balance
+    func balance() async throws -> BalanceResponse {
+        try await call("getBalance", EmptyRequest())
     }
 
     func verifyPurchase(signedTransaction: String) async throws -> VerifyPurchaseResponse {
@@ -71,7 +70,11 @@ struct FirebaseRecipeBackend: RecipeBackend {
             return .server
         }
         let details = nsError.userInfo[FunctionsErrorDetailsKey] as? [String: Any]
-        return RecipeServerError.from(code: name(of: code), reason: details?["reason"] as? String)
+        return RecipeServerError.from(
+            code: name(of: code),
+            reason: details?["reason"] as? String,
+            charged: details?["charged"] as? Bool
+        )
     }
 
     private static func name(of code: FunctionsErrorCode) -> String {
