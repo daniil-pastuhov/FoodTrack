@@ -12,7 +12,44 @@
           "package_name": "com.foodtracker.android"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1035101174561-189rt63phkseuk050vaka9ckqa53udg0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foodtracker.android",
+            "certificate_hash": "622343f704e40046cbbee3a0766754aa00917282"
+          }
+        },
+        {
+          "client_id": "1035101174561-89b35nhv00lui1hbhda89o61katlqvtb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foodtracker.android",
+            "certificate_hash": "ce53e51148e8b03b9c095918d63dd70f54b3871b"
+          }
+        },
+        {
+          "client_id": "1035101174561-fo7753gn3ml4gdnhhpmckmq1kj5vb9pe.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foodtracker.android",
+            "certificate_hash": "5bf69a6e0a077a846b6c6263c1d7165dfa9daf46"
+          }
+        },
+        {
+          "client_id": "1035101174561-nhvrrfsc4a6klbelj8i8fcik6g2os5os.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.foodtracker.android",
+            "certificate_hash": "157d0878a6f13e1b2eed863c2c86268d025e59d0"
+          }
+        },
+        {
+          "client_id": "1035101174561-usuaafab048l5m58hvvurkjq7gc9n42n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyD_HwYi_RDgNwT7TSeriKLwlDhB1PLsBZ4"
@@ -20,7 +57,20 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1035101174561-usuaafab048l5m58hvvurkjq7gc9n42n.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1035101174561-c9kjlqvhfpbo5d7pr8cof5o3vefeib9s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.foodbest.ios",
+                "app_store_id": "6818647200"
+              }
+            }
+          ]
         }
       }
     }
