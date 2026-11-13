@@ -143,6 +143,7 @@
     <string name="camera_off_title">The camera is off</string>
     <string name="camera_off_body">BestBefore needs the camera to scan. You can still add food by hand.</string>
     <string name="camera_off_open_settings">Open settings</string>
+    <string name="camera_off_allow">Allow camera</string>
     <string name="camera_off_add_by_hand">Type it in</string>
     <string name="scan_mode_batch">Batch</string>
     <string name="reticle_hint_batch">Keep scanning. Everything lands in the list</string>

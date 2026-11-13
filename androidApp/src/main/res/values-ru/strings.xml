@@ -143,6 +143,7 @@
     <string name="camera_off_title">Камера выключена</string>
     <string name="camera_off_body">Срокоеду нужна камера для сканирования. Продукты можно добавить и вручную.</string>
     <string name="camera_off_open_settings">Открыть настройки</string>
+    <string name="camera_off_allow">Разрешить камеру</string>
     <string name="camera_off_add_by_hand">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
     <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список</string>

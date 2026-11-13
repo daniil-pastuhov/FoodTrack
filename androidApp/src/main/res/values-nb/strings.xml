@@ -141,6 +141,7 @@
     <string name="camera_off_title">Kameraet er av</string>
     <string name="camera_off_body">Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.</string>
     <string name="camera_off_open_settings">Åpne innstillinger</string>
+    <string name="camera_off_allow">Tillat kamera</string>
     <string name="camera_off_add_by_hand">Skriv det inn</string>
     <string name="scan_mode_batch">Flere</string>
     <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen</string>

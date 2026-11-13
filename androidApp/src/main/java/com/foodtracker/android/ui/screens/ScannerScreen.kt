@@ -374,11 +374,26 @@ fun ScannerScreen(
 
     if (!cameraAccess.granted) {
         if (cameraAccess.refused) {
+            // True after a first refusal, when Android will still show its dialog; false once
+            // it won't (a second refusal), and settings is the only way back.
+            val canAskAgain = remember(cameraAccess) {
+                (view.context as? Activity)?.let {
+                    ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.CAMERA)
+                } == true
+            }
             CameraOffState(
                 // Revoking the permission kills the process, so no queue reaches this state;
                 // going through the discard keeps that true without a prompt to host here.
                 onClose = { discardQueueAndLeave() },
-                onOpenSettings = { context.startActivity(appSettingsIntent(context)) },
+                canAskAgain = canAskAgain,
+                onAllowCamera = {
+                    if (canAskAgain) {
+                        cameraAccess = cameraAccess.copy(refused = false)
+                        requestCameraIfNeeded()
+                    } else {
+                        context.startActivity(appSettingsIntent(context))
+                    }
+                },
                 onAddByHand = {
                     // In Add/Edit the form is what is underneath, so going back is adding by hand.
                     if (showManualEntryShortcut) proceed() else onNavigateBack()
@@ -729,7 +744,8 @@ internal fun appSettingsIntent(context: Context): Intent =
 @Composable
 private fun CameraOffState(
     onClose: () -> Unit,
-    onOpenSettings: () -> Unit,
+    canAskAgain: Boolean,
+    onAllowCamera: () -> Unit,
     onAddByHand: () -> Unit,
     modifier: Modifier = Modifier
-) = CameraOffContent(onClose, onOpenSettings, onAddByHand, modifier)
+) = CameraOffContent(onClose, canAskAgain, onAllowCamera, onAddByHand, modifier)

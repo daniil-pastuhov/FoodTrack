@@ -1114,11 +1114,14 @@ private fun CheckDateMark() {
     }
 }
 
-/** T5: every mode needs the camera, so the modes and the torch go, and Close stays. */
+/** T5: every mode needs the camera, so the modes and the torch go, and Close stays. While
+ *  Android will still show its permission dialog ([canAskAgain]), the main button asks again
+ *  in the app; after a second refusal only system settings can turn the camera back on. */
 @Composable
 internal fun CameraOffContent(
     onClose: () -> Unit,
-    onOpenSettings: () -> Unit,
+    canAskAgain: Boolean,
+    onAllowCamera: () -> Unit,
     onAddByHand: () -> Unit,
     modifier: Modifier = Modifier
 ) = CameraDark {
@@ -1139,8 +1142,10 @@ internal fun CameraOffContent(
                     verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)
                 ) {
                     LarderButton(
-                        text = stringResource(R.string.camera_off_open_settings),
-                        onClick = onOpenSettings,
+                        text = stringResource(
+                            if (canAskAgain) R.string.camera_off_allow else R.string.camera_off_open_settings
+                        ),
+                        onClick = onAllowCamera,
                         modifier = Modifier.fillMaxWidth()
                     )
                     LarderButton(
@@ -1291,5 +1296,5 @@ internal fun QueuePanelPreview() = LarderPreview {
 @PreviewLightDark
 @Composable
 internal fun CameraOffPreview() = LarderPreview {
-    Box(Modifier.height(560.dp)) { CameraOffContent({}, {}, {}) }
+    Box(Modifier.height(560.dp)) { CameraOffContent({}, canAskAgain = true, {}, {}) }
 }
