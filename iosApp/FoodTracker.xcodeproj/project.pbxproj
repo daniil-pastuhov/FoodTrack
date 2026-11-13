@@ -7,6 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		49EC1642A70BBBA187CDD961 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B57A120172E7E297EF9CE625 /* GoogleSignInSwift */; };
+		C4A08131025712F70D97E3A3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 38D906412AD359372AB3FD9F /* GoogleSignIn */; };
+		4E0F844EA39A9EABDBEB3299 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = 96764280BE35138D366540C0 /* FirebaseAppCheck */; };
+		56399532DA679AED6D2C936B /* FirebaseFunctions in Frameworks */ = {isa = PBXBuildFile; productRef = 30D7FB7979C01FA48633754A /* FirebaseFunctions */; };
+		FD515AE03C607E27A726003F /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = A672A6F6E1584F63E8AC27FD /* FirebaseAuth */; };
+		DF5FFF1B3D19C019B0A33E7D /* RecipeMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73AC4A4D9C4B693BC1B357CF /* RecipeMenuView.swift */; };
+		9A6A4111B9E3C17C2F8A8AF2 /* RecipeAccountCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4FC3FD21730F58EED5C63F /* RecipeAccountCard.swift */; };
+		38359FA18569772847BF74CE /* BuyRecipesSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F70B078A0AE73FBF2E48273 /* BuyRecipesSheet.swift */; };
+		E920D3D5090FAD0FE1CCB7B3 /* FirebaseBootstrap.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCD4399C2AFA07CAA64D52C7 /* FirebaseBootstrap.swift */; };
+		C09518A4E9E491D924960AAF /* RecipeCredits.swift in Sources */ = {isa = PBXBuildFile; fileRef = D185A2E2E6D52BDBA68A135E /* RecipeCredits.swift */; };
+		0DE34C0C1CA48C282CF0357A /* RecipeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69EAC004AB2A56B053214165 /* RecipeStore.swift */; };
+		5BA417BEE12C6B5BB2176BDA /* RecipeAccount.swift in Sources */ = {isa = PBXBuildFile; fileRef = 071622059675CAA9741592EE /* RecipeAccount.swift */; };
+		36D33AA1B4396C5DDD622BCF /* FirebaseRecipeBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1BB25354668B0FAD4E1C675 /* FirebaseRecipeBackend.swift */; };
+		FABAA7AFB1713EB925858F85 /* RecipeWire.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1CE0C1652525A4506FFC43DB /* RecipeWire.swift */; };
 		B0A5CA5599509DE59D476E43 /* ShoppingSectionList.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1025C863D9DEB8A7DEBBB78D /* ShoppingSectionList.swift */; };
 		79DF9FA4808735001D2C0286 /* ShoppingSectionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74059F126EBCA57ECB04AC1D /* ShoppingSectionRecord.swift */; };
 		F99AB10F826C7D53A8D1997F /* ShoppingSectionRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74059F126EBCA57ECB04AC1D /* ShoppingSectionRecord.swift */; };
@@ -165,6 +179,16 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		99ADD03720EF74D5011F5B9C /* Recipes.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Recipes.storekit; sourceTree = "<group>"; };
+		73AC4A4D9C4B693BC1B357CF /* RecipeMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeMenuView.swift"; sourceTree = "<group>"; };
+		5E4FC3FD21730F58EED5C63F /* RecipeAccountCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeAccountCard.swift"; sourceTree = "<group>"; };
+		4F70B078A0AE73FBF2E48273 /* BuyRecipesSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "BuyRecipesSheet.swift"; sourceTree = "<group>"; };
+		CCD4399C2AFA07CAA64D52C7 /* FirebaseBootstrap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FirebaseBootstrap.swift"; sourceTree = "<group>"; };
+		D185A2E2E6D52BDBA68A135E /* RecipeCredits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeCredits.swift"; sourceTree = "<group>"; };
+		69EAC004AB2A56B053214165 /* RecipeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeStore.swift"; sourceTree = "<group>"; };
+		071622059675CAA9741592EE /* RecipeAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeAccount.swift"; sourceTree = "<group>"; };
+		E1BB25354668B0FAD4E1C675 /* FirebaseRecipeBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "FirebaseRecipeBackend.swift"; sourceTree = "<group>"; };
+		1CE0C1652525A4506FFC43DB /* RecipeWire.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeWire.swift"; sourceTree = "<group>"; };
 		1025C863D9DEB8A7DEBBB78D /* ShoppingSectionList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingSectionList.swift; sourceTree = "<group>"; };
 		74059F126EBCA57ECB04AC1D /* ShoppingSectionRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingSectionRecord.swift; sourceTree = "<group>"; };
 		6EFB1C66D9B59CDEE32AE374 /* ShoppingSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingSection.swift; sourceTree = "<group>"; };
@@ -289,6 +313,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				49EC1642A70BBBA187CDD961 /* GoogleSignInSwift in Frameworks */,
+				C4A08131025712F70D97E3A3 /* GoogleSignIn in Frameworks */,
+				4E0F844EA39A9EABDBEB3299 /* FirebaseAppCheck in Frameworks */,
+				56399532DA679AED6D2C936B /* FirebaseFunctions in Frameworks */,
+				FD515AE03C607E27A726003F /* FirebaseAuth in Frameworks */,
 				F1EBA5E00000000000000003 /* FirebaseCrashlytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -330,6 +359,7 @@
 				FD0B2C260A7C5D988F621408 /* Info.plist */,
 				F1EBA5E00000000000000002 /* GoogleService-Info.plist */,
 				C0FFEE0000000000000000A1 /* PrivacyInfo.xcprivacy */,
+				99ADD03720EF74D5011F5B9C /* Recipes.storekit */,
 				C0FFEE0000000000000000C4 /* InfoPlist.strings */,
 				CFE3E7A9677B455C8365937F /* Assets.xcassets */,
 				159A2BFDCB04E883857F16A7 /* AppGroup.swift */,
@@ -571,6 +601,12 @@
 		123DA647FFFF5F0F63B31BE6 /* Recipe */ = {
 			isa = PBXGroup;
 			children = (
+				CCD4399C2AFA07CAA64D52C7 /* FirebaseBootstrap.swift */,
+				D185A2E2E6D52BDBA68A135E /* RecipeCredits.swift */,
+				69EAC004AB2A56B053214165 /* RecipeStore.swift */,
+				071622059675CAA9741592EE /* RecipeAccount.swift */,
+				E1BB25354668B0FAD4E1C675 /* FirebaseRecipeBackend.swift */,
+				1CE0C1652525A4506FFC43DB /* RecipeWire.swift */,
 				1835389C769FEF5873C16DB8 /* FoundationModelsRecipeModel.swift */,
 				153867F7F6B19EB37E09E812 /* RecipeServices.swift */,
 				89E5667346DF5704A78470CC /* RecipePromptBuilder.swift */,
@@ -581,6 +617,9 @@
 		508209E5003B5120E70B976A /* Recipe */ = {
 			isa = PBXGroup;
 			children = (
+				73AC4A4D9C4B693BC1B357CF /* RecipeMenuView.swift */,
+				5E4FC3FD21730F58EED5C63F /* RecipeAccountCard.swift */,
+				4F70B078A0AE73FBF2E48273 /* BuyRecipesSheet.swift */,
 				583BDAC0FA4AC195D4C0DAD7 /* RecipeSettingsView.swift */,
 				C9A89B547599520C7C9A2B5B /* SavedRecipesView.swift */,
 				E35505E65FE123F5547F46B0 /* RecipeResultView.swift */,
@@ -628,6 +667,11 @@
 			name = FoodTracker;
 			packageProductDependencies = (
 				F1EBA5E00000000000000004 /* FirebaseCrashlytics */,
+				B57A120172E7E297EF9CE625 /* GoogleSignInSwift */,
+				38D906412AD359372AB3FD9F /* GoogleSignIn */,
+				96764280BE35138D366540C0 /* FirebaseAppCheck */,
+				30D7FB7979C01FA48633754A /* FirebaseFunctions */,
+				A672A6F6E1584F63E8AC27FD /* FirebaseAuth */,
 			);
 			productName = FoodTracker;
 			productReference = 3887357415BF56C699A811E6 /* FoodTracker.app */;
@@ -663,6 +707,7 @@
 			);
 			mainGroup = 43621D17980B5A4694FCDAAD;
 			packageReferences = (
+				F7FC2ADCEE4F131C1EB8CB4E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = 8B228704103F56A284DBF16D /* Products */;
@@ -728,7 +773,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Debug builds skip Crashlytics entirely (see FoodTrackerApp.init) and carry no dSYM.\nif [ \"$CONFIGURATION\" = \"Debug\" ]; then\n  exit 0\nfi\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+			shellScript = "# Debug builds keep Crashlytics collection off (CRASHLYTICS_COLLECTION_ENABLED) and carry no dSYM.\nif [ \"$CONFIGURATION\" = \"Debug\" ]; then\n  exit 0\nfi\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -779,6 +824,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DF5FFF1B3D19C019B0A33E7D /* RecipeMenuView.swift in Sources */,
+				9A6A4111B9E3C17C2F8A8AF2 /* RecipeAccountCard.swift in Sources */,
+				38359FA18569772847BF74CE /* BuyRecipesSheet.swift in Sources */,
+				E920D3D5090FAD0FE1CCB7B3 /* FirebaseBootstrap.swift in Sources */,
+				C09518A4E9E491D924960AAF /* RecipeCredits.swift in Sources */,
+				0DE34C0C1CA48C282CF0357A /* RecipeStore.swift in Sources */,
+				5BA417BEE12C6B5BB2176BDA /* RecipeAccount.swift in Sources */,
+				36D33AA1B4396C5DDD622BCF /* FirebaseRecipeBackend.swift in Sources */,
+				FABAA7AFB1713EB925858F85 /* RecipeWire.swift in Sources */,
 				675566B5E3C943ACB13C6928 /* RecipeSettingsView.swift in Sources */,
 				9D746FB3B7D14259080F44D0 /* SavedRecipesView.swift in Sources */,
 				FF9CA431C0EE40B78502B962 /* RecipeResultView.swift in Sources */,
@@ -1042,6 +1096,7 @@
 		7DE486EDD1D254568D829D5D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CRASHLYTICS_COLLECTION_ENABLED = NO;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FoodTracker/FoodTracker.entitlements;
@@ -1090,6 +1145,7 @@
 		DF90E80FBC025E30AB73380D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CRASHLYTICS_COLLECTION_ENABLED = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = FoodTracker/FoodTracker.entitlements;
@@ -1144,6 +1200,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		F7FC2ADCEE4F131C1EB8CB4E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 10.0.0;
+			};
+		};
 		F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -1155,6 +1219,31 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		B57A120172E7E297EF9CE625 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F7FC2ADCEE4F131C1EB8CB4E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		38D906412AD359372AB3FD9F /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F7FC2ADCEE4F131C1EB8CB4E /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		96764280BE35138D366540C0 /* FirebaseAppCheck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAppCheck;
+		};
+		30D7FB7979C01FA48633754A /* FirebaseFunctions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFunctions;
+		};
+		A672A6F6E1584F63E8AC27FD /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
 		F1EBA5E00000000000000004 /* FirebaseCrashlytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = F1EBA5E00000000000000006 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

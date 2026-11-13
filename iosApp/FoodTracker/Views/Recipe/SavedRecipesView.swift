@@ -35,17 +35,16 @@ struct SavedRecipesView: View {
     }
 
     private func row(_ entry: SavedRecipe) -> some View {
-        let recipe = entry.recipe
         return Button {
             model.path.append(.result(id: entry.id))
         } label: {
             HStack(spacing: LarderSpace.s3) {
-                LarderIcon(.utensils, size: .large)
+                LarderIcon(entry.kind == .menu ? .calendarRange : .utensils, size: .large)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .frame(width: 44, height: 44)
                     .background(LarderColor.surfaceContainer, in: RoundedRectangle(cornerRadius: LarderRadius.md))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(recipe?.title ?? "")
+                    Text(Self.title(entry))
                         .larderFont(.titleSm)
                         .foregroundStyle(LarderColor.onSurface)
                         .lineLimit(2)
@@ -72,10 +71,22 @@ struct SavedRecipesView: View {
         showSnackbar(L10n.recipeSavedDeleted) { model.restoreSaved(removed) }
     }
 
-    /// "Today · 15 min · Written on this phone".
+    static func title(_ entry: SavedRecipe) -> String {
+        switch entry.content {
+        case .recipe(let recipe): return recipe.title
+        case .menu: return L10n.recipeMenuHeading
+        }
+    }
+
+    /// "Today · 15 min · Written on this phone", "Today · 9 dishes · From your pack".
     static func supporting(_ entry: SavedRecipe, now: Date = Date(), calendar: Calendar = .current) -> String {
         var parts = [day(entry.createdAt, now: now, calendar: calendar)]
-        if let minutes = entry.recipe?.minutes, minutes > 0 { parts.append(L10n.recipeMinutes(minutes)) }
+        switch entry.content {
+        case .recipe(let recipe):
+            if recipe.minutes > 0 { parts.append(L10n.recipeMinutes(recipe.minutes)) }
+        case .menu(let menu):
+            parts.append(L10n.recipeDishes(menu.days.reduce(0) { $0 + $1.courses.count }))
+        }
         parts.append(L10n.recipeSavedOrigin(entry.source))
         return parts.joined(separator: " · ")
     }

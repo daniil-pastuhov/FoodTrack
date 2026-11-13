@@ -33,40 +33,17 @@ protocol OnDeviceRecipeModel: Sendable {
     func write(_ request: RecipeRequest) async throws -> Recipe
 }
 
-// MARK: Paid route seams
+// MARK: Paid route
 
-/// Writes recipes and menus on our server from a pack. This step ships without one, so the paid
-/// route stays hidden; the paid step replaces `UnavailableRecipeBackend`.
+/// Our server's five callables (`functions/CONTRACT.md`). `FirebaseRecipeBackend` is the real
+/// one; errors are `RecipeServerError`. `RecipeCredits` builds the purchase and account flows on
+/// it, and `RecipeViewModel` the generation.
 protocol RecipeBackend: Sendable {
-    /// False hides every server action, as in a fork or before sign-up exists.
-    var isAvailable: Bool { get }
-    func writeRecipe(_ request: RecipeRequest, requestID: UUID) async throws -> Recipe
-}
-
-/// Purchases and the recipe count. `balance` is nil while there is no pack and no account,
-/// which is the only state before the paid step: no chip, no Buy.
-@MainActor
-protocol CreditsGateway: AnyObject {
-    var balance: Int? { get }
-    var canPurchase: Bool { get }
-}
-
-enum RecipeBackendError: Error {
-    case unavailable
-}
-
-struct UnavailableRecipeBackend: RecipeBackend {
-    var isAvailable: Bool { false }
-
-    func writeRecipe(_ request: RecipeRequest, requestID: UUID) async throws -> Recipe {
-        throw RecipeBackendError.unavailable
-    }
-}
-
-@MainActor
-final class UnavailableCreditsGateway: CreditsGateway {
-    var balance: Int? { nil }
-    var canPurchase: Bool { false }
+    func generate(_ request: GenerateRequest) async throws -> GenerateResponse
+    func balance() async throws -> Int
+    func verifyPurchase(signedTransaction: String) async throws -> VerifyPurchaseResponse
+    func mergeBalance(sourceIdToken: String) async throws -> MergeBalanceResponse
+    func deleteAccount(appleAuthorizationCode: String?) async throws
 }
 
 // MARK: Configuration

@@ -81,6 +81,8 @@ struct GeneratedIngredient {
     var name: String
     @Guide(description: "True only when this is one of the listed pantry items")
     var fromPantry: Bool
+    @Guide(description: "When this is one of the listed pantry items, that item's name copied exactly as listed, even if the recipe is in another language; otherwise an empty string")
+    var pantryItem: String
 }
 
 @available(iOS 26.0, *)
@@ -99,7 +101,10 @@ extension GeneratedRecipe {
                     amount: ingredient.amount.trimmingCharacters(in: .whitespacesAndNewlines),
                     name: ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines),
                     fromPantry: RecipeMatching.isFromPantry(
-                        ingredient.name, claimed: ingredient.fromPantry, pantryNames: pantryNames
+                        ingredient.name,
+                        pantryItem: ingredient.pantryItem,
+                        claimed: ingredient.fromPantry,
+                        pantryNames: pantryNames
                     )
                 )
             },
@@ -111,10 +116,16 @@ extension GeneratedRecipe {
 }
 
 enum RecipeMatching {
-    /// "In your pantry" must never mark something the person doesn't have, so the model's flag
-    /// counts only when the name is close to a ticked item, and a name that contains one
-    /// ("Sourdough bread, toasted") counts even when the model forgot to say so.
-    static func isFromPantry(_ name: String, claimed: Bool, pantryNames: [String]) -> Bool {
+    /// "In your pantry" must never mark something the person doesn't have. The ingredient's
+    /// own name is in the recipe's language, which need not be the pantry's (a German recipe
+    /// from English item names), so the model also copies the pantry item it used, verbatim;
+    /// that copy is matched against the ticked items, and the name itself only as a fallback:
+    /// close to a ticked item when the model claims it, nearly identical when it doesn't.
+    static func isFromPantry(_ name: String, pantryItem: String, claimed: Bool, pantryNames: [String]) -> Bool {
+        let copied = pantryItem.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !copied.isEmpty, pantryNames.contains(where: { NameSimilarity.score(copied, $0) >= 0.9 }) {
+            return true
+        }
         let best = pantryNames.map { NameSimilarity.score(name, $0) }.max() ?? 0
         return best >= 0.9 || (claimed && best >= 0.5)
     }

@@ -1,16 +1,20 @@
 import SwiftUI
 
 /// One recipe, read on a counter at arm's length: large type, numbered steps. It is saved as
-/// soon as it arrives, so there is no Save button; Share sends it as text.
+/// soon as it arrives, so there is no Save button; Share sends it as text. A saved menu opens
+/// as its three days instead, and `dish` one recipe of it.
 struct RecipeResultView: View {
     /// Nil when the entry was deleted while this screen was on the stack.
     let entry: SavedRecipe?
+    var dish: (day: Int, course: Int)? = nil
+    var onOpenDish: (Int, Int) -> Void = { _, _ in }
 
     @State private var sharing = false
 
     var body: some View {
         Group {
-            if let recipe = entry?.recipe {
+            switch entry?.content {
+            case .recipe(let recipe)?:
                 RecipeDocument(recipe: recipe)
                     .toolbar {
                         ToolbarItem(placement: .primaryAction) {
@@ -22,21 +26,36 @@ struct RecipeResultView: View {
                     .sheet(isPresented: $sharing) {
                         ActivityView(activityItems: [RecipePromptBuilder.plainText(recipe)])
                     }
-            } else {
-                EmptyState(.clear, title: L10n.recipeSavedEmptyTitle, message: L10n.recipeSavedEmptyMessage)
+                    .navigationTitle(L10n.recipeResultTitle)
+            case .menu(let menu)?:
+                if let dish, let course = Self.course(in: menu, day: dish.day, course: dish.course) {
+                    RecipeDishView(recipe: course, date: menu.days[dish.day].date)
+                } else {
+                    RecipeMenuView(menu: menu, onOpenDish: onOpenDish)
+                        .navigationTitle(L10n.recipeMenuResultTitle)
+                }
+            case nil:
+                EmptyState(.clear, title: L10n.recipeSavedEmptyTitle, message: L10n.recipeNotFound)
+                    .navigationTitle(L10n.recipeResultTitle)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(LarderColor.background.ignoresSafeArea())
-        .navigationTitle(L10n.recipeResultTitle)
         .navigationBarTitleDisplayMode(.inline)
         .shellChromeEffect(hideNav: true)
+    }
+
+    static func course(in menu: RecipeMenu, day: Int, course: Int) -> RecipeMenuCourse? {
+        guard menu.days.indices.contains(day), menu.days[day].courses.indices.contains(course) else { return nil }
+        return menu.days[day].courses[course]
     }
 }
 
 /// The recipe itself. Titles wrap, never cut; amounts keep a fixed column so names line up.
 struct RecipeDocument: View {
     let recipe: Recipe
+    /// The line at the end, in place of where the recipe was written.
+    var footer: String? = nil
 
     @ScaledMetric(relativeTo: .body) private var amountWidth: CGFloat = 72
     @ScaledMetric(relativeTo: .body) private var stepNumberSide: CGFloat = 28
@@ -82,7 +101,7 @@ struct RecipeDocument: View {
 
                 HStack(alignment: .top, spacing: LarderSpace.s2) {
                     LarderIcon(recipe.source == .device ? .smartphone : .cloud, size: .custom(16))
-                    Text(L10n.recipeSource(recipe.source))
+                    Text(footer ?? L10n.recipeSource(recipe.source))
                         .larderFont(.caption)
                         .fixedSize(horizontal: false, vertical: true)
                 }

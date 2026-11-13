@@ -22,18 +22,18 @@ enum RecipePromptBuilder {
     static func sharePreferences(_ request: RecipeRequest) -> [String] {
         let config = request.config
         var lines = [
-            L10n.recipePromptPreference(L10n.recipeLabelDifficulty, L10n.recipeDifficultyName(config.difficulty)),
-            L10n.recipePromptPreference(L10n.recipeLabelDetail, L10n.recipeDetailName(config.detail)),
-            L10n.recipePromptPreference(L10n.recipeLabelServings, "\(config.servings)"),
+            L10n.recipePromptDifficulty(config.difficulty),
+            L10n.recipePromptDetail(config.detail),
+            L10n.recipePromptServings(config.servings),
         ]
         if let minutes = config.maxMinutes {
-            lines.append(L10n.recipePromptPreference(L10n.recipeLabelTime, L10n.recipePromptTimeLimit(minutes)))
+            lines.append(L10n.recipePromptMaxMinutes(minutes))
         }
         if config.mealType != .any {
-            lines.append(L10n.recipePromptPreference(L10n.recipeLabelMeal, L10n.recipeMealName(config.mealType)))
+            lines.append(L10n.recipePromptMeal(config.mealType))
         }
         if config.diet != .none {
-            lines.append(L10n.recipePromptPreference(L10n.recipeLabelDiet, L10n.recipeDietName(config.diet)))
+            lines.append(L10n.recipePromptDiet(config.diet))
         }
         if !request.allergens.isEmpty {
             lines.append(L10n.recipePromptAllergens(request.allergens.joined(separator: ", ")))
@@ -54,7 +54,8 @@ enum RecipePromptBuilder {
         recipe. Build it around the pantry items listed, using the ones that expire soonest first; \
         it does not have to use all of them, and it may add common staples. Follow every preference \
         exactly. Never include an ingredient that is or contains a listed allergen. Mark an \
-        ingredient as from the pantry only when it is one of the listed pantry items. Write every \
+        ingredient as from the pantry only when it is one of the listed pantry items, and then \
+        copy that item's name exactly as listed into pantryItem, untranslated. Write every other \
         text field in \(request.config.resolvedLanguage.englishName).
         """
     }
@@ -147,5 +148,18 @@ enum RecipePromptBuilder {
             parts.append(L10n.recipeTipTitle + ": " + tip)
         }
         return parts.joined(separator: "\n\n")
+    }
+
+    /// A menu as plain text: each day's heading, then each course and its full recipe.
+    static func plainText(_ menu: RecipeMenu) -> String {
+        var parts = [L10n.recipeMenuHeading]
+        for day in menu.days {
+            let heading = RecipeMenuView.dayTitle(day.date)
+            let courses = day.courses.map { course in
+                L10n.recipeCourseName(course.course).uppercased() + "\n" + plainText(course.recipe)
+            }
+            parts.append(([heading.uppercased()] + courses).joined(separator: "\n\n"))
+        }
+        return parts.joined(separator: "\n\n\n")
     }
 }

@@ -233,8 +233,7 @@ public struct RecipeMenuDay: Codable, Equatable, Sendable {
     public var courses: [RecipeMenuCourse]
 }
 
-/// Three days of two or three courses, written by the server only. Modelled now so saved
-/// entries share one shape across platforms; nothing on iOS writes one yet.
+/// Three days of two or three courses, written by the server only.
 public struct RecipeMenu: Codable, Equatable, Sendable {
     public var days: [RecipeMenuDay]
 }
@@ -286,15 +285,26 @@ public struct RecipeIngredientInput: Equatable, Sendable {
     public var daysRemaining: Int
     /// "Today", "In 2 days": the words the prompt quotes.
     public var expiryText: String
+    /// The date itself and how many there are, which the server takes.
+    public var expiresOn: Date?
+    public var quantity: Int?
 
-    public init(name: String, daysRemaining: Int, expiryText: String) {
+    public init(name: String, daysRemaining: Int, expiryText: String, expiresOn: Date? = nil, quantity: Int? = nil) {
         self.name = name
         self.daysRemaining = daysRemaining
         self.expiryText = expiryText
+        self.expiresOn = expiresOn
+        self.quantity = quantity
     }
 
     public init(_ item: PantryItem) {
-        self.init(name: item.name, daysRemaining: item.daysRemaining, expiryText: item.daysRemainingFormatted)
+        self.init(
+            name: item.name,
+            daysRemaining: item.daysRemaining,
+            expiryText: item.daysRemainingFormatted,
+            expiresOn: item.expiryDate,
+            quantity: item.quantity
+        )
     }
 }
 

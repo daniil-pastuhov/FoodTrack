@@ -14,6 +14,7 @@ enum LarderIconName: String, CaseIterable {
     case bellOff = "bell-off"
     case bookmark
     case calendarDays = "calendar-days"
+    case calendarRange = "calendar-range"
     case camera
     case cameraOff = "camera-off"
     case carrot
@@ -26,6 +27,7 @@ enum LarderIconName: String, CaseIterable {
     case circleAlert = "circle-alert"
     case circleCheck = "circle-check"
     case circleMinus = "circle-minus"
+    case circleUserRound = "circle-user-round"
     case clock
     case cloud
     case copy
@@ -68,6 +70,7 @@ enum LarderIconName: String, CaseIterable {
     case sparkles
     case star
     case store
+    case ticket
     case timer
     case trash2 = "trash-2"
     case triangleAlert = "triangle-alert"
