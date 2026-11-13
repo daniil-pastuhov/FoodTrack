@@ -1,0 +1,30 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "generations",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "state", "order": "ASCENDING" },
+        { "fieldPath": "deadlineAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "generations",
+      "fieldPath": "expiresAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
+      "collectionGroup": "generations",
+      "fieldPath": "recipe",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "generations",
+      "fieldPath": "menu",
+      "indexes": []
+    }
+  ]
+}

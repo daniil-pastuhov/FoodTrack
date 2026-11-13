@@ -1,0 +1,7 @@
+node_modules/
+lib/
+coverage/
+*.log
+# Local parameter / secret overrides for the emulator; never commit.
+.env.local
+.secret.local
