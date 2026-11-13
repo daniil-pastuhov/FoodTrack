@@ -8,6 +8,7 @@ import android.os.Bundle
 import com.foodtracker.android.BuildConfig
 import com.google.android.gms.tasks.Task
 import com.google.firebase.FirebaseApp
+import com.google.firebase.FirebaseOptions
 import com.google.firebase.appcheck.FirebaseAppCheck
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
@@ -82,8 +83,11 @@ class RecipeFirebase(private val context: Context) {
 
     private val configured = mutableSetOf<String>()
 
-    /** The app the person's own user lives in. */
-    val primary: FirebaseApp get() = prepared(FirebaseApp.getInstance())
+    /** The app the person's own user lives in. Against the emulators, a copy of the default app
+     *  under the emulator suite's `demo-` project (functions/README.md): the Functions emulator
+     *  serves only that project, and answers the real project id with 404. */
+    val primary: FirebaseApp
+        get() = prepared(if (emulatorHost == null) FirebaseApp.getInstance() else namedCopy(EMULATOR_APP, EMULATOR_PROJECT))
 
     /**
      * A second app with the same project, for signing in to an existing account while this
@@ -92,13 +96,21 @@ class RecipeFirebase(private val context: Context) {
      */
     val merge: FirebaseApp
         get() = prepared(
-            FirebaseApp.getApps(context).firstOrNull { it.name == MERGE_APP }
-                ?: FirebaseApp.initializeApp(context, FirebaseApp.getInstance().options, MERGE_APP)
+            namedCopy(MERGE_APP, if (emulatorHost == null) null else EMULATOR_PROJECT)
         )
 
     fun auth(app: FirebaseApp = primary): FirebaseAuth = FirebaseAuth.getInstance(app)
 
     fun functions(app: FirebaseApp = primary): FirebaseFunctions = FirebaseFunctions.getInstance(app, RECIPE_FUNCTIONS_REGION)
+
+    /** The default app's options under another [name], and [projectId] when given. */
+    @Synchronized
+    private fun namedCopy(name: String, projectId: String?): FirebaseApp =
+        FirebaseApp.getApps(context).firstOrNull { it.name == name } ?: FirebaseApp.initializeApp(
+            context,
+            FirebaseOptions.Builder(FirebaseApp.getInstance().options).apply { projectId?.let(::setProjectId) }.build(),
+            name
+        )
 
     @Synchronized
     private fun prepared(app: FirebaseApp): FirebaseApp {
@@ -114,6 +126,10 @@ class RecipeFirebase(private val context: Context) {
 
     private companion object {
         const val MERGE_APP = "recipe-merge"
+        const val EMULATOR_APP = "recipe-emulator"
+
+        /** The project `firebase emulators:start --project` is given in functions/README.md. */
+        const val EMULATOR_PROJECT = "demo-foodtracker"
         const val AUTH_EMULATOR_PORT = 9099
         const val FUNCTIONS_EMULATOR_PORT = 5001
     }

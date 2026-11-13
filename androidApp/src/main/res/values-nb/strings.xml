@@ -948,6 +948,7 @@
     <string name="recipe_sign_in_failed">Kunne ikke logge inn. Oppskriftene dine er uendret.</string>
     <string name="recipe_sign_in_in_use">Den innloggingen hører allerede til en annen konto. Oppskriftene dine er uendret.</string>
     <string name="recipe_account_deleted">Kontoen er slettet</string>
+    <string name="recipe_purchases_blocked">Kjøp av oppskrifter er ikke tilgjengelig for denne kontoen fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.</string>
     <string name="recipe_account_busy">En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.</string>
     <string name="recipe_account_action_failed">Fikk ikke kontakt med serveren vår. Ingenting ble endret.</string>
     <string name="recipe_menu_bar_title">Meny</string>

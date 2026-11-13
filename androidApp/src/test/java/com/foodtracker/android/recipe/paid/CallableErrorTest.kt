@@ -76,6 +76,53 @@ class CallableErrorTest {
         assertEquals(false, RuntimeException("App attestation failed: 403").isConnectionFailure(), "a refusal")
     }
 
+    private class IntegrityServiceException(message: String) : Exception(message)
+
+    @Test
+    fun onlyARealRefusalHidesThePaidRoute() {
+        assertEquals(true, RuntimeException("Error returned from API. code: 403 body: App attestation failed.").isAttestationRefusal(), "the exchange refused it")
+        assertEquals(false, RuntimeException("wrapped", IntegrityServiceException("-12: TOO_MANY_REQUESTS 403")).isAttestationRefusal(), "a passing Play Integrity error")
+        assertEquals(false, RuntimeException("wrapped", IOException("403 reset")).isAttestationRefusal(), "a lost connection")
+        assertEquals(false, RuntimeException("Something else went wrong").isAttestationRefusal(), "unknown isn't a refusal")
+    }
+
+    private class FakeProfile(var name: String?, var photo: String?, val fails: Boolean = false) : NamedProfile {
+        var clears = 0
+        override val hasNameOrPhoto: Boolean get() = name != null || photo != null
+        override suspend fun clearNameAndPhoto() {
+            clears++
+            if (fails) throw IllegalStateException("network")
+            name = null
+            photo = null
+        }
+    }
+
+    @Test
+    fun aSignInsNameAndPhotoAreCleared() = kotlinx.coroutines.runBlocking {
+        val google = FakeProfile("A Person", "https://example.invalid/p.jpg")
+        assertEquals(true, dropNameAndPhoto(google), "cleared")
+        assertEquals(null, google.name, "no name kept")
+        assertEquals(null, google.photo, "no photo kept")
+
+        val apple = FakeProfile("A Person", null)
+        dropNameAndPhoto(apple)
+        assertEquals(null, apple.name, "Apple's first-sign-in name too")
+
+        val clean = FakeProfile(null, null)
+        dropNameAndPhoto(clean)
+        assertEquals(0, clean.clears, "nothing to clear, no call")
+
+        val failing = FakeProfile("A Person", null, fails = true)
+        assertEquals(false, dropNameAndPhoto(failing), "a failure doesn't break sign-in")
+    }
+
+    @Test
+    fun getBalanceRepliesCarryTheBlock() {
+        val blocked = JsonObject(mapOf("balance" to JsonPrimitive(4), "purchasesBlocked" to JsonPrimitive(true)))
+        assertEquals(true, balanceReplyOf(blocked)?.purchasesBlocked, "blocked")
+        assertEquals(false, balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(4))))?.purchasesBlocked, "absent")
+    }
+
     @Test
     fun noUserOrNoAppCheckTokenIsUnauthenticated() {
         assertEquals(ServerError.UNAUTHENTICATED, error(Code.UNAUTHENTICATED))

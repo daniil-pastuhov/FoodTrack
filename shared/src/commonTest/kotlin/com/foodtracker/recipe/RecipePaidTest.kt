@@ -65,6 +65,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     val verifyReplies = ArrayDeque<ServerResult<VerifyReply>>()
     var balance: ServerResult<Int> = ServerResult.Ok(0)
     var balanceCosts: RecipeCosts? = null
+    var balanceBlocked = false
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<Unit>>()
     var deleteCalls = 0
@@ -98,7 +99,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked))
             is ServerResult.Err -> current
         }
     }
@@ -1053,6 +1054,120 @@ class RecipePaidTest {
         assertEquals(listOf("req0", "req0"), backend.generated.map { it.requestId })
         assertTrue(backend.polled.isEmpty())
         assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun aLimitOnAPollKeepsTheHeldRequestAndAsksAgain() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += ServerResult.Err(ServerError.RATE_LIMITED)
+        backend.polls!! += ServerResult.Err(ServerError.fromReason("SOMETHING_NEW", ServerError.INTERNAL))
+        backend.polls!! += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0"), backend.generated.map { it.requestId })
+        assertEquals(3, backend.polled.size, "asked again after each, never dropped")
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertEquals(1, saved.rows.value.size, "the recipe that was charged arrives")
+    }
+
+    @Test
+    fun aLimitOnAPollPastTheDeadlineKeepsTheRequestForLater() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        repeat(80) { backend.polls!! += ServerResult.Err(ServerError.RATE_LIMITED) }
+        holder.generateOnServer()
+
+        assertEquals("req0", paidRepository.get().pendingGeneration?.requestId, "still held: it may yet be written")
+        assertNull(holder.uiState.value.paid.writing)
+    }
+
+    @Test
+    fun aRefusalOnTheFirstSendOfARequestTheServerNeverGotStillDropsIt() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        holder.consumeEvent()
+
+        backend.polls!! += ServerResult.Err(ServerError.UNKNOWN_REQUEST)
+        backend.generateReplies += ServerResult.Err(ServerError.USER_DAILY_LIMIT)
+        holder.retryServer()
+        assertEquals(RecipeEvent.ServerLimitToday, holder.uiState.value.event)
+        assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun anAppCheckRefusalWithRecipesHeldKeepsThemAndOnlyStopsBuying() = runUnconfined {
+        withBalance(5)
+        backend.attestation = Attestation.FAILED
+        val holder = holder()
+        holder.openPacks()
+        holder.continuePurchase()
+
+        val state = holder.uiState.value
+        assertTrue(state.paidRouteAvailable, "what was paid for stays")
+        assertEquals(5, state.paid.balance)
+        assertEquals(BuySheet.StoreUnavailable, state.paid.sheet)
+        assertTrue(store.bought.isEmpty())
+    }
+
+    @Test
+    fun aBlockedBuyerKeepsTheirRecipesButCantBuy() = runUnconfined {
+        withBalance(6)
+        backend.balanceBlocked = true
+        val holder = holder()
+        holder.onAppResume()
+
+        val paid = holder.uiState.value.paid
+        assertTrue(paid.purchasesBlocked)
+        assertTrue(paid.available)
+        assertFalse(paid.canBuy)
+        assertTrue(holder.uiState.value.canGenerateOnServer, "the balance stays usable")
+        holder.openPacks()
+        assertNull(holder.uiState.value.paid.sheet, "no pack sheet")
+        assertTrue(paidRepository.get().purchasesBlocked, "kept with the balance")
+        assertTrue(holder().uiState.value.paid.purchasesBlocked, "and after a restart")
+    }
+
+    @Test
+    fun aPurchaseThatStillArrivesForABlockedBuyerIsVerified() = runUnconfined {
+        account = FakeAccount(AccountKind.ANONYMOUS)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 0, purchasesBlocked = true, paymentPending = true))
+        val holder = holder()
+        backend.verifyReplies += ServerResult.Ok(
+            VerifyReply(VerifyStatus.GRANTED, 10, purchasesBlocked = kotlinx.serialization.json.JsonPrimitive(true))
+        )
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("tok", listOf("recipes_10"), 1, pending = false))))
+
+        assertEquals(listOf("tok"), backend.verified)
+        assertEquals(10, holder.uiState.value.paid.balance)
+        assertTrue(holder.uiState.value.paid.purchasesBlocked)
+    }
+
+    @Test
+    fun theBlockIsLiftedWhenTheServerStopsSayingIt() = runUnconfined {
+        withBalance(6)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 6, purchasesBlocked = true))
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe, balance = 5, charged = true))
+        holder.generateOnServer()
+        assertFalse(holder.uiState.value.paid.purchasesBlocked, "absent means not blocked")
+    }
+
+    @Test
+    fun purchasesBlockedIsReadLeniently() {
+        assertTrue(purchasesBlockedOf(kotlinx.serialization.json.JsonPrimitive(true)))
+        assertFalse(purchasesBlockedOf(null))
+        assertFalse(purchasesBlockedOf(kotlinx.serialization.json.JsonPrimitive(false)))
+        assertFalse(purchasesBlockedOf(kotlinx.serialization.json.JsonPrimitive("true")))
+        assertFalse(purchasesBlockedOf(kotlinx.serialization.json.JsonPrimitive(1)))
+        assertFalse(purchasesBlockedOf(buildJsonObject { }))
     }
 
     @Test

@@ -94,6 +94,16 @@ class RecipePaidWordingTest {
     }
 
     @Test
+    fun theBlockedBuyerLineInEveryLanguage() {
+        val keys = listOf("en" to "Buying recipes isn't available for this account", "ru" to "Покупка рецептов недоступна", "nb" to "Kjøp av oppskrifter er ikke tilgjengelig")
+        for ((language, start) in keys) {
+            val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            val text = context.createConfigurationContext(configuration).getString(R.string.recipe_purchases_blocked)
+            org.junit.Assert.assertTrue(text, text.startsWith(start))
+        }
+    }
+
+    @Test
     @Config(sdk = [34], qualifiers = "en")
     fun theDeleteDialogSaysWhatTheServerKeeps() {
         assertEquals(

@@ -952,6 +952,7 @@
     <string name="recipe_sign_in_failed">Couldn\'t sign in. Your recipes are unchanged.</string>
     <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your recipes are unchanged.</string>
     <string name="recipe_account_deleted">Account deleted</string>
+    <string name="recipe_purchases_blocked">Buying recipes isn\'t available for this account because earlier purchases were refunded after the recipes were used.</string>
     <string name="recipe_account_busy">A recipe is still being written. Try again in a moment.</string>
     <string name="recipe_account_action_failed">Couldn\'t reach our server. Nothing was changed.</string>
     <string name="recipe_menu_bar_title">Menu</string>

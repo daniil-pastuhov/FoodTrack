@@ -10,6 +10,7 @@ import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
 import com.foodtracker.recipe.VerifyReply
 import com.foodtracker.recipe.WireKind
+import com.foodtracker.recipe.purchasesBlockedOf
 import com.foodtracker.recipe.recipeCostsOf
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.appcheck.FirebaseAppCheck
@@ -43,7 +44,7 @@ class FirebaseRecipeBackend(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        if (e.isConnectionFailure()) Attestation.UNKNOWN else Attestation.FAILED
+        if (e.isAttestationRefusal()) Attestation.FAILED else Attestation.UNKNOWN
     }
 
     override suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply> {
@@ -85,6 +86,22 @@ class FirebaseRecipeBackend(
         }
 }
 
+/**
+ * App Check's exchange refusing this build's attestation (HTTP 403, "App attestation failed"):
+ * a fork, a sideload, a debug build whose token isn't registered. Anything else, a lost
+ * connection or a passing Play Integrity error (quota, server unavailable, Play services
+ * updating), isn't a refusal and doesn't hide the paid route.
+ */
+internal fun Throwable.isAttestationRefusal(): Boolean {
+    if (isConnectionFailure()) return false
+    val causes = generateSequence(this) { it.cause }.take(8).toList()
+    if (causes.any { it.javaClass.name.contains("Integrity") }) return false
+    return causes.any { cause ->
+        val message = cause.message.orEmpty()
+        message.contains("403") || message.contains("attestation failed", ignoreCase = true)
+    }
+}
+
 /** A failure to reach the network rather than an answer, anywhere in [this]'s causes. */
 internal fun Throwable.isConnectionFailure(): Boolean =
     generateSequence(this) { it.cause }.take(8).any { it is FirebaseNetworkException || it is IOException }
@@ -100,7 +117,7 @@ internal suspend fun callBalance(functions: FirebaseFunctions): ServerResult<Bal
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.longOrNull?.toInt() ?: return null
-    return BalanceReply(balance, recipeCostsOf(reply["costs"]))
+    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]))
 }
 
 internal suspend fun <T> call(

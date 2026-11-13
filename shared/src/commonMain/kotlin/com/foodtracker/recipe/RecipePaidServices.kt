@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 
@@ -104,7 +105,9 @@ data class GenerateReply(
     val balance: Int,
     val charged: Boolean = false,
     /** Read with [recipeCostsOf]. */
-    val costs: JsonElement? = null
+    val costs: JsonElement? = null,
+    /** Read with [purchasesBlockedOf]. */
+    val purchasesBlocked: JsonElement? = null
 )
 
 @Serializable
@@ -116,10 +119,20 @@ enum class VerifyStatus {
 }
 
 @Serializable
-data class VerifyReply(val status: VerifyStatus, val balance: Int? = null, val costs: JsonElement? = null)
+data class VerifyReply(
+    val status: VerifyStatus,
+    val balance: Int? = null,
+    val costs: JsonElement? = null,
+    val purchasesBlocked: JsonElement? = null
+)
 
 /** `getBalance`'s answer. */
-data class BalanceReply(val balance: Int, val costs: RecipeCosts? = null)
+data class BalanceReply(val balance: Int, val costs: RecipeCosts? = null, val purchasesBlocked: Boolean = false)
+
+/** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
+ *  (absent, false, a string, a number) doesn't. */
+fun purchasesBlockedOf(json: JsonElement?): Boolean =
+    (json as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull == true
 
 /** A failed call, by the contract's `details.reason`, plus the two the client sees itself. */
 enum class ServerError {
@@ -361,6 +374,8 @@ data class RecipePaidSnapshot(
     val pendingGeneration: GenerateRequest? = null,
     /** The costs the server last sent; null before it has sent any. */
     val costs: RecipeCosts? = null,
+    /** The server said it won't sell to this account; kept with the balance. */
+    val purchasesBlocked: Boolean = false,
     /** When [pendingGeneration] was first sent. The server keeps an answer for 7 days; past a day
      *  the request is dropped rather than risk it being written, and charged, anew. */
     val pendingSinceMillis: Long? = null

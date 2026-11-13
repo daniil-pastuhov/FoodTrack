@@ -1046,6 +1046,7 @@
     <string name="recipe_sign_in_failed">Не удалось войти. Ваши рецепты не изменились.</string>
     <string name="recipe_sign_in_in_use">Этот вход уже привязан к другому аккаунту. Ваши рецепты не изменились.</string>
     <string name="recipe_account_deleted">Аккаунт удалён</string>
+    <string name="recipe_purchases_blocked">Покупка рецептов недоступна для этого аккаунта: за прошлые покупки вернули деньги после того, как рецепты были использованы.</string>
     <string name="recipe_account_busy">Рецепт ещё составляется. Попробуйте чуть позже.</string>
     <string name="recipe_account_action_failed">Нет связи с нашим сервером. Ничего не изменилось.</string>
     <string name="recipe_menu_bar_title">Меню</string>
