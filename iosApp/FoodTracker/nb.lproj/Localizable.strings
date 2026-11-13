@@ -535,8 +535,8 @@
 /* Onboarding */
 "onboarding_get_started" = "Kom i gang";
 "onboarding_welcome_title" = "Minner deg på det før maten blir dårlig, ikke etterpå.";
-"onboarding_private_title" = "Privat fra starten av";
-"onboarding_private_body" = "Ingen konto og ingen reklame. Matlageret ditt blir på enheten din.";
+"onboarding_private_title" = "Ingen konto nødvendig";
+"onboarding_private_body" = "Ingen reklame. Matlageret ditt lagres på denne telefonen. En oppskrift fra en pakke sender varene du krysser av og allergenene dine til serveren vår.";
 "onboarding_notifications_title" = "Et stille hint dagen før";
 "onboarding_notifications_body" = "Vi minner deg på det klokken 09:00, dagen før en dato. Du kan endre tidspunktet eller slå av påminnelser i Innstillinger.";
 "onboarding_sample_source" = "%1$@ · 09:00";

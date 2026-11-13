@@ -535,8 +535,8 @@
 /* Onboarding */
 "onboarding_get_started" = "Get started";
 "onboarding_welcome_title" = "Reminds you before food goes off, not after.";
-"onboarding_private_title" = "Private by design";
-"onboarding_private_body" = "No account and no ads. Your pantry stays on your device.";
+"onboarding_private_title" = "No account needed";
+"onboarding_private_body" = "No ads. Your pantry is kept on this phone. A recipe from a pack sends the items you tick and your allergens to our server.";
 "onboarding_notifications_title" = "A quiet nudge, the day before";
 "onboarding_notifications_body" = "We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.";
 "onboarding_sample_source" = "%1$@ · 09:00";

@@ -32,14 +32,14 @@ PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO"}
 PLAY_SET = "phone-screenshots"
 PLAY_SIZE = (1080, 1920)
 
-# One caption per tab, in screenshot order (home, calendar, shopping, settings). "\n" is where a
+# One caption per tab, in screenshot order (home, recipe, shopping, settings). "\n" is where a
 # caption breaks on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
 CAPTIONS = {
-    "en": ["Know what's\nabout to expire", "Your week of\ndates at a glance",
+    "en": ["Know what's\nabout to expire", "Turn what's left\ninto a recipe",
            "Used it up?\nIt's on your list", "Reminders\nwhen it suits you"],
-    "ru": ["Видно, что скоро\nиспортится", "Все сроки на\nнеделю вперёд",
+    "ru": ["Видно, что скоро\nиспортится", "Рецепты из того,\nчто пора съесть",
            "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
-    "nb": ["Se hva som\nsnart går ut", "Ukens datoer\nmed et blikk",
+    "nb": ["Se hva som\nsnart går ut", "Gjør restene om\ntil en oppskrift",
            "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
 }
 # Google Play has a fifth screenshot, an item's Edit screen, fourth in order.

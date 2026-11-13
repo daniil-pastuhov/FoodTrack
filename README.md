@@ -16,14 +16,20 @@ A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Andr
   - Filter by storage location (**Fridge**, **Pantry**, **Freezer**).
   - Search by name or brand.
   - Quick swipe actions to mark items as *Consumed* or *Delete*.
+- 🛒 **Shopping List**: essentials you use up move onto it; share it as text or a QR code.
+- 🍳 **Recipes from what's expiring**: the Recipe tab picks the items closest to their date and writes a recipe in one of three ways:
+  - **Shared prompt** (free): the prompt is copied or shared to an AI app the user already has. Nothing comes back to the app.
+  - **On this phone** (free): Gemini Nano through ML Kit's Prompt API on supported Android phones, Apple Foundation Models on iOS 26 and later. Nothing is sent.
+  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A 3-day menu (2 or 3 courses a day) is server-only and takes 3 recipes.
 
 ## Project Structure
 
 - `shared/`: Kotlin Multiplatform shared domain, Open Food Facts Ktor client, GS1 parser, Date OCR parsing heuristics, the pantry state holder and repository interfaces. Only the Android app uses it.
 - `androidApp/`: Native Android application built with Jetpack Compose (Material 3), CameraX, Google ML Kit and Room.
 - `iosApp/`: Native iOS application built with SwiftUI, AVFoundation, Apple Vision and SwiftData. It is a separate implementation and does not link `shared/`, so a logic change on one platform has to be ported to the other by hand.
+- `functions/`: the backend for recipes from paid packs, Cloud Functions (TypeScript) on Firebase with Firestore, Auth and App Check. See [functions/README.md](functions/README.md) and the client wire contract in [functions/CONTRACT.md](functions/CONTRACT.md). Owner setup steps: [docs/recipe-setup.md](docs/recipe-setup.md).
 
-The pantry stays on the device: there is no backend, account or sync. The only network calls are barcode lookups on Open Food Facts and, in release builds, crash reports to Firebase Crashlytics.
+The pantry stays on the device, and there is no sync of it. The app's network calls are barcode lookups on Open Food Facts, crash reports to Firebase Crashlytics (release builds), the store's own purchase screens, and, only once someone starts a purchase, the recipe backend: an anonymous Firebase Auth user (or an Apple or Google sign-in, if the buyer chooses one), App Check, and the Cloud Functions. A recipe from a pack sends the names, dates and quantities of the items ticked for it, the recipe settings and the allergen list. Nothing reaches the backend for someone who only uses the free routes.
 
 ## Building and Running
 
@@ -32,6 +38,7 @@ Requires JDK 17 for Android and Xcode for iOS. See [CONTRIBUTING.md](CONTRIBUTIN
 ### Run Unit Tests
 ```bash
 ./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest
+cd functions && npm ci && npm test   # backend, against the Firebase emulators (Node.js 24, Java 21+)
 ```
 
 ### Build Android App

@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Takes the raw Google Play screenshots: installs the debug app on a running emulator, loads the
-# demo pantry in each of the app's languages and captures Home, Calendar, Shopping, an item's Edit
+# demo pantry in each of the app's languages and captures Home, Recipe, Shopping, an item's Edit
 # screen and Settings.
 #
 #   ANDROID_SERIAL=emulator-5554 scripts/android_screenshots.sh [output-dir]   # default: build/android-screenshots
@@ -57,7 +57,7 @@ for LANG_CODE in en ru nb; do
   sleep $SETTLE
   N=1
   # demo-4 is the salmon, a few days from its date (see demo_backup.py).
-  for TAB in home calendar shopping edit:demo-4 settings; do
+  for TAB in home recipe shopping edit:demo-4 settings; do
     adb shell am start -S -W -n $ACTIVITY --es demoTab "$TAB" >/dev/null
     sleep $SETTLE
     # A slow emulator can raise "isn't responding" dialogs for other apps over ours.
