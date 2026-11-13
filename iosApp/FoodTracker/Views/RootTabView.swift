@@ -91,6 +91,8 @@ struct RootTabView: View {
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isScanFloating)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shellChrome.navHidden)
         .background(safeAreaReader)
+        // Store transactions waiting for the server are sent at launch, not when Recipe opens.
+        .task { recipeViewModel.start() }
         #if DEBUG
         .onAppear(perform: applyScreenshotLaunchArguments)
         #endif
@@ -503,7 +505,20 @@ extension RootTabView {
         case "recipeResult":
             selectedTab = .recipe
             recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe())]
+        case "recipeMenu":
+            selectedTab = .recipe
+            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoMenu())]
+        case "buyRecipes":
+            selectedTab = .recipe
+            recipeViewModel.showsBuySheet = true
         default: break
+        }
+        if arguments.object(forKey: "demoRecipeCredits") != nil {
+            recipeViewModel.credits.showDemo(
+                balance: arguments.integer(forKey: "demoRecipeCredits"),
+                state: arguments.string(forKey: "demoRecipeState")
+            )
+            if arguments.string(forKey: "demoRecipeMode") == "menu" { recipeViewModel.mode = .menu }
         }
     }
 }

@@ -165,11 +165,31 @@ extension L10n {
 
     // Shared prompt
     static var recipePromptPreferencesIntro: String { text("recipe_prompt_preferences_intro") }
-    static func recipePromptPreference(_ label: String, _ value: String) -> String {
-        String(format: text("recipe_prompt_preference_format"), label, value)
+    static func recipePromptDifficulty(_ difficulty: RecipeDifficulty) -> String {
+        switch difficulty {
+        case .easy: return text("recipe_prompt_difficulty_easy")
+        case .medium: return text("recipe_prompt_difficulty_medium")
+        case .ambitious: return text("recipe_prompt_difficulty_ambitious")
+        }
     }
-    static func recipePromptTimeLimit(_ minutes: Int) -> String {
-        String(format: text("recipe_prompt_time_limit"), minutes)
+    static func recipePromptDetail(_ detail: RecipeDetail) -> String {
+        switch detail {
+        case .brief: return text("recipe_prompt_detail_brief")
+        case .standard: return text("recipe_prompt_detail_standard")
+        case .stepByStep: return text("recipe_prompt_detail_step_by_step")
+        }
+    }
+    static func recipePromptServings(_ servings: Int) -> String {
+        String(format: text("recipe_prompt_servings"), servings)
+    }
+    static func recipePromptMaxMinutes(_ minutes: Int) -> String {
+        String(format: text("recipe_prompt_max_minutes"), minutes)
+    }
+    static func recipePromptMeal(_ meal: RecipeMealType) -> String {
+        String(format: text("recipe_prompt_meal"), recipeMealName(meal))
+    }
+    static func recipePromptDiet(_ diet: RecipeDiet) -> String {
+        String(format: text("recipe_prompt_diet"), recipeDietName(diet))
     }
     static func recipePromptAllergens(_ list: String) -> String {
         String(format: text("recipe_prompt_allergens"), list)
@@ -177,4 +197,139 @@ extension L10n {
     static func recipePromptLanguage(_ language: String) -> String {
         String(format: text("recipe_prompt_language"), language)
     }
+
+    static var recipeNotFound: String { text("recipe_not_found") }
+}
+
+/// The paid route's strings. The unit is a "recipe" everywhere the person reads it.
+extension L10n {
+    private static func paid(_ key: String) -> String { NSLocalizedString(key, comment: "") }
+    private static func plural(_ key: String, _ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count)
+    }
+
+    // Tab
+    static var recipeModeRecipe: String { paid("recipe_mode_recipe") }
+    static var recipeModeMenu: String { paid("recipe_mode_menu") }
+    static var recipeCoursesLabel: String { paid("recipe_courses_label") }
+    static func recipeCourses(_ count: Int) -> String { plural("recipe_courses_count", count) }
+    static var recipeGenerateRecipe: String { paid("recipe_generate_recipe") }
+    static var recipeGenerateMenu: String { paid("recipe_generate_menu") }
+    /// "1 recipe", "3 recipes": what an action takes, and a pack's size.
+    static func recipeCost(_ count: Int) -> String { plural("recipe_cost_count", count) }
+    static func recipeBalanceLeft(_ count: Int) -> String { plural("recipe_balance_left", count) }
+    static var recipeBuy: String { paid("recipe_buy") }
+    static var recipeMenuServerHint: String { paid("recipe_menu_server_hint") }
+    static var recipeMenuShortTitle: String { paid("recipe_menu_short_title") }
+    static func recipeMenuShortMessage(_ balance: Int) -> String {
+        balance > 0 ? String(format: paid("recipe_menu_short_message"), balance) : paid("recipe_menu_short_none")
+    }
+
+    // Writing on the server
+    static func recipeWritingServerTitle(_ kind: RecipeKind) -> String {
+        paid(kind == .menu ? "recipe_writing_menu_title" : "recipe_writing_server_title")
+    }
+    static func recipeWritingServerMessage(_ kind: RecipeKind) -> String {
+        paid(kind == .menu ? "recipe_writing_menu_message" : "recipe_writing_server_message")
+    }
+    static func recipeServerFailed(_ kind: RecipeKind) -> String {
+        paid(kind == .menu ? "recipe_server_failed_menu" : "recipe_server_failed")
+    }
+    static func recipeServerRefused(_ kind: RecipeKind) -> String {
+        paid(kind == .menu ? "recipe_server_refused_menu" : "recipe_server_refused")
+    }
+    static var recipeServerBusy: String { paid("recipe_server_busy") }
+    static var recipeServerRateLimited: String { paid("recipe_server_rate_limited") }
+    static var recipeServerDailyCap: String { paid("recipe_server_daily_cap") }
+    static func recipeArrived(balance: Int) -> String { plural("recipe_arrived", balance) }
+
+    // Lasting conditions
+    static var recipeOfflineTitle: String { paid("recipe_offline_title") }
+    static var recipeOfflineMessage: String { paid("recipe_offline_message") }
+    static var recipePausedTitle: String { paid("recipe_paused_title") }
+    static func recipePausedMessage(_ balance: Int?) -> String {
+        guard let balance, balance > 0 else { return paid("recipe_paused_message_none") }
+        return plural("recipe_paused_message", balance)
+    }
+    static var recipeUnconfirmedTitle: String { paid("recipe_unconfirmed_title") }
+    static func recipeUnconfirmedMessage(_ credits: Int) -> String { plural("recipe_unconfirmed_message", credits) }
+    static var recipeTryNow: String { paid("recipe_try_now") }
+    static var recipePaymentPendingTitle: String { paid("recipe_payment_pending_title") }
+    static var recipePaymentPendingMessage: String { paid("recipe_payment_pending_message") }
+
+    // Buying
+    static var recipeBuyMessage: String { paid("recipe_buy_message") }
+    static func recipePackEach(_ price: String) -> String { String(format: paid("recipe_pack_each"), price) }
+    static var recipeContinue: String { paid("recipe_continue") }
+    static var recipeClose: String { paid("recipe_close") }
+    static var recipeOK: String { paid("recipe_ok") }
+    static var recipeAdding: String { paid("recipe_adding") }
+    static func recipeAdded(_ count: Int) -> String { plural("recipe_added", count) }
+    static var recipeStoreErrorTitle: String { paid("recipe_store_error_title") }
+    static var recipeStoreErrorMessage: String { paid("recipe_store_error_message") }
+    static var recipeChoiceTitle: String { paid("recipe_choice_title") }
+    static var recipeChoiceMessage: String { paid("recipe_choice_message") }
+    static var recipeChoicePhoneTitle: String { paid("recipe_choice_phone_title") }
+    static var recipeChoicePhoneMessage: String { paid("recipe_choice_phone_message") }
+    static var recipeChoiceAccountTitle: String { paid("recipe_choice_account_title") }
+    /// Without Google sign-in configured, the line names Apple only.
+    static func recipeChoiceAccountMessage(googleAvailable: Bool) -> String {
+        paid(googleAvailable ? "recipe_choice_account_message" : "recipe_choice_account_message_apple")
+    }
+    static var recipeRejectedTitle: String { paid("recipe_rejected_title") }
+    static var recipeRejectedMessage: String { paid("recipe_rejected_message") }
+
+    // Account
+    static var recipeYourRecipes: String { paid("recipe_your_recipes") }
+    static func recipeOnPhoneLabel(_ count: Int) -> String { plural("recipe_on_phone_label", count) }
+    static func recipeInAccountLabel(_ count: Int) -> String { plural("recipe_in_account_label", count) }
+    static var recipeOnPhoneMessage: String { paid("recipe_on_phone_message") }
+    static var recipeHaveAccountHint: String { paid("recipe_have_account_hint") }
+    static func recipeSignedIn(with provider: RecipeSignInProvider) -> String {
+        paid(provider == .apple ? "recipe_signed_in_apple" : "recipe_signed_in_google")
+    }
+    static func recipeSignedInHint(missing: RecipeSignInProvider?) -> String {
+        switch missing {
+        case .google?: return paid("recipe_signed_in_hint_add_google")
+        case .apple?: return paid("recipe_signed_in_hint_add_apple")
+        case nil: return paid("recipe_signed_in_hint")
+        }
+    }
+    static func recipeAddSignIn(_ provider: RecipeSignInProvider) -> String {
+        paid(provider == .apple ? "recipe_add_apple" : "recipe_add_google")
+    }
+    static var recipeSignOut: String { paid("recipe_sign_out") }
+    static var recipeDeleteAccount: String { paid("recipe_delete_account") }
+    static var recipeSignOutTitle: String { paid("recipe_sign_out_title") }
+    static func recipeSignOutMessage(_ balance: Int) -> String { plural("recipe_sign_out_message", balance) }
+    static var recipeDeleteTitle: String { paid("recipe_delete_title") }
+    static func recipeDeleteMessage(_ balance: Int) -> String { plural("recipe_delete_message", balance) }
+    static var recipeMergeTitle: String { paid("recipe_merge_title") }
+    static func recipeMergeMessage(account: Int, install: Int) -> String {
+        String(format: paid("recipe_merge_message"), account, install, account + install)
+    }
+    static var recipeMergeConfirm: String { paid("recipe_merge_confirm") }
+    static var recipeSignInFailed: String { paid("recipe_sign_in_failed") }
+    static var recipeProviderInUse: String { paid("recipe_provider_in_use") }
+    static var recipeAccountDeleted: String { paid("recipe_account_deleted") }
+    static var recipeAccountActionFailed: String { paid("recipe_account_action_failed") }
+
+    // Menu
+    static var recipeMenuResultTitle: String { paid("recipe_menu_result_title") }
+    static var recipeMenuHeading: String { paid("recipe_menu_heading") }
+    static func recipeMenuSummary(courses: Int, servings: Int) -> String {
+        String(format: paid(courses >= 3 ? "recipe_menu_summary_3" : "recipe_menu_summary_2"), servings)
+    }
+    static func recipeMenuToday(_ date: String) -> String { String(format: paid("recipe_menu_today"), date) }
+    static func recipeMenuUses(_ items: String) -> String { String(format: paid("recipe_menu_uses"), items) }
+    static func recipeCourseName(_ course: RecipeCourse) -> String {
+        switch course {
+        case .starter: return paid("recipe_course_starter")
+        case .main: return paid("recipe_course_main")
+        case .dessert: return paid("recipe_course_dessert")
+        }
+    }
+    static var recipePartOfMenu: String { paid("recipe_part_of_menu") }
+    static var recipeShareMenu: String { paid("recipe_share_menu") }
+    static func recipeDishes(_ count: Int) -> String { plural("recipe_dishes_count", count) }
 }

@@ -3,8 +3,9 @@ import UIKit
 
 /// The Recipe tab: what can I cook from what is about to expire? The soonest items are ticked,
 /// a short form sets the kind of dish, and one primary action writes it, pinned above the pill
-/// where Scan sits on Home. Free routes only for now: the phone's own model where it has one,
-/// and a prompt shared to another AI app.
+/// where Scan sits on Home. Three routes: our server while the pack has recipes, the phone's
+/// own model where it has one, and a prompt shared to another AI app. A menu for three days is
+/// the server's only.
 struct RecipeView: View {
     @ObservedObject var pantry: NativePantryViewModel
     @ObservedObject var model: RecipeViewModel
@@ -23,6 +24,11 @@ struct RecipeView: View {
     private var expiringSoonDays: Int { settingsStore.settings.expiringSoonDays }
     private var nothingTicked: Bool { model.selectedItems(from: pantry.items).isEmpty }
     private var routes: RecipeRoutes { model.routes }
+    private var credits: RecipeCredits { model.credits }
+    private var paid: Bool { credits.isPaidRouteAvailable }
+    /// Menu mode only while the server route exists; otherwise the form is the recipe one.
+    private var isMenu: Bool { paid && model.mode == .menu }
+    private var isWriting: Bool { model.phase != .idle }
 
     var body: some View {
         NavigationStack(path: $model.path) {
@@ -31,7 +37,11 @@ struct RecipeView: View {
                 .navigationDestination(for: RecipeDestination.self) { destination in
                     switch destination {
                     case .result(let id):
-                        RecipeResultView(entry: model.savedRecipe(id: id))
+                        RecipeResultView(entry: model.savedRecipe(id: id)) { day, course in
+                            model.path.append(.dish(id: id, day: day, course: course))
+                        }
+                    case .dish(let id, let day, let course):
+                        RecipeResultView(entry: model.savedRecipe(id: id), dish: (day, course))
                     case .saved:
                         SavedRecipesView(model: model)
                     case .settings:
@@ -57,23 +67,41 @@ struct RecipeView: View {
             model.syncSelection(with: pantry.items)
             model.refreshAvailability()
         }
+        // Prices from the store, and the count for an install that already has a user. Neither
+        // creates a user nor calls our server for anyone who never bought.
+        .task {
+            await credits.loadPacksIfNeeded()
+            await credits.refreshBalance()
+        }
         .onChange(of: pantry.items) { _, items in model.syncSelection(with: items) }
-        // The model can finish downloading, or Apple Intelligence be switched on, meanwhile.
+        // The model can finish downloading, or Apple Intelligence be switched on, meanwhile; a
+        // purchase waiting for the server is tried again.
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { model.refreshAvailability() }
+            guard phase == .active else { return }
+            model.refreshAvailability()
+            if !credits.unconfirmed.isEmpty {
+                Task { await credits.resubmitUnfinished() }
+            }
         }
         .onChange(of: model.failure) { _, failure in
             guard let failure else { return }
             model.failure = nil
-            switch failure {
-            case .onDeviceFailed:
-                showSnackbar(L10n.recipeFailedOnDevice, actionTitle: L10n.settingsTryAgain) {
-                    model.writeOnDevice(from: pantry.items)
-                }
-            case .onDeviceRefused:
-                showSnackbar(L10n.recipeRefusedOnDevice)
-            }
+            show(failure)
         }
+        .onChange(of: credits.notice) { _, notice in
+            guard let notice else { return }
+            credits.notice = nil
+            show(notice)
+        }
+        .larderSheet(isPresented: $model.showsBuySheet, detents: [.large]) {
+            BuyRecipesSheet(model: model) { model.showsBuySheet = false }
+        }
+        .larderDialog(
+            L10n.recipeRejectedTitle,
+            isPresented: Binding(get: { credits.rejectedPurchase }, set: { credits.rejectedPurchase = $0 }),
+            message: L10n.recipeRejectedMessage,
+            actions: [.init(L10n.recipeOK)]
+        )
         .sheet(item: $sharedPrompt) { prompt in
             ActivityView(activityItems: [prompt.text])
         }
@@ -106,6 +134,12 @@ struct RecipeView: View {
                     writingOnDevice
                 }
                 .padding(.bottom, shellClearance)
+            } else if case .writingOnServer(let kind) = model.phase {
+                VStack(spacing: 0) {
+                    header
+                    writingOnServer(kind)
+                }
+                .padding(.bottom, shellClearance)
             } else {
                 form
             }
@@ -116,6 +150,9 @@ struct RecipeView: View {
 
     private var header: some View {
         LedeHeader(L10n.recipeLede, brand: L10n.appName) {
+            if paid {
+                balanceChip
+            }
             LarderIconButton(.bookmark, label: L10n.recipeSavedButton) { model.path.append(.saved) }
             LarderIconButton(.slidersHorizontal, label: L10n.recipeSettingsButton) { model.path.append(.settings) }
         }
@@ -126,7 +163,13 @@ struct RecipeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
                 VStack(alignment: .leading, spacing: LarderSpace.s4) {
-                    if routes.onDevicePreparing {
+                    if paid {
+                        LarderSegmented(selection: $model.mode, options: [RecipeMode.recipe, .menu], fill: true) {
+                            $0 == .menu ? L10n.recipeModeMenu : L10n.recipeModeRecipe
+                        }
+                    }
+                    paidCallouts
+                    if routes.onDevicePreparing && !isMenu {
                         LarderCallout(
                             .info,
                             icon: .download,
@@ -164,7 +207,146 @@ struct RecipeView: View {
     /// Whether the pinned action shows: on the form, not over a pushed screen or a state that
     /// has nothing to act on.
     private var showsPinnedAction: Bool {
-        model.path.isEmpty && !pantry.items.isEmpty && model.phase == .idle
+        model.path.isEmpty && !pantry.items.isEmpty && model.phase == .idle && (!isMenu || model.serverCanWriteMenu)
+    }
+
+    // MARK: Paid route
+
+    /// The count left in the pack; opens the packs.
+    private var balanceChip: some View {
+        let count = credits.balance ?? 0
+        return Button {
+            if credits.canBuy { model.showsBuySheet = true }
+        } label: {
+            HStack(spacing: LarderSpace.s1) {
+                LarderIcon(.ticket, size: .custom(18))
+                Text("\(count)")
+                    .larderFont(.label)
+                    .monospacedDigit()
+            }
+            .foregroundStyle(LarderColor.onSurface)
+            .padding(.horizontal, LarderSpace.s3)
+            .padding(.vertical, LarderSpace.s1)
+            .background(LarderColor.surfaceContainer, in: Capsule())
+            .frame(minHeight: LarderSize.touch)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(L10n.recipeBalanceLeft(count))
+        .accessibilityHint(credits.canBuy ? L10n.recipeBuy : "")
+    }
+
+    /// The lasting conditions of the paid route, most important first: money that has moved
+    /// without recipes, a payment on its way, generation paused, no connection.
+    @ViewBuilder
+    private var paidCallouts: some View {
+        if !credits.unconfirmed.isEmpty {
+            LarderCallout(
+                .warning,
+                icon: .clock,
+                title: L10n.recipeUnconfirmedTitle,
+                message: L10n.recipeUnconfirmedMessage(credits.unconfirmedCredits),
+                actionTitle: credits.isConfirming ? nil : L10n.recipeTryNow,
+                action: { Task { await credits.resubmitUnfinished() } }
+            )
+        } else if credits.paymentPending {
+            LarderCallout(
+                .info,
+                icon: .clock,
+                title: L10n.recipePaymentPendingTitle,
+                message: L10n.recipePaymentPendingMessage
+            )
+        }
+        if paid && credits.serverPaused {
+            LarderCallout(
+                .warning,
+                icon: .triangleAlert,
+                title: L10n.recipePausedTitle,
+                message: L10n.recipePausedMessage(credits.balance)
+            )
+        } else if credits.showsOffline {
+            LarderCallout(
+                .warning,
+                icon: .wifiOff,
+                title: L10n.recipeOfflineTitle,
+                message: L10n.recipeOfflineMessage,
+                actionTitle: L10n.settingsTryAgain,
+                action: {
+                    if model.hasInterruptedServerWrite {
+                        model.resumeServerWrite()
+                    } else {
+                        Task { await credits.refreshBalance() }
+                    }
+                }
+            )
+        }
+    }
+
+    private var buyButton: some View {
+        LarderButton(L10n.recipeBuy, icon: .ticket, variant: .outline, fullWidth: true) {
+            model.showsBuySheet = true
+        }
+    }
+
+    private func writingOnServer(_ kind: RecipeKind) -> some View {
+        VStack(spacing: LarderSpace.s3) {
+            LarderSpinner()
+            Text(L10n.recipeWritingServerTitle(kind))
+                .larderFont(.title)
+                .foregroundStyle(LarderColor.onSurface)
+                .padding(.top, LarderSpace.s2)
+                .accessibilityAddTraits(.isHeader)
+            Text(L10n.recipeWritingServerMessage(kind))
+                .larderFont(.body)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .frame(maxWidth: 320)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .multilineTextAlignment(.center)
+        .padding(.vertical, LarderSpace.s8)
+        .padding(.horizontal, LarderSpace.s6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func show(_ failure: RecipeFailure) {
+        switch failure {
+        case .onDeviceFailed:
+            showSnackbar(L10n.recipeFailedOnDevice, actionTitle: L10n.settingsTryAgain) {
+                model.writeOnDevice(from: pantry.items)
+            }
+        case .onDeviceRefused:
+            showSnackbar(L10n.recipeRefusedOnDevice)
+        case .serverFailed(let kind, let sameRequest):
+            showSnackbar(L10n.recipeServerFailed(kind), actionTitle: L10n.settingsTryAgain) {
+                if sameRequest {
+                    model.resumeServerWrite()
+                } else {
+                    model.mode = kind == .menu ? .menu : .recipe
+                    model.writeOnServer(from: pantry.items)
+                }
+            }
+        case .serverRefused(let kind):
+            showSnackbar(L10n.recipeServerRefused(kind))
+        case .busy:
+            showSnackbar(L10n.recipeServerBusy)
+        case .rateLimited:
+            showSnackbar(L10n.recipeServerRateLimited)
+        case .dailyCap:
+            showSnackbar(L10n.recipeServerDailyCap)
+        case .arrived(let balance):
+            showSnackbar(L10n.recipeArrived(balance: balance))
+        }
+    }
+
+    private func show(_ notice: RecipeCreditsNotice) {
+        switch notice {
+        case .added(let count): showSnackbar(L10n.recipeAdded(count))
+        case .signInFailed: showSnackbar(L10n.recipeSignInFailed)
+        case .providerInUse: showSnackbar(L10n.recipeProviderInUse)
+        case .accountDeleted: showSnackbar(L10n.recipeAccountDeleted)
+        case .accountActionFailed: showSnackbar(L10n.recipeAccountActionFailed)
+        }
     }
 
     // MARK: Cook with
@@ -211,6 +393,15 @@ struct RecipeView: View {
 
     private var quickForm: some View {
         RecipeFormCard {
+            if isMenu {
+                RecipeFormField(label: L10n.recipeCoursesLabel) {
+                    LarderSegmented(
+                        selection: Binding(get: { model.menuCourses }, set: { model.setMenuCourses($0) }),
+                        options: [2, 3],
+                        fill: true
+                    ) { L10n.recipeCourses($0) }
+                }
+            }
             RecipeDifficultyField(selection: model.binding(\.difficulty))
             RecipeServingsField(servings: model.binding(\.servings))
             RecipeTimeField(maxMinutes: model.binding(\.maxMinutes))
@@ -242,20 +433,57 @@ struct RecipeView: View {
     /// The routes that aren't the pinned one, and the line that explains a disabled button.
     @ViewBuilder
     private var actions: some View {
-        if nothingTicked {
+        if isMenu {
+            menuActions
+        } else if nothingTicked {
             hint(L10n.recipeNoneSelectedHint)
-        } else if routes.onDevice {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: LarderSpace.s2) { shareButton; copyButton }
-                VStack(spacing: 0) { shareButton; copyButton }
+        } else if model.serverCanWriteRecipe {
+            // The server is pinned; the free routes follow, the phone's own first.
+            VStack(spacing: LarderSpace.s2) {
+                if routes.onDevice {
+                    LarderButton(L10n.recipeGenerateOnPhone, icon: .smartphone, variant: .outline, fullWidth: true) {
+                        model.writeOnDevice(from: pantry.items)
+                    }
+                    .accessibilityLabel("\(L10n.recipeGenerateOnPhone), \(L10n.recipeCostFree)")
+                }
+                shareAndCopy
             }
-            .frame(maxWidth: .infinity)
+        } else if routes.onDevice {
+            VStack(spacing: LarderSpace.s2) {
+                if credits.canBuy { buyButton }
+                shareAndCopy
+            }
         } else {
             VStack(spacing: LarderSpace.s2) {
                 LarderButton(L10n.recipeCopyPrompt, icon: .copy, variant: .outline, fullWidth: true, action: copyPrompt)
                 hint(L10n.recipePromptOnlyHint)
+                if credits.canBuy { buyButton }
             }
         }
+    }
+
+    /// A menu has no free route: the line under the button says why, and with too few recipes
+    /// a callout takes the button's place.
+    @ViewBuilder
+    private var menuActions: some View {
+        if model.serverCanWriteMenu {
+            hint(nothingTicked ? L10n.recipeNoneSelectedHint : L10n.recipeMenuServerHint)
+        } else if !credits.serverPaused {
+            LarderCallout(
+                .info,
+                title: L10n.recipeMenuShortTitle,
+                message: L10n.recipeMenuShortMessage(credits.balance ?? 0)
+            )
+            if credits.canBuy { buyButton }
+        }
+    }
+
+    private var shareAndCopy: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: LarderSpace.s2) { shareButton; copyButton }
+            VStack(spacing: 0) { shareButton; copyButton }
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private var shareButton: some View {
@@ -275,10 +503,21 @@ struct RecipeView: View {
             .frame(maxWidth: .infinity)
     }
 
-    /// The free route that writes in the app where the phone can, else the shared prompt.
+    /// The server while the pack has recipes, else the free route that writes in the app where
+    /// the phone can, else the shared prompt. A menu is the server's only.
     @ViewBuilder
     private var pinnedAction: some View {
-        if routes.onDevice {
+        if isMenu {
+            RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(RecipeKind.menu.cost)) {
+                model.writeOnServer(from: pantry.items)
+            }
+            .disabled(nothingTicked)
+        } else if model.serverCanWriteRecipe {
+            RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(RecipeKind.recipe.cost)) {
+                model.writeOnServer(from: pantry.items)
+            }
+            .disabled(nothingTicked)
+        } else if routes.onDevice {
             RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
                 model.writeOnDevice(from: pantry.items)
             }

@@ -62,14 +62,7 @@ struct RecipeSettingsView: View {
                     .buttonStyle(.plain)
                 }
 
-                // No account exists before the paid step, so this is the only state.
-                RecipeFormCard {
-                    heading(L10n.recipeSettingsAccount, icon: .userRound)
-                    Text(L10n.recipeSettingsNoAccount)
-                        .larderFont(.bodySm)
-                        .foregroundStyle(LarderColor.onSurfaceVariant)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                RecipeAccountCard(model: model)
             }
             .padding(.horizontal, LarderSpace.s4)
             .padding(.top, LarderSpace.s2)
@@ -81,6 +74,7 @@ struct RecipeSettingsView: View {
         .navigationTitle(L10n.recipeSettingsButton)
         .navigationBarTitleDisplayMode(.inline)
         .shellChromeEffect(hideNav: true)
+        .task { await model.credits.refreshBalance() }
         .larderSheet(isPresented: $choosingLanguage) {
             LanguagePicker(selection: model.config.language) { language in
                 model.updateConfig { $0.language = language }

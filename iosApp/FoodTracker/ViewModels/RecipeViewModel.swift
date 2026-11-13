@@ -1,8 +1,9 @@
+import Combine
 import Foundation
 import SwiftUI
 
-/// The routes the Recipe tab offers right now, worked out from what this phone and this build
-/// have. Only the free ones exist until the paid step adds the server.
+/// The free routes the Recipe tab offers right now, worked out from what this phone has. The
+/// server route's availability is `RecipeCredits.isPaidRouteAvailable`.
 struct RecipeRoutes: Equatable {
     /// The phone's own model can write in the chosen language.
     var onDevice: Bool
@@ -18,25 +19,43 @@ struct RecipeRoutes: Equatable {
 enum RecipePhase: Equatable {
     case idle
     case writingOnDevice
+    case writingOnServer(RecipeKind)
 }
 
-/// What just went wrong, for one snackbar.
+/// A single recipe, or the three-day menu that only the server writes.
+enum RecipeMode: Hashable {
+    case recipe, menu
+}
+
+/// What just happened, for one snackbar.
 enum RecipeFailure: Equatable {
     case onDeviceFailed
     case onDeviceRefused
+    /// Failed, nothing taken. `sameRequest` retries under the same id (a server error), else a
+    /// new attempt (the generation itself failed).
+    case serverFailed(RecipeKind, sameRequest: Bool)
+    /// Failed and counted: an input-caused failure past the day's free ones.
+    case serverRefused(RecipeKind)
+    case busy
+    case rateLimited
+    case dailyCap
+    /// A recipe or menu arrived; the count after it.
+    case arrived(balance: Int)
 }
 
 /// The screens pushed from the Recipe tab.
 enum RecipeDestination: Hashable {
     case result(id: String)
+    /// One dish of a saved menu.
+    case dish(id: String, day: Int, course: Int)
     case saved
     case settings
 }
 
 /// The Recipe tab's state: the configuration, which items are ticked, the routes, the one write
 /// in flight, and saved recipes. Separate from `NativePantryViewModel`, which it only reads
-/// items from, and built on the protocols in `RecipeServices.swift` so the paid step can plug
-/// its backend and credits in.
+/// items from. The paid route's account, purchases and count are `credits`, whose changes this
+/// object republishes so screens observe one thing.
 @MainActor
 final class RecipeViewModel: ObservableObject {
     @Published private(set) var config: RecipeConfig
@@ -48,6 +67,11 @@ final class RecipeViewModel: ObservableObject {
     /// way in from Home, can set it while the tab is off screen.
     @Published var path: [RecipeDestination] = []
     @Published var failure: RecipeFailure?
+    @Published var mode: RecipeMode = .recipe
+    @Published private(set) var menuCourses: Int
+    /// Opens the pack sheet: Buy recipes, the count in the bar, or a generation that found the
+    /// pack empty.
+    @Published var showsBuySheet = false
 
     /// Whether the person has changed the ticks since they were picked for them. Until then the
     /// soonest items follow the pantry as it changes.
@@ -56,9 +80,9 @@ final class RecipeViewModel: ObservableObject {
     private let configStore: RecipeConfigStore
     private let savedStore: SavedRecipeStore
     private let onDeviceModel: OnDeviceRecipeModel
-    let backend: RecipeBackend
-    let credits: CreditsGateway
+    let credits: RecipeCredits
     private var writeTask: Task<Void, Never>?
+    private var creditsChanges: AnyCancellable?
 
     /// How many of the soonest items are ticked for the person.
     static let defaultTickCount = 3
@@ -69,17 +93,27 @@ final class RecipeViewModel: ObservableObject {
         configStore: RecipeConfigStore = UserDefaultsRecipeConfigStore(),
         savedStore: SavedRecipeStore? = nil,
         onDeviceModel: OnDeviceRecipeModel = FoundationModelsRecipeModel(),
-        backend: RecipeBackend = UnavailableRecipeBackend(),
-        credits: CreditsGateway? = nil
+        credits: RecipeCredits? = nil
     ) {
         self.configStore = configStore
         self.savedStore = savedStore ?? SwiftDataSavedRecipeStore()
         self.onDeviceModel = onDeviceModel
-        self.backend = backend
-        self.credits = credits ?? UnavailableCreditsGateway()
+        let credits = credits ?? RecipeCredits()
+        self.credits = credits
         config = configStore.load()
+        menuCourses = credits.storage.menuCourses
         saved = self.savedStore.all()
         refreshAvailability()
+        creditsChanges = credits.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+    }
+
+    /// At launch: purchases waiting for the server, and a generation a closed app interrupted,
+    /// which the same id fetches without a second charge.
+    func start() {
+        credits.start()
+        if credits.storage.pendingGeneration != nil, credits.account.uid != nil {
+            resumeServerWrite()
+        }
     }
 
     var routes: RecipeRoutes { RecipeRoutes.from(onDeviceAvailability) }
@@ -147,6 +181,157 @@ final class RecipeViewModel: ObservableObject {
         RecipePromptBuilder.sharePrompt(for: request(for: items))
     }
 
+    func setMenuCourses(_ courses: Int) {
+        menuCourses = courses == 3 ? 3 : 2
+        credits.storage.menuCourses = menuCourses
+    }
+
+    // MARK: Server route
+
+    /// Whether the server writes the recipe: while there are recipes in the pack. Otherwise the
+    /// free routes take the primary action.
+    var serverCanWriteRecipe: Bool { serverCanWrite(.recipe) }
+    var serverCanWriteMenu: Bool { serverCanWrite(.menu) }
+
+    private func serverCanWrite(_ kind: RecipeKind) -> Bool {
+        credits.isPaidRouteAvailable && !credits.serverPaused && (credits.balance ?? 0) >= kind.cost
+    }
+
+    func writeOnServer(from items: [PantryItem]) {
+        let kind: RecipeKind = mode == .menu ? .menu : .recipe
+        let request = request(for: items)
+        guard !request.items.isEmpty, phase == .idle else { return }
+        let wire = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID())
+        guard !wire.ingredients.isEmpty else {
+            // Every ticked name was made of characters the server refuses.
+            failure = .serverFailed(kind, sameRequest: false)
+            return
+        }
+        credits.storage.pendingGeneration = wire
+        runServerWrite(wire)
+    }
+
+    /// Sends the interrupted request again under its own id: "Try again" after a lost
+    /// connection or a server error, and at launch.
+    func resumeServerWrite() {
+        guard phase == .idle, let wire = credits.storage.pendingGeneration else { return }
+        runServerWrite(wire)
+    }
+
+    var hasInterruptedServerWrite: Bool { credits.storage.pendingGeneration != nil }
+
+    private func runServerWrite(_ wire: GenerateRequest) {
+        phase = .writingOnServer(wire.kind)
+        let backend = credits.backend
+        let credits = credits
+        writeTask = Task { [weak self] in
+            // IN_PROGRESS is asked again every 3 s, up to 150 s for a recipe and 270 s for a
+            // menu (as Android); past that it is a failure retried under the same id.
+            let deadline = Date().addingTimeInterval(wire.kind == .menu ? 270 : 150)
+            do {
+                try await credits.ensureUser()
+                while true {
+                    let response = try await backend.generate(wire)
+                    if response.status == .inProgress, Date() < deadline {
+                        credits.apply(balance: response.balance)
+                        try await Task.sleep(for: .seconds(3))
+                        continue
+                    }
+                    self?.finishServerWrite(wire, response)
+                    return
+                }
+            } catch is CancellationError {
+                self?.phase = .idle
+            } catch {
+                self?.failServerWrite(wire, error)
+            }
+        }
+    }
+
+    private func finishServerWrite(_ wire: GenerateRequest, _ response: GenerateResponse) {
+        writeTask = nil
+        phase = .idle
+        credits.apply(balance: response.balance)
+        credits.callSucceeded()
+        let outcome = Self.outcome(of: response, kind: wire.kind)
+        if outcome.clearsRequest { credits.storage.pendingGeneration = nil }
+        switch outcome {
+        case .saved(let content):
+            let entry = SavedRecipe(content: content)
+            savedStore.save(entry)
+            saved = savedStore.all()
+            path = [.result(id: entry.id)]
+            failure = .arrived(balance: response.balance)
+        case .failure(let failure):
+            self.failure = failure
+        }
+    }
+
+    private func failServerWrite(_ wire: GenerateRequest, _ error: Error) {
+        writeTask = nil
+        phase = .idle
+        credits.note(error)
+        let serverError = error as? RecipeServerError ?? .server
+        if !serverError.isRetryableWithSameID { credits.storage.pendingGeneration = nil }
+        switch serverError {
+        case .insufficientCredits:
+            if credits.canBuy { showsBuySheet = true }
+        case .busy:
+            failure = .busy
+        case .rateLimited:
+            failure = .rateLimited
+        case .dailyCap:
+            failure = .dailyCap
+        case .offline, .generationDisabled, .accountClosed:
+            // Lasting conditions: the tab's callouts say so.
+            break
+        case .server:
+            failure = .serverFailed(wire.kind, sameRequest: true)
+        case .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed:
+            failure = .serverFailed(wire.kind, sameRequest: false)
+        }
+    }
+
+    enum ServerOutcome: Equatable {
+        case saved(SavedRecipe.Content)
+        case failure(RecipeFailure)
+
+        /// Whether the stored request is done with: everything but an answer to ask for again.
+        var clearsRequest: Bool {
+            if case .failure(.serverFailed(_, sameRequest: true)) = self { return false }
+            return true
+        }
+    }
+
+    /// What one `generateRecipe` answer means for the screen. A DONE without the right payload,
+    /// or an answer still IN_PROGRESS past the wait, reads as a failure retried under the same
+    /// id: the server holds the charge until it settles, and the same id never pays twice.
+    static func outcome(of response: GenerateResponse, kind: RecipeKind) -> ServerOutcome {
+        switch response.status {
+        case .done:
+            switch kind {
+            case .recipe:
+                if let recipe = response.recipe { return .saved(.recipe(RecipeWire.markedServer(recipe))) }
+            case .menu:
+                if var menu = response.menu, !menu.days.isEmpty {
+                    for day in menu.days.indices {
+                        for course in menu.days[day].courses.indices {
+                            menu.days[day].courses[course].recipe.source = .server
+                        }
+                    }
+                    return .saved(.menu(menu))
+                }
+            }
+            return .failure(.serverFailed(kind, sameRequest: true))
+        case .inProgress:
+            return .failure(.serverFailed(kind, sameRequest: true))
+        case .failed:
+            return .failure(response.charged ? .serverRefused(kind) : .serverFailed(kind, sameRequest: false))
+        }
+    }
+
+    // MARK: On-device route
+
     func writeOnDevice(from items: [PantryItem]) {
         let request = request(for: items)
         guard !request.items.isEmpty, phase == .idle else { return }
@@ -199,9 +384,8 @@ final class RecipeViewModel: ObservableObject {
 
     // MARK: Saved recipes
 
-    /// What Saved recipes lists. Menus come from the server only, which this build doesn't
-    /// have, so it has no screen for one yet.
-    var savedRecipes: [SavedRecipe] { saved.filter { $0.kind == .recipe } }
+    /// What Saved recipes lists: recipes and menus, newest first.
+    var savedRecipes: [SavedRecipe] { saved }
 
     func savedRecipe(id: String) -> SavedRecipe? {
         saved.first { $0.id == id }
@@ -246,6 +430,39 @@ final class RecipeViewModel: ObservableObject {
             source: .device
         )
         let entry = SavedRecipe(content: .recipe(recipe))
+        savedStore.save(entry)
+        saved = savedStore.all()
+        return entry.id
+    }
+
+    /// `-demoRoute recipeMenu`: a three-day menu as the server would write one, saved.
+    func saveDemoMenu() -> String {
+        func dish(_ title: String, _ minutes: Int) -> Recipe {
+            Recipe(
+                title: title,
+                summary: "",
+                minutes: minutes,
+                servings: config.servings,
+                difficulty: .easy,
+                ingredients: [RecipeIngredient(amount: "100 g", name: "Baby spinach", fromPantry: true)],
+                steps: ["Prepare and serve."],
+                source: .server
+            )
+        }
+        let calendar = Calendar.current
+        let days = (0..<3).map { offset -> RecipeMenuDay in
+            let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+            return RecipeMenuDay(
+                date: RecipeWire.isoDay(date),
+                uses: [["bread", "spinach", "yoghurt"], ["yoghurt", "milk"], ["salmon", "strawberries"]][offset],
+                courses: [
+                    RecipeMenuCourse(course: .starter, recipe: dish(["Spinach and yoghurt soup", "Cucumber and yoghurt salad", "Salmon rillettes on toast"][offset], 20)),
+                    RecipeMenuCourse(course: .main, recipe: dish(["Eggs on garlic sourdough toast", "Creamy milk-poached salmon", "Pan-fried salmon with greens"][offset], 25)),
+                    RecipeMenuCourse(course: .dessert, recipe: dish(["Yoghurt with honey and toasted crumbs", "Vanilla milk pudding", "Strawberries with sweet cream"][offset], 10)),
+                ]
+            )
+        }
+        let entry = SavedRecipe(content: .menu(RecipeMenu(days: days)))
         savedStore.save(entry)
         saved = savedStore.all()
         return entry.id

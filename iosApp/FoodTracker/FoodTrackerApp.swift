@@ -1,4 +1,4 @@
-import FirebaseCore
+import GoogleSignIn
 import SwiftUI
 
 @main
@@ -16,11 +16,10 @@ struct FoodTrackerApp: App {
     @ObservedObject private var settingsStore = SettingsStore.shared
 
     init() {
-        // Starts Crashlytics, configured by GoogleService-Info.plist. Left out of debug builds:
-        // crashes hit while developing would only bury the ones real users run into.
-        #if !DEBUG
-        FirebaseApp.configure()
-        #endif
+        // Firebase, configured by GoogleService-Info.plist, in every build: the paid Recipe route
+        // needs Auth, Functions and App Check in Debug too. Crashlytics still collects nothing in
+        // Debug, through the FirebaseCrashlyticsCollectionEnabled Info.plist key.
+        FirebaseBootstrap.configure()
         LarderTheme.applyGlobalAppearance()
     }
 
@@ -38,6 +37,8 @@ struct FoodTrackerApp: App {
                     StoreGeofenceManager.shared.sync(settings: settingsStore.settings)
                 }
                 .onOpenURL { url in
+                    // Google sign-in's redirect, where the SDK needs one.
+                    if GIDSignIn.sharedInstance.handle(url) { return }
                     AppRouter.shared.handle(url)
                 }
         }
