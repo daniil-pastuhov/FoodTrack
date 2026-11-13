@@ -255,7 +255,7 @@
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
     <string name="action_get_recipe_ideas">Get recipe ideas</string>
-    <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:</string>
+    <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest one recipe I could make, using the ones closest to their expiration date first:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">I also have these other items at home, in case any of them are useful too:</string>
     <string name="recipe_prompt_other_items_omitted">(+%1$d more items not shown)</string>
@@ -828,7 +828,7 @@
     <string name="recipe_prompt_meal">Meal: %1$s</string>
     <string name="recipe_prompt_diet">Diet: %1$s</string>
     <string name="recipe_prompt_allergens">Nothing that contains: %1$s</string>
-    <string name="recipe_prompt_language">Write the recipes in %1$s</string>
+    <string name="recipe_prompt_language">Write the recipe in %1$s</string>
     <plurals name="recipe_add_other_count">
         <item quantity="one">%1$d more in your pantry</item>
         <item quantity="other">%1$d more in your pantry</item>
@@ -855,8 +855,8 @@
         <item quantity="other">%1$d recipes</item>
     </plurals>
     <string name="recipe_buy">Buy recipes</string>
-    <string name="recipe_menu_hint">A menu is written on our server and takes 3 recipes from a pack.</string>
-    <string name="recipe_menu_short_title">A menu takes 3 recipes</string>
+    <string name="recipe_menu_hint">A menu is written on our server and takes %1$s from a pack.</string>
+    <string name="recipe_menu_short_title">A menu takes %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">You have %1$d left. A single recipe still works.</item>
         <item quantity="other">You have %1$d left. A single recipe still works.</item>
@@ -868,9 +868,12 @@
     <string name="recipe_offline_title">No connection</string>
     <string name="recipe_offline_body">Recipes from your pack need the internet. The free routes below still work.</string>
     <string name="recipe_failed_server">Couldn\'t write the recipe. No recipe was taken.</string>
+    <string name="recipe_failed_limit_today">That\'s the limit for today. Try again tomorrow. No recipes were taken.</string>
+    <string name="recipe_failed_trouble_today">We\'re having trouble writing recipes right now. Try again tomorrow. No recipes were taken.</string>
+    <string name="recipe_failed_server_later">Couldn\'t write it right now. Try again later. No recipes were taken.</string>
     <plurals name="recipe_refused">
-        <item quantity="one">Couldn\'t make a recipe from these items. %1$d recipe was taken.</item>
-        <item quantity="other">Couldn\'t make a recipe from these items. %1$d recipes were taken.</item>
+        <item quantity="one">Couldn\'t make a recipe from these items. It used %1$d recipe, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="other">Couldn\'t make a recipe from these items. It used %1$d recipes, because the attempt still cost us to run. Try fewer or different items.</item>
     </plurals>
     <string name="recipe_paused_title">Recipes from packs are paused</string>
     <plurals name="recipe_paused_body">
@@ -893,7 +896,7 @@
     <string name="recipe_try_now">Try now</string>
     <string name="recipe_pending_title">Waiting for payment</string>
     <string name="recipe_pending_body">Your recipes will be added when the store confirms the payment. That can take a while.</string>
-    <string name="recipe_packs_body">One recipe is one dish written by our server. A menu for 3 days takes 3. They don\'t expire.</string>
+    <string name="recipe_packs_body">One recipe is one dish written by our server. A menu for 3 days takes %1$s with two courses a day, %2$s with three. They don\'t expire.</string>
     <plurals name="recipe_pack_name">
         <item quantity="one">%1$d recipe</item>
         <item quantity="other">%1$d recipes</item>
@@ -939,8 +942,8 @@
     </plurals>
     <string name="recipe_delete_title">Delete your account?</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your account ID and email address are deleted from our server. Saved recipes and your pantry stay on this phone.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your account ID and email address are deleted from our server. Saved recipes and your pantry stay on this phone.</item>
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</item>
     </plurals>
     <string name="recipe_merge_title">Add this phone\'s recipes to your account?</string>
     <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this phone will be added to it, making %3$d. This can\'t be undone.</string>
@@ -949,6 +952,7 @@
     <string name="recipe_sign_in_failed">Couldn\'t sign in. Your recipes are unchanged.</string>
     <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your recipes are unchanged.</string>
     <string name="recipe_account_deleted">Account deleted</string>
+    <string name="recipe_account_busy">A recipe is still being written. Try again in a moment.</string>
     <string name="recipe_account_action_failed">Couldn\'t reach our server. Nothing was changed.</string>
     <string name="recipe_menu_bar_title">Menu</string>
     <string name="recipe_menu_title">Menu for three days</string>

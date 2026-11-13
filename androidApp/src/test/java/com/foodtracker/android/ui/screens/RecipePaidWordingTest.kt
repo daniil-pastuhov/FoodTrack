@@ -13,7 +13,9 @@ import com.foodtracker.recipe.MenuCourse
 import com.foodtracker.recipe.MenuCourseKind
 import com.foodtracker.recipe.MenuDay
 import com.foodtracker.recipe.Recipe
+import com.foodtracker.android.R
 import com.foodtracker.recipe.RecipeConfig
+import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.RecipeJson
 import com.foodtracker.recipe.RecipePaidSnapshot
 import com.foodtracker.recipe.SavedRecipe
@@ -51,6 +53,54 @@ class RecipePaidWordingTest {
         assertEquals("Сохранено. Осталось 11 рецептов", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_saved_left, 11, 11))
         assertEquals("1 рецепт", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_cost_recipes, 1, 1))
         assertEquals("3 рецепта", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_cost_recipes, 3, 3))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun theMenuCostsAreTheServersInEnglish() {
+        val resources = context.resources
+        val costs = RecipeCosts(1, 4, 5)
+        assertEquals(
+            "One recipe is one dish written by our server. A menu for 3 days takes 4 recipes with two courses a day, 5 recipes with three. They don't expire.",
+            recipePacksBody(resources, costs)
+        )
+        assertEquals("A menu takes 5 recipes", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, costs.menu3)))
+        assertEquals(
+            "A menu is written on our server and takes 4 recipes from a pack.",
+            resources.getString(R.string.recipe_menu_hint, recipeCount(resources, costs.menu2))
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun theMenuCostsTakeRussianPlurals() {
+        val resources = context.resources
+        assertEquals(
+            "Один рецепт — одно блюдо от нашего сервера. Меню на 3 дня стоит 4 рецепта при двух блюдах в день и 5 рецептов при трёх. Срок у рецептов не ограничен.",
+            recipePacksBody(resources, RecipeCosts(1, 4, 5))
+        )
+        assertEquals("Для меню нужно 21 рецепт", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, 21)))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "nb")
+    fun theMenuCostsInNorwegian() {
+        val resources = context.resources
+        assertEquals(
+            "Én oppskrift er én rett skrevet av serveren vår. En meny for 3 dager bruker 4 oppskrifter med to retter om dagen, 5 oppskrifter med tre. De utløper ikke.",
+            recipePacksBody(resources, RecipeCosts(1, 4, 5))
+        )
+        assertEquals("En meny bruker 1 oppskrift", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, 1)))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun theDeleteDialogSaysWhatTheServerKeeps() {
+        assertEquals(
+            "Your 5 unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; " +
+                "a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.",
+            context.resources.getQuantityString(R.plurals.recipe_delete_body, 5, 5)
+        )
     }
 
     @Test
@@ -121,9 +171,10 @@ class RecipePaidWordingTest {
     @Test
     fun whatThePaidRouteKeepsSurvivesARestart() {
         val first = AndroidRecipePaidRepository(context)
-        first.save(RecipePaidSnapshot(balance = 7, unverified = listOf(UnverifiedPurchase("tok", 50)), paymentPending = true))
+        first.save(RecipePaidSnapshot(balance = 7, unverified = listOf(UnverifiedPurchase("tok", 50)), paymentPending = true, costs = RecipeCosts(1, 4, 6)))
         val read = AndroidRecipePaidRepository(context).get()
         assertEquals(7, read.balance)
+        assertEquals(RecipeCosts(1, 4, 6), read.costs)
         assertEquals(listOf(UnverifiedPurchase("tok", 50)), read.unverified)
         assertEquals(true, read.paymentPending)
     }

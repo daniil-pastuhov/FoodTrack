@@ -1,6 +1,9 @@
 package com.foodtracker.android.recipe.paid
 
+import com.foodtracker.recipe.BalanceReply
+import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.ServerError
+import com.foodtracker.recipe.ServerResult
 import com.google.firebase.functions.FirebaseFunctionsException.Code
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -44,12 +47,73 @@ class CallableErrorTest {
         assertEquals(ServerError.OFFLINE, error(Code.INTERNAL, cause = IOException("reset")))
         assertEquals(ServerError.OFFLINE, error(Code.DEADLINE_EXCEEDED))
         assertEquals(ServerError.INTERNAL, error(Code.INTERNAL))
-        assertEquals(ServerError.INTERNAL, error(Code.UNKNOWN, "SOMETHING_NEW"))
+        assertEquals(ServerError.INTERNAL, error(Code.UNKNOWN))
+    }
+
+    @Test
+    fun aReasonAddedOnTheServerLaterIsUnknownNotABug() {
+        assertEquals(ServerError.UNKNOWN, error(Code.UNKNOWN, "SOMETHING_NEW"))
+        assertEquals(ServerError.UNKNOWN, error(Code.RESOURCE_EXHAUSTED, "TOO_MANY_FAILURES_TODAY"))
+        assertEquals(ServerError.UNKNOWN, error(Code.FAILED_PRECONDITION, "CONTENT_REFUND_LIMIT"))
+    }
+
+    @Test
+    fun getBalanceRepliesCarryTheCostsWhenThereAreAny() {
+        val withCosts = JsonObject(
+            mapOf(
+                "balance" to JsonPrimitive(12),
+                "costs" to JsonObject(mapOf("recipe" to JsonPrimitive(1), "menu2" to JsonPrimitive(4), "menu3" to JsonPrimitive(5)))
+            )
+        )
+        assertEquals(BalanceReply(12, RecipeCosts(1, 4, 5)), balanceReplyOf(withCosts), "with costs")
+        assertEquals(BalanceReply(3, null), balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(3)))), "an older server")
+        assertEquals(null, balanceReplyOf(JsonObject(mapOf("costs" to JsonNull))), "no balance is no reply")
+    }
+
+    @Test
+    fun onlyAConnectionFailureLeavesAttestationUnknown() {
+        assertEquals(true, RuntimeException("wrapped", IOException("reset")).isConnectionFailure(), "an I/O cause")
+        assertEquals(false, RuntimeException("App attestation failed: 403").isConnectionFailure(), "a refusal")
     }
 
     @Test
     fun noUserOrNoAppCheckTokenIsUnauthenticated() {
         assertEquals(ServerError.UNAUTHENTICATED, error(Code.UNAUTHENTICATED))
+    }
+
+    @Test
+    fun theFinalContractsReasonsAreRead() {
+        assertEquals(ServerError.APP_CHECK_REPLAYED, error(Code.UNAUTHENTICATED, "APP_CHECK_REPLAYED"))
+        assertEquals(ServerError.UNAUTHENTICATED, error(Code.UNAUTHENTICATED, "SOMETHING_ELSE"), "only a replay is not a refusal")
+        assertEquals(ServerError.USER_DAILY_LIMIT, error(Code.RESOURCE_EXHAUSTED, "USER_DAILY_LIMIT"))
+        assertEquals(ServerError.INFRA_FAILURE_LIMIT, error(Code.RESOURCE_EXHAUSTED, "INFRA_FAILURE_LIMIT"))
+        assertEquals(ServerError.REQUEST_ID_REUSED, error(Code.FAILED_PRECONDITION, "REQUEST_ID_REUSED"))
+    }
+
+    @Test
+    fun aReplayedTokenIsAskedAgainOnceWithAFreshOne() = kotlinx.coroutines.runBlocking {
+        var calls = 0
+        val ok = retryingReplayedAppCheck {
+            calls++
+            if (calls == 1) ServerResult.Err(ServerError.APP_CHECK_REPLAYED) else ServerResult.Ok(JsonNull)
+        }
+        assertEquals(ServerResult.Ok(JsonNull), ok, "the second call's answer")
+        assertEquals(2, calls, "asked twice")
+
+        calls = 0
+        val twice = retryingReplayedAppCheck {
+            calls++
+            ServerResult.Err(ServerError.APP_CHECK_REPLAYED)
+        }
+        assertEquals(ServerResult.Err(ServerError.APP_CHECK_REPLAYED), twice, "not a loop")
+        assertEquals(2, calls, "only once more")
+
+        calls = 0
+        retryingReplayedAppCheck {
+            calls++
+            ServerResult.Err(ServerError.UNAUTHENTICATED)
+        }
+        assertEquals(1, calls, "other refusals aren't asked again")
     }
 
     @Test

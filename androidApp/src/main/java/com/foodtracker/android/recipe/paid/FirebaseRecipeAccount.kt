@@ -161,7 +161,7 @@ class FirebaseRecipeAccount(
     }
 
     private fun appleProvider(): OAuthProvider = OAuthProvider.newBuilder(APPLE_PROVIDER)
-        .setScopes(listOf("email", "name"))
+        .setScopes(listOf("email"))
         .addCustomParameter("locale", Locale.getDefault().toLanguageTag())
         .build()
 
@@ -195,7 +195,7 @@ class FirebaseRecipeAccount(
         val mergeApp = firebase.merge
         val mergeAuth = firebase.auth(mergeApp)
         mergeAuth.signInWithCredential(credential).awaitResult()
-        val balance = (callBalance(firebase.functions(mergeApp)) as? ServerResult.Ok)?.value
+        val balance = (callBalance(firebase.functions(mergeApp)) as? ServerResult.Ok)?.value?.balance
         return SignInResult.NeedsMerge(FirebaseMerge(sourceToken, mergeAuth, balance))
     }
 

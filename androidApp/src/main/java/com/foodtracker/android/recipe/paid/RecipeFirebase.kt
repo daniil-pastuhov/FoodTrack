@@ -20,13 +20,15 @@ import kotlin.coroutines.resumeWithException
 const val RECIPE_FUNCTIONS_REGION = "europe-west1"
 
 /**
- * Whether this build can pass App Check, worked out without any network call: a build installed
- * by Google Play (Play Integrity attests it), or a debug build that asked for the paid route
- * (BuildConfig.RECIPE_PAID_ROUTE_IN_DEBUG, with the debug provider). Forks and sideloads can't
- * attest, so they keep the free routes only.
+ * Whether this build may offer the paid route, worked out without any network call: a release
+ * build installed by Google Play (Play Integrity attests it), or any debug build (the debug App
+ * Check provider, or the emulators' stand-in with -PrecipeEmulatorHost). Forks and sideloaded
+ * release builds can't attest, so they keep the free routes only. Where it is allowed, the route
+ * still hides itself at run time if Play sells the build no pack or App Check refuses it
+ * (RecipePaid's noteOffered and continuePurchase).
  */
 fun recipePaidRouteBuildAllowed(context: Context): Boolean {
-    if (BuildConfig.DEBUG) return BuildConfig.RECIPE_PAID_ROUTE_IN_DEBUG
+    if (BuildConfig.DEBUG) return true
     return installedFromPlay(context)
 }
 

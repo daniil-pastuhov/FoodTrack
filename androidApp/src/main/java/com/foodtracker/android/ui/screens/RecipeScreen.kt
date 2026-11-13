@@ -72,7 +72,6 @@ import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.recipe.AccountKind
 import com.foodtracker.recipe.AccountState
-import com.foodtracker.recipe.MENU_COST
 import com.foodtracker.recipe.MENU_COURSE_OPTIONS
 import com.foodtracker.recipe.OnDeviceAvailability
 import com.foodtracker.recipe.OnDeviceRoute
@@ -146,6 +145,18 @@ fun RecipeScreen(
             RecipeEvent.ServerFailed -> {
                 stateHolder.consumeEvent()
                 snackbars.show(resources.getString(R.string.recipe_failed_server), tryAgain) { stateHolder.generateOnServer() }
+            }
+            RecipeEvent.ServerFailedLater -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_server_later), null, null)
+            }
+            RecipeEvent.ServerLimitToday -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_limit_today), null, null)
+            }
+            RecipeEvent.ServerTroubleToday -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_trouble_today), null, null)
             }
             is RecipeEvent.ServerRefused -> {
                 stateHolder.consumeEvent()
@@ -571,18 +582,21 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
 private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions) {
     val paid = state.paid
     val balance = paid.balance ?: 0
+    val resources = LocalContext.current.resources
+    // For the courses chosen: switching 2 and 3 moves the button and this together.
+    val cost = recipeCount(resources, state.serverCost)
     when {
         paid.issue == ServerIssue.PAUSED -> Unit
-        balance < MENU_COST -> {
+        balance < state.serverCost -> {
             // T4: lasts until a pack is bought, so it takes the button's place.
             LarderCallout(
                 kind = LarderCalloutKind.Info,
-                title = stringResource(R.string.recipe_menu_short_title),
+                title = stringResource(R.string.recipe_menu_short_title, cost),
                 message = pluralStringResource(R.plurals.recipe_menu_short_body, balance, balance)
             )
             if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Primary)
         }
-        else -> RecipeHint(stringResource(R.string.recipe_menu_hint))
+        else -> RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
     }
 }
 

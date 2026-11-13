@@ -65,7 +65,19 @@ sealed interface RecipeEvent {
     /** The server couldn't write it, and nothing was taken. */
     data object ServerFailed : RecipeEvent
 
-    /** The server declined these items once too often today, and [taken] recipes were counted. */
+    /** The server couldn't write it for a reason that asking again now won't fix (busy, a
+     *  limit, or a reason this app doesn't know yet). Nothing was taken. */
+    data object ServerFailedLater : RecipeEvent
+
+    /** A daily limit (this account's, or the whole service's) was reached. Nothing was taken;
+     *  it works again tomorrow. */
+    data object ServerLimitToday : RecipeEvent
+
+    /** The server failed for technical reasons too often today for this account. Nothing was
+     *  taken; it works again tomorrow. */
+    data object ServerTroubleToday : RecipeEvent
+
+    /** The server declined these items once too often, and [taken] recipes were counted. */
     data class ServerRefused(val taken: Int) : RecipeEvent
 }
 
@@ -134,7 +146,7 @@ data class RecipeUiState(
     }
 
     /** What the current mode takes from a pack. */
-    val serverCost: Int get() = if (mode == RecipeMode.MENU) MENU_COST else RECIPE_COST
+    val serverCost: Int get() = if (mode == RecipeMode.MENU) paid.costs.menu(courses) else paid.costs.recipe
 
     /** Whether the server can be asked now: a pack with enough left, nothing in the way. */
     val canGenerateOnServer: Boolean

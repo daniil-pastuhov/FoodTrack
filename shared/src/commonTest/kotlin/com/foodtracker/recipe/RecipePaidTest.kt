@@ -16,6 +16,9 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.LocalDate
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -61,9 +64,17 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     val verified = mutableListOf<String>()
     val verifyReplies = ArrayDeque<ServerResult<VerifyReply>>()
     var balance: ServerResult<Int> = ServerResult.Ok(0)
+    var balanceCosts: RecipeCosts? = null
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<Unit>>()
     var deleteCalls = 0
+    var attestation = Attestation.OK
+    var attests = 0
+
+    override suspend fun attest(): Attestation {
+        attests++
+        return attestation
+    }
 
     override suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply> {
         generated += request
@@ -74,9 +85,12 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
         verified += purchaseToken
         return verifyReplies.removeFirst()
     }
-    override suspend fun getBalance(): ServerResult<Int> {
+    override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
-        return balance
+        return when (val current = balance) {
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts))
+            is ServerResult.Err -> current
+        }
     }
     override suspend fun deleteAccount(): ServerResult<Unit> {
         deleteCalls++
@@ -308,10 +322,90 @@ class RecipePaidTest {
 
     @Test
     fun aStoreThatCantBeReachedShowsInTheSheet() = runUnconfined {
-        store.packs = null
         val holder = holder()
+        store.packs = null
         holder.openPacks()
         assertEquals(BuySheet.StoreUnavailable, holder.uiState.value.paid.sheet)
+    }
+
+    @Test
+    fun aStoreThatSellsThisBuildNothingHidesTheRouteWhenNothingIsHeld() = runUnconfined {
+        store.packs = emptyList()
+        val holder = holder()
+        holder.openPacks()
+        holder.setMode(RecipeMode.MENU)
+
+        val state = holder.uiState.value
+        assertFalse(state.paidRouteAvailable, "a debug build Play has no products for keeps the free routes only")
+        assertFalse(state.paid.canBuy)
+        assertNull(state.paid.sheet)
+        assertEquals(RecipeMode.RECIPE, state.mode)
+        assertEquals(0, account.anonymousCreated)
+    }
+
+    @Test
+    fun recipesHeldStayUsableWithoutBuyWhenTheStoreSellsNothing() = runUnconfined {
+        withBalance(5)
+        store.packs = emptyList()
+        val holder = holder()
+
+        val paid = holder.uiState.value.paid
+        assertTrue(paid.available)
+        assertEquals(false, paid.packsOffered)
+        assertFalse(paid.canBuy, "no Buy that leads nowhere")
+        assertTrue(holder.uiState.value.canGenerateOnServer)
+    }
+
+    @Test
+    fun buyWaitsForTheStoreToAnswerAndIsAskedAgainOnALaterResume() = runUnconfined {
+        store.packs = null
+        val holder = holder()
+        assertFalse(holder.uiState.value.paidRouteAvailable, "nothing held and no packs known: nothing to show yet")
+        assertFalse(holder.uiState.value.paid.canBuy, "unknown packs: no Buy yet")
+
+        store.packs = listOf(StorePack("recipes_10", 10, "£1.99", 1_990_000, "GBP"))
+        now += 10_000
+        holder.onAppResume()
+        assertTrue(holder.uiState.value.paidRouteAvailable)
+        assertTrue(holder.uiState.value.paid.canBuy)
+    }
+
+    @Test
+    fun recipesHeldStayOnScreenWhileTheStoreCantBeReached() = runUnconfined {
+        withBalance(4)
+        store.packs = null
+        val holder = holder()
+
+        assertTrue(holder.uiState.value.paidRouteAvailable)
+        assertEquals(4, holder.uiState.value.paid.balance)
+        assertFalse(holder.uiState.value.paid.canBuy)
+    }
+
+    @Test
+    fun aBuildAppCheckRefusesHidesTheRouteBeforeAnyAccountOrPayment() = runUnconfined {
+        backend.attestation = Attestation.FAILED
+        val holder = holder()
+        holder.openPacks()
+        holder.continuePurchase()
+
+        val state = holder.uiState.value
+        assertEquals(1, backend.attests)
+        assertFalse(state.paidRouteAvailable)
+        assertNull(state.paid.sheet)
+        assertEquals(0, account.anonymousCreated)
+        assertTrue(store.bought.isEmpty())
+    }
+
+    @Test
+    fun anAttestationThatCouldNotBeAskedLetsThePurchaseGoOn() = runUnconfined {
+        withBalance(0)
+        backend.attestation = Attestation.UNKNOWN
+        val holder = holder()
+        holder.openPacks()
+        holder.continuePurchase()
+
+        assertTrue(holder.uiState.value.paidRouteAvailable)
+        assertEquals(listOf("recipes_50"), store.bought)
     }
 
     @Test
@@ -517,6 +611,7 @@ class RecipePaidTest {
         backend.generateReplies += done(3, sampleRecipe.copy(title = "Second"))
         holder.generateOnServer()
         assertEquals(listOf("req0", "req0", "req1"), backend.generated.map { it.requestId })
+        assertEquals(backend.generated[0], backend.generated[1], "a held id is only ever sent with the inputs it was first sent with")
         assertEquals(4, backend.generated.last().config.servings)
         assertEquals(2, saved.rows.value.size)
         assertEquals(3, holder.uiState.value.paid.balance)
@@ -616,15 +711,21 @@ class RecipePaidTest {
     }
 
     @Test
-    fun aMenuCostsThreeAndIsSentWithItsCourses() = runUnconfined {
-        withBalance(2)
+    fun aMenuCostsWhatItsCoursesTakeAndIsSentWithThem() = runUnconfined {
+        withBalance(4)
         val holder = holder()
         holder.setMode(RecipeMode.MENU)
-        assertEquals(3, holder.uiState.value.serverCost)
-        assertFalse(holder.uiState.value.canGenerateOnServer, "two left is not enough for a menu")
+        holder.setCourses(3)
+        assertEquals(5, holder.uiState.value.serverCost)
+        assertFalse(holder.uiState.value.canGenerateOnServer, "four left is not enough for three courses")
         holder.generateOnServer()
         assertTrue(backend.generated.isEmpty())
         holder.dismissPacks()
+        holder.setCourses(2)
+        assertEquals(4, holder.uiState.value.serverCost)
+        assertTrue(holder.uiState.value.canGenerateOnServer, "but it is for two")
+        holder.setMode(RecipeMode.RECIPE)
+        assertEquals(1, holder.uiState.value.serverCost)
 
         backend.balance = ServerResult.Ok(9)
         paidRepository.save(RecipePaidSnapshot(balance = 9))
@@ -637,7 +738,6 @@ class RecipePaidTest {
         val request = backend.generated.single()
         assertEquals(WireKind.MENU, request.kind)
         assertEquals(2, request.courses)
-        assertEquals(3, request.cost)
         val menu = saved.rows.value.single()
         assertEquals(SavedRecipeKind.MENU, menu.kind)
         assertEquals(6, menu.dishCount)
@@ -646,13 +746,109 @@ class RecipePaidTest {
     }
 
     @Test
-    fun aRefusedMenuCountsThree() = runUnconfined {
+    fun aRefusedMenuCountsWhatItsCoursesTake() = runUnconfined {
         withBalance(9)
         val holder = holder()
         holder.setMode(RecipeMode.MENU)
-        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.FAILED, balance = 6, charged = true))
+        holder.setCourses(3)
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.FAILED, balance = 4, charged = true))
         holder.generateOnServer()
-        assertEquals(RecipeEvent.ServerRefused(3), holder.uiState.value.event)
+        assertEquals(RecipeEvent.ServerRefused(5), holder.uiState.value.event)
+    }
+
+    @Test
+    fun costsComeFromTheServerAndAreKept() = runUnconfined {
+        withBalance(20)
+        val holder = holder()
+        assertEquals(RecipeCosts(1, 4, 5), holder.uiState.value.paid.costs, "the defaults before the server has said")
+
+        val costs = buildJsonObject {
+            put("recipe", 2)
+            put("menu2", 6)
+            put("menu3", 8)
+        }
+        backend.generateReplies += ServerResult.Ok(
+            GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe, balance = 18, charged = true, costs = costs)
+        )
+        holder.generateOnServer()
+
+        assertEquals(RecipeCosts(2, 6, 8), holder.uiState.value.paid.costs)
+        assertEquals(RecipeCosts(2, 6, 8), paidRepository.get().costs, "kept for the next launch")
+        assertEquals(2, holder.uiState.value.serverCost)
+        holder.setMode(RecipeMode.MENU)
+        holder.setCourses(2)
+        assertEquals(6, holder.uiState.value.serverCost)
+
+        val again = holder()
+        assertEquals(RecipeCosts(2, 6, 8), again.uiState.value.paid.costs)
+    }
+
+    @Test
+    fun aRefusalCountsWhatTheServerLastSaidItCosts() = runUnconfined {
+        account = FakeAccount(AccountKind.ANONYMOUS)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 10, costs = RecipeCosts(recipe = 2)))
+        backend.balance = ServerResult.Ok(10)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.FAILED, balance = 8, charged = true))
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerRefused(2), holder.uiState.value.event)
+    }
+
+    @Test
+    fun costsFromGetBalanceReplaceTheKeptOnes() = runUnconfined {
+        withBalance(7)
+        backend.balanceCosts = RecipeCosts(1, 3, 4)
+        val holder = holder()
+        holder.onAppResume()
+        assertEquals(RecipeCosts(1, 3, 4), holder.uiState.value.paid.costs)
+    }
+
+    @Test
+    fun costsAreReadLeniently() {
+        assertNull(recipeCostsOf(null))
+        assertNull(recipeCostsOf(JsonPrimitive(3)))
+        assertEquals(RecipeCosts(1, 4, 5), recipeCostsOf(buildJsonObject { }))
+        val odd = buildJsonObject {
+            put("recipe", "two")
+            put("menu2", 0)
+            put("menu3", 6.0)
+            put("extra", 9)
+        }
+        assertEquals(RecipeCosts(1, 4, 6), recipeCostsOf(odd), "bad fields keep their defaults, whole doubles count")
+        assertEquals(RecipeCosts(1, 4, 5), recipeCostsOf(buildJsonObject { put("menu2", -4); put("menu3", 5.5) }))
+        assertEquals(RecipeCosts(1, 4, 5), recipeCostsOf(buildJsonObject { put("recipe", 1_000_000) }))
+    }
+
+    @Test
+    fun aReasonThisAppDoesntKnowSaysTryLaterAndTakesNothing() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.fromReason("TOO_MANY_FAILURES_TODAY", ServerError.INTERNAL))
+        holder.generateOnServer()
+
+        assertEquals(RecipeEvent.ServerFailedLater, holder.uiState.value.event)
+        assertEquals(5, holder.uiState.value.paid.balance)
+        assertNull(paidRepository.get().pendingGeneration, "refused before anything was held")
+        assertTrue(holder.uiState.value.paidRouteAvailable)
+    }
+
+    @Test
+    fun reasonsAreMatchedOnlyToTheContractsOwn() {
+        assertEquals(ServerError.DAILY_CAP, ServerError.fromReason("DAILY_CAP", ServerError.INTERNAL))
+        assertEquals(ServerError.INTERNAL, ServerError.fromReason(null, ServerError.INTERNAL))
+        assertEquals(ServerError.OFFLINE, ServerError.fromReason("", ServerError.OFFLINE))
+        assertEquals(ServerError.UNKNOWN, ServerError.fromReason("SOMETHING_NEW", ServerError.INTERNAL))
+        assertEquals(ServerError.UNKNOWN, ServerError.fromReason("OFFLINE", ServerError.INTERNAL), "the client's own names aren't reasons")
+    }
+
+    @Test
+    fun aLimitTheServerSetsSaysTryLater() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.RATE_LIMITED)
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerFailedLater, holder.uiState.value.event)
+        assertNull(paidRepository.get().pendingGeneration)
     }
 
     @Test
@@ -781,6 +977,74 @@ class RecipePaidTest {
         assertEquals(1, account.reauths)
         assertEquals(2, backend.deleteCalls)
         assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
+    }
+
+    @Test
+    fun aDeletionWhileARecipeIsBeingWrittenSaysToWait() = runUnconfined {
+        withBalance(12, AccountKind.SIGNED_IN)
+        val holder = holder()
+        backend.deleteReplies += ServerResult.Err(ServerError.BUSY)
+        holder.deleteAccount()
+        assertEquals(PaidEvent.AccountBusy, holder.uiState.value.paid.event)
+        assertEquals(0, account.signOuts)
+        assertEquals(12, holder.uiState.value.paid.balance)
+    }
+
+    @Test
+    fun aRequestIdBoundToOtherInputsIsDroppedAndTheNextAskGetsANewOne() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.REQUEST_ID_REUSED)
+        holder.generateOnServer()
+
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertNull(paidRepository.get().pendingGeneration)
+        assertEquals(5, holder.uiState.value.paid.balance, "nothing was taken")
+        holder.consumeEvent()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(listOf("req0", "req1"), backend.generated.map { it.requestId })
+    }
+
+    @Test
+    fun aReplayedAppCheckTokenKeepsTheRouteAndTheRequest() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.APP_CHECK_REPLAYED)
+        holder.generateOnServer()
+
+        assertTrue(holder.uiState.value.paidRouteAvailable, "not a build that can't attest")
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals("req0", paidRepository.get().pendingGeneration?.requestId, "kept: it can't have been charged twice")
+    }
+
+    @Test
+    fun dailyLimitsSayTomorrowAndTakeNothing() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        for (error in listOf(ServerError.USER_DAILY_LIMIT, ServerError.DAILY_CAP)) {
+            backend.generateReplies += ServerResult.Err(error)
+            holder.generateOnServer()
+            assertEquals(RecipeEvent.ServerLimitToday, holder.uiState.value.event, "$error")
+            assertNull(paidRepository.get().pendingGeneration)
+            holder.consumeEvent()
+        }
+        backend.generateReplies += ServerResult.Err(ServerError.INFRA_FAILURE_LIMIT)
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerTroubleToday, holder.uiState.value.event)
+        assertEquals(5, holder.uiState.value.paid.balance)
+        assertTrue(holder.uiState.value.paidRouteAvailable)
+    }
+
+    @Test
+    fun aSpendingCeilingPausesLikeTheKillSwitch() = runUnconfined {
+        withBalance(12)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        backend.generateReplies += ServerResult.Err(ServerError.GENERATION_DISABLED)
+        holder.generateOnServer()
+        assertEquals(ServerIssue.PAUSED, holder.uiState.value.paid.issue)
+        assertEquals(12, holder.uiState.value.paid.balance)
     }
 
     @Test

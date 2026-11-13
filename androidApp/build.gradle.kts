@@ -46,13 +46,12 @@ android {
         // Read by the firebase_crashlytics_collection_enabled meta-data in AndroidManifest.xml.
         manifestPlaceholders["crashlyticsCollectionEnabled"] = true
 
-        // The paid Recipe route in builds not installed from Google Play, which can't pass Play
-        // Integrity. Debug builds only (see the debug block): -PrecipeEmulatorHost=10.0.2.2
-        // points them at the Firebase emulator suite (functions/README.md), and
-        // -PrecipePaidRoute=true turns the route on against the real project, with a debug App
-        // Check token registered in the console. Neither is ever set for a release build.
+        // Debug builds offer the paid Recipe route against the real project, with a debug App
+        // Check token registered in the console (it hides itself when App Check refuses the
+        // build or Play sells it no pack). -PrecipeEmulatorHost=10.0.2.2 points them at the
+        // Firebase emulator suite instead (functions/README.md), with a fake store. Never set
+        // for a release build.
         buildConfigField("String", "RECIPE_EMULATOR_HOST", "\"\"")
-        buildConfigField("boolean", "RECIPE_PAID_ROUTE_IN_DEBUG", "false")
     }
 
     signingConfigs {
@@ -75,11 +74,6 @@ android {
             manifestPlaceholders["crashlyticsCollectionEnabled"] = false
             val emulatorHost = providers.gradleProperty("recipeEmulatorHost").getOrElse("")
             buildConfigField("String", "RECIPE_EMULATOR_HOST", "\"$emulatorHost\"")
-            buildConfigField(
-                "boolean",
-                "RECIPE_PAID_ROUTE_IN_DEBUG",
-                (emulatorHost.isNotEmpty() || providers.gradleProperty("recipePaidRoute").getOrElse("false") == "true").toString()
-            )
         }
         release {
             isMinifyEnabled = true
