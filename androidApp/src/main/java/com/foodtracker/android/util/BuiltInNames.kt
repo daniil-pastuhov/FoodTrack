@@ -73,12 +73,17 @@ fun categoryLabel(resources: Resources, name: String): String =
 fun categoryLabel(name: String): String = categoryLabel(LocalContext.current.resources, name)
 
 /** What the item editor's category field shows for a stored [category]: the name it is shown
- *  under everywhere else, so the field never shows a raw English key. */
+ *  under everywhere else, so the field never shows a raw English key. A disabled category is
+ *  shown nowhere outside Settings, so it leaves the field blank (saving that unchanged still keeps
+ *  it - see [categoryForFieldText]). */
 fun categoryFieldText(
     category: String,
     preferences: List<CategoryPreference>,
     label: (String) -> String
-): String = label(preferences.firstOrNull { it.originName == category }?.displayName ?: category)
+): String {
+    val preference = preferences.firstOrNull { it.originName == category } ?: return label(category)
+    return if (preference.enabled) label(preference.displayName) else ""
+}
 
 /**
  * The category to store for what the item editor's field says when saving an item that had
@@ -88,7 +93,8 @@ fun categoryFieldText(
  * Settings), so mapping the name back could otherwise move the item to a different one just
  * because it was edited. Otherwise a built-in category's translated name maps to its English key
  * (what shelf-life defaults match on), a name shown for an existing category maps to that
- * category, and anything else is a new category, stored as typed.
+ * category, and anything else is a new category, stored as typed. A blank field is no category,
+ * unless it is the blank a disabled [original] shows.
  */
 fun categoryForFieldText(
     text: String,
@@ -97,6 +103,7 @@ fun categoryForFieldText(
     label: (String) -> String
 ): String {
     if (original != null && text == categoryFieldText(original, preferences, label)) return original
+    if (text.isBlank()) return ""
     CATEGORY_STRINGS.keys.firstOrNull { label(it) == text }?.let { return it }
     preferences.firstOrNull { label(it.displayName) == text }?.let { return it.originName }
     return text

@@ -228,7 +228,8 @@ object PantryDerivation {
     }
 
     /** One row per user-visible category, carrying the other raw origins merged onto that same
-     *  display name as a ready-made subtitle. */
+     *  display name as a ready-made subtitle. Disabled categories come after every enabled one,
+     *  each part in the user's order. */
     fun buildCategoryRows(preferences: List<CategoryPreference>): List<CategoryRow> =
         preferences
             .groupBy { it.displayName }
@@ -244,5 +245,12 @@ object PantryDerivation {
                         .joinToString(", ")
                 )
             }
-            .sortedBy { it.preference.sortOrder }
+            .sortedWith(compareBy<CategoryRow>({ !it.preference.enabled }, { it.preference.sortOrder }))
+
+    /** Whether the row at [from] in [rows] (as [buildCategoryRows] orders them) may take the
+     *  place of the row at [to]. Only within its own part: enabled rows always come before
+     *  disabled ones, so a move across would save a new order and then snap straight back. */
+    fun canMoveCategoryRow(rows: List<CategoryRow>, from: Int, to: Int): Boolean =
+        from in rows.indices && to in rows.indices &&
+            rows[from].preference.enabled == rows[to].preference.enabled
 }

@@ -96,6 +96,7 @@ import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSource
 import com.foodtracker.model.ShelfLifeSuggestion
+import com.foodtracker.model.suggestableDisplayNames
 import com.foodtracker.recognition.FoodLabelSuggestion
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryStateHolder
@@ -230,7 +231,7 @@ fun AddEditItemScreen(
     }
 
     val categorySuggestions = remember(category, state.categoryPreferences) {
-        categorySuggestions(category, state.categoryPreferences.map { labelOf(it.displayName) })
+        categorySuggestions(category, state.categoryPreferences.suggestableDisplayNames().map(labelOf))
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -295,9 +296,8 @@ fun AddEditItemScreen(
             expiryDate = expiryDate,
             addedDate = initialItem?.addedDate ?: today,
             storageLocation = storageLocation,
-            category = category.trim().ifBlank { null }
-                ?.let { categoryForFieldText(it, categorySource, state.categoryPreferences, labelOf) }
-                ?.ifBlank { null },
+            category = categoryForFieldText(category.trim(), categorySource, state.categoryPreferences, labelOf)
+                .ifBlank { null },
             quantity = quantity,
             notes = notes.trim().ifBlank { null },
             essential = essential,

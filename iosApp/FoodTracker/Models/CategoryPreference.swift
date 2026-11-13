@@ -51,10 +51,14 @@ func resolveCategoryDisplayName(_ origin: String?, _ preferences: [CategoryPrefe
 }
 
 /// What the item editor's category field shows for a stored `category`: the name it is shown
-/// under everywhere else, so the field never shows a raw English key. Mirrors
-/// `categoryFieldText` in the Android app.
+/// under everywhere else, so the field never shows a raw English key. A disabled category is
+/// shown nowhere outside Settings, so it leaves the field blank (saving that unchanged still keeps
+/// it - see `categoryForFieldText`). Mirrors `categoryFieldText` in the Android app.
 func categoryFieldText(_ category: String, _ preferences: [CategoryPreference]) -> String {
-    L10n.categoryName(preferences.first { $0.originName == category }?.displayName ?? category)
+    guard let preference = preferences.first(where: { $0.originName == category }) else {
+        return L10n.categoryName(category)
+    }
+    return preference.enabled ? L10n.categoryName(preference.displayName) : ""
 }
 
 /// The category to store for what the item editor's field says when saving an item that had
@@ -64,9 +68,11 @@ func categoryFieldText(_ category: String, _ preferences: [CategoryPreference]) 
 /// Settings), so mapping the name back could otherwise move the item to a different one just
 /// because it was edited. Otherwise a built-in category's translated name maps to its English
 /// key (what shelf-life defaults match on), a name shown for an existing category maps to that
-/// category, and anything else is a new category, stored as typed.
+/// category, and anything else is a new category, stored as typed. A blank field is no category,
+/// unless it is the blank a disabled `original` shows.
 func categoryForFieldText(_ text: String, original: String?, _ preferences: [CategoryPreference]) -> String {
     if let original, text == categoryFieldText(original, preferences) { return original }
+    if text.trimmingCharacters(in: .whitespaces).isEmpty { return "" }
     if let builtIn = FoodLabels.builtInCategories.first(where: { L10n.categoryName($0) == text }) { return builtIn }
     if let match = preferences.first(where: { L10n.categoryName($0.displayName) == text }) { return match.originName }
     return text
