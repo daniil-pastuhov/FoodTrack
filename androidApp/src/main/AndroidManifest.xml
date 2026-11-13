@@ -66,6 +66,18 @@
 
         <!-- Exported because only the system sends BOOT_COMPLETED; geofences do not survive a
              reboot and must be re-registered. -->
+        <!-- Exported because only the system sends these. Alarms do not survive a reboot, so
+             every expiry reminder is set again. -->
+        <receiver
+            android:name=".notification.ReminderRestoreReceiver"
+            android:exported="true"
+            android:directBootAware="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".location.BootCompletedReceiver"
             android:exported="true"

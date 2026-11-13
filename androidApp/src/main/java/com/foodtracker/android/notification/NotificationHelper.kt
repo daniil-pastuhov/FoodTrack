@@ -16,8 +16,10 @@ import com.foodtracker.model.NotificationSettings
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.isDigestDay
 import com.foodtracker.notification.ExpiryNotificationCalculator
+import com.foodtracker.repository.PantryRepository
 import com.foodtracker.util.DateUtils
 import java.util.Calendar
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 
 object NotificationHelper {
@@ -165,7 +167,9 @@ object NotificationHelper {
                 extraBody ?: context.getString(R.string.notif_fallback_body)
             )
 
-    fun scheduleNotification(context: Context, item: PantryItem) {
+    /** [fireIfPast] false skips a reminder whose time has gone by instead of firing it now, for
+     *  [restoreReminders], which must not repeat a reminder already shown. */
+    fun scheduleNotification(context: Context, item: PantryItem, fireIfPast: Boolean = true) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
         if (!wantsIndividualReminder(notificationSettings, item)) {
             // Also clears an alarm scheduled before the reminder was switched off - for the
@@ -206,6 +210,7 @@ object NotificationHelper {
         val now = System.currentTimeMillis()
 
         if (triggerMillis <= now) {
+            if (!fireIfPast) return
             triggerMillis = now + 5000L
         }
 
@@ -328,6 +333,20 @@ object NotificationHelper {
     fun rescheduleAll(context: Context, items: List<PantryItem>) {
         items.forEach { cancelNotification(context, it.id) }
         items.forEach { scheduleNotification(context, it) }
+    }
+
+    /**
+     * Puts back every reminder alarm still to come, per item and the digest, from what is
+     * stored. Android drops an app's alarms when the device restarts and when the app is
+     * force-stopped, and nothing else would set them again until a notification setting
+     * changed. Run after a restart or an update (see ReminderRestoreReceiver) and whenever the
+     * app opens. A reminder whose time has passed is left alone rather than fired again, and
+     * nothing is cancelled, so reminders already on screen stay.
+     */
+    suspend fun restoreReminders(context: Context, repository: PantryRepository) {
+        val settings = AndroidSettingsRepository(context).getSettings().notifications
+        repository.getItemsFlow().first().forEach { scheduleNotification(context, it, fireIfPast = false) }
+        scheduleDigest(context, settings)
     }
 
     /** Used only if tomorrow's reminder slot has somehow already passed. */

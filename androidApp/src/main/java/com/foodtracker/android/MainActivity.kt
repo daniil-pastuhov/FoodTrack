@@ -19,6 +19,11 @@ import com.foodtracker.android.ui.FoodTrackerRoot
 import com.foodtracker.android.ui.navigation.AddItemMode
 import com.foodtracker.android.ui.navigation.LarderRoute
 import com.foodtracker.backup.RestoreMode
+import com.foodtracker.android.notification.NotificationHelper
+import com.foodtracker.repository.PantryRepository
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.lifecycleScope
 import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.google.android.gms.location.LocationServices
@@ -28,6 +33,7 @@ import org.koin.android.ext.android.inject
 class MainActivity : ComponentActivity() {
 
     private val stateHolder: PantryStateHolder by inject()
+    private val pantryRepository: PantryRepository by inject()
 
     // Hoisted out of the composable (rather than `remember`ed) so the Shopping List widget's
     // tap intent can navigate there via onNewIntent even when MainActivity is already running,
@@ -74,6 +80,12 @@ class MainActivity : ComponentActivity() {
         // OS-level registrations that can be dropped underneath the app (a reboot clears them
         // all), and permission can be revoked from system settings between runs.
         StoreGeofenceManager.sync(this, stateHolder.uiState.value.settings)
+        // Likewise the reminder alarms, which a force-stop clears as well as a reboot.
+        if (savedInstanceState == null) {
+            lifecycleScope.launch(Dispatchers.IO) {
+                NotificationHelper.restoreReminders(applicationContext, pantryRepository)
+            }
+        }
 
         setContent {
             FoodTrackerRoot(
