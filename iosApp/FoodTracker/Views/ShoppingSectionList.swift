@@ -1,29 +1,18 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
-/// An `NSItemProvider` that reports when the drag carrying it is over. SwiftUI's drag and drop
-/// tells a drop target about a drop, but nobody about a drag that was let go somewhere it
-/// couldn't land - and the folded-away sections have to come back either way. The system holds
-/// the provider for exactly the length of the session, so its deinit is that missing signal.
-final class DragSessionItemProvider: NSItemProvider {
-    var onSessionEnd: (() -> Void)?
-
-    deinit {
-        let onSessionEnd = onSessionEnd
-        DispatchQueue.main.async { onSessionEnd?() }
-    }
-}
-
-/// The shopping list as collapsible sections, with entries dragged between them. The iOS
-/// counterpart of Android's `ShoppingSectionedList` (and the same rules):
-///  - picking an entry up folds every other section away, animated, so the headers are close
-///    together and easy to drop onto; they come back when the drag ends;
-///  - an entry dropped within its own section lands between its new neighbours, one dropped on
-///    another (folded) section goes to that section's end, and that section opens;
+/// The shopping list as collapsible sections. The iOS counterpart of Android's
+/// `ShoppingSectionedList` (and the same rules):
+///  - an entry dropped within a section lands between its new neighbours; one dropped under a
+///    folded section's header goes to that section's end, and the section opens;
+///  - sections are reordered with every section folded, so a header can only land between
+///    other headers;
 ///  - the default section is pinned first.
 ///
-/// Drag and drop rather than `List`'s `.onMove`, because `.onMove` has no "drag started" moment
-/// to fold the sections at, and can't cross a `Section` boundary.
+/// Headers and entries are rows of one `ForEach`, so `List`'s own `.onMove` (long press, then
+/// drag) moves an entry across sections, and a header among the others while reordering.
+/// SwiftUI's `.onDrag` and `.onDrop` don't work here: inside a `List` on iPhone a drag never
+/// starts and rows get no drop. `.onMove` has no moment a drag starts at, though, so where
+/// Android folds the sections as a header is picked up, iOS has a mode for it.
 struct ShoppingSectionedList: View {
     @ObservedObject var viewModel: NativePantryViewModel
     var onItemRemoved: (ShoppingListEntry) -> Void
@@ -31,56 +20,69 @@ struct ShoppingSectionedList: View {
     var onMoveEntry: (ShoppingListEntry, String) -> Void
     var onRenameSection: (ShoppingSection) -> Void
     var onDeleteSection: (ShoppingSection, Int) -> Void
+    /// Opens the reorder mode, offered on a header's long press; nil while there's nothing to
+    /// reorder.
+    var onReorderSections: (() -> Void)?
+    /// Every section folded, with only the headers to drag. Ended by Done.
+    @Binding var isReorderingSections: Bool
     /// The row to bring into view, set by the tablet's section index and cleared once done.
     @Binding var scrollTarget: String?
 
-    private struct DragState: Equatable {
-        let entryId: String
-        let sourceSectionId: String
-    }
-
-    @State private var drag: DragState?
-    /// The list as it is while a drag is in progress: built with the other sections folded when
-    /// the drag starts, then rearranged as the entry moves over rows. Never persisted.
-    @State private var dragRows: [ShoppingRow]?
     /// Rows showing their tick for a moment before they leave.
     @State private var tickedIds: Set<String> = []
     @Environment(\.scenePhase) private var scenePhase
 
-    private var rows: [ShoppingRow] { dragRows ?? viewModel.shoppingRows }
+    private var rows: [ShoppingRow] {
+        guard isReorderingSections else { return viewModel.shoppingRows }
+        return ShoppingSections.rows(
+            entries: viewModel.shoppingList,
+            sections: viewModel.shoppingSections,
+            collapsedOverride: { _ in true }
+        )
+    }
 
     var body: some View {
+        VStack(spacing: 0) {
+            if isReorderingSections { reorderBar }
+            list
+        }
+    }
+
+    private var reorderBar: some View {
+        HStack(spacing: LarderSpace.s2) {
+            Text(L10n.shoppingSectionReorder)
+                .larderFont(.titleSm)
+                .foregroundStyle(LarderColor.onSurface)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            LarderButton(L10n.doneButton, variant: .text) {
+                withAnimation(.easeInOut(duration: 0.3)) { isReorderingSections = false }
+            }
+        }
+        .padding(.horizontal, LarderSpace.s4)
+        .transition(.opacity)
+    }
+
+    private var list: some View {
         ScrollViewReader { proxy in
             List {
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
-                    switch row {
+                ForEach(Self.keyedRows(rows), id: \.key) { keyed in
+                    switch keyed.row {
                     case .header(let section, let count):
-                        header(section, count: count, hasGap: Self.headerHasGap(rows, at: index))
-                            .onDrop(of: [.text], delegate: RowDropDelegate(
-                                onEnter: { moveDragged(over: row.id) },
-                                onDrop: commitDrag
-                            ))
+                        header(section, count: count, hasGap: Self.headerHasGap(rows, at: keyed.index))
+                            .moveDisabled(section.isDefault || !isReorderingSections)
                     case .item(let entry, let sectionId):
-                        itemRow(entry, sectionId: sectionId, position: Self.groupPosition(rows, at: index))
-                            .onDrop(of: [.text], delegate: RowDropDelegate(
-                                onEnter: { moveDragged(over: row.id) },
-                                onDrop: commitDrag
-                            ))
+                        itemRow(entry, sectionId: sectionId, position: Self.groupPosition(rows, at: keyed.index))
                     }
+                }
+                .onMove { source, destination in
+                    apply(Self.move(rows, from: source, to: destination))
                 }
             }
             .larderList()
-            // A drop in the gaps between rows still lands where the entry currently sits.
-            .onDrop(of: [.text], delegate: RowDropDelegate(onEnter: {}, onDrop: commitDrag))
             .animation(.easeInOut(duration: 0.25), value: rows.map(\.id))
-            // Insurance on top of DragSessionItemProvider: never come back from the background
-            // with sections stuck folded.
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active {
-                    viewModel.reloadShoppingList()
-                } else {
-                    cancelDrag()
-                }
+                if phase == .active { viewModel.reloadShoppingList() }
             }
             .onChange(of: scrollTarget) { _, target in
                 guard let target else { return }
@@ -91,6 +93,23 @@ struct ShoppingSectionedList: View {
     }
 
     // MARK: - Layout
+
+    struct KeyedRow {
+        let key: String
+        let index: Int
+        let row: ShoppingRow
+    }
+
+    /// The rows with their `ForEach` identity. An entry's carries its place in its group, so a
+    /// row that has changed place is a new row: after a drag, `List` keeps a moved row's old
+    /// `listRowBackground`, and with it the rounded corners of where the row used to be.
+    static func keyedRows(_ rows: [ShoppingRow]) -> [KeyedRow] {
+        rows.indices.map { index in
+            let row = rows[index]
+            guard case .item = row else { return KeyedRow(key: row.id, index: index, row: row) }
+            return KeyedRow(key: "\(row.id)#\(groupPosition(rows, at: index))", index: index, row: row)
+        }
+    }
 
     /// Where the row at `index` falls in the group of rows under its section header.
     static func groupPosition(_ rows: [ShoppingRow], at index: Int) -> LarderGroupPosition {
@@ -115,12 +134,9 @@ struct ShoppingSectionedList: View {
     // MARK: - Rows
 
     /// The toggle takes the free space, so the menu stays pinned right however long the name is.
-    /// The main list has no menu. iOS reorders sections in a sheet, so headers have no handle.
+    /// The main list has no menu. While reordering, the chevron and menu give way to a grip.
     private func header(_ section: ShoppingSection, count: Int, hasGap: Bool) -> some View {
-        let collapsed: Bool = {
-            guard let drag else { return section.collapsed }
-            return section.id != drag.sourceSectionId
-        }()
+        let collapsed = isReorderingSections || section.collapsed
         let name = L10n.shoppingSectionName(section)
         return HStack(spacing: 0) {
             Button {
@@ -145,10 +161,18 @@ struct ShoppingSectionedList: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .disabled(drag != nil)
+            // Not `.disabled`, which would dim the headers that are there to be dragged.
+            .allowsHitTesting(!isReorderingSections)
             .accessibilityValue(collapsed ? L10n.shoppingSectionCollapsed : L10n.shoppingSectionExpanded)
 
-            if !section.isDefault {
+            if isReorderingSections {
+                if !section.isDefault {
+                    LarderIcon(.gripVertical, size: .custom(ShoppingRowMetrics.smallIcon))
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .frame(width: LarderSize.touch, height: LarderSize.touch)
+                        .accessibilityHidden(true)
+                }
+            } else if !section.isDefault {
                 Menu {
                     Button(L10n.shoppingSectionRename) { onRenameSection(section) }
                     Button(L10n.shoppingSectionDelete, role: .destructive) { onDeleteSection(section, count) }
@@ -167,6 +191,11 @@ struct ShoppingSectionedList: View {
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
         .deleteDisabled(true)
+        .contextMenu {
+            if !isReorderingSections, let onReorderSections {
+                Button(L10n.shoppingSectionReorder, action: onReorderSections)
+            }
+        }
     }
 
     private func itemRow(
@@ -181,10 +210,15 @@ struct ShoppingSectionedList: View {
             onTick: { tick(entry) },
             onQuantityChange: { changeQuantity(of: entry, to: $0) },
             onTap: { onEntryTap(entry) },
-            onLongPress: viewModel.shoppingSections.count > 1 ? { onMoveEntry(entry, sectionId) } : nil,
-            gripDrag: { startDrag(entry, sectionId: sectionId) }
+            onMoveToSection: viewModel.shoppingSections.count > 1 ? { onMoveEntry(entry, sectionId) } : nil
         )
         .larderGroupRow(position)
+        // A long press lifts the row to drag it; held still, it shows this menu instead.
+        .contextMenu {
+            if viewModel.shoppingSections.count > 1 {
+                Button(L10n.shoppingSectionMoveTo) { onMoveEntry(entry, sectionId) }
+            }
+        }
         .larderSwipeActions(
             trailing: isTicked ? [] : [
                 LarderSwipeAction(L10n.shoppingListCheckOff, icon: .check, tint: .success) { checkOff(entry) }
@@ -219,98 +253,74 @@ struct ShoppingSectionedList: View {
         }
     }
 
-    // MARK: - Dragging
+    // MARK: - Moving
 
-    private func startDrag(_ entry: ShoppingListEntry, sectionId: String) -> NSItemProvider {
-        drag = DragState(entryId: entry.id, sourceSectionId: sectionId)
-        withAnimation(.easeInOut(duration: 0.3)) {
-            dragRows = ShoppingSections.rows(
-                entries: viewModel.shoppingList,
-                sections: viewModel.shoppingSections,
-                collapsedOverride: { $0.id != sectionId }
-            )
-        }
-        let provider = DragSessionItemProvider(object: entry.id as NSString)
-        let entryId = entry.id
-        provider.onSessionEnd = {
-            // Only a drag that ended without a drop is still pending here.
-            if drag?.entryId == entryId { cancelDrag() }
-        }
-        return provider
+    /// What a drop does, worked out from the rows as they would be after it.
+    enum Move: Equatable {
+        /// Into `section`, between two of its entries (either may be nil at an end).
+        case entry(String, section: String, beforeId: String?, afterId: String?)
+        /// To the end of `section`, which then opens: dropped under a folded or empty header,
+        /// there are no neighbours to place it between.
+        case entryToEnd(String, section: String)
+        /// The sections' new order, top to bottom.
+        case sections([String])
     }
 
-    /// Moves the dragged entry to where the row `targetId` is. Over a header it goes just under
-    /// it - i.e. into that section.
-    private func moveDragged(over targetId: String) {
-        guard let drag, var current = dragRows,
-              let from = current.firstIndex(where: { $0.id == drag.entryId }),
-              current[from].id != targetId else { return }
-        let moving = current.remove(at: from)
-        guard var to = current.firstIndex(where: { $0.id == targetId }) else { return }
-        if case .header = current[to] {
-            to += 1
-        } else if from <= to {
-            to += 1
-        }
-        current.insert(moving, at: to)
-        withAnimation(.easeInOut(duration: 0.2)) { dragRows = current }
-    }
+    /// `List.onMove`'s `source` and `destination` against `rows`, as a `Move`, or nil when the
+    /// drop leaves everything where it was.
+    static func move(_ rows: [ShoppingRow], from source: IndexSet, to destination: Int) -> Move? {
+        guard source.count == 1, let from = source.first, rows.indices.contains(from) else { return nil }
+        var moved = rows
+        moved.move(fromOffsets: source, toOffset: destination)
+        guard moved != rows, let to = moved.firstIndex(where: { $0.id == rows[from].id }) else { return nil }
 
-    private func commitDrag() -> Bool {
-        guard let drag, let current = dragRows,
-              let index = current.firstIndex(where: { $0.id == drag.entryId }) else {
-            cancelDrag()
-            return false
+        func sectionIds(_ rows: [ShoppingRow]) -> [String] {
+            rows.compactMap { if case .header(let section, _) = $0 { section.id } else { nil } }
         }
-        var targetSectionId = ShoppingSection.defaultId
-        for row in current[..<index].reversed() {
-            if case .header(let section, _) = row {
-                targetSectionId = section.id
-                break
+        func entryId(at index: Int) -> String? {
+            guard moved.indices.contains(index), case .item(let entry, _) = moved[index] else { return nil }
+            return entry.id
+        }
+
+        switch rows[from] {
+        case .header:
+            let order = sectionIds(moved)
+            return order == sectionIds(rows) ? nil : .sections(order)
+        case .item(let entry, _):
+            let header = moved[..<to].reversed().lazy.compactMap { row -> ShoppingSection? in
+                if case .header(let section, _) = row { section } else { nil }
+            }.first
+            guard let header else {
+                // Above the pinned default header, which is the first row: first in that section.
+                guard let first = entryId(at: to + 2) else {
+                    return .entryToEnd(entry.id, section: ShoppingSection.defaultId)
+                }
+                return .entry(entry.id, section: ShoppingSection.defaultId, beforeId: nil, afterId: first)
             }
-        }
-
-        if targetSectionId == drag.sourceSectionId {
-            // The source section stayed open, so the neighbours on screen are the real ones.
-            func entryId(at i: Int) -> String? {
-                guard current.indices.contains(i), case .item(let entry, _) = current[i] else { return nil }
-                return entry.id
+            let before = entryId(at: to - 1)
+            let after = entryId(at: to + 1)
+            if header.collapsed || (before == nil && after == nil) {
+                return .entryToEnd(entry.id, section: header.id)
             }
-            viewModel.moveShoppingListEntry(
-                drag.entryId, toSection: targetSectionId,
-                beforeId: entryId(at: index - 1), afterId: entryId(at: index + 1)
-            )
-        } else {
-            // Dropped into a folded section: no position within it to read off the screen, so
-            // it goes to the end - and the section opens, so the entry is seen to arrive.
-            if viewModel.shoppingSections.first(where: { $0.id == targetSectionId })?.collapsed == true {
-                viewModel.setShoppingSectionCollapsed(targetSectionId, false)
-            }
-            viewModel.moveShoppingListEntry(drag.entryId, toSection: targetSectionId)
+            return .entry(entry.id, section: header.id, beforeId: before, afterId: after)
         }
-        withAnimation(.easeInOut(duration: 0.3)) {
-            self.drag = nil
-            dragRows = nil
-        }
-        return true
     }
 
-    private func cancelDrag() {
-        guard drag != nil || dragRows != nil else { return }
-        withAnimation(.easeInOut(duration: 0.3)) {
-            drag = nil
-            dragRows = nil
+    private func apply(_ move: Move?) {
+        switch move {
+        case .entry(let id, let section, let beforeId, let afterId):
+            viewModel.moveShoppingListEntry(id, toSection: section, beforeId: beforeId, afterId: afterId)
+        case .entryToEnd(let id, let section):
+            if viewModel.shoppingSections.first(where: { $0.id == section })?.collapsed == true {
+                viewModel.setShoppingSectionCollapsed(section, false)
+            }
+            viewModel.moveShoppingListEntry(id, toSection: section)
+        case .sections(let order):
+            viewModel.reorderShoppingSections(order)
+        case nil:
+            break
         }
     }
-}
-
-private struct RowDropDelegate: DropDelegate {
-    let onEnter: () -> Void
-    let onDrop: () -> Bool
-
-    func dropEntered(info: DropInfo) { onEnter() }
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
-    func performDrop(info: DropInfo) -> Bool { onDrop() }
 }
 
 /// From shopping.css.
@@ -326,7 +336,7 @@ enum ShoppingRowMetrics {
     static let tickHold: Duration = .milliseconds(350)
 }
 
-/// Tick, name, quantity, handle. Tapping the name opens Add item; a long press offers Move to
+/// Tick, name, quantity, handle. Tapping the name opens Add item; the list's context menu offers Move to
 /// section, which is also the way to move a row without dragging it.
 struct ShoppingRowContent: View {
     let entry: ShoppingListEntry
@@ -334,8 +344,7 @@ struct ShoppingRowContent: View {
     var onTick: () -> Void = {}
     var onQuantityChange: (Int) -> Void = { _ in }
     var onTap: () -> Void = {}
-    var onLongPress: (() -> Void)? = nil
-    var gripDrag: () -> NSItemProvider = { NSItemProvider() }
+    var onMoveToSection: (() -> Void)? = nil
 
     private var name: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -361,10 +370,9 @@ struct ShoppingRowContent: View {
             LarderTick(isOn: isTicked, label: L10n.shoppingListMarkBought(entry.productName), onToggle: onTick)
             name
                 .onTapGesture(perform: onTap)
-                .onLongPressGesture { onLongPress?() }
                 .accessibilityElement(children: .combine)
                 .accessibilityAddTraits(.isButton)
-                .accessibilityAction(named: L10n.shoppingSectionMoveTo) { onLongPress?() }
+                .accessibilityAction(named: L10n.shoppingSectionMoveTo) { onMoveToSection?() }
             LarderStepper(
                 value: Binding(get: { entry.quantity }, set: onQuantityChange),
                 range: 0...maxItemQuantity,
@@ -373,58 +381,12 @@ struct ShoppingRowContent: View {
             LarderIcon(.gripVertical, size: .custom(ShoppingRowMetrics.smallIcon))
                 .foregroundStyle(LarderColor.onSurfaceVariant)
                 .frame(width: ShoppingRowMetrics.gripWidth, height: LarderSize.touch)
-                .contentShape(Rectangle())
-                .onDrag(gripDrag) {
-                    Text(entry.productName)
-                        .larderFont(.titleSm)
-                        .foregroundStyle(LarderColor.onSurface)
-                        .padding(LarderSpace.s3)
-                        .background(LarderColor.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: LarderRadius.md))
-                }
-                .accessibilityLabel(L10n.shoppingListDragHandle)
+                // A hint only: the list picks the whole row up on a long press.
+                .accessibilityHidden(true)
         }
         .padding(.leading, LarderSpace.s1)
         .padding(.vertical, LarderSpace.s1)
         .frame(minHeight: ShoppingRowMetrics.minHeight)
-    }
-}
-
-/// Reordering the user's sections. The main list isn't shown because it stays pinned first.
-struct ShoppingSectionReorderSheet: View {
-    @ObservedObject var viewModel: NativePantryViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var order: [ShoppingSection] = []
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(L10n.shoppingSectionReorder)
-                .larderFont(.title)
-                .foregroundStyle(LarderColor.onSurface)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.top, LarderSpace.s6)
-                .padding(.horizontal, LarderSpace.s4)
-            List {
-                ForEach(order) { section in
-                    Text(L10n.shoppingSectionName(section))
-                        .larderFont(.body)
-                        .foregroundStyle(LarderColor.onSurface)
-                        .listRowBackground(Color.clear)
-                }
-                .onMove { from, to in
-                    order.move(fromOffsets: from, toOffset: to)
-                    viewModel.reorderShoppingSections(order.map(\.id))
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .environment(\.editMode, .constant(.active))
-            HStack {
-                Spacer()
-                LarderButton(L10n.doneButton) { dismiss() }
-            }
-            .padding(LarderSpace.s4)
-        }
-        .onAppear { order = viewModel.shoppingSections.filter { !$0.isDefault } }
     }
 }
 

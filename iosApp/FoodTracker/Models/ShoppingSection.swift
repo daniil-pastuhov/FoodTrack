@@ -79,7 +79,7 @@ public enum ShoppingSections {
 
     /// `entries` (already in the user's order) grouped under every section's header. An empty
     /// section still gets a header, so it can be dropped onto. `collapsedOverride`, when given,
-    /// replaces each section's stored flag - used to fold sections away during a drag.
+    /// replaces each section's stored flag - used to fold every section away while reordering.
     public static func rows(
         entries: [ShoppingListEntry],
         sections: [ShoppingSection],
@@ -92,8 +92,7 @@ public enum ShoppingSections {
         for section in ordered {
             let group = grouped[section.id] ?? []
             rows.append(.header(section, itemCount: group.count))
-            let collapsed = collapsedOverride?(section) ?? section.collapsed
-            if !collapsed {
+            if !(collapsedOverride?(section) ?? section.collapsed) {
                 rows.append(contentsOf: group.map { .item($0, sectionId: section.id) })
             }
         }
