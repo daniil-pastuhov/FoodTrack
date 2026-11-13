@@ -22,7 +22,7 @@ cd functions && npm ci && npm run lint && npm run typecheck  # backend (Node.js 
 cd functions && npm test                                    # backend tests (Vitest) against the Auth + Firestore emulators, project demo-foodtracker; needs Java 21+
 ```
 
-`functions/package.json` also has a `test:unit` script that calls Jest, which isn't installed; use `npm test`. CI (`.github/workflows/ci.yml`, job `functions`) lints, typechecks, builds and runs the emulator tests on changes under `functions/`; nothing deploys the backend automatically (`functions/README.md`, "Deploying from CI").
+Every backend test needs the emulators, so there is no separate unit-test script. CI (`.github/workflows/ci.yml`, job `functions`) lints, typechecks, builds and runs the emulator tests on changes under `functions/`; nothing deploys the backend automatically (`functions/README.md`, "Deploying from CI").
 
 **Releases** are cut with `scripts/release`, not by pushing to main: it bumps the version in `Version.xcconfig` (the single version of both apps: `androidApp/build.gradle.kts` reads it for `versionName`, and it is the Xcode project's base configuration, so no target sets `MARKETING_VERSION` itself) on a `release/vX.Y.Z` branch and writes `release-notes/vX.Y.Z/<play-locale>.txt`. CI (`.github/workflows/ci.yml`) publishes pushes to `release/v*` to Play internal and TestFlight, and on the PR's merge promotes that build to Play closed testing, submits the newest TestFlight build of the version for App Store review (`scripts/testflight.py appstore`), and tags `vX.Y.Z`. Main publishes nothing. See "Releasing" in README.md.
 

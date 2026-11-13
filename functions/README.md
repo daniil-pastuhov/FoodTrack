@@ -87,8 +87,9 @@ wrongly typed field uses the default.
 
 ## Local development
 
-Needs Node.js 24 and Java 21+ (the Firestore emulator). The `firebase` CLI is a dev dependency, so
-`npx firebase` works without a global install.
+Needs Node.js 24 and Java 21+ (the Firestore emulator). The `firebase` CLI is a dev dependency of
+`functions/`, so run every `npx firebase` command in this README from `functions/` (after
+`npm ci`); it finds `../firebase.json` and `../.firebaserc` from there, no global install needed.
 
 ```bash
 cd functions
@@ -145,16 +146,17 @@ which holds no secrets and may be committed), or set there beforehand:
 | `FUNCTIONS_SERVICE_ACCOUNT` | `recipe-functions@` | Service account the functions run as (`name@` = this project) |
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Vertex AI model id. Any Flash-tier Gemini; `gemini-2.x` models get thinking budget 0 |
 | `GEMINI_THINKING_LEVEL` | `LOW` | Thinking level for Gemini 3+ (`MINIMAL` where the model supports it; 3.8 Flash does not) |
-| `VERTEX_LOCATION` | `global` | Vertex AI location |
+| `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
 | `APPLE_APP_ID` | none | Numeric App Store app id (App Store Connect > App Information > Apple ID) |
 | `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` | none | App Store Server API key id and issuer id |
 | `APPLE_TEAM_ID`, `SIWA_KEY_ID` | none | Team id and Sign in with Apple key id, for token revocation |
 | `PLAY_RTDN_TOPIC` | `play-rtdn` | Pub/Sub topic Play publishes RTDNs to |
 | `BUDGET_ALERT_TOPIC` | `budget-alerts` | Pub/Sub topic the GCP budget publishes to |
 
-Secrets (Secret Manager, never in the repo):
+Secrets (Secret Manager, never in the repo), from `functions/`:
 
 ```bash
+cd functions
 npx firebase functions:secrets:set APPSTORE_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8   # In-App Purchase key
 npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8       # Sign in with Apple key
 ```
@@ -165,7 +167,8 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
    "Connect a Pub/Sub topic" set to `budget-alerts` (create the topic first). Without that topic
    connection the alert only emails you; the topic is what flips the kill switch.
 2. **Firestore**: create the `(default)` database in Native mode (a European location, e.g.
-   `eur3`), then `npx firebase deploy --only firestore` (rules, sweeper index and the TTL policy).
+   `eur3`), then `cd functions && npx firebase deploy --only firestore --project bestbefore-f9ee1`
+   (rules, sweeper index and the TTL policy).
    Create `config/runtime` (above).
 3. **Auth**: enable the Anonymous, Google and Apple providers. Leave Identity Platform's automatic
    clean-up of anonymous users **off**: it would delete paying anonymous buyers.
@@ -195,7 +198,8 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
    deploy; check the URL `firebase deploy` prints). Use "Request a Test Notification" to check it.
 9. **Sign in with Apple key** (Certificates, Identifiers & Profiles > Keys, Sign in with Apple
    enabled for `com.foodbest.ios`) as `SIWA_PRIVATE_KEY`, with its key id and the team id.
-10. Deploy: `npx firebase deploy --only functions,firestore` from the repo root.
+10. Deploy: `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
+   (lint and build run first as predeploy steps).
 11. Update the privacy policy, App Privacy label and Play Data safety form: purchases, a user id,
     ingredient names sent for generation, email when signed in.
 
@@ -206,5 +210,5 @@ Workload Identity Federation from GitHub to a deployer service account (no JSON 
 with Cloud Functions Admin, Cloud Run Admin, Service Account User on `recipe-functions@`, Secret
 Manager Viewer, Firebase Rules Admin, Cloud Datastore Index Admin, Cloud Scheduler Admin, Pub/Sub
 Editor and Artifact Registry Writer; the committed `functions/.env.bestbefore-f9ee1` so deploy
-does not prompt; and `npx firebase deploy --only functions,firestore --non-interactive --force`
+does not prompt; and, from `functions/` after `npm ci`, `npx firebase deploy --only functions,firestore --project bestbefore-f9ee1 --non-interactive --force`
 (`--force` because a removed function would otherwise block on a prompt).

@@ -174,8 +174,7 @@ provider's documentation when you get there.
 ## 10. Deploy
 
 - [ ] `cd functions && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
-      (lint and build run first as predeploy steps; functions/README.md says to run it from the
-      repo root, which needs the CLI installed there). This deploys the functions, `firestore.rules`
+      (lint and build run first as predeploy steps). This deploys the functions, `firestore.rules`
       (deny all clients), the sweeper index and the TTL policy.
 - [ ] Note the `appStoreNotifications` URL it prints and finish section 6.
 - [ ] Smoke test with a licence tester and a sandbox account (with `allowSandbox` on): buy a pack,
