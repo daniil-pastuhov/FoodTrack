@@ -30,7 +30,22 @@ struct LarderSheet<Content: View>: View {
             .padding(.horizontal, LarderSpace.s4)
             .padding(.bottom, LarderSpace.s6)
             .frame(maxWidth: .infinity, alignment: .leading)
+            // Its natural height, for a sheet presented with `fitsContent`; ignored otherwise.
+            .background {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: LarderSheetContentHeight.self, value: proxy.size.height)
+                }
+            }
         }
+    }
+}
+
+/// The natural height of the `LarderSheet` on screen, inside its scroll view.
+private struct LarderSheetContentHeight: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -40,33 +55,79 @@ private struct LarderSheetPresentation: ViewModifier {
     func body(content: Content) -> some View {
         content
             .presentationDetents(detents)
-            .presentationDragIndicator(.visible)
+            .larderSheetSurface()
+    }
+}
+
+/// A sheet as tall as its `LarderSheet` content, with `.large` above it for content that grows
+/// past the screen or for a drag up. It follows the content as it changes (a step, an error, a
+/// larger text size) until the person drags it to large, where it then stays.
+private struct LarderFittedSheetPresentation: ViewModifier {
+    @State private var contentHeight: CGFloat = 0
+    @State private var expanded = false
+
+    func body(content: Content) -> some View {
+        let fitted = Self.fittedDetent(contentHeight: contentHeight)
+        content
+            .onPreferenceChange(LarderSheetContentHeight.self) { contentHeight = $0 }
+            .presentationDetents(
+                [fitted, .large],
+                selection: Binding(get: { expanded ? .large : fitted }, set: { expanded = $0 == .large })
+            )
+            .larderSheetSurface()
+    }
+
+    /// The content's own height: the system adds the home indicator's inset below a height
+    /// detent itself. Medium until the content has been measured; the system keeps a height
+    /// detent within the large one.
+    static func fittedDetent(contentHeight: CGFloat) -> PresentationDetent {
+        guard contentHeight > 0 else { return .medium }
+        return .height(contentHeight.rounded(.up))
+    }
+}
+
+private extension View {
+    func larderSheetSurface() -> some View {
+        presentationDragIndicator(.visible)
             .presentationBackground(LarderColor.surfaceContainerHigh)
             .presentationCornerRadius(LarderRadius.xl)
+    }
+
+    @ViewBuilder
+    func larderSheetPresentation(detents: Set<PresentationDetent>, fitsContent: Bool) -> some View {
+        if fitsContent {
+            modifier(LarderFittedSheetPresentation())
+        } else {
+            modifier(LarderSheetPresentation(detents: detents))
+        }
     }
 }
 
 extension View {
     /// A native sheet with the Larder surface, medium and large detents by default.
+    /// `fitsContent` sizes it to its `LarderSheet` instead, with large still above (and
+    /// `detents` unused): for short content that would otherwise sit on an empty screen.
     func larderSheet<Content: View>(
         isPresented: Binding<Bool>,
         detents: Set<PresentationDetent> = [.medium, .large],
+        fitsContent: Bool = false,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         sheet(isPresented: isPresented, onDismiss: onDismiss) {
-            content().modifier(LarderSheetPresentation(detents: detents))
+            content().larderSheetPresentation(detents: detents, fitsContent: fitsContent)
         }
     }
 
     func larderSheet<Item: Identifiable, Content: View>(
         item: Binding<Item?>,
         detents: Set<PresentationDetent> = [.medium, .large],
+        fitsContent: Bool = false,
         onDismiss: (() -> Void)? = nil,
         @ViewBuilder content: @escaping (Item) -> Content
     ) -> some View {
         sheet(item: item, onDismiss: onDismiss) { value in
-            content(value).modifier(LarderSheetPresentation(detents: detents))
+            content(value).larderSheetPresentation(detents: detents, fitsContent: fitsContent)
         }
     }
 

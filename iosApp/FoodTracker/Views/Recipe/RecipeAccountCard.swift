@@ -102,6 +102,8 @@ struct RecipeAccountCard: View {
             LarderButton(L10n.recipeBuy, icon: .ticket, variant: .outline, fullWidth: true) {
                 model.showsBuySheet = true
             }
+        } else if credits.showsPurchasesBlocked {
+            note(L10n.recipePurchasesBlocked)
         }
     }
 

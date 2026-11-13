@@ -34,14 +34,21 @@ enum RecipeFailure: Equatable {
     /// Failed, nothing taken. `sameRequest` retries under the same id (a server error), else a
     /// new attempt (the generation itself failed).
     case serverFailed(RecipeKind, sameRequest: Bool)
-    /// Failed and counted: a failure caused by the request itself, past the ones the server
-    /// gives back. `taken` is what that kind of write takes.
+    /// Failed and counted: a failure caused by the request itself, once the account is past its
+    /// allowance of given-back failures (one for every ten recipes bought). `taken` is what that
+    /// kind of write takes.
     case serverRefused(RecipeKind, taken: Int)
     /// The server refused for a reason this version doesn't know. `taken` is 0 when nothing was
     /// taken.
     case serverUnrecognised(RecipeKind, taken: Int)
     case busy
+    /// Too many in a minute.
     case rateLimited
+    /// This account's limit for the day. Nothing taken; tomorrow (UTC).
+    case userDailyLimit
+    /// Three technical failures today, each given back. Nothing taken; tomorrow (UTC).
+    case infraFailureLimit
+    /// The whole service's limit for the day.
     case dailyCap
     /// A recipe or menu arrived; the count after it.
     case arrived(balance: Int)
@@ -210,26 +217,32 @@ final class RecipeViewModel: ObservableObject {
         let kind: RecipeKind = mode == .menu ? .menu : .recipe
         let request = request(for: items)
         guard !request.items.isEmpty, phase == .idle else { return }
-        let wire = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID())
-        guard !wire.ingredients.isEmpty else {
+        let fresh = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID())
+        guard !fresh.ingredients.isEmpty else {
             // Every ticked name was made of characters the server refuses.
             failure = .serverFailed(kind, sameRequest: false)
             return
         }
+        let wire = RecipeWire.requestToSend(fresh: fresh, held: credits.storage.pendingGeneration)
         credits.storage.pendingGeneration = wire
-        runServerWrite(wire)
+        // A held request may already be running or done on the server: asked after, not resent.
+        runServerWrite(wire, start: wire.requestId == fresh.requestId)
     }
 
     /// Sends the interrupted request again under its own id: "Try again" after a lost
     /// connection or a server error, and at launch.
     func resumeServerWrite() {
         guard phase == .idle, let wire = credits.storage.pendingGeneration else { return }
-        runServerWrite(wire)
+        runServerWrite(wire, start: false)
     }
 
     var hasInterruptedServerWrite: Bool { credits.storage.pendingGeneration != nil }
 
-    private func runServerWrite(_ wire: GenerateRequest) {
+    /// `start`: a new request, sent with `generateRecipe`. Otherwise (resuming a held one) and
+    /// for every IN_PROGRESS poll, `getGeneration` asks after it without spending a limited-use
+    /// App Check token, falling back to `generateRecipe` with the same id and inputs when the
+    /// server doesn't know the id or predates `getGeneration`.
+    private func runServerWrite(_ wire: GenerateRequest, start: Bool) {
         phase = .writingOnServer(wire.kind)
         let backend = credits.backend
         let credits = credits
@@ -237,12 +250,26 @@ final class RecipeViewModel: ObservableObject {
             // IN_PROGRESS is asked again every 3 s, up to 150 s for a recipe and 270 s for a
             // menu (as Android); past that it is a failure retried under the same id.
             let deadline = Date().addingTimeInterval(wire.kind == .menu ? 270 : 150)
+            var sendsRequest = start
+            // An older server without `getGeneration`: re-sending is how it is asked.
+            var serverLacksGetGeneration = false
             do {
                 try await credits.ensureUser()
                 while true {
-                    let response = try await backend.generate(wire)
+                    let response: GenerateResponse
+                    if sendsRequest || serverLacksGetGeneration {
+                        response = try await backend.generate(wire)
+                    } else {
+                        do {
+                            response = try await backend.generation(requestId: wire.requestId)
+                        } catch let error as RecipeServerError where error.fallsBackToGenerate {
+                            if error == .callableMissing { serverLacksGetGeneration = true }
+                            response = try await backend.generate(wire)
+                        }
+                    }
+                    sendsRequest = false
                     if response.status == .inProgress, Date() < deadline {
-                        credits.apply(balance: response.balance, costs: response.costs)
+                        credits.apply(response)
                         try await Task.sleep(for: .seconds(3))
                         continue
                     }
@@ -260,7 +287,7 @@ final class RecipeViewModel: ObservableObject {
     private func finishServerWrite(_ wire: GenerateRequest, _ response: GenerateResponse) {
         writeTask = nil
         phase = .idle
-        credits.apply(balance: response.balance, costs: response.costs)
+        credits.apply(response)
         credits.callSucceeded()
         let outcome = Self.outcome(of: response, for: wire, costs: credits.costs)
         if outcome.clearsRequest { credits.storage.pendingGeneration = nil }
@@ -282,24 +309,36 @@ final class RecipeViewModel: ObservableObject {
         credits.note(error)
         let serverError = error as? RecipeServerError ?? .server
         if !serverError.isRetryableWithSameID { credits.storage.pendingGeneration = nil }
-        switch serverError {
-        case .insufficientCredits:
+        if serverError == .insufficientCredits {
             if credits.canBuy { showsBuySheet = true }
-        case .busy:
-            failure = .busy
-        case .rateLimited:
-            failure = .rateLimited
-        case .dailyCap:
-            failure = .dailyCap
-        case .offline, .generationDisabled, .accountClosed:
-            // Lasting conditions: the tab's callouts say so.
-            break
-        case .server:
-            failure = .serverFailed(wire.kind, sameRequest: true)
-        case .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed:
-            failure = .serverFailed(wire.kind, sameRequest: false)
+            return
+        }
+        if let failure = Self.failure(for: serverError, kind: wire.kind, takenIfCharged: credits.costs.cost(of: wire)) {
+            self.failure = failure
+        }
+    }
+
+    /// The snackbar a failed `generateRecipe` call raises, or nil where a lasting condition's
+    /// callout (or the pack sheet, for INSUFFICIENT_CREDITS) says it instead. `takenIfCharged` is
+    /// what the request takes, for an unknown refusal that says it was charged.
+    static func failure(for error: RecipeServerError, kind: RecipeKind, takenIfCharged: Int) -> RecipeFailure? {
+        switch error {
+        case .insufficientCredits, .offline, .generationDisabled, .accountClosed:
+            return nil
+        case .busy: return .busy
+        case .rateLimited: return .rateLimited
+        case .userDailyLimit: return .userDailyLimit
+        case .infraFailureLimit: return .infraFailureLimit
+        case .dailyCap: return .dailyCap
+        case .server, .appCheckReplayed, .unknownRequest, .callableMissing:
+            // Nothing was decided on the server for this attempt: ask again under the same id.
+            return .serverFailed(kind, sameRequest: true)
+        case .requestIdReused, .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed:
+            // REQUEST_ID_REUSED: the stored request is already dropped, so "Try again" builds a
+            // new one under a new id.
+            return .serverFailed(kind, sameRequest: false)
         case .unrecognised(let charged):
-            failure = .serverUnrecognised(wire.kind, taken: charged ? credits.costs.cost(of: wire) : 0)
+            return .serverUnrecognised(kind, taken: charged ? takenIfCharged : 0)
         }
     }
 

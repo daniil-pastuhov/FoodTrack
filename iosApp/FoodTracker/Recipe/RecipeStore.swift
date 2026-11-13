@@ -48,13 +48,31 @@ struct UnconfirmedPurchase: Codable, Equatable, Identifiable, Sendable {
     let transactionID: UInt64
     let productID: String
     let credits: Int
+    /// Whether it was bought from the sheet with the consumption line shown; `verifyPurchase`
+    /// sends it on every resubmission. False for records an older build saved.
+    var consumptionConsent: Bool
 
     var id: UInt64 { transactionID }
+
+    init(transactionID: UInt64, productID: String, credits: Int, consumptionConsent: Bool = false) {
+        self.transactionID = transactionID
+        self.productID = productID
+        self.credits = credits
+        self.consumptionConsent = consumptionConsent
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        transactionID = try container.decode(UInt64.self, forKey: .transactionID)
+        productID = try container.decode(String.self, forKey: .productID)
+        credits = try container.decode(Int.self, forKey: .credits)
+        consumptionConsent = (try? container.decodeIfPresent(Bool.self, forKey: .consumptionConsent)) ?? false
+    }
 }
 
 /// The SwiftUI `purchase` environment action, passed in so the store sheet presents over the
-/// right scene.
-typealias RecipePurchaseAction = @MainActor (Product) async throws -> Product.PurchaseResult
+/// right scene, with the purchase's options (the `appAccountToken`).
+typealias RecipePurchaseAction = @MainActor (Product, Set<Product.PurchaseOption>) async throws -> Product.PurchaseResult
 
 enum RecipeStoreKit {
     static func loadPacks() async -> RecipePacksState {
@@ -73,11 +91,22 @@ enum RecipeStoreKit {
         transaction.productType == .consumable && RecipeWire.credits(forProductID: transaction.productID) != nil
     }
 
-    static func unconfirmed(_ transaction: Transaction) -> UnconfirmedPurchase {
+    static func unconfirmed(_ transaction: Transaction, consumptionConsent: Bool = false) -> UnconfirmedPurchase {
         UnconfirmedPurchase(
             transactionID: transaction.id,
             productID: transaction.productID,
-            credits: (RecipeWire.credits(forProductID: transaction.productID) ?? 0) * max(transaction.purchasedQuantity, 1)
+            credits: (RecipeWire.credits(forProductID: transaction.productID) ?? 0) * max(transaction.purchasedQuantity, 1),
+            consumptionConsent: consumptionConsent
         )
+    }
+
+    /// Whether a transaction's buyer consented to consumption information: its own record's
+    /// flag once it has one; otherwise whether the sheet started a purchase of that product,
+    /// with the line shown, no later than the transaction (an Ask to Buy approval arrives
+    /// after). A transaction from before this build has neither and reads false.
+    static func consumptionConsent(record: UnconfirmedPurchase?, consentStartedAt: Date?, purchaseDate: Date) -> Bool {
+        if let record { return record.consumptionConsent }
+        guard let consentStartedAt else { return false }
+        return consentStartedAt <= purchaseDate
     }
 }

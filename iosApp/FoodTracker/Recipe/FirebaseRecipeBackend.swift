@@ -18,12 +18,21 @@ struct FirebaseRecipeBackend: RecipeBackend {
         try await call("generateRecipe", request, timeout: request.kind == .menu ? 190 : 70)
     }
 
+    /// Not consumed on the server, so a normal (cached) App Check token rather than a limited-use
+    /// one: polling doesn't use up tokens.
+    func generation(requestId: String) async throws -> GenerateResponse {
+        try await call("getGeneration", GetGenerationRequest(requestId: requestId), limitedUseToken: false)
+    }
+
     func balance() async throws -> BalanceResponse {
         try await call("getBalance", EmptyRequest())
     }
 
-    func verifyPurchase(signedTransaction: String) async throws -> VerifyPurchaseResponse {
-        try await call("verifyPurchase", VerifyPurchaseRequest(signedTransaction: signedTransaction))
+    func verifyPurchase(signedTransaction: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse {
+        try await call(
+            "verifyPurchase",
+            VerifyPurchaseRequest(signedTransaction: signedTransaction, consumptionConsent: consumptionConsent)
+        )
     }
 
     func mergeBalance(sourceIdToken: String) async throws -> MergeBalanceResponse {
@@ -39,24 +48,33 @@ struct FirebaseRecipeBackend: RecipeBackend {
     private func call<Request: Encodable, Response: Decodable>(
         _ name: String,
         _ request: Request,
-        timeout: TimeInterval = 30
+        timeout: TimeInterval = 30,
+        limitedUseToken: Bool = true
     ) async throws -> Response {
         guard let app = appName.flatMap(FirebaseApp.app(name:)) ?? FirebaseApp.app() else {
             throw RecipeServerError.unauthenticated
         }
-        // Limited-use tokens cost nothing while the server doesn't consume them, and are what it
-        // will need once it does (CONTRACT.md, "Calling").
+        // A limited-use App Check token on every callable but `getGeneration`. `generateRecipe`
+        // and `verifyPurchase` consume theirs (CONTRACT.md, "Calling"), so none may be reused:
+        // the SDK asks App Check for a new one on every `call`, which covers each fallback to
+        // `generateRecipe` and each purchase resubmission, and nothing here keeps a token.
         var callable = FirebaseBootstrap.functions(app: app).httpsCallable(
             name,
-            options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true),
+            options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: limitedUseToken),
             requestAs: Request.self,
             responseAs: Response.self
         )
         callable.timeoutInterval = timeout
-        do {
-            return try await callable.call(request)
-        } catch {
-            throw Self.mapped(error)
+        var attempt = 0
+        while true {
+            do {
+                return try await callable.call(request)
+            } catch {
+                let mapped = Self.mapped(error)
+                // A replayed token: once more, with the new token the next call fetches.
+                guard RecipeServerError.retriesImmediately(mapped, attempt: attempt) else { throw mapped }
+                attempt += 1
+            }
         }
     }
 
@@ -81,6 +99,8 @@ struct FirebaseRecipeBackend: RecipeBackend {
         switch code {
         case .invalidArgument: return "invalid-argument"
         case .deadlineExceeded: return "deadline-exceeded"
+        case .notFound: return "not-found"
+        case .unimplemented: return "unimplemented"
         case .failedPrecondition: return "failed-precondition"
         case .permissionDenied: return "permission-denied"
         case .resourceExhausted: return "resource-exhausted"

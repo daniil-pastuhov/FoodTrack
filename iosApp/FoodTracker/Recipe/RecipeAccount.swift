@@ -114,7 +114,8 @@ final class RecipeAccount {
         guard let auth else { throw RecipeAccountError.notConfigured }
         guard let user = auth.currentUser else {
             do {
-                _ = try await auth.signIn(with: credential.credential)
+                let user = try await auth.signIn(with: credential.credential).user
+                await Self.forgetProfile(of: user)
                 return .signedIn
             } catch {
                 throw Self.mapped(error)
@@ -122,6 +123,7 @@ final class RecipeAccount {
         }
         do {
             _ = try await user.link(with: credential.credential)
+            await Self.forgetProfile(of: user)
             return .signedIn
         } catch {
             let nsError = error as NSError
@@ -151,6 +153,7 @@ final class RecipeAccount {
             await deleteMergeApp()
             throw Self.mapped(error)
         }
+        await Self.forgetProfile(of: signedIn)
         if installBalance <= 0 {
             // Nothing to move: the account simply takes over.
             try await adopt(signedIn)
@@ -216,6 +219,19 @@ final class RecipeAccount {
         }
         try await backend.deleteAccount(appleAuthorizationCode: credential.appleAuthorizationCode)
         signOut()
+    }
+
+    /// Overwrites the name Firebase copies onto the user from Google's ID token (Apple's
+    /// sign-in asks for the email only, so it brings none) with an empty one, after every
+    /// sign-in and link. The iOS SDK sends nothing for a nil name or photo (it has no
+    /// `deleteAttribute`), so an empty name is what actually reaches the server, and the photo
+    /// URL can only be removed there (Admin SDK). The app never reads either. A failure leaves
+    /// the sign-in as it is and logs nothing; the next sign-in tries again. The provider's own
+    /// record (`providerData`) keeps its copy of both, which only the server can remove.
+    static func forgetProfile(of user: User) async {
+        let change = user.createProfileChangeRequest()
+        change.displayName = ""
+        try? await change.commitChanges()
     }
 
     static func isNetwork(_ error: Error) -> Bool {

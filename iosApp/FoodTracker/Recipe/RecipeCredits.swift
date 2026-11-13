@@ -27,6 +27,9 @@ enum RecipeCreditsNotice: Equatable {
     case providerInUse
     case accountDeleted
     case accountActionFailed
+    /// `BUSY` from `deleteAccount` or `mergeBalance`: a recipe is still being written on the
+    /// account. Nothing changed; try again in a moment.
+    case accountBusy
 }
 
 /// Keys the paid route keeps on this phone, outside `AppSettings` and backups. A store
@@ -48,6 +51,15 @@ struct RecipeCreditsStorage {
         static let generationSavedAt = "com.foodtracker.recipe.pending_generation_saved_at"
         static let courses = "com.foodtracker.recipe.menu_courses"
         static let costs = "com.foodtracker.recipe.costs"
+        static let blocked = "com.foodtracker.recipe.purchases_blocked"
+        static let consentStarts = "com.foodtracker.recipe.consumption_consent_started"
+    }
+
+    /// When the sheet last started a purchase of each product with the consumption line shown,
+    /// by product id: how a transaction that arrives later (Ask to Buy) knows its consent.
+    var consentStarts: [String: Date] {
+        get { decode([String: Date].self, Key.consentStarts) ?? [:] }
+        nonmutating set { encode(newValue, Key.consentStarts) }
     }
 
     /// The last costs the server sent, whichever account it sent them to: they are the same for
@@ -78,9 +90,15 @@ struct RecipeCreditsStorage {
         return defaults.integer(forKey: Key.balance)
     }
 
-    func cache(balance: Int, for uid: String) {
+    /// Whether the server last said `uid` may not buy: kept with the balance.
+    func cachedPurchasesBlocked(for uid: String) -> Bool {
+        defaults.string(forKey: Key.balanceUID) == uid && defaults.bool(forKey: Key.blocked)
+    }
+
+    func cache(balance: Int, purchasesBlocked: Bool = false, for uid: String) {
         defaults.set(uid, forKey: Key.balanceUID)
         defaults.set(balance, forKey: Key.balance)
+        defaults.set(purchasesBlocked, forKey: Key.blocked)
     }
 
     /// The generation a lost connection, a server error or a long IN_PROGRESS interrupted,
@@ -131,6 +149,9 @@ final class RecipeCredits: ObservableObject {
     @Published private(set) var unconfirmed: [UnconfirmedPurchase] = []
     @Published private(set) var paymentPending = false
     @Published private(set) var serverPaused = false
+    /// Earlier purchases were refunded after the recipes were used: no way to buy shows, and a
+    /// line says why. What is in the balance still works.
+    @Published private(set) var purchasesBlocked = false
     @Published private(set) var attestationFailed = false
     /// A server call failed for want of a connection, or the phone has none.
     @Published private(set) var connectionLost = false
@@ -180,11 +201,14 @@ final class RecipeCredits: ObservableObject {
         }
     }
 
-    /// Buy is hidden while generation is paused, and while a payment is on its way, so nobody
-    /// pays twice.
+    /// Buy is hidden while generation is paused, while a payment is on its way, so nobody
+    /// pays twice, and for an account the server blocks from buying.
     var canBuy: Bool {
-        isPaidRouteAvailable && !serverPaused && unconfirmed.isEmpty && !paymentPending
+        isPaidRouteAvailable && !serverPaused && unconfirmed.isEmpty && !paymentPending && !purchasesBlocked
     }
+
+    /// Where Buy would be, the line that says why it isn't.
+    var showsPurchasesBlocked: Bool { isPaidRouteAvailable && purchasesBlocked }
 
     /// The first purchase asks where the recipes should live, once.
     var needsPurchaseChoice: Bool {
@@ -239,6 +263,7 @@ final class RecipeCredits: ObservableObject {
         #endif
         account = RecipeAccount.state(of: user)
         balance = account.uid.map { storage.cachedBalance(for: $0) ?? 0 }
+        purchasesBlocked = account.uid.map { storage.cachedPurchasesBlocked(for: $0) } ?? false
     }
 
     /// Asks the store for the packs, once per launch unless it failed.
@@ -264,7 +289,7 @@ final class RecipeCredits: ObservableObject {
         #endif
         do {
             let response = try await backend.balance()
-            apply(balance: response.balance, costs: response.costs)
+            apply(response)
             connectionLost = false
         } catch {
             note(error)
@@ -273,11 +298,14 @@ final class RecipeCredits: ObservableObject {
 
     // MARK: Results of server calls
 
-    /// A server answer's balance, and its costs when it carried readable ones.
-    func apply(balance newBalance: Int, costs newCosts: WireCosts? = nil) {
-        balance = newBalance
-        if let uid = account.uid { storage.cache(balance: newBalance, for: uid) }
-        if let received = newCosts?.value {
+    /// A server answer's balance, whether it blocks buying (absent: no), and its costs when it
+    /// carried readable ones.
+    func apply(_ response: some BalanceCarrying) {
+        let blocked = response.purchasesBlocked?.value ?? false
+        balance = response.balance
+        if purchasesBlocked != blocked { purchasesBlocked = blocked }
+        if let uid = account.uid { storage.cache(balance: response.balance, purchasesBlocked: blocked, for: uid) }
+        if let received = response.costs?.value {
             storage.costs = received
             if received != costs { costs = received }
         }
@@ -330,12 +358,18 @@ final class RecipeCredits: ObservableObject {
     }
 
     /// Takes the person through the store's own sheet for `pack`, then has the server add it.
-    func buy(_ pack: RecipePack, using purchase: RecipePurchaseAction) async -> RecipePurchaseOutcome {
+    /// `consumptionConsent`: the sheet showed the line about refunds and consumption.
+    func buy(
+        _ pack: RecipePack,
+        consumptionConsent: Bool,
+        using purchase: RecipePurchaseAction
+    ) async -> RecipePurchaseOutcome {
         guard !isConfirming else { return .cancelled }
         isConfirming = true
         defer { isConfirming = false }
         // A user and a working App Check token before any money moves: a build that can't
-        // attest would take payment it could never turn into recipes.
+        // attest would take payment it could never turn into recipes. This token only proves
+        // App Check works and is never sent; `verifyPurchase` fetches its own.
         do {
             _ = try await AppCheck.appCheck().limitedUseToken()
             try await ensureUser()
@@ -349,7 +383,13 @@ final class RecipeCredits: ObservableObject {
         }
         let result: Product.PurchaseResult
         do {
-            result = try await purchase(pack.product)
+            // Ties the purchase to the user it is for; the server accepts purchases without it.
+            let options: Set<Product.PurchaseOption> = account.uid
+                .map { [.appAccountToken(RecipeWire.appAccountToken(forUID: $0))] } ?? []
+            if consumptionConsent {
+                storage.consentStarts[pack.product.id] = Date()
+            }
+            result = try await purchase(pack.product, options)
         } catch {
             return .storeUnavailable
         }
@@ -380,18 +420,23 @@ final class RecipeCredits: ObservableObject {
         }
         guard submitting.insert(transaction.id).inserted else { return .notAddedYet }
         defer { submitting.remove(transaction.id) }
-        remember(RecipeStoreKit.unconfirmed(transaction))
+        let consent = RecipeStoreKit.consumptionConsent(
+            record: unconfirmed.first { $0.id == transaction.id },
+            consentStartedAt: storage.consentStarts[transaction.productID],
+            purchaseDate: transaction.purchaseDate
+        )
+        remember(RecipeStoreKit.unconfirmed(transaction, consumptionConsent: consent))
         do {
             try await ensureUser()
-            var response = try await verify(verification.jwsRepresentation)
+            var response = try await verify(verification.jwsRepresentation, consumptionConsent: consent)
             if response == nil {
                 // ACCOUNT_CLOSED: the user went away underneath us; start again as this install.
                 try await ensureUser()
-                response = try await verify(verification.jwsRepresentation)
+                response = try await verify(verification.jwsRepresentation, consumptionConsent: consent)
             }
             guard let response else { return notAddedYet() }
             callSucceeded()
-            apply(balance: response.balance, costs: response.costs)
+            apply(response)
             guard response.status.finishesTransaction else { return notAddedYet() }
             await transaction.finish()
             forget(transaction.id)
@@ -414,9 +459,9 @@ final class RecipeCredits: ObservableObject {
     }
 
     /// Nil on ACCOUNT_CLOSED, after signing the closed account out.
-    private func verify(_ jws: String) async throws -> VerifyPurchaseResponse? {
+    private func verify(_ jws: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse? {
         do {
-            return try await backend.verifyPurchase(signedTransaction: jws)
+            return try await backend.verifyPurchase(signedTransaction: jws, consumptionConsent: consumptionConsent)
         } catch RecipeServerError.accountClosed {
             note(RecipeServerError.accountClosed)
             return nil
@@ -521,12 +566,12 @@ final class RecipeCredits: ObservableObject {
         do {
             let response = try await accountService.completeMerge(merge)
             account = accountService.state
-            apply(balance: response.balance, costs: response.costs)
+            apply(response)
             callSucceeded()
         } catch {
             await accountService.cancelMerge()
             note(error)
-            notice = .signInFailed
+            notice = Self.accountNotice(for: error, otherwise: .signInFailed)
         }
     }
 
@@ -543,7 +588,7 @@ final class RecipeCredits: ObservableObject {
 
     #if DEBUG
     /// `-demoRecipeCredits <n>` with `-demoRecipeState <state>` (phone, account, unconfirmed,
-    /// pending, paused, offline): the paid route's screens without a server or a store, for
+    /// pending, paused, offline, blocked): the paid route's screens without a server or a store, for
     /// screenshots and layout checks. Nothing is sent anywhere.
     func showDemo(balance: Int, state: String?) {
         demoMode = true
@@ -556,6 +601,7 @@ final class RecipeCredits: ObservableObject {
         case "pending": paymentPending = true
         case "paused": serverPaused = true
         case "offline": connectionLost = true
+        case "blocked": purchasesBlocked = true
         default: break
         }
     }
@@ -583,7 +629,13 @@ final class RecipeCredits: ObservableObject {
             return
         } catch {
             note(error)
-            notice = .accountActionFailed
+            notice = Self.accountNotice(for: error, otherwise: .accountActionFailed)
         }
+    }
+
+    /// What an account call's failure tells the person: a generation in flight has its own
+    /// message, anything else `otherwise`.
+    static func accountNotice(for error: Error, otherwise: RecipeCreditsNotice) -> RecipeCreditsNotice {
+        (error as? RecipeServerError) == .busy ? .accountBusy : otherwise
     }
 }

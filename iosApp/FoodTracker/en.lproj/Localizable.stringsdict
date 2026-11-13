@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Couldn't make a recipe from these items. %d recipe was taken.</string>
+            <string>Couldn't make a recipe from these items. It used %d recipe, because the attempt still cost us to run. Try fewer or different items.</string>
             <key>other</key>
-            <string>Couldn't make a recipe from these items. %d recipes were taken.</string>
+            <string>Couldn't make a recipe from these items. It used %d recipes, because the attempt still cost us to run. Try fewer or different items.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -813,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Couldn't make a menu from these items. %d recipe was taken.</string>
+            <string>Couldn't make a menu from these items. It used %d recipe, because the attempt still cost us to run. Try fewer or different items.</string>
             <key>other</key>
-            <string>Couldn't make a menu from these items. %d recipes were taken.</string>
+            <string>Couldn't make a menu from these items. It used %d recipes, because the attempt still cost us to run. Try fewer or different items.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>
