@@ -1,6 +1,13 @@
 package com.foodtracker.android.ui.screens
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.compose.foundation.background
@@ -21,6 +28,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
@@ -35,6 +44,7 @@ import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NoPhotography
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material.icons.filled.PlaylistAdd
@@ -60,6 +70,8 @@ import androidx.compose.runtime.Composable
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -148,6 +160,31 @@ fun ScannerScreen(
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     var currentMode by remember { mutableStateOf(enabledModes.first()) }
     val context = LocalContext.current
+    // Every way into the scanner lands here - the scan buttons, the Add/Edit overlay and the
+    // launcher shortcut - so the permission is settled here rather than by each caller.
+    var cameraAccess by remember { mutableStateOf(CameraAccess(granted = hasCameraPermission(context))) }
+    // The multiple-permissions contract even for one permission: it returns no entry for a
+    // cancelled request, where the single one reports a refusal. A shortcut's cold start needs
+    // that difference: the root's notification request lands in the same frame, and the system
+    // cancels whichever of the two comes second.
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        cameraAccess = cameraAccess.answered(results[Manifest.permission.CAMERA])
+    }
+    fun requestCameraIfNeeded() {
+        if (cameraAccess.shouldRequest) {
+            cameraAccess = cameraAccess.requested()
+            cameraPermissionLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+        }
+    }
+    LaunchedEffect(Unit) { requestCameraIfNeeded() }
+    // Catches the way back from "Open settings" with the camera allowed, and asks again once
+    // whatever cancelled the request has gone.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        cameraAccess = cameraAccess.resumed(hasCameraPermission(context))
+        requestCameraIfNeeded()
+    }
     var imageCapture by remember { mutableStateOf<ImageCapture?>(null) }
     var isCapturingPhoto by remember { mutableStateOf(false) }
     var capturedPhotoUri by remember { mutableStateOf<String?>(null) }
@@ -223,7 +260,7 @@ fun ScannerScreen(
 
     // The host's own predictive-back handler would otherwise leave the scanner without going
     // through the prompt above, taking the queue out of view but not out of state.
-    BackHandler(enabled = state.batchQueue.isNotEmpty()) {
+    BackHandler(enabled = cameraAccess.granted && state.batchQueue.isNotEmpty()) {
         confirmDiscardQueue = true
     }
 
@@ -262,6 +299,31 @@ fun ScannerScreen(
             isReadingReceipt = false
             pendingReceiptUri = null
         }
+    }
+
+    if (!cameraAccess.granted) {
+        if (cameraAccess.refused) {
+            CameraOffState(
+                // Revoking the permission kills the process, so no queue reaches this state;
+                // going through the discard keeps that true without a prompt to host here.
+                onClose = { discardQueueAndLeave() },
+                onOpenSettings = { context.startActivity(appSettingsIntent(context)) },
+                onAddByHand = {
+                    // In Add/Edit the form is what is underneath, so going back is adding by hand.
+                    if (showManualEntryShortcut) {
+                        onProceedToAddItem(null, null, null, null, state.detectedDate, null, state.suggestedExpiry)
+                    } else {
+                        onNavigateBack()
+                    }
+                },
+                modifier = modifier
+            )
+        } else {
+            // Blank behind the system dialog: telling someone the camera is off before they
+            // have answered would be wrong.
+            Box(modifier = modifier.fillMaxSize().background(Color.Black))
+        }
+        return
     }
 
     Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
@@ -460,11 +522,11 @@ fun ScannerScreen(
                             CameraScanMode.RECEIPT -> R.string.reticle_hint_receipt
                         }
                     ),
-                    color = Color.White.copy(alpha = 0.85f),
+                    color = Color.White,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.72f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 )
             }
@@ -963,6 +1025,101 @@ fun ScannerScreen(
  * another mode.
  */
 /** Lets go of the single-item result on screen, so the camera takes the next barcode again. */
+/** Where the scanner stands on the camera permission. */
+internal data class CameraAccess(
+    val granted: Boolean,
+    val requestInFlight: Boolean = false,
+    val refused: Boolean = false
+) {
+    val shouldRequest: Boolean get() = !granted && !requestInFlight && !refused
+
+    fun requested(): CameraAccess = copy(requestInFlight = true)
+
+    /** [answer] is null when the system cancelled the request without showing it, which is not
+     *  a refusal: [shouldRequest] turns true again so it can be asked later. */
+    fun answered(answer: Boolean?): CameraAccess =
+        copy(granted = answer == true, requestInFlight = false, refused = answer == false)
+
+    fun resumed(granted: Boolean): CameraAccess = copy(granted = granted, refused = refused && !granted)
+}
+
+private fun hasCameraPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
+/** This app's page in system settings, where a refused camera permission is turned back on. */
+internal fun appSettingsIntent(context: Context): Intent =
+    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+
+/** Stands in for the whole scanner when the camera is refused: every mode needs the camera, so
+ *  the mode chips and the torch go with it and only the way out stays. */
+@Composable
+private fun CameraOffState(
+    onClose: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onAddByHand: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier.fillMaxSize().background(Color.Black)) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 32.dp, vertical = 96.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.NoPhotography,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(R.string.camera_off_title),
+                color = Color.White,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.camera_off_body),
+                color = Color.White,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.camera_off_open_settings))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onAddByHand,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(stringResource(R.string.camera_off_add_by_hand))
+            }
+        }
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .padding(top = 40.dp, start = 16.dp)
+                .size(40.dp)
+                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = stringResource(R.string.back_content_description),
+                tint = Color.White
+            )
+        }
+    }
+}
+
 @Composable
 private fun ScanAgainButton(onClick: () -> Unit) {
     TextButton(onClick = onClick, contentPadding = PaddingValues(horizontal = 8.dp)) {

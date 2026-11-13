@@ -1,10 +1,13 @@
+import AVFoundation
 import SwiftUI
 import UIKit
 
 public struct ScannerSheetView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject var viewModel: NativePantryViewModel
 
+    @State private var cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
     @State private var mode: IOSCameraMode
     @State private var showManualAdd: Bool = false
     @State private var cameraController: CameraScannerViewController?
@@ -135,6 +138,48 @@ public struct ScannerSheetView: View {
     }
 
     public var body: some View {
+        Group {
+            switch cameraAccess {
+            case .authorized:
+                scanner
+            case .notDetermined:
+                // Blank behind the system prompt: telling someone the camera is off before they
+                // have been asked would be wrong.
+                Color.black.ignoresSafeArea()
+            default:
+                CameraOffView(
+                    // Changing the permission relaunches the app, so no queue reaches this
+                    // state; going through the discard keeps that true without a prompt here.
+                    onClose: { discardQueueAndDismiss() },
+                    onOpenSettings: {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    },
+                    onAddByHand: {
+                        // In Add/Edit the form is what is underneath, so closing is adding by hand.
+                        if showManualEntryShortcut {
+                            onProceedToAdd(nil, nil, nil, nil, viewModel.detectedDate, nil, viewModel.suggestedExpiry)
+                        }
+                        dismiss()
+                    }
+                )
+            }
+        }
+        .task {
+            guard cameraAccess == .notDetermined else { return }
+            _ = await AVCaptureDevice.requestAccess(for: .video)
+            cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
+        }
+        // Catches the way back from "Open settings", should the app survive the change.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                cameraAccess = AVCaptureDevice.authorizationStatus(for: .video)
+            }
+        }
+    }
+
+    private var scanner: some View {
         ZStack {
             // Live Camera View
             CameraScannerView(
@@ -747,6 +792,65 @@ public struct ScannerSheetView: View {
     }
 }
 
+
+/// Stands in for the whole scanner when the camera is refused: every mode needs the camera, so
+/// the mode chips and the torch go with it and only the way out stays.
+private struct CameraOffView: View {
+    let onClose: () -> Void
+    let onOpenSettings: () -> Void
+    let onAddByHand: () -> Void
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.black.ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    Image(systemName: "video.slash.fill")
+                        .font(.system(size: 40))
+                        .accessibilityHidden(true)
+                    Text(L10n.cameraOffTitle)
+                        .font(.title3)
+                        .fontWeight(.bold)
+                    Text(L10n.cameraOffBody)
+                        .font(.subheadline)
+                    Button(action: onOpenSettings) {
+                        Text(L10n.cameraOffOpenSettings)
+                            .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.accentColor)
+                            .cornerRadius(12)
+                    }
+                    .padding(.top, 12)
+                    Button(action: onAddByHand) {
+                        Label(L10n.cameraOffAddByHand, systemImage: "square.and.pencil")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                }
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .padding(.vertical, 72)
+                .frame(maxWidth: .infinity)
+            }
+            .defaultScrollAnchor(.center)
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(10)
+                    .background(Color.black.opacity(0.6))
+                    .clipShape(Circle())
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+        }
+    }
+}
 
 /// The batch queue, docked over the live camera so scanning and reviewing happen on one screen.
 ///

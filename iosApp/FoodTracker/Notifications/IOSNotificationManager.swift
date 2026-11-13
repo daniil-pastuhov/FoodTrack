@@ -157,7 +157,10 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         let content = UNMutableNotificationContent()
         let brandSuffix = (brand?.isEmpty == false) ? " (\(brand!))" : ""
         let nameWithBrand = "\(name)\(brandSuffix)"
-        if daysRemaining <= 0 {
+        if daysRemaining < 0 {
+            content.title = L10n.notifTitlePast
+            content.body = L10n.notifBodyPast(nameWithBrand, days: -daysRemaining)
+        } else if daysRemaining == 0 {
             content.title = L10n.notifTitleToday
             content.body = L10n.notifBodyToday(nameWithBrand)
         } else {

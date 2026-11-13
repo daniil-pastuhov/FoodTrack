@@ -141,6 +141,10 @@
     <string name="date_picker_cancel">Cancel</string>
 
     <string name="manual_entry_button">Manual Entry</string>
+    <string name="camera_off_title">The camera is off</string>
+    <string name="camera_off_body">BestBefore needs the camera to scan. You can still add food by hand.</string>
+    <string name="camera_off_open_settings">Open settings</string>
+    <string name="camera_off_add_by_hand">Type it in</string>
     <string name="scan_mode_batch">Batch</string>
     <string name="reticle_hint_batch">Keep scanning — everything lands in the list below</string>
     <string name="scan_mode_receipt">Receipt</string>
@@ -297,10 +301,15 @@
     <string name="notification_digest_channel_desc">One notification listing what expires in the coming week</string>
     <string name="notif_title_today">Product Expires Today! ⚠️</string>
     <string name="notif_title_soon">Product Expiring Soon! ⚠️</string>
+    <string name="notif_title_past">Worth a look</string>
     <string name="notif_body_today_format">%1$s expires today. Make sure to consume it!</string>
     <plurals name="notif_body_soon_format">
         <item quantity="one">%1$s expires in %2$d day. Make sure to consume it!</item>
         <item quantity="other">%1$s expires in %2$d days. Make sure to consume it!</item>
+    </plurals>
+    <plurals name="notif_body_past_format">
+        <item quantity="one">%1$s is %2$d day past its date.</item>
+        <item quantity="other">%1$s is %2$d days past its date.</item>
     </plurals>
     <string name="notif_fallback_title">Food Expiration Alert</string>
     <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>
