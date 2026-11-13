@@ -16,7 +16,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.core.content.ContextCompat
 import com.foodtracker.android.location.StoreGeofenceManager
 import com.foodtracker.android.ui.FoodTrackerRoot
+import com.foodtracker.android.ui.navigation.AddItemMode
 import com.foodtracker.android.ui.navigation.LarderRoute
+import com.foodtracker.backup.RestoreMode
 import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.google.android.gms.location.LocationServices
@@ -65,6 +67,7 @@ class MainActivity : ComponentActivity() {
         // app from the launcher landing on Add Item. A newer intent that caused the recreation
         // arrives separately through onNewIntent.
         if (savedInstanceState == null) {
+            if (isDebuggable()) loadDemoFromIntent(intent)
             applyScreenFromIntent(intent)
         }
         // Re-asserted on every start rather than only when Settings changes: geofences are
@@ -84,6 +87,39 @@ class MainActivity : ComponentActivity() {
             )
         }
     }
+
+    /**
+     * Debug builds only, for scripts/android_screenshots.sh: `--es demoBackup <path>` replaces
+     * everything with that backup file, as Settings' Replace restore does, and `--es demoTab
+     * <home|calendar|shopping|settings>` opens that tab, or `edit:<item id>` that item's Edit
+     * screen. The counterpart of iOS's `-demoBackup` and `-demoTab` launch arguments. A restore
+     * also marks onboarding done, so onboarding is skipped from the next launch on.
+     */
+    private fun loadDemoFromIntent(intent: Intent) {
+        intent.getStringExtra(EXTRA_DEMO_BACKUP)?.let { path ->
+            val raw = runCatching { java.io.File(path).readText() }.getOrNull()
+            if (raw == null) {
+                android.util.Log.w("DemoBackup", "Can't read $path")
+            } else {
+                stateHolder.restoreBackup(raw, RestoreMode.REPLACE) { result, summary ->
+                    android.util.Log.i("DemoBackup", "$result, $summary")
+                }
+            }
+        }
+        val tab = intent.getStringExtra(EXTRA_DEMO_TAB)
+        when {
+            tab == null -> Unit
+            tab.startsWith("edit:") ->
+                currentScreenState.value = LarderRoute.AddItem(AddItemMode.Edit(tab.removePrefix("edit:")))
+            tab == "home" -> currentScreenState.value = LarderRoute.Home
+            tab == "calendar" -> currentScreenState.value = LarderRoute.Calendar
+            tab == "shopping" -> currentScreenState.value = LarderRoute.Shopping
+            tab == "settings" -> currentScreenState.value = LarderRoute.Settings
+        }
+    }
+
+    private fun isDebuggable(): Boolean =
+        (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
 
     /** Re-derives the pantry when the date may have moved under it. See
      *  [PantryStateHolder.refreshToday] for why its own midnight timer isn't enough. */
@@ -234,6 +270,9 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        private const val EXTRA_DEMO_BACKUP = "demoBackup"
+        private const val EXTRA_DEMO_TAB = "demoTab"
+
         const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
 
         /** Sent by the expiry widgets' title taps and the expiry/digest notification taps.
