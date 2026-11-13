@@ -3,7 +3,9 @@
  * Everything a client sends is validated here before it reaches Firestore or the LLM.
  */
 import { HttpsError } from "firebase-functions/v2/https";
+import { createHash } from "node:crypto";
 import {
+  type Costs,
   GenerationKind,
   LANGUAGES,
   MAX_ALLERGENS,
@@ -84,12 +86,16 @@ export interface Menu {
 
 export type GenerateStatus = "DONE" | "IN_PROGRESS" | "FAILED";
 
+/** Credits per request kind, in every response that carries `balance`. */
+export type CostsWire = Costs;
+
 export interface GenerateResponse {
   status: GenerateStatus;
   recipe?: Recipe;
   menu?: Menu;
   balance: number;
   charged: boolean;
+  costs: CostsWire;
 }
 
 export type VerifyStatus = "GRANTED" | "ALREADY_GRANTED" | "REJECTED_PERMANENT" | "RETRY";
@@ -97,6 +103,7 @@ export type VerifyStatus = "GRANTED" | "ALREADY_GRANTED" | "REJECTED_PERMANENT" 
 export interface VerifyResponse {
   status: VerifyStatus;
   balance: number;
+  costs: CostsWire;
 }
 
 export type VerifyRequest =
@@ -114,7 +121,11 @@ export type ErrorReason =
   | "GENERATION_DISABLED"
   | "ACCOUNT_CLOSED"
   | "RATE_LIMITED"
+  | "USER_DAILY_LIMIT"
+  | "INFRA_FAILURE_LIMIT"
   | "DAILY_CAP"
+  | "REQUEST_ID_REUSED"
+  | "APP_CHECK_REPLAYED"
   | "RECENT_SIGN_IN_REQUIRED"
   | "MERGE_NOT_ALLOWED";
 
@@ -224,7 +235,27 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
   };
 }
 
-const PLAY_TOKEN = /^[A-Za-z0-9._:-]{20,2048}$/;
+/**
+ * Binds a requestId to its inputs: sha256 of the validated request without the id. A stored
+ * generation is returned for a retry only when the hash matches.
+ */
+export function inputHashOf(req: GenerateRequest): string {
+  const inputs = req;
+  const canonical = JSON.stringify({
+    kind: inputs.kind,
+    courses: inputs.courses ?? null,
+    config: [
+      inputs.config.difficulty, inputs.config.detail, inputs.config.servings, inputs.config.maxMinutes,
+      inputs.config.mealType, inputs.config.diet, inputs.config.language,
+    ],
+    ingredients: inputs.ingredients.map((i) => [i.name, i.expiresOn, i.quantity]),
+    allergens: inputs.allergens,
+    today: inputs.today,
+  });
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+const PLAY_TOKEN =/^[A-Za-z0-9._:-]{20,2048}$/;
 const JWS = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 export function validateVerifyRequest(v: unknown): VerifyRequest {

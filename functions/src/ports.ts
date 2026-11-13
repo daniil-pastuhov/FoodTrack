@@ -89,23 +89,47 @@ export interface AppleTokenRevoker {
 // --- LLM --------------------------------------------------------------------------------------
 
 /**
- * Failure classes. `infra` (timeout, 5xx, quota) is always refunded; `content` (safety block,
- * unusable output) is refunded at most CONTENT_REFUNDS_PER_DAY times per user per day.
+ * Failure classes. `infra` (timeout, 5xx, quota, token-ceiling abort) is always refunded, up to a
+ * per-user daily ceiling after which generation is refused; `content` (safety block, MAX_TOKENS,
+ * unusable output) is refunded within an allowance tied to the credits the user has paid for.
  */
 export type FailureClass = "infra" | "content";
 
+/** Token counts of one LLM call, from the response's usageMetadata. */
+export interface LlmUsage {
+  inputTokens: number;
+  /** Visible output (candidatesTokenCount). */
+  outputTokens: number;
+  thinkingTokens: number;
+  model: string;
+  finishReason: string | null;
+}
+
 export class GenerationError extends Error {
-  constructor(readonly failureClass: FailureClass, message: string) {
+  /**
+   * `usage`: what the call is known to have used. Absent means unknown (the call may have been
+   * billed for anything up to the worst case), so the spend estimate keeps the reserved worst case.
+   */
+  constructor(readonly failureClass: FailureClass, message: string, readonly usage?: LlmUsage) {
     super(message);
   }
 }
 
+export interface GenerationLimits {
+  maxOutputTokens: number;
+  /** Abort the call, as an infrastructure failure, once output + thinking is observed above this. */
+  hardTokenCeiling: number;
+}
+
+export interface GenerationResult {
+  /** The model's parsed JSON, validated by the caller against the expected shape. */
+  output: unknown;
+  usage: LlmUsage;
+}
+
 export interface RecipeGenerator {
-  /**
-   * Returns the model's parsed JSON (validated by the caller against the expected shape), or
-   * throws GenerationError. Must honour `signal`.
-   */
-  generate(request: GenerateRequest, signal: AbortSignal): Promise<unknown>;
+  /** Throws GenerationError. Must honour `signal` and `limits`. */
+  generate(request: GenerateRequest, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult>;
 }
 
 // --- Wiring -----------------------------------------------------------------------------------

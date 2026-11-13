@@ -25,6 +25,7 @@ import { generateRecipe as generateCore } from "./core/generation";
 import { verifyPurchase as verifyCore } from "./core/purchases";
 import { deleteAccount as deleteCore, getBalance as balanceCore, mergeBalance as mergeCore } from "./core/account";
 import { sweep } from "./core/sweeper";
+import { CallThrottle, LogSampler, assertFreshAppCheck, clientIp } from "./core/guard";
 import {
   handleAppleNotification,
   handleBudgetAlert,
@@ -54,7 +55,7 @@ const siwaPrivateKey = defineSecret("SIWA_PRIVATE_KEY");
 const playRtdnTopic = defineString("PLAY_RTDN_TOPIC", { default: "play-rtdn" });
 const budgetTopic = defineString("BUDGET_ALERT_TOPIC", { default: "budget-alerts" });
 
-setGlobalOptions({ region: REGION, serviceAccount, maxInstances: 5, memory: "256MiB" });
+setGlobalOptions({ region: REGION, serviceAccount, maxInstances: 3, memory: "256MiB" });
 
 initializeApp();
 
@@ -113,8 +114,17 @@ function getDeps(): Deps {
   return deps;
 }
 
-function callerOf(request: CallableRequest): Caller {
+const throttle = new CallThrottle();
+
+/**
+ * The verified caller, after the checks that cost no Firestore access: auth, App Check replay
+ * (`consume` callables), and the per-instance uid and IP throttles.
+ */
+function callerOf(request: CallableRequest, consume = false): Caller {
   if (!request.auth) throw new HttpsError("unauthenticated", "Sign-in required");
+  assertFreshAppCheck(request.app, consume);
+  const raw = request.rawRequest;
+  throttle.admit(request.auth.uid, clientIp(raw.headers, raw.socket?.remoteAddress), Date.now());
   return {
     uid: request.auth.uid,
     signInProvider: request.auth.token.firebase?.sign_in_provider ?? "",
@@ -133,38 +143,50 @@ async function guarded<T>(name: string, fn: () => Promise<T>): Promise<T> {
   }
 }
 
-const callable = { enforceAppCheck: true, invoker: "public" } as const;
+// Public invoker is required for callables (Firebase Auth and App Check are checked in the
+// function). No CORS: the only clients are the mobile apps, so browsers get no access.
+const callable = { enforceAppCheck: true, invoker: "public", cors: false } as const;
 
 // --- Callables --------------------------------------------------------------------------------
 
 export const verifyPurchase = onCall(
-  { ...callable, consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS, secrets: [appStorePrivateKey], timeoutSeconds: 60 },
-  (request) => guarded("verifyPurchase", () => verifyCore(getDeps(), callerOf(request), request.data)),
+  {
+    ...callable,
+    consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
+    secrets: [appStorePrivateKey],
+    timeoutSeconds: 60,
+    maxInstances: 3,
+  },
+  (request) =>
+    guarded("verifyPurchase", () => verifyCore(getDeps(), callerOf(request, CONSUME_APP_CHECK_TOKENS), request.data)),
 );
 
+// Concurrency 20 x 5 instances = 100 calls at once, far more than the spend breaker lets reserve.
 export const generateRecipe = onCall(
   {
     ...callable,
     consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
     timeoutSeconds: GENERATE_TIMEOUT_SECONDS,
-    maxInstances: 10,
+    maxInstances: 5,
     concurrency: 20,
     cpu: 1,
     memory: "512MiB",
   },
-  (request) => guarded("generateRecipe", () => generateCore(getDeps(), callerOf(request), request.data)),
+  (request) =>
+    guarded("generateRecipe", () => generateCore(getDeps(), callerOf(request, CONSUME_APP_CHECK_TOKENS), request.data)),
 );
 
-export const getBalance = onCall({ ...callable, timeoutSeconds: 10 }, (request) =>
+export const getBalance = onCall({ ...callable, timeoutSeconds: 10, maxInstances: 3 }, (request) =>
   guarded("getBalance", () => balanceCore(getDeps(), callerOf(request))),
 );
 
-export const mergeBalance = onCall({ ...callable, timeoutSeconds: 30 }, (request) =>
+export const mergeBalance = onCall({ ...callable, timeoutSeconds: 30, maxInstances: 2 }, (request) =>
   guarded("mergeBalance", () => mergeCore(getDeps(), callerOf(request), request.data)),
 );
 
-export const deleteAccount = onCall({ ...callable, secrets: [siwaPrivateKey], timeoutSeconds: 120 }, (request) =>
-  guarded("deleteAccount", () => deleteCore(getDeps(), callerOf(request), request.data)),
+export const deleteAccount = onCall(
+  { ...callable, secrets: [siwaPrivateKey], timeoutSeconds: 120, maxInstances: 2 },
+  (request) => guarded("deleteAccount", () => deleteCore(getDeps(), callerOf(request), request.data)),
 );
 
 // --- Background -------------------------------------------------------------------------------
@@ -201,9 +223,13 @@ export const playNotifications = onMessagePublished(
 
 export const budgetKillSwitch = onMessagePublished({ topic: budgetTopic, maxInstances: 1 }, async (event) => {
   const d = getDeps();
-  const config = await loadRuntimeConfig(d.db);
+  const config = await loadRuntimeConfig(d.db, d.logger);
   await handleBudgetAlert(d, decodePubSub(event.data.message.data), config.budgetKillFraction);
 });
+
+/** Apple's signed payloads are a few KB; anything far larger is not from Apple. */
+const APPLE_BODY_MAX_BYTES = 64 * 1024;
+const rejectedLog = new LogSampler(60_000);
 
 export const appStoreNotifications = onRequest(
   { invoker: "public", maxInstances: 2, timeoutSeconds: 30 },
@@ -212,9 +238,19 @@ export const appStoreNotifications = onRequest(
       res.status(405).send("POST only");
       return;
     }
+    if ((req.rawBody?.length ?? 0) > APPLE_BODY_MAX_BYTES || !req.is("application/json")) {
+      res.status(400).send("rejected");
+      return;
+    }
     try {
       const result = await handleAppleNotification(getDeps(), req.body);
-      logger.info("App Store notification", { ...result });
+      if (result.httpStatus === 200) {
+        logger.info("App Store notification", { ...result });
+      } else {
+        // A flood of forged bodies must not become a flood of log lines.
+        const sample = rejectedLog.take(Date.now());
+        if (sample.log) logger.warn("App Store notification rejected", { ...result, suppressedSinceLast: sample.suppressed });
+      }
       res.status(result.httpStatus).send(result.httpStatus === 200 ? "OK" : "rejected");
     } catch (e) {
       logger.error("App Store notification failed", { error: String(e) });

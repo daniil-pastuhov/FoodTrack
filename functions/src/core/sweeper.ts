@@ -4,9 +4,9 @@
  */
 import { Timestamp } from "firebase-admin/firestore";
 import { CONSUME_RETRY_MIN_AGE_MS, SWEEP_GRACE_MS } from "../constants";
-import type { GenerationDoc, PurchaseDoc } from "../model";
+import { loadRuntimeConfig, type GenerationDoc, type PurchaseDoc } from "../model";
 import type { Deps } from "../ports";
-import { settle } from "./generation";
+import { logLlmCall, settle, type Outcome } from "./generation";
 import { consumePlay } from "./purchases";
 
 export interface SweepResult {
@@ -23,11 +23,18 @@ export async function sweep(deps: Deps, limit = 200): Promise<SweepResult> {
     .limit(limit)
     .get();
   let settled = 0;
+  const config = stale.empty ? null : await loadRuntimeConfig(deps.db, deps.logger);
   for (const snap of stale.docs) {
     const uid = snap.ref.parent.parent?.id;
-    if (!uid || (snap.data() as GenerationDoc).state !== "pending") continue;
-    const res = await settle(deps, uid, snap.id, { ok: false, failureClass: "infra", reason: "timeout (sweeper)" });
-    if (res.status === "FAILED") settled++;
+    const gen = snap.data() as GenerationDoc;
+    if (!uid || gen.state !== "pending") continue;
+    // The invocation died: its usage is unknown, so settle books the reserved worst case.
+    const outcome: Outcome = { ok: false, failureClass: "infra", reason: "timeout (sweeper)" };
+    const res = await settle(deps, uid, snap.id, outcome, config!);
+    if (res.settledHere) {
+      settled++;
+      logLlmCall(deps, uid, gen, outcome, res, null);
+    }
   }
 
   const unconsumed = await deps.db

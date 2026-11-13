@@ -1,3 +1,4 @@
+import { DEFAULT_COSTS } from "../src/constants";
 import { HttpsError } from "firebase-functions/v2/https";
 import { deleteAccount } from "../src/core/account";
 import { playPurchaseId, applePurchaseId, verifyPurchase } from "../src/core/purchases";
@@ -30,7 +31,7 @@ async function reason(p: Promise<unknown>): Promise<string> {
 describe("Play", () => {
   test("grants credits from Play's product and quantity, then consumes", async () => {
     const token = deps.play.add(playToken(), { productId: "recipes_50", quantity: 2 });
-    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "GRANTED", balance: 100 });
+    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS });
     expect(deps.play.consumed).toEqual([token]);
     const doc = await purchase(playPurchaseId(token));
     expect(doc).toMatchObject({ uid: "alice", productId: "recipes_50", quantity: 2, credits: 100, state: "consumed" });
@@ -41,7 +42,7 @@ describe("Play", () => {
   test("a second submission is a no-op", async () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, alice, play(token));
-    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 10 });
+    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 10, costs: DEFAULT_COSTS });
     expect(await balanceOf("alice")).toBe(10);
   });
 
@@ -55,7 +56,7 @@ describe("Play", () => {
   test("a replay under another uid grants nothing", async () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, alice, play(token));
-    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0 });
+    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS });
     expect(await balanceOf("bob")).toBe(0);
   });
 
@@ -64,7 +65,7 @@ describe("Play", () => {
     await verifyPurchase(deps, alice, play(token));
     await deleteAccount(deps, alice, {});
     expect((await purchase(playPurchaseId(token)))?.uid).toBeNull();
-    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0 });
+    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS });
     // The deleted account itself can do nothing more, though its token is still valid for a while.
     expect(await reason(verifyPurchase(deps, alice, play(deps.play.add(playToken()))))).toBe("ACCOUNT_CLOSED");
   });
@@ -96,7 +97,7 @@ describe("Play", () => {
     expect(await purchase(playPurchaseId(t1))).toMatchObject({ state: "granted", consumePending: true, consumeAttempts: 1 });
     deps.play.failConsume = false;
     // Resubmission retries the consume (and grants nothing more).
-    expect(await verifyPurchase(deps, alice, play(t1))).toEqual({ status: "ALREADY_GRANTED", balance: 20 });
+    expect(await verifyPurchase(deps, alice, play(t1))).toEqual({ status: "ALREADY_GRANTED", balance: 20, costs: DEFAULT_COSTS });
     expect((await purchase(playPurchaseId(t1)))?.state).toBe("consumed");
     // The sweeper picks up the other one once it is old enough.
     expect((await sweep(deps)).consumed).toBe(0);
@@ -118,6 +119,19 @@ describe("Play", () => {
     expect(await balanceOf("alice")).toBe(10);
   });
 
+  test("sandbox grants are also capped in credits per day; one larger than the whole cap is rejected", async () => {
+    await setConfig({ allowSandbox: true, sandboxDailyCap: 20, sandboxDailyCredits: 120 });
+    const big = deps.play.add(playToken(), { isTest: true, productId: "recipes_100", quantity: 10 });
+    expect((await verifyPurchase(deps, alice, play(big))).status).toBe("REJECTED_PERMANENT");
+    const t1 = deps.play.add(playToken(), { isTest: true, productId: "recipes_100" });
+    expect((await verifyPurchase(deps, alice, play(t1))).status).toBe("GRANTED");
+    const t2 = deps.play.add(playToken(), { isTest: true, productId: "recipes_50" });
+    expect((await verifyPurchase(deps, alice, play(t2))).status).toBe("RETRY");
+    const t3 = deps.play.add(playToken(), { isTest: true, productId: "recipes_10" });
+    expect((await verifyPurchase(deps, alice, play(t3))).status).toBe("GRANTED");
+    expect(await balanceOf("alice")).toBe(110);
+  });
+
   test("malformed tokens never reach Play", async () => {
     expect(await reason(verifyPurchase(deps, alice, play("short")))).toBe("INVALID_REQUEST");
     expect(await reason(verifyPurchase(deps, alice, play(`${"x".repeat(30)}/../`)))).toBe("INVALID_REQUEST");
@@ -137,7 +151,7 @@ describe("Play", () => {
 describe("App Store", () => {
   test("grants a verified consumable", async () => {
     const tx = appleTx({ productId: "recipes_100", quantity: 1 });
-    expect(await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).toEqual({ status: "GRANTED", balance: 100 });
+    expect(await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS });
     expect(await purchase(applePurchaseId("production", tx.transactionId))).toMatchObject({ uid: "alice", state: "granted" });
   });
 
