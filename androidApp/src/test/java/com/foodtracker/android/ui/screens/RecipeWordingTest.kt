@@ -44,13 +44,14 @@ class RecipeWordingTest {
             listOf("peanuts")
         )
 
+        assertTrue(prompt, prompt.contains("Please suggest one recipe I could make, using the ones closest to their expiration date first:"))
         assertTrue(prompt, prompt.contains("- Milk ("))
         assertTrue(prompt, prompt.contains("Please keep to this:\n- Easy to make, for a beginner"))
         assertTrue(prompt, prompt.contains("- Servings: 4"))
         assertTrue(prompt, prompt.contains("- Ready in 15 minutes or less"))
         assertTrue(prompt, prompt.contains("- Meal: Dinner"))
         assertTrue(prompt, prompt.contains("- Diet: Vegan"))
-        assertTrue(prompt, prompt.contains("- Write the recipes in German"))
+        assertTrue(prompt, prompt.contains("- Write the recipe in German"))
         assertTrue(prompt, prompt.endsWith("- Nothing that contains: peanuts"))
     }
 
@@ -59,9 +60,27 @@ class RecipeWordingTest {
     fun russianPromptIsRussian() {
         val prompt = buildRecipePrompt(context, listOf(item("Молоко", 1)), RecipeConfig(detail = RecipeDetail.BRIEF), emptyList())
 
+        assertTrue(prompt, prompt.contains("Предложи один рецепт, который я могу приготовить"))
         assertTrue(prompt, prompt.contains("Пожалуйста, учти:"))
         assertTrue(prompt, prompt.contains("- Коротко, в несколько шагов"))
         assertTrue(prompt, prompt.contains("- Порций: 2"))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun russianLanguageLineIsSingular() {
+        val prompt = buildRecipePrompt(context, listOf(item("Молоко", 1)), RecipeConfig(language = "de"), emptyList())
+
+        assertTrue(prompt, prompt.contains("- Напиши рецепт на языке: "))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "nb")
+    fun norwegianPromptAsksForOneRecipe() {
+        val prompt = buildRecipePrompt(context, listOf(item("Melk", 1)), RecipeConfig(language = "de"), emptyList())
+
+        assertTrue(prompt, prompt.contains("Foreslå én oppskrift jeg kan lage, og bruk først det som nærmer seg utløpsdatoen:"))
+        assertTrue(prompt, prompt.contains("- Skriv oppskriften på "))
     }
 
     @Test

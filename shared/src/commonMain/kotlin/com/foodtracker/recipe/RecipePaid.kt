@@ -48,6 +48,9 @@ sealed interface PaidEvent {
     data object SignInInUse : PaidEvent
     data object AccountDeleted : PaidEvent
     data object AccountActionFailed : PaidEvent
+
+    /** Deleting waits for a recipe that is still being written. */
+    data object AccountBusy : PaidEvent
 }
 
 data class PaidUiState(
@@ -71,12 +74,19 @@ data class PaidUiState(
     val merge: MergePrompt? = null,
     /** A sign-in, sign-out or deletion is running. */
     val accountBusy: Boolean = false,
-    val event: PaidEvent? = null
+    val event: PaidEvent? = null,
+    /** Whether the store sells any pack to this build: null until it has answered. */
+    val packsOffered: Boolean? = null,
+    /** What a recipe and a menu take, as the server last said. */
+    val costs: RecipeCosts = RecipeCosts(),
+    /** The server won't sell to this account (earlier purchases refunded after use). */
+    val purchasesBlocked: Boolean = false
 ) {
-    /** Buying is offered: hidden while the server is paused, and while a payment is waiting or
+    /** Buying is offered: only once the store has shown it has packs, so there is never a Buy
+     *  that leads nowhere; hidden while the server is paused, and while a payment is waiting or
      *  unconfirmed, so nobody pays twice. */
     val canBuy: Boolean
-        get() = available && issue != ServerIssue.PAUSED && unconfirmedRecipes == 0 && !paymentPending
+        get() = available && !purchasesBlocked && packsOffered == true && issue != ServerIssue.PAUSED && unconfirmedRecipes == 0 && !paymentPending
 }
 
 /** How long a "paused" answer stands before the tab offers the server again. */
@@ -93,6 +103,21 @@ private const val MENU_POLL_MILLIS = 270_000L
 private const val HELD_GENERATION_MAX_MILLIS = 24 * 60 * 60_000L
 
 private const val RESUME_DEDUPE_MILLIS = 5_000L
+
+/** Errors that, when asking about a request the server may already hold, leave it held. */
+private val KEEP_WHEN_ASKING = setOf(
+    ServerError.RATE_LIMITED,
+    ServerError.BUSY,
+    ServerError.UNKNOWN,
+    ServerError.USER_DAILY_LIMIT,
+    ServerError.DAILY_CAP,
+    ServerError.INFRA_FAILURE_LIMIT,
+    ServerError.GENERATION_DISABLED,
+    ServerError.INSUFFICIENT_CREDITS,
+    ServerError.INVALID_REQUEST,
+    ServerError.UNKNOWN_REQUEST,
+    ServerError.CALLABLE_MISSING
+)
 
 /** The English title a menu is saved under; the app shows its own words for menus. */
 const val MENU_SAVED_TITLE = "Menu for three days"
@@ -139,11 +164,18 @@ internal class RecipePaid(
     private var balanceAskedAt: Long? = null
     private var resumedAt: Long? = null
 
-    /** Set when the server says this build can't attest after all: the paid route hides for
-     *  the rest of the run, and the free routes stay. */
-    private var attestationFailed = false
+    /** Set when this build turns out not to be able to use the paid route after all (App Check
+     *  refuses it, or the store sells it nothing and nothing is held): the route hides for the
+     *  rest of the run, and the free routes stay. */
+    private var hiddenForRun = false
 
-    private val available: Boolean get() = backend.isAvailable && store.isSupported && !attestationFailed
+    private val available: Boolean get() = backend.isAvailable && store.isSupported && !hiddenForRun
+
+    private var probingPacks = false
+
+    /** Set when the server turns out to predate `getGeneration`: polls go through
+     *  `generateRecipe` again for the rest of the run, as they used to. */
+    private var getGenerationMissing = false
 
     /** The generation still waiting for its answer, unless it is too old to ask about. */
     private fun held(): GenerateRequest? {
@@ -167,20 +199,30 @@ internal class RecipePaid(
     private fun publish(kept: RecipePaidSnapshot) {
         updatePaid {
             it.copy(
+                available = shown(it.packsOffered),
                 balance = kept.balance,
+                costs = kept.costs ?: RecipeCosts(),
+                purchasesBlocked = kept.purchasesBlocked,
                 unconfirmedRecipes = kept.unverified.sumOf { purchase -> purchase.recipes },
                 paymentPending = kept.paymentPending
             )
         }
     }
 
+    /** Whether the route is on screen: only once the store has shown it sells this build a
+     *  pack, unless something is held already (a count, a purchase, a payment, a generation),
+     *  which always shows, so an unreachable store never hides what was paid for. */
+    private fun shown(packsOffered: Boolean?): Boolean = available && (packsOffered == true || !holdsNothing())
+
     fun start() {
-        updatePaid { it.copy(available = available) }
+        updatePaid { it.copy(available = shown(it.packsOffered)) }
         // Not even the account is looked at on a build without the paid route.
         if (!available) return
         updatePaid {
             it.copy(
                 balance = snapshot.balance,
+                costs = snapshot.costs ?: RecipeCosts(),
+                purchasesBlocked = snapshot.purchasesBlocked,
                 account = account.state.value,
                 providers = account.providers,
                 unconfirmedRecipes = snapshot.unverified.sumOf { purchase -> purchase.recipes },
@@ -205,7 +247,7 @@ internal class RecipePaid(
     }
 
     private fun markUnavailable() {
-        attestationFailed = true
+        hiddenForRun = true
         // The menu has no free route, so the tab goes back to a single recipe.
         state.update { it.copy(mode = RecipeMode.RECIPE, paid = it.paid.copy(available = false, sheet = null, writing = null)) }
     }
@@ -224,6 +266,7 @@ internal class RecipePaid(
         val last = resumedAt
         if (last == null || nowMillis() - last >= RESUME_DEDUPE_MILLIS) {
             resumedAt = nowMillis()
+            if (state.value.paid.packsOffered == null) scope.launch { probePacks() }
             scope.launch { resubmitPurchases() }
             if (held() != null && state.value.paid.writing == null) {
                 scope.launch { recoverGeneration() }
@@ -240,7 +283,7 @@ internal class RecipePaid(
         balanceAskedAt = nowMillis()
         return when (val result = backend.getBalance()) {
             is ServerResult.Ok -> {
-                persist { it.copy(balance = result.value) }
+                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked) }
                 updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                 true
             }
@@ -267,6 +310,29 @@ internal class RecipePaid(
 
     // --- Purchases ---------------------------------------------------------------------------
 
+    /** Asks the store whether it sells this build any pack, so Buy is shown only when it does.
+     *  An unreachable store is asked again on a later resume. */
+    private suspend fun probePacks() {
+        if (probingPacks) return
+        probingPacks = true
+        try {
+            val packs = runCatching { store.packs() }.getOrNull() ?: return
+            noteOffered(packs.any { it.productId in RECIPE_PACKS })
+        } finally {
+            probingPacks = false
+        }
+    }
+
+    /** No packs for this build (a debug or sideloaded build Play has no products for): with
+     *  nothing bought, the whole route hides; with recipes held, they stay usable, without Buy. */
+    private fun noteOffered(offered: Boolean) {
+        updatePaid { it.copy(packsOffered = offered, available = shown(offered)) }
+        if (!offered && holdsNothing()) markUnavailable()
+    }
+
+    private fun holdsNothing(): Boolean =
+        (snapshot.balance ?: 0) <= 0 && snapshot.unverified.isEmpty() && !snapshot.paymentPending && snapshot.pendingGeneration == null
+
     fun openPacks() {
         val paid = state.value.paid
         if (!paid.canBuy) return
@@ -275,6 +341,13 @@ internal class RecipePaid(
             val packs = runCatching { store.packs() }.getOrNull()
                 ?.filter { it.productId in RECIPE_PACKS }
                 ?.sortedBy { it.recipes }
+            if (packs != null && packs.isEmpty()) {
+                // The store answered and sells this build nothing: Buy goes, rather than a sheet
+                // whose Try again could never work.
+                noteOffered(false)
+                updatePaid { it.copy(sheet = null) }
+                return@launch
+            }
             updatePaid { current ->
                 // Closed while the store answered.
                 if (current.sheet != BuySheet.Loading) return@updatePaid current
@@ -300,10 +373,27 @@ internal class RecipePaid(
     fun continuePurchase() {
         val sheet = state.value.paid.sheet as? BuySheet.Packs ?: return
         if (sheet.purchasing) return
-        if (account.state.value.kind == AccountKind.NONE) {
-            updatePaid { it.copy(sheet = BuySheet.Choice(sheet.packs, sheet.selected)) }
-        } else {
-            launchStore(sheet.packs, sheet.selected)
+        val checking = sheet.copy(purchasing = true)
+        updatePaid { it.copy(sheet = checking) }
+        scope.launch {
+            // Before any account or payment: a build App Check refuses could take the money and
+            // then never be let in to add the recipes.
+            if (backend.attest() == Attestation.FAILED) {
+                if (holdsNothing()) {
+                    markUnavailable()
+                } else {
+                    // What is held stays usable; only buying is off for now.
+                    updatePaid { if (it.sheet == checking) it.copy(sheet = BuySheet.StoreUnavailable) else it }
+                }
+                return@launch
+            }
+            // Closed while that was asked.
+            if (state.value.paid.sheet != checking) return@launch
+            if (account.state.value.kind == AccountKind.NONE) {
+                updatePaid { it.copy(sheet = BuySheet.Choice(sheet.packs, sheet.selected)) }
+            } else {
+                launchStore(sheet.packs, sheet.selected)
+            }
         }
     }
 
@@ -450,7 +540,9 @@ internal class RecipePaid(
                     persist { current ->
                         current.copy(
                             unverified = if (settled) current.unverified.filterNot { it.token == purchase.token } else current.unverified,
-                            balance = reply.balance ?: current.balance
+                            balance = reply.balance ?: current.balance,
+                            costs = recipeCostsOf(reply.costs) ?: current.costs,
+                            purchasesBlocked = reply.purchasesBlocked?.let(::purchasesBlockedOf) ?: current.purchasesBlocked
                         )
                     }
                     when (reply.status) {
@@ -579,7 +671,8 @@ internal class RecipePaid(
                         updatePaid { it.copy(accountBusy = false, event = PaidEvent.AccountDeleted) }
                     } else {
                         if (result.error == ServerError.OFFLINE) handleCommonError(result.error)
-                        updatePaid { it.copy(accountBusy = false, event = PaidEvent.AccountActionFailed) }
+                        val event = if (result.error == ServerError.BUSY) PaidEvent.AccountBusy else PaidEvent.AccountActionFailed
+                        updatePaid { it.copy(accountBusy = false, event = event) }
                     }
                 }
             }
@@ -644,7 +737,8 @@ internal class RecipePaid(
                 val request = kept ?: fresh
                 if (kept == null) persist { it.copy(pendingGeneration = request, pendingSinceMillis = nowMillis()) }
                 updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE) }
-                send(request, interactive = true)
+                // Already sent once with these inputs: asked about, not started again.
+                send(request, interactive = true, start = kept == null)
             }
         }
     }
@@ -693,11 +787,15 @@ internal class RecipePaid(
      * [interactive] runs are the ones the person is watching: they report events and clear the
      * writing state; a recovery in the background only saves what arrives.
      */
-    private suspend fun send(request: GenerateRequest, interactive: Boolean): Boolean {
+    private suspend fun send(request: GenerateRequest, interactive: Boolean, start: Boolean = false): Boolean {
+        // What it takes as asked, before a reply can bring new costs.
+        val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses)
         val deadline = nowMillis() + if (request.kind == WireKind.MENU) MENU_POLL_MILLIS else RECIPE_POLL_MILLIS
+        var starting = start
         while (true) {
+            var fresh = starting
             val result = try {
-                backend.generate(request)
+                ask(request, starting) { fresh = true }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -712,12 +810,12 @@ internal class RecipePaid(
                             if (saved == null) {
                                 // The contract promises the content with DONE; without it there is
                                 // nothing to show, and asking again with this id returns the same.
-                                persist { it.copy(pendingGeneration = null, balance = reply.balance) }
+                                persist { it.copy(pendingGeneration = null, balance = reply.balance, costs = recipeCostsOf(reply.costs) ?: it.costs, purchasesBlocked = reply.purchasesBlocked?.let(::purchasesBlockedOf) ?: it.purchasesBlocked) }
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return true
                             }
                             savedRecipeRepository.save(saved)
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance, costs = recipeCostsOf(reply.costs) ?: it.costs, purchasesBlocked = reply.purchasesBlocked?.let(::purchasesBlockedOf) ?: it.purchasesBlocked) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                             if (interactive) {
                                 state.update { current ->
@@ -731,6 +829,8 @@ internal class RecipePaid(
                             return true
                         }
                         GenerateStatus.IN_PROGRESS -> {
+                            // Whatever the first call was, the rest only ask.
+                            starting = false
                             // The balance it reports is held, not spent: the count waits for the
                             // result.
                             if (nowMillis() >= deadline) {
@@ -740,12 +840,22 @@ internal class RecipePaid(
                             pollDelay()
                         }
                         GenerateStatus.FAILED -> {
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance, costs = recipeCostsOf(reply.costs) ?: it.costs, purchasesBlocked = reply.purchasesBlocked?.let(::purchasesBlockedOf) ?: it.purchasesBlocked) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
-                            finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(request.cost) else RecipeEvent.ServerFailed)
+                            finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(cost) else RecipeEvent.ServerFailed)
                             return true
                         }
                     }
+                }
+                // Asking about a request the server may already hold (a poll, a recovery): a limit or
+                // a refusal on that call says nothing about the request, which may still be
+                // written and charged. Keep it and ask again later, as for a lost connection.
+                is ServerResult.Err if !fresh && result.error in KEEP_WHEN_ASKING -> {
+                    if (nowMillis() >= deadline) {
+                        finish(interactive, null, ServerIssue.OFFLINE)
+                        return false
+                    }
+                    pollDelay()
                 }
                 is ServerResult.Err -> when (result.error) {
                     // Kept, with its id: asking again can't charge twice.
@@ -753,9 +863,28 @@ internal class RecipePaid(
                         finish(interactive, null, ServerIssue.OFFLINE)
                         return false
                     }
-                    ServerError.INTERNAL -> {
+                    // A replayed App Check token was already asked again once with a fresh one; the
+                    // request is kept like any other failure that can't have charged.
+                    ServerError.INTERNAL, ServerError.APP_CHECK_REPLAYED -> {
                         finish(interactive, RecipeEvent.ServerFailed)
                         return false
+                    }
+                    ServerError.REQUEST_ID_REUSED -> {
+                        // The id is bound to other inputs: never send it again. Try again builds
+                        // a new request with a new id.
+                        persist { it.copy(pendingGeneration = null, pendingSinceMillis = null) }
+                        finish(interactive, RecipeEvent.ServerFailed)
+                        return true
+                    }
+                    ServerError.USER_DAILY_LIMIT, ServerError.DAILY_CAP -> {
+                        persist { it.copy(pendingGeneration = null) }
+                        finish(interactive, RecipeEvent.ServerLimitToday)
+                        return true
+                    }
+                    ServerError.INFRA_FAILURE_LIMIT -> {
+                        persist { it.copy(pendingGeneration = null) }
+                        finish(interactive, RecipeEvent.ServerTroubleToday)
+                        return true
                     }
                     ServerError.UNAUTHENTICATED -> {
                         markUnavailable()
@@ -780,16 +909,48 @@ internal class RecipePaid(
                         finish(interactive, RecipeEvent.ServerFailed)
                         return true
                     }
-                    else -> {
-                        // Busy, rate limits, the daily cap, a bad request: refused before
-                        // anything was held.
+                    ServerError.INVALID_REQUEST -> {
                         persist { it.copy(pendingGeneration = null) }
                         finish(interactive, RecipeEvent.ServerFailed)
+                        return true
+                    }
+                    else -> {
+                        // On a first send: busy, the per-minute limit, a reason this app doesn't
+                        // know yet. Refused before anything was held; asking again at once won't
+                        // help.
+                        persist { it.copy(pendingGeneration = null) }
+                        finish(interactive, RecipeEvent.ServerFailedLater)
                         return true
                     }
                 }
             }
         }
+    }
+
+    /**
+     * One call for [request]: `generateRecipe` to [start] it (a fresh limited-use App Check
+     * token, which is a Play Integrity request), `getGeneration` for everything after, so polls
+     * and recoveries spend none. Falls back to `generateRecipe`, same id and inputs, when the
+     * server never got the request or predates `getGeneration`.
+     */
+    private suspend fun ask(request: GenerateRequest, start: Boolean, onFreshStart: () -> Unit): ServerResult<GenerateReply> {
+        if (start || getGenerationMissing) return backend.generate(request)
+        val polled = backend.getGeneration(request.requestId)
+        if (polled is ServerResult.Err) {
+            when (polled.error) {
+                ServerError.UNKNOWN_REQUEST -> {
+                    // The server never got it: this send starts it, and may be refused as one.
+                    onFreshStart()
+                    return backend.generate(request)
+                }
+                ServerError.CALLABLE_MISSING -> {
+                    getGenerationMissing = true
+                    return backend.generate(request)
+                }
+                else -> Unit
+            }
+        }
+        return polled
     }
 
     private fun finish(interactive: Boolean, event: RecipeEvent?, issue: ServerIssue? = null) {

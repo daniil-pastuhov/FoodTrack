@@ -47,6 +47,7 @@ import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.recipe.BuySheet
 import com.foodtracker.recipe.MergePrompt
 import com.foodtracker.recipe.PaidEvent
+import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.RecipeUiState
 import com.foodtracker.recipe.SignInProvider
@@ -61,6 +62,14 @@ internal fun signInProviderName(provider: SignInProvider): String = when (provid
     SignInProvider.GOOGLE -> "Google"
     SignInProvider.APPLE -> "Apple"
 }
+
+/** "N recipes", with the language's plural. */
+internal fun recipeCount(resources: Resources, count: Int): String =
+    resources.getQuantityString(R.plurals.recipe_cost_recipes, count, count)
+
+/** What a pack is and what a menu takes from it, with the server's costs. */
+internal fun recipePacksBody(resources: Resources, costs: RecipeCosts): String =
+    resources.getString(R.string.recipe_packs_body, recipeCount(resources, costs.menu2), recipeCount(resources, costs.menu3))
 
 /** The store price of one recipe in a pack, worked out from the pack's store price and never
  *  hard-coded: "£0.16 each". */
@@ -115,6 +124,7 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
             PaidEvent.SignInInUse -> resources.getString(R.string.recipe_sign_in_in_use)
             PaidEvent.AccountDeleted -> resources.getString(R.string.recipe_account_deleted)
             PaidEvent.AccountActionFailed -> resources.getString(R.string.recipe_account_action_failed)
+            PaidEvent.AccountBusy -> resources.getString(R.string.recipe_account_busy)
             null -> null
         }
         if (message != null) {
@@ -127,6 +137,7 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
         BuyRecipesSheet(
             sheet = sheet,
             providers = paid.providers,
+            costs = paid.costs,
             actions = BuySheetActions(
                 onSelect = stateHolder::selectPack,
                 onContinue = stateHolder::continuePurchase,
@@ -184,18 +195,18 @@ internal class BuySheetActions(
  *  payment sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun BuyRecipesSheet(sheet: BuySheet, providers: Set<SignInProvider>, actions: BuySheetActions) {
+internal fun BuyRecipesSheet(sheet: BuySheet, providers: Set<SignInProvider>, costs: RecipeCosts, actions: BuySheetActions) {
     val title = if (sheet is BuySheet.Choice) stringResource(R.string.recipe_choice_title) else stringResource(R.string.recipe_buy)
     LarderSheet(onDismissRequest = actions.onDismiss, title = title) {
-        BuySheetBody(sheet, providers, actions)
+        BuySheetBody(sheet, providers, actions, costs)
     }
 }
 
 @Composable
-internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actions: BuySheetActions) {
+internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actions: BuySheetActions, costs: RecipeCosts = RecipeCosts()) {
     when (sheet) {
-        BuySheet.Loading -> PacksList(packs = null, selected = null, purchasing = false, actions = actions)
-        is BuySheet.Packs -> PacksList(sheet.packs, sheet.selected, sheet.purchasing, actions)
+        BuySheet.Loading -> PacksList(packs = null, selected = null, purchasing = false, costs = costs, actions = actions)
+        is BuySheet.Packs -> PacksList(sheet.packs, sheet.selected, sheet.purchasing, costs, actions)
         is BuySheet.Choice -> StorageChoice(sheet, providers, actions)
         BuySheet.StoreUnavailable -> {
             LarderCallout(
@@ -214,10 +225,10 @@ internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actio
 }
 
 @Composable
-private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Boolean, actions: BuySheetActions) {
+private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Boolean, costs: RecipeCosts, actions: BuySheetActions) {
     val resources = LocalContext.current.resources
     Text(
-        text = stringResource(R.string.recipe_packs_body),
+        text = recipePacksBody(resources, costs),
         modifier = Modifier.padding(bottom = LarderSpace.s4),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -375,9 +386,9 @@ private fun SheetActions(content: @Composable () -> Unit) {
 // --- Previews ---------------------------------------------------------------------------------
 
 private val previewPacks = listOf(
-    StorePack("recipes_10", 10, "£1.99", 1_990_000, "GBP"),
-    StorePack("recipes_50", 50, "£7.99", 7_990_000, "GBP"),
-    StorePack("recipes_100", 100, "£12.99", 12_990_000, "GBP")
+    StorePack("recipes_10", 10, "$3.99", 3_990_000, "USD"),
+    StorePack("recipes_50", 50, "$10.99", 10_990_000, "USD"),
+    StorePack("recipes_100", 100, "$18.99", 18_990_000, "USD")
 )
 
 @Composable

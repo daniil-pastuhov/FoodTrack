@@ -26,6 +26,7 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthCredential
 import com.google.firebase.auth.OAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -150,10 +151,12 @@ class FirebaseRecipeAccount(
         val credential = googleCredential(activity) ?: return SignInResult.Failed
         val user = auth.currentUser ?: run {
             auth.signInWithCredential(credential).awaitResult()
+            dropNameAndPhoto(auth.currentUser)
             return SignInResult.SignedIn
         }
         return try {
             user.linkWithCredential(credential).awaitResult()
+            dropNameAndPhoto(auth.currentUser)
             SignInResult.SignedIn
         } catch (e: FirebaseAuthUserCollisionException) {
             if (user.isAnonymous) prepareMerge(user, e.updatedCredential ?: credential) else SignInResult.InUse
@@ -161,7 +164,7 @@ class FirebaseRecipeAccount(
     }
 
     private fun appleProvider(): OAuthProvider = OAuthProvider.newBuilder(APPLE_PROVIDER)
-        .setScopes(listOf("email", "name"))
+        .setScopes(listOf("email"))
         .addCustomParameter("locale", Locale.getDefault().toLanguageTag())
         .build()
 
@@ -170,14 +173,17 @@ class FirebaseRecipeAccount(
         // a result that arrived that way is picked up here.
         auth.pendingAuthResult?.let { pending ->
             pending.awaitResult()
+            dropNameAndPhoto(auth.currentUser)
             return SignInResult.SignedIn
         }
         val user = auth.currentUser ?: run {
             auth.startActivityForSignInWithProvider(activity, appleProvider()).awaitResult()
+            dropNameAndPhoto(auth.currentUser)
             return SignInResult.SignedIn
         }
         return try {
             user.startActivityForLinkWithProvider(activity, appleProvider()).awaitResult()
+            dropNameAndPhoto(auth.currentUser)
             SignInResult.SignedIn
         } catch (e: FirebaseAuthUserCollisionException) {
             val credential = e.updatedCredential ?: return SignInResult.Failed
@@ -195,7 +201,8 @@ class FirebaseRecipeAccount(
         val mergeApp = firebase.merge
         val mergeAuth = firebase.auth(mergeApp)
         mergeAuth.signInWithCredential(credential).awaitResult()
-        val balance = (callBalance(firebase.functions(mergeApp)) as? ServerResult.Ok)?.value
+        dropNameAndPhoto(mergeAuth.currentUser)
+        val balance = (callBalance(firebase.functions(mergeApp)) as? ServerResult.Ok)?.value?.balance
         return SignInResult.NeedsMerge(FirebaseMerge(sourceToken, mergeAuth, balance))
     }
 
@@ -253,6 +260,7 @@ class FirebaseRecipeAccount(
         return try {
             if (APPLE_PROVIDER in providerIds) {
                 val result: AuthResult = user.startActivityForReauthenticateWithProvider(activity, appleProvider()).awaitResult()
+                dropNameAndPhoto(auth.currentUser)
                 // Apple asks apps to revoke its tokens when an account is deleted.
                 (result.credential as? OAuthCredential)?.accessToken?.let { token ->
                     runCatching { auth.revokeAccessToken(token).awaitResult() }
@@ -261,6 +269,7 @@ class FirebaseRecipeAccount(
             } else if (GOOGLE_PROVIDER in providerIds) {
                 val credential = googleCredential(activity) ?: return false
                 user.reauthenticate(credential).awaitResult()
+                dropNameAndPhoto(auth.currentUser)
                 true
             } else {
                 false
@@ -278,5 +287,44 @@ class FirebaseRecipeAccount(
         // So the next Google sign-in asks which account rather than reusing this one.
         val activity = CurrentActivity.activity ?: return
         runCatching { CredentialManager.create(activity).clearCredentialState(ClearCredentialStateRequest()) }
+    }
+}
+
+/**
+ * The app keeps no names: Google's ID token, and Apple's on a first sign-in, give Firebase the
+ * person's name (and Google a photo), which Firebase copies onto the user. Cleared straight after
+ * every sign-in, link and re-authentication, before anything else uses the user. The copy in the
+ * user's provider data can't be cleared from the client.
+ */
+private suspend fun dropNameAndPhoto(user: FirebaseUser?) {
+    if (user != null) dropNameAndPhoto(FirebaseUserProfile(user))
+}
+
+/** The part of a signed-in user that holds a name and a photo. */
+internal interface NamedProfile {
+    val hasNameOrPhoto: Boolean
+    suspend fun clearNameAndPhoto()
+}
+
+/** Clears [profile]'s name and photo when it has either. A failure leaves sign-in as it is and
+ *  is tried again at the next sign-in; nothing about the person is logged. True when cleared. */
+internal suspend fun dropNameAndPhoto(profile: NamedProfile): Boolean {
+    if (!profile.hasNameOrPhoto) return true
+    return try {
+        profile.clearNameAndPhoto()
+        true
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        false
+    }
+}
+
+private class FirebaseUserProfile(private val user: FirebaseUser) : NamedProfile {
+    override val hasNameOrPhoto: Boolean get() = user.displayName != null || user.photoUrl != null
+
+    override suspend fun clearNameAndPhoto() {
+        // Null removes the field (UserProfileChangeRequest).
+        user.updateProfile(UserProfileChangeRequest.Builder().setDisplayName(null).setPhotoUri(null).build()).awaitResult()
     }
 }

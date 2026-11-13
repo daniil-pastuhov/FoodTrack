@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,9 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -72,7 +74,6 @@ import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.recipe.AccountKind
 import com.foodtracker.recipe.AccountState
-import com.foodtracker.recipe.MENU_COST
 import com.foodtracker.recipe.MENU_COURSE_OPTIONS
 import com.foodtracker.recipe.OnDeviceAvailability
 import com.foodtracker.recipe.OnDeviceRoute
@@ -146,6 +147,18 @@ fun RecipeScreen(
             RecipeEvent.ServerFailed -> {
                 stateHolder.consumeEvent()
                 snackbars.show(resources.getString(R.string.recipe_failed_server), tryAgain) { stateHolder.generateOnServer() }
+            }
+            RecipeEvent.ServerFailedLater -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_server_later), null, null)
+            }
+            RecipeEvent.ServerLimitToday -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_limit_today), null, null)
+            }
+            RecipeEvent.ServerTroubleToday -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_trouble_today), null, null)
             }
             is RecipeEvent.ServerRefused -> {
                 stateHolder.consumeEvent()
@@ -223,6 +236,13 @@ internal fun RecipeTabContent(
     var showingOthers by remember { mutableStateOf(false) }
     val showForm = !state.isLoading && state.rows.isNotEmpty() && !state.isBusy
     val paid = state.paid
+    val primary = recipePrimary(state)
+    val showsAction = showForm && primary != RecipePrimary.None
+    // Reported on every composition rather than reset on dispose: an outgoing copy of this
+    // screen (a tab or launch transition) disposing after the new one measured used to leave
+    // the root with 0, so the end of the form ran under the pill.
+    var actionHeightPx by remember { mutableIntStateOf(0) }
+    SideEffect { onPinnedActionHeight(if (showsAction) actionHeightPx else 0) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -285,10 +305,8 @@ internal fun RecipeTabContent(
             }
         }
 
-        val primary = recipePrimary(state)
-        if (showForm && primary != RecipePrimary.None) {
+        if (showsAction) {
             val nothingTicked = state.selectedIds.isEmpty()
-            DisposableEffect(Unit) { onDispose { onPinnedActionHeight(0) } }
             PinnedAction(
                 text = when (primary) {
                     RecipePrimary.Server -> stringResource(
@@ -321,11 +339,8 @@ internal fun RecipeTabContent(
                         bottom = pinnedActionBottom
                     )
                     .then(if (expanded) Modifier.widthIn(max = 440.dp).fillMaxWidth(0.5f) else Modifier.fillMaxWidth())
-                    .onSizeChanged { onPinnedActionHeight(it.height) }
+                    .onSizeChanged { actionHeightPx = it.height }
             )
-        } else if (showForm) {
-            // No pinned action (a menu without enough recipes): nothing for the root to clear.
-            LaunchedEffect(Unit) { onPinnedActionHeight(0) }
         }
     }
 
@@ -548,7 +563,7 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                 ShareAndCopy(actions)
             }
             RecipePrimary.OnDevice -> {
-                if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Outline)
+                BuyOrBlocked(paid, actions, LarderButtonStyle.Outline)
                 ShareAndCopy(actions)
             }
             else -> {
@@ -560,7 +575,7 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                     leadingIcon = LarderIcons.Copy
                 )
                 RecipeHint(stringResource(R.string.recipe_prompt_hint))
-                if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Text)
+                BuyOrBlocked(paid, actions, LarderButtonStyle.Text)
             }
         }
     }
@@ -571,18 +586,31 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
 private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions) {
     val paid = state.paid
     val balance = paid.balance ?: 0
+    val resources = LocalContext.current.resources
+    // For the courses chosen: switching 2 and 3 moves the button and this together.
+    val cost = recipeCount(resources, state.serverCost)
     when {
         paid.issue == ServerIssue.PAUSED -> Unit
-        balance < MENU_COST -> {
+        balance < state.serverCost -> {
             // T4: lasts until a pack is bought, so it takes the button's place.
             LarderCallout(
                 kind = LarderCalloutKind.Info,
-                title = stringResource(R.string.recipe_menu_short_title),
+                title = stringResource(R.string.recipe_menu_short_title, cost),
                 message = pluralStringResource(R.plurals.recipe_menu_short_body, balance, balance)
             )
-            if (paid.canBuy) BuyButton(actions, LarderButtonStyle.Primary)
+            BuyOrBlocked(paid, actions, LarderButtonStyle.Primary)
         }
-        else -> RecipeHint(stringResource(R.string.recipe_menu_hint))
+        else -> RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
+    }
+}
+
+/** Buy where buying is offered; for an account the server won't sell to, one calm line in its
+ *  place instead (the recipes it holds stay usable). */
+@Composable
+private fun BuyOrBlocked(paid: PaidUiState, actions: RecipeTabActions, style: LarderButtonStyle) {
+    when {
+        paid.available && paid.purchasesBlocked -> RecipeHint(stringResource(R.string.recipe_purchases_blocked))
+        paid.canBuy -> BuyButton(actions, style)
     }
 }
 
@@ -597,11 +625,12 @@ private fun BuyButton(actions: RecipeTabActions, style: LarderButtonStyle) {
     )
 }
 
+/** Side by side, and one under the other when large text leaves no room for both. */
 @Composable
-private fun ColumnScope.ShareAndCopy(actions: RecipeTabActions) {
-    Row(
-        modifier = Modifier.align(Alignment.CenterHorizontally),
-        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)
+private fun ShareAndCopy(actions: RecipeTabActions) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.CenterHorizontally)
     ) {
         LarderButton(
             text = stringResource(R.string.recipe_share_prompt),

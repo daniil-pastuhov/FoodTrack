@@ -44,7 +44,7 @@ private fun emulatorToken(app: FirebaseApp): AppCheckToken {
     val header = part("""{"alg":"none","typ":"JWT"}""")
     val payload = part(
         """{"sub":"${app.options.applicationId}","aud":["projects/${app.options.projectId}"],""" +
-            """"iat":${now / 1000},"exp":${expires / 1000}}"""
+            """"iat":${now / 1000},"exp":${expires / 1000},"jti":"${UUID.randomUUID()}"}"""
     )
     val token = "$header.$payload.emulator"
     return object : AppCheckToken() {
@@ -66,8 +66,14 @@ private class EmulatorRecipeStore : RecipeStore {
     override val updates: Flow<StoreUpdate> = _updates.asSharedFlow()
     override val isSupported: Boolean = true
 
+    // The store's sample prices for 10 / 50 / 100 recipes.
     override suspend fun packs(): List<StorePack> = RECIPE_PACKS.map { (id, recipes) ->
-        StorePack(id, recipes, "€${recipes / 5}.99", (recipes / 5 + 0.99).times(1_000_000).toLong(), "EUR")
+        val micros = when (recipes) {
+            10 -> 3_990_000L
+            50 -> 10_990_000L
+            else -> 18_990_000L
+        }
+        StorePack(id, recipes, "\$" + "%.2f".format(java.util.Locale.US, micros / 1_000_000.0), micros, "USD")
     }
 
     override suspend fun buy(productId: String): Boolean {

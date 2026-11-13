@@ -58,7 +58,9 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
             BalanceLine(balance, pluralStringResource(R.plurals.recipe_on_phone_label, balance))
             AccountText(stringResource(R.string.recipe_on_phone_body))
             SignInButtons(paid.providers, signingIn = null, enabled = !paid.accountBusy, onSignIn = actions.onSignIn)
-            if (paid.canBuy) {
+            if (paid.purchasesBlocked) {
+                AccountText(stringResource(R.string.recipe_purchases_blocked))
+            } else if (paid.canBuy) {
                 LarderButton(
                     text = stringResource(R.string.recipe_buy),
                     onClick = actions.onBuy,

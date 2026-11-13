@@ -100,9 +100,9 @@ val appModule = module {
             openFoodFactsApi = get()
         )
     }
-    // The paid route. Builds that can't pass App Check (forks, sideloads, debug builds that
-    // didn't ask for it) get the stand-ins, so the tab shows only the free routes and nothing
-    // here is ever created. Where it is allowed, nothing runs before a purchase starts either.
+    // The paid route. Release builds that can't pass App Check (forks, sideloads) get the
+    // stand-ins, so the tab shows only the free routes and nothing here is ever created. Where
+    // it is allowed, nothing reaches our server before a purchase starts either.
     single { RecipeFirebase(androidContext()) }
     single<RecipePaidRepository> { AndroidRecipePaidRepository(androidContext()) }
     single<RecipeBackend> {
@@ -110,7 +110,7 @@ val appModule = module {
     }
     single<RecipeStore> {
         if (recipePaidRouteBuildAllowed(androidContext())) {
-            emulatorRecipeStore(androidContext()) ?: PlayRecipeStore(androidContext())
+            emulatorRecipeStore(androidContext()) ?: PlayRecipeStore(androidContext(), get())
         } else {
             NotAvailableRecipeStore
         }
