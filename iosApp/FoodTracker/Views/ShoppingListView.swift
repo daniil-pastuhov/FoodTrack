@@ -40,6 +40,8 @@ struct ShoppingListView: View {
     @State private var renamingSection: ShoppingSection?
     @State private var deletingSection: DeletingSection?
     @State private var scrollTarget: String?
+    /// Every section folded to its header, for dragging the headers into order.
+    @State private var isReorderingSections = false
 
     var body: some View {
         content
@@ -254,7 +256,7 @@ struct ShoppingListView: View {
         if viewModel.shoppingSections.count > 2 {
             Menu {
                 Button(L10n.shoppingSectionNew, action: promptForNewSection)
-                Button(L10n.shoppingSectionReorder) { sheet = .reorder }
+                Button(L10n.shoppingSectionReorder, action: startReorderingSections)
             } label: {
                 label()
             }
@@ -265,6 +267,10 @@ struct ShoppingListView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.shoppingSectionNew)
         }
+    }
+
+    private func startReorderingSections() {
+        withAnimation(.easeInOut(duration: 0.3)) { isReorderingSections = true }
     }
 
     private func promptForNewSection() {
@@ -366,7 +372,8 @@ struct ShoppingListView: View {
 
     @ViewBuilder
     private var listPane: some View {
-        if viewModel.shoppingList.isEmpty {
+        // Reordering works on an empty list too: the headers are all it shows.
+        if viewModel.shoppingList.isEmpty && !isReorderingSections {
             EmptyState(.basket, title: L10n.shoppingListEmptyTitle, message: L10n.shoppingListEmptySubtitle)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .transition(.opacity)
@@ -381,6 +388,8 @@ struct ShoppingListView: View {
                     renamingSection = section
                 },
                 onDeleteSection: { deletingSection = DeletingSection(section: $0, itemCount: $1) },
+                onReorderSections: viewModel.shoppingSections.count > 2 ? startReorderingSections : nil,
+                isReorderingSections: $isReorderingSections,
                 scrollTarget: $scrollTarget
             )
             .transition(.opacity)
@@ -427,8 +436,6 @@ struct ShoppingListView: View {
                 },
                 onCancel: { sheet = nil }
             )
-        case .reorder:
-            ShoppingSectionReorderSheet(viewModel: viewModel)
         case .activity(let text):
             ActivityView(activityItems: [text])
         }
@@ -524,7 +531,8 @@ struct ShoppingListView: View {
 
     #if DEBUG
     /// Screenshot support, compiled out of release builds: `-demoShoppingSheet <name>` (share,
-    /// qr, import, reorder, move) opens that sheet and `-demoShoppingText <text>` fills the field.
+    /// qr, import, move) opens that sheet, or `reorder` folds the sections for reordering, and
+    /// `-demoShoppingText <text>` fills the field.
     private func applyDemoOverlay() {
         let arguments = UserDefaults.standard
         if let text = arguments.string(forKey: "demoShoppingText") {
@@ -542,7 +550,7 @@ struct ShoppingListView: View {
         case "share": sheet = .share
         case "qr": sheet = .qr
         case "import": sheet = .importList
-        case "reorder": sheet = .reorder
+        case "reorder": isReorderingSections = true
         case "move":
             if let entry = viewModel.shoppingList.first {
                 sheet = .move(entry, sectionId: ShoppingSection.defaultId)
@@ -562,7 +570,7 @@ private struct DeletingSection {
 }
 
 private enum ShoppingSheetRoute: Identifiable {
-    case share, qr, importList, reorder
+    case share, qr, importList
     case move(ShoppingListEntry, sectionId: String)
     /// The system share sheet, for the list as text.
     case activity(String)
@@ -572,7 +580,6 @@ private enum ShoppingSheetRoute: Identifiable {
         case .share: return "share"
         case .qr: return "qr"
         case .importList: return "import"
-        case .reorder: return "reorder"
         case .move(let entry, _): return "move_\(entry.id)"
         case .activity: return "activity"
         }

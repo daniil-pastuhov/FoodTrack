@@ -4,12 +4,15 @@ import SwiftUI
 /// `ShoppingSectionedList` (and the same rules):
 ///  - an entry dropped within a section lands between its new neighbours; one dropped under a
 ///    folded section's header goes to that section's end, and the section opens;
-///  - a section header drags too, to reorder the sections;
+///  - sections are reordered with every section folded, so a header can only land between
+///    other headers;
 ///  - the default section is pinned first.
 ///
 /// Headers and entries are rows of one `ForEach`, so `List`'s own `.onMove` (long press, then
-/// drag) moves an entry across sections and a header among the others. SwiftUI's `.onDrag` and
-/// `.onDrop` don't work here: inside a `List` on iPhone a drag never starts and rows get no drop.
+/// drag) moves an entry across sections, and a header among the others while reordering.
+/// SwiftUI's `.onDrag` and `.onDrop` don't work here: inside a `List` on iPhone a drag never
+/// starts and rows get no drop. `.onMove` has no moment a drag starts at, though, so where
+/// Android folds the sections as a header is picked up, iOS has a mode for it.
 struct ShoppingSectionedList: View {
     @ObservedObject var viewModel: NativePantryViewModel
     var onItemRemoved: (ShoppingListEntry) -> Void
@@ -17,6 +20,11 @@ struct ShoppingSectionedList: View {
     var onMoveEntry: (ShoppingListEntry, String) -> Void
     var onRenameSection: (ShoppingSection) -> Void
     var onDeleteSection: (ShoppingSection, Int) -> Void
+    /// Opens the reorder mode, offered on a header's long press; nil while there's nothing to
+    /// reorder.
+    var onReorderSections: (() -> Void)?
+    /// Every section folded, with only the headers to drag. Ended by Done.
+    @Binding var isReorderingSections: Bool
     /// The row to bring into view, set by the tablet's section index and cleared once done.
     @Binding var scrollTarget: String?
 
@@ -24,16 +32,45 @@ struct ShoppingSectionedList: View {
     @State private var tickedIds: Set<String> = []
     @Environment(\.scenePhase) private var scenePhase
 
-    private var rows: [ShoppingRow] { viewModel.shoppingRows }
+    private var rows: [ShoppingRow] {
+        guard isReorderingSections else { return viewModel.shoppingRows }
+        return ShoppingSections.rows(
+            entries: viewModel.shoppingList,
+            sections: viewModel.shoppingSections,
+            collapsedOverride: { _ in true }
+        )
+    }
 
     var body: some View {
+        VStack(spacing: 0) {
+            if isReorderingSections { reorderBar }
+            list
+        }
+    }
+
+    private var reorderBar: some View {
+        HStack(spacing: LarderSpace.s2) {
+            Text(L10n.shoppingSectionReorder)
+                .larderFont(.titleSm)
+                .foregroundStyle(LarderColor.onSurface)
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+            LarderButton(L10n.doneButton, variant: .text) {
+                withAnimation(.easeInOut(duration: 0.3)) { isReorderingSections = false }
+            }
+        }
+        .padding(.horizontal, LarderSpace.s4)
+        .transition(.opacity)
+    }
+
+    private var list: some View {
         ScrollViewReader { proxy in
             List {
                 ForEach(Self.keyedRows(rows), id: \.key) { keyed in
                     switch keyed.row {
                     case .header(let section, let count):
                         header(section, count: count, hasGap: Self.headerHasGap(rows, at: keyed.index))
-                            .moveDisabled(section.isDefault)
+                            .moveDisabled(section.isDefault || !isReorderingSections)
                     case .item(let entry, let sectionId):
                         itemRow(entry, sectionId: sectionId, position: Self.groupPosition(rows, at: keyed.index))
                     }
@@ -97,9 +134,9 @@ struct ShoppingSectionedList: View {
     // MARK: - Rows
 
     /// The toggle takes the free space, so the menu stays pinned right however long the name is.
-    /// The main list has no menu. A long press picks a header up, as it does an entry.
+    /// The main list has no menu. While reordering, the chevron and menu give way to a grip.
     private func header(_ section: ShoppingSection, count: Int, hasGap: Bool) -> some View {
-        let collapsed = section.collapsed
+        let collapsed = isReorderingSections || section.collapsed
         let name = L10n.shoppingSectionName(section)
         return HStack(spacing: 0) {
             Button {
@@ -124,9 +161,18 @@ struct ShoppingSectionedList: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // Not `.disabled`, which would dim the headers that are there to be dragged.
+            .allowsHitTesting(!isReorderingSections)
             .accessibilityValue(collapsed ? L10n.shoppingSectionCollapsed : L10n.shoppingSectionExpanded)
 
-            if !section.isDefault {
+            if isReorderingSections {
+                if !section.isDefault {
+                    LarderIcon(.gripVertical, size: .custom(ShoppingRowMetrics.smallIcon))
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .frame(width: LarderSize.touch, height: LarderSize.touch)
+                        .accessibilityHidden(true)
+                }
+            } else if !section.isDefault {
                 Menu {
                     Button(L10n.shoppingSectionRename) { onRenameSection(section) }
                     Button(L10n.shoppingSectionDelete, role: .destructive) { onDeleteSection(section, count) }
@@ -145,6 +191,11 @@ struct ShoppingSectionedList: View {
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
         .deleteDisabled(true)
+        .contextMenu {
+            if !isReorderingSections, let onReorderSections {
+                Button(L10n.shoppingSectionReorder, action: onReorderSections)
+            }
+        }
     }
 
     private func itemRow(
@@ -336,45 +387,6 @@ struct ShoppingRowContent: View {
         .padding(.leading, LarderSpace.s1)
         .padding(.vertical, LarderSpace.s1)
         .frame(minHeight: ShoppingRowMetrics.minHeight)
-    }
-}
-
-/// Reordering the user's sections. The main list isn't shown because it stays pinned first.
-struct ShoppingSectionReorderSheet: View {
-    @ObservedObject var viewModel: NativePantryViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var order: [ShoppingSection] = []
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(L10n.shoppingSectionReorder)
-                .larderFont(.title)
-                .foregroundStyle(LarderColor.onSurface)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.top, LarderSpace.s6)
-                .padding(.horizontal, LarderSpace.s4)
-            List {
-                ForEach(order) { section in
-                    Text(L10n.shoppingSectionName(section))
-                        .larderFont(.body)
-                        .foregroundStyle(LarderColor.onSurface)
-                        .listRowBackground(Color.clear)
-                }
-                .onMove { from, to in
-                    order.move(fromOffsets: from, toOffset: to)
-                    viewModel.reorderShoppingSections(order.map(\.id))
-                }
-            }
-            .listStyle(.plain)
-            .scrollContentBackground(.hidden)
-            .environment(\.editMode, .constant(.active))
-            HStack {
-                Spacer()
-                LarderButton(L10n.doneButton) { dismiss() }
-            }
-            .padding(LarderSpace.s4)
-        }
-        .onAppear { order = viewModel.shoppingSections.filter { !$0.isDefault } }
     }
 }
 
