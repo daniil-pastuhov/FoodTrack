@@ -11,7 +11,6 @@ import com.foodtracker.backup.RestoreSummary
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
-import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.MAX_ITEM_QUANTITY
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ProductInfo
@@ -116,24 +115,14 @@ data class FilterCriteria(
 
 data class PantryUiState(
     val items: List<PantryItem> = emptyList(),
-    /** All items as UI rows, with expiry/status/category already derived. Used by the Calendar,
+    /** All items as UI rows, with expiry/status/category already derived. Used by the Recipe tab,
      *  which needs the full set rather than the dashboard's filtered subset. */
     val allRows: List<PantryRow> = emptyList(),
     val filteredItems: List<PantryRow> = emptyList(),
-    /** All rows grouped by expiry date, for the Calendar. Derived here rather than in
-     *  composition so paging between months doesn't regroup the whole pantry. */
-    val itemsByExpiryDate: Map<LocalDate, List<PantryRow>> = emptyMap(),
-    /** The single most urgent status among the items expiring on each date, for the Calendar's
-     *  day indicator dots. Previously recomputed per day cell, per recomposition, by mapping
-     *  that day's items to a throwaway status list. */
-    val statusByExpiryDate: Map<LocalDate, ExpiryStatus> = emptyMap(),
-    /** The Calendar's agenda: every item bucketed into Overdue / Today / Tomorrow / this week /
-     *  next week / later, empty buckets dropped. */
-    val agenda: List<AgendaSection> = emptyList(),
     /** Distinct resolved category names present on the current items, in the user's configured
      *  category order — the dashboard's category filter chips. */
     val availableCategories: List<String> = emptyList(),
-    /** The date every row's [PantryRow.daysRemaining]/status and the [agenda] were derived
+    /** The date every row's [PantryRow.daysRemaining]/status were derived
      *  against. Screens that mark "today" read it from here rather than calling
      *  [DateUtils.today] themselves, so their highlight and the labels can't disagree. */
     val today: LocalDate = DateUtils.today(),
@@ -245,7 +234,7 @@ class PantryStateHolder(
     private val preferencesState = MutableStateFlow(emptyList<CategoryPreference>())
 
     /** The date the pantry is derived against. An input to [basePantry] like any other, so when
-     *  the day rolls over every "expires in N days" label, status and agenda bucket is rebuilt.
+     *  the day rolls over every "expires in N days" label and status is rebuilt.
      *  Without it they stayed frozen at whatever day the last item/settings change happened on,
      *  so an app left running overnight showed yesterday's countdowns. Advanced by
      *  [observeDayRollover] and by [refreshToday]. */
@@ -253,7 +242,7 @@ class PantryStateHolder(
 
     /**
      * Everything derived from the pantry that does **not** depend on the dashboard's filter
-     * selection: the per-item rows, the three counters, the calendar groupings and the category
+     * selection: the per-item rows, the three counters and the category
      * chips. These are a pure function of (items, category preferences, settings).
      *
      * Kept in its own `combine` so that changing a filter doesn't re-run any of it. Folding
@@ -334,9 +323,6 @@ class PantryStateHolder(
                             items = base.items,
                             allRows = base.allRows,
                             filteredItems = filtered,
-                            itemsByExpiryDate = base.itemsByExpiryDate,
-                            statusByExpiryDate = base.statusByExpiryDate,
-                            agenda = base.agenda,
                             today = base.today,
                             availableCategories = base.availableCategories,
                             expiredCount = base.expiredCount,

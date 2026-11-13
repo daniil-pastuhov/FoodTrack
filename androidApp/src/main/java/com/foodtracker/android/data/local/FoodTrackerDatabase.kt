@@ -13,9 +13,10 @@ import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
         ProductNameEntity::class,
         LocalProductEntity::class,
         CategoryPreferenceEntity::class,
-        ShoppingSectionEntity::class
+        ShoppingSectionEntity::class,
+        SavedRecipeEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -25,6 +26,7 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
     abstract fun localProductDao(): LocalProductDao
     abstract fun categoryPreferenceDao(): CategoryPreferenceDao
     abstract fun shoppingSectionDao(): ShoppingSectionDao
+    abstract fun savedRecipeDao(): SavedRecipeDao
 
     companion object {
         const val DB_NAME = "foodtracker.db"
@@ -371,6 +373,29 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                 }
                 db.execSQL("DROP TABLE migrated_section_map")
                 db.execSQL("DROP TABLE migrated_section_groups")
+            }
+        }
+
+        // Adds the table for recipes and menus written in the Recipe tab. Nothing existing is
+        // touched: every other table keeps its rows as they are.
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS saved_recipes (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        kind TEXT NOT NULL,
+                        title TEXT NOT NULL,
+                        payload TEXT NOT NULL,
+                        createdAtEpochMillis INTEGER NOT NULL,
+                        source TEXT NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_saved_recipes_createdAtEpochMillis " +
+                        "ON saved_recipes (createdAtEpochMillis)"
+                )
             }
         }
     }

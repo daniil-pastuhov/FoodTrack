@@ -8,10 +8,19 @@ import com.foodtracker.android.data.local.RoomLocalProductRepository
 import com.foodtracker.android.data.local.RoomPantryRepository
 import com.foodtracker.android.data.local.RoomProductNameRepository
 import com.foodtracker.android.data.local.RoomShoppingListRepository
+import com.foodtracker.android.data.local.RoomSavedRecipeRepository
 import com.foodtracker.android.data.local.RoomShoppingSectionRepository
+import com.foodtracker.android.recipe.GeminiNanoRecipeModel
+import com.foodtracker.android.settings.AndroidRecipeConfigRepository
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
+import com.foodtracker.recipe.NotAvailableCreditsGateway
+import com.foodtracker.recipe.NotAvailableRecipeBackend
+import com.foodtracker.recipe.OnDeviceRecipeModel
+import com.foodtracker.recipe.RecipeConfigRepository
+import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.recipe.SavedRecipeRepository
 import com.foodtracker.repository.CategoryPreferenceRepository
 import com.foodtracker.repository.LocalProductRepository
 import com.foodtracker.repository.PantryRepository
@@ -22,6 +31,7 @@ import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.viewmodel.PantryStateHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
+import java.util.Locale
 
 val appModule = module {
     single {
@@ -40,7 +50,8 @@ val appModule = module {
                 FoodTrackerDatabase.MIGRATION_9_10,
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
-                FoodTrackerDatabase.MIGRATION_12_13
+                FoodTrackerDatabase.MIGRATION_12_13,
+                FoodTrackerDatabase.MIGRATION_13_14
             )
             .build()
     }
@@ -50,6 +61,7 @@ val appModule = module {
     single { get<FoodTrackerDatabase>().localProductDao() }
     single { get<FoodTrackerDatabase>().categoryPreferenceDao() }
     single { get<FoodTrackerDatabase>().shoppingSectionDao() }
+    single { get<FoodTrackerDatabase>().savedRecipeDao() }
     single<PantryRepository> { RoomPantryRepository(get()) }
     single<ShoppingListRepository> { RoomShoppingListRepository(get()) }
     single<ProductNameRepository> { RoomProductNameRepository(get()) }
@@ -57,6 +69,9 @@ val appModule = module {
     single<CategoryPreferenceRepository> { RoomCategoryPreferenceRepository(get()) }
     single<ShoppingSectionRepository> { RoomShoppingSectionRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
+    single<SavedRecipeRepository> { RoomSavedRecipeRepository(get()) }
+    single<RecipeConfigRepository> { AndroidRecipeConfigRepository(androidContext()) }
+    single<OnDeviceRecipeModel> { GeminiNanoRecipeModel() }
     single { OpenFoodFactsApi() }
     // Depends on PantryStateHolder rather than the repositories: see WidgetUpdater for why.
     single { WidgetUpdater(androidContext(), get()) }
@@ -71,6 +86,19 @@ val appModule = module {
             shoppingSectionRepository = get(),
             uncategorizedLabel = androidContext().getString(R.string.shopping_list_uncategorized),
             openFoodFactsApi = get()
+        )
+    }
+    // The paid route is not there yet: the backend and credits stay at their "not available"
+    // defaults until the step that adds sign-in and purchases plugs them in here.
+    single {
+        RecipeStateHolder(
+            pantry = get<PantryStateHolder>().uiState,
+            onDeviceModel = get(),
+            savedRecipeRepository = get(),
+            configRepository = get(),
+            backend = NotAvailableRecipeBackend,
+            credits = NotAvailableCreditsGateway,
+            appLanguage = { Locale.getDefault().toLanguageTag() }
         )
     }
 }

@@ -2,10 +2,12 @@ package com.foodtracker.android.ui.design
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -64,7 +66,7 @@ fun isExpanded(): Boolean {
 }
 
 /** The four destinations on the [FloatingNav]. */
-enum class LarderTab { Home, Calendar, Shopping, Settings }
+enum class LarderTab { Home, Recipe, Shopping, Settings }
 
 /** The gap between floating things: the pill and the window edge, Scan and the pill. */
 private val ShellGap = LarderSpace.s3
@@ -161,7 +163,7 @@ fun FloatingNav(
 ) {
     val entries = listOf(
         NavEntry(LarderTab.Home, LarderIcons.House, stringResource(R.string.nav_label_home)),
-        NavEntry(LarderTab.Calendar, LarderIcons.CalendarDays, stringResource(R.string.nav_label_calendar)),
+        NavEntry(LarderTab.Recipe, LarderIcons.ChefHat, stringResource(R.string.nav_label_recipe)),
         NavEntry(LarderTab.Shopping, LarderIcons.ShoppingBasket, stringResource(R.string.nav_label_shopping_list)),
         NavEntry(LarderTab.Settings, LarderIcons.Settings, stringResource(R.string.nav_label_settings))
     )
@@ -255,7 +257,7 @@ private fun NavTab(entry: NavEntry, selected: Boolean, badgeCount: Int, onClick:
     }
 }
 
-/** The labelled Scan button, on Home and Calendar. See [shellClearance] for where it sits. */
+/** The labelled Scan button, on Home only; Recipe pins its own primary action in the same place. See [shellClearance] for where it sits. */
 @Composable
 fun ScanFab(
     onClick: () -> Unit,
@@ -281,6 +283,64 @@ fun ScanFab(
             Text(text = label, style = MaterialTheme.typography.labelLarge)
         }
     }
+}
+
+/**
+ * A tab's one primary action, pinned where Scan sits on Home, above the pill: the Recipe tab's
+ * Generate or Share. Full width on phones; the caller sizes it on expanded windows. [cost] is the
+ * small pill at the end that says what the action takes ("Free").
+ */
+@Composable
+fun PinnedAction(
+    text: String,
+    icon: LarderIcons,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    cost: String? = null,
+    enabled: Boolean = true
+) {
+    val shape = RoundedCornerShape(LarderRadius.lg)
+    val scheme = MaterialTheme.colorScheme
+    val container = if (enabled) scheme.primary else scheme.surfaceContainerHigh
+    val content = if (enabled) scheme.onPrimary else scheme.onSurfaceVariant
+    Row(
+        modifier = modifier
+            .then(if (enabled) Modifier.larderShadow(LarderTheme.shadows.level2, shape) else Modifier)
+            .clip(shape)
+            .background(container, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(horizontal = LarderSpace.s5, vertical = LarderSpace.s2),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LarderIcon(icon, contentDescription = null, tint = content)
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.labelLarge,
+            color = content
+        )
+        cost?.let {
+            Text(
+                text = it,
+                modifier = Modifier
+                    .border(1.dp, content, RoundedCornerShape(LarderRadius.xl))
+                    .padding(horizontal = LarderSpace.s2, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = content,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@PreviewLightDark
+@Composable
+internal fun PinnedActionPreview() = LarderPreview {
+    PinnedAction("Generate on this phone", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
+    PinnedAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
+    PinnedAction("Generate on this phone", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
 }
 
 @PreviewLightDark

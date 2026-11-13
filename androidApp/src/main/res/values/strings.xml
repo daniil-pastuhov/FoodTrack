@@ -7,7 +7,7 @@
     <string name="scan_content_description">Scan</string>
 
     <string name="nav_label_home">Home</string>
-    <string name="nav_label_calendar">Calendar</string>
+    <string name="nav_label_recipe">Recipe</string>
     <string name="nav_label_shopping_list">Shopping</string>
     <string name="nav_label_settings">Settings</string>
 
@@ -259,10 +259,6 @@
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">I also have these other items at home, in case any of them are useful too:</string>
     <string name="recipe_prompt_other_items_omitted">(+%1$d more items not shown)</string>
-    <string name="share_recipe_dialog_title">Get recipe ideas</string>
-    <string name="share_recipe_include_other_items_title">Include other pantry items</string>
-    <string name="share_recipe_include_other_items_subtitle">Optional. Lets the assistant suggest recipes using more of what you have.</string>
-    <string name="share_recipe_share_button">Share</string>
     <string name="share_recipe_cancel_button">Cancel</string>
 
     <string name="expires_today">Expires today</string>
@@ -335,26 +331,6 @@
     <string name="settings_content_description">Settings</string>
     <string name="settings_title">Settings</string>
 
-    <string name="calendar_content_description">Calendar</string>
-    <string name="calendar_previous_month">Previous month</string>
-    <string name="calendar_next_month">Next month</string>
-    <string name="calendar_no_items_for_day">No items expiring on this day</string>
-    <string name="calendar_section_overdue">Overdue</string>
-    <string name="calendar_section_today">Today</string>
-    <string name="calendar_section_tomorrow">Tomorrow</string>
-    <string name="calendar_section_this_week">Later this week</string>
-    <string name="calendar_section_next_week">Next week</string>
-    <string name="calendar_section_later">Later</string>
-    <string name="calendar_agenda_empty">Nothing in your pantry yet</string>
-    <string name="calendar_show_all">Show all</string>
-    <string name="calendar_swipe_used">Used</string>
-    <string name="calendar_swipe_tossed">Tossed</string>
-    <string name="calendar_show_month">Show month</string>
-    <string name="calendar_show_week">Show week</string>
-    <plurals name="calendar_day_item_count">
-        <item quantity="one">%1$d item expiring</item>
-        <item quantity="other">%1$d items expiring</item>
-    </plurals>
 
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Remind me before food expires</string>
@@ -586,9 +562,6 @@
     <string name="detail_credit">Product data from Open Food Facts</string>
     <string name="detail_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
     <string name="detail_choose_item">Choose an item to see its details.</string>
-    <string name="recipe_intro">BestBefore writes a prompt from %1$s for you to share with an AI assistant. Nothing leaves your device until you choose where to send it.</string>
-    <string name="recipe_names_two">%1$s and %2$s</string>
-    <string name="recipe_names_three">%1$s, %2$s and %3$s</string>
     <plurals name="lede_use_by_tomorrow">
         <item quantity="one">%1$s thing to use by tomorrow</item>
         <item quantity="other">%1$s things to use by tomorrow</item>
@@ -608,14 +581,6 @@
     <plurals name="home_show_items">
         <item quantity="one">Show %d item</item>
         <item quantity="other">Show %d items</item>
-    </plurals>
-    <plurals name="recipe_names_more">
-        <item quantity="one">%1$s, %2$s and %3$d other</item>
-        <item quantity="other">%1$s, %2$s and %3$d others</item>
-    </plurals>
-    <plurals name="recipe_include_others_count">
-        <item quantity="one">Adds your other item, so the assistant can use more of what you have.</item>
-        <item quantity="other">Adds your other %d items, so the assistant can use more of what you have.</item>
     </plurals>
     <string-array name="lede_number_words">
         <item>One</item>
@@ -730,11 +695,8 @@
     <string name="discard_edit_message">Your changes to %1$s won\'t be saved. The item stays as it was.</string>
 
 
-    <!-- Larder: Calendar -->
-    <string name="calendar_pane_title">What\'s due</string>
-    <string name="calendar_used_snackbar">%1$s used</string>
-    <string name="calendar_tossed_snackbar">%1$s tossed</string>
-    <string name="calendar_empty_message">Add food with its date and it will show up here, on the day it is due.</string>
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s used</string>
 
     <!-- Onboarding -->
     <string name="onboarding_get_started">Get started</string>
@@ -766,4 +728,113 @@
     <string name="onboarding_declined_camera_title">The camera is off</string>
     <string name="onboarding_declined_camera_body">The scanner will show how to allow it</string>
     <string name="onboarding_add_by_hand">Add an item by hand</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">What to cook</string>
+    <string name="recipe_saved_action">Saved recipes</string>
+    <string name="recipe_settings_action">Recipe settings</string>
+    <string name="recipe_cook_with">Cook with</string>
+    <string name="recipe_add_other">Add other items</string>
+    <string name="recipe_difficulty">Difficulty</string>
+    <string name="recipe_difficulty_easy">Easy</string>
+    <string name="recipe_difficulty_medium">Medium</string>
+    <string name="recipe_difficulty_ambitious">Ambitious</string>
+    <string name="recipe_servings">Servings</string>
+    <string name="recipe_servings_fewer">Fewer</string>
+    <string name="recipe_servings_more">More</string>
+    <string name="recipe_time">Time</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 hour</string>
+    <string name="recipe_time_any">Any</string>
+    <string name="recipe_more_options">More options</string>
+    <string name="recipe_detail_summary_brief">Brief detail</string>
+    <string name="recipe_detail_summary_standard">Standard detail</string>
+    <string name="recipe_detail_summary_step_by_step">Step by step</string>
+    <string name="recipe_meal_summary_any">Any meal</string>
+    <string name="recipe_diet_summary_none">No diet</string>
+    <string name="recipe_share_prompt">Share prompt</string>
+    <string name="recipe_copy_prompt">Copy prompt</string>
+    <string name="recipe_prompt_copied">Prompt copied</string>
+    <string name="recipe_prompt_clip_label">Recipe prompt</string>
+    <string name="recipe_generate_on_phone">Generate on this phone</string>
+    <string name="recipe_cost_free">Free</string>
+    <string name="recipe_prompt_hint">Free: send the prompt to an AI app you already use.</string>
+    <string name="recipe_tick_hint">Tick at least one item to cook with.</string>
+    <string name="recipe_writing_phone_title">Writing on this phone</string>
+    <string name="recipe_writing_phone_body">Nothing is sent anywhere. This can take a minute.</string>
+    <string name="recipe_stop">Stop</string>
+    <string name="recipe_failed_phone">Couldn\'t write the recipe on this phone.</string>
+    <string name="recipe_try_again">Try again</string>
+    <string name="recipe_preparing_title">Your phone is getting ready</string>
+    <string name="recipe_preparing_body">Its own model is still downloading. Until then, share the prompt.</string>
+    <string name="recipe_empty_title">Nothing to cook with yet</string>
+    <string name="recipe_empty_body">Add what you have at home and the items closest to their date will be picked for you.</string>
+    <string name="recipe_done">Done</string>
+    <string name="recipe_result_title">Recipe</string>
+    <string name="recipe_share_recipe">Share recipe</string>
+    <string name="recipe_duration_hours">%1$d h</string>
+    <string name="recipe_duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="recipe_ingredients">Ingredients</string>
+    <string name="recipe_method">Method</string>
+    <string name="recipe_in_pantry">In your pantry</string>
+    <string name="recipe_tip">Tip</string>
+    <string name="recipe_source_phone">Written on this phone · Nothing was sent anywhere</string>
+    <string name="recipe_source_server">Written by our server · Saved on this phone</string>
+    <string name="recipe_not_found">This recipe is no longer saved.</string>
+    <string name="recipe_saved_today">Today</string>
+    <string name="recipe_saved_yesterday">Yesterday</string>
+    <string name="recipe_saved_from_phone">Written on this phone</string>
+    <string name="recipe_saved_from_pack">From your pack</string>
+    <string name="recipe_saved_empty_title">No recipes yet</string>
+    <string name="recipe_saved_empty_body">Recipes and menus written in the app are kept here.</string>
+    <string name="recipe_deleted">Recipe deleted</string>
+    <string name="recipe_cooking">Cooking</string>
+    <string name="recipe_cooking_desc">Used for every recipe, prompt and menu until you change them.</string>
+    <string name="recipe_detail">Detail</string>
+    <string name="recipe_detail_brief">Brief</string>
+    <string name="recipe_detail_standard">Standard</string>
+    <string name="recipe_detail_step_by_step">Step by step</string>
+    <string name="recipe_meal_and_diet">Meal and diet</string>
+    <string name="recipe_meal">Meal</string>
+    <string name="recipe_meal_any">Any</string>
+    <string name="recipe_meal_breakfast">Breakfast</string>
+    <string name="recipe_meal_lunch">Lunch</string>
+    <string name="recipe_meal_dinner">Dinner</string>
+    <string name="recipe_meal_snack">Snack</string>
+    <string name="recipe_meal_dessert">Dessert</string>
+    <string name="recipe_diet">Diet</string>
+    <string name="recipe_diet_none">None</string>
+    <string name="recipe_diet_vegetarian">Vegetarian</string>
+    <string name="recipe_diet_vegan">Vegan</string>
+    <string name="recipe_diet_pescatarian">Pescatarian</string>
+    <string name="recipe_diet_gluten_free">Gluten-free</string>
+    <string name="recipe_diet_dairy_free">Dairy-free</string>
+    <string name="recipe_allergens_note">Your allergen list from Settings is always applied: %1$s.</string>
+    <string name="recipe_allergens_none">none yet</string>
+    <string name="recipe_language">Language</string>
+    <string name="recipe_write_in">Write recipes in</string>
+    <string name="recipe_language_same_as_app">Same as the app (%1$s)</string>
+    <string name="recipe_account">Account</string>
+    <string name="recipe_account_none">No account. You only need to decide when you buy a pack, and the free routes never use one.</string>
+    <string name="recipe_prompt_preferences_intro">Please keep to this:</string>
+    <string name="recipe_prompt_difficulty_easy">Easy to make, for a beginner</string>
+    <string name="recipe_prompt_difficulty_medium">Medium difficulty</string>
+    <string name="recipe_prompt_difficulty_ambitious">Ambitious, for a keen cook</string>
+    <string name="recipe_prompt_detail_brief">A short method in a few steps</string>
+    <string name="recipe_prompt_detail_standard">A normal level of detail</string>
+    <string name="recipe_prompt_detail_step_by_step">Every step spelled out</string>
+    <string name="recipe_prompt_servings">Servings: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Ready in %1$d minutes or less</string>
+    <string name="recipe_prompt_meal">Meal: %1$s</string>
+    <string name="recipe_prompt_diet">Diet: %1$s</string>
+    <string name="recipe_prompt_allergens">Nothing that contains: %1$s</string>
+    <string name="recipe_prompt_language">Write the recipes in %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d more in your pantry</item>
+        <item quantity="other">%1$d more in your pantry</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d serving</item>
+        <item quantity="other">%1$d servings</item>
+    </plurals>
 </resources>

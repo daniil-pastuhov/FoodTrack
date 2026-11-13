@@ -3,12 +3,9 @@ package com.foodtracker.android.ui.design
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxDefaults
@@ -23,27 +20,19 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.PreviewLightDark
-import androidx.compose.ui.unit.dp
-import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.model.ExpiryStatus
 import kotlinx.coroutines.launch
 
 /** How a swipe's reveal looks. */
-enum class LarderSwipeStyle(internal val stacked: Boolean = false) {
+enum class LarderSwipeStyle {
     Primary,
 
     /** The error colour, for an action that removes something. */
     Danger,
 
     /** A soft primary container, for actions that aren't the row's main story. */
-    Quiet,
-
-    /** Calendar's Used: a success container, with the icon stacked over the word. */
-    SuccessStacked(stacked = true),
-
-    /** Calendar's Tossed: an error container, with the icon stacked over the word. */
-    ErrorStacked(stacked = true)
+    Quiet
 }
 
 /** One side of a [LarderSwipeRow]. [keepsRow] is for an action that can leave the row in the
@@ -56,9 +45,6 @@ class LarderSwipeAction(
     val keepsRow: Boolean = false,
     val onSwipe: () -> Unit
 )
-
-/** From calendar.css: the block a stacked action sits in, at the edge the row slides away from. */
-private val StackedRevealWidth = 104.dp
 
 /**
  * Swipe to dismiss with a labelled, coloured reveal. [startAction] is revealed dragging right,
@@ -122,29 +108,10 @@ fun LarderSwipeRow(
 @Composable
 internal fun SwipeReveal(action: LarderSwipeAction, alignment: Alignment) {
     val scheme = MaterialTheme.colorScheme
-    val colors = LarderTheme.colors
     val (background, foreground) = when (action.style) {
         LarderSwipeStyle.Primary -> scheme.primary to scheme.onPrimary
         LarderSwipeStyle.Danger -> scheme.error to scheme.onError
         LarderSwipeStyle.Quiet -> scheme.primaryContainer to scheme.onPrimaryContainer
-        LarderSwipeStyle.SuccessStacked -> colors.successContainer to colors.onSuccessContainer
-        LarderSwipeStyle.ErrorStacked -> scheme.errorContainer to scheme.onErrorContainer
-    }
-    if (action.style.stacked) {
-        // The colour fills the whole reveal, so a long drag doesn't run out past the block.
-        Box(modifier = Modifier.fillMaxSize().background(background), contentAlignment = alignment) {
-            Column(
-                modifier = Modifier.width(StackedRevealWidth),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                LarderIcon(action.icon, contentDescription = null, tint = foreground)
-                action.label?.let {
-                    Text(text = it, style = MaterialTheme.typography.labelMedium, color = foreground)
-                }
-            }
-        }
-        return
     }
     Box(
         modifier = Modifier
@@ -171,18 +138,6 @@ internal fun LarderSwipeRowPreview() = LarderPreview {
     LarderGroup {
         Box {
             SwipeReveal(LarderSwipeAction(LarderIcons.ShoppingBasket, "To list") {}, Alignment.CenterStart)
-        }
-        Box(modifier = Modifier.height(68.dp)) {
-            SwipeReveal(
-                LarderSwipeAction(LarderIcons.Check, "Used", LarderSwipeStyle.SuccessStacked) {},
-                Alignment.CenterStart
-            )
-        }
-        Box(modifier = Modifier.height(68.dp)) {
-            SwipeReveal(
-                LarderSwipeAction(LarderIcons.Trash2, "Tossed", LarderSwipeStyle.ErrorStacked) {},
-                Alignment.CenterEnd
-            )
         }
         LarderSwipeRow(
             startAction = LarderSwipeAction(LarderIcons.ShoppingBasket, "To list") {},
