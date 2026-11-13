@@ -29,10 +29,13 @@ Artifacts: options https://claude.ai/artifact/TeLu92BMaS1QDhDVj98fPw · design h
 |---|---|---|---|
 | Pantry | Home dashboard | What do I need to use first? | Expired / Soon / Fresh metrics, search, filter + sort sheets, row: image, name, status, location, category, quantity; use one, swipe, multi-select, delete with undo |
 | Pantry | Product detail sheet | Is it OK for me? | Nutri-Score, NOVA, allergens, ingredients |
-| Pantry | Recipe ideas dialog | Share a prompt to an AI assistant | Optional other items |
 | Add | Add / edit item | Save with the right date | Name, brand, date + quick dates and suggestions, location, category, quantity, notes, essential, per-item reminder; implausible date warning |
 | Add | Scanner | Capture a product | Modes: Barcode, Date OCR, Photo, Batch, Receipt; lookup, not found, duplicate dialog, allergen warning, torch |
-| Calendar | Calendar | What's due when? | Week strip / month grid, agenda buckets, swipe Used / Tossed |
+| Recipe | Recipe tab | What can I cook from what expires first? | Items ticked soonest-first, quick form, three routes: recipe from a pack (server), on this phone (free), prompt for another AI app (free). Menu for 3 days, server only |
+| Recipe | Recipe and menu | Cook it | Saved automatically; menu is 3 days of 2 or 3 full recipes |
+| Recipe | Saved recipes | Find it again | On this phone only; delete with Undo |
+| Recipe | Buying recipes | Buy a pack, know where it is kept | Packs of 10, 50, 100; first purchase chooses no account or sign-in; store and server failures |
+| Recipe | Recipe settings | Set how recipes are written | Difficulty, detail, servings, time, meal, diet, language; account, sign out, delete account (destructive) |
 | Shopping | Shopping list | What do I need to buy? | Sections, did-you-mean, share text/QR, import, move to section |
 | Settings | Settings | Change a preference | Notifications, threshold, locations, categories, allergens, appearance, stores, backup, clear data (destructive) |
 | Settings | Categories | Organise categories | Reorder, rename, hide, shelf life |
@@ -42,24 +45,27 @@ Artifacts: options https://claude.ai/artifact/TeLu92BMaS1QDhDVj98fPw · design h
 | System | Background location disclosure | Consent | Store arrival reminders |
 
 ## State plan
-Pantry data is local, so list screens have no loading, refresh or network error states. Only barcode lookup, product images and shop location touch the outside world.
+Pantry data is local, so list screens have no loading, refresh or network error states. Barcode lookup, product images and shop location touch the outside world, and so does the Recipe tab when a recipe is written by our server, a pack is bought or someone signs in. Those have loading, offline and failure states.
 
 | Screen | States (tier) |
 |---|---|
 | Onboarding | Welcome · Notifications rationale · Camera rationale · Ready to add first item · Permission declined, continues without it (T4 later on the screen that needs it) |
 | Home | Loaded · Empty first use · All fresh · No search results · Search active · Filter sheet · Sort sheet · Multi-select · Item used, Undo (T3) · Item removed, Undo (T3) · Delete selected (T6) · Notifications off (T4) · Long names, 999+ items, missing images, 1 item |
 | Product detail | Full info · Partial data, gaps closed · Allergen match (T4) · Long ingredients |
-| Recipe ideas | Default · With other items |
 | Add / edit | New blank · Prefilled from scan · Suggested date · Name missing (T1) · Implausible date (T1 warning) · Date picker · Edit existing · Discard changes (T6) · Long content |
 | Scanner | Barcode ready · Lookup in progress · Found · Found with date · Allergen match (T4) · Not found · Offline lookup (T4, continue by hand) · Date OCR ready · Date found · Photo ready · Photo captured, suggestions · Batch empty · Batch with queue, Check date · Receipt ready · Receipt reading · Nothing found on receipt (T3) · Already in pantry (T6) · Camera denied (T5 with path to settings) |
-| Calendar | Agenda with week strip · Month grid · Day selected · Day with nothing · Empty first use · Swipe Used / Tossed, Undo (T3) |
+| Recipe tab | Ready with recipes · Phone can write too · No recipes (phone / prompt only) · Menu for 3 days · Menu, too few recipes (T4) · Nothing ticked · Writing (server, menu, phone) · Offline (T4) · Could not write, nothing taken (T3) · Refused, counted (T3) · Server paused (T4) · Phone model preparing (T4) · Empty pantry · Russian |
+| Recipe and menu | Recipe from a pack · Just arrived (T3) · Written on the phone · Menu · Dish from a menu · Long recipe |
+| Saved recipes | Loaded · Empty · Deleted, Undo (T3) |
+| Buying recipes | Packs · Account or not · Adding · Added (T3) · Paid, not added yet (T4) · Payment pending (T4) · Store unavailable (T4) · Not accepted (T6) |
+| Recipe settings | No account · Recipes on this phone · Signed in · Language · Sign out (T6) · Delete account (T6) · Sign-in already has recipes (T6) · Sign-in failed (T3) |
 | Shopping | Loaded with sections · Empty · Add with did-you-mean · Item ticked · Section menu, rename, delete section (T6) · Move to section · Share · QR code · List too long for QR (T4) · Import · Import results (T3) · Long list |
 | Settings | Default · Notifications blocked (T4) · Reminder styles · Locations editing · Allergens · Shops: permission disclosure (T6), location failed (T3) · Backup: export success or failure (T3), restore choice (T6), bad file (T3) · Clear all data (T6) |
 | Categories | Loaded · Empty · Rename · Shelf life dialog, out of range (T1) · Reordering |
 | Widgets | Expiring, Shopping, Overview, each with content and empty, small and medium, light and dark |
 | Notifications | Per item · Summary · Shop arrival, each with actions |
 
-Tablet and foldable: Home, Calendar and Shopping get list-detail or two-pane layouts with the same floating pill as phones. The rest use a centred column.
+Tablet and foldable: Home, Recipe and Shopping get list-detail or two-pane layouts with the same floating pill as phones. The rest use a centred column.
 
 Removing one item, marking used or tossed, and removing from a queue are reversible, so they are T3 with Undo. Clear all data and Replace everything on restore are T6. Deleting several items is T3 with one Undo.
 
@@ -82,7 +88,7 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - 2026-11-04 · Display faces must have Cyrillic, which rules out Fraunces; candidates are Vollkorn, Nunito, Bitter · the app ships in Russian
 - 2026-11-04 · Home keeps one action button, Scan. The separate plus button is removed altogether; Add by hand is reached through Type it in on the scanner · user decision
 - 2026-11-04 · Feature pages are written by parallel subagents, one per feature · user choice
-- 2026-11-04 · Calendar rows open product detail like Home, day marks use shape plus count, snackbars say used or tossed rather than removed · consistency and no reliance on colour
+- 2026-11-04 · Calendar rows open product detail like Home, day marks use shape plus count, snackbars say used or tossed rather than removed · consistency and no reliance on colour (superseded: Calendar removed 2026-11-13)
 - 2026-11-04 · Add item: Save stays enabled and shows a T1 error when the name is missing; Android asks before discarding changes; Save moves to a pinned bar on both platforms · error framework rules
 - 2026-11-04 · Shopping rows get a visible tick as well as swipe, and the swipe reveal becomes green with a tick; ticking removes the row with Undo · no action depends on a gesture
 - 2026-11-04 · Settings: phone is one long page in four groups, tablet is section list plus detail; drag handles also offer Move up and Move down (WCAG 2.5.7); out-of-range shelf life and duplicate locations show T1 errors instead of silent handling · error framework and accessibility
@@ -99,6 +105,13 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - 2026-11-04 · No navigation rail or sidebar: tablets and foldables use the floating pill, with Scan at the bottom right in thumb reach · user decision; the rail took a column and put Scan in the least reachable corner
 - 2026-11-05 · iOS Add item: swiping down on a changed form is blocked and Cancel asks first; a swipe can't raise the dialog on iOS 27 · nothing is lost
 - 2026-11-04 · The user asked for a new design system, so the existing theme is replaced rather than extended · from the /design request
+- 2026-11-13 · The Calendar tab is removed and Recipe takes its place; the recipe-ideas dialog on Home becomes one route of the new tab · owner decision
+- 2026-11-13 · Recipes can be written three ways: by our server from a paid pack, by the phone's own model for free, or as a prompt shared to another AI app for free. A menu for 3 days (2 or 3 courses a day) is server only and takes 3 recipes · owner decision
+- 2026-11-13 · The unit people buy is called a recipe, not a credit or token: 10 recipes buys ten dishes · plain words
+- 2026-11-13 · The app gains a server, purchases and optional sign-in. "No account, data stays on the device" stays true for anyone who never buys: nothing reaches our server until a purchase starts · owner decision
+- 2026-11-13 · The first purchase asks where the recipes should live, on this phone with no account or in an Apple or Google account, with the consequence of each spelled out · owner decision
+- 2026-11-13 · On the Recipe tab the primary action is pinned above the nav where Scan sits on Home, and Scan is on Home only · the form is taller than a phone screen
+- 2026-11-13 · A recipe is taken only when a result arrives; the count changes when the result is shown · trust
 
 ## Options history
 - Round 1: A Larder, B Enamel, C Preserves → A Larder chosen by the user, the closest fit to warm and calm
@@ -129,6 +142,7 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - Add item: quantity limit differs (iOS 99, Android none) and the design sets none.
 - Add item: "Add to Pantry" reads oddly above "Save to Fridge".
 - Translation: discard dialog body has no ru or nb text yet.
-- Calendar: Russian past-date label "Просрочено 1 день назад" is long and sterner than "1 day over"; needs a new string.
-- Calendar: tablet pane titles "What's due" / "Что истекает" are new and need a translator's check.
-- Calendar: sample data gained Mature cheddar (12 Nov) so Next week has a row.
+- Russian past-date label "Просрочено 1 день назад" is long and sterner than "1 day over"; needs a new string. It now shows on the Recipe tab's rows.
+- Recipe: every Russian string on the page is new and needs a translator's check; Norwegian has none yet.
+- Recipe: pack prices on the page are samples; real ones come from the stores.
+- Recipe: Apple and Google sign-in buttons use stand-in icons; the real ones must follow each company's button rules.

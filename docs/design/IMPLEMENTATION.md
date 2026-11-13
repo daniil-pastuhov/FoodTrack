@@ -15,7 +15,7 @@ Android lives in `androidApp/.../ui/design/`, iOS in `iosApp/FoodTracker/DesignS
 Widths: `isExpanded` is true at 700dp/pt and up, read from window width. Two-pane layouts use it. There is no navigation rail or sidebar on any device.
 
 ## Routes
-Tabs: home, calendar, shopping, settings. Pushed or modal: productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, onboarding.
+Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), savedRecipes, recipeSettings, buyRecipes (sheet), productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, onboarding.
 
 ## State additions (Wave 0)
 - Lookup result: Found(product), NotFound, Offline.
@@ -38,7 +38,7 @@ Tabs: home, calendar, shopping, settings. Pushed or modal: productDetail(itemId)
 `./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug` (JDK 17) and the `xcodebuild` simulator build in CLAUDE.md, as far as your platform is affected. In a fresh Gradle home set `GRADLE_RO_DEP_CACHE=$HOME/.gradle/caches`. Report real results and anything not verified.
 
 ## Approved defaults
-`found` hides "In your pantry" at zero. Quantity limit 99 on both platforms. iOS Add item stays a modal with Cancel. Add item title is "Add item". Per-item notification channel gets a new id at default importance. Widget tick stays a ring with a check; in-app tick keeps its empty-ring off state. Blank Save and Import in Shopping stay disabled. A duplicate shopping name shows a T3 message. Scan is on Home and Calendar only. Later, not now: fixing Check date from the queue, validating restore files on pick, the T4 after declining location, shop-arrival actions.
+`found` hides "In your pantry" at zero. Quantity limit 99 on both platforms. iOS Add item stays a modal with Cancel. Add item title is "Add item". Per-item notification channel gets a new id at default importance. Widget tick stays a ring with a check; in-app tick keeps its empty-ring off state. Blank Save and Import in Shopping stay disabled. A duplicate shopping name shows a T3 message. Scan is on Home only; on Recipe the primary action takes its place above the pill. Later, not now: fixing Check date from the queue, validating restore files on pick, the T4 after declining location, shop-arrival actions.
 
 ## Wave 1 and 2 notes
 The foundation is merged. Read the source in `androidApp/.../ui/design/`, `ui/navigation/`, `iosApp/FoodTracker/DesignSystem/` and `AppRouter.swift` for component APIs before writing screens. Don't rebuild a component that exists.
