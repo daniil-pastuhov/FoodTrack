@@ -1,0 +1,5 @@
+• A fresh new look across the whole app, including the calendar and widgets
+• A short welcome guide helps you set up reminders and the camera
+• Calmer expiry reminders, and on Android they now come back after a restart or update
+• Undo when you delete items, and tick off shopping right from the Android widget
+• The scanner tells you when you're offline and helps out if camera access is turned off
