@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { HttpsError } from "firebase-functions/v2/https";
+import { getBalance } from "../src/core/account";
 import { generateRecipe } from "../src/core/generation";
 import { sweep } from "../src/core/sweeper";
 import { emptyUser } from "../src/model";
@@ -59,16 +60,61 @@ describe("generateRecipe charging", () => {
     expect(await user()).toMatchObject({ balance: 4, inFlight: 0, consumedCredits: 1 });
   });
 
-  test("a menu costs three credits and needs a balance of three", async () => {
-    await seed(2);
+  test("a 2-course menu costs four credits and a 3-course menu five", async () => {
+    await seed(4);
     expect(await reason(generateRecipe(deps, caller, request({ kind: "menu", courses: 3 })))).toBe("INSUFFICIENT_CREDITS");
     expect(deps.generator.calls).toBe(0);
-    await seed(3);
     const res = await generateRecipe(deps, caller, request({ kind: "menu", courses: 2 }));
-    expect(res.status).toBe("DONE");
-    expect(res.balance).toBe(0);
+    expect(res).toMatchObject({ status: "DONE", balance: 0, costs: { recipe: 1, menu2: 4, menu3: 5 } });
     expect(res.menu?.days).toHaveLength(3);
     expect(res.menu?.days[0].courses.map((c) => c.course)).toEqual(["starter", "main"]);
+    await seed(5);
+    const three = await generateRecipe(deps, caller, request({ kind: "menu", courses: 3 }));
+    expect(three).toMatchObject({ status: "DONE", balance: 0 });
+    const gens = await db.collection("users").doc(UID).collection("generations").get();
+    expect(gens.docs.map((d) => d.data().cost).sort()).toEqual([4, 5]);
+    expect(await user()).toMatchObject({ consumedCredits: 5 });
+  });
+
+  test("the menu output caps are 14000 (2 courses) and 20000 (3 courses), the recipe cap 4096", async () => {
+    await seed(20);
+    await setConfig({ perUserPerMinute: 10 });
+    await generateRecipe(deps, caller, request());
+    await generateRecipe(deps, caller, request({ kind: "menu", courses: 2 }));
+    await generateRecipe(deps, caller, request({ kind: "menu", courses: 3 }));
+    expect(deps.generator.limits).toEqual([
+      { maxOutputTokens: 4096, hardTokenCeiling: 8192 },
+      { maxOutputTokens: 14_000, hardTokenCeiling: 28_000 },
+      { maxOutputTokens: 20_000, hardTokenCeiling: 40_000 },
+    ]);
+  });
+
+  test("costs come from config/runtime, and a reservation keeps the cost it charged", async () => {
+    await seed(10);
+    await setConfig({ costs: { recipe: 2, menu2: 3, menu3: 6 } });
+    const slow = deps.generator.blockNext();
+    const pending = generateRecipe(deps, caller, request());
+    await slow.started;
+    // The table changes while the call is in flight; the refund or charge uses the stored cost.
+    await setConfig({ costs: { recipe: 1, menu2: 4, menu3: 5 } });
+    slow.release();
+    const res = await pending;
+    expect(res).toMatchObject({ status: "DONE", balance: 8, costs: { recipe: 2, menu2: 3, menu3: 6 } });
+    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: { recipe: 1, menu2: 4, menu3: 5 } });
+  });
+
+  test.each([
+    ["a menu cheaper than a recipe", { recipe: 3, menu2: 2, menu3: 5 }],
+    ["a 3-course menu cheaper than a 2-course one", { recipe: 1, menu2: 5, menu3: 4 }],
+    ["a zero cost", { recipe: 0, menu2: 4, menu3: 5 }],
+    ["a fractional cost", { recipe: 1.5, menu2: 4, menu3: 5 }],
+    ["a missing key", { recipe: 1, menu2: 4 }],
+    ["a string", { recipe: "1", menu2: 4, menu3: 5 }],
+  ])("an invalid costs override (%s) is ignored as a whole", async (_label, costs) => {
+    await seed(5);
+    await setConfig({ costs });
+    const res = await generateRecipe(deps, caller, request());
+    expect(res).toMatchObject({ balance: 4, costs: { recipe: 1, menu2: 4, menu3: 5 } });
   });
 
   test("no balance, no LLM call", async () => {
@@ -124,9 +170,9 @@ describe("generateRecipe charging", () => {
 });
 
 describe("refund classes", () => {
-  test("infrastructure failures always refund", async () => {
+  test("infrastructure failures always refund, up to the daily ceiling", async () => {
     await seed(1);
-    await setConfig({ perUserPerMinute: 100 });
+    await setConfig({ perUserPerMinute: 100, infraRefundsPerDay: 5 });
     deps.generator.failWith("infra", 5);
     for (let i = 0; i < 5; i++) {
       const res = await generateRecipe(deps, caller, request());
@@ -135,19 +181,58 @@ describe("refund classes", () => {
     expect(await user()).toMatchObject({ balance: 1, inFlight: 0, consumedCredits: 0 });
   });
 
-  test("input-caused failures refund three times a day, then are charged", async () => {
+  test("at the infrastructure-refund ceiling, generation is refused before any LLM call until the next UTC day", async () => {
     await seed(5);
     await setConfig({ perUserPerMinute: 100 });
-    deps.generator.failWith("content", 4);
+    deps.generator.failWith("infra", 3);
+    for (let i = 0; i < 3; i++) expect(await generateRecipe(deps, caller, request())).toMatchObject({ charged: false });
+    expect(deps.generator.calls).toBe(3);
+    expect(await reason(generateRecipe(deps, caller, request()))).toBe("INFRA_FAILURE_LIMIT");
+    expect(deps.generator.calls).toBe(3);
+    expect(await user()).toMatchObject({ balance: 5, inFlight: 0 });
+    deps.clock.advance(24 * 60 * 60 * 1000);
+    const res = await generateRecipe(deps, caller, request({ today: new Date(deps.now()).toISOString().slice(0, 10) }));
+    expect(res.status).toBe("DONE");
+  });
+
+  test("sweeper refunds count towards the infrastructure-refund ceiling", async () => {
+    await seed(5);
+    await setConfig({ infraRefundsPerDay: 1 });
+    const slow = deps.generator.blockNext();
+    const live = generateRecipe(deps, caller, request());
+    await slow.started;
+    deps.clock.advance(60_000 + 61_000);
+    expect((await sweep(deps)).settled).toBe(1);
+    slow.release();
+    await live;
+    expect(await reason(generateRecipe(deps, caller, request()))).toBe("INFRA_FAILURE_LIMIT");
+  });
+
+  test("content failures are refunded once per 10 purchased credits over the account's life, then charged", async () => {
+    // 25 credits bought: an allowance of 2 refunded content failures, not reset by a new day.
+    await seed(25);
+    await setConfig({ perUserPerMinute: 100 });
+    deps.generator.failWith("content", 3);
     const results = [];
-    for (let i = 0; i < 4; i++) results.push(await generateRecipe(deps, caller, request()));
-    expect(results.map((r) => r.charged)).toEqual([false, false, false, true]);
-    expect(results[3]).toMatchObject({ status: "FAILED", balance: 4 });
-    // The next UTC day starts a new allowance.
+    for (let i = 0; i < 3; i++) results.push(await generateRecipe(deps, caller, request()));
+    expect(results.map((r) => r.charged)).toEqual([false, false, true]);
+    expect(results[2]).toMatchObject({ status: "FAILED", balance: 24 });
     deps.clock.advance(24 * 60 * 60 * 1000);
     deps.generator.failWith("content");
     expect(await generateRecipe(deps, caller, request({ today: new Date(deps.now()).toISOString().slice(0, 10) })))
-      .toMatchObject({ charged: false, balance: 4 });
+      .toMatchObject({ charged: true, balance: 23 });
+    expect(await user()).toMatchObject({ contentRefundsUsed: 2, consumedCredits: 2 });
+  });
+
+  test("a buyer of fewer than 10 credits still gets one refunded content failure; credits not paid for get none", async () => {
+    await seed(3);
+    deps.generator.failWith("content", 2);
+    expect(await generateRecipe(deps, caller, request())).toMatchObject({ charged: false, balance: 3 });
+    expect(await generateRecipe(deps, caller, request())).toMatchObject({ charged: true, balance: 2 });
+    // A balance whose purchase was refunded by the store (net paid 0) has no allowance.
+    await seed(3, { purchasedCredits: 10, refundedCredits: 10, contentRefundsUsed: 0 });
+    deps.generator.failWith("content");
+    expect(await generateRecipe(deps, caller, request())).toMatchObject({ charged: true, balance: 2 });
   });
 
   test("invalid model output is a content failure", async () => {
@@ -159,21 +244,21 @@ describe("refund classes", () => {
   });
 
   test("a menu missing a day or a course is refunded in full", async () => {
-    await seed(3);
+    await seed(20);
     const req = request({ kind: "menu", courses: 3 });
     deps.generator.next.push(async (r) => {
       const m = sampleMenu(r);
       m.days[2].courses.pop();
       return m;
     });
-    expect(await generateRecipe(deps, caller, req)).toMatchObject({ status: "FAILED", charged: false, balance: 3 });
+    expect(await generateRecipe(deps, caller, req)).toMatchObject({ status: "FAILED", charged: false, balance: 20 });
     deps.generator.next.push(async (r) => {
       const m = sampleMenu(r);
       m.days.pop();
       return m;
     });
     expect(await generateRecipe(deps, caller, request({ kind: "menu", courses: 3 })))
-      .toMatchObject({ status: "FAILED", charged: false, balance: 3 });
+      .toMatchObject({ status: "FAILED", charged: false, balance: 20 });
   });
 
   test("a failed request id stays FAILED on retry", async () => {
@@ -235,9 +320,9 @@ describe("guards", () => {
     expect((await generateRecipe(deps, caller, request())).status).toBe("DONE");
   });
 
-  test("the global daily cap counts a menu as three", async () => {
+  test("the global daily cap counts a menu at its cost", async () => {
     await seed(10);
-    await setConfig({ dailyCap: 3 });
+    await setConfig({ dailyCap: 4 });
     await generateRecipe(deps, caller, request());
     expect(await reason(generateRecipe(deps, caller, request({ kind: "menu", courses: 2 })))).toBe("DAILY_CAP");
     expect(await balanceOf(UID)).toBe(9);

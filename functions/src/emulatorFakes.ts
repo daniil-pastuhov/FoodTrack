@@ -17,6 +17,7 @@ import {
   type AppleNotification,
   type AppleTransaction,
   type AppStoreVerifier,
+  type GenerationResult,
   type PlayPurchase,
   type PlayVerifier,
   type RecipeGenerator,
@@ -103,18 +104,26 @@ function cannedRecipe(req: GenerateRequest, title: string): Recipe {
 }
 
 export class EmulatorGenerator implements RecipeGenerator {
-  async generate(req: GenerateRequest): Promise<unknown> {
+  async generate(req: GenerateRequest): Promise<GenerationResult> {
+    const usage = {
+      inputTokens: 600,
+      outputTokens: req.kind === "menu" ? 9000 : 1200,
+      thinkingTokens: 300,
+      model: "emulator-fake",
+      finishReason: "STOP",
+    };
     const names = req.ingredients.map((i) => i.name.toLowerCase());
     if (names.includes("fail infra")) throw new GenerationError("infra", "emulator fake infra failure");
     if (names.includes("fail content")) throw new GenerationError("content", "emulator fake content failure");
     await new Promise((r) => setTimeout(r, 1500));
-    if (req.kind === "recipe") return cannedRecipe(req, "Emulator pantry dish");
-    return {
+    if (req.kind === "recipe") return { output: cannedRecipe(req, "Emulator pantry dish"), usage };
+    const output = {
       days: menuDates(req.today).map((date, d) => ({
         date,
         uses: req.ingredients.slice(0, 2).map((i) => i.name),
         courses: coursesFor(req.courses!).map((course) => ({ course, recipe: cannedRecipe(req, `Day ${d + 1} ${course}`) })),
       })),
     };
+    return { output, usage };
   }
 }

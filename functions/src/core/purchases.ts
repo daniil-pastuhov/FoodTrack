@@ -32,6 +32,8 @@ export const playPurchaseId = (purchaseToken: string) =>
 export const applePurchaseId = (env: "production" | "sandbox", transactionId: string) =>
   `appstore_${env}_${transactionId}`;
 
+type VerifyResult = Omit<VerifyResponse, "costs">;
+
 export async function readBalance(deps: Deps, uid: string): Promise<number> {
   const user = (await userRef(deps.db, uid).get()).data();
   return user?.balance ?? 0;
@@ -113,10 +115,16 @@ async function grant(deps: Deps, uid: string, input: GrantInput, config: Runtime
     }
 
     if (input.env === "sandbox") {
+      // Sandbox purchases cost nothing, so they are capped by count and by credits: one
+      // recipes_100 bought with quantity 10 would otherwise be 1000 free credits.
       const granted = (sSnap.data()?.sandboxGrants as number | undefined) ?? 0;
+      const grantedCredits = (sSnap.data()?.sandboxCredits as number | undefined) ?? 0;
       if (!config.allowSandbox) return { status: "REJECTED_PERMANENT", balance, needsConsume: false };
-      if (granted >= config.sandboxDailyCap) return { status: "RETRY", balance, needsConsume: false };
-      tx.set(sRef, { sandboxGrants: FieldValue.increment(1) }, { merge: true });
+      if (credits > config.sandboxDailyCredits) return { status: "REJECTED_PERMANENT", balance, needsConsume: false };
+      if (granted >= config.sandboxDailyCap || grantedCredits + credits > config.sandboxDailyCredits) {
+        return { status: "RETRY", balance, needsConsume: false };
+      }
+      tx.set(sRef, { sandboxGrants: FieldValue.increment(1), sandboxCredits: FieldValue.increment(credits) }, { merge: true });
     }
 
     const alreadyRefunded = existing?.refundedCredits ?? 0;
@@ -171,7 +179,7 @@ export async function consumePlay(deps: Deps, id: string, productId: string, pur
   return true;
 }
 
-async function verifyPlay(deps: Deps, caller: Caller, purchaseToken: string, config: RuntimeConfig): Promise<VerifyResponse> {
+async function verifyPlay(deps: Deps, caller: Caller, purchaseToken: string, config: RuntimeConfig): Promise<VerifyResult> {
   const id = playPurchaseId(purchaseToken);
   let purchase;
   try {
@@ -206,7 +214,7 @@ function checkAppleTransaction(tx: AppleTransaction): boolean {
   return tx.bundleId === IOS_BUNDLE_ID && tx.type === "Consumable" && tx.productId in PRODUCT_CREDITS && tx.quantity >= 1;
 }
 
-async function verifyApple(deps: Deps, caller: Caller, jws: string, config: RuntimeConfig): Promise<VerifyResponse> {
+async function verifyApple(deps: Deps, caller: Caller, jws: string, config: RuntimeConfig): Promise<VerifyResult> {
   const balanceNow = () => readBalance(deps, caller.uid);
   let signed: AppleTransaction;
   try {
@@ -246,11 +254,12 @@ async function verifyApple(deps: Deps, caller: Caller, jws: string, config: Runt
 
 export async function verifyPurchase(deps: Deps, caller: Caller, data: unknown): Promise<VerifyResponse> {
   const request = validateVerifyRequest(data);
-  const config = await loadRuntimeConfig(deps.db);
+  const config = await loadRuntimeConfig(deps.db, deps.logger);
   await throttleVerify(deps, caller.uid, config);
-  return request.store === "play"
-    ? verifyPlay(deps, caller, request.purchaseToken, config)
-    : verifyApple(deps, caller, request.signedTransaction, config);
+  const result = request.store === "play"
+    ? await verifyPlay(deps, caller, request.purchaseToken, config)
+    : await verifyApple(deps, caller, request.signedTransaction, config);
+  return { ...result, costs: config.costs };
 }
 
 // ---------------------------------------------------------------------------------------------

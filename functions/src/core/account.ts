@@ -1,13 +1,30 @@
 /** getBalance, mergeBalance and deleteAccount. */
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { fail } from "../contract";
-import { RECENT_SIGN_IN_SECONDS } from "../constants";
-import { assertOpen, emptyUser, userRef, type UserDoc } from "../model";
+import { RECENT_SIGN_IN_SECONDS, type Costs } from "../constants";
+import { assertOpen, emptyUser, loadRuntimeConfig, uidHash, userRef, utcDay, type UserDoc } from "../model";
 import type { Caller, Deps } from "../ports";
 
-export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance: number }> {
-  const user = (await userRef(deps.db, caller.uid).get()).data();
-  return { balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0 };
+export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance: number; costs: Costs }> {
+  const [snap, config] = await Promise.all([userRef(deps.db, caller.uid).get(), loadRuntimeConfig(deps.db, deps.logger)]);
+  const user = snap.data();
+  return {
+    balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0,
+    costs: config.costs,
+  };
+}
+
+/** Adds two same-day counters so a merge cannot reset a daily limit; another day's counter is dropped. */
+function mergeDay<T extends { day: string }>(
+  day: string,
+  a: T | undefined,
+  b: T | undefined,
+  add: (x: T, y: T) => T,
+): T | undefined {
+  const x = a?.day === day ? a : undefined;
+  const y = b?.day === day ? b : undefined;
+  if (x && y) return add(x, y);
+  return x ?? y;
 }
 
 const isAnonymous = (provider: string) => provider === "anonymous";
@@ -17,7 +34,11 @@ const isAnonymous = (provider: string) => provider === "anonymous";
  * itself with its own ID token, must be anonymous, and ends up tombstoned (`mergedInto`) and its
  * Auth user deleted, so a balance can be moved once and never onward through it.
  */
-export async function mergeBalance(deps: Deps, caller: Caller, data: unknown): Promise<{ balance: number; moved: number }> {
+export async function mergeBalance(
+  deps: Deps,
+  caller: Caller,
+  data: unknown,
+): Promise<{ balance: number; moved: number; costs: Costs }> {
   const sourceIdToken = (data as { sourceIdToken?: unknown } | null)?.sourceIdToken;
   if (typeof sourceIdToken !== "string" || sourceIdToken.length > 8192) {
     fail("invalid-argument", "INVALID_REQUEST", "sourceIdToken is required");
@@ -47,15 +68,27 @@ export async function mergeBalance(deps: Deps, caller: Caller, data: unknown): P
       fail("failed-precondition", "MERGE_NOT_ALLOWED", "The source account was already merged or deleted");
     }
     if (src && src.inFlight > 0) fail("failed-precondition", "BUSY", "The source account is generating a recipe");
+    // A negative source balance (a store refund of spent credits) moves too: the debt follows.
     const moved = src?.balance ?? 0;
     const base: UserDoc = target ?? { ...emptyUser(), createdAt: Timestamp.fromMillis(deps.now()) };
-    tx.set(tRef, {
+    const day = utcDay(deps.now());
+    const merged: UserDoc = {
       ...base,
       balance: base.balance + moved,
       purchasedCredits: base.purchasedCredits + (src?.purchasedCredits ?? 0),
       consumedCredits: base.consumedCredits + (src?.consumedCredits ?? 0),
       refundedCredits: base.refundedCredits + (src?.refundedCredits ?? 0),
-    });
+      // The refund allowance is tied to purchases, so what was used of it moves with them.
+      contentRefundsUsed: (base.contentRefundsUsed ?? 0) + (src?.contentRefundsUsed ?? 0),
+    };
+    const addCount = (x: { day: string; count: number }, y: { count: number }) => ({ day, count: x.count + y.count });
+    const dayWindow = mergeDay(day, base.dayWindow, src?.dayWindow, addCount);
+    const infraRefunds = mergeDay(day, base.infraRefunds, src?.infraRefunds, addCount);
+    const spendWindow = mergeDay(day, base.spendWindow, src?.spendWindow, (x, y) => ({ day, microUsd: x.microUsd + y.microUsd }));
+    if (dayWindow) merged.dayWindow = dayWindow;
+    if (infraRefunds) merged.infraRefunds = infraRefunds;
+    if (spendWindow) merged.spendWindow = spendWindow;
+    tx.set(tRef, merged);
     // The tombstone stays: refunds of the source's purchases follow `mergedInto` to the target.
     tx.set(sRef, {
       ...(src ?? emptyUser()),
@@ -70,9 +103,10 @@ export async function mergeBalance(deps: Deps, caller: Caller, data: unknown): P
     await deps.auth.deleteUser(source.uid);
   } catch (e) {
     // The tombstone already blocks every use of the source account.
-    deps.logger.warn("Could not delete merged anonymous user", { uid: source.uid, error: String(e) });
+    deps.logger.warn("Could not delete merged anonymous user", { uidHash: uidHash(source.uid), error: String(e) });
   }
-  return result;
+  const config = await loadRuntimeConfig(deps.db, deps.logger);
+  return { ...result, costs: config.costs };
 }
 
 /**
@@ -97,6 +131,8 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
     // follow `mergedInto` to the account that holds the credits now.
     if (user?.mergedInto !== undefined) return true;
     if (user?.deletedAt !== undefined) return false;
+    // Deleting mid-generation would delete the pending reservation before it settles.
+    if (user && user.inFlight > 0) fail("failed-precondition", "BUSY", "A recipe is being generated; try again shortly");
     tx.set(uRef, {
       ...(user ?? emptyUser()),
       balance: 0,
@@ -104,7 +140,8 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
       minuteWindow: FieldValue.delete(),
       dayWindow: FieldValue.delete(),
       verifyWindow: FieldValue.delete(),
-      contentRefunds: FieldValue.delete(),
+      infraRefunds: FieldValue.delete(),
+      spendWindow: FieldValue.delete(),
       deletedAt: Timestamp.fromMillis(deps.now()),
     }, { merge: true });
     return false;

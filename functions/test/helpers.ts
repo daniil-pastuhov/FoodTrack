@@ -19,6 +19,9 @@ import {
   type AppleTokenRevoker,
   type Caller,
   type Deps,
+  type GenerationLimits,
+  type GenerationResult,
+  type LlmUsage,
   type PlayPurchase,
   type PlayVerifier,
   type RecipeGenerator,
@@ -201,18 +204,32 @@ export function sampleMenu(req: GenerateRequest) {
 
 type Behaviour = (req: GenerateRequest, signal: AbortSignal) => Promise<unknown>;
 
+export function fakeUsage(over: Partial<LlmUsage> = {}): LlmUsage {
+  return { inputTokens: 1000, outputTokens: 1500, thinkingTokens: 500, model: "fake-model", finishReason: "STOP", ...over };
+}
+
 export class FakeGenerator implements RecipeGenerator {
   calls = 0;
   next: Behaviour[] = [];
+  /** Usage reported for successful calls (and content failures from failWith). */
+  usage: LlmUsage = fakeUsage();
+  limits: GenerationLimits[] = [];
   fallback: Behaviour = async (req) => (req.kind === "menu" ? sampleMenu(req) : sampleRecipe());
 
-  async generate(req: GenerateRequest, signal: AbortSignal): Promise<unknown> {
+  async generate(req: GenerateRequest, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
     this.calls++;
-    return (this.next.shift() ?? this.fallback)(req, signal);
+    this.limits.push(limits);
+    const output = await (this.next.shift() ?? this.fallback)(req, signal);
+    return { output, usage: this.usage };
   }
 
-  failWith(cls: "infra" | "content", times = 1) {
-    for (let i = 0; i < times; i++) this.next.push(async () => { throw new GenerationError(cls, `${cls} failure`); });
+  /** Content failures report usage (the tokens were spent); infra failures report none (unknown). */
+  failWith(cls: "infra" | "content", times = 1, usage?: LlmUsage) {
+    for (let i = 0; i < times; i++) {
+      this.next.push(async () => {
+        throw new GenerationError(cls, `${cls} failure`, usage ?? (cls === "content" ? this.usage : undefined));
+      });
+    }
   }
 
   returns(value: unknown) {
@@ -247,10 +264,21 @@ export interface TestDeps extends Deps {
   generator: FakeGenerator;
   appleRevoker: FakeRevoker;
   clock: Clock;
+  logs: LogLine[];
+}
+
+export interface LogLine {
+  level: "info" | "warn" | "error";
+  message: string;
+  data?: Record<string, unknown>;
 }
 
 export function makeDeps(): TestDeps {
   const clock = new Clock();
+  const logs: LogLine[] = [];
+  const record = (level: LogLine["level"]) => (message: string, data?: Record<string, unknown>) => {
+    logs.push({ level, message, data });
+  };
   return {
     db,
     auth,
@@ -260,7 +288,8 @@ export function makeDeps(): TestDeps {
     appleRevoker: new FakeRevoker(),
     clock,
     now: clock.now,
-    logger: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    logs,
+    logger: { info: record("info"), warn: record("warn"), error: record("error") },
   };
 }
 

@@ -9,12 +9,37 @@ source of truth is `src/contract.ts`; this file must change with it.
   (`Firebase.functions("europe-west1")` / `Functions.functions(region: "europe-west1")`).
 - Every call needs a signed-in Firebase Auth user (anonymous counts) and a valid **App Check**
   token. A call without either fails with `unauthenticated`.
-- App Check replay protection is **off** for now (`CONSUME_APP_CHECK_TOKENS` in
-  `src/constants.ts`). When it is turned on, `generateRecipe` and `verifyPurchase` must be called
-  with limited-use tokens: `limitedUseAppCheckTokens = true` in the Kotlin `getHttpsCallable`
-  options, `HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)` in Swift. Clients can
-  already do this; it does no harm while the server does not consume them.
+- App Check replay protection is **on** for `generateRecipe` and `verifyPurchase`
+  (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a fresh
+  **limited-use** token (`limitedUseAppCheckTokens = true` in the Kotlin `getHttpsCallable`
+  options, `HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)` in Swift; both clients
+  already do this for every callable). A reused token fails with `unauthenticated` /
+  `APP_CHECK_REPLAYED`; the SDKs fetch a new limited-use token per call, so a plain retry works.
+  This includes `IN_PROGRESS` polls of `generateRecipe`.
+- Every callable is also throttled per user and per IP before it touches the database
+  (`RATE_LIMITED`); normal use never comes near it.
 - JSON field names are camelCase, exactly as below. Unknown request fields are ignored.
+
+## Costs
+
+Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generateRecipe`,
+`mergeBalance`) also carries the price table in force:
+
+```json
+"costs": { "recipe": 1, "menu2": 4, "menu3": 5 }
+```
+
+| key | what | default |
+|---|---|---|
+| `recipe` | one recipe | 1 credit |
+| `menu2` | 3-day menu, 2 courses (`kind: "menu", courses: 2`) | 4 credits |
+| `menu3` | 3-day menu, 3 courses (`kind: "menu", courses: 3`) | 5 credits |
+
+The server alone decides the cost and may change the table without a client release. Clients must
+not hard-code prices: show the latest `costs` they received (cache it with the balance; with none
+cached yet, call `getBalance` first). A cached table is for display only; the server's own check
+(`INSUFFICIENT_CREDITS`) is what decides. The server charges what the table said when the request
+was reserved, even if the table changes while it runs.
 
 ## Errors
 
@@ -24,19 +49,25 @@ not on `message` (English, for logs).
 | code | details.reason | meaning / client action |
 |---|---|---|
 | `invalid-argument` | `INVALID_REQUEST` | Bad input. A client bug; do not retry unchanged. |
-| `failed-precondition` | `INSUFFICIENT_CREDITS` | Balance below the cost (1 recipe, 3 menu). Show the pack sheet. |
-| `failed-precondition` | `BUSY` | This account already has a generation in flight. Wait for it; retry later. |
-| `unavailable` | `GENERATION_DISABLED` | Kill switch is on. Show "temporarily unavailable"; nothing was charged. |
+| `failed-precondition` | `INSUFFICIENT_CREDITS` | Balance below the cost (see `costs`). Show the pack sheet. |
+| `failed-precondition` | `BUSY` | This account already has a generation in flight (`generateRecipe`, `mergeBalance` of that source, `deleteAccount`). Wait for it; retry later. |
+| `unavailable` | `GENERATION_DISABLED` | Generation is paused: the kill switch is on, or today's spending ceiling for the whole service is reached. Show "temporarily unavailable, try later"; nothing was charged. |
 | `failed-precondition` | `ACCOUNT_CLOSED` | Account deleted or merged away. Sign out / start anonymous again. |
-| `resource-exhausted` | `RATE_LIMITED` | Too many calls in a short time. Back off. |
+| `resource-exhausted` | `RATE_LIMITED` | Too many calls in a short time (per minute). Back off and retry after a minute. |
+| `resource-exhausted` | `USER_DAILY_LIMIT` | This account reached its daily generation limit (number of generations, or estimated usage). Try again tomorrow (UTC); nothing was charged. |
+| `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
+| `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
+| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`). Retry; the SDK fetches a new limited-use token. |
 | `failed-precondition` | `RECENT_SIGN_IN_REQUIRED` | `deleteAccount` needs a sign-in in the last 5 minutes. Re-authenticate, retry. |
 | `failed-precondition` / `permission-denied` | `MERGE_NOT_ALLOWED` | `mergeBalance` refused (see below). |
 | `internal` | (none) | Server bug or outage. Safe to retry with the same `requestId`. |
 | `unauthenticated` | (none) | No Auth user or no valid App Check token. Builds that cannot attest hide the paid route. |
 
 Network errors and `internal` on `generateRecipe` are always safe to retry **with the same
-`requestId`**: the server never charges twice or calls the model twice for one id.
+`requestId` and the same request body**: the server never charges twice or calls the model twice
+for one id, and a `requestId` is bound to the inputs it was first used with (`REQUEST_ID_REUSED`
+otherwise).
 
 ## Types
 
@@ -95,7 +126,8 @@ Network errors and `internal` on `generateRecipe` are always safe to retry **wit
 
 Always exactly 3 days: `today`, `today + 1`, `today + 2`, in order. `courses: 2` gives
 `starter, main`; `courses: 3` gives `starter, main, dessert`, always in that order. A model
-answer with a missing day or course is never returned; it is a failed, refunded generation.
+answer with a missing day or course is never returned; it is a failed generation (refunded under
+the rule in "Failures and refunds").
 
 ## Callables
 
@@ -116,22 +148,49 @@ Request:
 ```
 
 `courses` is required for `menu` and must be absent or null for `recipe`. 1 to 30 ingredients.
-Cost: `recipe` 1 credit, `menu` 3 credits (the server decides; the client only shows it).
+Cost: `costs.recipe`, `costs.menu2` or `costs.menu3` (see "Costs"; by default 1, 4, 5).
 
 Response:
 
 ```json
-{ "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true }
+{ "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
+  "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }
 ```
 
 | status | meaning | `charged` | client action |
 |---|---|---|---|
 | `DONE` | `recipe` (kind recipe) or `menu` (kind menu) is present | `true` | Show and save it. |
 | `IN_PROGRESS` | Same `requestId` is still generating (another call is running) | `true` (held; refunded if it fails) | Poll again with the same `requestId` after a few seconds. |
-| `FAILED` | Generation failed | `false` normally; `true` only after the 3rd input-caused failure of the day | Snackbar "failed, not charged" when `charged` is false. A new attempt needs a **new** `requestId`. |
+| `FAILED` | Generation failed | `false` when refunded; `true` when the failure was charged (see below) | `charged` false: "failed, not charged". `charged` true: "failed; this request could not be completed and was charged" (see below for the wording). A new attempt needs a **new** `requestId`. |
 
 `balance` is the balance after this call. A recipe takes up to ~40 s and a menu up to ~2 min;
 set the callable timeout to at least 70 s (recipe) / 190 s (menu).
+
+#### Failures and refunds
+
+Two kinds of failure, decided by the server; `charged` tells the client which way it went.
+
+- **Technical failures** (the model service erred, was overloaded or timed out, or the answer was
+  stopped for running far too long) are **always refunded** (`charged: false`). An account that
+  has 3 of them in one UTC day (`config/runtime.infraRefundsPerDay`) cannot generate again until
+  the next UTC day: further calls fail with `INFRA_FAILURE_LIMIT` before anything is charged.
+- **Failures caused by the request** (the model refused the ingredients on safety grounds, ran out
+  of room, or wrote something unusable) are refunded within an allowance tied to what the account
+  has bought: **one refunded failure for every 10 credits purchased** over the account's life
+  (at least one once anything was bought; credits the store refunded do not count). The
+  allowance does not reset daily, and it moves with the credits on `mergeBalance`. Past it, such
+  a failure is charged (`charged: true`), because the model's work was still paid for.
+
+Suggested wording: refunded: "Couldn't create it. You weren't charged." Charged: "Couldn't create
+a recipe from these ingredients. It used N credit(s), because the attempt still cost us to run.
+Try fewer or different ingredients." (N = the request's cost.) Do not promise refunds in the UI.
+
+#### Limits
+
+Per account: at most one generation at a time (`BUSY`), 3 per minute (`RATE_LIMITED`), 40 per
+UTC day or about USD 1 of estimated model usage per UTC day (`USER_DAILY_LIMIT`; a typical day of
+use is far below it). For the service as a whole a daily spending ceiling pauses generation
+(`GENERATION_DISABLED`). The server can change every number; branch on the reason, not on counts.
 
 ### `verifyPurchase`
 
@@ -142,14 +201,14 @@ Request, one of:
 { "store": "appstore", "signedTransaction": "<VerificationResult<Transaction>.jwsRepresentation>" }
 ```
 
-Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10 }`
+Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`
 
 | status | client action |
 |---|---|
 | `GRANTED` | Credits added. Finish the transaction (iOS `transaction.finish()`). |
 | `ALREADY_GRANTED` | This purchase was already counted (possibly for another account). Finish it. |
-| `REJECTED_PERMANENT` | Not a valid, unrefunded purchase of ours (or a sandbox purchase while sandbox is off). Finish it. |
-| `RETRY` | Store unreachable, purchase pending, or sandbox daily cap hit. Do **not** finish; resubmit at next launch / from `Transaction.updates` / `queryPurchasesAsync`. |
+| `REJECTED_PERMANENT` | Not a valid, unrefunded purchase of ours (or a sandbox purchase while sandbox is off, or one worth more credits than the whole daily sandbox allowance). Finish it. |
+| `RETRY` | Store unreachable, purchase pending, or sandbox daily cap (purchases or credits) hit. Do **not** finish; resubmit at next launch / from `Transaction.updates` / `queryPurchasesAsync`. |
 
 - **Play**: the product id and quantity come from Google, not the client. The **server consumes**
   the purchase; the Android client must neither consume nor acknowledge it. Resubmitting a
@@ -162,7 +221,7 @@ Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY",
 
 ### `getBalance`
 
-Request `{}`. Response `{ "balance": 0 }`. A new, deleted or merged account reads 0. The balance can
+Request `{}`. Response `{ "balance": 0, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`. A new, deleted or merged account reads 0. The balance can
 be negative after a store refund of already-spent credits.
 
 ### `mergeBalance`
@@ -171,7 +230,9 @@ For when a signed-in account replaces an anonymous install that holds credits (w
 anonymous user to the provider is not possible because the credential already has an account).
 
 Request `{ "sourceIdToken": "<ID token of the anonymous user, fetched before switching users>" }`,
-called **as the signed-in (non-anonymous) user**. Response `{ "balance": 12, "moved": 7 }`.
+called **as the signed-in (non-anonymous) user**. Response `{ "balance": 12, "moved": 7, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`.
+`moved` can be negative when a store refund left the anonymous balance below zero: the debt moves
+too.
 
 Refused (`MERGE_NOT_ALLOWED`) when the caller is anonymous, the source is not anonymous, the
 source is the caller, the token is invalid/expired/revoked, or the source was already merged or
@@ -192,3 +253,4 @@ Response `{ "deleted": true, "balance": 0 }`.
   exchanges and revokes it, as Apple requires. (Alternatively the iOS client may call Firebase's
   `Auth.auth().revokeToken(withAuthorizationCode:)` itself and omit the field.)
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
+- `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.

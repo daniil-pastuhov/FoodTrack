@@ -101,6 +101,19 @@ export function responseSchema(req: GenerateRequest): Record<string, unknown> {
   };
 }
 
+/**
+ * An upper bound on the input tokens of one call: the UTF-8 byte length of everything sent
+ * (system instruction, prompt, response schema). Every token covers at least one byte, so a
+ * pantry in a script that tokenises badly still cannot exceed it.
+ */
+export function inputTokenBound(req: GenerateRequest): number {
+  return (
+    Buffer.byteLength(SYSTEM_INSTRUCTION, "utf8") +
+    Buffer.byteLength(buildPrompt(req), "utf8") +
+    Buffer.byteLength(JSON.stringify(responseSchema(req)), "utf8")
+  );
+}
+
 export function buildPrompt(req: GenerateRequest): string {
   const c = req.config;
   const lines = [
