@@ -1,0 +1,5 @@
+• Et helt nytt utseende i hele appen, også kalenderen og widgetene
+• En kort velkomstguide hjelper deg med å sette opp påminnelser og kamera
+• Roligere påminnelser om utløpsdato, og på Android kommer de nå tilbake etter omstart eller oppdatering
+• Angre når du sletter varer, og huk av handlelisten rett fra widgeten på Android
+• Skanneren sier fra når du er frakoblet, og hjelper deg videre hvis kameratilgangen er slått av
