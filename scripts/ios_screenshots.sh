@@ -9,6 +9,9 @@
 # RootTabView.applyScreenshotLaunchArguments), so release builds are unaffected. Dates in the demo
 # pantry (scripts/demo_backup.py) are relative to today, so the "expires today / tomorrow" badges
 # always read right. SETTLE=<seconds> waits longer before each capture on a slow machine.
+# The Recipe shot is the tab itself, as on Android (demoTab recipe). For a written recipe instead,
+# RootTabView also takes -demoRoute recipeResult (or recipeMenu, buyRecipes) and
+# -demoRecipeCredits <n>; Android has no such arguments, so the two sets would differ.
 set -euo pipefail
 
 ROOT=${0:A:h:h}
@@ -59,7 +62,7 @@ for LANG_CODE in en ru nb; do
   mkdir -p "$OUT/$LANG_CODE"
   python3 "$ROOT/scripts/demo_backup.py" "$LANG_CODE" "$DATA/tmp/demo.json"
   N=1
-  for TAB in home calendar shopping settings; do
+  for TAB in home recipe shopping settings; do
     xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" \
       -demoBackup "$DATA/tmp/demo.json" -demoTab "$TAB" \
       -AppleLanguages "($LANG_CODE)" -AppleLocale "$LANG_CODE" >/dev/null

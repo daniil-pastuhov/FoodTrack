@@ -10,18 +10,24 @@ ADD FOOD IN SECONDS
 NEVER MISS A DATE
 • Reminders a few days before something expires, at the time you choose
 • "Expiring soon" and "Expired" at a glance
-• Calendar agenda: see what's due today, tomorrow and next week, and swipe to mark items used or tossed
 • Home Screen widgets for expiring items, your shopping list and a quick overview
 
 SHOP SMARTER
 • Essentials you use up go straight onto your shopping list
 • Share the list as text or a QR code
 • Optional: see your shopping list when you arrive at a shop you've saved
-• Not sure what to cook? Get a ready-made prompt for your favourite AI assistant, built from what's expiring soonest
 
-PRIVATE BY DESIGN
-• No account, no ads, no tracking
+COOK WHAT'S EXPIRING
+• The Recipe tab picks the items closest to their date; change the selection, servings, time, diet and more
+• Free: copy or share a ready-made prompt to the AI app you already use
+• Free on iPhones with Apple Intelligence (iOS 26 or later): the recipe is written on the phone itself
+• Recipe packs (in-app purchase): recipes written by our server and saved in the app, and a menu for 3 days that uses what expires first
+
+YOUR DATA
+• No ads, no tracking
 • Your pantry is stored on your iPhone; export a backup whenever you like
+• No account needed, not even to buy a pack. Sign in with Apple or Google only if you want your recipes on other phones
+• A recipe from a pack sends the items you tick, your recipe settings and your allergens to our server. The free ways send nothing to us
 • Available in English, Russian and Norwegian
 
 Waste less food, save money and always know what you have at home.

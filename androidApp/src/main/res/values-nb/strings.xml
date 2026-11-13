@@ -697,8 +697,8 @@
     <!-- Onboarding -->
     <string name="onboarding_get_started">Kom i gang</string>
     <string name="onboarding_welcome_title">Minner deg på det før maten blir dårlig, ikke etterpå.</string>
-    <string name="onboarding_private_title">Privat fra starten av</string>
-    <string name="onboarding_private_body">Ingen konto og ingen reklame. Matlageret ditt blir på enheten din.</string>
+    <string name="onboarding_private_title">Ingen konto nødvendig</string>
+    <string name="onboarding_private_body">Ingen reklame. Matlageret ditt lagres på denne telefonen. En oppskrift fra en pakke sender varene du krysser av og allergenene dine til serveren vår.</string>
     <string name="onboarding_notifications_title">Et stille hint dagen før</string>
     <string name="onboarding_notifications_body">Vi minner deg på det klokken 09:00, dagen før en dato. Du kan endre tidspunktet eller slå av påminnelser i Innstillinger.</string>
     <string name="onboarding_sample_source">%1$s · 09:00</string>

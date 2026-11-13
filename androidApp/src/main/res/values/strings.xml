@@ -701,8 +701,8 @@
     <!-- Onboarding -->
     <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_welcome_title">Reminds you before food goes off, not after.</string>
-    <string name="onboarding_private_title">Private by design</string>
-    <string name="onboarding_private_body">No account and no ads. Your pantry stays on your device.</string>
+    <string name="onboarding_private_title">No account needed</string>
+    <string name="onboarding_private_body">No ads. Your pantry is kept on this phone. A recipe from a pack sends the items you tick and your allergens to our server.</string>
     <string name="onboarding_notifications_title">A quiet nudge, the day before</string>
     <string name="onboarding_notifications_body">We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.</string>
     <string name="onboarding_sample_source">%1$s · 09:00</string>

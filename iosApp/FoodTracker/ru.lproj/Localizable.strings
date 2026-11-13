@@ -535,8 +535,8 @@
 /* Onboarding */
 "onboarding_get_started" = "Начать";
 "onboarding_welcome_title" = "Напоминает до того, как еда испортится, а не после.";
-"onboarding_private_title" = "Приватно по умолчанию";
-"onboarding_private_body" = "Без аккаунта и рекламы. Ваши запасы остаются на вашем устройстве.";
+"onboarding_private_title" = "Аккаунт не нужен";
+"onboarding_private_body" = "Без рекламы. Ваши запасы хранятся на этом телефоне. Для рецепта из пакета на наш сервер уходят отмеченные продукты и ваши аллергены.";
 "onboarding_notifications_title" = "Тихое напоминание накануне";
 "onboarding_notifications_body" = "Напомним в 09:00, за день до конца срока. Время можно изменить в настройках, там же напоминания можно отключить.";
 "onboarding_sample_source" = "%1$@ · 09:00";

@@ -10,18 +10,24 @@ Matvakt holder oversikt over hva du har i kjøleskapet, fryseren og skapene, og 
 <b>Gå aldri glipp av en dato</b>
 • Påminnelser noen dager før noe går ut på dato, til tidspunktet du velger
 • Lister over «Går snart ut» og «Utløpt» med et blikk
-• Kalender: se hva som går ut i dag, i morgen og neste uke, og sveip for å merke varer som brukt eller kastet
 • Widgeter på hjemskjermen for varer som snart går ut, handlelisten og en rask oversikt
 
 <b>Handle smartere</b>
 • Faste varer du bruker opp havner rett på handlelisten
 • Del listen som tekst eller QR-kode
 • Valgfritt: få opp handlelisten når du kommer til en butikk du har lagret
-• Usikker på hva du skal lage? Få en ferdig forespørsel til din AI-assistent, laget av det som snart går ut
 
-<b>Personvern først</b>
-• Ingen konto, ingen reklame, ingen sporing
-• Dataene lagres på telefonen din, ikke på våre servere; ta sikkerhetskopi når du vil
+<b>Lag mat av det som snart går ut</b>
+• Oppskrift-fanen krysser av varene som er nærmest datoen; endre utvalget, porsjoner, tid, kosthold og mer
+• Gratis: kopier eller del en ferdig forespørsel til AI-appen du allerede bruker
+• Gratis på Android-telefoner som støtter det: oppskriften skrives på selve telefonen, av dens egen modell
+• Oppskriftspakker (kjøp i appen): oppskrifter skrevet av serveren vår og lagret i appen, og en meny for 3 dager som bruker det som går ut først
+
+<b>Dine data</b>
+• Ingen reklame, ingen sporing
+• Matvarene lagres på telefonen din; ta sikkerhetskopi når du vil
+• Ingen konto nødvendig, heller ikke for å kjøpe en pakke. Logg inn med Apple eller Google bare hvis du vil bruke oppskriftene på andre telefoner
+• En oppskrift fra en pakke sender varene du krysser av, oppskriftsinnstillingene og allergenene dine til serveren vår. De gratis måtene sender ingenting til oss
 • Tilgjengelig på norsk, engelsk og russisk
 
 Kast mindre mat, spar penger og vit alltid hva du har hjemme.

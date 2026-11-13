@@ -87,7 +87,8 @@ From CI, on every push to a `release/v*` branch (see "Releasing" in the top-leve
 | Category | Primary: **Food & Drink**. Secondary: **Productivity** |
 | Copyright | `2026 Daniil Pastuhov` |
 | Content rights | Does not contain, show or access third-party content. (Product names and pictures come from Open Food Facts, an open database; if asked, answer yes and that you have the rights under its ODbL/CC BY-SA licences.) |
-| Price | Free. Availability: all countries, or pick |
+| Price | Free, with in-app purchases. Availability: all countries, or pick |
+| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes). Prices are set in App Store Connect; this kit doesn't fix them. The first ones have to be submitted for review together with an app version (select them on the version page under "In-App Purchases and Subscriptions"). Each needs a display name, description and review screenshot (the "Buy recipes" sheet). Setup: `docs/recipe-setup.md` |
 | Export compliance | Already answered in Info.plist (`ITSAppUsesNonExemptEncryption = NO`) |
 
 ## 4. Age rating
@@ -98,45 +99,82 @@ The result is **4+**.
 
 ## 5. App Privacy ("nutrition label")
 
-- **Data collection: "Yes, we collect data from this app."** The only collection is crash
-  reports, sent to Firebase Crashlytics from release builds.
-  - Apple counts data as collected only when it is sent off the device to you or a partner.
-  - BestBefore has no account, analytics or ads, and no server of its own.
-  - Barcode lookups go to Open Food Facts without any user or device identifier.
-  - Declare these types, each **not linked to the user** and **not used for tracking**, with
-    the purpose **App Functionality**:
-    - **Diagnostics > Crash Data**: the crash report itself.
-    - **Diagnostics > Other Diagnostic Data**: device model, OS version, free disk and memory
-      at the time of the crash.
-    - **Identifiers > Device ID**: the Firebase installation ID Crashlytics groups crashes by.
+What the app sends off the phone, and so what Apple counts as collected (data sent to you or a
+partner). `iosApp/FoodTracker/PrivacyInfo.xcprivacy` declares the recipe items below; the
+Firebase SDKs ship their own privacy manifests for crash reporting. The privacy policy (URL above)
+has to say the same; a draft of its changes is in `docs/privacy-policy-changes.md`.
+
+- **Data collection: "Yes, we collect data from this app."**
+- From everyone, release builds only: crash reports to Firebase Crashlytics. Each **not linked
+  to the user**, **not used for tracking**, purpose **App Functionality**:
+  - **Diagnostics > Crash Data**: the crash report itself.
+  - **Diagnostics > Other Diagnostic Data**: device model, OS version, free disk and memory at
+    the time of the crash.
+  - **Identifiers > Device ID**: the Firebase installation ID Crashlytics groups crashes by.
+- Only from someone who starts a purchase of a recipe pack (nothing of this is sent by the free
+  recipe routes or the rest of the app). Each **linked to the user** (it is stored under their
+  Firebase Auth user ID), **not used for tracking**, purpose **App Functionality**:
+  - **Purchases > Purchase History**: the packs bought, verified with the App Store and kept as
+    the record that stops one purchase being redeemed twice.
+  - **Identifiers > User ID**: the Firebase Auth user ID, anonymous or signed in, that holds the
+    recipe balance.
+  - **Contact Info > Email Address**: only when the buyer signs in with Apple (possibly Apple's
+    relay address) or Google.
+  - **Contact Info > Name**: only when the buyer signs in with Google; Firebase Auth keeps the
+    Google profile's display name with the account. (The iOS Apple sign-in asks for the email
+    only.) Check this against the Firebase Auth user record before submitting.
+  - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities,
+    the recipe settings and the allergen list sent to write a recipe or menu, and the recipe
+    written back (kept on the server for 7 days, for retries).
+  - Open question: whether the **allergen list** should also be declared as **Health & Fitness >
+    Health**. It is a list of ingredients to leave out, chosen by the user, not a medical record,
+    and the server keeps it only inside the request. Decide this with the privacy policy wording.
+- Barcode lookups go to Open Food Facts without any user or device identifier, and the shared
+  prompt goes only to the app the user picks, so neither counts as collection by us.
 - **Tracking: No.**
-- The privacy policy (URL above) has to say the same: crash reports go to Google's Firebase
-  Crashlytics.
-- Google Play's Data safety form needs the matching answers: **Crash logs**, **Diagnostics**
-  and **Device or other IDs** are collected, are not shared, are encrypted in transit, are
-  not optional, and are used for **App functionality**.
+- Google Play's Data safety form needs the matching answers. Collected, not shared (Google acts
+  as our processor), encrypted in transit:
+  - **Crash logs**, **Diagnostics**, **Device or other IDs**: not optional, **App functionality**
+    (unchanged).
+  - **Purchase history**, **User IDs**: optional (only for buyers), **App functionality**,
+    **Account management**.
+  - **Email address**, **Name**: optional (only when signed in), **App functionality**,
+    **Account management**.
+  - **Other user-generated content** (the ingredients and allergens sent, the recipe returned):
+    optional, **App functionality**. Same open question about **Health info** for allergens.
+  - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings > Delete
+    account); say what is kept (see `docs/privacy-policy-changes.md`) and give the policy URL.
+  - Account creation: "Users can create an account" with Sign in with Apple and Google (OAuth),
+    and the app works without one.
 
 ## 6. App Review information
 
-- Sign-in required: **No**.
+- Sign-in required: **No**. Signing in is optional and only offered for recipe packs.
 - Contact: your name, phone and email. Apple only uses these to reach you about the review; they
   are not shown publicly.
+- Before submitting, set `allowSandbox` to `true` in Firestore `config/runtime` (see
+  `functions/README.md`), or the server refuses the reviewer's sandbox purchase, and check that
+  `sandboxDailyCap` leaves room. Turn it off again after approval.
 - Notes (paste as is):
 
 ```
-BestBefore has no account or login; the pantry stays on the device. Apart from barcode lookups on Open Food Facts, the app sends only crash reports, to Firebase Crashlytics.
+BestBefore needs no account; the pantry stays on the device. Apart from barcode lookups on Open Food Facts and crash reports to Firebase Crashlytics, the app only contacts our server for recipe packs, and only after a purchase is started.
 
-To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by
-hand), then open the Calendar and Shopping List tabs.
+To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by hand), then open the Recipe and Shopping List tabs.
 
-Location is optional and only used for "Shop reminders": Settings → Shopping reminders →
-turn on "Remind me near a shop", name a shop and tap the location button to save your current
-position. With "Always" location access, the app shows the shopping list when you arrive at
-that shop (iOS region monitoring); with "While Using" it only works while the app is open. The
-app never sends the location anywhere.
+RECIPE TAB AND IN-APP PURCHASES
+The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions), and "Menu for 3 days" takes 3.
+To test the purchase with a sandbox account:
+1. Add an item or two (scan, or "+").
+2. Open the Recipe tab and tap "Buy recipes".
+3. Choose "On this phone, no account", or sign in with Apple to keep the recipes in an account.
+4. Buy the 10-recipe pack with the sandbox account. The balance shows 10.
+5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A failed attempt is not charged.
+Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
 
-The camera is used for barcode scanning, reading printed expiry dates (Vision, on device) and
-product photos, which stay on the device.
+Location is optional and only used for "Shop reminders": Settings → Shopping reminders → turn on "Remind me near a shop", name a shop and tap the location button to save your current position. With "Always" location access, the app shows the shopping list when you arrive at that shop (iOS region monitoring); with "While Using" it only works while the app is open. The app never sends the location anywhere.
+
+The camera is used for barcode scanning, reading printed expiry dates (Vision, on device) and product photos, which stay on the device.
 ```
 
 ## 7. Version page
