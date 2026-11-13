@@ -8,10 +8,15 @@ import { getFirestore } from "firebase-admin/firestore";
 import { randomUUID } from "node:crypto";
 import type { GenerateRequest, Recipe } from "../src/contract";
 import { menuDates, coursesFor } from "../src/contract";
+import { ANDROID_FIREBASE_APP_ID, IOS_FIREBASE_APP_ID } from "../src/constants";
+import { loadRuntimeConfig } from "../src/model";
+import { verifyPurchase as verifyCore } from "../src/core/purchases";
 import {
+  ConsumptionRejectedError,
   GenerationError,
   InvalidSignatureError,
   RetryableStoreError,
+  type ConsumptionInfo,
   type AppleEnvironment,
   type AppleNotification,
   type AppleTransaction,
@@ -61,8 +66,15 @@ async function signUp(body: Record<string, unknown>): Promise<{ uid: string; idT
 export const anonymousUser = () => signUp({});
 export const passwordUser = () => signUp({ email: `${randomUUID()}@example.com`, password: "secret-password" });
 
-export function callerFor(uid: string, provider = "password", authTime = Math.floor(Date.now() / 1000)): Caller {
-  return { uid, signInProvider: provider, authTime };
+export function callerFor(uid: string, provider = "password", authTime = Math.floor(Date.now() / 1000), appId: string | null = null, profileClaims = false): Caller {
+  return { uid, signInProvider: provider, authTime, appId, profileClaims };
+}
+
+/** verifyPurchase as called from the app that matches the store (Android for Play, iOS for the App Store). */
+export function verifyPurchase(deps: Deps, caller: Caller, data: unknown) {
+  const store = (data as { store?: unknown } | null)?.store;
+  const appId = store === "appstore" ? IOS_FIREBASE_APP_ID : ANDROID_FIREBASE_APP_ID;
+  return verifyCore(deps, { ...caller, appId: caller.appId ?? appId }, data);
 }
 
 // --- Clock ------------------------------------------------------------------------------------
@@ -94,6 +106,7 @@ export class FakePlay implements PlayVerifier {
       isTest: false,
       orderId: `GPA.${token.slice(0, 8)}`,
       refundableQuantity: p.quantity ?? 1,
+      obfuscatedExternalAccountId: null,
       ...p,
     });
     return token;
@@ -128,6 +141,8 @@ export function appleTx(over: Partial<AppleTransaction> = {}): AppleTransaction 
     revocationDate: null,
     revocationPercentage: null,
     signedDate: Date.now(),
+    appAccountToken: null,
+    appTransactionId: null,
     ...over,
   };
 }
@@ -139,6 +154,10 @@ export class FakeAppStore implements AppStoreVerifier {
   fresh = new Map<string, AppleTransaction | null>();
   notifications = new Map<string, AppleNotification>();
   failFetch = false;
+  /** Consumption answers sent, in order. */
+  consumptionSent: { transactionId: string; environment: AppleEnvironment; info: ConsumptionInfo }[] = [];
+  /** Next consumption sends fail with these, in order ("retry" or "reject"). */
+  consumptionFailures: ("retry" | "reject")[] = [];
   private n = 0;
 
   sign(tx: AppleTransaction): string {
@@ -147,10 +166,10 @@ export class FakeAppStore implements AppStoreVerifier {
     return jws;
   }
 
-  signNotification(type: string, tx: AppleTransaction | null, signedDate = Date.now()): string {
+  signNotification(type: string, tx: AppleTransaction | null, signedDate = Date.now(), uuid: string = randomUUID()): string {
     const payload = `h.ntf${++this.n}.s`;
     this.notifications.set(payload, {
-      notificationUUID: randomUUID(),
+      notificationUUID: uuid,
       notificationType: type,
       subtype: null,
       signedDate,
@@ -166,7 +185,10 @@ export class FakeAppStore implements AppStoreVerifier {
     return tx;
   }
 
+  fetchCalls = 0;
+
   async fetchTransaction(id: string, env: AppleEnvironment): Promise<AppleTransaction | null> {
+    this.fetchCalls++;
     if (this.failFetch) throw new RetryableStoreError("apple down");
     if (this.fresh.has(id)) return this.fresh.get(id)!;
     for (const tx of this.signed.values()) if (tx.transactionId === id && tx.environment === env) return tx;
@@ -177,6 +199,13 @@ export class FakeAppStore implements AppStoreVerifier {
     const n = this.notifications.get(payload);
     if (!n) throw new InvalidSignatureError("forged notification");
     return n;
+  }
+
+  async sendConsumptionInformation(transactionId: string, environment: AppleEnvironment, info: ConsumptionInfo): Promise<void> {
+    const failure = this.consumptionFailures.shift();
+    if (failure === "retry") throw new RetryableStoreError("apple 503");
+    if (failure === "reject") throw new ConsumptionRejectedError("apple 400");
+    this.consumptionSent.push({ transactionId, environment, info });
   }
 }
 
@@ -212,15 +241,16 @@ export class FakeGenerator implements RecipeGenerator {
   calls = 0;
   next: Behaviour[] = [];
   /** Usage reported for successful calls (and content failures from failWith). */
-  usage: LlmUsage = fakeUsage();
+  usage: LlmUsage | undefined = fakeUsage();
   limits: GenerationLimits[] = [];
   fallback: Behaviour = async (req) => (req.kind === "menu" ? sampleMenu(req) : sampleRecipe());
 
+  /** Usage reported for successful calls; undefined means the model reported none. */
   async generate(req: GenerateRequest, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
     this.calls++;
     this.limits.push(limits);
     const output = await (this.next.shift() ?? this.fallback)(req, signal);
-    return { output, usage: this.usage };
+    return { output, ...(this.usage ? { usage: this.usage } : {}) };
   }
 
   /** Content failures report usage (the tokens were spent); infra failures report none (unknown). */
@@ -290,6 +320,8 @@ export function makeDeps(): TestDeps {
     now: clock.now,
     logs,
     logger: { info: record("info"), warn: record("warn"), error: record("error") },
+    // Uncached in tests: setConfig must take effect on the next call.
+    config: () => loadRuntimeConfig(db),
   };
 }
 

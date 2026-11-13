@@ -1,7 +1,8 @@
 /**
  * Stand-ins for the stores and the LLM, for client development against the local emulator suite
  * only. They are used when EMULATOR_FAKES=true AND the code runs inside the Functions emulator
- * (FUNCTIONS_EMULATOR=true, set by the emulator itself); a deployed function never uses them.
+ * (FUNCTIONS_EMULATOR=true, set by the emulator itself) AND the project id starts with `demo-`
+ * (a demo project has no real resources), so a deployed function never uses them.
  *
  * - Play: any purchase token starting with "fake-" is a purchased recipes_10 (or the product named
  *   after it, e.g. "fake-recipes_50-1"); other tokens are unknown.
@@ -14,6 +15,7 @@ import { coursesFor, menuDates, type GenerateRequest, type Recipe } from "./cont
 import {
   GenerationError,
   InvalidSignatureError,
+  type ConsumptionInfo,
   type AppleNotification,
   type AppleTransaction,
   type AppStoreVerifier,
@@ -24,15 +26,19 @@ import {
   type VoidedPurchase,
 } from "./ports";
 
-export function emulatorFakesEnabled(): boolean {
-  return process.env.FUNCTIONS_EMULATOR === "true" && process.env.EMULATOR_FAKES === "true";
+export function emulatorFakesEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const project = env.GCLOUD_PROJECT ?? env.GOOGLE_CLOUD_PROJECT ?? "";
+  return env.FUNCTIONS_EMULATOR === "true" && env.EMULATOR_FAKES === "true" && project.startsWith("demo-");
 }
 
 export class EmulatorPlay implements PlayVerifier {
   async getPurchase(token: string): Promise<PlayPurchase | null> {
     if (!token.startsWith("fake-")) return null;
     const productId = /^fake-(recipes_(?:10|50|100))/.exec(token)?.[1] ?? "recipes_10";
-    return { productId, quantity: 1, purchaseState: "PURCHASED", consumed: false, isTest: false, orderId: null, refundableQuantity: 1 };
+    return {
+      productId, quantity: 1, purchaseState: "PURCHASED", consumed: false, isTest: false, orderId: null,
+      refundableQuantity: 1, obfuscatedExternalAccountId: null,
+    };
   }
   async consume(): Promise<void> {}
   async listVoided(): Promise<VoidedPurchase[]> {
@@ -62,6 +68,8 @@ function tx(p: Record<string, unknown>): AppleTransaction {
     revocationDate: typeof p.revocationDate === "number" ? p.revocationDate : null,
     revocationPercentage: typeof p.revocationPercentage === "number" ? p.revocationPercentage : null,
     signedDate: Number(p.signedDate ?? Date.now()),
+    appAccountToken: typeof p.appAccountToken === "string" ? p.appAccountToken : null,
+    appTransactionId: typeof p.appTransactionId === "string" ? p.appTransactionId : null,
   };
 }
 
@@ -75,6 +83,7 @@ export class EmulatorAppStore implements AppStoreVerifier {
   async fetchTransaction(id: string): Promise<AppleTransaction | null> {
     return this.seen.get(id) ?? null;
   }
+  async sendConsumptionInformation(_id: string, _env: string, _info: ConsumptionInfo): Promise<void> {}
   async verifyNotification(signedPayload: string): Promise<AppleNotification> {
     const p = decode(signedPayload);
     const data = (p.data ?? {}) as Record<string, unknown>;

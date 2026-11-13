@@ -1,9 +1,9 @@
 import { DEFAULT_COSTS } from "../src/constants";
 import { HttpsError } from "firebase-functions/v2/https";
 import { deleteAccount } from "../src/core/account";
-import { playPurchaseId, applePurchaseId, verifyPurchase } from "../src/core/purchases";
+import { playPurchaseId, applePurchaseId } from "../src/core/purchases";
 import { sweep } from "../src/core/sweeper";
-import { appleTx, balanceOf, callerFor, db, makeDeps, playToken, resetEmulators, setConfig, type TestDeps } from "./helpers";
+import { appleTx, balanceOf, callerFor, db, makeDeps, playToken, resetEmulators, setConfig, verifyPurchase, type TestDeps } from "./helpers";
 
 const alice = callerFor("alice");
 const bob = callerFor("bob");

@@ -5,6 +5,7 @@
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
 import type { GenerateRequest } from "./contract";
+import type { RuntimeConfig } from "./model";
 
 /** A store error that should make the client try again later (network, 5xx, quota, misconfiguration). */
 export class RetryableStoreError extends Error {}
@@ -21,6 +22,8 @@ export interface PlayPurchase {
   orderId: string | null;
   /** Units not yet voided; quantity minus refundableQuantity have been refunded. */
   refundableQuantity: number;
+  /** BillingFlowParams.setObfuscatedAccountId as set by the client at purchase, or null. */
+  obfuscatedExternalAccountId: string | null;
 }
 
 export interface VoidedPurchase {
@@ -55,6 +58,10 @@ export interface AppleTransaction {
   /** Milliunits (100000 = 100 %) of the transaction refunded, when the store reports a partial refund. */
   revocationPercentage: number | null;
   signedDate: number;
+  /** The appAccountToken the client set at purchase (a UUID), or null. */
+  appAccountToken: string | null;
+  /** Stable per Apple Account per app; null on transactions from before Apple added it. */
+  appTransactionId: string | null;
 }
 
 export interface AppleNotification {
@@ -77,7 +84,25 @@ export interface AppStoreVerifier {
   fetchTransaction(transactionId: string, environment: AppleEnvironment): Promise<AppleTransaction | null>;
   /** Verifies an App Store Server Notifications v2 `signedPayload`. Throws InvalidSignatureError. */
   verifyNotification(signedPayload: string): Promise<AppleNotification>;
+  /**
+   * App Store Server API "Send Consumption Information" (v2). Throws RetryableStoreError when
+   * worth retrying (network, 429, 5xx, missing key) and ConsumptionRejectedError when Apple refused
+   * the request for good (other 4xx).
+   */
+  sendConsumptionInformation(transactionId: string, environment: AppleEnvironment, info: ConsumptionInfo): Promise<void>;
 }
+
+/** The current (v2) ConsumptionRequest body. Apple: a deliveryStatus other than DELIVERED needs consumptionPercentage 0. */
+export interface ConsumptionInfo {
+  customerConsented: true;
+  /** Milliunits, 0 to 100000. */
+  consumptionPercentage: number;
+  deliveryStatus: "DELIVERED" | "UNDELIVERED_OTHER";
+  sampleContentProvided: boolean;
+}
+
+/** Apple refused a consumption answer for good (a 4xx other than 429). */
+export class ConsumptionRejectedError extends Error {}
 
 // --- Sign in with Apple -----------------------------------------------------------------------
 
@@ -124,7 +149,8 @@ export interface GenerationLimits {
 export interface GenerationResult {
   /** The model's parsed JSON, validated by the caller against the expected shape. */
   output: unknown;
-  usage: LlmUsage;
+  /** Absent when the model reported no usage: the call is then booked at the reserved worst case. */
+  usage?: LlmUsage;
 }
 
 export interface RecipeGenerator {
@@ -149,6 +175,8 @@ export interface Deps {
   appleRevoker: AppleTokenRevoker;
   now(): number;
   logger: Logger;
+  /** `config/runtime`, parsed fail-closed (cached for CONFIG_CACHE_MS in production). */
+  config(): Promise<RuntimeConfig>;
 }
 
 /** The parts of a verified Firebase ID token the core needs. */
@@ -157,4 +185,8 @@ export interface Caller {
   signInProvider: string;
   /** Seconds since epoch of the user's last sign-in. */
   authTime: number;
+  /** The Firebase app id from the verified App Check token, or null when there is none. */
+  appId: string | null;
+  /** The ID token still carries a `name` or `picture` claim (the Auth user has a display name or photo). */
+  profileClaims: boolean;
 }

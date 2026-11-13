@@ -12,6 +12,7 @@ import {
   parseMenu,
   parseRecipe,
   validateGenerateRequest,
+  validateRequestId,
   type GenerateRequest,
   type GenerateResponse,
   type Menu,
@@ -19,8 +20,10 @@ import {
 } from "../contract";
 import {
   CREDITS_PER_CONTENT_REFUND,
+  CREDITS_PER_TIMEOUT_REFUND,
   GENERATION_TTL_MS,
   MAX_OUTPUT_TOKENS,
+  REVENUE_WINDOW_DAYS,
   THINKING_FACTOR,
   TIMINGS,
   type CostKey,
@@ -29,19 +32,21 @@ import {
 import { inputTokenBound } from "../adapters/prompt";
 import {
   assertOpen,
-  contentRefundAllowance,
   costKeyOf,
+  dailySpendCeiling,
   generationRef,
   isClosed,
-  loadRuntimeConfig,
   microUsd,
+  paidAllowance,
   statsRef,
   uidHash,
   userRef,
   utcDay,
   type GenerationDoc,
   type RuntimeConfig,
+  type UserDoc,
 } from "../model";
+import { blockFlag } from "./buyers";
 import {
   GenerationError,
   type Caller,
@@ -96,17 +101,24 @@ const sameInputs = (doc: GenerationDoc, req: GenerateRequest, plan: Plan) =>
     ? doc.inputHash === plan.inputHash
     : doc.kind === req.kind && (doc.courses ?? null) === (req.courses ?? null);
 
-type Reservation = { reserved: true; balance: number } | { reserved: false; response: GenerateResponse };
+type Reservation =
+  | { reserved: true; balance: number }
+  | { reserved: false; response: GenerateResponse; user: UserDoc | undefined };
 
+/**
+ * The per-user and existing-generation checks read only the caller's own documents; the shared
+ * stats docs (today's, and the trailing days for the revenue-aware ceiling) are read only when a new
+ * reservation is about to be made, so refused calls never contend on them.
+ */
 async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: RuntimeConfig, plan: Plan): Promise<Reservation> {
   const { cost, reservedMicroUsd } = plan;
-  return deps.db.runTransaction(async (tx) => {
+  return deps.db.runTransaction(async (tx): Promise<Reservation> => {
     const now = deps.now();
     const day = utcDay(now);
     const uRef = userRef(deps.db, uid);
     const gRef = generationRef(deps.db, uid, req.requestId);
     const sRef = statsRef(deps.db, day);
-    const [uSnap, gSnap, sSnap] = await Promise.all([tx.get(uRef), tx.get(gRef), tx.get(sRef)]);
+    const [uSnap, gSnap] = await Promise.all([tx.get(uRef), tx.get(gRef)]);
     const user = uSnap.data();
     assertOpen(user);
     const existing = gSnap.data();
@@ -116,7 +128,7 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
       if (!sameInputs(existing, req, plan)) {
         fail("failed-precondition", "REQUEST_ID_REUSED", "This requestId was used for a different request");
       }
-      return { reserved: false, response: fromDoc(existing, user?.balance ?? 0, config.costs) };
+      return { reserved: false, response: fromDoc(existing, user?.balance ?? 0, config.costs), user };
     }
 
     if (!config.generationEnabled) fail("unavailable", "GENERATION_DISABLED", "Recipe generation is paused");
@@ -135,13 +147,17 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
     if (dw.count >= config.perUserPerDay || userSpend + reservedMicroUsd > config.perUserDailySpendMicroUsd) {
       fail("resource-exhausted", "USER_DAILY_LIMIT", "Daily limit for this account reached");
     }
+    const pastRefs = Array.from({ length: REVENUE_WINDOW_DAYS - 1 }, (_, i) => statsRef(deps.db, utcDay(now - (i + 1) * 86_400_000)));
+    const [sSnap, ...pastSnaps] = await tx.getAll(sRef, ...pastRefs);
     const stats = sSnap.data() ?? {};
     const units = (stats.generationUnits as number | undefined) ?? 0;
     if (units + cost > config.dailyCap) fail("resource-exhausted", "DAILY_CAP", "Daily generation limit reached");
-    // The real-time spend breaker: today's estimated spend plus every in-flight worst case. The
-    // worst case is reserved here, inside the transaction, so parallel calls cannot overshoot.
+    // The real-time spend breaker: today's estimated spend plus every in-flight worst case, against
+    // the revenue-aware ceiling. The worst case is reserved here, inside the transaction, so
+    // parallel calls cannot overshoot.
+    const netCredits7d = [sSnap, ...pastSnaps].reduce((sum, s) => sum + ((s.data()?.netCreditsGranted as number | undefined) ?? 0), 0);
     const spent = ((stats.spentMicroUsd as number | undefined) ?? 0) + ((stats.reservedMicroUsd as number | undefined) ?? 0);
-    if (spent + reservedMicroUsd > config.dailySpendCapMicroUsd) {
+    if (spent + reservedMicroUsd > dailySpendCeiling(config, netCredits7d)) {
       fail("unavailable", "GENERATION_DISABLED", "Recipe generation is paused");
     }
 
@@ -179,7 +195,19 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
 
 export type Outcome =
   | { ok: true; recipe?: Recipe; menu?: Menu; usage?: LlmUsage }
-  | { ok: false; failureClass: FailureClass; reason: string; usage?: LlmUsage };
+  | {
+      ok: false;
+      failureClass: FailureClass;
+      reason: string;
+      usage?: LlmUsage;
+      /**
+       * Settled by the sweeper: the invocation died before it could answer (a server fault the client
+       * cannot cause; abandoning a call does not stop it). Always refunded, and counted against
+       * neither the daily infrastructure ceiling nor the timeout allowance, so it never locks a user
+       * out. Its cost stays booked at the worst case.
+       */
+      swept?: boolean;
+    };
 
 /**
  * Settle and reserve both write stats/{day}, a single hot document. A settle lost to contention
@@ -194,6 +222,7 @@ export interface Settled {
   /** Estimated cost booked for the call (the reserved worst case when usage was unknown). */
   actualMicroUsd: number;
   generation: GenerationDoc;
+  user: UserDoc | undefined;
 }
 
 /**
@@ -223,6 +252,7 @@ export async function settle(
         settledHere: false,
         actualMicroUsd: 0,
         generation: gen,
+        user,
       };
     }
 
@@ -254,11 +284,23 @@ export async function settle(
       if (outcome.failureClass === "content") {
         // Refunded within an allowance tied to what the account has paid for, never per day.
         const used = user?.contentRefundsUsed ?? 0;
-        refunded = !!user && used < contentRefundAllowance(user, CREDITS_PER_CONTENT_REFUND);
+        refunded = !!user && used < paidAllowance(user, CREDITS_PER_CONTENT_REFUND);
         if (refunded) userUpdate.contentRefundsUsed = used + 1;
-      } else {
-        // Infrastructure failures are always refunded; reserve refuses once the daily ceiling is hit.
+      } else if (outcome.swept) {
         refunded = true;
+      } else if (usage) {
+        // An infrastructure failure with known usage (nothing generated, or measured) is always
+        // refunded; reserve refuses once the daily ceiling is hit.
+        refunded = true;
+      } else {
+        // Unknown usage (a timeout, mid-stream error, token-ceiling abort or dead invocation) is
+        // booked at the worst case, so its refund is rationed like content failures: timing out on
+        // purpose must not be free for ever.
+        const used = user?.timeoutRefundsUsed ?? 0;
+        refunded = !!user && used < paidAllowance(user, CREDITS_PER_TIMEOUT_REFUND);
+        if (refunded) userUpdate.timeoutRefundsUsed = used + 1;
+      }
+      if (refunded && outcome.failureClass === "infra" && !outcome.swept) {
         const count = user?.infraRefunds?.day === today ? user.infraRefunds.count : 0;
         userUpdate.infraRefunds = { day: today, count: count + 1 };
       }
@@ -309,6 +351,7 @@ export async function settle(
       settledHere: true,
       actualMicroUsd: actual,
       generation: finalDoc,
+      user,
     };
   }, { maxAttempts: SETTLE_ATTEMPTS });
 }
@@ -318,7 +361,8 @@ async function runGenerator(deps: Deps, req: GenerateRequest, limits: Generation
   const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs);
   try {
     const { output, usage } = await deps.generator.generate(req, controller.signal, limits);
-    if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout" };
+    // The answer arrived too late to use, but its usage is known and is what gets booked.
+    if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
     if (req.kind === "menu") {
       const menu = parseMenu(output, req.today, req.courses!);
       return menu ? { ok: true, menu, usage } : { ok: false, failureClass: "content", reason: "invalid menu output", usage };
@@ -369,10 +413,10 @@ export function logLlmCall(
 
 export async function generateRecipe(deps: Deps, caller: Caller, data: unknown): Promise<GenerateResponse> {
   const req = validateGenerateRequest(data, deps.now());
-  const config = await loadRuntimeConfig(deps.db, deps.logger);
+  const config = await deps.config();
   const plan = planFor(req, config);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
-  if (!reservation.reserved) return reservation.response;
+  if (!reservation.reserved) return { ...reservation.response, ...(await blockFlag(deps.db, reservation.user, config)) };
   const started = deps.now();
   const outcome = await runGenerator(deps, req, plan.limits);
   const durationMs = deps.now() - started;
@@ -385,5 +429,24 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     settled,
     durationMs,
   );
-  return settled.response;
+  return { ...settled.response, ...(await blockFlag(deps.db, settled.user, config)) };
+}
+
+/**
+ * The polling callable: the state of one of the caller's generations, in generateRecipe's response
+ * shape. Never reserves, never calls the LLM, never reads the shared stats. An unknown (or expired
+ * and deleted) id is `not-found` / UNKNOWN_REQUEST: the client re-sends generateRecipe with the same
+ * id and inputs.
+ */
+export async function getGeneration(deps: Deps, caller: Caller, data: unknown): Promise<GenerateResponse> {
+  const requestId = validateRequestId((data as { requestId?: unknown } | null)?.requestId);
+  const [uSnap, gSnap, config] = await Promise.all([
+    userRef(deps.db, caller.uid).get(),
+    generationRef(deps.db, caller.uid, requestId).get(),
+    deps.config(),
+  ]);
+  const gen = gSnap.data();
+  if (!gen) fail("not-found", "UNKNOWN_REQUEST", "No generation with this requestId");
+  const user = uSnap.data();
+  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...(await blockFlag(deps.db, user, config)) };
 }

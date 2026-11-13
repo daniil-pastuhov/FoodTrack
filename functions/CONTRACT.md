@@ -5,19 +5,25 @@ source of truth is `src/contract.ts`; this file must change with it.
 
 ## Calling
 
-- All five are Firebase **callable** functions in region **`europe-west1`**
+- All six are Firebase **callable** functions in region **`europe-west1`**
   (`Firebase.functions("europe-west1")` / `Functions.functions(region: "europe-west1")`).
 - Every call needs a signed-in Firebase Auth user (anonymous counts) and a valid **App Check**
   token. A call without either fails with `unauthenticated`.
-- App Check replay protection is **on** for `generateRecipe` and `verifyPurchase`
-  (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a fresh
-  **limited-use** token (`limitedUseAppCheckTokens = true` in the Kotlin `getHttpsCallable`
-  options, `HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)` in Swift; both clients
-  already do this for every callable). A reused token fails with `unauthenticated` /
-  `APP_CHECK_REPLAYED`; the SDKs fetch a new limited-use token per call, so a plain retry works.
-  This includes `IN_PROGRESS` polls of `generateRecipe`.
-- Every callable is also throttled per user and per IP before it touches the database
-  (`RATE_LIMITED`); normal use never comes near it.
+- App Check replay protection is **on** for `generateRecipe`, `verifyPurchase`, `mergeBalance`
+  and `deleteAccount` (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a
+  fresh **limited-use** token (`limitedUseAppCheckTokens = true` in the Kotlin `getHttpsCallable`
+  options, `HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)` in Swift). A reused token
+  fails with `unauthenticated` / `APP_CHECK_REPLAYED`; the SDKs fetch a new limited-use token per
+  call, so a plain retry works.
+- `getGeneration` and `getBalance` enforce App Check but do **not** consume the token: call them
+  with an ordinary (not limited-use) token, so polling does not spend attestations (Play
+  Integrity has a daily quota). **Poll with `getGeneration`, not by re-sending `generateRecipe`.**
+- Every callable is also throttled per user, per IP (IPv6: per /64) and per server instance
+  before it touches the database (`RATE_LIMITED`); normal use never comes near it. Poll no more
+  often than every 3 seconds.
+- Each function runs a small, fixed number of server instances. When they are all busy, a call
+  can fail with `resource-exhausted` (HTTP 429) **without** a `details.reason`: nothing was
+  charged; retry after a few seconds (for `generateRecipe`, with the same `requestId`).
 - JSON field names are camelCase, exactly as below. Unknown request fields are ignored.
 
 ## Costs
@@ -58,16 +64,37 @@ not on `message` (English, for logs).
 | `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
 | `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
-| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`). Retry; the SDK fetches a new limited-use token. |
+| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`). Retry; the SDK fetches a new limited-use token. |
 | `failed-precondition` | `RECENT_SIGN_IN_REQUIRED` | `deleteAccount` needs a sign-in in the last 5 minutes. Re-authenticate, retry. |
 | `failed-precondition` / `permission-denied` | `MERGE_NOT_ALLOWED` | `mergeBalance` refused (see below). |
+| `not-found` | `UNKNOWN_REQUEST` | `getGeneration`: no generation with this `requestId` for this account (never started, or older than the idempotency window below). Re-send `generateRecipe` with the same `requestId` and the same inputs. |
+| `permission-denied` | `STORE_MISMATCH` | `verifyPurchase`: `store: "play"` from an app other than the Android app, or `store: "appstore"` from an app other than the iOS app (decided by the App Check app id). A client bug; nothing was recorded. |
+| `failed-precondition` | `PURCHASE_ACCOUNT_MISMATCH` | `verifyPurchase`: the store reports a purchase account token (see "Purchase account token") that is neither this account's nor that of an account merged into it. Nothing was recorded: do **not** finish the transaction; it can still be redeemed by the account that bought it. |
+| `resource-exhausted` | (none) | All server instances busy (HTTP 429). Nothing was charged; retry after a few seconds. |
 | `internal` | (none) | Server bug or outage. Safe to retry with the same `requestId`. |
 | `unauthenticated` | (none) | No Auth user or no valid App Check token. Builds that cannot attest hide the paid route. |
 
-Network errors and `internal` on `generateRecipe` are always safe to retry **with the same
-`requestId` and the same request body**: the server never charges twice or calls the model twice
-for one id, and a `requestId` is bound to the inputs it was first used with (`REQUEST_ID_REUSED`
-otherwise).
+Network errors and `internal` on `generateRecipe` are safe to retry **with the same `requestId`
+and the same request body** while the generation document exists: the server never charges twice
+or calls the model twice for one id, and a `requestId` is bound to the inputs it was first used
+with (`REQUEST_ID_REUSED` otherwise).
+
+**Idempotency window.** A finished generation is kept for 7 days after it finished
+(`GENERATION_TTL_MS`), then Firestore's TTL deletes it at some point after that (Google says
+typically within a day; there is no upper bound guarantee). Within 7 days of finishing, a retry
+returns the stored result. After that it may be gone: a retry with the same id is then a **new**
+generation and is charged again, and `getGeneration` answers `UNKNOWN_REQUEST`. A pending
+generation is kept until it settles (at most its deadline plus the sweeper's 5-minute period).
+Never reuse a `requestId` for a new attempt.
+
+## Account flag `purchasesBlocked`
+
+Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generateRecipe`,
+`getGeneration`, `mergeBalance`) may also carry `"purchasesBlocked": true`. It is **absent**
+otherwise (never `false`). When present: hide buying (the pack sheet and buy buttons); keep
+everything else working, including spending the remaining balance. It is set for accounts whose
+buyer got store refunds of credits they had already used, more than the server allows. Purchases
+that still go through are credited normally.
 
 ## Types
 
@@ -160,20 +187,38 @@ Response:
 | status | meaning | `charged` | client action |
 |---|---|---|---|
 | `DONE` | `recipe` (kind recipe) or `menu` (kind menu) is present | `true` | Show and save it. |
-| `IN_PROGRESS` | Same `requestId` is still generating (another call is running) | `true` (held; refunded if it fails) | Poll again with the same `requestId` after a few seconds. |
+| `IN_PROGRESS` | Same `requestId` is still generating (another call is running) | `true` (held; if it then fails, refunded or not by "Failures and refunds") | Poll `getGeneration` with the same `requestId` every few seconds (at least 3 s apart). |
 | `FAILED` | Generation failed | `false` when refunded; `true` when the failure was charged (see below) | `charged` false: "failed, not charged". `charged` true: "failed; this request could not be completed and was charged" (see below for the wording). A new attempt needs a **new** `requestId`. |
 
+**Abandoning a request does not cancel it.** If the user changes the form while a request is held,
+the server keeps generating: the old request finishes and is charged if it succeeds (its result
+stays retrievable with `getGeneration` under the old `requestId` for the idempotency window), and
+a new request from the same account gets `BUSY` until it does (at most ~40 s for a recipe, ~2 min
+for a menu). Clients should either wait for the held request or show its result. Abandoning never
+counts as a technical failure. Only a server invocation that dies before answering is settled by
+the server's sweeper, and that is always refunded and counts against neither the daily
+technical-failure ceiling nor the timeout allowance below, so editing the form can never lock a
+user out for the day.
+
 `balance` is the balance after this call. A recipe takes up to ~40 s and a menu up to ~2 min;
-set the callable timeout to at least 70 s (recipe) / 190 s (menu).
+set the callable timeout to at least 70 s (recipe) / 190 s (menu). If the call is cut off
+(network, app backgrounded) or answers `IN_PROGRESS`, poll `getGeneration` with the same
+`requestId` until it is `DONE` or `FAILED`; re-sending `generateRecipe` with the same id and body
+is also accepted (it never charges twice within the idempotency window) but spends a limited-use App Check token per call.
 
 #### Failures and refunds
 
 Two kinds of failure, decided by the server; `charged` tells the client which way it went.
 
-- **Technical failures** (the model service erred, was overloaded or timed out, or the answer was
-  stopped for running far too long) are **always refunded** (`charged: false`). An account that
-  has 3 of them in one UTC day (`config/runtime.infraRefundsPerDay`) cannot generate again until
-  the next UTC day: further calls fail with `INFRA_FAILURE_LIMIT` before anything is charged.
+- **Technical failures** are refunded (`charged: false`), with one limit. Errors before the model
+  produced anything are always refunded, and so is a request whose server invocation died before
+  answering (settled by the sweeper; it counts against nothing below). Timeouts and failures in
+  the middle of an answer (the model service broke off, the answer was stopped for running far too
+  long) still cost the full worst case, so they are refunded **once for every 10 credits
+  purchased** over the account's life (at least once when anything was bought). Past that they are
+  charged (`charged: true`). Separately, an account that has 3 refunded technical failures in one
+  UTC day (`config/runtime.infraRefundsPerDay`) cannot generate again until the next UTC day.
+  Further calls then fail with `INFRA_FAILURE_LIMIT` before anything is charged.
 - **Failures caused by the request** (the model refused the ingredients on safety grounds, ran out
   of room, or wrote something unusable) are refunded within an allowance tied to what the account
   has bought: **one refunded failure for every 10 credits purchased** over the account's life
@@ -188,9 +233,22 @@ Try fewer or different ingredients." (N = the request's cost.) Do not promise re
 #### Limits
 
 Per account: at most one generation at a time (`BUSY`), 3 per minute (`RATE_LIMITED`), 40 per
-UTC day or about USD 1 of estimated model usage per UTC day (`USER_DAILY_LIMIT`; a typical day of
-use is far below it). For the service as a whole a daily spending ceiling pauses generation
-(`GENERATION_DISABLED`). The server can change every number; branch on the reason, not on counts.
+UTC day or about USD 0.45 of estimated model usage per UTC day (`USER_DAILY_LIMIT`; that is at
+least two 3-course menus, or four 2-course menus, or about 20 recipes a day). For the service as a
+whole a daily spending ceiling pauses generation (`GENERATION_DISABLED`). The server can change
+every number; branch on the reason, not on counts.
+
+### `getGeneration`
+
+The polling call. App Check enforced, token **not** consumed; per-user throttled.
+
+Request `{ "requestId": "<the id sent to generateRecipe>" }`.
+
+Response: exactly `generateRecipe`'s response for that generation (`status`, `recipe` / `menu`,
+`balance`, `charged`, `costs`, and `purchasesBlocked` when set). It never charges, never starts a
+generation and never calls the model. Unknown id (never sent, another account's, or past the
+idempotency window): `not-found` / `UNKNOWN_REQUEST`; then re-send `generateRecipe` with the same
+`requestId` and the same inputs.
 
 ### `verifyPurchase`
 
@@ -198,10 +256,20 @@ Request, one of:
 
 ```json
 { "store": "play", "purchaseToken": "<Purchase.getPurchaseToken()>" }
-{ "store": "appstore", "signedTransaction": "<VerificationResult<Transaction>.jwsRepresentation>" }
+{ "store": "appstore", "signedTransaction": "<VerificationResult<Transaction>.jwsRepresentation>", "consumptionConsent": true }
 ```
 
-Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`
+`consumptionConsent` (optional boolean, either store, meaningful for the App Store): `true` when
+the buyer was shown, before buying, a line saying that if they ask Apple for a refund we tell Apple
+how many of the recipes were used, and continued. The server records it (with the time) on that
+purchase, and only for such purchases answers Apple's consumption request with the share of the
+purchase's credits already used. Absent or `null`: nothing changes. `false` on a later
+resubmission withdraws it. Only the account that redeemed the purchase can set it.
+
+Play purchases are accepted only from the Android app and App Store purchases only from the iOS
+app (`STORE_MISMATCH` otherwise).
+
+Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`, plus `"purchasesBlocked": true` when set.
 
 | status | client action |
 |---|---|
@@ -218,10 +286,34 @@ Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY",
   `Xcode`) are always `REJECTED_PERMANENT`; use the sandbox. Only consumables of bundle
   `com.foodbest.ios` count.
 - Products: `recipes_10`, `recipes_50`, `recipes_100` = 10 / 50 / 100 credits per unit.
+- Units or shares the store already reports refunded when the purchase is submitted are not
+  credited (Play `refundableQuantity`, Apple `revocationPercentage`); a fully refunded one is
+  `REJECTED_PERMANENT`.
+- A purchase the server already settled is answered from its record without asking the store.
+
+#### Purchase account token
+
+Contract addition: set this at purchase so the server can tie the purchase to the account that
+made it. It is **optional** (purchases without it are accepted as before), but recommended for
+every new purchase.
+
+- Value: the RFC 9562 **UUID version 5** of the signed-in Firebase uid (UTF-8 bytes of
+  `FirebaseAuth.currentUser.uid`) in the namespace **`6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48`**,
+  written lower-case with hyphens; the same as Python's
+  `uuid.uuid5(uuid.UUID("6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48"), uid)`. Worked example: uid
+  `test-uid-123` gives `e0612f8d-d882-5109-b5f4-6e979f3b69ce` (asserted in
+  `test/hardening.test.ts`). Both stores carry the same string (Apple as a UUID, Play as text).
+- Android: `BillingFlowParams.newBuilder().setObfuscatedAccountId(token)`.
+- iOS: `product.purchase(options: [.appAccountToken(UUID(uuidString: token)!)])`.
+- Compute it from the uid that will call `verifyPurchase` for this purchase (anonymous installs:
+  the anonymous uid; it stays valid after `mergeBalance` into a signed-in account).
+- The server reads the value from the store (never from the request). When present it must be the
+  caller's or that of an account merged into the caller; otherwise `PURCHASE_ACCOUNT_MISMATCH`.
 
 ### `getBalance`
 
-Request `{}`. Response `{ "balance": 0, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`. A new, deleted or merged account reads 0. The balance can
+Request `{}`. Response `{ "balance": 0, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`,
+plus `"purchasesBlocked": true` when set. A new, deleted or merged account reads 0. The balance can
 be negative after a store refund of already-spent credits.
 
 ### `mergeBalance`
@@ -230,7 +322,9 @@ For when a signed-in account replaces an anonymous install that holds credits (w
 anonymous user to the provider is not possible because the credential already has an account).
 
 Request `{ "sourceIdToken": "<ID token of the anonymous user, fetched before switching users>" }`,
-called **as the signed-in (non-anonymous) user**. Response `{ "balance": 12, "moved": 7, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`.
+called **as the signed-in (non-anonymous) user**, with a limited-use App Check token. Response
+`{ "balance": 12, "moved": 7, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`, plus
+`"purchasesBlocked": true` when set (a block on the anonymous install's buyer follows the merge).
 `moved` can be negative when a store refund left the anonymous balance below zero: the debt moves
 too.
 
@@ -240,12 +334,20 @@ deleted. `BUSY` while the source has a generation in flight. On success the anon
 deleted; sign it out locally.
 
 Prefer `linkWithCredential` on the anonymous user when it succeeds: the uid, and so the balance,
-stays the same and no merge is needed.
+stays the same and no merge is needed. Call `mergeBalance` whenever the anonymous balance is not
+zero, **including when it is negative** (a store refund of used credits): the debt then moves with
+the person. If a client drops an anonymous install with a negative balance without merging, the
+server moves that debt to the next account that buys with the same Apple account (Apple's
+`appTransactionId`) or the same linked sign-in (Play); for a Play buyer who never signed in there is
+no stable buyer id, and the debt stays behind.
+
+The signed-in account's display name and photo are removed from Firebase Authentication by the
+server (see "Profile data" below).
 
 ### `deleteAccount`
 
-Request `{ "appleAuthorizationCode": "<optional, from a fresh Sign in with Apple>" }`.
-Response `{ "deleted": true, "balance": 0 }`.
+Request `{ "appleAuthorizationCode": "<optional, from a fresh Sign in with Apple>" }`, with a
+limited-use App Check token. Response `{ "deleted": true, "balance": 0 }`.
 
 - A non-anonymous user must have signed in within the last 5 minutes (`RECENT_SIGN_IN_REQUIRED`
   otherwise): re-authenticate first. For an Apple-linked account, the re-authentication's
@@ -254,3 +356,12 @@ Response `{ "deleted": true, "balance": 0 }`.
   `Auth.auth().revokeToken(withAuthorizationCode:)` itself and omit the field.)
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
 - `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.
+
+## Profile data
+
+The server does not keep users' names or photos. On any callable (except `deleteAccount`) from a
+signed-in, non-anonymous user whose ID token still carries a `name` or `picture` claim, it clears
+the Auth user's `displayName` and `photoURL` (once per sign-in), and it always clears them for the
+target of `mergeBalance`. Clients need do nothing; they should not rely on `displayName` /
+`photoURL` (they may be present until the next token refresh, at most an hour). The iOS client may
+keep blanking the name locally; it is harmless.

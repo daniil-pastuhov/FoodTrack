@@ -5,9 +5,9 @@ import {
   handlePlayNotification,
   pollVoidedPurchases,
 } from "../src/core/notifications";
-import { applePurchaseId, playPurchaseId, verifyPurchase } from "../src/core/purchases";
+import { applePurchaseId, playPurchaseId } from "../src/core/purchases";
 import { emptyUser } from "../src/model";
-import { appleTx, balanceOf, callerFor, db, makeDeps, playToken, resetEmulators, type TestDeps } from "./helpers";
+import { appleTx, balanceOf, callerFor, db, makeDeps, playToken, resetEmulators, verifyPurchase, type TestDeps } from "./helpers";
 
 const alice = callerFor("alice");
 const purchase = async (id: string) => (await db.collection("purchases").doc(id).get()).data();
@@ -149,8 +149,8 @@ describe("App Store Server Notifications", () => {
 
   test("a forged notification is answered 400 and changes nothing", async () => {
     await buyApple();
-    expect(await handleAppleNotification(deps, { signedPayload: "eyJh.eyJh.Zm9yZ2Vk" })).toEqual({ httpStatus: 400, outcome: "invalid signature" });
-    expect(await handleAppleNotification(deps, {})).toEqual({ httpStatus: 400, outcome: "missing signedPayload" });
+    expect(await handleAppleNotification(deps, { signedPayload: "eyJh.eyJh.Zm9yZ2Vk" })).toEqual({ httpStatus: 400, outcome: "INVALID_SIGNATURE" });
+    expect(await handleAppleNotification(deps, {})).toEqual({ httpStatus: 400, outcome: "MISSING_PAYLOAD" });
     expect(await balanceOf("alice")).toBe(10);
   });
 
@@ -165,10 +165,12 @@ describe("App Store Server Notifications", () => {
     expect(await balanceOf("alice")).toBe(10);
   });
 
-  test("CONSUMPTION_REQUEST is recorded, TEST and other types are acknowledged", async () => {
+  test("CONSUMPTION_REQUEST without consent is recorded and not answered; TEST and other types are acknowledged", async () => {
     const tx = await buyApple();
     expect((await handleAppleNotification(deps, { signedPayload: deps.appStore.signNotification("CONSUMPTION_REQUEST", tx) })).outcome)
-      .toBe("consumption request recorded");
+      .toBe("consumption request: not consented");
+    expect(deps.appStore.consumptionSent).toEqual([]);
+    expect(deps.logs.find((l) => l.message === "apple_consumption_request")?.data).toMatchObject({ outcome: "not consented" });
     expect((await purchase(applePurchaseId("production", tx.transactionId)))?.consumptionRequestedAt).toBeDefined();
     expect((await handleAppleNotification(deps, { signedPayload: deps.appStore.signNotification("TEST", null) })).outcome).toBe("test");
     expect((await handleAppleNotification(deps, { signedPayload: deps.appStore.signNotification("REFUND_DECLINED", tx) })).outcome)

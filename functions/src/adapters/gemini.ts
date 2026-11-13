@@ -68,7 +68,12 @@ export function thinkingConfigFor(model: string, level: string): ThinkingConfig 
   return { thinkingLevel: (known.includes(level) ? level : ThinkingLevel.LOW) as ThinkingLevel };
 }
 
-function usageOf(meta: GenerateContentResponseUsageMetadata | undefined, model: string, finish: string | null): LlmUsage {
+/**
+ * Usage from the last usageMetadata the stream carried. undefined when it carried none: the call is
+ * then booked at the reserved worst case, never as free.
+ */
+function usageOf(meta: GenerateContentResponseUsageMetadata | undefined, model: string, finish: string | null): LlmUsage | undefined {
+  if (!meta) return undefined;
   return {
     inputTokens: meta?.promptTokenCount ?? 0,
     outputTokens: meta?.candidatesTokenCount ?? 0,
@@ -111,7 +116,10 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
     // Before the first chunk nothing was generated (a rejected request is not billed for output).
     let started = false;
     const usage = () => usageOf(meta, model, finish);
-    const known = () => (started ? usage() : { ...usage(), outputTokens: 0, thinkingTokens: 0 });
+    const known = (): LlmUsage | undefined =>
+      started
+        ? usage()
+        : { inputTokens: meta?.promptTokenCount ?? 0, outputTokens: 0, thinkingTokens: 0, model, finishReason: finish };
 
     try {
       const stream = await this.models.generateContentStream({
@@ -145,11 +153,12 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
       if (signal.aborted) throw new GenerationError("infra", "timeout");
       // An HTTP error before any chunk: nothing was generated. Mid-stream: usage is unknown.
       const reported = started ? undefined : known();
-      if (e instanceof ApiError) throw new GenerationError("infra", `Vertex AI ${e.status}`, reported);
-      throw new GenerationError("infra", `Vertex AI call failed: ${String(e).slice(0, 120)}`, reported);
+      // Fixed reasons only: an SDK error message could quote the request.
+      if (e instanceof ApiError) throw new GenerationError("infra", `Vertex AI ${Number(e.status) || "error"}`, reported);
+      throw new GenerationError("infra", "Vertex AI call failed", reported);
     }
     if (signal.aborted) throw new GenerationError("infra", "timeout");
-    if (blockReason) throw new GenerationError("content", `prompt blocked: ${blockReason}`, known());
+    if (blockReason) throw new GenerationError("content", `prompt blocked: ${blockReason.slice(0, 40)}`, known());
     if (finish && CONTENT_FINISH.has(finish)) throw new GenerationError("content", `finish ${finish}`, usage());
     if (!text) throw new GenerationError("content", "empty response", known());
     try {

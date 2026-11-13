@@ -73,7 +73,7 @@ describe("Play productsv2 mapping", () => {
       testPurchaseContext: { fopType: "TEST" },
       orderId: "GPA.1",
     })).toEqual({
-      productId: "recipes_50", quantity: 2, purchaseState: "PURCHASED", consumed: false, isTest: true, orderId: "GPA.1", refundableQuantity: 1,
+      productId: "recipes_50", quantity: 2, purchaseState: "PURCHASED", consumed: false, isTest: true, orderId: "GPA.1", refundableQuantity: 1, obfuscatedExternalAccountId: null,
     });
     expect(parseProductPurchaseV2({ productLineItem: [] })).toBeNull();
     expect(parseProductPurchaseV2({ productLineItem: [{ productId: "recipes_10" }] })?.quantity).toBe(1);

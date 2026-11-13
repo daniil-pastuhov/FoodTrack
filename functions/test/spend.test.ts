@@ -116,7 +116,7 @@ describe("spend breakers", () => {
   test("parallel calls cannot overshoot the daily spend cap: worst cases are reserved up front", async () => {
     const users = Array.from({ length: 8 }, (_, i) => `spender-${i}`);
     for (const u of users) await seed(u, 3);
-    await setConfig({ dailySpendCapMicroUsd: 3 * worstCase() });
+    await setConfig({ dailySpendBaseMicroUsd: 3 * worstCase() });
     let release!: () => void;
     const gate = new Promise<void>((r) => (release = r));
     deps.generator.fallback = async () => {
@@ -149,7 +149,7 @@ describe("spend breakers", () => {
 
   test("at the daily spend cap generation is paused before any LLM call, and nothing is charged", async () => {
     await seed(UID, 3);
-    await statsRef(db, utcDay(deps.now())).set({ spentMicroUsd: 2_000_000 - worstCase() + 1 });
+    await statsRef(db, utcDay(deps.now())).set({ spentMicroUsd: 1_200_000 - worstCase() + 1 });
     expect(await reason(generateRecipe(deps, caller, request()))).toBe("GENERATION_DISABLED");
     expect(deps.generator.calls).toBe(0);
     expect(await user()).toMatchObject({ balance: 3, inFlight: 0 });
@@ -183,19 +183,19 @@ describe("config/runtime fails closed", () => {
   test("invalid limits fall back to the defaults and are logged", () => {
     const logs: unknown[] = [];
     const c = parseRuntimeConfig(
-      { dailySpendCapMicroUsd: -1, perUserPerDay: 1.5, dailyCap: Number.NaN, allowSandbox: "true", budgetKillFraction: 0, prices: { inputUsdPerMTok: 0 } },
+      { dailySpendBaseMicroUsd: -1, perUserPerDay: 1.5, dailyCap: Number.NaN, allowSandbox: "true", budgetKillFraction: 0, prices: { inputUsdPerMTok: 0 } },
       { info: () => undefined, error: () => undefined, warn: (_m, d) => logs.push(d) },
     );
     expect(c).toMatchObject({
-      dailySpendCapMicroUsd: 2_000_000, perUserPerDay: 40, dailyCap: 1000, allowSandbox: false, budgetKillFraction: 1,
+      dailySpendBaseMicroUsd: 1_200_000, perUserPerDay: 40, dailyCap: 1000, allowSandbox: false, budgetKillFraction: 1,
       prices: { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5 },
     });
     expect(logs).toHaveLength(1);
   });
 
   test("valid overrides are taken", () => {
-    expect(parseRuntimeConfig({ dailySpendCapMicroUsd: 0, infraRefundsPerDay: 1, costs: { recipe: 1, menu2: 1, menu3: 1 } }))
-      .toMatchObject({ dailySpendCapMicroUsd: 0, infraRefundsPerDay: 1, costs: { recipe: 1, menu2: 1, menu3: 1 } });
+    expect(parseRuntimeConfig({ dailySpendBaseMicroUsd: 0, infraRefundsPerDay: 1, costs: { recipe: 1, menu2: 1, menu3: 1 } }))
+      .toMatchObject({ dailySpendBaseMicroUsd: 0, infraRefundsPerDay: 1, costs: { recipe: 1, menu2: 1, menu3: 1 } });
   });
 });
 

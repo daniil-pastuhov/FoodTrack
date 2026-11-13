@@ -4,7 +4,22 @@ export const ANDROID_PACKAGE = "com.foodtracker.android";
 export const IOS_BUNDLE_ID = "com.foodbest.ios";
 
 /**
- * App Check replay protection on generateRecipe and verifyPurchase: each call must carry a fresh
+ * Firebase app ids (App Check `appId`) of the two clients, from the committed
+ * androidApp/google-services.json and iosApp/FoodTracker/GoogleService-Info.plist. verifyPurchase
+ * accepts Play purchases only from the Android app and App Store purchases only from the iOS app.
+ */
+export const ANDROID_FIREBASE_APP_ID = "1:1035101174561:android:8a5a6e0a9fca3573f0dc60";
+export const IOS_FIREBASE_APP_ID = "1:1035101174561:ios:27d1027b9220f5d1f0dc60";
+
+/**
+ * Namespace of the purchase account token: UUIDv5(PURCHASE_TOKEN_NAMESPACE, uid). Clients set it as
+ * Play's obfuscatedAccountId and Apple's appAccountToken (see CONTRACT.md). Never change it: every
+ * purchase made with the old value would stop matching.
+ */
+export const PURCHASE_TOKEN_NAMESPACE = "6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48";
+
+/**
+ * App Check replay protection on generateRecipe, verifyPurchase, mergeBalance and deleteAccount: each call must carry a fresh
  * limited-use token, which the server consumes (both clients request limited-use tokens for every
  * callable). The function's service account needs the "Firebase App Check Token Verifier" role
  * (roles/firebaseappcheck.tokenVerifier). A replayed token arrives with `alreadyConsumed: true`
@@ -76,7 +91,11 @@ export const THINKING_FACTOR = 2;
  */
 export const DEFAULT_PRICES = { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5 } as const;
 
-/** How long a finished generation doc is kept for idempotent retries before Firestore TTL deletes it. */
+/**
+ * How long a finished generation doc is kept for idempotent retries. Firestore TTL deletes it some
+ * time after this (Google documents "typically within 24 hours" of expiry, not a guarantee), so the
+ * idempotency window is at least 7 days after the generation finished, and no more is promised.
+ */
 export const GENERATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
@@ -85,6 +104,15 @@ export const GENERATION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
  * paid for anything. Later ones are charged.
  */
 export const CREDITS_PER_CONTENT_REFUND = 10;
+
+/**
+ * Infrastructure failures whose usage is unknown (timeouts, mid-stream errors, token-ceiling aborts,
+ * invocations the sweeper settles) cost the worst case, so refunding them for ever would make timing
+ * out on purpose free. They are refunded once per this many credits paid over the account's life
+ * (net of store refunds), minimum one once it has paid for anything; later ones are charged.
+ * Failures with known usage (an error before the model produced anything) are always refunded.
+ */
+export const CREDITS_PER_TIMEOUT_REFUND = 10;
 
 export const MAX_INGREDIENTS = 30;
 export const MAX_ALLERGENS = 20;
@@ -99,6 +127,20 @@ export const MERGE_CHAIN_MAX = 5;
 
 /** Play purchases granted more recently than this are left to the live verifyPurchase call to consume. */
 export const CONSUME_RETRY_MIN_AGE_MS = 60_000;
+/** After this many failed consumes the sweeper stops retrying and logs `play_consume_gave_up`. */
+export const CONSUME_MAX_ATTEMPTS = 50;
+/** Documents the sweeper reads per page, and the most pages per run, for each of its queues. */
+export const SWEEP_PAGE = 100;
+export const SWEEP_MAX_PAGES = 10;
+
+/** Apple: "Respond within 12 hours of receiving the CONSUMPTION_REQUEST notification." */
+export const CONSUMPTION_ANSWER_WINDOW_MS = 12 * 60 * 60 * 1000;
+
+/** How long `config/runtime` is cached in memory per instance. */
+export const CONFIG_CACHE_MS = 30_000;
+
+/** Days of production credit grants (net of refunds) the revenue-aware daily spend ceiling looks at. */
+export const REVENUE_WINDOW_DAYS = 7;
 
 /** How far back the daily Voided Purchases poll looks (the API allows up to 30 days). */
 export const VOIDED_POLL_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
