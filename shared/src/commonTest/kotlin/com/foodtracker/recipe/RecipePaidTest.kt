@@ -71,6 +71,16 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var attestation = Attestation.OK
     var attests = 0
 
+    /** Null: a server that predates getGeneration. */
+    var polls: ArrayDeque<ServerResult<GenerateReply>>? = null
+    val polled = mutableListOf<String>()
+
+    override suspend fun getGeneration(requestId: String): ServerResult<GenerateReply> {
+        val replies = polls ?: return ServerResult.Err(ServerError.CALLABLE_MISSING)
+        polled += requestId
+        return replies.removeFirst()
+    }
+
     override suspend fun attest(): Attestation {
         attests++
         return attestation
@@ -977,6 +987,72 @@ class RecipePaidTest {
         assertEquals(1, account.reauths)
         assertEquals(2, backend.deleteCalls)
         assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
+    }
+
+    @Test
+    fun pollsAskWithoutStartingAgain() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0"), backend.generated.map { it.requestId }, "one generateRecipe, one limited-use token")
+        assertEquals(listOf("req0", "req0"), backend.polled)
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertEquals(4, holder.uiState.value.paid.balance)
+    }
+
+    @Test
+    fun aHeldRequestIsAskedAboutAtLaunchNotStartedAgain() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val first = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        first.generateOnServer()
+
+        backend.polls!! += done(4)
+        val second = holder()
+        second.onAppResume()
+
+        assertEquals(listOf("req0"), backend.generated.map { it.requestId }, "only the first send")
+        assertEquals(listOf("req0"), backend.polled)
+        assertEquals(1, saved.rows.value.size)
+        assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun aRequestTheServerNeverGotIsSentAgainWithTheSameIdAndInputs() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        holder.consumeEvent()
+
+        backend.polls!! += ServerResult.Err(ServerError.UNKNOWN_REQUEST)
+        backend.generateReplies += done(4)
+        holder.retryServer()
+
+        assertEquals(listOf("req0", "req0"), backend.generated.map { it.requestId })
+        assertEquals(backend.generated[0], backend.generated[1])
+        assertEquals(listOf("req0"), backend.polled)
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun anOlderServerWithoutGetGenerationIsPolledTheOldWay() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0", "req0"), backend.generated.map { it.requestId })
+        assertTrue(backend.polled.isEmpty())
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
     }
 
     @Test

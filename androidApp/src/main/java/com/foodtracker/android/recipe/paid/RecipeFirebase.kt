@@ -13,11 +13,35 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.lang.ref.WeakReference
+import java.nio.ByteBuffer
+import java.security.MessageDigest
+import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /** The region every callable is deployed in (functions/CONTRACT.md). */
 const val RECIPE_FUNCTIONS_REGION = "europe-west1"
+
+/**
+ * The namespace of [purchaseAccountId]. It must match the server's (functions/CONTRACT.md);
+ * chosen here before the contract defined one, so it is to be reconciled with it.
+ */
+internal const val PURCHASE_ACCOUNT_NAMESPACE = "c986cefb-e1ed-4b35-9023-b2e93c4b42a2"
+
+/**
+ * The value set as Play's `obfuscatedAccountId` for the Firebase user [uid]: a name-based UUID
+ * (version 5, SHA-1, RFC 9562) of the uid in [PURCHASE_ACCOUNT_NAMESPACE]. Deterministic, so the
+ * server can work it out from the uid, and not the uid itself.
+ */
+internal fun purchaseAccountId(uid: String): String {
+    val namespace = UUID.fromString(PURCHASE_ACCOUNT_NAMESPACE)
+    val bytes = ByteBuffer.allocate(16).putLong(namespace.mostSignificantBits).putLong(namespace.leastSignificantBits).array()
+    val hash = MessageDigest.getInstance("SHA-1").digest(bytes + uid.toByteArray(Charsets.UTF_8))
+    hash[6] = ((hash[6].toInt() and 0x0f) or 0x50).toByte()
+    hash[8] = ((hash[8].toInt() and 0x3f) or 0x80).toByte()
+    val buffer = ByteBuffer.wrap(hash, 0, 16)
+    return UUID(buffer.long, buffer.long).toString()
+}
 
 /**
  * Whether this build may offer the paid route, worked out without any network call: a release

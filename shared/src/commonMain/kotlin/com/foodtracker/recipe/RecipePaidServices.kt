@@ -143,6 +143,13 @@ enum class ServerError {
     /** The request id was first used with other inputs: a client bug. Drop it, use a new id. */
     REQUEST_ID_REUSED,
 
+    /** `getGeneration` doesn't know this id: the server never got the request. Send it again
+     *  with `generateRecipe`, same id and inputs. */
+    UNKNOWN_REQUEST,
+
+    /** The callable itself doesn't exist on this server (deployed before it was added). */
+    CALLABLE_MISSING,
+
     /** The App Check token was already used. Asking again with a fresh one works; it never
      *  means the build can't attest. */
     APP_CHECK_REPLAYED,
@@ -160,11 +167,14 @@ enum class ServerError {
     UNAUTHENTICATED;
 
     companion object {
+        /** What the client works out itself; never a server's `details.reason`. */
+        private val CLIENT_ONLY = setOf(UNKNOWN, OFFLINE, UNAUTHENTICATED, CALLABLE_MISSING)
+
         /** The error for a callable failure's `details.reason`, [fallback] when it has none, and
          *  [UNKNOWN] for a reason this app doesn't know. */
         fun fromReason(reason: String?, fallback: ServerError): ServerError = when {
             reason.isNullOrEmpty() -> fallback
-            else -> entries.firstOrNull { it.name == reason && it != UNKNOWN && it != OFFLINE && it != UNAUTHENTICATED } ?: UNKNOWN
+            else -> entries.firstOrNull { it.name == reason && it !in CLIENT_ONLY } ?: UNKNOWN
         }
     }
 }
@@ -186,7 +196,14 @@ interface RecipeBackend {
     /** Whether this build can get an App Check token, asked as a purchase starts and before
      *  any money moves. Makes no call to our server. */
     suspend fun attest(): Attestation = Attestation.OK
+    /** Starts [request], or answers for it if that id was already started with these inputs.
+     *  Each call spends a fresh limited-use App Check token. */
     suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply>
+
+    /** Asks how an already started generation is going, without starting one and without
+     *  spending a limited-use App Check token. [ServerError.UNKNOWN_REQUEST] when the server
+     *  never got it; [ServerError.CALLABLE_MISSING] from a server deployed before it existed. */
+    suspend fun getGeneration(requestId: String): ServerResult<GenerateReply> = ServerResult.Err(ServerError.CALLABLE_MISSING)
     suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply>
     suspend fun getBalance(): ServerResult<BalanceReply>
 

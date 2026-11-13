@@ -36,7 +36,7 @@ import kotlin.coroutines.resume
  * purchase keeps showing up in [purchases] until the server has, which is what makes resending
  * it at launch and on resume work.
  */
-class PlayRecipeStore(context: Context) : RecipeStore {
+class PlayRecipeStore(context: Context, private val firebase: RecipeFirebase) : RecipeStore {
 
     private val appContext = context.applicationContext
     private val _updates = MutableSharedFlow<StoreUpdate>(extraBufferCapacity = 16)
@@ -113,7 +113,11 @@ class PlayRecipeStore(context: Context) : RecipeStore {
         // Fetched again rather than kept: stale details can make launchBillingFlow fail.
         val product = details(listOf(productId))?.firstOrNull() ?: return@guarded false
         val offer = product.offer() ?: return@guarded false
+        // Ties the purchase to its buyer for the server (functions/CONTRACT.md). The user exists
+        // by now: the purchase flow creates or signs one in before opening Play's sheet.
+        val buyer = firebase.auth().currentUser?.uid?.let(::purchaseAccountId)
         val params = BillingFlowParams.newBuilder()
+            .apply { buyer?.let(::setObfuscatedAccountId) }
             .setProductDetailsParamsList(
                 listOf(
                     BillingFlowParams.ProductDetailsParams.newBuilder()

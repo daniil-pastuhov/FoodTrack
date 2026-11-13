@@ -156,6 +156,10 @@ internal class RecipePaid(
 
     private var probingPacks = false
 
+    /** Set when the server turns out to predate `getGeneration`: polls go through
+     *  `generateRecipe` again for the rest of the run, as they used to. */
+    private var getGenerationMissing = false
+
     /** The generation still waiting for its answer, unless it is too old to ask about. */
     private fun held(): GenerateRequest? {
         val request = snapshot.pendingGeneration ?: return null
@@ -708,7 +712,8 @@ internal class RecipePaid(
                 val request = kept ?: fresh
                 if (kept == null) persist { it.copy(pendingGeneration = request, pendingSinceMillis = nowMillis()) }
                 updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE) }
-                send(request, interactive = true)
+                // Already sent once with these inputs: asked about, not started again.
+                send(request, interactive = true, start = kept == null)
             }
         }
     }
@@ -757,13 +762,14 @@ internal class RecipePaid(
      * [interactive] runs are the ones the person is watching: they report events and clear the
      * writing state; a recovery in the background only saves what arrives.
      */
-    private suspend fun send(request: GenerateRequest, interactive: Boolean): Boolean {
+    private suspend fun send(request: GenerateRequest, interactive: Boolean, start: Boolean = false): Boolean {
         // What it takes as asked, before a reply can bring new costs.
         val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses)
         val deadline = nowMillis() + if (request.kind == WireKind.MENU) MENU_POLL_MILLIS else RECIPE_POLL_MILLIS
+        var starting = start
         while (true) {
             val result = try {
-                backend.generate(request)
+                ask(request, starting)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -797,6 +803,8 @@ internal class RecipePaid(
                             return true
                         }
                         GenerateStatus.IN_PROGRESS -> {
+                            // Whatever the first call was, the rest only ask.
+                            starting = false
                             // The balance it reports is held, not spent: the count waits for the
                             // result.
                             if (nowMillis() >= deadline) {
@@ -880,6 +888,28 @@ internal class RecipePaid(
                 }
             }
         }
+    }
+
+    /**
+     * One call for [request]: `generateRecipe` to [start] it (a fresh limited-use App Check
+     * token, which is a Play Integrity request), `getGeneration` for everything after, so polls
+     * and recoveries spend none. Falls back to `generateRecipe`, same id and inputs, when the
+     * server never got the request or predates `getGeneration`.
+     */
+    private suspend fun ask(request: GenerateRequest, start: Boolean): ServerResult<GenerateReply> {
+        if (start || getGenerationMissing) return backend.generate(request)
+        val polled = backend.getGeneration(request.requestId)
+        if (polled is ServerResult.Err) {
+            when (polled.error) {
+                ServerError.UNKNOWN_REQUEST -> return backend.generate(request)
+                ServerError.CALLABLE_MISSING -> {
+                    getGenerationMissing = true
+                    return backend.generate(request)
+                }
+                else -> Unit
+            }
+        }
+        return polled
     }
 
     private fun finish(interactive: Boolean, event: RecipeEvent?, issue: ServerIssue? = null) {

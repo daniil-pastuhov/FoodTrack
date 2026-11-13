@@ -110,7 +110,7 @@ val appModule = module {
     }
     single<RecipeStore> {
         if (recipePaidRouteBuildAllowed(androidContext())) {
-            emulatorRecipeStore(androidContext()) ?: PlayRecipeStore(androidContext())
+            emulatorRecipeStore(androidContext()) ?: PlayRecipeStore(androidContext(), get())
         } else {
             NotAvailableRecipeStore
         }

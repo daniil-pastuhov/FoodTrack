@@ -53,6 +53,18 @@ class FirebaseRecipeBackend(
         return call(firebase.functions(), "generateRecipe", RecipeJson.encodeToJsonElement(GenerateRequest.serializer(), request), timeout, GenerateReply.serializer())
     }
 
+    // A normal App Check token, not a limited-use one: the server doesn't consume it, so polling
+    // spends no Play Integrity request.
+    override suspend fun getGeneration(requestId: String): ServerResult<GenerateReply> =
+        call(
+            firebase.functions(),
+            "getGeneration",
+            JsonObject(mapOf("requestId" to JsonPrimitive(requestId))),
+            30L,
+            GenerateReply.serializer(),
+            limitedUseAppCheck = false
+        )
+
     override suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply> =
         call(
             firebase.functions(),
@@ -96,8 +108,9 @@ internal suspend fun <T> call(
     name: String,
     data: JsonElement,
     timeoutSeconds: Long,
-    serializer: KSerializer<T>
-): ServerResult<T> = when (val result = callRaw(functions, name, data, timeoutSeconds)) {
+    serializer: KSerializer<T>,
+    limitedUseAppCheck: Boolean = true
+): ServerResult<T> = when (val result = callRaw(functions, name, data, timeoutSeconds, limitedUseAppCheck)) {
     is ServerResult.Ok -> try {
         ServerResult.Ok(RecipeJson.decodeFromJsonElement(serializer, result.value))
     } catch (e: IllegalArgumentException) {
@@ -113,8 +126,9 @@ internal suspend fun callRaw(
     functions: FirebaseFunctions,
     name: String,
     data: JsonElement,
-    timeoutSeconds: Long
-): ServerResult<JsonElement> = retryingReplayedAppCheck { callOnce(functions, name, data, timeoutSeconds) }
+    timeoutSeconds: Long,
+    limitedUseAppCheck: Boolean = true
+): ServerResult<JsonElement> = retryingReplayedAppCheck { callOnce(functions, name, data, timeoutSeconds, limitedUseAppCheck) }
 
 internal suspend fun retryingReplayedAppCheck(call: suspend () -> ServerResult<JsonElement>): ServerResult<JsonElement> {
     val first = call()
@@ -125,10 +139,12 @@ private suspend fun callOnce(
     functions: FirebaseFunctions,
     name: String,
     data: JsonElement,
-    timeoutSeconds: Long
+    timeoutSeconds: Long,
+    limitedUseAppCheck: Boolean
 ): ServerResult<JsonElement> = try {
-    // Limited-use tokens, so these calls keep working when the server starts consuming them.
-    val options = HttpsCallableOptions.Builder().setLimitedUseAppCheckTokens(true).build()
+    // A fresh limited-use token per call where the server consumes them (functions/CONTRACT.md);
+    // never cached or reused across calls.
+    val options = HttpsCallableOptions.Builder().setLimitedUseAppCheckTokens(limitedUseAppCheck).build()
     val callable = functions.getHttpsCallable(name, options).apply { setTimeout(timeoutSeconds, TimeUnit.SECONDS) }
     val result = callable.call(data.toCallableData()).awaitResult()
     ServerResult.Ok(result.getData().toJsonElement())
@@ -154,6 +170,9 @@ internal fun serverErrorOf(code: FirebaseFunctionsException.Code, reason: String
         FirebaseFunctionsException.Code.UNAUTHENTICATED ->
             if (reason == ServerError.APP_CHECK_REPLAYED.name) ServerError.APP_CHECK_REPLAYED else ServerError.UNAUTHENTICATED
         FirebaseFunctionsException.Code.DEADLINE_EXCEEDED -> ServerError.OFFLINE
+        // Without a reason, the callable itself isn't on this server (an older deployment).
+        FirebaseFunctionsException.Code.NOT_FOUND, FirebaseFunctionsException.Code.UNIMPLEMENTED ->
+            if (reason.isNullOrEmpty()) ServerError.CALLABLE_MISSING else ServerError.fromReason(reason, ServerError.INTERNAL)
         FirebaseFunctionsException.Code.UNAVAILABLE -> ServerError.fromReason(reason, ServerError.OFFLINE)
         // The SDK reports a dropped connection as `internal` with the I/O error as its cause.
         FirebaseFunctionsException.Code.INTERNAL ->

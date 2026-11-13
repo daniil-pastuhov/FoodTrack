@@ -91,6 +91,22 @@ class CallableErrorTest {
     }
 
     @Test
+    fun aMissingCallableIsToldApartFromAnUnknownRequest() {
+        assertEquals(ServerError.UNKNOWN_REQUEST, error(Code.NOT_FOUND, "UNKNOWN_REQUEST"))
+        assertEquals(ServerError.CALLABLE_MISSING, error(Code.NOT_FOUND), "an older server without getGeneration")
+        assertEquals(ServerError.CALLABLE_MISSING, error(Code.UNIMPLEMENTED))
+        assertEquals(ServerError.UNKNOWN, error(Code.NOT_FOUND, "CALLABLE_MISSING"), "the client's own name isn't a reason")
+    }
+
+    @Test
+    fun thePurchaseAccountIdIsAVersion5UuidOfTheUid() {
+        // Python: uuid.uuid5(uuid.UUID("c986cefb-e1ed-4b35-9023-b2e93c4b42a2"), "abc123")
+        assertEquals("aed6646c-752d-5dd0-b6da-945b88bd5df2", purchaseAccountId("abc123"), "matches RFC 9562 UUIDv5")
+        assertEquals(purchaseAccountId("abc123"), purchaseAccountId("abc123"), "deterministic")
+        assertEquals(false, purchaseAccountId("abc124") == purchaseAccountId("abc123"), "per user")
+    }
+
+    @Test
     fun aReplayedTokenIsAskedAgainOnceWithAFreshOne() = kotlinx.coroutines.runBlocking {
         var calls = 0
         val ok = retryingReplayedAppCheck {
