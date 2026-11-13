@@ -4,7 +4,10 @@ import { getBalance } from "../src/core/account";
 import { generateRecipe } from "../src/core/generation";
 import { sweep } from "../src/core/sweeper";
 import { emptyUser } from "../src/model";
-import { balanceOf, callerFor, db, makeDeps, resetEmulators, sampleMenu, setConfig, type TestDeps } from "./helpers";
+import { balanceOf, callerFor, db, fakeUsage, makeDeps, resetEmulators, sampleMenu, setConfig, type TestDeps } from "./helpers";
+
+/** An error before the model produced anything: usage known, nothing billed for output. */
+const nothingGenerated = fakeUsage({ inputTokens: 0, outputTokens: 0, thinkingTokens: 0 });
 
 const UID = "user-gen";
 const caller = callerFor(UID);
@@ -170,10 +173,10 @@ describe("generateRecipe charging", () => {
 });
 
 describe("refund classes", () => {
-  test("infrastructure failures always refund, up to the daily ceiling", async () => {
+  test("infrastructure failures with known usage always refund, up to the daily ceiling", async () => {
     await seed(1);
     await setConfig({ perUserPerMinute: 100, infraRefundsPerDay: 5 });
-    deps.generator.failWith("infra", 5);
+    deps.generator.failWith("infra", 5, nothingGenerated);
     for (let i = 0; i < 5; i++) {
       const res = await generateRecipe(deps, caller, request());
       expect(res).toMatchObject({ status: "FAILED", charged: false, balance: 1 });
@@ -184,7 +187,7 @@ describe("refund classes", () => {
   test("at the infrastructure-refund ceiling, generation is refused before any LLM call until the next UTC day", async () => {
     await seed(5);
     await setConfig({ perUserPerMinute: 100 });
-    deps.generator.failWith("infra", 3);
+    deps.generator.failWith("infra", 3, nothingGenerated);
     for (let i = 0; i < 3; i++) expect(await generateRecipe(deps, caller, request())).toMatchObject({ charged: false });
     expect(deps.generator.calls).toBe(3);
     expect(await reason(generateRecipe(deps, caller, request()))).toBe("INFRA_FAILURE_LIMIT");
@@ -195,17 +198,21 @@ describe("refund classes", () => {
     expect(res.status).toBe("DONE");
   });
 
-  test("sweeper refunds count towards the infrastructure-refund ceiling", async () => {
+  test("a dead invocation settled by the sweeper is refunded and counts against no ceiling or allowance", async () => {
     await seed(5);
-    await setConfig({ infraRefundsPerDay: 1 });
-    const slow = deps.generator.blockNext();
-    const live = generateRecipe(deps, caller, request());
-    await slow.started;
-    deps.clock.advance(60_000 + 61_000);
-    expect((await sweep(deps)).settled).toBe(1);
-    slow.release();
-    await live;
-    expect(await reason(generateRecipe(deps, caller, request()))).toBe("INFRA_FAILURE_LIMIT");
+    await setConfig({ infraRefundsPerDay: 1, perUserPerMinute: 100 });
+    for (let i = 0; i < 3; i++) {
+      const slow = deps.generator.blockNext();
+      const live = generateRecipe(deps, caller, request());
+      await slow.started;
+      deps.clock.advance(60_000 + 61_000);
+      expect((await sweep(deps)).settled).toBe(1);
+      slow.release();
+      await live;
+    }
+    expect(await user()).toMatchObject({ balance: 5, timeoutRefundsUsed: 0 });
+    expect((await user()).infraRefunds).toBeUndefined();
+    expect((await generateRecipe(deps, caller, request())).status).toBe("DONE");
   });
 
   test("content failures are refunded once per 10 purchased credits over the account's life, then charged", async () => {

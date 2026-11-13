@@ -7,6 +7,22 @@
         { "fieldPath": "state", "order": "ASCENDING" },
         { "fieldPath": "deadlineAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "purchases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consumePending", "order": "ASCENDING" },
+        { "fieldPath": "grantedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "purchases",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consumptionPending", "order": "ASCENDING" },
+        { "fieldPath": "consumption.deadlineAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": [

@@ -1,10 +1,10 @@
 import { DEFAULT_COSTS } from "../src/constants";
 import { HttpsError } from "firebase-functions/v2/https";
 import { randomUUID } from "node:crypto";
-import { deleteAccount, getBalance, mergeBalance } from "../src/core/account";
+import { deleteAccount, getBalance, mergeBalance, scrubProfile } from "../src/core/account";
 import { generateRecipe } from "../src/core/generation";
 import { handlePlayNotification } from "../src/core/notifications";
-import { playPurchaseId, verifyPurchase } from "../src/core/purchases";
+import { playPurchaseId } from "../src/core/purchases";
 import { emptyUser } from "../src/model";
 import {
   anonymousUser,
@@ -17,6 +17,7 @@ import {
   playToken,
   resetEmulators,
   type TestDeps,
+  verifyPurchase,
 } from "./helpers";
 
 let deps: TestDeps;
@@ -158,5 +159,71 @@ describe("deleteAccount", () => {
     const anon = await anonymousUser();
     const old = callerFor(anon.uid, "anonymous", 0);
     expect(await deleteAccount(deps, old, {})).toEqual({ deleted: true, balance: 0 });
+  });
+});
+
+describe("names and photos are not kept", () => {
+  async function googleUser(name = "Ada Lovelace", photo = "https://lh3.example/photo.jpg") {
+    const u = await auth.createUser({ email: `${randomUUID()}@example.com`, password: "secret-password", displayName: name, photoURL: photo });
+    return u.uid;
+  }
+  function countingUpdates(d: TestDeps) {
+    const calls: string[] = [];
+    const real = d.auth.updateUser.bind(d.auth);
+    const counting = Object.assign(Object.create(d.auth), {
+      updateUser: (uid: string, req: object) => {
+        calls.push(uid);
+        return real(uid, req as never);
+      },
+    });
+    return { deps: { ...d, auth: counting } as TestDeps, calls };
+  }
+
+  test("a signed-in caller's display name and photo are cleared once per sign-in, and never logged", async () => {
+    const uid = await googleUser();
+    const { deps: d, calls } = countingUpdates(deps);
+    const signIn = Math.floor(Date.now() / 1000);
+    const caller = callerFor(uid, "google.com", signIn, null, true);
+    expect(await scrubProfile(d, caller)).toBe(true);
+    const record = await auth.getUser(uid);
+    expect(record.displayName).toBeUndefined();
+    expect(record.photoURL).toBeUndefined();
+    expect((await db.collection("users").doc(uid).get()).data()).toMatchObject({ balance: 0, inFlight: 0 });
+    // The same token keeps its claims until it refreshes: no second update.
+    expect(await scrubProfile(d, caller)).toBe(false);
+    expect(calls).toHaveLength(1);
+    // A later sign-in that brought them back is cleared again.
+    await auth.updateUser(uid, { displayName: "Ada Lovelace" });
+    expect(await scrubProfile(d, callerFor(uid, "google.com", signIn + 10, null, true))).toBe(true);
+    expect((await auth.getUser(uid)).displayName).toBeUndefined();
+    expect(JSON.stringify(deps.logs)).not.toContain("Ada");
+  });
+
+  test("the flag on the user doc stops a second update from another instance", async () => {
+    const uid = await googleUser();
+    const signIn = Math.floor(Date.now() / 1000) - 100;
+    await db.collection("users").doc(uid).set({ ...emptyUser(), profileScrubbedAt: new Date() });
+    const { deps: d, calls } = countingUpdates(deps);
+    expect(await scrubProfile(d, callerFor(uid, "google.com", signIn, null, true))).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  test("anonymous callers and tokens without name or picture cost nothing", async () => {
+    const uid = await googleUser();
+    const { deps: d, calls } = countingUpdates(deps);
+    expect(await scrubProfile(d, callerFor(uid, "anonymous", 1, null, true))).toBe(false);
+    expect(await scrubProfile(d, callerFor(uid, "google.com", 1, null, false))).toBe(false);
+    expect(calls).toHaveLength(0);
+    expect((await db.collection("users").doc(uid).get()).exists).toBe(false);
+  });
+
+  test("mergeBalance clears the target account's name and photo", async () => {
+    const anon = await anonymousUser();
+    const target = await googleUser("Grace Hopper");
+    await give(anon.uid, 3);
+    await mergeBalance(deps, callerFor(target, "google.com"), { sourceIdToken: anon.idToken });
+    const record = await auth.getUser(target);
+    expect(record.displayName).toBeUndefined();
+    expect(record.photoURL).toBeUndefined();
   });
 });

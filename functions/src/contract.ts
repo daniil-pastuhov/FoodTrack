@@ -89,7 +89,16 @@ export type GenerateStatus = "DONE" | "IN_PROGRESS" | "FAILED";
 /** Credits per request kind, in every response that carries `balance`. */
 export type CostsWire = Costs;
 
-export interface GenerateResponse {
+/**
+ * Present and true on every response that carries `balance` when the account's buyer is blocked for
+ * refunds after use: the client hides buying. Absent otherwise.
+ */
+export interface BlockFlag {
+  purchasesBlocked?: true;
+}
+
+/** generateRecipe and getGeneration. */
+export interface GenerateResponse extends BlockFlag {
   status: GenerateStatus;
   recipe?: Recipe;
   menu?: Menu;
@@ -100,15 +109,19 @@ export interface GenerateResponse {
 
 export type VerifyStatus = "GRANTED" | "ALREADY_GRANTED" | "REJECTED_PERMANENT" | "RETRY";
 
-export interface VerifyResponse {
+export interface VerifyResponse extends BlockFlag {
   status: VerifyStatus;
   balance: number;
   costs: CostsWire;
 }
 
-export type VerifyRequest =
+export type VerifyRequest = (
   | { store: "play"; purchaseToken: string }
-  | { store: "appstore"; signedTransaction: string };
+  | { store: "appstore"; signedTransaction: string }
+) & {
+  /** iOS: the buyer saw and accepted the consumption-data line before buying. null when not sent. */
+  consumptionConsent: boolean | null;
+};
 
 // ---------------------------------------------------------------------------------------------
 // Validation helpers
@@ -127,7 +140,10 @@ export type ErrorReason =
   | "REQUEST_ID_REUSED"
   | "APP_CHECK_REPLAYED"
   | "RECENT_SIGN_IN_REQUIRED"
-  | "MERGE_NOT_ALLOWED";
+  | "MERGE_NOT_ALLOWED"
+  | "UNKNOWN_REQUEST"
+  | "STORE_MISMATCH"
+  | "PURCHASE_ACCOUNT_MISMATCH";
 
 export function fail(
   code: ConstructorParameters<typeof HttpsError>[0],
@@ -190,10 +206,16 @@ export function validateConfig(v: unknown): RecipeConfig {
   };
 }
 
+/** A requestId (any UUID version 1-8), lower-cased. */
+export function validateRequestId(v: unknown): string {
+  if (typeof v !== "string" || !UUID.test(v)) invalid("requestId must be a UUID");
+  return v.toLowerCase();
+}
+
 /** `nowMs` is the server clock; `today` must be within a day of the server's UTC date either way. */
 export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequest {
   if (!isObject(v)) invalid("request must be an object");
-  if (typeof v.requestId !== "string" || !UUID.test(v.requestId)) invalid("requestId must be a UUID");
+  const requestId = validateRequestId(v.requestId);
   const kind = oneOf(["recipe", "menu"] as const, v.kind, "kind");
   let courses: 2 | 3 | undefined;
   if (kind === "menu") courses = oneOf([2, 3] as const, v.courses, "courses");
@@ -225,7 +247,7 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
   const allergens = allergensRaw.map((a: unknown, i: number) => validName(a, `allergens[${i}]`));
 
   return {
-    requestId: v.requestId.toLowerCase(),
+    requestId,
     kind,
     ...(courses ? { courses } : {}),
     config: validateConfig(v.config),
@@ -260,17 +282,20 @@ const JWS = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
 
 export function validateVerifyRequest(v: unknown): VerifyRequest {
   if (!isObject(v)) invalid("request must be an object");
+  const c = v.consumptionConsent;
+  if (c !== undefined && c !== null && typeof c !== "boolean") invalid("consumptionConsent must be a boolean");
+  const consumptionConsent = typeof c === "boolean" ? c : null;
   if (v.store === "play") {
     if (typeof v.purchaseToken !== "string" || !PLAY_TOKEN.test(v.purchaseToken)) {
       invalid("purchaseToken is malformed");
     }
-    return { store: "play", purchaseToken: v.purchaseToken };
+    return { store: "play", purchaseToken: v.purchaseToken, consumptionConsent };
   }
   if (v.store === "appstore") {
     if (typeof v.signedTransaction !== "string" || v.signedTransaction.length > 32_768 || !JWS.test(v.signedTransaction)) {
       invalid("signedTransaction must be a compact JWS");
     }
-    return { store: "appstore", signedTransaction: v.signedTransaction };
+    return { store: "appstore", signedTransaction: v.signedTransaction, consumptionConsent };
   }
   invalid("store must be play or appstore");
 }

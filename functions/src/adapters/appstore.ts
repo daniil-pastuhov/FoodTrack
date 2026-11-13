@@ -16,12 +16,14 @@ import {
 } from "@apple/app-store-server-library";
 import { IOS_BUNDLE_ID } from "../constants";
 import {
+  ConsumptionRejectedError,
   InvalidSignatureError,
   RetryableStoreError,
   type AppleEnvironment,
   type AppleNotification,
   type AppleTransaction,
   type AppStoreVerifier,
+  type ConsumptionInfo,
 } from "../ports";
 
 export interface AppStoreOptions {
@@ -47,7 +49,8 @@ function decodeUnverified(jws: string): Record<string, unknown> {
 function envOf(value: unknown): AppleEnvironment {
   if (value === Environment.PRODUCTION) return "production";
   if (value === Environment.SANDBOX) return "sandbox";
-  throw new InvalidSignatureError(`refused environment ${String(value)}`);
+  // Never echo the value: it comes from an unverified payload.
+  throw new InvalidSignatureError("refused environment");
 }
 
 export function toAppleTransaction(p: JWSTransactionDecodedPayload): AppleTransaction {
@@ -63,6 +66,8 @@ export function toAppleTransaction(p: JWSTransactionDecodedPayload): AppleTransa
     revocationDate: p.revocationDate ?? null,
     revocationPercentage: p.revocationPercentage ?? null,
     signedDate: p.signedDate ?? 0,
+    appAccountToken: typeof p.appAccountToken === "string" && p.appAccountToken ? p.appAccountToken : null,
+    appTransactionId: typeof p.appTransactionId === "string" && p.appTransactionId ? p.appTransactionId : null,
   };
 }
 
@@ -120,6 +125,19 @@ export class AppleAppStoreVerifier implements AppStoreVerifier {
     }
     if (!signed) return null;
     return this.verifyTransaction(signed);
+  }
+
+  async sendConsumptionInformation(transactionId: string, environment: AppleEnvironment, info: ConsumptionInfo): Promise<void> {
+    try {
+      await this.client(environment).sendConsumptionInformation(transactionId, info);
+    } catch (e) {
+      const status = e instanceof APIException ? e.httpStatusCode : undefined;
+      if (status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 429) {
+        throw new ConsumptionRejectedError(`App Store Server API refused the consumption answer: ${status}`);
+      }
+      // 401 is our key setup, 429/5xx/network are transient: all worth retrying within the window.
+      throw new RetryableStoreError(`App Store Server API failed: ${status ?? "network"}`);
+    }
   }
 
   async verifyNotification(signedPayload: string): Promise<AppleNotification> {

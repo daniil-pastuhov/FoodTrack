@@ -4,9 +4,10 @@
  */
 import { Timestamp } from "firebase-admin/firestore";
 import { ANDROID_PACKAGE, PRODUCT_CREDITS, VOIDED_POLL_WINDOW_MS } from "../constants";
-import { purchaseRef, type PurchaseDoc } from "../model";
-import { InvalidSignatureError, RetryableStoreError, type AppleTransaction, type Deps, type PlayPurchase } from "../ports";
-import { applePurchaseId, applyRefund, playPurchaseId, type RefundResult } from "./purchases";
+import { purchaseRef, type PurchaseDoc, type RuntimeConfig } from "../model";
+import { InvalidSignatureError, RetryableStoreError, type Deps, type PlayPurchase } from "../ports";
+import { handleConsumptionRequest } from "./consumption";
+import { appleRefundedCredits, applePurchaseId, applyRefund, playPurchaseId, type RefundResult } from "./purchases";
 
 const creditsOf = (productId: string | null | undefined, quantity: number) =>
   productId && productId in PRODUCT_CREDITS ? PRODUCT_CREDITS[productId] * quantity : 0;
@@ -31,6 +32,7 @@ async function refundPlay(
   orderId: string | null,
   eventAt: number,
   partial: boolean,
+  config: RuntimeConfig,
 ): Promise<RefundResult | "skipped"> {
   const id = playPurchaseId(purchaseToken);
   const existing = (await purchaseRef(deps.db, id).get()).data();
@@ -64,7 +66,7 @@ async function refundPlay(
       credits: creditsOf(productId, quantity),
       orderId,
     },
-  });
+  }, config);
 }
 
 /** Handles one decoded RTDN. Throws (so Pub/Sub retries) only on transient failures. */
@@ -80,20 +82,22 @@ export async function handlePlayNotification(deps: Deps, message: unknown): Prom
   }
   if (v.refundType !== REFUND_TYPE_FULL && v.refundType !== REFUND_TYPE_PARTIAL) return "ignored: unknown refund type";
   const eventAt = Number(n.eventTimeMillis) || deps.now();
-  return refundPlay(deps, v.purchaseToken, v.orderId ?? null, eventAt, v.refundType === REFUND_TYPE_PARTIAL);
+  const config = await deps.config();
+  return refundPlay(deps, v.purchaseToken, v.orderId ?? null, eventAt, v.refundType === REFUND_TYPE_PARTIAL, config);
 }
 
 /** The daily poll: catches voids whose RTDN was lost. Only full voids are listed (no partial-refund entries). */
 export async function pollVoidedPurchases(deps: Deps): Promise<{ seen: number; applied: number }> {
   const voided = await deps.play.listVoided(deps.now() - VOIDED_POLL_WINDOW_MS);
+  const config = await deps.config();
   let applied = 0;
   for (const v of voided) {
     try {
-      const r = await refundPlay(deps, v.purchaseToken, v.orderId, v.voidedTimeMillis, false);
+      const r = await refundPlay(deps, v.purchaseToken, v.orderId, v.voidedTimeMillis, false, config);
       if (r === "applied" || r === "created") applied++;
     } catch (e) {
       if (!(e instanceof RetryableStoreError)) throw e;
-      deps.logger.warn("Voided poll: purchase lookup failed; next poll retries", { error: String(e) });
+      deps.logger.warn("Voided poll: purchase lookup failed; next poll retries", { error: String(e).slice(0, 200) });
     }
   }
   return { seen: voided.length, applied };
@@ -101,43 +105,47 @@ export async function pollVoidedPurchases(deps: Deps): Promise<{ seen: number; a
 
 // --- App Store --------------------------------------------------------------------------------
 
-const PERCENT_MILLIUNITS = 100_000;
+/**
+ * Apple's signedPayload for a consumable is about 15 KB: the notification JWS carries a 3-certificate
+ * x5c header (~5 KB once base64url-encoded) and a payload holding the transaction JWS (~6.5 KB with
+ * its own x5c), base64url-encoded again (x 4/3). 24 KB leaves room for fields Apple adds; anything
+ * larger is not a notification about our consumables.
+ */
+export const APPLE_SIGNED_PAYLOAD_MAX = 24 * 1024;
 
-function appleRefundedCredits(credits: number, tx: AppleTransaction): number {
-  if (tx.revocationPercentage === null) return credits;
-  return Math.min(credits, Math.ceil((credits * tx.revocationPercentage) / PERCENT_MILLIUNITS));
-}
-
+/**
+ * `outcome` is a fixed code (never a value taken from the request), so it is safe to log. Only a
+ * signature-verified notification can produce a 200.
+ */
 export type AppleNotificationResult =
   | { httpStatus: 200; outcome: string }
-  | { httpStatus: 400; outcome: string }
-  | { httpStatus: 500; outcome: string };
+  | { httpStatus: 400; outcome: "MISSING_PAYLOAD" | "PAYLOAD_TOO_LARGE" | "INVALID_SIGNATURE" }
+  | { httpStatus: 500; outcome: "VERIFICATION_ERROR" };
+
+/** Apple's notification types are upper-case words; anything else is reported as OTHER. */
+const typeCode = (t: string) => (/^[A-Z_]{1,40}$/.test(t) ? t : "OTHER");
 
 /**
  * Handles one App Store Server Notifications v2 request body. A payload that fails signature
  * verification is answered 400 and changes nothing; a transient failure is answered 500 so Apple
- * retries.
+ * retries. Logs nothing for a rejected body: the caller logs the fixed outcome, sampled.
  */
 export async function handleAppleNotification(deps: Deps, body: unknown): Promise<AppleNotificationResult> {
   const signedPayload = (body as { signedPayload?: unknown } | null)?.signedPayload;
-  if (typeof signedPayload !== "string" || signedPayload.length > 200_000) {
-    return { httpStatus: 400, outcome: "missing signedPayload" };
-  }
+  if (typeof signedPayload !== "string") return { httpStatus: 400, outcome: "MISSING_PAYLOAD" };
+  if (signedPayload.length > APPLE_SIGNED_PAYLOAD_MAX) return { httpStatus: 400, outcome: "PAYLOAD_TOO_LARGE" };
   let n;
   try {
     n = await deps.appStore.verifyNotification(signedPayload);
   } catch (e) {
-    if (e instanceof InvalidSignatureError) {
-      deps.logger.warn("Rejected App Store notification", { error: e.message });
-      return { httpStatus: 400, outcome: "invalid signature" };
-    }
-    deps.logger.error("App Store notification verification failed", { error: String(e) });
-    return { httpStatus: 500, outcome: "verification error" };
+    if (e instanceof InvalidSignatureError) return { httpStatus: 400, outcome: "INVALID_SIGNATURE" };
+    return { httpStatus: 500, outcome: "VERIFICATION_ERROR" };
   }
   const tx = n.transaction;
   if (n.notificationType === "TEST") return { httpStatus: 200, outcome: "test" };
-  if (!tx) return { httpStatus: 200, outcome: `ignored: ${n.notificationType} without transaction` };
+  if (!tx) return { httpStatus: 200, outcome: `ignored: ${typeCode(n.notificationType)} without transaction` };
   if (tx.type !== "Consumable") return { httpStatus: 200, outcome: "ignored: not a consumable" };
+  const config = await deps.config();
 
   const id = applePurchaseId(tx.environment, tx.transactionId);
   const whenMissing = {
@@ -151,30 +159,37 @@ export async function handleAppleNotification(deps: Deps, body: unknown): Promis
   switch (n.notificationType) {
     case "REFUND":
     case "REVOKE": {
+      // A refund notification is a refund even if the embedded copy lacks revocationDate.
+      const revoked = { revocationDate: tx.revocationDate ?? n.signedDate, revocationPercentage: tx.revocationPercentage };
       const r = await applyRefund(deps, {
         purchaseId: id,
         eventAt: n.signedDate,
-        targetRefunded: (doc) => appleRefundedCredits(doc?.credits ?? whenMissing.credits, tx),
+        targetRefunded: (doc) => appleRefundedCredits(doc?.credits ?? whenMissing.credits, revoked),
         whenMissing,
-      });
+      }, config);
       return { httpStatus: 200, outcome: `refund ${r}` };
     }
     case "REFUND_REVERSED": {
+      // A reversal restores the credits. Only when the transaction still reports a partial
+      // refund (revocationDate and a revocationPercentage) does that share stay refunded; a
+      // revocationDate without a percentage is not read as "still fully refunded", since Apple does
+      // not document whether it clears the date on reversal.
+      const remaining = tx.revocationPercentage !== null && tx.revocationPercentage < 100_000 ? tx : null;
       const r = await applyRefund(deps, {
-        purchaseId: id, eventAt: n.signedDate, reversal: true, targetRefunded: () => 0, whenMissing,
-      });
+        purchaseId: id,
+        eventAt: n.signedDate,
+        reversal: true,
+        targetRefunded: (doc) => (remaining ? appleRefundedCredits(doc?.credits ?? whenMissing.credits, remaining) : 0),
+        whenMissing,
+      }, config);
       return { httpStatus: 200, outcome: `reversal ${r}` };
     }
     case "CONSUMPTION_REQUEST": {
-      // Answering needs the customer's consent to share consumption data, which the app does not
-      // collect, so the request is only recorded. Apple decides without it.
-      const ref = purchaseRef(deps.db, id);
-      const snap = await ref.get();
-      if (snap.exists) await ref.update({ consumptionRequestedAt: Timestamp.fromMillis(deps.now()) });
-      return { httpStatus: 200, outcome: "consumption request recorded" };
+      const r = await handleConsumptionRequest(deps, n, config);
+      return { httpStatus: 200, outcome: `consumption request: ${r}` };
     }
     default:
-      return { httpStatus: 200, outcome: `ignored: ${n.notificationType}` };
+      return { httpStatus: 200, outcome: `ignored: ${typeCode(n.notificationType)}` };
   }
 }
 

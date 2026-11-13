@@ -90,7 +90,7 @@ describe("Gemini adapter", () => {
     const json = JSON.stringify(sampleRecipe());
     const models = new FakeStream([textChunk(json, { promptTokenCount: 300, candidatesTokenCount: 900, thoughtsTokenCount: 1500 }, "STOP")]);
     const res = await gen(models).generate(req, new AbortController().signal, limits);
-    expect(res.usage.thinkingTokens).toBe(1500);
+    expect(res.usage?.thinkingTokens).toBe(1500);
   });
 
   test("MAX_TOKENS and safety stops are content failures with usage", async () => {

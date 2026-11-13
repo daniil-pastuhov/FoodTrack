@@ -1,16 +1,66 @@
-/** getBalance, mergeBalance and deleteAccount. */
+/** getBalance, mergeBalance, deleteAccount, and clearing the name and photo Auth keeps. */
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { fail } from "../contract";
 import { RECENT_SIGN_IN_SECONDS, type Costs } from "../constants";
-import { assertOpen, emptyUser, loadRuntimeConfig, uidHash, userRef, utcDay, type UserDoc } from "../model";
+import { assertOpen, emptyUser, uidHash, userRef, utcDay, type UserDoc } from "../model";
 import type { Caller, Deps } from "../ports";
+import { blockFlag, mergeKeys } from "./buyers";
 
-export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance: number; costs: Costs }> {
-  const [snap, config] = await Promise.all([userRef(deps.db, caller.uid).get(), loadRuntimeConfig(deps.db, deps.logger)]);
+type Block = { purchasesBlocked?: true };
+
+/** uid:authTime pairs this instance already handled, so a token's later calls cost no read. Bounded. */
+const scrubbed = new Set<string>();
+const SCRUBBED_MAX = 10_000;
+
+/**
+ * Clears the display name and photo URL Firebase Auth stores for a signed-in (non-anonymous) user:
+ * Google sign-in always supplies them, and they are not wanted. Runs when the ID token still
+ * carries a `name` / `picture` claim (no Auth read otherwise), at most once per sign-in: the user
+ * doc remembers `profileScrubbedAt`, and a later sign-in (newer `auth_time`) that brought them back
+ * is cleared again. `force` (mergeBalance's target) clears without looking at the claims. Best
+ * effort: never fails the call, and never logs either value.
+ */
+export async function scrubProfile(deps: Deps, caller: Caller, force = false): Promise<boolean> {
+  if (caller.signInProvider === "anonymous" || caller.signInProvider === "") return false;
+  if (!force && !caller.profileClaims) return false;
+  const memo = `${caller.uid}:${caller.authTime}`;
+  if (!force && scrubbed.has(memo)) return false;
+  const ref = userRef(deps.db, caller.uid);
+  try {
+    const user = (await ref.get()).data();
+    if (user && (user.deletedAt !== undefined || user.mergedInto !== undefined)) return false;
+    const last = user?.profileScrubbedAt ? Math.floor(user.profileScrubbedAt.toMillis() / 1000) : -1;
+    if (!force && last >= caller.authTime) {
+      remember(memo);
+      return false;
+    }
+    await deps.auth.updateUser(caller.uid, { displayName: null, photoURL: null });
+    const at = Timestamp.fromMillis(deps.now());
+    await deps.db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (snap.exists) tx.update(ref, { profileScrubbedAt: at });
+      else tx.set(ref, { ...emptyUser(), createdAt: at, profileScrubbedAt: at });
+    });
+    remember(memo);
+    return true;
+  } catch (e) {
+    deps.logger.warn("profile_scrub_failed", { uidHash: uidHash(caller.uid), code: String((e as { code?: string }).code ?? "unknown").slice(0, 60) });
+    return false;
+  }
+}
+
+function remember(memo: string): void {
+  if (scrubbed.size >= SCRUBBED_MAX) scrubbed.clear();
+  scrubbed.add(memo);
+}
+
+export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance: number; costs: Costs } & Block> {
+  const [snap, config] = await Promise.all([userRef(deps.db, caller.uid).get(), deps.config()]);
   const user = snap.data();
   return {
     balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0,
     costs: config.costs,
+    ...(await blockFlag(deps.db, user, config)),
   };
 }
 
@@ -38,7 +88,7 @@ export async function mergeBalance(
   deps: Deps,
   caller: Caller,
   data: unknown,
-): Promise<{ balance: number; moved: number; costs: Costs }> {
+): Promise<{ balance: number; moved: number; costs: Costs } & Block> {
   const sourceIdToken = (data as { sourceIdToken?: unknown } | null)?.sourceIdToken;
   if (typeof sourceIdToken !== "string" || sourceIdToken.length > 8192) {
     fail("invalid-argument", "INVALID_REQUEST", "sourceIdToken is required");
@@ -80,7 +130,11 @@ export async function mergeBalance(
       refundedCredits: base.refundedCredits + (src?.refundedCredits ?? 0),
       // The refund allowance is tied to purchases, so what was used of it moves with them.
       contentRefundsUsed: (base.contentRefundsUsed ?? 0) + (src?.contentRefundsUsed ?? 0),
+      timeoutRefundsUsed: (base.timeoutRefundsUsed ?? 0) + (src?.timeoutRefundsUsed ?? 0),
+      // The block follows the merge: the source's buyers are now this account's buyers.
+      buyerKeys: mergeKeys(base.buyerKeys, src?.buyerKeys),
     };
+    if (merged.buyerKeys!.length === 0) delete merged.buyerKeys;
     const addCount = (x: { day: string; count: number }, y: { count: number }) => ({ day, count: x.count + y.count });
     const dayWindow = mergeDay(day, base.dayWindow, src?.dayWindow, addCount);
     const infraRefunds = mergeDay(day, base.infraRefunds, src?.infraRefunds, addCount);
@@ -96,17 +150,18 @@ export async function mergeBalance(
       mergedInto: caller.uid,
       mergedAt: Timestamp.fromMillis(deps.now()),
     });
-    return { balance: base.balance + moved, moved };
+    return { balance: base.balance + moved, moved, target: merged };
   });
 
   try {
     await deps.auth.deleteUser(source.uid);
   } catch (e) {
     // The tombstone already blocks every use of the source account.
-    deps.logger.warn("Could not delete merged anonymous user", { uidHash: uidHash(source.uid), error: String(e) });
+    deps.logger.warn("Could not delete merged anonymous user", { uidHash: uidHash(source.uid), error: String(e).slice(0, 200) });
   }
-  const config = await loadRuntimeConfig(deps.db, deps.logger);
-  return { ...result, costs: config.costs };
+  await scrubProfile(deps, caller, true);
+  const config = await deps.config();
+  return { balance: result.balance, moved: result.moved, costs: config.costs, ...(await blockFlag(deps.db, result.target, config)) };
 }
 
 /**
@@ -154,7 +209,9 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
   const purchases = await deps.db.collection("purchases").where("uid", "==", caller.uid).get();
   for (let i = 0; i < purchases.docs.length; i += 400) {
     const batch = deps.db.batch();
-    for (const d of purchases.docs.slice(i, i + 400)) batch.update(d.ref, { uid: null });
+    // `formerUid` keeps the ledger: a refund after deletion is still attributed (refund after use,
+    // consumption answers), while the null `uid` keeps the purchase from being redeemed again.
+    for (const d of purchases.docs.slice(i, i + 400)) batch.update(d.ref, { uid: null, formerUid: caller.uid });
     await batch.commit();
   }
   await deps.db.recursiveDelete(uRef.collection("generations"));
@@ -163,7 +220,7 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
     try {
       await deps.appleRevoker.revokeWithAuthorizationCode(code);
     } catch (e) {
-      deps.logger.warn("Sign in with Apple revocation failed", { error: String(e) });
+      deps.logger.warn("Sign in with Apple revocation failed", { error: String(e).slice(0, 200) });
     }
   }
   try {

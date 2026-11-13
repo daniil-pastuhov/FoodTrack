@@ -3,10 +3,12 @@ import { createHash } from "node:crypto";
 import type { DocumentReference, Firestore, Timestamp, Transaction } from "firebase-admin/firestore";
 import { fail } from "./contract";
 import {
+  CONFIG_CACHE_MS,
   COST_KEYS,
   COST_MAX,
   DEFAULT_COSTS,
   DEFAULT_PRICES,
+  PURCHASE_TOKEN_NAMESPACE,
   type CostKey,
   type Costs,
   type GenerationKind,
@@ -25,8 +27,15 @@ export interface UserDoc {
   dayWindow?: { day: string; count: number };
   /** verifyPurchase calls in the current minute. */
   verifyWindow?: { start: number; count: number };
-  /** Input-caused failures refunded over the account's lifetime (see contentRefundAllowance). */
+  /** Input-caused failures refunded over the account's lifetime (see paidAllowance). */
   contentRefundsUsed?: number;
+  /** Unknown-usage infrastructure failures (timeouts) refunded over the account's lifetime (see paidAllowance). */
+  timeoutRefundsUsed?: number;
+  /**
+   * Buyer keys (`buyers/{key}`) of every purchase granted to this account or to accounts merged into
+   * it; a blocked one sets `purchasesBlocked` in responses.
+   */
+  buyerKeys?: string[];
   /** Infrastructure failures refunded in the current UTC day (ceiling: infraRefundsPerDay). */
   infraRefunds?: { day: string; count: number };
   /** Estimated LLM spend in micro-USD in the current UTC day: worst case while in flight, actual after. */
@@ -36,6 +45,11 @@ export interface UserDoc {
   deletedAt?: Timestamp;
   /** Balance that was lost when the account was deleted. */
   forfeitedBalance?: number;
+  /** When the Auth user's displayName and photoURL were last cleared (scrubProfile). */
+  profileScrubbedAt?: Timestamp;
+  /** Set when this account's negative balance was moved to another account of the same buyer. */
+  debtMovedTo?: string;
+  debtMovedAt?: Timestamp;
   createdAt?: Timestamp;
 }
 
@@ -45,6 +59,8 @@ export interface PurchaseDoc {
   store: "play" | "appstore";
   /** Owner. null for a purchase never submitted (refund seen first) or whose account was deleted. */
   uid: string | null;
+  /** The owner before deleteAccount nulled `uid`; keeps the FIFO ledger and buyer attribution. */
+  formerUid?: string;
   env: "production" | "sandbox";
   productId: string | null;
   quantity: number;
@@ -67,6 +83,49 @@ export interface PurchaseDoc {
   consumeAttempts?: number;
   /** Play only: true while a server-side consume is still owed (the sweeper's work list). */
   consumePending?: boolean;
+  /** Set when the sweeper stopped retrying the consume after CONSUME_MAX_ATTEMPTS. */
+  consumeGaveUpAt?: Timestamp;
+  /** The purchase account token the store reported (obfuscatedExternalAccountId / appAccountToken). */
+  accountToken?: string;
+  /** buyers/{key} documents this purchase counts under (see buyerKeysFor in core/buyers.ts). */
+  buyerKeys?: string[];
+  /** iOS: the buyer agreed that consumption data may be sent to Apple if they ask for a refund. */
+  consumptionConsent?: boolean;
+  consumptionConsentAt?: Timestamp;
+  /** The CONSUMPTION_REQUEST being answered (or last answered); see core/consumption.ts. */
+  consumption?: ConsumptionState;
+  /** True while a consumption answer is owed (the sweeper retries until `consumption.deadlineAt`). */
+  consumptionPending?: boolean;
+  /** Set while a refund of this purchase takes credits that had been spent (FIFO, core/buyers.ts). */
+  refundAfterUse?: boolean;
+}
+
+export interface ConsumptionState {
+  notificationUUID: string;
+  requestedAt: Timestamp;
+  deadlineAt: Timestamp;
+  attempts: number;
+  answeredAt?: Timestamp;
+  /** What was (or will be) sent, for the record. */
+  consumptionPercentage?: number;
+  /** Fixed reason code of the last failure. */
+  lastError?: string;
+  gaveUp?: boolean;
+}
+
+/**
+ * buyers/{key}: refund-after-use events of one buyer. Never deleted. Holds no personal data: the key
+ * is an Apple appTransactionId, a Firebase uid, or a hash of a sign-in provider's user id.
+ */
+export interface BuyerDoc {
+  /** Active refund-after-use events, by purchase id. */
+  events: Record<string, { at: Timestamp; store: "play" | "appstore"; spentCreditsTaken: number; active: boolean }>;
+  refundAfterUseCount: number;
+  /** Written by the policy, unless `blockedOverride` is true: then it is the owner's decision. */
+  blocked: boolean;
+  blockedOverride?: boolean;
+  blockedAt?: Timestamp;
+  createdAt: Timestamp;
 }
 
 export type GenerationState = "pending" | "done" | "failed";
@@ -118,10 +177,22 @@ export interface RuntimeConfig {
   verifyPerMinute: number;
   /** Refunded infrastructure failures per user per UTC day; at the ceiling, generation is refused. */
   infraRefundsPerDay: number;
-  /** Estimated LLM spend per UTC day, all users, in micro-USD. At it, generation is paused. */
-  dailySpendCapMicroUsd: number;
+  /**
+   * The daily spend ceiling (all users, micro-USD; at it generation is paused) is
+   * min(dailySpendMaxMicroUsd, dailySpendBaseMicroUsd + dailySpendRevenueFraction x
+   * netMicroUsdPerCredit x production credits granted, net of refunds, over the last 7 UTC days).
+   */
+  dailySpendBaseMicroUsd: number;
+  dailySpendMaxMicroUsd: number;
+  dailySpendRevenueFraction: number;
+  /** Conservative estimate of what one production credit nets after store fees and VAT, in micro-USD. */
+  netMicroUsdPerCredit: number;
   /** Estimated LLM spend per user per UTC day, in micro-USD. */
   perUserDailySpendMicroUsd: number;
+  /** Refund-after-use events that block a buyer (purchasesBlocked). */
+  refundAbuseThreshold: number;
+  /** Sent to Apple as sampleContentProvided: the pack sheet explains what a credit buys before purchase. */
+  consumptionSampleContentProvided: boolean;
   /** The kill switch flips when a budget alert reports cost >= budget * this. */
   budgetKillFraction: number;
   costs: Costs;
@@ -138,9 +209,15 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   perUserPerDay: 40,
   verifyPerMinute: 10,
   infraRefundsPerDay: 3,
-  // USD 2 a day (~USD 60 a month), well under the 1000 NOK (~USD 90) monthly budget.
-  dailySpendCapMicroUsd: 2_000_000,
-  perUserDailySpendMicroUsd: 1_000_000,
+  // See README "Spend ceilings" for the arithmetic: at most USD 2.00 a day (USD 60 a month) of
+  // estimated LLM spend, USD 1.20 a day without sales, USD 0.45 per user (2 three-course menus).
+  dailySpendBaseMicroUsd: 1_200_000,
+  dailySpendMaxMicroUsd: 2_000_000,
+  dailySpendRevenueFraction: 0.25,
+  netMicroUsdPerCredit: 120_000,
+  perUserDailySpendMicroUsd: 450_000,
+  refundAbuseThreshold: 2,
+  consumptionSampleContentProvided: true,
   budgetKillFraction: 1,
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES },
@@ -154,7 +231,9 @@ const COUNT_FIELDS = [
   "perUserPerDay",
   "verifyPerMinute",
   "infraRefundsPerDay",
-  "dailySpendCapMicroUsd",
+  "dailySpendBaseMicroUsd",
+  "dailySpendMaxMicroUsd",
+  "netMicroUsdPerCredit",
   "perUserDailySpendMicroUsd",
 ] as const;
 
@@ -188,7 +267,7 @@ function validPrices(v: unknown): Prices | null {
 export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logger): RuntimeConfig {
   const out: RuntimeConfig = { ...DEFAULT_RUNTIME_CONFIG };
   const bad: string[] = [];
-  for (const key of ["generationEnabled", "allowSandbox"] as const) {
+  for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided"] as const) {
     if (data[key] === undefined) continue;
     if (typeof data[key] === "boolean") {
       out[key] = data[key] as boolean;
@@ -201,6 +280,16 @@ export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logge
     if (data[key] === undefined) continue;
     if (isCount(data[key])) out[key] = data[key] as number;
     else bad.push(key);
+  }
+  if (data.dailySpendRevenueFraction !== undefined) {
+    const f = data.dailySpendRevenueFraction;
+    if (typeof f === "number" && Number.isFinite(f) && f >= 0 && f <= 1) out.dailySpendRevenueFraction = f;
+    else bad.push("dailySpendRevenueFraction");
+  }
+  if (data.refundAbuseThreshold !== undefined) {
+    const t = data.refundAbuseThreshold;
+    if (isCount(t) && t >= 1) out.refundAbuseThreshold = t;
+    else bad.push("refundAbuseThreshold");
   }
   if (data.budgetKillFraction !== undefined) {
     const f = data.budgetKillFraction;
@@ -226,6 +315,68 @@ export async function loadRuntimeConfig(db: Firestore, logger?: Logger): Promise
   return parseRuntimeConfig((snap.data() ?? {}) as Record<string, unknown>, logger);
 }
 
+/**
+ * `config/runtime` cached in memory for `ttlMs`, so a flood of cheap calls is not also a flood of
+ * config reads. Concurrent loads share one read. A failed read is never papered over with a stale
+ * copy: the call fails (fail closed) and the next call reads again.
+ */
+export class RuntimeConfigCache {
+  private value: RuntimeConfig | undefined;
+  private loadedAt = Number.NEGATIVE_INFINITY;
+  private inFlight: Promise<RuntimeConfig> | undefined;
+
+  constructor(
+    private readonly load: () => Promise<RuntimeConfig>,
+    private readonly now: () => number,
+    private readonly ttlMs = CONFIG_CACHE_MS,
+  ) {}
+
+  get(): Promise<RuntimeConfig> {
+    if (this.value && this.now() - this.loadedAt < this.ttlMs) return Promise.resolve(this.value);
+    this.inFlight ??= this.load().then(
+      (v) => {
+        this.value = v;
+        this.loadedAt = this.now();
+        this.inFlight = undefined;
+        return v;
+      },
+      (e: unknown) => {
+        this.value = undefined;
+        this.inFlight = undefined;
+        throw e;
+      },
+    );
+    return this.inFlight;
+  }
+}
+
+/** The revenue-aware daily spend ceiling (see RuntimeConfig.dailySpendBaseMicroUsd). */
+export function dailySpendCeiling(config: RuntimeConfig, netCredits7d: number): number {
+  const fromRevenue = Math.floor(
+    config.dailySpendRevenueFraction * Math.max(0, netCredits7d) * config.netMicroUsdPerCredit,
+  );
+  return Math.min(config.dailySpendMaxMicroUsd, config.dailySpendBaseMicroUsd + fromRevenue);
+}
+
+/**
+ * The purchase account token of a uid: UUIDv5 (RFC 9562) of the uid's UTF-8 bytes in
+ * PURCHASE_TOKEN_NAMESPACE, lower case. Clients set it as Play's obfuscatedAccountId and Apple's
+ * appAccountToken at purchase.
+ */
+export function purchaseAccountToken(uid: string): string {
+  return uuidV5(PURCHASE_TOKEN_NAMESPACE, uid);
+}
+
+/** RFC 9562 UUID version 5 (SHA-1) of `name`'s UTF-8 bytes in `namespace`, lower case. */
+export function uuidV5(namespace: string, name: string): string {
+  const ns = Buffer.from(namespace.replace(/-/g, ""), "hex");
+  const h = createHash("sha1").update(ns).update(Buffer.from(name, "utf8")).digest().subarray(0, 16);
+  h[6] = (h[6] & 0x0f) | 0x50;
+  h[8] = (h[8] & 0x3f) | 0x80;
+  const hex = h.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export function costKeyOf(kind: GenerationKind, courses?: 2 | 3): CostKey {
   if (kind === "recipe") return "recipe";
   return courses === 2 ? "menu2" : "menu3";
@@ -241,8 +392,8 @@ export function uidHash(uid: string): string {
   return createHash("sha256").update(`foodtracker-log:${uid}`).digest("hex").slice(0, 16);
 }
 
-/** Lifetime refundable content failures: one per `perRefund` paid credits (net of store refunds), min 1 once paid. */
-export function contentRefundAllowance(user: UserDoc, perRefund: number): number {
+/** Lifetime refundable failures of a kind: one per `perRefund` paid credits (net of store refunds), min 1 once paid. */
+export function paidAllowance(user: UserDoc, perRefund: number): number {
   const paid = (user.purchasedCredits ?? 0) - (user.refundedCredits ?? 0);
   return paid > 0 ? Math.max(1, Math.floor(paid / perRefund)) : 0;
 }
@@ -253,13 +404,17 @@ export const generationRef = (db: Firestore, uid: string, requestId: string) =>
 export const purchaseRef = (db: Firestore, id: string) =>
   db.collection("purchases").doc(id) as DocumentReference<PurchaseDoc>;
 export const statsRef = (db: Firestore, day: string) => db.collection("stats").doc(day.replace(/-/g, ""));
+export const buyerRef = (db: Firestore, key: string) => db.collection("buyers").doc(key) as DocumentReference<BuyerDoc>;
 
 export function utcDay(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
 export function emptyUser(): UserDoc {
-  return { balance: 0, inFlight: 0, purchasedCredits: 0, consumedCredits: 0, refundedCredits: 0, contentRefundsUsed: 0 };
+  return {
+    balance: 0, inFlight: 0, purchasedCredits: 0, consumedCredits: 0, refundedCredits: 0,
+    contentRefundsUsed: 0, timeoutRefundsUsed: 0,
+  };
 }
 
 export function isClosed(user: UserDoc | undefined): boolean {

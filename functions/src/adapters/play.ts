@@ -20,6 +20,7 @@ interface ProductPurchaseV2 {
   purchaseStateContext?: { purchaseState?: string };
   testPurchaseContext?: unknown;
   orderId?: string;
+  obfuscatedExternalAccountId?: string;
 }
 
 interface VoidedList {
@@ -45,6 +46,7 @@ export function parseProductPurchaseV2(body: ProductPurchaseV2): PlayPurchase | 
     isTest: body.testPurchaseContext !== undefined,
     orderId: body.orderId ?? null,
     refundableQuantity: item.productOfferDetails?.refundableQuantity ?? quantity,
+    obfuscatedExternalAccountId: body.obfuscatedExternalAccountId || null,
   };
 }
 
