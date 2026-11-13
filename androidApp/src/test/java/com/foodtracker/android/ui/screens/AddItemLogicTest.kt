@@ -82,6 +82,7 @@ class AddItemLogicTest {
     fun `the header needs a photo or a barcode`() {
         assertFalse(showsAddItemHero(null, ""))
         assertFalse(showsAddItemHero("", "  "))
+        assertFalse(showsAddItemHero("   ", ""))
         assertTrue(showsAddItemHero("file:///photo.jpg", ""))
         assertTrue(showsAddItemHero(null, "5012345678900"))
     }

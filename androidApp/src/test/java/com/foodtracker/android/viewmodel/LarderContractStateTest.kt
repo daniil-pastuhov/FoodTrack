@@ -18,6 +18,7 @@ import com.foodtracker.model.ProductInfo
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.HomeConfirmation
 import com.foodtracker.viewmodel.PantryStateHolder
+import com.foodtracker.viewmodel.PantryUiState
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -169,6 +170,14 @@ class LarderContractStateTest {
 
         assertTrue(fixture.state.needsOnboarding)
         assertFalse(fixture.state.settings.onboardingCompleted)
+    }
+
+    @Test
+    fun testNothingAsksForOnboardingWhileThePantryIsStillLoading() {
+        // Before the pantry first loads, an upgrade with items can't be told from a fresh
+        // install, so onboarding must wait rather than flash up.
+        assertFalse(PantryUiState(isLoading = true).needsOnboarding)
+        assertTrue(PantryUiState(isLoading = false).needsOnboarding)
     }
 
     @Test

@@ -27,6 +27,12 @@ class SegmentWidthsTest {
     }
 
     @Test
+    fun shrinkingWithUnevenWidthsStillFillsExactly() {
+        // 200 into thirds leaves a rounding remainder, which must not leave a gap at the end.
+        assertEquals(200, segmentWidths(listOf(100, 100, 100), available = 200, fill = true).sum())
+    }
+
+    @Test
     fun unboundedWidthKeepsIdealWidths() =
         assertEquals(listOf(10, 20), segmentWidths(listOf(10, 20), available = null, fill = true))
 

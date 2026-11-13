@@ -9,6 +9,7 @@ import kotlinx.datetime.LocalDate
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -67,6 +68,13 @@ class RoomPantryRepositoryTest {
         addedDate = LocalDate(2026, 9, 3),
         storageLocation = "Fridge"
     )
+
+    @Test
+    fun testBulkQueriesStayUnderSqlitesBoundVariableLimit() {
+        // Robolectric's SQLite allows far more than 999 bound variables, so the bulk tests
+        // below can't catch a chunk size over the limit older Android versions enforce.
+        assertTrue(MAX_IDS_PER_QUERY in 1..999)
+    }
 
     @Test
     fun testBulkDeleteAndRestoreBeyondOneQueryOfIds() = runTest {

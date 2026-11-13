@@ -7,7 +7,7 @@ import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 /** Under SQLite's limit of 999 bound variables on the oldest Android versions we support. */
-private const val MAX_IDS_PER_QUERY = 500
+internal const val MAX_IDS_PER_QUERY = 500
 
 @Dao
 interface PantryDao {

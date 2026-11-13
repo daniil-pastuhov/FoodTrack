@@ -14,6 +14,9 @@ class ShoppingSectionOrderTest {
     fun movesDownOnePlace() = assertEquals(listOf("a", "c", "b"), movedSectionOrder(ids, "b", 1))
 
     @Test
+    fun firstCanMoveDown() = assertEquals(listOf("b", "a", "c"), movedSectionOrder(ids, "a", 1))
+
+    @Test
     fun firstCannotMoveUp() = assertNull(movedSectionOrder(ids, "a", -1))
 
     @Test

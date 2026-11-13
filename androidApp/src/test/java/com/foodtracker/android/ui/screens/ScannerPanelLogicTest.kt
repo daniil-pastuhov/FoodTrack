@@ -108,5 +108,9 @@ class ScannerPanelLogicTest {
         assertEquals(260.dp to 260.dp, scanFrameSize(CameraScanMode.PHOTO, expanded = false))
         assertEquals(240.dp to 300.dp, scanFrameSize(CameraScanMode.RECEIPT, expanded = false))
         assertEquals(300.dp to 480.dp, scanFrameSize(CameraScanMode.RECEIPT, expanded = true))
+        assertEquals(360.dp to 200.dp, scanFrameSize(CameraScanMode.BARCODE, expanded = true))
+        assertEquals(360.dp to 200.dp, scanFrameSize(CameraScanMode.BATCH, expanded = true))
+        assertEquals(380.dp to 150.dp, scanFrameSize(CameraScanMode.DATE_OCR, expanded = true))
+        assertEquals(340.dp to 340.dp, scanFrameSize(CameraScanMode.PHOTO, expanded = true))
     }
 }

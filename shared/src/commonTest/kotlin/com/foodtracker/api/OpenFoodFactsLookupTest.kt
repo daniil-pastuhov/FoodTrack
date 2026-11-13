@@ -54,6 +54,16 @@ class OpenFoodFactsLookupTest {
     }
 
     @Test
+    fun aBlankImageIsNoImage() = runTest {
+        val result = apiAnswering(
+            HttpStatusCode.OK,
+            """{"status":1,"product":{"product_name":"Oat milk","image_front_url":"  "}}"""
+        ).lookupProduct("123")
+
+        assertEquals(null, assertIs<ProductLookupResult.Found>(result).product.imageUrl)
+    }
+
+    @Test
     fun aProductWithNoNameIsStillFound() = runTest {
         val result = apiAnswering(HttpStatusCode.OK, """{"status":1,"product":{"product_name":" "}}""")
             .lookupProduct("123")

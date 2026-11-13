@@ -191,6 +191,8 @@ class ScannerQueueUndoTest {
     fun testEveryRowFromAReceiptAsksForItsDateToBeChecked() {
         assertTrue(entry("receipt_1", ShelfLifeSource.CATEGORY_DEFAULT).showsCheckDate)
         assertTrue(entry("receipt_1", ShelfLifeSource.REMEMBERED).showsCheckDate)
+        // A date read off the pack is the one exception, even on a receipt row.
+        assertFalse(entry("receipt_1", ShelfLifeSource.DETECTED).showsCheckDate)
     }
 
     @Test
