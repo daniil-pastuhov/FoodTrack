@@ -14,7 +14,7 @@
     <string name="metric_soon">Snart</string>
     <string name="metric_fresh">Fersk</string>
 
-    <string name="search_placeholder">Søk etter produkter eller merker...</string>
+    <string name="search_placeholder">Søk etter produkter eller merker</string>
     <string name="clear_content_description">Fjern</string>
 
     <string name="filter_all_locations">Alle steder</string>
@@ -39,7 +39,7 @@
     <string name="back_content_description">Tilbake</string>
 
     <string name="edit_item_title">Rediger vare</string>
-    <string name="add_item_title">Legg til i matskapet</string>
+    <string name="add_item_title">Legg til vare</string>
     <string name="barcode_format">Strekkode: %1$s</string>
     <string name="new_item_placeholder">Ny vare</string>
     <string name="photo_suggestions_title">Ser ut som…</string>
@@ -115,14 +115,14 @@
     <string name="food_label_food">Mat</string>
     <string name="product_name_label">Produktnavn *</string>
     <string name="brand_label">Merke / produsent</string>
-    <string name="expiry_section_title">Best før / utløpsdato</string>
+    <string name="expiry_section_title">Best før</string>
     <string name="expiry_suggestion_remembered">Som sist · %1$s</string>
     <string name="expiry_suggestion_category">Standard for %1$s · %2$s</string>
     <plurals name="expiry_suggestion_days">
         <item quantity="one">%1$d dag</item>
         <item quantity="other">%1$d dager</item>
     </plurals>
-    <string name="expiry_date_implausible_warning">Denne datoen er mer enn %1$d år fra i dag. Dobbeltsjekk året.</string>
+    <string name="expiry_date_implausible_warning">Denne datoen er over %1$d år unna. Sjekk året.</string>
     <string name="quick_date_3_days">+3 dager</string>
     <string name="quick_date_1_week">+1 uke</string>
     <string name="quick_date_2_weeks">+2 uker</string>
@@ -132,19 +132,19 @@
     <string name="quantity_label">Antall</string>
     <string name="quantity_decrease_content_description">Reduser antall</string>
     <string name="quantity_increase_content_description">Øk antall</string>
-    <string name="notes_label">Notater (f.eks. åpnet, mengde, hylle)</string>
     <string name="update_item_button">Oppdater vare</string>
     <string name="save_item_button">Lagre i %1$s</string>
     <string name="date_picker_ok">OK</string>
     <string name="date_picker_cancel">Avbryt</string>
 
-    <string name="manual_entry_button">Manuell registrering</string>
+    <string name="manual_entry_button">Skriv det inn</string>
     <string name="camera_off_title">Kameraet er av</string>
     <string name="camera_off_body">Matvakt trenger kameraet for å skanne. Du kan fortsatt legge til mat for hånd.</string>
     <string name="camera_off_open_settings">Åpne innstillinger</string>
+    <string name="camera_off_allow">Tillat kamera</string>
     <string name="camera_off_add_by_hand">Skriv det inn</string>
     <string name="scan_mode_batch">Flere</string>
-    <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen under</string>
+    <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen</string>
     <string name="scan_mode_receipt">Kvittering</string>
     <string name="reticle_hint_receipt">Få hele kvitteringen i bildet, og trykk for å lese den</string>
     <string name="scan_receipt_button">Les kvittering</string>
@@ -154,7 +154,7 @@
         <item quantity="other">La til %1$d varer fra kvitteringen — sjekk dem under</item>
     </plurals>
     <string name="batch_queue_empty">Skann en vare for å starte listen</string>
-    <string name="batch_queue_remove_content_description">Fjern fra listen</string>
+    <string name="batch_queue_remove_content_description">Fjern fra listen: %1$s</string>
     <string name="batch_queue_needs_date">Sjekk dato</string>
     <string name="batch_commit_button">Legg til alle</string>
     <string name="batch_clear_button">Tøm</string>
@@ -212,7 +212,7 @@
     <string name="shopping_list_add_button">Legg til</string>
     <string name="shopping_list_scan_content_description">Skann produkt</string>    <string name="shopping_list_share_content_description">Del eller importer liste</string>
     <string name="shopping_list_share_dialog_title">Del liste</string>
-    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din — ingenting erstattes.</string>
+    <string name="shopping_list_share_dialog_message">Send listen til noen andre, eller hent inn en. Importerte varer legges til i listen din, ingenting erstattes.</string>
     <string name="shopping_list_share_as_text">Del som tekst</string>
     <string name="shopping_list_share_as_qr">Vis QR-kode</string>
     <string name="shopping_list_share_qr_content_description">QR-kode med handlelisten</string>
@@ -236,7 +236,6 @@
     <string name="shopping_section_rename">Gi nytt navn</string>
     <string name="shopping_section_delete">Slett</string>
     <string name="shopping_section_delete_title">Slette «%1$s»?</string>
-    <string name="shopping_section_delete_message">Varene flyttes til hovedlisten.</string>
     <string name="shopping_section_save">Lagre</string>
     <string name="shopping_section_name_placeholder">f.eks. Meieri</string>
     <string name="shopping_section_move_to">Flytt til seksjon</string>
@@ -254,7 +253,6 @@
     <string name="selection_count_format">%1$d valgt</string>
     <string name="exit_selection_content_description">Avslutt utvalg</string>
     <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>
-    <string name="delete_selected_dialog_title">Slette valgte varer?</string>
     <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:</string>
@@ -293,30 +291,27 @@
         <item quantity="other">Utløpt for %d år siden</item>
     </plurals>
 
-    <string name="notification_channel_name">Utløpsvarsler for hver vare</string>
+    <string name="notification_channel_name">Påminnelser for hver vare</string>
     <string name="notification_channel_desc">Ett varsel per vare, kort tid før den går ut på dato</string>
     <string name="notification_digest_channel_name">Utløpsoppsummering</string>
     <string name="notification_digest_channel_desc">Ett varsel med det som går ut på dato den kommende uken</string>
-    <string name="notif_title_today">Produktet utløper i dag! ⚠️</string>
-    <string name="notif_title_soon">Produktet utløper snart! ⚠️</string>
+    <string name="notif_title_today">Best å bruke i dag</string>
+    <string name="notif_title_soon">Best å bruke snart</string>
     <string name="notif_title_past">Verdt en titt</string>
-    <string name="notif_body_today_format">%1$s utløper i dag. Husk å spise det!</string>
+    <string name="notif_body_today_format">%1$s når datoen sin i dag.</string>
+    <string name="notif_body_tomorrow_format">%1$s når datoen sin i morgen.</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s utløper om %2$d dag. Husk å spise det!</item>
-        <item quantity="other">%1$s utløper om %2$d dager. Husk å spise det!</item>
+        <item quantity="one">%1$s når datoen sin om %2$d dag.</item>
+        <item quantity="other">%1$s når datoen sin om %2$d dager.</item>
     </plurals>
     <plurals name="notif_body_past_format">
         <item quantity="one">%1$s er %2$d dag over datoen.</item>
         <item quantity="other">%1$s er %2$d dager over datoen.</item>
     </plurals>
-    <string name="notif_fallback_title">Varsel om utløpsdato</string>
-    <string name="notif_fallback_body">En vare i matskapet ditt går snart ut på dato.</string>
+    <string name="notif_fallback_title">Påminnelse fra matskapet</string>
+    <string name="notif_fallback_body">Noe i matskapet når datoen sin snart.</string>
     <string name="notif_action_used">Brukt</string>
     <string name="notif_action_snooze">I morgen</string>
-    <plurals name="notif_action_still_good">
-        <item quantity="one">Fortsatt god +%1$dd</item>
-        <item quantity="other">Fortsatt god +%1$dd</item>
-    </plurals>
     <string name="shortcut_scan_barcode_short">Skann</string>
     <string name="shortcut_scan_barcode_long">Skann en strekkode</string>
     <string name="shortcut_add_item_short">Legg til</string>
@@ -434,8 +429,8 @@
     <string name="category_settings_shelf_life_field_label">Dager</string>
     <string name="category_settings_shelf_life_clear">Fjern</string>
     <plurals name="category_settings_shelf_life_days_format">
-        <item quantity="one">%1$d d</item>
-        <item quantity="other">%1$d d</item>
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dager</item>
     </plurals>
     <string name="category_settings_rename_content_description">Endre navn på kategori</string>
 
@@ -465,6 +460,7 @@
     <string name="widget_shopping_list_title">Handleliste</string>
     <string name="widget_shopping_list_empty">Handlelisten din er tom</string>
     <string name="widget_action_used">Brukt én</string>
+    <string name="widget_action_used_item">Brukt én: %1$s</string>
     <string name="widget_action_mark_bought">Merk %1$s som kjøpt</string>
 
     <string name="widget_overview_label">Matskapoversikt</string>
@@ -481,7 +477,7 @@
     <string name="restore_mode_replace_subtitle">Sletter først det som er på denne enheten, inkludert innstillinger.</string>
     <string name="backup_export_success">Sikkerhetskopi lagret</string>
     <string name="backup_export_failed">Kunne ikke lagre sikkerhetskopien</string>
-    <string name="backup_import_malformed">Den filen er ikke en Matvakt-sikkerhetskopi</string>
+    <string name="backup_import_malformed">Den filen er ikke en Matvakt-sikkerhetskopi. Ingenting ble endret.</string>
     <string name="backup_import_unsupported">Den sikkerhetskopien er laget av en nyere versjon av appen</string>
     <string name="backup_import_empty">Den sikkerhetskopien har ingenting å gjenopprette</string>
     <plurals name="backup_import_success">
@@ -525,4 +521,245 @@
     </plurals>
     <string name="batch_discard_confirm">Forkast</string>
     <string name="batch_discard_keep">Fortsett å skanne</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Laster</string>
+    <string name="status_today">Utløper i dag</string>
+    <string name="status_tomorrow">Utløper i morgen</string>
+    <plurals name="status_days_over">
+        <item quantity="one">Utløpt for %d dag siden</item>
+        <item quantity="other">Utløpt for %d dager siden</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d vare</item>
+        <item quantity="other">%1$d varer</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s lagret i %2$s</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">%d vare slettet</item>
+        <item quantity="other">%d varer slettet</item>
+    </plurals>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Neste: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">Ingenting må brukes denne uken</string>
+    <string name="home_section_use_first">Bruk først</string>
+    <string name="home_section_later_this_week">Senere denne uken</string>
+    <string name="home_section_later">Senere</string>
+    <string name="home_clear_filters">Nullstill filtre</string>
+    <string name="home_search_description">Søk</string>
+    <string name="home_filters_on_description">Filtre, på</string>
+    <string name="home_empty_title">Hyllene er tomme</string>
+    <string name="home_empty_message">Skann det første produktet, så dukker det opp her med nærmeste dato først.</string>
+    <string name="home_empty_scan">Skann et produkt</string>
+    <string name="home_empty_add_by_hand">Legg til manuelt</string>
+    <string name="home_no_results_title">Ingen treff på «%1$s»</string>
+    <string name="home_no_results_message">Sjekk stavemåten, eller prøv merkenavnet.</string>
+    <string name="home_clear_search">Tøm søket</string>
+    <string name="home_no_filter_results_title">Ingenting passer med disse filtrene</string>
+    <string name="home_no_filter_results_message">Prøv et annet sted eller en annen kategori.</string>
+    <string name="home_reminders_off_title">Påminnelser er av</string>
+    <string name="home_reminders_off_message">Varsler er slått av for Matvakt i innstillingene på telefonen.</string>
+    <string name="home_dismiss">Lukk</string>
+    <string name="home_swipe_to_list">Til listen</string>
+    <string name="home_use_one_item">Bruk én: %1$s</string>
+    <string name="home_used_one_snackbar">Brukte én %1$s. %2$d igjen.</string>
+    <string name="home_location_label">Sted</string>
+    <string name="home_category_label">Kategori</string>
+    <string name="home_best_before_label">Best før</string>
+    <string name="home_notes_label">Notater</string>
+    <string name="home_done">Ferdig</string>
+    <string name="detail_close">Lukk</string>
+    <string name="detail_edit">Rediger</string>
+    <string name="detail_to_shopping_list">Til handlelisten</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Ubearbeidet</string>
+    <string name="detail_nova_2">Matlagingsingredienser</string>
+    <string name="detail_nova_3">Bearbeidet</string>
+    <string name="detail_nova_4">Ultrabearbeidet</string>
+    <string name="detail_credit">Produktdata fra Open Food Facts</string>
+    <string name="detail_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
+    <string name="detail_choose_item">Velg en vare for å se detaljene.</string>
+    <string name="recipe_intro">Matvakt lager en ledetekst av %1$s som du kan dele med en KI-assistent. Ingenting forlater enheten før du velger hvor den skal sendes.</string>
+    <string name="recipe_names_two">%1$s og %2$s</string>
+    <string name="recipe_names_three">%1$s, %2$s og %3$s</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s ting å bruke innen i morgen</item>
+        <item quantity="other">%1$s ting å bruke innen i morgen</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s ting er over datoen</item>
+        <item quantity="other">%1$s ting er over datoen</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d treff</item>
+        <item quantity="other">%d treff</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d av %2$d vare</item>
+        <item quantity="other">%1$d av %2$d varer</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Vis %d vare</item>
+        <item quantity="other">Vis %d varer</item>
+    </plurals>
+    <plurals name="recipe_names_more">
+        <item quantity="one">%1$s, %2$s og %3$d til</item>
+        <item quantity="other">%1$s, %2$s og %3$d til</item>
+    </plurals>
+    <plurals name="recipe_include_others_count">
+        <item quantity="one">Legger til den andre varen din, så assistenten kan bruke mer av det du har.</item>
+        <item quantity="other">Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>Én</item>
+        <item>To</item>
+        <item>Tre</item>
+        <item>Fire</item>
+        <item>Fem</item>
+        <item>Seks</item>
+        <item>Sju</item>
+        <item>Åtte</item>
+        <item>Ni</item>
+        <item>Ti</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>på mandag</item>
+        <item>på tirsdag</item>
+        <item>på onsdag</item>
+        <item>på torsdag</item>
+        <item>på fredag</item>
+        <item>på lørdag</item>
+        <item>på søndag</item>
+    </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Lukk skanneren</string>
+    <string name="scan_torch_on">På</string>
+    <string name="scan_torch_off">Av</string>
+    <string name="scan_idle_results_title">Resultatet vises her</string>
+    <string name="scan_idle_results_message">Skann en strekkode, så vises varen på denne siden.</string>
+    <string name="scan_idle_date_title">Datoen vises her</string>
+    <string name="scan_idle_date_message">Hold kameraet rolig mot den trykte datoen.</string>
+    <string name="scan_idle_photo_title">Bildet vises her</string>
+    <string name="scan_idle_photo_message">Ta et bilde for å få forslag til navn.</string>
+    <string name="scan_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
+    <string name="scan_offline_title">Du er frakoblet</string>
+    <string name="scan_offline_message">Kunne ikke slå opp denne varen. Du kan fortsette for hånd, og strekkoden blir med varen.</string>
+    <string name="scan_try_again">Prøv igjen</string>
+    <string name="scan_continue_by_hand">Fortsett for hånd</string>
+    <string name="scan_best_before_format">Best før %1$s</string>
+    <string name="scan_date_from_barcode">Lest fra strekkoden</string>
+    <string name="scan_date_from_packaging">Lest fra emballasjen</string>
+    <string name="scan_use_this_date">Bruk denne datoen</string>
+    <string name="scan_reading_receipt">Leser kvitteringen …</string>
+    <string name="receipt_queue_empty">Les en kvittering for å starte listen</string>
+    <string name="scan_queue_cleared">Køen er tømt</string>
+    <string name="scan_capture_failed">Kunne ikke ta bildet. Prøv igjen.</string>
+    <string name="batch_queue_estimated_format">Anslått %1$s</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Påminnelser</string>
+    <string name="settings_group_kitchen">Kjøkkenet ditt</string>
+    <string name="settings_notifications_blocked_title">Påminnelser er av</string>
+    <string name="settings_off">Av</string>
+    <string name="settings_allergens_none">Ingen ennå</string>
+    <string name="settings_add_allergen_label">Legg til et allergen</string>
+    <string name="settings_data_summary">Sikkerhetskopi og tømming</string>
+    <string name="settings_location_default">Standard</string>
+    <string name="settings_location_taken">Du har allerede et sted som heter %1$s</string>
+    <string name="settings_rename_location_format">Endre navn: %1$s</string>
+    <string name="settings_delete_location_format">Slett: %1$s</string>
+    <string name="settings_set_default_location_format">Sett som standard: %1$s</string>
+    <string name="settings_remove_format">Fjern: %1$s</string>
+    <string name="settings_try_again">Prøv igjen</string>
+    <string name="restore_mode_cancel">Ikke importer</string>
+    <string name="clear_data_keep">Behold matskapet</string>
+    <string name="category_settings_empty_title">Ingen kategorier ennå</string>
+    <string name="category_settings_scan">Skann en vare</string>
+    <string name="category_settings_move_up">Flytt opp</string>
+    <string name="category_settings_move_down">Flytt ned</string>
+    <string name="category_settings_move_done">Ferdig</string>
+    <string name="category_settings_rename_field_label">Kategorinavn</string>
+    <string name="category_settings_rename_confirm">Endre navn</string>
+    <string name="category_settings_rename_format">Endre navn på kategori: %1$s</string>
+    <string name="category_settings_drag_handle_format">Dra for å endre rekkefølge: %1$s</string>
+    <string name="category_settings_show_format">Vis: %1$s</string>
+    <string name="category_settings_shelf_life_format">Angi standard holdbarhet: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Standard holdbarhet for %1$s</string>
+    <string name="category_settings_shelf_life_range">Fra 0 til 3650 dager</string>
+    <string name="category_settings_shelf_life_error">Skriv inn et tall fra 0 til 3650, det er omtrent 10 år</string>
+    <string name="category_settings_shelf_life_save">Lagre</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">Dette fjerner %1$d vare og avbryter påminnelsene for den. Dette kan ikke angres.</item>
+        <item quantity="other">Dette fjerner alle %1$d varer og avbryter påminnelsene for dem. Dette kan ikke angres.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Handleliste</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d ting å kjøpe</item>
+        <item quantity="other">%d ting å kjøpe</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Ingenting å kjøpe</string>
+    <string name="shopping_list_already_listed">%1$s står allerede på listen</string>
+    <string name="shopping_list_check_off">Kryss av</string>
+    <string name="shopping_list_import_label">Listen din</string>
+    <string name="shopping_list_close">Lukk</string>
+    <string name="shopping_list_done">Ferdig</string>
+    <string name="shopping_sections_label">Seksjoner</string>
+    <string name="shopping_section_name_label">Navn på seksjon</string>
+    <string name="shopping_section_keep">Behold seksjonen</string>
+    <string name="shopping_section_delete_confirm">Slett seksjonen</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">%d vare flyttes til hovedlisten.</item>
+        <item quantity="other">%d varer flyttes til hovedlisten.</item>
+    </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Legg til et navn, så finner du varen igjen senere</string>
+    <string name="add_see_details">Se detaljer</string>
+    <string name="add_notes_placeholder">f.eks. åpnet, mengde, hylle</string>
+    <string name="discard_changes_title">Forkaste endringene?</string>
+    <string name="discard_changes_confirm">Forkast endringene</string>
+    <string name="discard_changes_keep">Fortsett å redigere</string>
+    <string name="discard_new_message">Denne varen er ikke lagret, så den blir ikke lagt til i matskapet.</string>
+    <string name="discard_edit_message">Endringene i %1$s blir ikke lagret. Varen forblir som den var.</string>
+
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">Hva som går ut</string>
+    <string name="calendar_used_snackbar">%1$s brukt</string>
+    <string name="calendar_tossed_snackbar">%1$s kastet</string>
+    <string name="calendar_empty_message">Legg til mat med dato, så dukker den opp her den dagen den går ut.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Kom i gang</string>
+    <string name="onboarding_welcome_title">Minner deg på det før maten blir dårlig, ikke etterpå.</string>
+    <string name="onboarding_private_title">Privat fra starten av</string>
+    <string name="onboarding_private_body">Ingen konto og ingen reklame. Matlageret ditt blir på enheten din.</string>
+    <string name="onboarding_notifications_title">Et stille hint dagen før</string>
+    <string name="onboarding_notifications_body">Vi minner deg på det klokken 09:00, dagen før en dato. Du kan endre tidspunktet eller slå av påminnelser i Innstillinger.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Bør brukes snart</string>
+    <string name="onboarding_sample_body">Gresk yoghurt når datoen sin i morgen.</string>
+    <string name="onboarding_sample_description">Eksempel på påminnelse: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Slå på påminnelser</string>
+    <string name="onboarding_not_now">Ikke nå</string>
+    <string name="onboarding_camera_title">Skann i stedet for å skrive</string>
+    <string name="onboarding_camera_body">Rett kameraet mot et produkt, så fyller %1$s inn opplysningene for deg. Bilder blir på enheten din.</string>
+    <string name="onboarding_camera_barcodes_title">Strekkoder</string>
+    <string name="onboarding_camera_barcodes_body">Finner produktet og navnet på det</string>
+    <string name="onboarding_camera_dates_title">Trykte datoer</string>
+    <string name="onboarding_camera_dates_body">Leser datoen på pakken</string>
+    <string name="onboarding_camera_allow">Tillat kameraet</string>
+    <string name="onboarding_ready_title">Klar for det første produktet</string>
+    <string name="onboarding_ready_body">Hent noe fra kjøleskapet og skann det. Det tar noen få sekunder.</string>
+    <string name="onboarding_skip">Hopp over for nå</string>
+    <string name="onboarding_declined_title">Du kan begynne uten dem</string>
+    <string name="onboarding_declined_body">Alt annet virker. Du kan ombestemme deg når som helst.</string>
+    <string name="onboarding_declined_reminders_title">Påminnelser er av</string>
+    <string name="onboarding_declined_reminders_body">Hjem viser en merknad om hvordan du slår dem på</string>
+    <string name="onboarding_declined_camera_title">Kameraet er av</string>
+    <string name="onboarding_declined_camera_body">Skanneren viser hvordan du tillater det</string>
+    <string name="onboarding_add_by_hand">Legg til et produkt manuelt</string>
 </resources>

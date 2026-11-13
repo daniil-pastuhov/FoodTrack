@@ -1,0 +1,34 @@
+/* Onboarding: one centred column, the action always in reach at the bottom. */
+.ob { background: var(--color-background); }
+.ob-main { flex: 1; min-height: 0; overflow: auto; display: flex; padding: var(--space-6) var(--space-6) var(--space-4); scrollbar-width: none; }
+.ob-main > .ob-col { margin: auto; }
+.ob-col { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; }
+.ob-foot { flex: none; padding: var(--space-2) var(--space-6) var(--space-6); }
+.ob-foot .ob-col { gap: var(--space-1); }
+.ob .lede { margin: 0 0 var(--space-3); text-wrap: pretty; }
+.ob-p { margin: 0 0 var(--space-5); color: var(--color-on-surface-variant); }
+.ob-jar { width: 72px; height: 72px; margin-bottom: var(--space-5); }
+.ob-name { margin: 0 0 var(--space-2); font: var(--type-title); letter-spacing: var(--type-title-tracking); color: var(--color-primary); }
+.ob-disc { display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: var(--space-5); border-radius: 50%; background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.ob-disc svg.lucide { width: 32px; height: 32px; }
+
+.ob-private { display: flex; gap: var(--space-3); margin-top: var(--space-5); color: var(--color-on-surface); }
+.ob-private svg.lucide { flex: none; color: var(--color-primary); }
+.ob-private strong { font: var(--type-label); }
+.ob-private p { margin: 2px 0 0; font: var(--type-body-sm); }
+
+/* A sample reminder: shows what the permission buys, in place of an illustration */
+.ob-sample { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-container-high); box-shadow: 0 0 0 1px var(--color-outline-variant); font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.ob-sample-ic { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.app .ob-sample-ic svg.lucide { width: 18px; height: 18px; }
+.ob-sample-tx { min-width: 0; }
+.ob-sample-app { font: var(--type-caption); }
+.ob-sample strong { display: block; font: var(--type-label); color: var(--color-on-surface); }
+
+/* The system's own permission dialog, drawn neutrally so it reads as not ours */
+.ob-sys { width: min(100%, 320px); padding: var(--space-6) var(--space-6) var(--space-3); border-radius: var(--radius-xl); background: var(--color-surface-container-high); color: var(--color-on-surface); box-shadow: var(--elevation-3); text-align: center; }
+.ob-sys-ic { display: block; color: var(--color-on-surface-variant); }
+.ob-sys p { margin: var(--space-3) 0 var(--space-4); font: var(--type-body); }
+.ob-sys p strong { font-weight: 600; }
+.ob-sys-btns { display: grid; gap: var(--space-1); }
+.ob-sys-btns button { min-height: var(--size-touch); border: 0; border-radius: var(--radius-full); background: var(--color-surface-container); color: var(--color-on-surface); font: var(--type-label); cursor: pointer; }

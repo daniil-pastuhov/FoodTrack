@@ -34,6 +34,28 @@ func stripLanguagePrefix(_ raw: String) -> String {
     return raw[raw.index(after: colonIndex)...].trimmingCharacters(in: .whitespaces)
 }
 
+/// How a barcode lookup ended.
+public enum LookupResult: Equatable {
+    case found(ProductInfo)
+    /// Open Food Facts answered, and doesn't know this barcode.
+    case notFound(barcode: String)
+    /// There was no answer: no network, or a failure on the way. Says nothing about the product,
+    /// so the design offers to carry on by hand rather than saying it wasn't found.
+    case offline(barcode: String)
+}
+
+/// What the Home screen confirms after an add, as a snackbar.
+public enum HomeConfirmation: Equatable {
+    case saved(name: String, location: String)
+    case batchAdded(count: Int)
+    case oneMoreAdded(name: String, quantity: Int)
+}
+
+/// What `deleteItems` took out, to hand back to `restoreItems` for one Undo over all of it.
+public struct DeletedItems: Equatable {
+    public let items: [PantryItem]
+}
+
 @MainActor
 public class NativePantryViewModel: ObservableObject {
     @Published public var items: [PantryItem] = []
@@ -42,8 +64,23 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var selectedCategory: String? = nil
     @Published public var selectedFilter: NativeStatusFilter = .all
     @Published public var isLookingUpBarcode: Bool = false
-    @Published public var scannedProduct: ProductInfo? = nil
-    @Published public var productNotFoundBarcode: String? = nil
+    /// How the last barcode lookup ended, or nil before one ends. New screens switch on this.
+    @Published public var lookupResult: LookupResult? = nil
+    /// The product `lookupResult` found.
+    public var scannedProduct: ProductInfo? {
+        if case .found(let product) = lookupResult { return product }
+        return nil
+    }
+    /// The barcode a lookup came back empty for, whichever the reason. For the scanner's single
+    /// "not found" card; `lookupResult` tells the two reasons apart.
+    public var productNotFoundBarcode: String? {
+        switch lookupResult {
+        case .notFound(let barcode), .offline(let barcode): return barcode
+        case .found, nil: return nil
+        }
+    }
+    /// The latest Home confirmation waiting to be shown. `RootTabView` takes it and clears it.
+    @Published public var homeConfirmation: HomeConfirmation? = nil
     @Published public var detectedDate: Date? = nil
     /// Expiry date to pre-fill on the item this scan produces, and where it came from - a date
     /// read off the packaging, the shelf life this barcode was given last time, or its
@@ -151,6 +188,25 @@ public class NativePantryViewModel: ObservableObject {
         observeDayChanges()
     }
 
+    /// Whether the first-run flow is still to come.
+    public var needsOnboarding: Bool { !SettingsStore.shared.settings.onboardingCompleted }
+
+    /// Onboarding is for getting to a first item, so anyone with items is past it. Runs on every
+    /// load, which covers people upgrading from a version with no onboarding, whose settings
+    /// decode with the flag off, and a first item added any other way.
+    private func completeOnboardingIfPantryHasItems() {
+        if !items.isEmpty { completeOnboarding() }
+    }
+
+    /// Marks the first-run flow as done. Safe to call when it already is.
+    public func completeOnboarding() {
+        let store = SettingsStore.shared
+        guard !store.settings.onboardingCompleted else { return }
+        var settings = store.settings
+        settings.onboardingCompleted = true
+        store.save(settings)
+    }
+
     /// `PantryItem.daysRemaining` and every count/filter built on it read the clock when they're
     /// evaluated, but SwiftUI only re-evaluates them when something published changes — so an
     /// app left open across midnight kept showing yesterday's countdowns. iOS posts
@@ -187,6 +243,7 @@ public class NativePantryViewModel: ObservableObject {
         let descriptor = FetchDescriptor<PantryItemRecord>(sortBy: [SortDescriptor(\.expiryDate)])
         items = ((try? modelContext.fetch(descriptor)) ?? []).map { $0.asPantryItem }
         registerCategories(items.compactMap { $0.category })
+        completeOnboardingIfPantryHasItems()
     }
 
     private func loadShoppingList() {
@@ -670,7 +727,7 @@ public class NativePantryViewModel: ObservableObject {
     /// visibly responds to each scan rather than lagging behind the network.
     public func enqueueBatchScan(_ barcode: String) {
         if let index = batchQueue.firstIndex(where: { $0.barcode == barcode }) {
-            batchQueue[index].quantity += 1
+            batchQueue[index].quantity = min(batchQueue[index].quantity + 1, maxItemQuantity)
             return
         }
 
@@ -695,7 +752,9 @@ public class NativePantryViewModel: ObservableObject {
             // of a non-assignment operator.
             var product = cachedProduct(for: barcode)
             if product == nil {
-                product = await fetchProductFromApi(barcode)
+                if case .found(let fetched) = await fetchProductFromApi(barcode) {
+                    product = fetched
+                }
             }
             let suggestion = ShelfLife.suggest(
                 detectedDate: gs1Date,
@@ -727,6 +786,51 @@ public class NativePantryViewModel: ObservableObject {
 
     public func clearBatchQueue() {
         batchQueue = []
+    }
+
+    // MARK: - Scanner: queue Undo and lookup retry
+
+    /// Undoes `removeBatchEntry`. `index` is where the row was, so it comes back in place.
+    public func restoreBatchEntry(_ entry: BatchScanEntry, at index: Int) {
+        reinstateBatchEntry(entry, at: index)
+    }
+
+    /// Undoes `clearBatchQueue`. Anything scanned since stays, after the rows coming back.
+    public func restoreBatchQueue(_ entries: [BatchScanEntry]) {
+        for (index, entry) in entries.enumerated() {
+            reinstateBatchEntry(entry, at: index)
+        }
+    }
+
+    private func reinstateBatchEntry(_ entry: BatchScanEntry, at index: Int) {
+        if let rescanned = batchQueue.firstIndex(where: { $0.id == entry.id }) {
+            // The same product was scanned again after this row went: both scans count.
+            batchQueue[rescanned].quantity = min(batchQueue[rescanned].quantity + entry.quantity, maxItemQuantity)
+            return
+        }
+        if entry.isLookingUp, let barcode = entry.barcode {
+            // The lookup found no row to fill in when it finished, so this one would stay
+            // "looking up" for good. Enqueuing starts a new one.
+            enqueueBatchScan(barcode)
+            guard let queued = batchQueue.firstIndex(where: { $0.id == entry.id }) else { return }
+            var row = batchQueue.remove(at: queued)
+            row.quantity = entry.quantity
+            batchQueue.insert(row, at: min(max(index, 0), batchQueue.count))
+            return
+        }
+        batchQueue.insert(entry, at: min(max(index, 0), batchQueue.count))
+    }
+
+    /// Tries the held barcode again, for Try again on the offline result. Returns the barcode so
+    /// the scanner can repeat its duplicate check, or nil when nothing is held.
+    public func retryBarcodeLookup() -> String? {
+        guard let barcode = productNotFoundBarcode else { return nil }
+        clearScanResults()
+        if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
+            detectedDate = gs1Date
+        }
+        lookupBarcode(barcode)
+        return barcode
     }
 
     /// Saves everything in the queue and empties it, returning how many items were added.
@@ -782,7 +886,7 @@ public class NativePantryViewModel: ObservableObject {
     public func incrementQuantity(_ id: String) -> PantryItem? {
         let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
         guard let record = try? modelContext.fetch(descriptor).first else { return nil }
-        record.quantity += 1
+        record.quantity = min(record.quantity + 1, maxItemQuantity)
         try? modelContext.save()
         loadItems()
         dismissDuplicate()
@@ -919,23 +1023,36 @@ public class NativePantryViewModel: ObservableObject {
     }
 
     /// The Open Food Facts half of `lookupBarcode`, factored out so the batch queue can reuse it
-    /// without also driving the single-scan `scannedProduct` state.
-    private func fetchProductFromApi(_ barcode: String) async -> ProductInfo? {
+    /// without also driving the single-scan state. Nil only for a barcode that can't go in a URL.
+    private func fetchProductFromApi(_ barcode: String) async -> LookupResult? {
         guard let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(barcode).json") else {
             return nil
         }
         var request = URLRequest(url: url)
         request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
-        guard let (data, _) = try? await URLSession.shared.data(for: request),
+        guard let (data, response) = try? await URLSession.shared.data(for: request) else {
+            return .offline(barcode: barcode)
+        }
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        return Self.parseLookupResponse(barcode: barcode, statusCode: statusCode, data: data)
+    }
+
+    /// Reads an Open Food Facts response. Only a well-formed answer counts as "not found": it
+    /// says so with `status: 0`, usually under a 404. Anything else, like a 5xx, a rate limit or
+    /// a proxy's HTML page, tells us nothing about the product, so it is `.offline`.
+    nonisolated static func parseLookupResponse(barcode: String, statusCode: Int, data: Data) -> LookupResult {
+        guard (200..<300).contains(statusCode) || statusCode == 404,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let status = json["status"] as? Int, status == 1,
-              let product = json["product"] as? [String: Any] else {
-            return nil
+              let status = json["status"] as? Int else {
+            return statusCode == 404 ? .notFound(barcode: barcode) : .offline(barcode: barcode)
+        }
+        guard status == 1, let product = json["product"] as? [String: Any] else {
+            return .notFound(barcode: barcode)
         }
         let rawCategory = (product["categories"] as? String)?
             .components(separatedBy: ",").first?
             .trimmingCharacters(in: .whitespaces)
-        return ProductInfo(
+        return .found(ProductInfo(
             barcode: barcode,
             name: product["product_name"] as? String ?? "Product \(barcode)",
             brand: product["brands"] as? String,
@@ -943,7 +1060,7 @@ public class NativePantryViewModel: ObservableObject {
             category: rawCategory.map(stripLanguagePrefix),
             quantity: product["quantity"] as? String,
             nutrition: ProductNutrition.from(offProduct: product)
-        )
+        ))
     }
 
     /// True while a single-item scan is on screen - its lookup still running, or its product
@@ -955,14 +1072,14 @@ public class NativePantryViewModel: ObservableObject {
 
     public func lookupBarcode(_ barcode: String) {
         isLookingUpBarcode = true
-        scannedProduct = nil
+        lookupResult = nil
 
         // A locally-cached product (whether it was previously found via the API or entered by
         // hand for a barcode OFF didn't know) wins over the network, so a "custom" product from
         // a past scan is recognized here instead of showing not-found again.
         let cacheDescriptor = FetchDescriptor<LocalProductRecord>(predicate: #Predicate { $0.barcode == barcode })
         if let cached = try? modelContext.fetch(cacheDescriptor).first {
-            scannedProduct = ProductInfo(
+            lookupResult = .found(ProductInfo(
                 barcode: cached.barcode,
                 name: cached.name,
                 brand: cached.brand,
@@ -970,8 +1087,7 @@ public class NativePantryViewModel: ObservableObject {
                 category: cached.category,
                 quantity: nil,
                 nutrition: cached.nutrition
-            )
-            productNotFoundBarcode = nil
+            ))
             allergenWarnings = cached.nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
             suggestedExpiry = resolveSuggestedExpiry(barcode: barcode, category: cached.category)
             isLookingUpBarcode = false
@@ -979,53 +1095,24 @@ public class NativePantryViewModel: ObservableObject {
         }
 
         Task {
-            guard let url = URL(string: "https://world.openfoodfacts.org/api/v2/product/\(barcode).json") else {
-                self.isLookingUpBarcode = false
-                return
-            }
-
-            var request = URLRequest(url: url)
-            request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
-
-            do {
-                let (data, _) = try await URLSession.shared.data(for: request)
-                if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let status = json["status"] as? Int, status == 1,
-                   let product = json["product"] as? [String: Any] {
-
-                    let name = product["product_name"] as? String ?? "Product \(barcode)"
-                    let brand = product["brands"] as? String
-                    let image = product["image_front_url"] as? String
-                    let rawCategory = (product["categories"] as? String)?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces)
-                    let category = rawCategory.map(stripLanguagePrefix)
-                    let quantity = product["quantity"] as? String
-
-                    let nutrition = ProductNutrition.from(offProduct: product)
-                    self.scannedProduct = ProductInfo(
-                        barcode: barcode,
-                        name: name,
-                        brand: brand,
-                        imageUrl: image,
-                        category: category,
-                        quantity: quantity,
-                        nutrition: nutrition
-                    )
-                    self.productNotFoundBarcode = nil
-                    self.allergenWarnings = nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
-                    self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: category)
-                } else {
-                    self.scannedProduct = nil
-                    self.productNotFoundBarcode = barcode
-                    // Unknown product, but the barcode may still have been added by hand before.
-                    self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: nil)
-                }
-            } catch {
-                self.scannedProduct = nil
-                self.productNotFoundBarcode = barcode
+            defer { self.isLookingUpBarcode = false }
+            guard let result = await fetchProductFromApi(barcode) else { return }
+            self.lookupResult = result
+            if case .found(let product) = result {
+                self.allergenWarnings = product.nutrition.matchedAllergens(SettingsStore.shared.settings.allergens)
+                self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: product.category)
+            } else {
+                // Unknown product, but the barcode may still have been added by hand before.
                 self.suggestedExpiry = self.resolveSuggestedExpiry(barcode: barcode, category: nil)
             }
-            self.isLookingUpBarcode = false
         }
+    }
+
+    /// What the product cache knows about `item`'s nutrition. Empty for an item with no barcode,
+    /// or one Open Food Facts had nothing on.
+    public func nutrition(for item: PantryItem) -> ProductNutrition {
+        guard let barcode = item.barcode else { return ProductNutrition() }
+        return cachedProduct(for: barcode)?.nutrition ?? ProductNutrition()
     }
 
     /// The storage location to pre-select for a new item with `barcode`: where that product was
@@ -1134,6 +1221,45 @@ public class NativePantryViewModel: ObservableObject {
         removeItemRecord(id) { removed in onItemRemoved?(removed, false) }
     }
 
+    /// Deletes several items at once, for multi-select on Home. Like `deleteItem` it never
+    /// touches the shopping list. The result goes to `restoreItems` for one Undo over all of them.
+    @discardableResult
+    public func deleteItems(_ ids: Set<String>) -> DeletedItems {
+        let deleted = items.filter { ids.contains($0.id) }
+        let records = (try? modelContext.fetch(FetchDescriptor<PantryItemRecord>())) ?? []
+        for record in records where ids.contains(record.id) {
+            modelContext.delete(record)
+        }
+        try? modelContext.save()
+        items.removeAll { ids.contains($0.id) }
+        for item in deleted {
+            IOSNotificationManager.shared.cancelNotification(for: item.id)
+        }
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
+        WidgetCenter.shared.reloadAllTimelines()
+        return DeletedItems(items: deleted)
+    }
+
+    /// Puts back everything one `deleteItems` removed.
+    public func restoreItems(_ deleted: DeletedItems) {
+        for item in deleted.items {
+            let id = item.id
+            let descriptor = FetchDescriptor<PantryItemRecord>(predicate: #Predicate { $0.id == id })
+            if let existingRecord = try? modelContext.fetch(descriptor).first {
+                existingRecord.update(from: item)
+            } else {
+                modelContext.insert(PantryItemRecord(from: item))
+            }
+        }
+        try? modelContext.save()
+        loadItems()
+        for item in deleted.items {
+            IOSNotificationManager.shared.scheduleNotification(for: item)
+        }
+        IOSNotificationManager.shared.scheduleDigestNotification(items: items)
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     /// Decrements one unit of an item; once the last unit is used it is removed the same way
     /// `deleteItem` removes a whole item, except an essential item is also re-added to the
     /// shopping list here (a plain `deleteItem` never does that).
@@ -1224,6 +1350,21 @@ public class NativePantryViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
         addShoppingListEntryIfAbsent(name: trimmed, barcode: nil, category: nil)
         recordProductName(trimmed)
+    }
+
+    /// As `addManualShoppingListEntry(_:)`, but says when the name was on the list already, so
+    /// the screen can tell the person why no row appeared. `onDuplicate` gets the name as it is
+    /// written on the list, which may differ in case from what was typed.
+    public func addManualShoppingListEntry(_ productName: String, onDuplicate: (String) -> Void) {
+        let normalized = productName.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !normalized.isEmpty else { return }
+        if let existing = shoppingList.first(where: {
+            $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == normalized
+        }) {
+            onDuplicate(existing.productName)
+        } else {
+            addManualShoppingListEntry(productName)
+        }
     }
 
     /// Adds every entry in `raw` (a QR payload or pasted text - see `ShoppingListShare.parse`)
@@ -1665,8 +1806,7 @@ public class NativePantryViewModel: ObservableObject {
     /// something else is how a stale result ends up on screen under a mode that cannot have
     /// produced it. `clearScanState` is the stronger version, for closing the scanner entirely.
     public func clearScanResults() {
-        scannedProduct = nil
-        productNotFoundBarcode = nil
+        lookupResult = nil
         detectedDate = nil
         suggestedExpiry = nil
         photoLabelSuggestions = []
@@ -1823,7 +1963,10 @@ public class NativePantryViewModel: ObservableObject {
         }
 
         if mode == .replace {
-            SettingsStore.shared.save(document.settings)
+            // Backups don't carry this flag, and someone restoring has no use for a first run.
+            var settings = document.settings
+            settings.onboardingCompleted = true
+            SettingsStore.shared.save(settings)
         }
 
         loadCategoryPreferences()

@@ -65,7 +65,7 @@
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%1$@ %2$#@days@</string>
+        <string>%1$@: срок годности заканчивается через %2$#@days@</string>
         <key>days</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
@@ -73,13 +73,13 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>истекает через %2$d день. Не забудьте съесть его!</string>
+            <string>%2$d день.</string>
             <key>few</key>
-            <string>истекает через %2$d дня. Не забудьте съесть его!</string>
+            <string>%2$d дня.</string>
             <key>many</key>
-            <string>истекает через %2$d дней. Не забудьте съесть его!</string>
+            <string>%2$d дней.</string>
             <key>other</key>
-            <string>истекает через %2$d дня. Не забудьте съесть его!</string>
+            <string>%2$d дня.</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>
@@ -233,13 +233,13 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d д</string>
+            <string>%d день</string>
             <key>few</key>
-            <string>%d д</string>
+            <string>%d дня</string>
             <key>many</key>
-            <string>%d д</string>
+            <string>%d дней</string>
             <key>other</key>
-            <string>%d д</string>
+            <string>%d дня</string>
         </dict>
     </dict>
     <key>shopping_list_import_added_format</key>
@@ -440,6 +440,286 @@
             <string>Каждые %d дней</string>
             <key>other</key>
             <string>Каждые %d дня</string>
+        </dict>
+    </dict>
+    <key>items_deleted_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Удалён %d товар</string>
+            <key>few</key>
+            <string>Удалено %d товара</string>
+            <key>many</key>
+            <string>Удалено %d товаров</string>
+            <key>other</key>
+            <string>Удалено %d товара</string>
+        </dict>
+    </dict>
+    <key>status_days_over_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Просрочено %d день назад</string>
+            <key>few</key>
+            <string>Просрочено %d дня назад</string>
+            <key>many</key>
+            <string>Просрочено %d дней назад</string>
+            <key>other</key>
+            <string>Просрочено %d дня назад</string>
+        </dict>
+    </dict>
+    <key>clear_data_dialog_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Это удалит %d продукт и отменит напоминания о сроке годности. Это действие необратимо.</string>
+            <key>few</key>
+            <string>Это удалит %d продукта и отменит напоминания о сроке годности. Это действие необратимо.</string>
+            <key>many</key>
+            <string>Это удалит %d продуктов и отменит напоминания о сроке годности. Это действие необратимо.</string>
+            <key>other</key>
+            <string>Это удалит %d продукта и отменит напоминания о сроке годности. Это действие необратимо.</string>
+        </dict>
+    </dict>
+    <key>shopping_list_lede_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Купить: %d товар</string>
+            <key>few</key>
+            <string>Купить: %d товара</string>
+            <key>many</key>
+            <string>Купить: %d товаров</string>
+            <key>other</key>
+            <string>Купить: %d товара</string>
+        </dict>
+    </dict>
+    <key>shopping_section_delete_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d товар из него перейдёт в основной список.</string>
+            <key>few</key>
+            <string>%d товара из него перейдут в основной список.</string>
+            <key>many</key>
+            <string>%d товаров из него перейдут в основной список.</string>
+            <key>other</key>
+            <string>%d товара из него перейдут в основной список.</string>
+        </dict>
+    </dict>
+    <key>lede_use_by_tomorrow</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} продукт лучше использовать до завтра</string>
+            <key>few</key>
+            <string>{n} продукта лучше использовать до завтра</string>
+            <key>many</key>
+            <string>{n} продуктов лучше использовать до завтра</string>
+            <key>other</key>
+            <string>{n} продукта лучше использовать до завтра</string>
+        </dict>
+    </dict>
+    <key>lede_past_date</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} продукт с истёкшим сроком</string>
+            <key>few</key>
+            <string>{n} продукта с истёкшим сроком</string>
+            <key>many</key>
+            <string>{n} продуктов с истёкшим сроком</string>
+            <key>other</key>
+            <string>{n} продукта с истёкшим сроком</string>
+        </dict>
+    </dict>
+    <key>home_search_results</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d результат</string>
+            <key>few</key>
+            <string>%d результата</string>
+            <key>many</key>
+            <string>%d результатов</string>
+            <key>other</key>
+            <string>%d результата</string>
+        </dict>
+    </dict>
+    <key>home_active_filter_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} из %d</string>
+            <key>few</key>
+            <string>{n} из %d</string>
+            <key>many</key>
+            <string>{n} из %d</string>
+            <key>other</key>
+            <string>{n} из %d</string>
+        </dict>
+    </dict>
+    <key>home_show_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Показать %d продукт</string>
+            <key>few</key>
+            <string>Показать %d продукта</string>
+            <key>many</key>
+            <string>Показать %d продуктов</string>
+            <key>other</key>
+            <string>Показать %d продукта</string>
+        </dict>
+    </dict>
+    <key>recipe_names_more</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{a}, {b} и ещё %d</string>
+            <key>few</key>
+            <string>{a}, {b} и ещё %d</string>
+            <key>many</key>
+            <string>{a}, {b} и ещё %d</string>
+            <key>other</key>
+            <string>{a}, {b} и ещё %d</string>
+        </dict>
+    </dict>
+    <key>recipe_include_others_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</string>
+            <key>few</key>
+            <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
+            <key>many</key>
+            <string>Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</string>
+            <key>other</key>
+            <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
+        </dict>
+    </dict>
+    <key>expires_in_months_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Через %d месяц</string>
+            <key>few</key>
+            <string>Через %d месяца</string>
+            <key>many</key>
+            <string>Через %d месяцев</string>
+            <key>other</key>
+            <string>Через %d месяца</string>
+        </dict>
+    </dict>
+    <key>expires_in_years_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Через %d год</string>
+            <key>few</key>
+            <string>Через %d года</string>
+            <key>many</key>
+            <string>Через %d лет</string>
+            <key>other</key>
+            <string>Через %d года</string>
         </dict>
     </dict>
 </dict>

@@ -69,6 +69,17 @@ class BlockedNotificationsTest {
         val intent = NotificationHelper.blockedNotificationsSettingsIntent(context, summary)
         assertEquals(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS, intent?.action)
         assertEquals(NotificationHelper.DIGEST_CHANNEL_ID, intent?.getStringExtra(Settings.EXTRA_CHANNEL_ID))
+        // The channel screen needs the app too, or the system can't tell whose channel it is.
+        assertEquals(context.packageName, intent?.getStringExtra(Settings.EXTRA_APP_PACKAGE))
+    }
+
+    @Test
+    fun withBothBlockedTheItemChannelComesFirst() {
+        blockChannel(NotificationHelper.CHANNEL_ID)
+        blockChannel(NotificationHelper.DIGEST_CHANNEL_ID)
+        val both = NotificationSettings().withReminderStyle(ReminderStyle.BOTH)
+        val intent = NotificationHelper.blockedNotificationsSettingsIntent(context, both)
+        assertEquals(NotificationHelper.CHANNEL_ID, intent?.getStringExtra(Settings.EXTRA_CHANNEL_ID))
     }
 
     @Test

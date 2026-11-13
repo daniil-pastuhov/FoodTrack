@@ -99,7 +99,7 @@ class StoreGeofenceReceiver : BroadcastReceiver(), KoinComponent {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
-            .setColor(ContextCompat.getColor(context, R.color.notification_accent))
+            .setColor(ContextCompat.getColor(context, R.color.larder_primary))
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

@@ -102,4 +102,13 @@ data class BatchScanEntry(
     /** True when nothing better than the fallback was known, so the user should look at it. */
     val needsAttention: Boolean
         get() = expirySource == ShelfLifeSource.FALLBACK
+
+    /** The queue's Check date mark: a guess nothing better than the fallback backs up, and every
+     *  receipt row, because a receipt prints no dates. Only a date read off a pack is exempt. */
+    val showsCheckDate: Boolean
+        get() = !isLookingUp && (needsAttention ||
+            (id.startsWith(RECEIPT_ROW_ID_PREFIX) && expirySource != ShelfLifeSource.DETECTED))
 }
+
+/** What `PantryStateHolder.enqueueReceiptLines` starts its generated row ids with. */
+private const val RECEIPT_ROW_ID_PREFIX = "receipt_"

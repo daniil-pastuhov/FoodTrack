@@ -1,16 +1,17 @@
 package com.foodtracker.android.notification
 
+import android.app.Notification
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
 import com.foodtracker.repository.PantryRepository
+import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,9 +30,8 @@ class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
         // The notification's action buttons re-enter here with distinct action strings (rather
         // than separate receivers) so they can reuse the same Koin-injected PantryStateHolder.
         //
-        // These cover what a user actually does at the moment the reminder fires. Until now the
-        // only choices were "Remove" or open the app, which fits none of the common outcomes:
-        // the food was eaten, it's still fine, or it's not a today problem.
+        // These cover what a user actually does at the moment the reminder fires: the food was
+        // eaten, it's not a today problem, or it's gone.
         when (intent.action) {
             // deleteItem() already re-adds essential items to the shopping list, matching the
             // dashboard's own delete behavior.
@@ -46,6 +46,7 @@ class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
                 handleAction(context, itemId) { stateHolder.decrementQuantity(itemId) }
                 return
             }
+            // No longer offered, but a reminder posted by an older version can still be on screen.
             // A printed date is a guess, and the user is looking at the actual food. Trust them.
             ACTION_STILL_GOOD -> {
                 handleAction(context, itemId) {
@@ -82,78 +83,27 @@ class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
             }
         }
 
-        val title = intent.getStringExtra(EXTRA_TITLE) ?: context.getString(R.string.notif_fallback_title)
-        val body = intent.getStringExtra(EXTRA_BODY) ?: context.getString(R.string.notif_fallback_body)
-
-        // Intent to open app when tapping notification
-        // The extra is what lands on the dashboard: MainActivity is singleTop, so CLEAR_TOP
-        // reuses a running instance through onNewIntent rather than recreating it.
-        val tapIntent = Intent(context, MainActivity::class.java).apply {
-            putExtra(MainActivity.EXTRA_OPEN_DASHBOARD, true)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-
-        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-
-        val pendingTapIntent = PendingIntent.getActivity(
-            context,
-            0,
-            tapIntent,
-            flags
-        )
-
-        // Each action needs its own request code, or PendingIntent.getBroadcast returns the
-        // same cached intent for all of them and every button performs whichever was built
-        // first - the extras differ but FLAG_UPDATE_CURRENT only refreshes those, not the
-        // action string the receiver branches on.
-        fun actionIntent(action: String, requestOffset: Int): PendingIntent {
-            val actionIntent = Intent(context, ExpiryNotificationReceiver::class.java).apply {
-                this.action = action
-                putExtra(EXTRA_ITEM_ID, itemId)
-                putExtra(EXTRA_TITLE, title)
-                putExtra(EXTRA_BODY, body)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val (title, body) = NotificationHelper.reminderCopyAtFiring(
+                    context = context,
+                    item = repository.getItem(itemId),
+                    today = DateUtils.today(),
+                    extraTitle = intent.getStringExtra(EXTRA_TITLE),
+                    extraBody = intent.getStringExtra(EXTRA_BODY)
+                )
+                postReminder(context, itemId, title, body)
+            } finally {
+                pendingResult.finish()
             }
-            return PendingIntent.getBroadcast(
-                context,
-                itemId.hashCode() + requestOffset,
-                actionIntent,
-                flags
-            )
         }
+    }
 
-        val notification = NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setColor(ContextCompat.getColor(context, R.color.notification_accent))
-            .setContentTitle(title)
-            .setContentText(body)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setContentIntent(pendingTapIntent)
-            .addAction(
-                R.drawable.ic_notification,
-                context.getString(R.string.notif_action_used),
-                actionIntent(ACTION_USED_ITEM, REQUEST_OFFSET_USED)
-            )
-            .addAction(
-                R.drawable.ic_notification,
-                context.resources.getQuantityString(
-                    R.plurals.notif_action_still_good,
-                    STILL_GOOD_DAYS,
-                    STILL_GOOD_DAYS
-                ),
-                actionIntent(ACTION_STILL_GOOD, REQUEST_OFFSET_STILL_GOOD)
-            )
-            .addAction(
-                R.drawable.ic_notification,
-                context.getString(R.string.notif_action_snooze),
-                actionIntent(ACTION_SNOOZE, REQUEST_OFFSET_SNOOZE)
-            )
-            .setAutoCancel(true)
-            .build()
-
+    private fun postReminder(context: Context, itemId: String, title: String, body: String) {
         try {
-            val notificationManager = NotificationManagerCompat.from(context)
-            notificationManager.notify(itemId.hashCode(), notification)
+            NotificationManagerCompat.from(context)
+                .notify(itemId.hashCode(), buildReminder(context, itemId, title, body))
         } catch (e: SecurityException) {
             // Thrown if POST_NOTIFICATIONS permission not granted
             e.printStackTrace()
@@ -188,9 +138,62 @@ class ExpiryNotificationReceiver : BroadcastReceiver(), KoinComponent {
          *  from someone looking at the food, not a reassessment of its shelf life. */
         const val STILL_GOOD_DAYS = 3
 
-        // Distinct per action so each button gets its own PendingIntent (see actionIntent).
+        // Distinct per action so each button gets its own PendingIntent (see buildReminder).
         private const val REQUEST_OFFSET_USED = 1
-        private const val REQUEST_OFFSET_STILL_GOOD = 2
-        private const val REQUEST_OFFSET_SNOOZE = 3
+        private const val REQUEST_OFFSET_SNOOZE = 2
+        private const val REQUEST_OFFSET_REMOVE = 3
+
+        /** The reminder as posted: tapping opens Home, and its buttons are Used it, Tomorrow and
+         *  Remove. Android shows three at most, so Still good stays on iOS only. */
+        internal fun buildReminder(context: Context, itemId: String, title: String, body: String): Notification {
+            // The extra is what lands on the dashboard: MainActivity is singleTop, so CLEAR_TOP
+            // reuses a running instance through onNewIntent rather than recreating it.
+            val tapIntent = Intent(context, MainActivity::class.java).apply {
+                putExtra(MainActivity.EXTRA_OPEN_DASHBOARD, true)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            }
+            val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            val pendingTapIntent = PendingIntent.getActivity(context, 0, tapIntent, flags)
+
+            // Each action needs its own request code, or PendingIntent.getBroadcast returns the
+            // same cached intent for all of them and every button performs whichever was built
+            // first - the extras differ but FLAG_UPDATE_CURRENT only refreshes those, not the
+            // action string the receiver branches on.
+            fun actionIntent(action: String, requestOffset: Int): PendingIntent {
+                val actionIntent = Intent(context, ExpiryNotificationReceiver::class.java).apply {
+                    this.action = action
+                    putExtra(EXTRA_ITEM_ID, itemId)
+                    putExtra(EXTRA_TITLE, title)
+                    putExtra(EXTRA_BODY, body)
+                }
+                return PendingIntent.getBroadcast(context, itemId.hashCode() + requestOffset, actionIntent, flags)
+            }
+
+            return NotificationCompat.Builder(context, NotificationHelper.CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setColor(ContextCompat.getColor(context, R.color.larder_primary))
+                .setContentTitle(title)
+                .setContentText(body)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingTapIntent)
+                .addAction(
+                    R.drawable.ic_notification,
+                    context.getString(R.string.notif_action_used),
+                    actionIntent(ACTION_USED_ITEM, REQUEST_OFFSET_USED)
+                )
+                .addAction(
+                    R.drawable.ic_notification,
+                    context.getString(R.string.notif_action_snooze),
+                    actionIntent(ACTION_SNOOZE, REQUEST_OFFSET_SNOOZE)
+                )
+                .addAction(
+                    R.drawable.ic_notification,
+                    context.getString(R.string.notif_action_remove),
+                    actionIntent(ACTION_REMOVE_ITEM, REQUEST_OFFSET_REMOVE)
+                )
+                .setAutoCancel(true)
+                .build()
+        }
     }
 }

@@ -6,6 +6,9 @@ import SwiftUI
 /// names stay on one line instead of being squeezed into vertical text.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 8
+    /// Gap between rows, when it differs from the gap between items. See
+    /// `LarderChip.wrapRowSpacing`.
+    var rowSpacing: CGFloat? = nil
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let maxWidth = proposal.width ?? .infinity
@@ -17,7 +20,7 @@ struct FlowLayout: Layout {
         for subview in subviews {
             let size = subview.sizeThatFits(.unspecified)
             if x > 0, x + size.width > maxWidth {
-                y += rowHeight + spacing
+                y += rowHeight + (rowSpacing ?? spacing)
                 x = 0
                 rowHeight = 0
             }
@@ -37,7 +40,7 @@ struct FlowLayout: Layout {
             let size = subview.sizeThatFits(.unspecified)
             if x > bounds.minX, x + size.width > bounds.maxX {
                 x = bounds.minX
-                y += rowHeight + spacing
+                y += rowHeight + (rowSpacing ?? spacing)
                 rowHeight = 0
             }
             subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))

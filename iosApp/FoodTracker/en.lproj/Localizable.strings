@@ -1,12 +1,12 @@
 "app_name" = "BestBefore";
 "nav_home" = "Home";
 
-"metric_expired" = "Expired";
-"metric_expiring_soon" = "Expiring Soon";
+"metric_expired" = "Past date";
+"metric_expiring_soon" = "Soon";
 "metric_fresh" = "Fresh";
 
-"location_filter_all" = "All";
-"category_filter_all" = "All Categories";
+"location_filter_all" = "All locations";
+"category_filter_all" = "All categories";
 
 "status_filter_all" = "All";
 "status_filter_expiring_soon" = "Expiring Soon";
@@ -14,11 +14,11 @@
 "status_filter_fresh" = "Fresh";
 
 "sort_button" = "Sort";
-"sort_sheet_title" = "Sort By";
-"sort_option_expiry_date" = "Expiry Date";
+"sort_sheet_title" = "Sort by";
+"sort_option_expiry_date" = "Expiry date";
 "sort_option_name" = "Name";
-"sort_option_date_added" = "Date Added";
-"sort_option_storage_location" = "Storage Location";
+"sort_option_date_added" = "Date added";
+"sort_option_storage_location" = "Storage location";
 
 "empty_state_title" = "No items found";
 "empty_state_subtitle" = "Scan a barcode or tap 'Add to Pantry' to track groceries.";
@@ -33,7 +33,6 @@
 "exit_selection_button" = "Cancel";
 "select_items_button" = "Select";
 "more_options_button" = "More";
-"delete_selected_dialog_title" = "Delete selected items?";
 "action_get_recipe_ideas" = "Get recipe ideas";
 "recipe_prompt_intro" = "I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:";
 "recipe_prompt_item_format" = "%@ (%@)";
@@ -41,11 +40,11 @@
 "recipe_prompt_other_items_omitted" = "(+%d more items not shown)";
 "share_recipe_dialog_title" = "Get recipe ideas";
 "share_recipe_include_other_items_title" = "Include other pantry items";
-"share_recipe_include_other_items_subtitle" = "Optional — lets the AI suggest recipes using more of what you already have";
+"share_recipe_include_other_items_subtitle" = "Optional. Lets the assistant suggest recipes using more of what you have.";
 "share_recipe_share_button" = "Share";
 "share_recipe_cancel_button" = "Cancel";
 
-"search_placeholder" = "Search products or brands...";
+"search_placeholder" = "Search products or brands";
 "scan_button" = "Scan";
 "status_picker_label" = "Status";
 "filters_sheet_title" = "Filters";
@@ -71,17 +70,17 @@
 "calendar_show_week" = "Show week";
 
 "section_product_details" = "Product Details";
-"product_name_label" = "Product Name *";
-"brand_label" = "Brand / Manufacturer";
+"product_name_label" = "Product name *";
+"brand_label" = "Brand";
 "barcode_word" = "Barcode";
 
 "section_expiration_date" = "Expiration Date";
-"expiry_date_implausible_warning_format" = "This date is more than %d years from today. Please double-check the year.";
-"expiry_picker_label" = "Best Before / Expiry";
+"expiry_date_implausible_warning_format" = "This date is over %d years away. Check the year.";
+"expiry_picker_label" = "Best before";
 "quick_date_3_days" = "+3 Days";
-"quick_date_1_week" = "+1 Wk";
-"quick_date_2_weeks" = "+2 Wks";
-"quick_date_1_month" = "+1 Mo";
+"quick_date_1_week" = "+1 Week";
+"quick_date_2_weeks" = "+2 Weeks";
+"quick_date_1_month" = "+1 Month";
 
 "section_storage" = "Storage";
 "location_picker_label" = "Location";
@@ -92,13 +91,13 @@
 "use_one_button" = "Use one";
 
 "section_notes" = "Notes";
-"notes_field_placeholder" = "Optional notes (e.g. opened, freezer door)";
+"notes_field_placeholder" = "e.g. opened, quantity, shelf";
 
 "edit_item_title" = "Edit Item";
-"add_item_title" = "Add to Pantry";
+"add_item_title" = "Add item";
 "cancel_button" = "Cancel";
 "discard_changes_title" = "Discard changes?";
-"discard_changes_confirm" = "Discard";
+"discard_changes_confirm" = "Discard changes";
 "discard_changes_keep" = "Keep editing";
 "save_button" = "Save";
 
@@ -120,7 +119,6 @@
 "shopping_section_rename" = "Rename section";
 "shopping_section_delete" = "Delete";
 "shopping_section_delete_title" = "Delete “%@”?";
-"shopping_section_delete_message" = "Its items move to the main list.";
 "shopping_section_save" = "Save";
 "shopping_section_name_placeholder" = "e.g. Dairy aisle";
 "shopping_section_move_to" = "Move to section";
@@ -133,21 +131,21 @@
 "shopping_list_did_you_mean_title" = "Did you mean one of these?";
 "shopping_list_did_you_mean_none_of_these" = "None of these, add new item";
 
-"manual_entry_button" = "Manual";
+"manual_entry_button" = "Type it in";
 "camera_off_title" = "The camera is off";
 "camera_off_body" = "BestBefore needs the camera to scan. You can still add food by hand.";
 "camera_off_open_settings" = "Open settings";
 "camera_off_add_by_hand" = "Type it in";
 "scanner_mode_picker_label" = "Scanner Mode";
 "scan_mode_barcode" = "Barcode";
-"scan_mode_date_ocr" = "Date OCR";
+"scan_mode_date_ocr" = "Date";
 "scan_mode_photo" = "Photo";
-"looking_up_product" = "Looking up product in Open Food Facts...";
-"scan_date_button" = "Scan Date";
+"looking_up_product" = "Looking up this product…";
+"scan_date_button" = "Scan date";
 "continue_button" = "Continue";
 
 "product_not_found_title" = "Product not found";
-"switch_to_photo_button" = "Try Photo";
+"switch_to_photo_button" = "Photo mode";
 
 "take_photo_button" = "Take photo";
 "photo_captured_title" = "Photo captured";
@@ -155,20 +153,21 @@
 "retake_photo_button" = "Retake";
 "photo_capture_failed_message" = "Couldn't capture photo. Try again.";
 
-"reticle_hint_barcode" = "Align product barcode within frame";
-"reticle_hint_date_ocr" = "Point camera at printed expiration date stamp";
-"reticle_hint_photo" = "Center item to capture photo";
-"torch_toggle_button" = "Toggle flashlight";
+"reticle_hint_barcode" = "Line up the barcode inside the frame";
+"reticle_hint_date_ocr" = "Point at the printed date, like EXP 24.11.2026";
+"reticle_hint_photo" = "Put the product in the middle, then take the picture";
+"torch_toggle_button" = "Torch";
 
 "expires_today" = "Expires today";
 "expires_tomorrow" = "Expires tomorrow";
 
-"notif_title_today" = "Product Expires Today! ⚠️";
-"notif_title_soon" = "Product Expiring Soon! ⚠️";
+"notif_title_today" = "Best used today";
+"notif_title_soon" = "Best used soon";
+"notif_body_tomorrow_format" = "%@ reaches its date tomorrow.";
 "notif_title_past" = "Worth a look";
 
 "expiry_date_found_format" = "Found Expiry: %@";
-"notif_body_today_format" = "%@ expires today. Make sure to consume it!";
+"notif_body_today_format" = "%@ reaches its date today.";
 "notif_action_remove" = "Remove";
 "notif_digest_item_format" = "%1$@ — %2$@";
 "notif_action_recipe_ideas" = "Recipe ideas";
@@ -194,10 +193,10 @@
 "settings_notifications_blocked" = "Notifications are turned off for this app in your phone's settings, so reminders won't arrive.";
 "settings_notifications_open_settings" = "Open settings";
 
-"settings_section_expiring_soon" = "Expiring Soon Threshold";
+"settings_section_expiring_soon" = "Expiring soon threshold";
 "settings_expiring_soon_desc" = "Items expiring within this many days are flagged as 'Expiring Soon'";
 
-"settings_section_locations" = "Storage Locations";
+"settings_section_locations" = "Storage locations";
 "settings_locations_desc" = "Tap the star to set the default for new items";
 "settings_remember_last_location" = "Remember last storage location";
 "settings_remember_last_location_desc" = "Products you haven't added before start in the storage location you picked last time";
@@ -207,7 +206,7 @@
 
 "settings_section_categories" = "Categories";
 "settings_categories_desc" = "Rename, reorder, or hide the categories detected from your products";
-"settings_manage_categories_button" = "Manage Categories";
+"settings_manage_categories_button" = "Manage categories";
 
 "category_settings_title" = "Categories";
 "category_settings_description" = "Drag to reorder. Tap the pencil to rename a category, or turn it off to hide it everywhere.";
@@ -223,10 +222,10 @@
 "settings_theme_dark" = "Dark";
 
 "settings_section_data" = "Data";
-"settings_clear_data_button" = "Clear All Pantry Data";
+"settings_clear_data_button" = "Clear all pantry data";
 "clear_data_dialog_title" = "Clear all pantry data?";
 "clear_data_dialog_message" = "This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.";
-"clear_data_confirm" = "Clear Data";
+"clear_data_confirm" = "Clear all data";
 
 "widget_expiring_title" = "Expiring";
 "widget_expiring_description" = "Shows what's expired or expiring soon in your pantry";
@@ -234,8 +233,8 @@
 "widget_shopping_list_title" = "Shopping List";
 "widget_shopping_list_description" = "Shows your current shopping list";
 "widget_shopping_list_empty" = "Your shopping list is empty";
-"widget_action_used" = "Used one";
-"widget_action_bought" = "Bought";
+"widget_action_used_item_format" = "Used one: %@";
+"widget_action_bought_item_format" = "Bought: %@";
 "widget_overview_title" = "Pantry Overview";
 "widget_overview_description" = "Shows what's expired or expiring soon, followed by your shopping list";
 
@@ -248,7 +247,7 @@
 
 "shopping_list_share_content_description" = "Share or import list";
 "shopping_list_share_dialog_title" = "Share list";
-"shopping_list_share_dialog_message" = "Send your list to someone else, or bring one in. Imported items are added to your list — nothing is replaced.";
+"shopping_list_share_dialog_message" = "Send your list to someone else, or bring one in. Imported items are added to your list, nothing is replaced.";
 "shopping_list_share_as_text" = "Share as text";
 "shopping_list_share_as_qr" = "Show QR code";
 "shopping_list_share_qr_hint" = "Scan this from the other phone's shopping list.";
@@ -339,7 +338,7 @@
 "restore_mode_replace_title" = "Replace everything";
 "backup_export_success" = "Backup saved";
 "backup_export_failed" = "Couldn't save the backup";
-"backup_import_malformed" = "That file isn't a BestBefore backup";
+"backup_import_malformed" = "That file isn't a BestBefore backup. Nothing was changed.";
 "backup_import_unsupported" = "That backup was made by a newer version of the app";
 "backup_import_empty" = "That backup has nothing to restore";
 
@@ -347,18 +346,18 @@
 "notif_action_snooze" = "Tomorrow";
 
 "scan_mode_batch" = "Batch";
-"reticle_hint_batch" = "Keep scanning — everything lands in the list below";
+"reticle_hint_batch" = "Keep scanning. Everything lands in the list";
 "scan_mode_receipt" = "Receipt";
-"reticle_hint_receipt" = "Fit the whole receipt in frame, then tap to read it";
+"reticle_hint_receipt" = "Fit the whole receipt in the frame, then tap to read it";
 "scan_receipt_button" = "Read receipt";
-"receipt_nothing_found" = "No products found on that receipt — try again with the whole receipt in frame";
+"receipt_nothing_found" = "No products found on that receipt. Try again with the whole receipt in frame";
 "batch_queue_empty" = "Scan a product to start the list";
-"batch_queue_remove_content_description" = "Remove from list";
+"batch_queue_remove_content_description" = "Remove from list: %@";
 "batch_queue_needs_date" = "Check date";
 "batch_commit_button" = "Add all";
 "batch_clear_button" = "Clear";
 "duplicate_dialog_title" = "Already in your pantry";
-"duplicate_dialog_message" = "You already have %@. Add one more to it, or create a separate entry?";
+"duplicate_dialog_message" = "You already have %@. Add one more to it, or keep this one separate?";
 "duplicate_dialog_add_one" = "Add one more";
 "duplicate_dialog_separate" = "Keep separate";
 "duplicate_added" = "%1$@ is now %2$d";
@@ -385,7 +384,7 @@
 
 /* Scanner mode workflow */
 "date_captured_title" = "Expiry date read";
-"scan_again_button" = "Scan Again";
+"scan_again_button" = "Scan again";
 "shopping_list_scan_unsupported" = "Open the scanner from your pantry to import a shared list";
 "batch_discard_title" = "Discard scanned items?";
 "batch_discard_confirm" = "Discard";
@@ -403,3 +402,198 @@
 "category_builtin_drinks" = "Drinks";
 "category_builtin_sweets" = "Sweets";
 "category_builtin_pantry" = "Pantry";
+
+/* Larder foundation */
+"nav_shopping" = "Shopping";
+"back_button" = "Back";
+"status_today" = "Today";
+"status_tomorrow" = "Tomorrow";
+"clear_field_button" = "Clear";
+"dismiss_button" = "Dismiss";
+"quantity_decrease" = "Decrease quantity";
+"quantity_increase" = "Increase quantity";
+"use_one_label_format" = "Use one: %@";
+"item_saved_to_format" = "%1$@ saved to %2$@";
+
+/* Pantry */
+"lede_next_up" = "Next up: %1$@ %2$@";
+"lede_nothing_this_week" = "Nothing needs using this week";
+"home_section_use_first" = "Use first";
+"home_section_later_this_week" = "Later this week";
+"home_section_later" = "Later";
+"home_clear_filters" = "Clear filters";
+"home_search_description" = "Search";
+"home_filters_on_description" = "Filters, on";
+"home_empty_title" = "Your shelves are empty";
+"home_empty_message" = "Scan your first product and it will show up here, soonest date first.";
+"home_empty_scan" = "Scan a product";
+"home_empty_add_by_hand" = "Add by hand";
+"home_no_results_title" = "Nothing matches “%1$@”";
+"home_no_results_message" = "Check the spelling, or try the brand name.";
+"home_clear_search" = "Clear search";
+"home_no_filter_results_title" = "Nothing matches these filters";
+"home_no_filter_results_message" = "Try another location or category.";
+"home_reminders_off_title" = "Reminders are off";
+"home_reminders_off_message" = "Notifications are turned off for BestBefore in your phone's settings.";
+"home_dismiss" = "Dismiss";
+"home_swipe_to_list" = "To list";
+"home_use_one_item" = "Use one: %1$@";
+"home_used_one_snackbar" = "Used one %1$@. %2$d left.";
+"home_location_label" = "Location";
+"home_category_label" = "Category";
+"home_best_before_label" = "Best before";
+"home_notes_label" = "Notes";
+"home_done" = "Done";
+"detail_close" = "Close";
+"detail_edit" = "Edit";
+"detail_to_shopping_list" = "To shopping list";
+"detail_nutri_caption" = "Nutri-Score %1$@";
+"detail_nova_caption" = "NOVA %1$d · %2$@";
+"detail_nova_description" = "NOVA %1$d, %2$@";
+"detail_nova_1" = "Unprocessed";
+"detail_nova_2" = "Culinary ingredients";
+"detail_nova_3" = "Processed";
+"detail_nova_4" = "Ultra-processed";
+"detail_credit" = "Product data from Open Food Facts";
+"detail_allergen_note" = "This matches your allergen list. Matching is loose, so check the label.";
+"detail_choose_item" = "Choose an item to see its details.";
+"recipe_intro" = "BestBefore writes a prompt from %1$@ for you to share with an AI assistant. Nothing leaves your device until you choose where to send it.";
+"recipe_names_two" = "%1$@ and %2$@";
+"recipe_names_three" = "%1$@, %2$@ and %3$@";
+"lede_number_1" = "One";
+"lede_number_2" = "Two";
+"lede_number_3" = "Three";
+"lede_number_4" = "Four";
+"lede_number_5" = "Five";
+"lede_number_6" = "Six";
+"lede_number_7" = "Seven";
+"lede_number_8" = "Eight";
+"lede_number_9" = "Nine";
+"lede_number_10" = "Ten";
+"lede_on_weekday_1" = "on Monday";
+"lede_on_weekday_2" = "on Tuesday";
+"lede_on_weekday_3" = "on Wednesday";
+"lede_on_weekday_4" = "on Thursday";
+"lede_on_weekday_5" = "on Friday";
+"lede_on_weekday_6" = "on Saturday";
+"lede_on_weekday_7" = "on Sunday";
+/* Scanner (Larder) */
+"barcode_format" = "Barcode: %@";
+"close_scanner" = "Close scanner";
+"scan_torch_on" = "On";
+"scan_torch_off" = "Off";
+"scan_idle_results_title" = "Results show up here";
+"scan_idle_results_message" = "Scan a barcode and the product appears on this side.";
+"scan_idle_date_title" = "The date shows up here";
+"scan_idle_date_message" = "Hold the camera steady on the printed date.";
+"scan_idle_photo_title" = "Your photo shows up here";
+"scan_idle_photo_message" = "Take a picture to get name suggestions.";
+"scan_allergen_note" = "This matches your allergen list. Matching is loose, so check the label.";
+"scan_offline_title" = "You're offline";
+"scan_offline_message" = "Couldn't look this product up. You can carry on by hand, and the barcode stays with the item.";
+"scan_try_again" = "Try again";
+"scan_continue_by_hand" = "Continue by hand";
+"scan_best_before_format" = "Best before %@";
+"scan_date_from_barcode" = "Read from the barcode";
+"scan_date_from_packaging" = "Read from the packaging";
+"scan_use_this_date" = "Use this date";
+"scan_reading_receipt" = "Reading the receipt…";
+"receipt_queue_empty" = "Read a receipt to start the list";
+"scan_queue_cleared" = "Queue cleared";
+"batch_queue_estimated_format" = "Estimated %@";
+/* Larder settings */
+"settings_group_reminders" = "Reminders";
+"settings_group_kitchen" = "Your kitchen";
+"settings_notifications_blocked_title" = "Reminders are off";
+"settings_off" = "Off";
+"settings_allergens_none" = "None yet";
+"settings_add_allergen_label" = "Add an allergen";
+"settings_data_summary" = "Backup and clear data";
+"settings_location_default" = "Default";
+"settings_location_taken" = "You already have a location called %1$@";
+"settings_rename_location_format" = "Rename: %1$@";
+"settings_delete_location_format" = "Delete: %1$@";
+"settings_set_default_location_format" = "Set as default: %1$@";
+"settings_remove_format" = "Remove: %1$@";
+"settings_try_again" = "Try again";
+"restore_mode_cancel" = "Don't import";
+"clear_data_keep" = "Keep my pantry";
+"category_settings_empty_title" = "No categories yet";
+"category_settings_scan" = "Scan a product";
+"category_settings_move_up" = "Move up";
+"category_settings_move_down" = "Move down";
+"category_settings_move_done" = "Done";
+"category_settings_rename_field_label" = "Category name";
+"category_settings_rename_confirm" = "Rename";
+"category_settings_rename_format" = "Rename category: %1$@";
+"category_settings_drag_handle_format" = "Drag to reorder: %1$@";
+"category_settings_show_format" = "Show: %1$@";
+"category_settings_shelf_life_format" = "Set default shelf life: %1$@, %2$@";
+"category_settings_shelf_life_title_format" = "Default shelf life for %1$@";
+"category_settings_shelf_life_range" = "From 0 to 3650 days";
+"category_settings_shelf_life_error" = "Enter a number from 0 to 3650, which is about 10 years";
+"category_settings_shelf_life_save" = "Save";
+
+/* Larder: Shopping */
+"shopping_list_brand" = "Shopping list";
+"shopping_list_lede_empty" = "Nothing to buy";
+"shopping_list_already_listed" = "%@ is already on your list";
+"shopping_list_mark_bought" = "Mark %@ as bought";
+"shopping_list_import_placeholder" = "Milk\nBread (2)";
+"shopping_list_barcode_format" = "Barcode: %@";
+"shopping_list_import_label" = "Your list";
+"shopping_list_close" = "Close";
+"shopping_list_qr_description" = "QR code containing the shopping list";
+"shopping_list_drag_handle" = "Drag to reorder";
+"shopping_sections_label" = "Sections";
+"shopping_section_name_label" = "Section name";
+"shopping_section_keep" = "Keep section";
+"shopping_section_delete_confirm" = "Delete section";
+
+/* Add item */
+"new_item_placeholder" = "New Item";
+"add_name_missing" = "Add a name so you can find this later";
+"add_see_details" = "See details";
+"storage_location_title" = "Storage Location";
+"save_item_button_format" = "Save to %@";
+"update_item_button" = "Update Item";
+"discard_new_message" = "This item hasn't been saved, so it won't be added to your pantry.";
+"discard_edit_message_format" = "Your changes to %@ won't be saved. The item stays as it was.";
+
+/* Larder: Calendar */
+"calendar_pane_title" = "What's due";
+"calendar_used_snackbar" = "%1$@ used";
+"calendar_tossed_snackbar" = "%1$@ tossed";
+"calendar_empty_message" = "Add food with its date and it will show up here, on the day it is due.";
+
+/* Onboarding */
+"onboarding_get_started" = "Get started";
+"onboarding_welcome_title" = "Reminds you before food goes off, not after.";
+"onboarding_private_title" = "Private by design";
+"onboarding_private_body" = "No account and no ads. Your pantry stays on your device.";
+"onboarding_notifications_title" = "A quiet nudge, the day before";
+"onboarding_notifications_body" = "We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.";
+"onboarding_sample_source" = "%1$@ · 09:00";
+"onboarding_sample_title" = "Best used soon";
+"onboarding_sample_body" = "Greek yoghurt reaches its date tomorrow.";
+"onboarding_sample_description" = "Example reminder: %1$@. %2$s";
+"onboarding_notifications_allow" = "Turn on reminders";
+"onboarding_not_now" = "Not now";
+"onboarding_camera_title" = "Scan it instead of typing";
+"onboarding_camera_body" = "Point the camera at a product and %1$@ fills in the details for you. Photos stay on your device.";
+"onboarding_camera_barcodes_title" = "Barcodes";
+"onboarding_camera_barcodes_body" = "Finds the product and its name";
+"onboarding_camera_dates_title" = "Printed dates";
+"onboarding_camera_dates_body" = "Reads the date from the pack";
+"onboarding_camera_allow" = "Allow the camera";
+"onboarding_ready_title" = "Ready for your first item";
+"onboarding_ready_body" = "Bring something from the fridge and scan it. It takes a few seconds.";
+"onboarding_skip" = "Skip for now";
+"onboarding_declined_title" = "You can start without them";
+"onboarding_declined_body" = "Everything else works. You can change your mind at any time.";
+"onboarding_declined_reminders_title" = "Reminders are off";
+"onboarding_declined_reminders_body" = "Home will show a note with a way to turn them on";
+"onboarding_declined_camera_title" = "The camera is off";
+"onboarding_declined_camera_body" = "The scanner will show how to allow it";
+"onboarding_add_by_hand" = "Add an item by hand";
+"reminders_not_asked_message" = "Turn them on and we'll remind you the day before a date.";

@@ -2,10 +2,10 @@
 "nav_home" = "Главная";
 
 "metric_expired" = "Просрочено";
-"metric_expiring_soon" = "Скоро истекают";
+"metric_expiring_soon" = "Скоро";
 "metric_fresh" = "Свежее";
 
-"location_filter_all" = "Все";
+"location_filter_all" = "Все места";
 "category_filter_all" = "Все категории";
 
 "status_filter_all" = "Все";
@@ -33,7 +33,6 @@
 "exit_selection_button" = "Отмена";
 "select_items_button" = "Выбрать";
 "more_options_button" = "Ещё";
-"delete_selected_dialog_title" = "Удалить выбранные продукты?";
 "action_get_recipe_ideas" = "Идеи рецептов";
 "recipe_prompt_intro" = "У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:";
 "recipe_prompt_item_format" = "%@ (%@)";
@@ -45,7 +44,7 @@
 "share_recipe_share_button" = "Поделиться";
 "share_recipe_cancel_button" = "Отмена";
 
-"search_placeholder" = "Поиск по названию или бренду...";
+"search_placeholder" = "Поиск по названию или бренду";
 "scan_button" = "Сканировать";
 "status_picker_label" = "Статус";
 "filters_sheet_title" = "Фильтры";
@@ -76,12 +75,12 @@
 "barcode_word" = "Штрихкод";
 
 "section_expiration_date" = "Срок годности";
-"expiry_date_implausible_warning_format" = "Эта дата отстоит от сегодняшней более чем на %d лет. Проверьте год.";
-"expiry_picker_label" = "Годен до";
+"expiry_date_implausible_warning_format" = "Эта дата отстоит более чем на %d лет. Проверьте год.";
+"expiry_picker_label" = "Срок годности / годен до";
 "quick_date_3_days" = "+3 дня";
-"quick_date_1_week" = "+1 нед.";
-"quick_date_2_weeks" = "+2 нед.";
-"quick_date_1_month" = "+1 мес.";
+"quick_date_1_week" = "+1 неделя";
+"quick_date_2_weeks" = "+2 недели";
+"quick_date_1_month" = "+1 месяц";
 
 "section_storage" = "Хранение";
 "location_picker_label" = "Место";
@@ -92,10 +91,10 @@
 "use_one_button" = "Использовать одну штуку";
 
 "section_notes" = "Заметки";
-"notes_field_placeholder" = "Заметки (напр. вскрыто, дверца морозильника)";
+"notes_field_placeholder" = "напр. вскрыто, количество, полка";
 
 "edit_item_title" = "Изменить продукт";
-"add_item_title" = "Добавить в кладовую";
+"add_item_title" = "Добавить продукт";
 "cancel_button" = "Отмена";
 "discard_changes_title" = "Отменить изменения?";
 "discard_changes_confirm" = "Не сохранять";
@@ -120,7 +119,6 @@
 "shopping_section_rename" = "Переименовать раздел";
 "shopping_section_delete" = "Удалить";
 "shopping_section_delete_title" = "Удалить «%@»?";
-"shopping_section_delete_message" = "Товары из него перейдут в основной список.";
 "shopping_section_save" = "Сохранить";
 "shopping_section_name_placeholder" = "например, Молочный отдел";
 "shopping_section_move_to" = "Переместить в раздел";
@@ -133,7 +131,7 @@
 "shopping_list_did_you_mean_title" = "Вы имели в виду одно из этих?";
 "shopping_list_did_you_mean_none_of_these" = "Ни один из них, добавить новый товар";
 
-"manual_entry_button" = "Вручную";
+"manual_entry_button" = "Ввести вручную";
 "camera_off_title" = "Камера выключена";
 "camera_off_body" = "Срокоеду нужна камера для сканирования. Продукты можно добавить и вручную.";
 "camera_off_open_settings" = "Открыть настройки";
@@ -156,19 +154,20 @@
 "photo_capture_failed_message" = "Не удалось сделать фото. Попробуйте снова.";
 
 "reticle_hint_barcode" = "Совместите штрихкод продукта с рамкой";
-"reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности";
+"reticle_hint_date_ocr" = "Наведите камеру на напечатанный срок годности (например, «EXP 24.11.2026»)";
 "reticle_hint_photo" = "Расположите продукт по центру, чтобы сделать снимок";
 "torch_toggle_button" = "Включить/выключить фонарик";
 
 "expires_today" = "Истекает сегодня";
 "expires_tomorrow" = "Истекает завтра";
 
-"notif_title_today" = "Продукт истекает сегодня! ⚠️";
-"notif_title_soon" = "Продукт скоро истекает! ⚠️";
+"notif_title_today" = "Лучше использовать сегодня";
+"notif_title_soon" = "Лучше использовать скоро";
+"notif_body_tomorrow_format" = "%@: срок годности заканчивается завтра.";
 "notif_title_past" = "Стоит проверить";
 
 "expiry_date_found_format" = "Найден срок годности: %@";
-"notif_body_today_format" = "%@ истекает сегодня. Не забудьте съесть его!";
+"notif_body_today_format" = "%@: срок годности заканчивается сегодня.";
 "notif_action_remove" = "Удалить";
 "notif_digest_item_format" = "%1$@ — %2$@";
 "notif_action_recipe_ideas" = "Идеи рецептов";
@@ -234,8 +233,8 @@
 "widget_shopping_list_title" = "Список покупок";
 "widget_shopping_list_description" = "Показывает ваш текущий список покупок";
 "widget_shopping_list_empty" = "Ваш список покупок пуст";
-"widget_action_used" = "Съел";
-"widget_action_bought" = "Куплено";
+"widget_action_used_item_format" = "Съел: %@";
+"widget_action_bought_item_format" = "Куплено: %@";
 "widget_overview_title" = "Обзор кладовой";
 "widget_overview_description" = "Показывает просроченные и скоро истекающие продукты, а затем список покупок";
 
@@ -248,7 +247,7 @@
 
 "shopping_list_share_content_description" = "Поделиться списком или импортировать";
 "shopping_list_share_dialog_title" = "Поделиться списком";
-"shopping_list_share_dialog_message" = "Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку — ничего не заменяется.";
+"shopping_list_share_dialog_message" = "Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку, ничего не заменяется.";
 "shopping_list_share_as_text" = "Отправить текстом";
 "shopping_list_share_as_qr" = "Показать QR-код";
 "shopping_list_share_qr_hint" = "Отсканируйте его со списка покупок на другом телефоне.";
@@ -339,7 +338,7 @@
 "restore_mode_replace_title" = "Заменить всё";
 "backup_export_success" = "Копия сохранена";
 "backup_export_failed" = "Не удалось сохранить копию";
-"backup_import_malformed" = "Этот файл не является резервной копией Срокоеда";
+"backup_import_malformed" = "Этот файл не является резервной копией Срокоеда. Ничего не изменилось.";
 "backup_import_unsupported" = "Эта копия создана более новой версией приложения";
 "backup_import_empty" = "В этой копии нечего восстанавливать";
 
@@ -347,13 +346,13 @@
 "notif_action_snooze" = "Завтра";
 
 "scan_mode_batch" = "Пакет";
-"reticle_hint_batch" = "Продолжайте сканировать — всё попадёт в список ниже";
+"reticle_hint_batch" = "Продолжайте сканировать — всё попадёт в список";
 "scan_mode_receipt" = "Чек";
 "reticle_hint_receipt" = "Поместите чек целиком в кадр и нажмите, чтобы считать";
 "scan_receipt_button" = "Считать чек";
 "receipt_nothing_found" = "На чеке не найдено товаров — попробуйте снять чек целиком";
 "batch_queue_empty" = "Отсканируйте товар, чтобы начать список";
-"batch_queue_remove_content_description" = "Убрать из списка";
+"batch_queue_remove_content_description" = "Убрать из списка: %@";
 "batch_queue_needs_date" = "Проверьте дату";
 "batch_commit_button" = "Добавить все";
 "batch_clear_button" = "Очистить";
@@ -403,3 +402,198 @@
 "category_builtin_drinks" = "Напитки";
 "category_builtin_sweets" = "Сладкое";
 "category_builtin_pantry" = "Бакалея";
+
+/* Larder foundation */
+"nav_shopping" = "Покупки";
+"back_button" = "Назад";
+"status_today" = "Истекает сегодня";
+"status_tomorrow" = "Истекает завтра";
+"clear_field_button" = "Очистить";
+"dismiss_button" = "Закрыть";
+"quantity_decrease" = "Уменьшить количество";
+"quantity_increase" = "Увеличить количество";
+"use_one_label_format" = "Использовать один: %@";
+"item_saved_to_format" = "%1$@: сохранено в «%2$@»";
+
+/* Pantry */
+"lede_next_up" = "Дальше: %1$@ %2$@";
+"lede_nothing_this_week" = "На этой неделе ничего не истекает";
+"home_section_use_first" = "Сначала это";
+"home_section_later_this_week" = "Позже на этой неделе";
+"home_section_later" = "Потом";
+"home_clear_filters" = "Сбросить фильтры";
+"home_search_description" = "Поиск";
+"home_filters_on_description" = "Фильтры включены";
+"home_empty_title" = "Полки пусты";
+"home_empty_message" = "Отсканируйте первый продукт, и он появится здесь. Сначала идут самые близкие сроки.";
+"home_empty_scan" = "Сканировать продукт";
+"home_empty_add_by_hand" = "Добавить вручную";
+"home_no_results_title" = "Ничего не найдено по запросу «%1$@»";
+"home_no_results_message" = "Проверьте написание или попробуйте название бренда.";
+"home_clear_search" = "Очистить поиск";
+"home_no_filter_results_title" = "Под эти фильтры ничего не подходит";
+"home_no_filter_results_message" = "Попробуйте другое место или категорию.";
+"home_reminders_off_title" = "Напоминания выключены";
+"home_reminders_off_message" = "Уведомления для Срокоеда выключены в настройках телефона.";
+"home_dismiss" = "Закрыть";
+"home_swipe_to_list" = "В список";
+"home_use_one_item" = "Использовать один: %1$@";
+"home_used_one_snackbar" = "Использован один: %1$@. Осталось: %2$d.";
+"home_location_label" = "Место хранения";
+"home_category_label" = "Категория";
+"home_best_before_label" = "Годен до";
+"home_notes_label" = "Заметки";
+"home_done" = "Готово";
+"detail_close" = "Закрыть";
+"detail_edit" = "Изменить";
+"detail_to_shopping_list" = "В список покупок";
+"detail_nutri_caption" = "Nutri-Score %1$@";
+"detail_nova_caption" = "NOVA %1$d · %2$@";
+"detail_nova_description" = "NOVA %1$d, %2$@";
+"detail_nova_1" = "Без обработки";
+"detail_nova_2" = "Кулинарные ингредиенты";
+"detail_nova_3" = "Обработанный";
+"detail_nova_4" = "Ультраобработанный";
+"detail_credit" = "Данные о продукте из Open Food Facts";
+"detail_allergen_note" = "Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.";
+"detail_choose_item" = "Выберите продукт, чтобы увидеть подробности.";
+"recipe_intro" = "Запрос для ИИ-помощника из выбранных продуктов: %1$@. Он покинет устройство, только если вы им поделитесь.";
+"recipe_names_two" = "%1$@ и %2$@";
+"recipe_names_three" = "%1$@, %2$@ и %3$@";
+"lede_number_1" = "Один";
+"lede_number_2" = "Два";
+"lede_number_3" = "Три";
+"lede_number_4" = "Четыре";
+"lede_number_5" = "Пять";
+"lede_number_6" = "Шесть";
+"lede_number_7" = "Семь";
+"lede_number_8" = "Восемь";
+"lede_number_9" = "Девять";
+"lede_number_10" = "Десять";
+"lede_on_weekday_1" = "в понедельник";
+"lede_on_weekday_2" = "во вторник";
+"lede_on_weekday_3" = "в среду";
+"lede_on_weekday_4" = "в четверг";
+"lede_on_weekday_5" = "в пятницу";
+"lede_on_weekday_6" = "в субботу";
+"lede_on_weekday_7" = "в воскресенье";
+/* Scanner (Larder) */
+"barcode_format" = "Штрихкод: %@";
+"close_scanner" = "Закрыть сканер";
+"scan_torch_on" = "Включён";
+"scan_torch_off" = "Выключен";
+"scan_idle_results_title" = "Результат появится здесь";
+"scan_idle_results_message" = "Отсканируйте штрихкод, и товар появится на этой стороне.";
+"scan_idle_date_title" = "Дата появится здесь";
+"scan_idle_date_message" = "Держите камеру ровно, наведя её на напечатанную дату.";
+"scan_idle_photo_title" = "Фото появится здесь";
+"scan_idle_photo_message" = "Сделайте снимок, чтобы получить варианты названия.";
+"scan_allergen_note" = "Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.";
+"scan_offline_title" = "Нет подключения к сети";
+"scan_offline_message" = "Не удалось найти этот товар. Можно продолжить вручную, штрихкод останется у товара.";
+"scan_try_again" = "Повторить";
+"scan_continue_by_hand" = "Продолжить вручную";
+"scan_best_before_format" = "Годен до %@";
+"scan_date_from_barcode" = "Считано со штрихкода";
+"scan_date_from_packaging" = "Считано с упаковки";
+"scan_use_this_date" = "Использовать эту дату";
+"scan_reading_receipt" = "Считываем чек…";
+"receipt_queue_empty" = "Отсканируйте товар, чтобы начать список";
+"scan_queue_cleared" = "Очередь очищена";
+"batch_queue_estimated_format" = "%@";
+/* Larder settings */
+"settings_group_reminders" = "Напоминания";
+"settings_group_kitchen" = "Ваша кухня";
+"settings_notifications_blocked_title" = "Напоминания выключены";
+"settings_off" = "Выкл.";
+"settings_allergens_none" = "Нет";
+"settings_add_allergen_label" = "Добавить аллерген";
+"settings_data_summary" = "Экспорт и импорт копии";
+"settings_location_default" = "По умолчанию";
+"settings_location_taken" = "Место «%1$@» уже есть";
+"settings_rename_location_format" = "Переименовать: %1$@";
+"settings_delete_location_format" = "Удалить: %1$@";
+"settings_set_default_location_format" = "Сделать по умолчанию: %1$@";
+"settings_remove_format" = "Убрать: %1$@";
+"settings_try_again" = "Повторить";
+"restore_mode_cancel" = "Не импортировать";
+"clear_data_keep" = "Отмена";
+"category_settings_empty_title" = "Категорий пока нет";
+"category_settings_scan" = "Сканировать продукт";
+"category_settings_move_up" = "Переместить выше";
+"category_settings_move_down" = "Переместить ниже";
+"category_settings_move_done" = "Готово";
+"category_settings_rename_field_label" = "Название категории";
+"category_settings_rename_confirm" = "Переименовать";
+"category_settings_rename_format" = "Переименовать категорию: %1$@";
+"category_settings_drag_handle_format" = "Перетащить: %1$@";
+"category_settings_show_format" = "Показать: %1$@";
+"category_settings_shelf_life_format" = "Задать срок по умолчанию: %1$@, %2$@";
+"category_settings_shelf_life_title_format" = "Срок хранения по умолчанию: %1$@";
+"category_settings_shelf_life_range" = "От 0 до 3650 дней";
+"category_settings_shelf_life_error" = "Введите число от 0 до 3650, это примерно 10 лет";
+"category_settings_shelf_life_save" = "Сохранить";
+
+/* Larder: Shopping */
+"shopping_list_brand" = "Покупки";
+"shopping_list_lede_empty" = "Покупать нечего";
+"shopping_list_already_listed" = "%@ уже в списке";
+"shopping_list_mark_bought" = "Отметить «%@» как купленное";
+"shopping_list_import_placeholder" = "Молоко\nХлеб (2)";
+"shopping_list_barcode_format" = "Штрихкод: %@";
+"shopping_list_import_label" = "Ваш список";
+"shopping_list_close" = "Закрыть";
+"shopping_list_qr_description" = "QR-код со списком покупок";
+"shopping_list_drag_handle" = "Перетащите, чтобы изменить порядок";
+"shopping_sections_label" = "Разделы";
+"shopping_section_name_label" = "Название раздела";
+"shopping_section_keep" = "Оставить раздел";
+"shopping_section_delete_confirm" = "Удалить раздел";
+
+/* Add item */
+"new_item_placeholder" = "Новый продукт";
+"add_name_missing" = "Добавьте название, чтобы потом найти продукт";
+"add_see_details" = "Подробнее";
+"storage_location_title" = "Место хранения";
+"save_item_button_format" = "Сохранить: %@";
+"update_item_button" = "Обновить продукт";
+"discard_new_message" = "Этот продукт не сохранён, поэтому в кладовую он не попадёт.";
+"discard_edit_message_format" = "Изменения в «%@» не сохранятся. Продукт останется прежним.";
+
+/* Larder: Calendar */
+"calendar_pane_title" = "Что истекает";
+"calendar_used_snackbar" = "%1$@: использовано";
+"calendar_tossed_snackbar" = "%1$@: выброшено";
+"calendar_empty_message" = "Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.";
+
+/* Onboarding */
+"onboarding_get_started" = "Начать";
+"onboarding_welcome_title" = "Напоминает до того, как еда испортится, а не после.";
+"onboarding_private_title" = "Приватно по умолчанию";
+"onboarding_private_body" = "Без аккаунта и рекламы. Ваши запасы остаются на вашем устройстве.";
+"onboarding_notifications_title" = "Тихое напоминание накануне";
+"onboarding_notifications_body" = "Напомним в 09:00, за день до конца срока. Время можно изменить в настройках, там же напоминания можно отключить.";
+"onboarding_sample_source" = "%1$@ · 09:00";
+"onboarding_sample_title" = "Лучше использовать скоро";
+"onboarding_sample_body" = "Греческий йогурт: срок годности заканчивается завтра.";
+"onboarding_sample_description" = "Пример напоминания: %1$@. %2$s";
+"onboarding_notifications_allow" = "Включить напоминания";
+"onboarding_not_now" = "Не сейчас";
+"onboarding_camera_title" = "Сканируйте, а не вводите";
+"onboarding_camera_body" = "Наведите камеру на продукт, и %1$@ заполнит данные за вас. Фото остаются на вашем устройстве.";
+"onboarding_camera_barcodes_title" = "Штрихкоды";
+"onboarding_camera_barcodes_body" = "Находит продукт и его название";
+"onboarding_camera_dates_title" = "Напечатанные даты";
+"onboarding_camera_dates_body" = "Считывает дату с упаковки";
+"onboarding_camera_allow" = "Разрешить камеру";
+"onboarding_ready_title" = "Всё готово для первого продукта";
+"onboarding_ready_body" = "Возьмите что-нибудь из холодильника и отсканируйте. Это займёт несколько секунд.";
+"onboarding_skip" = "Пока пропустить";
+"onboarding_declined_title" = "Можно начать и без них";
+"onboarding_declined_body" = "Всё остальное работает. Передумать можно в любой момент.";
+"onboarding_declined_reminders_title" = "Напоминания выключены";
+"onboarding_declined_reminders_body" = "На главном экране появится подсказка, как их включить";
+"onboarding_declined_camera_title" = "Камера выключена";
+"onboarding_declined_camera_body" = "Сканер покажет, как её разрешить";
+"onboarding_add_by_hand" = "Добавить вручную";
+"reminders_not_asked_message" = "Включите их, и мы напомним за день до конца срока.";

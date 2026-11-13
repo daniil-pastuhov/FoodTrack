@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The shopping-list widget's "bought" control: a ring with a tick, the Android counterpart of
-     the iOS widget's checkmark. Painted flat because the widget tints it with
-     widget_on_background_muted, which is what makes it follow light and dark. -->
+<!-- The widget tick, on shopping rows and narrow expiring rows: a ring with a check, the Android
+     counterpart of the iOS widget's checkmark.circle. Painted flat because the widget tints it with
+     larder_on_surface_variant, which is what makes it follow light and dark. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"

@@ -6,36 +6,33 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.actionStartActivity
-import androidx.glance.Button
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
-import androidx.glance.text.FontWeight
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.foodtracker.android.MainActivity
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.model.PantryItem
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.viewmodel.PantryStateHolder
@@ -52,6 +49,9 @@ import org.koin.core.component.inject
  *  `AppSettings.expiringSoonDays` threshold), soonest first. Runs in the app's own process, so
  *  it reads straight from the same repositories the dashboard uses via Koin — no IPC needed. */
 class ExpiryWidget : GlanceAppWidget(), KoinComponent {
+
+    /** Two layouts: a tick on each row when narrow, the "Used one" button when wide. */
+    override val sizeMode = SizeMode.Responsive(setOf(DpSize(180.dp, 110.dp), DpSize(USED_BUTTON_MIN_WIDTH, 110.dp)))
 
     private val pantryRepository: PantryRepository by inject()
     private val stateHolder: PantryStateHolder by inject()
@@ -78,7 +78,7 @@ class ExpiryWidget : GlanceAppWidget(), KoinComponent {
             val allItems by itemsFlow.collectAsState(initial = initialItems)
             val window by windowFlow.collectAsState(initial = stateHolder.uiState.value.expiryWindow())
             val items = remember(allItems, window) { expiringItems(allItems, window) }
-            ExpiryWidgetContent(items = items, today = window.today)
+            ExpiryWidgetContent(items = items, window = window)
         }
     }
 }
@@ -115,26 +115,29 @@ internal fun openDashboardIntent(context: Context): Intent =
             Intent.FLAG_ACTIVITY_SINGLE_TOP
     }
 
+/** What a row of the expiring list offers. */
+internal enum class ExpiryRowAction { NONE, TICK, BUTTON }
+
+/** Below this width the "Used one" button leaves no room for a name, so the row has a tick. */
+private val USED_BUTTON_MIN_WIDTH = 250.dp
+
+internal fun expiryRowAction(widgetWidth: Dp): ExpiryRowAction =
+    if (widgetWidth >= USED_BUTTON_MIN_WIDTH) ExpiryRowAction.BUTTON else ExpiryRowAction.TICK
+
 @Composable
-private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
+private fun ExpiryWidgetContent(items: List<PantryItem>, window: ExpiryWindow) {
     val context = LocalContext.current
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ColorProvider(R.color.widget_background))
-            .padding(12.dp)
-    ) {
-        Text(
-            text = context.getString(R.string.widget_expiry_title),
-            style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ColorProvider(R.color.widget_on_background)),
-            modifier = GlanceModifier.clickable(actionStartActivity(openDashboardIntent(context)))
-        )
-        Spacer(modifier = GlanceModifier.height(8.dp))
-        if (items.isEmpty()) {
-            Text(
-                text = context.getString(R.string.widget_expiry_empty),
-                style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
+    val action = expiryRowAction(LocalSize.current.width)
+    val tickInset = if (action == ExpiryRowAction.TICK) LarderSpace.s3 else 0.dp
+    WidgetSurface(endPadding = LarderSpace.s3 - tickInset) {
+        Box(modifier = GlanceModifier.padding(end = tickInset)) {
+            WidgetTitle(
+                text = context.getString(R.string.widget_expiry_title),
+                onClick = actionStartActivity(openDashboardIntent(context))
             )
+        }
+        if (items.isEmpty()) {
+            WidgetEmptyText(context.getString(R.string.widget_expiry_empty), GlanceModifier.padding(end = tickInset))
         } else {
             val visibleItems = items.take(12)
             // defaultWeight() gives the list a bounded height (rather than wrap-content), which
@@ -142,9 +145,9 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
             LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                 itemsIndexed(visibleItems, itemId = { _, item -> item.id.hashCode().toLong() }) { index, item ->
                     Column {
-                        ExpiryRow(item, today, showAction = true)
+                        ExpiryRow(item, window, action)
                         if (index != visibleItems.lastIndex) {
-                            WidgetRowDivider()
+                            WidgetRowDivider(endPadding = tickInset)
                         }
                     }
                 }
@@ -154,48 +157,36 @@ private fun ExpiryWidgetContent(items: List<PantryItem>, today: LocalDate) {
 }
 
 /**
- * One expiry row.
+ * One expiry row: name, status chip and [action].
  *
- * [showAction] adds the "Used one" button. Off by default because [OverviewWidget] renders this
- * same row inside a dense two-section summary, where a button per row crowds out the content
- * the summary exists to show; only the dedicated expiry widget opts in.
+ * [OverviewWidget] renders this same row with no action, inside a dense two-section summary where
+ * a control per row crowds out the content the summary exists to show.
  */
 @Composable
-internal fun ExpiryRow(item: PantryItem, today: LocalDate, showAction: Boolean = false) {
+internal fun ExpiryRow(item: PantryItem, window: ExpiryWindow, action: ExpiryRowAction = ExpiryRowAction.NONE) {
     val context = LocalContext.current
-    val statusColor = if (item.daysRemaining(today) < 0) {
-        ColorProvider(R.color.widget_status_expired)
-    } else {
-        ColorProvider(R.color.widget_status_expiring)
-    }
+    val status = item.expiryStatus(window.today, window.expiringSoonDays)
     Row(
-        modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
+        modifier = GlanceModifier.fillMaxWidth().padding(vertical = LarderSpace.s1),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Spacer(modifier = GlanceModifier.height(5.dp))
-            Box(modifier = GlanceModifier.width(8.dp).height(8.dp).background(statusColor)) {}
-        }
-        Spacer(modifier = GlanceModifier.width(8.dp))
         Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(
-                text = item.name,
-                maxLines = 1,
-                style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Medium, color = ColorProvider(R.color.widget_on_background))
-            )
-            Text(
-                text = expiryLabel(context, item, today),
-                maxLines = 1,
-                style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, color = statusColor)
-            )
+            WidgetItemName(item.name)
+            Spacer(modifier = GlanceModifier.height(2.dp))
+            WidgetStatusChip(status, widgetStatusLabel(context, item, status, window))
         }
-        if (showAction) {
-            Spacer(modifier = GlanceModifier.width(8.dp))
-            Button(
-                text = context.getString(R.string.widget_action_used),
-                onClick = widgetRowAction<ConsumeItemAction>(item.id),
-                modifier = GlanceModifier.height(32.dp)
-            )
+        val description = context.getString(R.string.widget_action_used_item, item.name)
+        when (action) {
+            ExpiryRowAction.NONE -> Unit
+            ExpiryRowAction.TICK -> WidgetTick(description, widgetRowAction<ConsumeItemAction>(item.id))
+            ExpiryRowAction.BUTTON -> {
+                Spacer(modifier = GlanceModifier.width(LarderSpace.s2))
+                WidgetUsedButton(
+                    label = context.getString(R.string.widget_action_used),
+                    description = description,
+                    onClick = widgetRowAction<ConsumeItemAction>(item.id)
+                )
+            }
         }
     }
 }

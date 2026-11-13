@@ -53,7 +53,7 @@
     <key>notif_body_soon_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
-        <string>%1$@ %2$#@days@</string>
+        <string>%1$@ når datoen sin om %2$#@days@</string>
         <key>days</key>
         <dict>
             <key>NSStringFormatSpecTypeKey</key>
@@ -61,9 +61,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>utløper om %2$d dag. Husk å spise det!</string>
+            <string>%2$d dag.</string>
             <key>other</key>
-            <string>utløper om %2$d dager. Husk å spise det!</string>
+            <string>%2$d dager.</string>
         </dict>
     </dict>
     <key>receipt_lines_added</key>
@@ -189,9 +189,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d d</string>
+            <string>%d dag</string>
             <key>other</key>
-            <string>%d d</string>
+            <string>%d dager</string>
         </dict>
     </dict>
     <key>shopping_list_import_added_format</key>
@@ -352,6 +352,230 @@
             <string>Hver %d. dag</string>
             <key>other</key>
             <string>Hver %d. dag</string>
+        </dict>
+    </dict>
+    <key>items_deleted_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d vare slettet</string>
+            <key>other</key>
+            <string>%d varer slettet</string>
+        </dict>
+    </dict>
+    <key>status_days_over_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Utløpt for %d dag siden</string>
+            <key>other</key>
+            <string>Utløpt for %d dager siden</string>
+        </dict>
+    </dict>
+    <key>clear_data_dialog_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dette fjerner %d vare og avbryter påminnelsene for den. Dette kan ikke angres.</string>
+            <key>other</key>
+            <string>Dette fjerner alle %d varer og avbryter påminnelsene for dem. Dette kan ikke angres.</string>
+        </dict>
+    </dict>
+    <key>shopping_list_lede_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d ting å kjøpe</string>
+            <key>other</key>
+            <string>%d ting å kjøpe</string>
+        </dict>
+    </dict>
+    <key>shopping_section_delete_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d vare flyttes til hovedlisten.</string>
+            <key>other</key>
+            <string>%d varer flyttes til hovedlisten.</string>
+        </dict>
+    </dict>
+    <key>lede_use_by_tomorrow</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} ting å bruke innen i morgen</string>
+            <key>other</key>
+            <string>{n} ting å bruke innen i morgen</string>
+        </dict>
+    </dict>
+    <key>lede_past_date</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} ting er over datoen</string>
+            <key>other</key>
+            <string>{n} ting er over datoen</string>
+        </dict>
+    </dict>
+    <key>home_search_results</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d treff</string>
+            <key>other</key>
+            <string>%d treff</string>
+        </dict>
+    </dict>
+    <key>home_active_filter_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} av %d vare</string>
+            <key>other</key>
+            <string>{n} av %d varer</string>
+        </dict>
+    </dict>
+    <key>home_show_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Vis %d vare</string>
+            <key>other</key>
+            <string>Vis %d varer</string>
+        </dict>
+    </dict>
+    <key>recipe_names_more</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{a}, {b} og %d til</string>
+            <key>other</key>
+            <string>{a}, {b} og %d til</string>
+        </dict>
+    </dict>
+    <key>recipe_include_others_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Legger til den andre varen din, så assistenten kan bruke mer av det du har.</string>
+            <key>other</key>
+            <string>Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</string>
+        </dict>
+    </dict>
+    <key>expires_in_months_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Om %d måned</string>
+            <key>other</key>
+            <string>Om %d måneder</string>
+        </dict>
+    </dict>
+    <key>expires_in_years_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Om %d år</string>
+            <key>other</key>
+            <string>Om %d år</string>
         </dict>
     </dict>
 </dict>

@@ -3,6 +3,7 @@ package com.foodtracker.android.notification
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -26,18 +27,17 @@ class NotificationCopyTest {
 
     @Test
     fun `the expiry day itself still says today`() {
-        assertEquals(
-            "Product Expires Today! ⚠️" to "Bread expires today. Make sure to consume it!",
-            copy(0)
-        )
+        assertEquals("Best used today" to "Bread reaches its date today.", copy(0))
     }
 
     @Test
-    fun `the day before still counts down`() {
-        assertEquals(
-            "Product Expiring Soon! ⚠️" to "Bread expires in 1 day. Make sure to consume it!",
-            copy(1)
-        )
+    fun `the day before says tomorrow`() {
+        assertEquals("Best used soon" to "Bread reaches its date tomorrow.", copy(1))
+    }
+
+    @Test
+    fun `the day before keeps the brand`() {
+        assertEquals("Bread (Acme) reaches its date tomorrow.", copy(1, "Acme").second)
     }
 
     @Test
@@ -47,15 +47,21 @@ class NotificationCopyTest {
 
     @Test
     fun `several days ahead uses the plural and keeps the brand`() {
-        assertEquals(
-            "Product Expiring Soon! ⚠️" to "Bread (Acme) expires in 3 days. Make sure to consume it!",
-            copy(3, "Acme")
-        )
+        assertEquals("Best used soon" to "Bread (Acme) reaches its date in 3 days.", copy(3, "Acme"))
     }
 
     @Test
     fun `the expiry day keeps the brand`() {
-        assertEquals("Bread (Acme) expires today. Make sure to consume it!", copy(0, "Acme").second)
+        assertEquals("Bread (Acme) reaches its date today.", copy(0, "Acme").second)
+    }
+
+    @Test
+    fun `no reminder wording raises its voice`() {
+        (-3..3).map { copy(it) }.forEach { (title, body) ->
+            listOf(title, body).forEach { text ->
+                assertFalse(text, text.contains("!") || text.contains("⚠"))
+            }
+        }
     }
 
     @Test
@@ -71,6 +77,26 @@ class NotificationCopyTest {
         assertEquals("Bread: срок годности прошёл 2 дня назад.", copy(-2).second)
         assertEquals("Bread: срок годности прошёл 5 дней назад.", copy(-5).second)
         assertEquals("Bread: срок годности прошёл 21 день назад.", copy(-21).second)
+    }
+
+    @Test
+    @Config(qualifiers = "ru")
+    fun `russian counts down in each plural form`() {
+        assertEquals("Лучше использовать сегодня", copy(0).first)
+        assertEquals("Bread: срок годности заканчивается сегодня.", copy(0).second)
+        assertEquals("Лучше использовать скоро", copy(1).first)
+        assertEquals("Bread: срок годности заканчивается завтра.", copy(1).second)
+        assertEquals("Bread: срок годности заканчивается через 2 дня.", copy(2).second)
+        assertEquals("Bread: срок годности заканчивается через 5 дней.", copy(5).second)
+        assertEquals("Bread: срок годности заканчивается через 21 день.", copy(21).second)
+    }
+
+    @Test
+    @Config(qualifiers = "nb")
+    fun `norwegian counts down`() {
+        assertEquals("Best å bruke i dag" to "Bread når datoen sin i dag.", copy(0))
+        assertEquals("Best å bruke snart" to "Bread når datoen sin i morgen.", copy(1))
+        assertEquals("Bread når datoen sin om 2 dager.", copy(2).second)
     }
 
     @Test

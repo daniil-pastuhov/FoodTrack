@@ -1,0 +1,79 @@
+/* Add item: one form for add and edit. Everything is scoped under .add-item. */
+.add-item .topbar .title { margin: 0; }
+.add-item .add-scan { margin-right: var(--space-2); background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.add-item .add-scan:hover { background: color-mix(in srgb, var(--color-on-primary-container) 8%, var(--color-primary-container)); }
+.add-item .scroll { padding-top: var(--space-2); padding-bottom: var(--space-4); }
+.add-form { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+.add-item .chips.wrap { row-gap: var(--space-4); } /* 48dp pitch, so the chips' hit areas never overlap */
+
+/* Header: appears once there is a photo or a barcode */
+.add-hero { display: flex; align-items: flex-start; gap: var(--space-4); min-width: 0; }
+.add-hero .thumb { width: 72px; height: 72px; border-radius: var(--radius-lg); }
+.app.add-item .add-hero .thumb svg.lucide { width: 32px; height: 32px; }
+.add-hero .txt { flex: 1; min-width: 0; min-height: 72px; display: flex; flex-direction: column; justify-content: center; }
+.add-hero .nm { font: var(--type-title); letter-spacing: var(--type-title-tracking); overflow-wrap: anywhere; }
+.add-hero .sub { font: var(--type-body-sm); color: var(--color-on-surface-variant); overflow-wrap: anywhere; }
+
+.add-link { display: flex; align-items: center; gap: var(--space-3); width: 100%; min-height: var(--size-touch); padding: 0 var(--space-3); border: 0; border-radius: var(--radius-md); background: var(--color-surface-container); color: var(--color-on-surface); font: var(--type-label); text-align: left; cursor: pointer; }
+.add-link span { flex: 1; min-width: 0; }
+.add-link svg.lucide:last-child { color: var(--color-on-surface-variant); }
+.add-link:hover { background: var(--color-surface-container-high); }
+
+.add-item .callout .btn.text { margin-left: calc(var(--space-3) * -1); }
+
+/* Looks like… */
+.add-sugg { display: grid; gap: var(--space-3); }
+.add-sugg-title { display: flex; align-items: center; gap: var(--space-2); font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.add-sugg .spinner { width: 16px; height: 16px; border-width: 2px; }
+
+/* Date card: the one thing this screen must get right */
+.add-date-card { display: grid; gap: var(--space-4); }
+.add-date-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; column-gap: var(--space-2); min-width: 0; }
+.add-date-head label, .add-label { font: var(--type-label); color: var(--color-on-surface); }
+.add-date-head .btn.text { margin: 0 calc(var(--space-3) * -1); } /* text lines up with the card edge, on its own row too */
+.add-date-card .field .control { padding: 0; }
+.add-date { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); min-height: var(--size-control); padding: var(--space-1) var(--space-3); border: 0; border-radius: var(--radius-md); background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.add-date > svg.lucide { flex: none; color: var(--color-primary); }
+.add-date .when { flex: 1; min-width: 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); }
+.add-quick .chip { flex: 1 1 auto; justify-content: center; padding: 0 var(--space-2); font: var(--type-caption); } /* all four on one row at 390, wraps at large text sizes */
+.add-why svg.lucide { flex: none; margin-top: 1px; color: var(--color-primary); }
+
+/* Rows */
+.add-typing .control { box-shadow: inset 0 0 0 2px var(--color-primary); }
+.add-cat-sugg { margin-top: var(--space-2); padding-top: var(--space-2); padding-bottom: var(--space-2); }
+.add-item textarea { display: block; width: 100%; resize: none; }
+.add-qty { justify-content: space-between; }
+.add-row-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.add-row-title { font: var(--type-title-sm); color: var(--color-on-surface); }
+.add-row-desc { font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.add-item .stepper .icon-btn[disabled] { color: color-mix(in srgb, var(--color-on-surface) 38%, transparent); cursor: not-allowed; background: transparent; }
+
+/* Save stays above the keyboard, so it never needs a scroll to the end of the form */
+.add-save { flex: none; padding: var(--space-3) var(--space-4); background: var(--color-background); border-top: 1px solid var(--color-outline-variant); }
+
+/* Date picker (Android): 48dp day cells on a phone */
+.add-cal-overlay { padding: var(--space-3); }
+.add-item .add-cal { width: min(100%, 372px); padding: var(--space-4) var(--space-3) var(--space-2); gap: var(--space-2); }
+.add-cal > :first-child { padding: 0 var(--space-3); }
+.add-cal-sup { font: var(--type-label); color: var(--color-on-surface-variant); }
+.add-cal-nav { display: flex; align-items: center; justify-content: space-between; }
+.add-cal-month { font: var(--type-label); }
+.add-cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.add-cal-grid .dow { display: grid; place-items: center; height: 32px; font: var(--type-caption); color: var(--color-on-surface-variant); }
+.add-cal-grid button { display: grid; place-items: center; height: var(--size-touch); padding: 0; border: 0; background: transparent; color: var(--color-on-surface); font: var(--type-body-sm); font-variant-numeric: tabular-nums; cursor: pointer; }
+.add-cal-grid button span { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; }
+.add-cal-grid button:hover span { background: color-mix(in srgb, var(--color-on-surface) 8%, transparent); }
+.add-cal-grid .is-today span { box-shadow: inset 0 0 0 1px var(--color-primary); color: var(--color-primary); }
+.add-cal-grid .is-selected span, .add-cal-grid .is-selected:hover span { background: var(--color-primary); color: var(--color-on-primary); }
+
+/* Date wheels (iOS) */
+.add-sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+.add-item .add-sheet-head h2 { margin: 0; }
+.add-wheels { position: relative; display: grid; grid-template-columns: 1fr 2fr 1fr; }
+.add-wheels::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 40px; transform: translateY(-50%); border-radius: var(--radius-md); background: var(--color-surface-container); }
+.add-wheel { position: relative; display: grid; grid-auto-rows: 40px; align-items: center; text-align: center; color: var(--color-on-surface-variant); }
+.add-wheel .is-on { font: var(--type-title-sm); color: var(--color-on-surface); }
+
+@container (min-width: 700px) {
+  .add-item .add-sheet { max-width: 480px; }
+}

@@ -41,6 +41,21 @@ class AppSettingsTest {
     }
 
     @Test
+    fun testSettingsSavedBeforeOnboardingExistedReadAsNotCompleted() {
+        val saved = Json.decodeFromString<AppSettings>("""{"expiringSoonDays":5}""")
+
+        assertEquals(5, saved.expiringSoonDays)
+        assertEquals(false, saved.onboardingCompleted)
+    }
+
+    @Test
+    fun testOnboardingCompletedSurvivesASerializationRoundTrip() {
+        val done = settings.copy(onboardingCompleted = true)
+
+        assertEquals(true, Json.decodeFromString<AppSettings>(Json.encodeToString(done)).onboardingCompleted)
+    }
+
+    @Test
     fun testStoresSurviveASerializationRoundTrip() {
         val withStores = settings.copy(
             storeRemindersEnabled = true,

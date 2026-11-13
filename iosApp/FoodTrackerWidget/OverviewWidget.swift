@@ -6,6 +6,7 @@ struct OverviewEntry: TimelineEntry {
     let date: Date
     let items: [PantryItem]
     let entries: [ShoppingListEntry]
+    var expiringSoonDays = WidgetSettings.expiringSoonDays
 }
 
 /// Combines `ExpiringItemsProvider` and `ShoppingListWidgetProvider`'s own queries into one
@@ -42,50 +43,62 @@ struct OverviewWidgetView: View {
     @Environment(\.widgetFamily) private var family
     var entry: OverviewProvider.Entry
 
-    private var expiryLimit: Int { family == .systemLarge ? 5 : 2 }
-    private var shoppingLimit: Int { family == .systemLarge ? 6 : 3 }
+    private var expiryLimit: Int { family == .systemLarge ? 4 : 2 }
+    private var shoppingLimit: Int { 3 }
+
+    private var expiringSection: some View {
+        OverviewSectionView(
+            title: L10n.widgetExpiringTitle,
+            isEmpty: entry.items.isEmpty,
+            emptyText: L10n.widgetExpiringEmpty
+        ) {
+            ForEach(entry.items.prefix(expiryLimit)) { item in
+                WidgetExpiringText(item: item, expiringSoonDays: entry.expiringSoonDays)
+                    .padding(.vertical, 2)
+            }
+        }
+    }
+
+    private var shoppingSection: some View {
+        OverviewSectionView(
+            title: L10n.widgetShoppingListTitle,
+            isEmpty: entry.entries.isEmpty,
+            emptyText: L10n.widgetShoppingListEmpty
+        ) {
+            ForEach(entry.entries.prefix(shoppingLimit)) { item in
+                HStack(spacing: LarderSpace.s2) {
+                    WidgetItemName(item.productName)
+                    Spacer(minLength: 0)
+                    if item.quantity > 1 {
+                        WidgetQuantity(quantity: item.quantity)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            OverviewSectionView(
-                title: L10n.widgetExpiringTitle,
-                isEmpty: entry.items.isEmpty,
-                emptyText: L10n.widgetExpiringEmpty
-            ) {
-                ForEach(entry.items.prefix(expiryLimit)) { item in
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(item.name)
-                            .font(.subheadline)
-                            .lineLimit(1)
-                        Text(item.daysRemainingFormatted)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+        Group {
+            if family == .systemLarge {
+                VStack(alignment: .leading, spacing: LarderSpace.s3) {
+                    expiringSection
+                    Rectangle().fill(LarderColor.outlineVariant).frame(height: 1)
+                    shoppingSection
+                    Spacer(minLength: 0)
+                }
+            } else {
+                // Side by side: stacked, the two lists don't fit a medium widget's height.
+                HStack(alignment: .top, spacing: LarderSpace.s4) {
+                    expiringSection
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Rectangle().fill(LarderColor.outlineVariant).frame(width: 1)
+                    shoppingSection
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            Divider()
-            OverviewSectionView(
-                title: L10n.widgetShoppingListTitle,
-                isEmpty: entry.entries.isEmpty,
-                emptyText: L10n.widgetShoppingListEmpty
-            ) {
-                ForEach(entry.entries.prefix(shoppingLimit)) { item in
-                    HStack {
-                        Text(item.productName)
-                            .font(.subheadline)
-                            .lineLimit(1)
-                        Spacer(minLength: 4)
-                        if item.quantity > 1 {
-                            Text(L10n.quantityFormat(item.quantity))
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-            }
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetContent()
         // Routed by `AppRouter` (main app target only) to open the Shopping List sheet
         // directly, matching `ShoppingListWidget`'s own tap target.
         .widgetURL(URL(string: "foodtracker://shopping-list"))
@@ -99,15 +112,15 @@ private struct OverviewSectionView<Rows: View>: View {
     @ViewBuilder let rows: Rows
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .font(.caption)
+                .larderFont(.caption)
                 .fontWeight(.bold)
-                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .padding(.bottom, 2)
             if isEmpty {
-                Text(emptyText)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                WidgetEmptyLine(emptyText)
             } else {
                 rows
             }
@@ -121,7 +134,7 @@ struct OverviewWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: OverviewProvider()) { entry in
             OverviewWidgetView(entry: entry)
-                .containerBackground(.background, for: .widget)
+                .containerBackground(LarderColor.surfaceContainerHigh, for: .widget)
         }
         .configurationDisplayName(L10n.widgetOverviewTitle)
         .description(L10n.widgetOverviewDescription)

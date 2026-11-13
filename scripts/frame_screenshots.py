@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Frames raw simulator screenshots for the App Store: a caption on the teal gradient above the
-screenshot in a dark device bezel, the same style as the existing 6.9" iPhone and 13" iPad sets.
+"""Frames raw screenshots for the stores: a caption on a Larder green gradient above the
+screenshot in a dark device bezel.
 
     scripts/ios_screenshots.sh build/raw                 # raw captures, one folder per language
     scripts/frame_screenshots.py build/raw duo-inner-screenshots
 
-reads <raw>/<lang>/<n>-<tab>.png (as ios_screenshots.sh writes them) and writes
+    scripts/android_screenshots.sh build/raw-android
+    scripts/frame_screenshots.py build/raw-android phone-screenshots
+
+reads <raw>/<lang>/<n>-<tab>.png (as those scripts write them). An App Store set is written to
 store-listing/app-store/<listing folder>/<set>/<n>.png at the raw screenshot's own size, which
-is the size App Store Connect wants for that device. Needs Pillow; the captions are set in
-Helvetica Neue Bold from macOS.
+is the size App Store Connect wants for that device. The Google Play set, phone-screenshots,
+goes to store-listing/google-play/<listing folder>/phone-screenshots/<n>.png at 1080x1920: Play
+refuses a screenshot more than twice as tall as it is wide, so the phone runs off the bottom
+edge. Needs Pillow. The colours are Larder's (docs/design/tokens.json) and the captions are set
+in Vollkorn SemiBold, the app's display face.
 """
 import sys
 from pathlib import Path
@@ -16,11 +22,15 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
-FONT = "/System/Library/Fonts/HelveticaNeue.ttc"
-FONT_BOLD_INDEX = 1
+FONT = str(ROOT / "iosApp" / "FoodTracker" / "Resources" / "Fonts" / "Vollkorn-SemiBold.ttf")
+FONT_BOLD_INDEX = 0
 
-# ios_screenshots.sh language code -> store-listing/app-store folder
+# Screenshot script language code -> store-listing/app-store folder
 LISTING_FOLDERS = {"en": "en-GB", "ru": "ru", "nb": "no"}
+# The same for store-listing/google-play
+PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO"}
+PLAY_SET = "phone-screenshots"
+PLAY_SIZE = (1080, 1920)
 
 # One caption per tab, in screenshot order (home, calendar, shopping, settings). "\n" is where a
 # caption breaks on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
@@ -32,12 +42,24 @@ CAPTIONS = {
     "nb": ["Se hva som\nsnart går ut", "Ukens datoer\nmed et blikk",
            "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
 }
+# Google Play has a fifth screenshot, an item's Edit screen, fourth in order.
+EDIT_CAPTIONS = {
+    "en": "Date and storage\nin two taps",
+    "ru": "Срок и место —\nв два касания",
+    "nb": "Dato og plassering\nmed to trykk",
+}
 
-# The background runs from the top-left corner towards the bottom, sampled from the existing sets.
-GRADIENT_STOPS = [(0.0, (22, 185, 163)), (0.25, (17, 166, 149)), (0.5, (12, 126, 116)),
-                  (1.0, (10, 94, 87))]
-BEZEL = (11, 31, 28)
-WHITE = (255, 255, 255)
+
+def play_captions(lang):
+    captions = CAPTIONS[lang]
+    return captions[:3] + [EDIT_CAPTIONS[lang]] + captions[3:]
+
+# The background runs from the top-left corner towards the bottom, through Larder's greens
+# (green.600, 700, 800 and 900 in tokens.json).
+GRADIENT_STOPS = [(0.0, (0x2F, 0x62, 0x46)), (0.25, (0x23, 0x4E, 0x37)), (0.5, (0x1F, 0x43, 0x31)),
+                  (1.0, (0x10, 0x2A, 0x1C))]
+BEZEL = (0x14, 0x12, 0x0D)  # neutral.950
+WHITE = (0xFF, 0xFD, 0xF8)  # neutral.0, the warm white the app uses
 
 
 def gradient(width, height):
@@ -74,10 +96,16 @@ def caption_lines(text, font, max_width, wrap):
     return [one_line] if font.getlength(one_line) <= max_width else text.split("\n")
 
 
-def frame(raw_path, caption, out_path):
+def frame(raw_path, caption, out_path, canvas_size=None):
+    """[canvas_size] other than the screenshot's own size is Play's: the phone keeps the
+    screenshot's shape and runs off the bottom edge."""
     shot = Image.open(raw_path).convert("RGB")
-    width, height = shot.size
+    width, height = canvas_size or shot.size
     spec = layout(width, height)
+    if canvas_size:
+        # Measured from the earlier Play set: a phone 72% of the width, starting 22% down.
+        spec.update(font=0.0765 * width, caption_top=0.06 * height, frame_top=0.22 * height,
+                    bezel=0.0167 * width, radius=0.07 * width, wrap=False, play_width=0.722 * width)
     canvas = gradient(width, height)
     draw = ImageDraw.Draw(canvas)
 
@@ -93,8 +121,12 @@ def frame(raw_path, caption, out_path):
     frame_top = max(spec["frame_top"], caption_bottom + 0.05 * height)
     frame_height = spec["frame_height"] - (frame_top - spec["frame_top"])
     bezel = round(spec["bezel"])
-    screen_height = round(frame_height) - 2 * bezel
-    screen_width = round(screen_height * width / height)
+    if "play_width" in spec:
+        screen_width = round(spec["play_width"]) - 2 * bezel
+        screen_height = round(screen_width * shot.height / shot.width)
+    else:
+        screen_height = round(frame_height) - 2 * bezel
+        screen_width = round(screen_height * width / height)
     frame_width = screen_width + 2 * bezel
     left = round((width - frame_width) / 2)
     frame_top = round(frame_top)
@@ -116,13 +148,16 @@ def main():
     if len(sys.argv) != 3:
         sys.exit(__doc__)
     raw_dir, set_name = Path(sys.argv[1]), sys.argv[2]
-    for lang, folder in LISTING_FOLDERS.items():
+    play = set_name == PLAY_SET
+    for lang, folder in (PLAY_FOLDERS if play else LISTING_FOLDERS).items():
+        captions = play_captions(lang) if play else CAPTIONS[lang]
         raws = sorted((raw_dir / lang).glob("[0-9]-*.png"))
-        if len(raws) != len(CAPTIONS[lang]):
-            sys.exit(f"expected {len(CAPTIONS[lang])} screenshots in {raw_dir / lang}, found {len(raws)}")
-        for n, (raw, caption) in enumerate(zip(raws, CAPTIONS[lang]), start=1):
-            out = ROOT / "store-listing" / "app-store" / folder / set_name / f"{n}.png"
-            frame(raw, caption, out)
+        if len(raws) != len(captions):
+            sys.exit(f"expected {len(captions)} screenshots in {raw_dir / lang}, found {len(raws)}")
+        store = "google-play" if play else "app-store"
+        for n, (raw, caption) in enumerate(zip(raws, captions), start=1):
+            out = ROOT / "store-listing" / store / folder / set_name / f"{n}.png"
+            frame(raw, caption, out, PLAY_SIZE if play else None)
             print(out.relative_to(ROOT))
 
 

@@ -28,7 +28,9 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         super.init()
     }
 
-    public func requestAuthorization() {
+    /// Runs on every launch, so a reminder's actions work whether or not the app has asked for
+    /// permission yet. Asking is `requestAuthorization()`, from onboarding or the reminders note.
+    public func configure() {
         UNUserNotificationCenter.current().delegate = self
 
         // These cover what a user actually does at the moment the reminder fires. Until now
@@ -74,12 +76,25 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             options: []
         )
         UNUserNotificationCenter.current().setNotificationCategories([expiryCategory, digestCategory])
+    }
 
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if let error = error {
-                print("Notification permission error: \(error.localizedDescription)")
-            }
+    /// Puts the system prompt up, if it hasn't been answered. Returns the answer, or nil when the
+    /// request failed, which isn't anyone saying no.
+    public func requestAuthorization() async -> Bool? {
+        do {
+            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
+        } catch {
+            print("Notification permission error: \(error.localizedDescription)")
+            return nil
         }
+    }
+
+    /// For the "reminders are off" notes, when the prompt is still unanswered because of Not now
+    /// in onboarding. Anything saved since was refused by the system, so it is scheduled again.
+    public func requestAuthorization(thenSchedule items: [PantryItem]) async {
+        guard await requestAuthorization() == true else { return }
+        rescheduleAll(items: items)
+        scheduleDigestNotification(items: items)
     }
 
     public func scheduleNotification(for item: PantryItem) {
@@ -163,6 +178,9 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         } else if daysRemaining == 0 {
             content.title = L10n.notifTitleToday
             content.body = L10n.notifBodyToday(nameWithBrand)
+        } else if daysRemaining == 1 {
+            content.title = L10n.notifTitleSoon
+            content.body = L10n.notifBodyTomorrow(nameWithBrand)
         } else {
             content.title = L10n.notifTitleSoon
             content.body = L10n.notifBodySoon(nameWithBrand, days: daysRemaining)
@@ -255,6 +273,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     }
 
     public func scheduleDigestNotification(items: [PantryItem]) {
+        rewordPendingRemindersOnce(items: items)
         let notificationSettings = SettingsStore.shared.settings.notifications
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [Self.digestIdentifier])
         guard notificationSettings.enabled, notificationSettings.digestEnabled else { return }
@@ -303,6 +322,38 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         }
     }
 
+    /// Bumped when the reminder wording changes.
+    private nonisolated static let reminderCopyVersion = 2
+    private nonisolated static let reminderCopyVersionKey = "reminderCopyVersion"
+
+    /// Re-words the per-item reminders already waiting to fire. A request's content is fixed when
+    /// it is scheduled, possibly months ahead, so new wording would otherwise take that long to
+    /// reach people. Each keeps its trigger: `rescheduleAll` would also re-fire every reminder
+    /// whose slot has passed. Runs once per wording, from the launch-time digest call, which is
+    /// the one place that has the items in hand.
+    private func rewordPendingRemindersOnce(items: [PantryItem]) {
+        let defaults = UserDefaults.standard
+        guard defaults.integer(forKey: Self.reminderCopyVersionKey) < Self.reminderCopyVersion else { return }
+        defaults.set(Self.reminderCopyVersion, forKey: Self.reminderCopyVersionKey)
+        let itemsById = Dictionary(items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            for request in requests where request.content.categoryIdentifier == Self.expiryCategoryIdentifier {
+                guard let item = itemsById[request.identifier],
+                      let trigger = request.trigger as? UNCalendarNotificationTrigger,
+                      let fireDate = trigger.nextTriggerDate(),
+                      let days = Self.days(from: fireDate, to: item.expiryDate) else { continue }
+                let content = Self.expiryContent(
+                    for: item.name,
+                    brand: item.brand,
+                    daysRemaining: days,
+                    itemId: item.id
+                )
+                center.add(UNNotificationRequest(identifier: item.id, content: content, trigger: trigger))
+            }
+        }
+    }
+
     // MARK: - UNUserNotificationCenterDelegate
 
     public nonisolated func userNotificationCenter(
@@ -329,7 +380,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         if userInfo["openShoppingList"] as? Bool == true {
             Task { @MainActor in
                 #if !WIDGET_EXTENSION
-                AppRouter.shared.destination = .shoppingList
+                AppRouter.shared.navigate(to: .tab(.shopping))
                 #endif
                 completionHandler()
             }

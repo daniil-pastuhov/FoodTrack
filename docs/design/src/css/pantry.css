@@ -1,0 +1,124 @@
+/* Pantry: Home, product detail, recipe ideas. Everything is scoped under .pantry, set on each state's .app. */
+
+/* List pane fills the phone frame; the two-pane split starts at tablet width */
+.pantry .pane.list-pane { flex: 1 1 0; border-right: 0; }
+.pantry .hd .lede:last-child { margin-bottom: 0; }
+
+/* Pantry row: one link for the row, a separate target for Use one */
+.pantry .item { gap: var(--space-2); }
+.pantry .item .open { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-3); color: inherit; text-decoration: none; }
+.pantry .item .meta { flex-wrap: wrap; row-gap: 2px; }
+.pantry .item .where { max-width: 100%; }
+.pantry .item .use { flex: none; margin: 0 calc(var(--space-2) * -1) 0 calc(var(--space-1) * -1); }
+.pantry .item.is-selected .where, .pantry .item.is-selected .qty, .pantry .item.is-selected .nm, .pantry .item.is-selected .st-fresh { color: var(--color-on-primary-container); }
+.pantry .item.is-selected .thumb { background: var(--color-surface); }
+.pantry .item .tick { margin: 0 calc(var(--space-2) * -1) 0 calc(var(--space-2) * -1); }
+
+/* Filter dot and the line that says what is hidden */
+.pantry .has-dot { position: relative; }
+.pantry .dot { position: absolute; top: 10px; right: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 2px var(--color-background); }
+.pantry .active-filter { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.pantry .active-filter .sec { margin: 0; }
+
+/* Search takes over the header */
+.pantry .search-hd .control { padding: 0; }
+.pantry .search-hd .control .icon-btn { flex: none; }
+.pantry .search-hd input { padding: var(--space-2) 0; }
+
+/* Empty and no results */
+.pantry.is-empty .scroll { display: flex; flex-direction: column; }
+.pantry .empty-actions { display: grid; justify-items: center; gap: var(--space-1); margin-top: var(--space-2); }
+
+/* T4 callout on Home */
+.pantry .scroll > .callout { margin-bottom: var(--space-3); padding-right: var(--space-1); }
+.pantry .callout .callout-x { flex: none; width: 40px; height: 40px; margin-top: calc(var(--space-2) * -1); color: inherit; }
+.pantry .callout .btn.text { padding: 0; margin-top: var(--space-1); }
+
+/* Swipe reveal */
+.pantry .swipe-row { position: relative; overflow: hidden; }
+.pantry .swipe-row + .swipe-row, .pantry .swipe-row + .list-item { border-top: 1px solid var(--color-outline-variant); }
+.pantry .swipe-row .item { position: relative; background: var(--color-surface); }
+.pantry .swipe-row.left .item { transform: translateX(-96px); }
+.pantry .swipe-row.right .item { transform: translateX(96px); }
+.pantry .reveal { position: absolute; inset: 0; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); font: var(--type-label); }
+.pantry .reveal.del { justify-content: flex-end; background: var(--color-error); color: var(--color-on-error); }
+.pantry .reveal.move { background: var(--color-primary); color: var(--color-on-primary); }
+
+/* Selection */
+.pantry .select-bar { flex: none; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--color-surface); border-top: 1px solid var(--color-outline-variant); }
+.pantry .select-bar .btn.secondary { flex: 1; }
+.pantry .btn.danger-text:hover { background: color-mix(in srgb, var(--color-error) 8%, transparent); }
+
+/* Sheets */
+.pantry .sheet .sec:first-of-type { margin-top: 0; }
+.pantry .sheet-link { margin: var(--space-4) calc(var(--space-4) * -1) 0; padding: var(--space-2) var(--space-4); border-top: 1px solid var(--color-outline-variant); }
+.pantry .sheet-link svg.lucide { color: var(--color-on-surface-variant); }
+.pantry .sheet .actions { margin-top: var(--space-3); }
+
+/* Product detail: the same content in a sheet and in the tablet pane */
+.pantry .pd-sheet { display: flex; flex-direction: column; overflow: hidden; padding: var(--space-3) 0 0; }
+.pantry .pd { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.pantry .pd-body { flex: 1; min-height: 0; overflow: auto; scrollbar-width: none; display: grid; gap: var(--space-4); align-content: start; padding: 0 var(--space-4) var(--space-4); }
+.pantry .detail-pane .pd-body { padding-top: var(--space-4); }
+.pantry .pd-head { display: flex; align-items: flex-start; gap: var(--space-3); min-width: 0; }
+.pantry .pd-head .thumb { width: 72px; height: 72px; border-radius: var(--radius-lg); }
+.pantry .pd-head .thumb svg.lucide { width: 32px; height: 32px; }
+.pantry .pd-title { flex: 1; min-width: 0; }
+.pantry .pd h2 { margin: 0; font: var(--type-title); letter-spacing: var(--type-title-tracking); overflow-wrap: anywhere; }
+.pantry .pd-brand { margin: 2px 0 0; font: var(--type-body-sm); color: var(--color-on-surface-variant); overflow-wrap: anywhere; }
+.pantry .pd-close { flex: none; margin: calc(var(--space-2) * -1) calc(var(--space-2) * -1) 0 0; }
+.pantry .pd-facts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4); margin: 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: 0 0 0 1px var(--color-outline-variant); }
+.pantry .pd-facts > div { min-width: 0; }
+.pantry .pd-facts dt { font: var(--type-caption); color: var(--color-on-surface-variant); }
+.pantry .pd-facts dd { margin: 2px 0 0; font: var(--type-title-sm); color: var(--color-on-surface); overflow-wrap: anywhere; }
+.pantry .pd-facts dd .st { margin-top: var(--space-1); }
+.pantry .pd-scores { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.pantry .score { display: grid; gap: var(--space-1); min-width: 0; align-content: start; }
+.pantry .score-scale { display: flex; gap: 2px; }
+.pantry .score-scale span { flex: 1; display: grid; place-items: center; height: 28px; border-radius: var(--radius-sm); background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-outline-variant); color: var(--color-on-surface-variant); font: var(--type-caption); }
+.pantry .score-scale .on { background: var(--color-primary); box-shadow: none; color: var(--color-on-primary); font: var(--type-label); }
+.pantry .score-cap { font: var(--type-caption); color: var(--color-on-surface-variant); }
+.pantry .pd section .sec { margin: 0 0 var(--space-1); }
+.pantry .pd-tags { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.pantry .pd-tags .tag { background: var(--color-surface); box-shadow: inset 0 0 0 1px var(--color-outline-variant); }
+.pantry .pd-tags .tag.is-match { background: var(--color-error-container); color: var(--color-on-error-container); box-shadow: none; }
+.pantry .pd-text { margin: 0; font: var(--type-body-sm); color: var(--color-on-surface); overflow-wrap: anywhere; }
+.pantry .pd-credit { margin: 0; font: var(--type-caption); color: var(--color-on-surface-variant); }
+.pantry .pd-actions { flex: none; display: flex; flex-wrap: wrap; gap: var(--space-2); padding: var(--space-3) var(--space-4) var(--space-4); border-top: 1px solid var(--color-outline-variant); }
+.pantry .pd-actions .btn { flex: 1 1 auto; padding: 0 var(--space-3); white-space: nowrap; }
+.pantry .pd-actions .btn:first-child { flex-grow: 2; }
+.pantry .pd-blank { flex: 1; display: grid; place-content: center; justify-items: center; gap: var(--space-2); padding: var(--space-6); text-align: center; color: var(--color-on-surface-variant); }
+.pantry .pd-blank p { margin: 0; max-width: 24ch; }
+
+/* Recipe ideas */
+.pantry .recipe-check { align-items: flex-start; padding: var(--space-1) 0; }
+.pantry .recipe-check input { margin-top: 2px; flex: none; }
+.pantry .recipe-t { display: block; font: var(--type-body); color: var(--color-on-surface); }
+.pantry .recipe-s { display: block; font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+
+/* Tablet and foldable: list beside detail, and the sheets stop stretching */
+@container (min-width: 700px) {
+  .pantry .pane.list-pane { flex: 0 0 380px; border-right: 1px solid var(--color-outline-variant); }
+  .pantry .detail-pane { background: var(--color-surface-container); }
+  .pantry .item.is-current { background: var(--color-surface-container); }
+  .pantry .item.is-current .thumb, .pantry .detail-pane .thumb { background: var(--color-surface); }
+  .pantry .sheet { max-width: 560px; }
+}
+
+/* Nutri-Score keeps its official colours. They sit on a dark plate in both themes, because no light
+   surface gives all five 3:1 (C on paper is about 1.5:1). The grade is also the larger, ringed tile and the caption. */
+.pantry .score.nutri .score-scale { align-items: center; gap: var(--space-1); padding: var(--space-1) var(--space-2); border-radius: var(--radius-md); background: var(--color-nutri-plate); }
+.pantry .score.nutri .score-scale span { font: var(--type-label); box-shadow: none; }
+.pantry .score.nutri .score-scale span:nth-child(1) { background: var(--color-nutri-a); color: var(--color-on-nutri-a); }
+.pantry .score.nutri .score-scale span:nth-child(2) { background: var(--color-nutri-b); color: var(--color-on-nutri-b); }
+.pantry .score.nutri .score-scale span:nth-child(3) { background: var(--color-nutri-c); color: var(--color-on-nutri-c); }
+.pantry .score.nutri .score-scale span:nth-child(4) { background: var(--color-nutri-d); color: var(--color-on-nutri-d); }
+.pantry .score.nutri .score-scale span:nth-child(5) { background: var(--color-nutri-e); color: var(--color-on-nutri-e); }
+.pantry .score.nutri .score-scale .on { height: 36px; box-shadow: 0 0 0 2px var(--color-on-nutri-plate); }
+
+/* Tablet: the product pane's buttons stay above the floating pill and Scan,
+   and snackbars sit over the list so they never cover those buttons. */
+@container (min-width: 700px) {
+  .pantry .detail-pane .pd-actions { padding-bottom: 92px; }
+  .pantry.has-nav .snackbar-host, .pantry.has-nav.has-fab-host .snackbar-host { left: var(--space-4); right: auto; width: 348px; bottom: 96px; }
+}

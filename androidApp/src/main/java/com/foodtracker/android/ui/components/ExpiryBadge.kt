@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -24,9 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.foodtracker.android.ui.theme.expiredStatusColors
-import com.foodtracker.android.ui.theme.expiringStatusColors
-import com.foodtracker.android.ui.theme.freshStatusColors
+import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.daysRemainingLabel
 import com.foodtracker.model.ExpiryStatus
 
@@ -36,14 +35,12 @@ fun ExpiryBadge(
     status: ExpiryStatus,
     modifier: Modifier = Modifier
 ) {
-    val (colors, icon) = when (status) {
-        ExpiryStatus.EXPIRED -> expiredStatusColors() to Icons.Default.Error
+    val (bg, textColor, icon) = when (status) {
+        ExpiryStatus.EXPIRED -> Triple(LarderTheme.colors.expiredContainer, LarderTheme.colors.onExpiredContainer, Icons.Default.Error)
         ExpiryStatus.EXPIRING_TODAY,
-        ExpiryStatus.EXPIRING_SOON -> expiringStatusColors() to Icons.Default.Warning
-        ExpiryStatus.FRESH -> freshStatusColors() to Icons.Default.Schedule
+        ExpiryStatus.EXPIRING_SOON -> Triple(LarderTheme.colors.soonContainer, LarderTheme.colors.onSoonContainer, Icons.Default.Warning)
+        ExpiryStatus.FRESH -> Triple(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.colorScheme.onSurfaceVariant, Icons.Default.Schedule)
     }
-    val bg = colors.background
-    val textColor = colors.foreground
 
     // Resolving this label goes through Resources.getQuantityString, which is a real lookup —
     // and this badge renders on every card in the grid and every row in the calendar's day

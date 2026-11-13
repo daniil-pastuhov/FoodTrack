@@ -14,7 +14,7 @@
     <string name="metric_soon">Скоро</string>
     <string name="metric_fresh">Свежее</string>
 
-    <string name="search_placeholder">Поиск по названию или бренду...</string>
+    <string name="search_placeholder">Поиск по названию или бренду</string>
     <string name="clear_content_description">Очистить</string>
 
     <string name="filter_all_locations">Все места</string>
@@ -39,7 +39,7 @@
     <string name="back_content_description">Назад</string>
 
     <string name="edit_item_title">Изменить продукт</string>
-    <string name="add_item_title">Добавить в кладовую</string>
+    <string name="add_item_title">Добавить продукт</string>
     <string name="barcode_format">Штрихкод: %1$s</string>
     <string name="new_item_placeholder">Новый продукт</string>
     <string name="photo_suggestions_title">Похоже на…</string>
@@ -124,7 +124,7 @@
         <item quantity="many">%1$d дней</item>
         <item quantity="other">%1$d дня</item>
     </plurals>
-    <string name="expiry_date_implausible_warning">Эта дата отстоит от сегодняшней более чем на %1$d лет. Проверьте год.</string>
+    <string name="expiry_date_implausible_warning">Эта дата отстоит более чем на %1$d лет. Проверьте год.</string>
     <string name="quick_date_3_days">+3 дня</string>
     <string name="quick_date_1_week">+1 неделя</string>
     <string name="quick_date_2_weeks">+2 недели</string>
@@ -134,7 +134,6 @@
     <string name="quantity_label">Количество</string>
     <string name="quantity_decrease_content_description">Уменьшить количество</string>
     <string name="quantity_increase_content_description">Увеличить количество</string>
-    <string name="notes_label">Заметки (напр. вскрыто, количество, полка)</string>
     <string name="update_item_button">Обновить продукт</string>
     <string name="save_item_button">Сохранить: %1$s</string>
     <string name="date_picker_ok">ОК</string>
@@ -144,9 +143,10 @@
     <string name="camera_off_title">Камера выключена</string>
     <string name="camera_off_body">Срокоеду нужна камера для сканирования. Продукты можно добавить и вручную.</string>
     <string name="camera_off_open_settings">Открыть настройки</string>
+    <string name="camera_off_allow">Разрешить камеру</string>
     <string name="camera_off_add_by_hand">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
-    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список ниже</string>
+    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список</string>
     <string name="scan_mode_receipt">Чек</string>
     <string name="reticle_hint_receipt">Поместите чек целиком в кадр и нажмите, чтобы считать</string>
     <string name="scan_receipt_button">Считать чек</string>
@@ -158,7 +158,7 @@
         <item quantity="other">Добавлено %1$d товара из чека — проверьте ниже</item>
     </plurals>
     <string name="batch_queue_empty">Отсканируйте товар, чтобы начать список</string>
-    <string name="batch_queue_remove_content_description">Убрать из списка</string>
+    <string name="batch_queue_remove_content_description">Убрать из списка: %1$s</string>
     <string name="batch_queue_needs_date">Проверьте дату</string>
     <string name="batch_commit_button">Добавить все</string>
     <string name="batch_clear_button">Очистить</string>
@@ -220,7 +220,7 @@
     <string name="shopping_list_add_button">Добавить</string>
     <string name="shopping_list_scan_content_description">Сканировать продукт</string>    <string name="shopping_list_share_content_description">Поделиться списком или импортировать</string>
     <string name="shopping_list_share_dialog_title">Поделиться списком</string>
-    <string name="shopping_list_share_dialog_message">Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку — ничего не заменяется.</string>
+    <string name="shopping_list_share_dialog_message">Отправьте список кому-нибудь или получите чужой. Импортированные товары добавляются к вашему списку, ничего не заменяется.</string>
     <string name="shopping_list_share_as_text">Отправить текстом</string>
     <string name="shopping_list_share_as_qr">Показать QR-код</string>
     <string name="shopping_list_share_qr_content_description">QR-код со списком покупок</string>
@@ -246,7 +246,6 @@
     <string name="shopping_section_rename">Переименовать раздел</string>
     <string name="shopping_section_delete">Удалить</string>
     <string name="shopping_section_delete_title">Удалить «%1$s»?</string>
-    <string name="shopping_section_delete_message">Товары из него перейдут в основной список.</string>
     <string name="shopping_section_save">Сохранить</string>
     <string name="shopping_section_name_placeholder">например, Молочный отдел</string>
     <string name="shopping_section_move_to">Переместить в раздел</string>
@@ -264,7 +263,6 @@
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
     <string name="action_get_recipe_ideas">Идеи рецептов</string>
-    <string name="delete_selected_dialog_title">Удалить выбранные продукты?</string>
     <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:</string>
@@ -315,19 +313,20 @@
         <item quantity="other">Просрочено %d года назад</item>
     </plurals>
 
-    <string name="notification_channel_name">Уведомления по каждому продукту</string>
+    <string name="notification_channel_name">Напоминания о каждом продукте</string>
     <string name="notification_channel_desc">Отдельное уведомление для каждого продукта незадолго до истечения срока</string>
     <string name="notification_digest_channel_name">Сводка по срокам годности</string>
     <string name="notification_digest_channel_desc">Одно уведомление со списком продуктов, срок которых истекает на этой неделе</string>
-    <string name="notif_title_today">Продукт истекает сегодня! ⚠️</string>
-    <string name="notif_title_soon">Продукт скоро истекает! ⚠️</string>
+    <string name="notif_title_today">Лучше использовать сегодня</string>
+    <string name="notif_title_soon">Лучше использовать скоро</string>
     <string name="notif_title_past">Стоит проверить</string>
-    <string name="notif_body_today_format">%1$s истекает сегодня. Не забудьте съесть его!</string>
+    <string name="notif_body_today_format">%1$s: срок годности заканчивается сегодня.</string>
+    <string name="notif_body_tomorrow_format">%1$s: срок годности заканчивается завтра.</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s истекает через %2$d день. Не забудьте съесть его!</item>
-        <item quantity="few">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
-        <item quantity="many">%1$s истекает через %2$d дней. Не забудьте съесть его!</item>
-        <item quantity="other">%1$s истекает через %2$d дня. Не забудьте съесть его!</item>
+        <item quantity="one">%1$s: срок годности заканчивается через %2$d день.</item>
+        <item quantity="few">%1$s: срок годности заканчивается через %2$d дня.</item>
+        <item quantity="many">%1$s: срок годности заканчивается через %2$d дней.</item>
+        <item quantity="other">%1$s: срок годности заканчивается через %2$d дня.</item>
     </plurals>
     <plurals name="notif_body_past_format">
         <item quantity="one">%1$s: срок годности прошёл %2$d день назад.</item>
@@ -335,16 +334,10 @@
         <item quantity="many">%1$s: срок годности прошёл %2$d дней назад.</item>
         <item quantity="other">%1$s: срок годности прошёл %2$d дня назад.</item>
     </plurals>
-    <string name="notif_fallback_title">Уведомление о сроке годности</string>
-    <string name="notif_fallback_body">Один из продуктов в кладовой скоро испортится.</string>
+    <string name="notif_fallback_title">Напоминание о продуктах</string>
+    <string name="notif_fallback_body">Срок годности одного из продуктов скоро закончится.</string>
     <string name="notif_action_used">Съедено</string>
     <string name="notif_action_snooze">Завтра</string>
-    <plurals name="notif_action_still_good">
-        <item quantity="one">Ещё годен +%1$dд</item>
-        <item quantity="few">Ещё годен +%1$dд</item>
-        <item quantity="many">Ещё годен +%1$dд</item>
-        <item quantity="other">Ещё годен +%1$dд</item>
-    </plurals>
     <string name="shortcut_scan_barcode_short">Сканер</string>
     <string name="shortcut_scan_barcode_long">Сканировать штрихкод</string>
     <string name="shortcut_add_item_short">Добавить</string>
@@ -474,10 +467,10 @@
     <string name="category_settings_shelf_life_field_label">Дней</string>
     <string name="category_settings_shelf_life_clear">Очистить</string>
     <plurals name="category_settings_shelf_life_days_format">
-        <item quantity="one">%1$d д</item>
-        <item quantity="few">%1$d д</item>
-        <item quantity="many">%1$d д</item>
-        <item quantity="other">%1$d д</item>
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
     </plurals>
     <string name="category_settings_rename_content_description">Переименовать категорию</string>
 
@@ -507,6 +500,7 @@
     <string name="widget_shopping_list_title">Список покупок</string>
     <string name="widget_shopping_list_empty">Ваш список покупок пуст</string>
     <string name="widget_action_used">Съел</string>
+    <string name="widget_action_used_item">Съел: %1$s</string>
     <string name="widget_action_mark_bought">Отметить «%1$s» как купленное</string>
 
     <string name="widget_overview_label">Обзор кладовой</string>
@@ -523,7 +517,7 @@
     <string name="restore_mode_replace_subtitle">Сначала удалит всё на этом устройстве, включая настройки.</string>
     <string name="backup_export_success">Копия сохранена</string>
     <string name="backup_export_failed">Не удалось сохранить копию</string>
-    <string name="backup_import_malformed">Этот файл не является резервной копией Срокоеда</string>
+    <string name="backup_import_malformed">Этот файл не является резервной копией Срокоеда. Ничего не изменилось.</string>
     <string name="backup_import_unsupported">Эта копия создана более новой версией приложения</string>
     <string name="backup_import_empty">В этой копии нечего восстанавливать</string>
     <plurals name="backup_import_success">
@@ -575,4 +569,271 @@
     </plurals>
     <string name="batch_discard_confirm">Удалить</string>
     <string name="batch_discard_keep">Продолжить сканирование</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Загрузка</string>
+    <string name="status_today">Истекает сегодня</string>
+    <string name="status_tomorrow">Истекает завтра</string>
+    <plurals name="status_days_over">
+        <item quantity="one">Просрочено %d день назад</item>
+        <item quantity="few">Просрочено %d дня назад</item>
+        <item quantity="many">Просрочено %d дней назад</item>
+        <item quantity="other">Просрочено %d дня назад</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d товар</item>
+        <item quantity="few">%1$d товара</item>
+        <item quantity="many">%1$d товаров</item>
+        <item quantity="other">%1$d товара</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s: сохранено в «%2$s»</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">Удалён %d товар</item>
+        <item quantity="few">Удалено %d товара</item>
+        <item quantity="many">Удалено %d товаров</item>
+        <item quantity="other">Удалено %d товара</item>
+    </plurals>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Дальше: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">На этой неделе ничего не истекает</string>
+    <string name="home_section_use_first">Сначала это</string>
+    <string name="home_section_later_this_week">Позже на этой неделе</string>
+    <string name="home_section_later">Потом</string>
+    <string name="home_clear_filters">Сбросить фильтры</string>
+    <string name="home_search_description">Поиск</string>
+    <string name="home_filters_on_description">Фильтры включены</string>
+    <string name="home_empty_title">Полки пусты</string>
+    <string name="home_empty_message">Отсканируйте первый продукт, и он появится здесь. Сначала идут самые близкие сроки.</string>
+    <string name="home_empty_scan">Сканировать продукт</string>
+    <string name="home_empty_add_by_hand">Добавить вручную</string>
+    <string name="home_no_results_title">Ничего не найдено по запросу «%1$s»</string>
+    <string name="home_no_results_message">Проверьте написание или попробуйте название бренда.</string>
+    <string name="home_clear_search">Очистить поиск</string>
+    <string name="home_no_filter_results_title">Под эти фильтры ничего не подходит</string>
+    <string name="home_no_filter_results_message">Попробуйте другое место или категорию.</string>
+    <string name="home_reminders_off_title">Напоминания выключены</string>
+    <string name="home_reminders_off_message">Уведомления для Срокоеда выключены в настройках телефона.</string>
+    <string name="home_dismiss">Закрыть</string>
+    <string name="home_swipe_to_list">В список</string>
+    <string name="home_use_one_item">Использовать один: %1$s</string>
+    <string name="home_used_one_snackbar">Использован один: %1$s. Осталось: %2$d.</string>
+    <string name="home_location_label">Место хранения</string>
+    <string name="home_category_label">Категория</string>
+    <string name="home_best_before_label">Годен до</string>
+    <string name="home_notes_label">Заметки</string>
+    <string name="home_done">Готово</string>
+    <string name="detail_close">Закрыть</string>
+    <string name="detail_edit">Изменить</string>
+    <string name="detail_to_shopping_list">В список покупок</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Без обработки</string>
+    <string name="detail_nova_2">Кулинарные ингредиенты</string>
+    <string name="detail_nova_3">Обработанный</string>
+    <string name="detail_nova_4">Ультраобработанный</string>
+    <string name="detail_credit">Данные о продукте из Open Food Facts</string>
+    <string name="detail_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
+    <string name="detail_choose_item">Выберите продукт, чтобы увидеть подробности.</string>
+    <string name="recipe_intro">Запрос для ИИ-помощника из выбранных продуктов: %1$s. Он покинет устройство, только если вы им поделитесь.</string>
+    <string name="recipe_names_two">%1$s и %2$s</string>
+    <string name="recipe_names_three">%1$s, %2$s и %3$s</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s продукт лучше использовать до завтра</item>
+        <item quantity="few">%1$s продукта лучше использовать до завтра</item>
+        <item quantity="many">%1$s продуктов лучше использовать до завтра</item>
+        <item quantity="other">%1$s продукта лучше использовать до завтра</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s продукт с истёкшим сроком</item>
+        <item quantity="few">%1$s продукта с истёкшим сроком</item>
+        <item quantity="many">%1$s продуктов с истёкшим сроком</item>
+        <item quantity="other">%1$s продукта с истёкшим сроком</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d результат</item>
+        <item quantity="few">%d результата</item>
+        <item quantity="many">%d результатов</item>
+        <item quantity="other">%d результата</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d из %2$d</item>
+        <item quantity="few">%1$d из %2$d</item>
+        <item quantity="many">%1$d из %2$d</item>
+        <item quantity="other">%1$d из %2$d</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Показать %d продукт</item>
+        <item quantity="few">Показать %d продукта</item>
+        <item quantity="many">Показать %d продуктов</item>
+        <item quantity="other">Показать %d продукта</item>
+    </plurals>
+    <plurals name="recipe_names_more">
+        <item quantity="one">%1$s, %2$s и ещё %3$d</item>
+        <item quantity="few">%1$s, %2$s и ещё %3$d</item>
+        <item quantity="many">%1$s, %2$s и ещё %3$d</item>
+        <item quantity="other">%1$s, %2$s и ещё %3$d</item>
+    </plurals>
+    <plurals name="recipe_include_others_count">
+        <item quantity="one">Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+        <item quantity="few">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+        <item quantity="many">Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+        <item quantity="other">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>Один</item>
+        <item>Два</item>
+        <item>Три</item>
+        <item>Четыре</item>
+        <item>Пять</item>
+        <item>Шесть</item>
+        <item>Семь</item>
+        <item>Восемь</item>
+        <item>Девять</item>
+        <item>Десять</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>в понедельник</item>
+        <item>во вторник</item>
+        <item>в среду</item>
+        <item>в четверг</item>
+        <item>в пятницу</item>
+        <item>в субботу</item>
+        <item>в воскресенье</item>
+    </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Закрыть сканер</string>
+    <string name="scan_torch_on">Включён</string>
+    <string name="scan_torch_off">Выключен</string>
+    <string name="scan_idle_results_title">Результат появится здесь</string>
+    <string name="scan_idle_results_message">Отсканируйте штрихкод, и товар появится на этой стороне.</string>
+    <string name="scan_idle_date_title">Дата появится здесь</string>
+    <string name="scan_idle_date_message">Держите камеру ровно, наведя её на напечатанную дату.</string>
+    <string name="scan_idle_photo_title">Фото появится здесь</string>
+    <string name="scan_idle_photo_message">Сделайте снимок, чтобы получить варианты названия.</string>
+    <string name="scan_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
+    <string name="scan_offline_title">Нет подключения к сети</string>
+    <string name="scan_offline_message">Не удалось найти этот товар. Можно продолжить вручную, штрихкод останется у товара.</string>
+    <string name="scan_try_again">Повторить</string>
+    <string name="scan_continue_by_hand">Продолжить вручную</string>
+    <string name="scan_best_before_format">Годен до %1$s</string>
+    <string name="scan_date_from_barcode">Считано со штрихкода</string>
+    <string name="scan_date_from_packaging">Считано с упаковки</string>
+    <string name="scan_use_this_date">Использовать эту дату</string>
+    <string name="scan_reading_receipt">Считываем чек…</string>
+    <string name="receipt_queue_empty">Отсканируйте товар, чтобы начать список</string>
+    <string name="scan_queue_cleared">Очередь очищена</string>
+    <string name="scan_capture_failed">Не удалось сделать фото. Попробуйте ещё раз.</string>
+    <string name="batch_queue_estimated_format">%1$s</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Напоминания</string>
+    <string name="settings_group_kitchen">Ваша кухня</string>
+    <string name="settings_notifications_blocked_title">Напоминания выключены</string>
+    <string name="settings_off">Выкл.</string>
+    <string name="settings_allergens_none">Нет</string>
+    <string name="settings_add_allergen_label">Добавить аллерген</string>
+    <string name="settings_data_summary">Экспорт и импорт копии</string>
+    <string name="settings_location_default">По умолчанию</string>
+    <string name="settings_location_taken">Место «%1$s» уже есть</string>
+    <string name="settings_rename_location_format">Переименовать: %1$s</string>
+    <string name="settings_delete_location_format">Удалить: %1$s</string>
+    <string name="settings_set_default_location_format">Сделать по умолчанию: %1$s</string>
+    <string name="settings_remove_format">Убрать: %1$s</string>
+    <string name="settings_try_again">Повторить</string>
+    <string name="restore_mode_cancel">Не импортировать</string>
+    <string name="clear_data_keep">Отмена</string>
+    <string name="category_settings_empty_title">Категорий пока нет</string>
+    <string name="category_settings_scan">Сканировать продукт</string>
+    <string name="category_settings_move_up">Переместить выше</string>
+    <string name="category_settings_move_down">Переместить ниже</string>
+    <string name="category_settings_move_done">Готово</string>
+    <string name="category_settings_rename_field_label">Название категории</string>
+    <string name="category_settings_rename_confirm">Переименовать</string>
+    <string name="category_settings_rename_format">Переименовать категорию: %1$s</string>
+    <string name="category_settings_drag_handle_format">Перетащить: %1$s</string>
+    <string name="category_settings_show_format">Показать: %1$s</string>
+    <string name="category_settings_shelf_life_format">Задать срок по умолчанию: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Срок хранения по умолчанию: %1$s</string>
+    <string name="category_settings_shelf_life_range">От 0 до 3650 дней</string>
+    <string name="category_settings_shelf_life_error">Введите число от 0 до 3650, это примерно 10 лет</string>
+    <string name="category_settings_shelf_life_save">Сохранить</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">Это удалит %1$d продукт и отменит напоминания о сроке годности. Это действие необратимо.</item>
+        <item quantity="few">Это удалит %1$d продукта и отменит напоминания о сроке годности. Это действие необратимо.</item>
+        <item quantity="many">Это удалит %1$d продуктов и отменит напоминания о сроке годности. Это действие необратимо.</item>
+        <item quantity="other">Это удалит %1$d продукта и отменит напоминания о сроке годности. Это действие необратимо.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Покупки</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">Купить: %d товар</item>
+        <item quantity="few">Купить: %d товара</item>
+        <item quantity="many">Купить: %d товаров</item>
+        <item quantity="other">Купить: %d товара</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Покупать нечего</string>
+    <string name="shopping_list_already_listed">%1$s уже в списке</string>
+    <string name="shopping_list_check_off">Отметить</string>
+    <string name="shopping_list_import_label">Ваш список</string>
+    <string name="shopping_list_close">Закрыть</string>
+    <string name="shopping_list_done">Готово</string>
+    <string name="shopping_sections_label">Разделы</string>
+    <string name="shopping_section_name_label">Название раздела</string>
+    <string name="shopping_section_keep">Оставить раздел</string>
+    <string name="shopping_section_delete_confirm">Удалить раздел</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">%d товар из него перейдёт в основной список.</item>
+        <item quantity="few">%d товара из него перейдут в основной список.</item>
+        <item quantity="many">%d товаров из него перейдут в основной список.</item>
+        <item quantity="other">%d товара из него перейдут в основной список.</item>
+    </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Добавьте название, чтобы потом найти продукт</string>
+    <string name="add_see_details">Подробнее</string>
+    <string name="add_notes_placeholder">напр. вскрыто, количество, полка</string>
+    <string name="discard_changes_title">Отменить изменения?</string>
+    <string name="discard_changes_confirm">Не сохранять</string>
+    <string name="discard_changes_keep">Продолжить редактирование</string>
+    <string name="discard_new_message">Этот продукт не сохранён, поэтому в кладовую он не попадёт.</string>
+    <string name="discard_edit_message">Изменения в «%1$s» не сохранятся. Продукт останется прежним.</string>
+
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">Что истекает</string>
+    <string name="calendar_used_snackbar">%1$s: использовано</string>
+    <string name="calendar_tossed_snackbar">%1$s: выброшено</string>
+    <string name="calendar_empty_message">Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Начать</string>
+    <string name="onboarding_welcome_title">Напоминает до того, как еда испортится, а не после.</string>
+    <string name="onboarding_private_title">Приватно по умолчанию</string>
+    <string name="onboarding_private_body">Без аккаунта и рекламы. Ваши запасы остаются на вашем устройстве.</string>
+    <string name="onboarding_notifications_title">Тихое напоминание накануне</string>
+    <string name="onboarding_notifications_body">Напомним в 09:00, за день до конца срока. Время можно изменить в настройках, там же напоминания можно отключить.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Лучше использовать скоро</string>
+    <string name="onboarding_sample_body">Греческий йогурт: срок годности заканчивается завтра.</string>
+    <string name="onboarding_sample_description">Пример напоминания: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Включить напоминания</string>
+    <string name="onboarding_not_now">Не сейчас</string>
+    <string name="onboarding_camera_title">Сканируйте, а не вводите</string>
+    <string name="onboarding_camera_body">Наведите камеру на продукт, и %1$s заполнит данные за вас. Фото остаются на вашем устройстве.</string>
+    <string name="onboarding_camera_barcodes_title">Штрихкоды</string>
+    <string name="onboarding_camera_barcodes_body">Находит продукт и его название</string>
+    <string name="onboarding_camera_dates_title">Напечатанные даты</string>
+    <string name="onboarding_camera_dates_body">Считывает дату с упаковки</string>
+    <string name="onboarding_camera_allow">Разрешить камеру</string>
+    <string name="onboarding_ready_title">Всё готово для первого продукта</string>
+    <string name="onboarding_ready_body">Возьмите что-нибудь из холодильника и отсканируйте. Это займёт несколько секунд.</string>
+    <string name="onboarding_skip">Пока пропустить</string>
+    <string name="onboarding_declined_title">Можно начать и без них</string>
+    <string name="onboarding_declined_body">Всё остальное работает. Передумать можно в любой момент.</string>
+    <string name="onboarding_declined_reminders_title">Напоминания выключены</string>
+    <string name="onboarding_declined_reminders_body">На главном экране появится подсказка, как их включить</string>
+    <string name="onboarding_declined_camera_title">Камера выключена</string>
+    <string name="onboarding_declined_camera_body">Сканер покажет, как её разрешить</string>
+    <string name="onboarding_add_by_hand">Добавить вручную</string>
 </resources>

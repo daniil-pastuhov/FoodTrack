@@ -28,7 +28,6 @@ public enum L10n {
 
     public static var swipeDelete: String { NSLocalizedString("swipe_delete", comment: "") }
     public static var swipeAddToShoppingList: String { NSLocalizedString("swipe_add_to_shopping_list", comment: "") }
-    public static var deleteSelectedDialogTitle: String { NSLocalizedString("delete_selected_dialog_title", comment: "") }
     public static func itemRemovedToast(_ name: String) -> String {
         String(format: NSLocalizedString("item_removed_toast_format", comment: ""), name)
     }
@@ -36,6 +35,187 @@ public enum L10n {
         String(format: NSLocalizedString("item_added_to_shopping_list_toast_format", comment: ""), name)
     }
     public static var undoAction: String { NSLocalizedString("undo_action", comment: "") }
+
+    // Pantry
+    public static func ledeNextUp(_ a1: String, _ a2: String) -> String {
+        String(format: NSLocalizedString("lede_next_up", comment: ""), a1, a2)
+    }
+    public static var ledeNothingThisWeek: String { NSLocalizedString("lede_nothing_this_week", comment: "") }
+    public static var homeSectionUseFirst: String { NSLocalizedString("home_section_use_first", comment: "") }
+    public static var homeSectionLaterThisWeek: String { NSLocalizedString("home_section_later_this_week", comment: "") }
+    public static var homeSectionLater: String { NSLocalizedString("home_section_later", comment: "") }
+    public static var homeClearFilters: String { NSLocalizedString("home_clear_filters", comment: "") }
+    public static var homeSearchDescription: String { NSLocalizedString("home_search_description", comment: "") }
+    public static var homeFiltersOnDescription: String { NSLocalizedString("home_filters_on_description", comment: "") }
+    public static var homeEmptyTitle: String { NSLocalizedString("home_empty_title", comment: "") }
+    public static var homeEmptyMessage: String { NSLocalizedString("home_empty_message", comment: "") }
+    public static var homeEmptyScan: String { NSLocalizedString("home_empty_scan", comment: "") }
+    public static var homeEmptyAddByHand: String { NSLocalizedString("home_empty_add_by_hand", comment: "") }
+    public static func homeNoResultsTitle(_ a1: String) -> String {
+        String(format: NSLocalizedString("home_no_results_title", comment: ""), a1)
+    }
+    public static var homeNoResultsMessage: String { NSLocalizedString("home_no_results_message", comment: "") }
+    public static var homeClearSearch: String { NSLocalizedString("home_clear_search", comment: "") }
+    public static var homeNoFilterResultsTitle: String { NSLocalizedString("home_no_filter_results_title", comment: "") }
+    public static var homeNoFilterResultsMessage: String { NSLocalizedString("home_no_filter_results_message", comment: "") }
+    public static var homeRemindersOffTitle: String { NSLocalizedString("home_reminders_off_title", comment: "") }
+    public static var homeRemindersOffMessage: String { NSLocalizedString("home_reminders_off_message", comment: "") }
+    public static var homeDismiss: String { NSLocalizedString("home_dismiss", comment: "") }
+    public static var homeSwipeToList: String { NSLocalizedString("home_swipe_to_list", comment: "") }
+    public static func homeUseOneItem(_ a1: String) -> String {
+        String(format: NSLocalizedString("home_use_one_item", comment: ""), a1)
+    }
+    public static func homeUsedOneSnackbar(_ a1: String, _ a2: Int) -> String {
+        String(format: NSLocalizedString("home_used_one_snackbar", comment: ""), a1, a2)
+    }
+    public static var homeLocationLabel: String { NSLocalizedString("home_location_label", comment: "") }
+    public static var homeCategoryLabel: String { NSLocalizedString("home_category_label", comment: "") }
+    public static var homeBestBeforeLabel: String { NSLocalizedString("home_best_before_label", comment: "") }
+    public static var homeNotesLabel: String { NSLocalizedString("home_notes_label", comment: "") }
+    public static var homeDone: String { NSLocalizedString("home_done", comment: "") }
+    public static var detailClose: String { NSLocalizedString("detail_close", comment: "") }
+    public static var detailEdit: String { NSLocalizedString("detail_edit", comment: "") }
+    public static var detailToShoppingList: String { NSLocalizedString("detail_to_shopping_list", comment: "") }
+    public static func detailNutriCaption(_ a1: String) -> String {
+        String(format: NSLocalizedString("detail_nutri_caption", comment: ""), a1)
+    }
+    public static func detailNovaCaption(_ a1: Int, _ a2: String) -> String {
+        String(format: NSLocalizedString("detail_nova_caption", comment: ""), a1, a2)
+    }
+    public static func detailNovaDescription(_ a1: Int, _ a2: String) -> String {
+        String(format: NSLocalizedString("detail_nova_description", comment: ""), a1, a2)
+    }
+    public static var detailNova1: String { NSLocalizedString("detail_nova_1", comment: "") }
+    public static var detailNova2: String { NSLocalizedString("detail_nova_2", comment: "") }
+    public static var detailNova3: String { NSLocalizedString("detail_nova_3", comment: "") }
+    public static var detailNova4: String { NSLocalizedString("detail_nova_4", comment: "") }
+    public static var detailCredit: String { NSLocalizedString("detail_credit", comment: "") }
+    public static var detailAllergenNote: String { NSLocalizedString("detail_allergen_note", comment: "") }
+    public static var detailChooseItem: String { NSLocalizedString("detail_choose_item", comment: "") }
+    public static func recipeIntro(_ a1: String) -> String {
+        String(format: NSLocalizedString("recipe_intro", comment: ""), a1)
+    }
+    public static func recipeNamesTwo(_ a1: String, _ a2: String) -> String {
+        String(format: NSLocalizedString("recipe_names_two", comment: ""), a1, a2)
+    }
+    public static func recipeNamesThree(_ a1: String, _ a2: String, _ a3: String) -> String {
+        String(format: NSLocalizedString("recipe_names_three", comment: ""), a1, a2, a3)
+    }
+    /// A pantry count as a word up to ten, as the sentence on Home writes it.
+    public static func ledeNumber(_ count: Int) -> String {
+        (1...10).contains(count) ? NSLocalizedString("lede_number_\(count)", comment: "") : "\(count)"
+    }
+    /// "on Friday". Takes 1 for Monday, because the words carry their own grammar in Russian.
+    public static func ledeOnWeekday(_ isoDay: Int) -> String {
+        NSLocalizedString("lede_on_weekday_\(isoDay)", comment: "")
+    }
+    private static func plural(_ key: String, _ count: Int, _ inserts: [String: String] = [:]) -> String {
+        var text = String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count)
+        for (name, value) in inserts { text = text.replacingOccurrences(of: "{\(name)}", with: value) }
+        return text
+    }
+    public static func ledeUseByTomorrow(_ count: Int) -> String {
+        plural("lede_use_by_tomorrow", count, ["n": ledeNumber(count)])
+    }
+    public static func ledePastDate(_ count: Int) -> String {
+        plural("lede_past_date", count, ["n": ledeNumber(count)])
+    }
+    public static func homeSearchResults(_ count: Int) -> String { plural("home_search_results", count) }
+    public static func homeShowItems(_ count: Int) -> String { plural("home_show_items", count) }
+    public static func homeActiveFilterCount(_ shown: Int, of total: Int) -> String {
+        plural("home_active_filter_count", total, ["n": "\(shown)"])
+    }
+    public static func recipeNamesMore(_ first: String, _ second: String, others: Int) -> String {
+        plural("recipe_names_more", others, ["a": first, "b": second])
+    }
+    public static func recipeIncludeOthersCount(_ count: Int) -> String {
+        plural("recipe_include_others_count", count)
+    }
+
+    // Larder foundation
+    public static var navShopping: String { NSLocalizedString("nav_shopping", comment: "") }
+    public static var backButton: String { NSLocalizedString("back_button", comment: "") }
+
+    /// How many days ahead a fresh item still counts down rather than showing its date.
+    private static let relativeFreshDays = 7
+
+    /// The words a status chip shows: "1 day over", "Today", "Tomorrow", "In 4 days", "19 Nov",
+    /// and the year too when it isn't this one. Factual on purpose: a passed date is never
+    /// "Expired!". Mirrors Android's `expiryStatusLabel`.
+    public static func expiryStatusLabel(
+        status: ExpiryStatus,
+        daysRemaining: Int,
+        expiryDate: Date,
+        today: Date = Date(),
+        locale: Locale = .current
+    ) -> String {
+        if daysRemaining < 0 {
+            return String.localizedStringWithFormat(NSLocalizedString("status_days_over_format", comment: ""), -daysRemaining)
+        }
+        if daysRemaining == 0 { return NSLocalizedString("status_today", comment: "") }
+        if daysRemaining == 1 { return NSLocalizedString("status_tomorrow", comment: "") }
+        if status != .fresh || daysRemaining <= relativeFreshDays {
+            return String.localizedStringWithFormat(NSLocalizedString("expires_in_days_format", comment: ""), daysRemaining)
+        }
+        let calendar = Calendar.current
+        let sameYear = calendar.component(.year, from: expiryDate) == calendar.component(.year, from: today)
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate(sameYear ? "dMMM" : "dMMMy")
+        return formatter.string(from: expiryDate)
+    }
+
+    public static var clearFieldButton: String { NSLocalizedString("clear_field_button", comment: "") }
+    public static var dismissButton: String { NSLocalizedString("dismiss_button", comment: "") }
+    public static var quantityDecrease: String { NSLocalizedString("quantity_decrease", comment: "") }
+    public static var quantityIncrease: String { NSLocalizedString("quantity_increase", comment: "") }
+    public static func useOneLabel(_ name: String) -> String {
+        String(format: NSLocalizedString("use_one_label_format", comment: ""), name)
+    }
+    public static func itemSavedTo(_ name: String, _ location: String) -> String {
+        String(format: NSLocalizedString("item_saved_to_format", comment: ""), name, location)
+    }
+    public static func itemsDeleted(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("items_deleted_format", comment: ""), count)
+    }
+
+    // MARK: - Onboarding
+    public static var onboardingGetStarted: String { NSLocalizedString("onboarding_get_started", comment: "") }
+    public static var onboardingWelcomeTitle: String { NSLocalizedString("onboarding_welcome_title", comment: "") }
+    public static var onboardingPrivateTitle: String { NSLocalizedString("onboarding_private_title", comment: "") }
+    public static var onboardingPrivateBody: String { NSLocalizedString("onboarding_private_body", comment: "") }
+    public static var onboardingNotificationsTitle: String { NSLocalizedString("onboarding_notifications_title", comment: "") }
+    public static var onboardingNotificationsBody: String { NSLocalizedString("onboarding_notifications_body", comment: "") }
+    public static func onboardingSampleSource(_ appName: String) -> String {
+        String(format: NSLocalizedString("onboarding_sample_source", comment: ""), appName)
+    }
+    public static var onboardingSampleTitle: String { NSLocalizedString("onboarding_sample_title", comment: "") }
+    public static var onboardingSampleBody: String { NSLocalizedString("onboarding_sample_body", comment: "") }
+    public static func onboardingSampleDescription(_ title: String, _ body: String) -> String {
+        String(format: NSLocalizedString("onboarding_sample_description", comment: ""), title, body)
+    }
+    public static var onboardingNotificationsAllow: String { NSLocalizedString("onboarding_notifications_allow", comment: "") }
+    public static var onboardingNotNow: String { NSLocalizedString("onboarding_not_now", comment: "") }
+    public static var onboardingCameraTitle: String { NSLocalizedString("onboarding_camera_title", comment: "") }
+    public static func onboardingCameraBody(_ appName: String) -> String {
+        String(format: NSLocalizedString("onboarding_camera_body", comment: ""), appName)
+    }
+    public static var onboardingCameraBarcodesTitle: String { NSLocalizedString("onboarding_camera_barcodes_title", comment: "") }
+    public static var onboardingCameraBarcodesBody: String { NSLocalizedString("onboarding_camera_barcodes_body", comment: "") }
+    public static var onboardingCameraDatesTitle: String { NSLocalizedString("onboarding_camera_dates_title", comment: "") }
+    public static var onboardingCameraDatesBody: String { NSLocalizedString("onboarding_camera_dates_body", comment: "") }
+    public static var onboardingCameraAllow: String { NSLocalizedString("onboarding_camera_allow", comment: "") }
+    public static var onboardingReadyTitle: String { NSLocalizedString("onboarding_ready_title", comment: "") }
+    public static var onboardingReadyBody: String { NSLocalizedString("onboarding_ready_body", comment: "") }
+    public static var onboardingSkip: String { NSLocalizedString("onboarding_skip", comment: "") }
+    public static var onboardingDeclinedTitle: String { NSLocalizedString("onboarding_declined_title", comment: "") }
+    public static var onboardingDeclinedBody: String { NSLocalizedString("onboarding_declined_body", comment: "") }
+    public static var onboardingDeclinedRemindersTitle: String { NSLocalizedString("onboarding_declined_reminders_title", comment: "") }
+    public static var onboardingDeclinedRemindersBody: String { NSLocalizedString("onboarding_declined_reminders_body", comment: "") }
+    public static var onboardingDeclinedCameraTitle: String { NSLocalizedString("onboarding_declined_camera_title", comment: "") }
+    public static var onboardingDeclinedCameraBody: String { NSLocalizedString("onboarding_declined_camera_body", comment: "") }
+    public static var onboardingAddByHand: String { NSLocalizedString("onboarding_add_by_hand", comment: "") }
+    public static var remindersNotAskedMessage: String { NSLocalizedString("reminders_not_asked_message", comment: "") }
 
     public static var exitSelectionButton: String { NSLocalizedString("exit_selection_button", comment: "") }
     public static var selectItemsButton: String { NSLocalizedString("select_items_button", comment: "") }
@@ -97,6 +277,14 @@ public enum L10n {
     public static var calendarSwipeTossed: String { NSLocalizedString("calendar_swipe_tossed", comment: "") }
     public static var calendarShowMonth: String { NSLocalizedString("calendar_show_month", comment: "") }
     public static var calendarShowWeek: String { NSLocalizedString("calendar_show_week", comment: "") }
+    public static var calendarPaneTitle: String { NSLocalizedString("calendar_pane_title", comment: "") }
+    public static var calendarEmptyMessage: String { NSLocalizedString("calendar_empty_message", comment: "") }
+    public static func calendarUsedSnackbar(_ name: String) -> String {
+        String(format: NSLocalizedString("calendar_used_snackbar", comment: ""), name)
+    }
+    public static func calendarTossedSnackbar(_ name: String) -> String {
+        String(format: NSLocalizedString("calendar_tossed_snackbar", comment: ""), name)
+    }
     public static func calendarDayItemCount(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("calendar_day_item_count", comment: ""), count)
     }
@@ -174,7 +362,6 @@ public enum L10n {
     public static func shoppingSectionDeleteTitle(_ name: String) -> String {
         String(format: NSLocalizedString("shopping_section_delete_title", comment: ""), name)
     }
-    public static var shoppingSectionDeleteMessage: String { NSLocalizedString("shopping_section_delete_message", comment: "") }
     public static var shoppingSectionSave: String { NSLocalizedString("shopping_section_save", comment: "") }
     public static var shoppingSectionNamePlaceholder: String { NSLocalizedString("shopping_section_name_placeholder", comment: "") }
     public static var shoppingSectionMoveTo: String { NSLocalizedString("shopping_section_move_to", comment: "") }
@@ -254,6 +441,32 @@ public enum L10n {
             count
         )
     }
+    public static var shoppingListBrand: String { NSLocalizedString("shopping_list_brand", comment: "") }
+    public static var shoppingListLedeEmpty: String { NSLocalizedString("shopping_list_lede_empty", comment: "") }
+    public static func shoppingListLede(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("shopping_list_lede_format", comment: ""), count)
+    }
+    public static func shoppingListAlreadyListed(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_list_already_listed", comment: ""), name)
+    }
+    public static func shoppingListMarkBought(_ name: String) -> String {
+        String(format: NSLocalizedString("shopping_list_mark_bought", comment: ""), name)
+    }
+    public static var shoppingListImportPlaceholder: String { NSLocalizedString("shopping_list_import_placeholder", comment: "") }
+    public static func shoppingListBarcode(_ barcode: String) -> String {
+        String(format: NSLocalizedString("shopping_list_barcode_format", comment: ""), barcode)
+    }
+    public static var shoppingListImportLabel: String { NSLocalizedString("shopping_list_import_label", comment: "") }
+    public static var shoppingListClose: String { NSLocalizedString("shopping_list_close", comment: "") }
+    public static var shoppingListQrDescription: String { NSLocalizedString("shopping_list_qr_description", comment: "") }
+    public static var shoppingListDragHandle: String { NSLocalizedString("shopping_list_drag_handle", comment: "") }
+    public static var shoppingSectionsLabel: String { NSLocalizedString("shopping_sections_label", comment: "") }
+    public static var shoppingSectionNameLabel: String { NSLocalizedString("shopping_section_name_label", comment: "") }
+    public static var shoppingSectionKeep: String { NSLocalizedString("shopping_section_keep", comment: "") }
+    public static var shoppingSectionDeleteConfirm: String { NSLocalizedString("shopping_section_delete_confirm", comment: "") }
+    public static func shoppingSectionDeleteCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("shopping_section_delete_count_format", comment: ""), count)
+    }
     public static var shoppingListScan: String { NSLocalizedString("shopping_list_scan", comment: "") }
     public static var shoppingListDidYouMeanTitle: String { NSLocalizedString("shopping_list_did_you_mean_title", comment: "") }
     public static var shoppingListDidYouMeanNoneOfThese: String { NSLocalizedString("shopping_list_did_you_mean_none_of_these", comment: "") }
@@ -293,7 +506,9 @@ public enum L10n {
         String.localizedStringWithFormat(NSLocalizedString("receipt_lines_added", comment: ""), count)
     }
     public static var batchQueueEmpty: String { NSLocalizedString("batch_queue_empty", comment: "") }
-    public static var batchQueueRemoveContentDescription: String { NSLocalizedString("batch_queue_remove_content_description", comment: "") }
+    public static func batchQueueRemove(_ name: String) -> String {
+        String(format: NSLocalizedString("batch_queue_remove_content_description", comment: ""), name)
+    }
     public static var batchQueueNeedsDate: String { NSLocalizedString("batch_queue_needs_date", comment: "") }
     public static var batchCommitButton: String { NSLocalizedString("batch_commit_button", comment: "") }
     public static var batchClearButton: String { NSLocalizedString("batch_clear_button", comment: "") }
@@ -324,6 +539,36 @@ public enum L10n {
     public static func batchDiscardMessage(_ count: Int) -> String {
         String.localizedStringWithFormat(NSLocalizedString("batch_discard_message_format", comment: ""), count)
     }
+    // Scanner (Larder)
+    public static func barcodeFormat(_ barcode: String) -> String {
+        String(format: NSLocalizedString("barcode_format", comment: ""), barcode)
+    }
+    public static var closeScanner: String { NSLocalizedString("close_scanner", comment: "") }
+    public static var scanTorchOn: String { NSLocalizedString("scan_torch_on", comment: "") }
+    public static var scanTorchOff: String { NSLocalizedString("scan_torch_off", comment: "") }
+    public static var scanIdleResultsTitle: String { NSLocalizedString("scan_idle_results_title", comment: "") }
+    public static var scanIdleResultsMessage: String { NSLocalizedString("scan_idle_results_message", comment: "") }
+    public static var scanIdleDateTitle: String { NSLocalizedString("scan_idle_date_title", comment: "") }
+    public static var scanIdleDateMessage: String { NSLocalizedString("scan_idle_date_message", comment: "") }
+    public static var scanIdlePhotoTitle: String { NSLocalizedString("scan_idle_photo_title", comment: "") }
+    public static var scanIdlePhotoMessage: String { NSLocalizedString("scan_idle_photo_message", comment: "") }
+    public static var scanAllergenNote: String { NSLocalizedString("scan_allergen_note", comment: "") }
+    public static var scanOfflineTitle: String { NSLocalizedString("scan_offline_title", comment: "") }
+    public static var scanOfflineMessage: String { NSLocalizedString("scan_offline_message", comment: "") }
+    public static var scanTryAgain: String { NSLocalizedString("scan_try_again", comment: "") }
+    public static var scanContinueByHand: String { NSLocalizedString("scan_continue_by_hand", comment: "") }
+    public static func scanBestBefore(_ date: String) -> String {
+        String(format: NSLocalizedString("scan_best_before_format", comment: ""), date)
+    }
+    public static var scanDateFromBarcode: String { NSLocalizedString("scan_date_from_barcode", comment: "") }
+    public static var scanDateFromPackaging: String { NSLocalizedString("scan_date_from_packaging", comment: "") }
+    public static var scanUseThisDate: String { NSLocalizedString("scan_use_this_date", comment: "") }
+    public static var scanReadingReceipt: String { NSLocalizedString("scan_reading_receipt", comment: "") }
+    public static var receiptQueueEmpty: String { NSLocalizedString("receipt_queue_empty", comment: "") }
+    public static var scanQueueCleared: String { NSLocalizedString("scan_queue_cleared", comment: "") }
+    public static func batchQueueEstimated(_ date: String) -> String {
+        String(format: NSLocalizedString("batch_queue_estimated_format", comment: ""), date)
+    }
     public static var torchToggleButton: String { NSLocalizedString("torch_toggle_button", comment: "") }
 
     public static var expiresToday: String { NSLocalizedString("expires_today", comment: "") }
@@ -339,6 +584,10 @@ public enum L10n {
 
     public static func notifBodyToday(_ nameWithBrand: String) -> String {
         String(format: NSLocalizedString("notif_body_today_format", comment: ""), nameWithBrand)
+    }
+
+    public static func notifBodyTomorrow(_ nameWithBrand: String) -> String {
+        String(format: NSLocalizedString("notif_body_tomorrow_format", comment: ""), nameWithBrand)
     }
 
     public static func notifBodySoon(_ nameWithBrand: String, days: Int) -> String {
@@ -502,8 +751,12 @@ public enum L10n {
     public static var widgetShoppingListTitle: String { NSLocalizedString("widget_shopping_list_title", comment: "") }
     public static var widgetShoppingListDescription: String { NSLocalizedString("widget_shopping_list_description", comment: "") }
     public static var widgetShoppingListEmpty: String { NSLocalizedString("widget_shopping_list_empty", comment: "") }
-    public static var widgetActionUsed: String { NSLocalizedString("widget_action_used", comment: "") }
-    public static var widgetActionBought: String { NSLocalizedString("widget_action_bought", comment: "") }
+    public static func widgetActionUsed(_ name: String) -> String {
+        String(format: NSLocalizedString("widget_action_used_item_format", comment: ""), name)
+    }
+    public static func widgetActionBought(_ name: String) -> String {
+        String(format: NSLocalizedString("widget_action_bought_item_format", comment: ""), name)
+    }
     public static var widgetOverviewTitle: String { NSLocalizedString("widget_overview_title", comment: "") }
     public static var widgetOverviewDescription: String { NSLocalizedString("widget_overview_description", comment: "") }
 
@@ -521,5 +774,88 @@ public enum L10n {
             let format = NSLocalizedString("expires_in_days_format", comment: "")
             return String.localizedStringWithFormat(format, days)
         }
+    }
+
+    // MARK: Add item
+    public static var newItemPlaceholder: String { NSLocalizedString("new_item_placeholder", comment: "") }
+    public static var addNameMissing: String { NSLocalizedString("add_name_missing", comment: "") }
+    public static var addSeeDetails: String { NSLocalizedString("add_see_details", comment: "") }
+    public static var storageLocationTitle: String { NSLocalizedString("storage_location_title", comment: "") }
+    public static var updateItemButton: String { NSLocalizedString("update_item_button", comment: "") }
+    public static var discardNewMessage: String { NSLocalizedString("discard_new_message", comment: "") }
+    public static func discardEditMessage(_ name: String) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("discard_edit_message_format", comment: ""), name)
+    }
+    public static func saveItemButton(_ location: String) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("save_item_button_format", comment: ""), location)
+    }
+    /// "In 20 days", then "In 2 months", then "In 36 years", on the same thresholds as Android's
+    /// `daysRemainingLabel`. For two days or more.
+    public static func dateDistance(days: Int) -> String {
+        if days < 60 {
+            return String.localizedStringWithFormat(NSLocalizedString("expires_in_days_format", comment: ""), days)
+        }
+        let months = Int((Double(days) / 30.44).rounded())
+        if months < 12 {
+            return String.localizedStringWithFormat(NSLocalizedString("expires_in_months_format", comment: ""), months)
+        }
+        let years = max(Int((Double(days) / 365.25).rounded()), 1)
+        return String.localizedStringWithFormat(NSLocalizedString("expires_in_years_format", comment: ""), years)
+    }
+
+    // MARK: Larder settings
+    public static var settingsGroupReminders: String { NSLocalizedString("settings_group_reminders", comment: "") }
+    public static var settingsGroupKitchen: String { NSLocalizedString("settings_group_kitchen", comment: "") }
+    public static var settingsNotificationsBlockedTitle: String { NSLocalizedString("settings_notifications_blocked_title", comment: "") }
+    public static var settingsOff: String { NSLocalizedString("settings_off", comment: "") }
+    public static var settingsAllergensNone: String { NSLocalizedString("settings_allergens_none", comment: "") }
+    public static var settingsAddAllergenLabel: String { NSLocalizedString("settings_add_allergen_label", comment: "") }
+    public static var settingsDataSummary: String { NSLocalizedString("settings_data_summary", comment: "") }
+    public static var settingsLocationDefault: String { NSLocalizedString("settings_location_default", comment: "") }
+    public static func settingsLocationTaken(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_location_taken", comment: ""), value1)
+    }
+    public static func settingsRenameLocationFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_rename_location_format", comment: ""), value1)
+    }
+    public static func settingsDeleteLocationFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_delete_location_format", comment: ""), value1)
+    }
+    public static func settingsSetDefaultLocationFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_set_default_location_format", comment: ""), value1)
+    }
+    public static func settingsRemoveFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("settings_remove_format", comment: ""), value1)
+    }
+    public static var settingsTryAgain: String { NSLocalizedString("settings_try_again", comment: "") }
+    public static var restoreModeCancel: String { NSLocalizedString("restore_mode_cancel", comment: "") }
+    public static var clearDataKeep: String { NSLocalizedString("clear_data_keep", comment: "") }
+    public static var categorySettingsEmptyTitle: String { NSLocalizedString("category_settings_empty_title", comment: "") }
+    public static var categorySettingsScan: String { NSLocalizedString("category_settings_scan", comment: "") }
+    public static var categorySettingsMoveUp: String { NSLocalizedString("category_settings_move_up", comment: "") }
+    public static var categorySettingsMoveDown: String { NSLocalizedString("category_settings_move_down", comment: "") }
+    public static var categorySettingsMoveDone: String { NSLocalizedString("category_settings_move_done", comment: "") }
+    public static var categorySettingsRenameFieldLabel: String { NSLocalizedString("category_settings_rename_field_label", comment: "") }
+    public static var categorySettingsRenameConfirm: String { NSLocalizedString("category_settings_rename_confirm", comment: "") }
+    public static func categorySettingsRenameFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_rename_format", comment: ""), value1)
+    }
+    public static func categorySettingsDragHandleFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_drag_handle_format", comment: ""), value1)
+    }
+    public static func categorySettingsShowFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_show_format", comment: ""), value1)
+    }
+    public static func categorySettingsShelfLifeFormat(_ value1: String, _ value2: String) -> String {
+        String(format: NSLocalizedString("category_settings_shelf_life_format", comment: ""), value1, value2)
+    }
+    public static func categorySettingsShelfLifeTitleFormat(_ value1: String) -> String {
+        String(format: NSLocalizedString("category_settings_shelf_life_title_format", comment: ""), value1)
+    }
+    public static var categorySettingsShelfLifeRange: String { NSLocalizedString("category_settings_shelf_life_range", comment: "") }
+    public static var categorySettingsShelfLifeError: String { NSLocalizedString("category_settings_shelf_life_error", comment: "") }
+    public static var categorySettingsShelfLifeSave: String { NSLocalizedString("category_settings_shelf_life_save", comment: "") }
+    public static func clearDataDialogCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("clear_data_dialog_count", comment: ""), count)
     }
 }

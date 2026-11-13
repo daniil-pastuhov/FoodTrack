@@ -1,0 +1,78 @@
+/* Widgets and notifications: system surfaces on a neutral wallpaper stand-in. Sizes are the platforms' real dp/pt. */
+.sf { background: var(--color-surface-container); }
+.sf-wall { flex: 1; min-height: 0; overflow: auto; padding: var(--space-4); scrollbar-width: none; background: linear-gradient(160deg, var(--color-surface-container), color-mix(in srgb, var(--color-outline-variant) 60%, var(--color-surface-container))); }
+.sf-board { display: grid; grid-template-columns: minmax(0, 358px); justify-content: center; gap: var(--space-5); }
+.sf-plat { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+.sf-cap { margin: 0; font: var(--type-label); color: var(--color-on-surface); }
+.sf-size { margin: 0; font: var(--type-caption); color: var(--color-on-surface); }
+@container (min-width: 700px) { .sf-board { grid-template-columns: repeat(2, minmax(0, 358px)); align-items: start; } }
+
+/* Widget frame */
+.sf-w { display: flex; flex-direction: column; flex: none; overflow: hidden; background: var(--color-surface-container-high); color: var(--color-on-surface); box-shadow: var(--elevation-1); }
+.sf-w.a { padding: var(--space-3); border-radius: var(--radius-xl); height: 170px; }
+.sf-w.a.s { width: 180px; }
+.sf-w.a.m { width: 100%; max-width: 358px; }
+.sf-w.i { padding: var(--space-4); border-radius: var(--radius-xl); height: 158px; }
+.sf-w.i.s { width: 158px; }
+.sf-w.i.m { width: 338px; max-width: 100%; }
+.sf-w.cols { flex-direction: row; gap: var(--space-4); }
+.sf-col { flex: 1 1 0; min-width: 0; }
+.sf-col + .sf-col { padding-left: var(--space-4); border-left: 1px solid var(--color-outline-variant); }
+.sf-none { display: grid; place-items: center; width: 158px; height: 158px; padding: var(--space-3); border-radius: var(--radius-xl); box-shadow: inset 0 0 0 1px var(--color-outline); text-align: center; font: var(--type-caption); color: var(--color-on-surface); }
+.sf-none p { margin: 0; }
+
+/* Widget content */
+.sf-t { flex: none; font: var(--type-title-sm); color: inherit; text-decoration: none; margin-bottom: var(--space-1); }
+.sf-rows { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow: hidden; }
+.sf-r { display: flex; align-items: center; gap: var(--space-2); min-width: 0; padding: var(--space-1) 0; }
+.sf-r + .sf-r { border-top: 1px solid var(--color-outline-variant); }
+.sf-tx { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: start; gap: 2px; }
+.sf-nm { font: var(--type-body-sm); font-weight: 500; }
+.sf-tx .sf-nm { justify-self: stretch; }
+.sf-grow { flex: 1; min-width: 0; }
+.sf-q { flex: none; font: var(--type-label); color: var(--color-on-surface-variant); font-variant-numeric: tabular-nums; }
+.sf .st { max-width: 100%; }
+.sf-e { margin: 0; font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.sf-more { flex: none; margin: 0; font: var(--type-caption); color: var(--color-on-surface-variant); }
+.sf-sec { font: var(--type-caption); font-weight: 700; color: var(--color-on-surface-variant); padding: var(--space-1) 0 2px; }
+.sf-sec a { color: inherit; text-decoration: none; }
+.sf-h { display: flex; align-items: center; gap: var(--space-1); width: 100%; text-align: left; min-height: 28px; padding: 0; border: 0; background: transparent; color: var(--color-on-surface-variant); font: var(--type-caption); font-weight: 700; cursor: pointer; }
+.app .sf-h svg.lucide { flex: none; width: 14px; height: 14px; }
+.sf-w.i .sf-r { padding: 2px 0; }
+.sf-w.i .sf-r + .sf-r { border-top: 0; }
+.sf-w.i .sf-h { min-height: 20px; }
+.sf-w.i .sf-t { margin-bottom: 2px; }
+
+/* The widget tick is an action, not a checkbox: ring and tick both show, muted, like ic_widget_check */
+.sf .tick { color: var(--color-on-surface-variant); margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) calc(var(--space-3) * -1) 0; }
+.sf .tick::before { width: 22px; height: 22px; box-shadow: inset 0 0 0 2px var(--color-on-surface-variant); }
+.sf .tick svg.lucide { visibility: visible; width: 14px; height: 14px; stroke-width: 2.5; }
+.sf .tick.sm { width: 28px; height: 28px; margin: 0; }
+.sf-used { flex: none; min-height: 32px; padding: 0 var(--space-3); font: var(--type-caption); }
+.sf-used::after { content: ""; position: absolute; inset: -8px 0; }
+
+/* Notification cards: neutral, drawn for each system, no Larder type */
+.sf-n { display: flex; gap: var(--space-3); width: 100%; min-width: 0; color: var(--color-on-surface); text-decoration: none; font: var(--type-body-sm); }
+.sf-n.a { padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--color-surface-container-high); box-shadow: var(--elevation-1); }
+.sf-n.i { padding: var(--space-3); border-radius: var(--radius-xl); background: color-mix(in srgb, var(--color-surface-container-high) 88%, transparent); box-shadow: var(--elevation-2); }
+.sf-nic { flex: none; display: block; }
+.sf-ic { display: block; width: 36px; height: 36px; }
+.sf-n.a .sf-ic { width: 24px; height: 24px; border-radius: 50%; }
+.sf-nx { flex: 1; min-width: 0; display: block; }
+.sf-nlink { display: block; color: inherit; text-decoration: none; }
+.sf-nh { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); font: var(--type-caption); color: var(--color-on-surface-variant); }
+.app .sf-nh svg.lucide { flex: none; width: 16px; height: 16px; }
+.sf-nh.open svg.lucide { transform: rotate(180deg); }
+.sf-nrow { display: flex; align-items: baseline; gap: var(--space-2); }
+.sf-nrow .sf-nt { flex: 1; }
+.sf-when { flex: none; font: var(--type-caption); color: var(--color-on-surface-variant); }
+.sf-nt { display: block; font: var(--type-label); }
+.sf-nb { display: block; margin: 0; color: var(--color-on-surface-variant); }
+.sf-n.i .sf-nb { -webkit-box-orient: vertical; }
+.sf-n.i .sf-nb.clamp-2 { display: -webkit-box; }
+.sf-acts { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin-top: var(--space-1); }
+.sf-acts button { min-height: var(--size-touch); padding: 0; border: 0; background: transparent; color: var(--color-primary); font: var(--type-label); cursor: pointer; }
+.sf-menu { display: grid; width: 100%; max-width: 260px; overflow: hidden; border-radius: var(--radius-lg); background: var(--color-surface-container-high); box-shadow: var(--elevation-2); }
+.sf-menu button { min-height: 44px; padding: 0 var(--space-4); border: 0; background: transparent; color: var(--color-on-surface); font: var(--type-body); text-align: left; cursor: pointer; }
+.sf-menu button + button { border-top: 1px solid var(--color-outline-variant); }
+.sf-menu button.danger { color: var(--color-error); }

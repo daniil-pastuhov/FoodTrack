@@ -28,8 +28,11 @@ struct ShoppingSectionedList: View {
     @ObservedObject var viewModel: NativePantryViewModel
     var onItemRemoved: (ShoppingListEntry) -> Void
     var onEntryTap: (ShoppingListEntry) -> Void
+    var onMoveEntry: (ShoppingListEntry, String) -> Void
     var onRenameSection: (ShoppingSection) -> Void
-    var onDeleteSection: (ShoppingSection) -> Void
+    var onDeleteSection: (ShoppingSection, Int) -> Void
+    /// The row to bring into view, set by the tablet's section index and cleared once done.
+    @Binding var scrollTarget: String?
 
     private struct DragState: Equatable {
         let entryId: String
@@ -40,73 +43,105 @@ struct ShoppingSectionedList: View {
     /// The list as it is while a drag is in progress: built with the other sections folded when
     /// the drag starts, then rearranged as the entry moves over rows. Never persisted.
     @State private var dragRows: [ShoppingRow]?
+    /// Rows showing their tick for a moment before they leave.
+    @State private var tickedIds: Set<String> = []
     @Environment(\.scenePhase) private var scenePhase
 
     private var rows: [ShoppingRow] { dragRows ?? viewModel.shoppingRows }
 
     var body: some View {
-        List {
-            ForEach(rows) { row in
-                switch row {
-                case .header(let section, let count):
-                    header(section, count: count)
-                        .onDrop(of: [.text], delegate: RowDropDelegate(
-                            onEnter: { moveDragged(over: row.id) },
-                            onDrop: commitDrag
-                        ))
-                case .item(let entry, let sectionId):
-                    itemRow(entry, sectionId: sectionId)
-                        .onDrag { startDrag(entry, sectionId: sectionId) }
-                        .onDrop(of: [.text], delegate: RowDropDelegate(
-                            onEnter: { moveDragged(over: row.id) },
-                            onDrop: commitDrag
-                        ))
+        ScrollViewReader { proxy in
+            List {
+                ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                    switch row {
+                    case .header(let section, let count):
+                        header(section, count: count, hasGap: Self.headerHasGap(rows, at: index))
+                            .onDrop(of: [.text], delegate: RowDropDelegate(
+                                onEnter: { moveDragged(over: row.id) },
+                                onDrop: commitDrag
+                            ))
+                    case .item(let entry, let sectionId):
+                        itemRow(entry, sectionId: sectionId, position: Self.groupPosition(rows, at: index))
+                            .onDrop(of: [.text], delegate: RowDropDelegate(
+                                onEnter: { moveDragged(over: row.id) },
+                                onDrop: commitDrag
+                            ))
+                    }
                 }
             }
-        }
-        .listStyle(.plain)
-        // A drop in the gaps between rows still lands where the entry currently sits.
-        .onDrop(of: [.text], delegate: RowDropDelegate(onEnter: {}, onDrop: commitDrag))
-        .animation(.easeInOut(duration: 0.25), value: rows.map(\.id))
-        // Insurance on top of DragSessionItemProvider: never come back from the background with
-        // sections stuck folded.
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active {
-                viewModel.reloadShoppingList()
-            } else {
-                cancelDrag()
+            .larderList()
+            // A drop in the gaps between rows still lands where the entry currently sits.
+            .onDrop(of: [.text], delegate: RowDropDelegate(onEnter: {}, onDrop: commitDrag))
+            .animation(.easeInOut(duration: 0.25), value: rows.map(\.id))
+            // Insurance on top of DragSessionItemProvider: never come back from the background
+            // with sections stuck folded.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active {
+                    viewModel.reloadShoppingList()
+                } else {
+                    cancelDrag()
+                }
+            }
+            .onChange(of: scrollTarget) { _, target in
+                guard let target else { return }
+                withAnimation { proxy.scrollTo(target, anchor: .top) }
+                scrollTarget = nil
             }
         }
     }
 
+    // MARK: - Layout
+
+    /// Where the row at `index` falls in the group of rows under its section header.
+    static func groupPosition(_ rows: [ShoppingRow], at index: Int) -> LarderGroupPosition {
+        func isItem(_ i: Int) -> Bool {
+            guard rows.indices.contains(i), case .item = rows[i] else { return false }
+            return true
+        }
+        switch (isItem(index - 1), isItem(index + 1)) {
+        case (true, true): return .middle
+        case (true, false): return .last
+        case (false, true): return .first
+        case (false, false): return .only
+        }
+    }
+
+    /// A header only needs space above it after a group of rows: folded sections sit close.
+    static func headerHasGap(_ rows: [ShoppingRow], at index: Int) -> Bool {
+        guard rows.indices.contains(index - 1), case .item = rows[index - 1] else { return false }
+        return true
+    }
+
     // MARK: - Rows
 
-    private func header(_ section: ShoppingSection, count: Int) -> some View {
+    /// The toggle takes the free space, so the menu stays pinned right however long the name is.
+    /// The main list has no menu. iOS reorders sections in a sheet, so headers have no handle.
+    private func header(_ section: ShoppingSection, count: Int, hasGap: Bool) -> some View {
         let collapsed: Bool = {
             guard let drag else { return section.collapsed }
             return section.id != drag.sourceSectionId
         }()
         let name = L10n.shoppingSectionName(section)
-        return HStack(spacing: 8) {
+        return HStack(spacing: 0) {
             Button {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     viewModel.setShoppingSectionCollapsed(section.id, !section.collapsed)
                 }
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "chevron.down")
-                        .font(.footnote.weight(.semibold))
+                HStack(spacing: LarderSpace.s2) {
+                    LarderIcon(.chevronDown, size: .custom(ShoppingRowMetrics.smallIcon))
                         .rotationEffect(.degrees(collapsed ? -90 : 0))
                         .animation(.easeInOut(duration: 0.2), value: collapsed)
                     Text(name)
-                        .font(.subheadline.weight(.bold))
+                        .larderFont(.label)
                         .lineLimit(1)
                     Text("\(count)")
-                        .font(.footnote)
-                        .foregroundStyle(.tertiary)
+                        .larderFont(.caption)
+                        .monospacedDigit()
                     Spacer(minLength: 0)
                 }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .frame(minHeight: LarderSize.touch)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -116,88 +151,72 @@ struct ShoppingSectionedList: View {
             if !section.isDefault {
                 Menu {
                     Button(L10n.shoppingSectionRename) { onRenameSection(section) }
-                    Button(L10n.shoppingSectionDelete, role: .destructive) { onDeleteSection(section) }
+                    Button(L10n.shoppingSectionDelete, role: .destructive) { onDeleteSection(section, count) }
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 32, height: 28)
+                    LarderIcon(.ellipsisVertical)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .frame(width: LarderSize.touch, height: LarderSize.touch)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(L10n.shoppingSectionOptions(name))
             }
         }
-        .padding(.top, 8)
+        .padding(.top, hasGap ? LarderSpace.s2 : 0)
+        .listRowInsets(EdgeInsets(top: 0, leading: LarderSpace.s4, bottom: 0, trailing: LarderSpace.s4))
         .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
         .deleteDisabled(true)
     }
 
-    private func itemRow(_ entry: ShoppingListEntry, sectionId: String) -> some View {
-        HStack(spacing: 14) {
-            // Decorative affordance: the row itself is picked up with a long press.
-            Image(systemName: "line.3.horizontal")
-                .font(.title3)
-                .foregroundColor(.secondary)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(entry.productName)
-                    .font(.title3)
-                if let barcode = entry.barcode {
-                    Text(barcode)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-            }
-            Spacer()
-            Button {
-                if entry.quantity <= 1 {
-                    viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
-                } else {
-                    viewModel.decrementShoppingListQuantity(entry.id)
-                }
-            } label: {
-                Image(systemName: "minus.circle")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-            Text("\(entry.quantity)")
-                .font(.title3)
-                .frame(minWidth: 24)
-                .contentTransition(.numericText())
-                .animation(.easeInOut(duration: 0.2), value: entry.quantity)
-            Button {
-                viewModel.incrementShoppingListQuantity(entry.id)
-            } label: {
-                Image(systemName: "plus.circle")
-                    .font(.title2)
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
-        .onTapGesture { onEntryTap(entry) }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) {
-                viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved)
-            } label: {
-                Label(L10n.shoppingListCheckOff, systemImage: "checkmark.circle.fill")
-            }
-        }
-        .contextMenu {
-            // The non-drag way to move an entry, for anyone who can't or won't drag.
-            let targets = viewModel.shoppingSections.filter { $0.id != sectionId }
-            if !targets.isEmpty {
-                Menu(L10n.shoppingSectionMoveTo) {
-                    ForEach(targets) { target in
-                        Button(L10n.shoppingSectionName(target)) {
-                            viewModel.moveShoppingListEntry(entry.id, toSection: target.id)
-                        }
-                    }
-                }
-            }
-        }
+    private func itemRow(
+        _ entry: ShoppingListEntry,
+        sectionId: String,
+        position: LarderGroupPosition
+    ) -> some View {
+        let isTicked = tickedIds.contains(entry.id)
+        return ShoppingRowContent(
+            entry: entry,
+            isTicked: isTicked,
+            onTick: { tick(entry) },
+            onQuantityChange: { changeQuantity(of: entry, to: $0) },
+            onTap: { onEntryTap(entry) },
+            onLongPress: viewModel.shoppingSections.count > 1 ? { onMoveEntry(entry, sectionId) } : nil,
+            gripDrag: { startDrag(entry, sectionId: sectionId) }
+        )
+        .larderGroupRow(position)
+        .larderSwipeActions(
+            trailing: isTicked ? [] : [
+                LarderSwipeAction(L10n.shoppingListCheckOff, icon: .check, tint: .success) { checkOff(entry) }
+            ]
+        )
         .deleteDisabled(true)
+    }
+
+    /// The row shows its tick for a moment, then leaves as a swipe would.
+    private func tick(_ entry: ShoppingListEntry) {
+        guard !tickedIds.contains(entry.id) else { return }
+        tickedIds.insert(entry.id)
+        Task { @MainActor in
+            try? await Task.sleep(for: ShoppingRowMetrics.tickHold)
+            checkOff(entry)
+            tickedIds.remove(entry.id)
+        }
+    }
+
+    private func checkOff(_ entry: ShoppingListEntry) {
+        withAnimation { viewModel.deleteShoppingListEntry(entry.id, onItemRemoved: onItemRemoved) }
+    }
+
+    /// At quantity 1 the minus stays on and takes the row off, with Undo, like a tick.
+    private func changeQuantity(of entry: ShoppingListEntry, to quantity: Int) {
+        if quantity > entry.quantity {
+            viewModel.incrementShoppingListQuantity(entry.id)
+        } else if entry.quantity <= 1 {
+            checkOff(entry)
+        } else {
+            viewModel.decrementShoppingListQuantity(entry.id)
+        }
     }
 
     // MARK: - Dragging
@@ -294,34 +313,137 @@ private struct RowDropDelegate: DropDelegate {
     func performDrop(info: DropInfo) -> Bool { onDrop() }
 }
 
-/// Reordering the user's sections: a plain edit-mode list, since the default section is pinned
-/// and the rest are few.
+/// From shopping.css.
+enum ShoppingRowMetrics {
+    /// A row is at least this tall, since a name may take two lines.
+    static let minHeight: CGFloat = 64
+    /// Narrower than a full target so the name keeps its room on a phone. The handle still spans
+    /// the row's height, and Move to section does the same job without a drag.
+    static let gripWidth: CGFloat = 28
+    /// The chevron and grip are a size down from the icon default.
+    static let smallIcon: CGFloat = 18
+    /// How long a ticked row shows its tick before it leaves.
+    static let tickHold: Duration = .milliseconds(350)
+}
+
+/// Tick, name, quantity, handle. Tapping the name opens Add item; a long press offers Move to
+/// section, which is also the way to move a row without dragging it.
+struct ShoppingRowContent: View {
+    let entry: ShoppingListEntry
+    var isTicked = false
+    var onTick: () -> Void = {}
+    var onQuantityChange: (Int) -> Void = { _ in }
+    var onTap: () -> Void = {}
+    var onLongPress: (() -> Void)? = nil
+    var gripDrag: () -> NSItemProvider = { NSItemProvider() }
+
+    private var name: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(entry.productName)
+                .larderFont(.titleSm)
+                .lineLimit(2)
+                .strikethrough(isTicked)
+                .foregroundStyle(isTicked ? LarderColor.onSurfaceVariant : LarderColor.onSurface)
+            if let barcode = entry.barcode, !barcode.isEmpty {
+                Text(L10n.shoppingListBarcode(barcode))
+                    .larderFont(.caption)
+                    .lineLimit(1)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+            }
+        }
+        .padding(.horizontal, LarderSpace.s1)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            LarderTick(isOn: isTicked, label: L10n.shoppingListMarkBought(entry.productName), onToggle: onTick)
+            name
+                .onTapGesture(perform: onTap)
+                .onLongPressGesture { onLongPress?() }
+                .accessibilityElement(children: .combine)
+                .accessibilityAddTraits(.isButton)
+                .accessibilityAction(named: L10n.shoppingSectionMoveTo) { onLongPress?() }
+            LarderStepper(
+                value: Binding(get: { entry.quantity }, set: onQuantityChange),
+                range: 0...maxItemQuantity,
+                outlined: false
+            )
+            LarderIcon(.gripVertical, size: .custom(ShoppingRowMetrics.smallIcon))
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .frame(width: ShoppingRowMetrics.gripWidth, height: LarderSize.touch)
+                .contentShape(Rectangle())
+                .onDrag(gripDrag) {
+                    Text(entry.productName)
+                        .larderFont(.titleSm)
+                        .foregroundStyle(LarderColor.onSurface)
+                        .padding(LarderSpace.s3)
+                        .background(LarderColor.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: LarderRadius.md))
+                }
+                .accessibilityLabel(L10n.shoppingListDragHandle)
+        }
+        .padding(.leading, LarderSpace.s1)
+        .padding(.vertical, LarderSpace.s1)
+        .frame(minHeight: ShoppingRowMetrics.minHeight)
+    }
+}
+
+/// Reordering the user's sections. The main list isn't shown because it stays pinned first.
 struct ShoppingSectionReorderSheet: View {
     @ObservedObject var viewModel: NativePantryViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var order: [ShoppingSection] = []
 
     var body: some View {
-        NavigationStack {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(L10n.shoppingSectionReorder)
+                .larderFont(.title)
+                .foregroundStyle(LarderColor.onSurface)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.top, LarderSpace.s6)
+                .padding(.horizontal, LarderSpace.s4)
             List {
                 ForEach(order) { section in
                     Text(L10n.shoppingSectionName(section))
+                        .larderFont(.body)
+                        .foregroundStyle(LarderColor.onSurface)
+                        .listRowBackground(Color.clear)
                 }
                 .onMove { from, to in
                     order.move(fromOffsets: from, toOffset: to)
                     viewModel.reorderShoppingSections(order.map(\.id))
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .environment(\.editMode, .constant(.active))
-            .navigationTitle(L10n.shoppingSectionReorder)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(L10n.doneButton) { dismiss() }
-                }
+            HStack {
+                Spacer()
+                LarderButton(L10n.doneButton) { dismiss() }
             }
-            .onAppear { order = viewModel.shoppingSections.filter { !$0.isDefault } }
+            .padding(LarderSpace.s4)
         }
-        .presentationDetents([.medium, .large])
+        .onAppear { order = viewModel.shoppingSections.filter { !$0.isDefault } }
     }
 }
+
+private func previewEntry(_ name: String, quantity: Int = 1, barcode: String? = nil) -> ShoppingListEntry {
+    ShoppingListEntry(id: name, productName: name, barcode: barcode, quantity: quantity, addedDate: Date())
+}
+
+private struct ShoppingRowGallery: View {
+    var body: some View {
+        LarderGroup {
+            ShoppingRowContent(entry: previewEntry("Semi-skimmed milk", quantity: 2))
+            ShoppingRowContent(entry: previewEntry("Greek yoghurt", quantity: 2, barcode: "5200435000027"))
+            ShoppingRowContent(entry: previewEntry("Sourdough bread"), isTicked: true)
+            ShoppingRowContent(entry: previewEntry("Молоко ультрапастеризованное безлактозное 3,2%", quantity: 12))
+        }
+        .padding(LarderSpace.s4)
+        .background(LarderColor.background)
+    }
+}
+
+#Preview("Shopping rows") { ShoppingRowGallery() }
+#Preview("Shopping rows, dark") { ShoppingRowGallery().preferredColorScheme(.dark) }

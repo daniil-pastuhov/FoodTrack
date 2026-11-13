@@ -16,15 +16,21 @@ import com.foodtracker.model.NotificationSettings
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.isDigestDay
 import com.foodtracker.notification.ExpiryNotificationCalculator
+import com.foodtracker.repository.PantryRepository
 import com.foodtracker.util.DateUtils
 import java.util.Calendar
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 
 object NotificationHelper {
 
-    /** Per-item expiry reminders. The id predates the summary channel and is kept as-is, so
-     *  whatever the user already set for it in system settings carries over. */
-    const val CHANNEL_ID = "foodtracker_expiry_channel"
+    /** Per-item expiry reminders, at default importance: a reminder is information, not an alarm.
+     *  A channel's importance can't be lowered once it exists, which is why this is a new id. */
+    const val CHANNEL_ID = "foodtracker_item_reminders"
+
+    /** The high-importance channel that made every reminder a heads-up with vibration. Deleted
+     *  on start; see [itemChannelImportance]. */
+    internal const val LEGACY_CHANNEL_ID = "foodtracker_expiry_channel"
 
     /** The grouped summary. Its own channel, so the user can silence or demote it in system
      *  settings without touching the per-item reminders, and the other way round. */
@@ -32,14 +38,13 @@ object NotificationHelper {
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             val itemChannel = NotificationChannel(
                 CHANNEL_ID,
                 context.getString(R.string.notification_channel_name),
-                NotificationManager.IMPORTANCE_HIGH
+                itemChannelImportance(notificationManager.getNotificationChannel(LEGACY_CHANNEL_ID)?.importance)
             ).apply {
                 description = context.getString(R.string.notification_channel_desc)
-                enableVibration(true)
-                enableLights(true)
             }
             val digestChannel = NotificationChannel(
                 DIGEST_CHANNEL_ID,
@@ -48,10 +53,23 @@ object NotificationHelper {
             ).apply {
                 description = context.getString(R.string.notification_digest_channel_desc)
             }
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannels(listOf(itemChannel, digestChannel))
+            notificationManager.deleteNotificationChannel(LEGACY_CHANNEL_ID)
         }
     }
+
+    /**
+     * The importance to create the per-item channel with, given the old channel's. Someone who
+     * turned the old channel off in system settings keeps it off; moving to a new id must not
+     * start reminding them again. Anyone else gets the default, whatever they had. Only matters
+     * on the first start after the update: once the channel exists, this value is ignored.
+     */
+    internal fun itemChannelImportance(legacyImportance: Int?): Int =
+        if (legacyImportance == NotificationManager.IMPORTANCE_NONE) {
+            NotificationManager.IMPORTANCE_NONE
+        } else {
+            NotificationManager.IMPORTANCE_DEFAULT
+        }
 
     /**
      * The system settings screen that would unblock expiry reminders, or null when nothing the
@@ -116,6 +134,9 @@ object NotificationHelper {
             daysRemaining == 0 ->
                 context.getString(R.string.notif_title_today) to
                     context.getString(R.string.notif_body_today_format, nameWithBrand)
+            daysRemaining == 1 ->
+                context.getString(R.string.notif_title_soon) to
+                    context.getString(R.string.notif_body_tomorrow_format, nameWithBrand)
             else ->
                 context.getString(R.string.notif_title_soon) to
                     context.resources.getQuantityString(
@@ -127,7 +148,28 @@ object NotificationHelper {
         }
     }
 
-    fun scheduleNotification(context: Context, item: PantryItem) {
+    /**
+     * What a reminder says as it fires. Worded from the item as it stands, not from the extras
+     * the alarm was set with: an alarm can sit for months, so an update's new wording would
+     * otherwise take that long to reach people, and the date may have changed since. The extras
+     * are for an item that can no longer be read, then the generic line.
+     */
+    internal fun reminderCopyAtFiring(
+        context: Context,
+        item: PantryItem?,
+        today: LocalDate,
+        extraTitle: String?,
+        extraBody: String?
+    ): Pair<String, String> =
+        item?.let { notificationCopy(context, it.name, it.brand, it.daysRemaining(today)) }
+            ?: Pair(
+                extraTitle ?: context.getString(R.string.notif_fallback_title),
+                extraBody ?: context.getString(R.string.notif_fallback_body)
+            )
+
+    /** [fireIfPast] false skips a reminder whose time has gone by instead of firing it now, for
+     *  [restoreReminders], which must not repeat a reminder already shown. */
+    fun scheduleNotification(context: Context, item: PantryItem, fireIfPast: Boolean = true) {
         val notificationSettings = AndroidSettingsRepository(context).getSettings().notifications
         if (!wantsIndividualReminder(notificationSettings, item)) {
             // Also clears an alarm scheduled before the reminder was switched off - for the
@@ -144,6 +186,11 @@ object NotificationHelper {
             hour = notificationSettings.hour,
             minute = notificationSettings.minute
         ) ?: return
+        // Past its own day, the calculator moves a reminder to today so a late addition still
+        // gets one. A restore must not: that reminder has been shown already, and re-arming it
+        // would show it again every morning until the date.
+        val reminderDay = LocalDate.fromEpochDays(item.expiryDate.toEpochDays() - notificationSettings.leadDays)
+        if (!fireIfPast && payload.triggerDate != reminderDay) return
 
         val (title, body) = notificationCopy(
             context,
@@ -168,6 +215,7 @@ object NotificationHelper {
         val now = System.currentTimeMillis()
 
         if (triggerMillis <= now) {
+            if (!fireIfPast) return
             triggerMillis = now + 5000L
         }
 
@@ -290,6 +338,20 @@ object NotificationHelper {
     fun rescheduleAll(context: Context, items: List<PantryItem>) {
         items.forEach { cancelNotification(context, it.id) }
         items.forEach { scheduleNotification(context, it) }
+    }
+
+    /**
+     * Puts back every reminder alarm still to come, per item and the digest, from what is
+     * stored. Android drops an app's alarms when the device restarts and when the app is
+     * force-stopped, and nothing else would set them again until a notification setting
+     * changed. Run after a restart or an update (see ReminderRestoreReceiver) and whenever the
+     * app opens. A reminder whose time has passed is left alone rather than fired again, and
+     * nothing is cancelled, so reminders already on screen stay.
+     */
+    suspend fun restoreReminders(context: Context, repository: PantryRepository) {
+        val settings = AndroidSettingsRepository(context).getSettings().notifications
+        repository.getItemsFlow().first().forEach { scheduleNotification(context, it, fireIfPast = false) }
+        scheduleDigest(context, settings)
     }
 
     /** Used only if tomorrow's reminder slot has somehow already passed. */

@@ -1,36 +1,30 @@
 package com.foodtracker.android.ui.screens
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -42,34 +36,78 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
-import com.foodtracker.android.ui.theme.BrandPrimary
-import com.foodtracker.android.ui.theme.TextSecondary
+import com.foodtracker.android.ui.design.LarderGroup
+import com.foodtracker.android.ui.design.LarderGroupPosition
+import com.foodtracker.android.ui.design.LarderIcon
+import com.foodtracker.android.ui.design.LarderIconButton
+import com.foodtracker.android.ui.design.LarderIcons
+import com.foodtracker.android.ui.design.LarderPreview
+import com.foodtracker.android.ui.design.LarderStepper
+import com.foodtracker.android.ui.design.LarderSwipeAction
+import com.foodtracker.android.ui.design.LarderSwipeRow
+import com.foodtracker.android.ui.design.LarderSwipeStyle
+import com.foodtracker.android.ui.design.LarderTick
+import com.foodtracker.android.ui.design.larderGroupItem
+import com.foodtracker.android.ui.theme.LarderRadius
+import com.foodtracker.android.ui.theme.LarderSize
+import com.foodtracker.android.ui.theme.LarderSpace
+import com.foodtracker.android.ui.theme.LarderTheme
+import com.foodtracker.android.ui.theme.larderShadow
 import com.foodtracker.android.util.categoryLabel
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
 import com.foodtracker.model.resolveShoppingSectionId
+import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryDerivation
-import com.foodtracker.viewmodel.PantryUiState
 import com.foodtracker.viewmodel.PantryStateHolder
+import com.foodtracker.viewmodel.PantryUiState
 import com.foodtracker.viewmodel.ShoppingRow
+import kotlinx.coroutines.delay
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+
+/** From shopping.css: a row is at least this tall, since a name may take two lines. */
+private val ShoppingRowMinHeight = 64.dp
+
+/** A full touch target, so the handle is as easy to catch as the stepper beside it. Move to
+ *  section, and Move up and down on a section's menu, do the same jobs without a drag. */
+private val ShoppingGripWidth = LarderSize.touch
+
+/** From shopping.css: the chevron and grip are a size down from [LarderIcons]'s default. */
+private val ShoppingSmallIcon = 18.dp
+
+/** How long a ticked row shows its tick before it leaves. */
+private const val TICK_HOLD_MILLIS = 350L
+
+/** Where the row at [index] falls in the group of rows under its section header. */
+internal fun shoppingGroupPosition(rows: List<ShoppingRow>, index: Int): LarderGroupPosition {
+    val joinsAbove = rows.getOrNull(index - 1) is ShoppingRow.Item
+    val joinsBelow = rows.getOrNull(index + 1) is ShoppingRow.Item
+    return when {
+        joinsAbove && joinsBelow -> LarderGroupPosition.Middle
+        joinsAbove -> LarderGroupPosition.Last
+        joinsBelow -> LarderGroupPosition.First
+        else -> LarderGroupPosition.Single
+    }
+}
+
+/** A header only needs space above it after a group of rows: folded sections sit close. */
+internal fun shoppingHeaderHasGap(rows: List<ShoppingRow>, index: Int): Boolean =
+    rows.getOrNull(index - 1) is ShoppingRow.Item
 
 /** What is being dragged right now, if anything. */
 private sealed interface DragMode {
@@ -106,8 +144,9 @@ internal fun ShoppingSectionedList(
     onCheckOffEntry: (String) -> Unit,
     onDecrementEntry: (String) -> Unit,
     onEntryClick: (ShoppingListEntry) -> Unit,
+    onMoveEntry: (ShoppingListEntry, String) -> Unit,
     onRenameSection: (ShoppingSection) -> Unit,
-    onDeleteSection: (ShoppingSection) -> Unit
+    onDeleteSection: (ShoppingSection, Int) -> Unit
 ) {
     val haptics = LocalHapticFeedback.current
     val resources = LocalContext.current.resources
@@ -238,17 +277,27 @@ internal fun ShoppingSectionedList(
         optimisticRows = result
     }
 
-    val sectionLabels = state.shoppingSections.map { it.id to labelOf(it) }
+    val canMove = state.shoppingSections.size > 1
+    val movableSectionIds = rows.filterIsInstance<ShoppingRow.Header>()
+        .map { it.section }
+        .filterNot { it.isDefault }
+        .map { it.id }
+    fun moveSection(sectionId: String, delta: Int) {
+        val reordered = movedSectionOrder(movableSectionIds, sectionId, delta) ?: return
+        stateHolder.reorderShoppingSections(reordered)
+    }
 
     LazyColumn(
         state = lazyListState,
         modifier = Modifier.fillMaxSize(),
-        // Bottom padding clears the floating pill nav bar and scan/add buttons that overlay
-        // this screen (see MainActivity).
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = bottomOverlayClearance),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        // Bottom padding clears the floating pill, which overlays this screen.
+        contentPadding = PaddingValues(
+            start = LarderSpace.s4,
+            end = LarderSpace.s4,
+            bottom = bottomOverlayClearance
+        )
     ) {
-        items(rows, key = { it.key }) { row ->
+        itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
             when (row) {
                 is ShoppingRow.Header -> {
                     val section = row.section
@@ -279,8 +328,20 @@ internal fun ShoppingSectionedList(
                             ),
                             onToggle = { stateHolder.setShoppingSectionCollapsed(section.id, !section.collapsed) },
                             onRename = { onRenameSection(section) },
-                            onDelete = { onDeleteSection(section) },
-                            modifier = Modifier.animateItem()
+                            onDelete = { onDeleteSection(section, row.itemCount) },
+                            onMoveUp = if (movedSectionOrder(movableSectionIds, section.id, -1) != null) {
+                                { moveSection(section.id, -1) }
+                            } else {
+                                null
+                            },
+                            onMoveDown = if (movedSectionOrder(movableSectionIds, section.id, 1) != null) {
+                                { moveSection(section.id, 1) }
+                            } else {
+                                null
+                            },
+                            modifier = Modifier
+                                .animateItem()
+                                .padding(top = if (shoppingHeaderHasGap(rows, index)) LarderSpace.s2 else 0.dp)
                         )
                     }
                 }
@@ -289,6 +350,7 @@ internal fun ShoppingSectionedList(
                     ReorderableItem(reorderableState, key = row.key) { isDragging ->
                         ShoppingListRow(
                             entry = entry,
+                            position = shoppingGroupPosition(rows, index),
                             isDragging = isDragging,
                             dragHandleModifier = Modifier.draggableHandle(
                                 onDragStarted = {
@@ -304,18 +366,171 @@ internal fun ShoppingSectionedList(
                             onIncrement = { stateHolder.incrementShoppingListQuantity(entry.id) },
                             onDecrement = { onDecrementEntry(entry.id) },
                             onClick = { onEntryClick(entry) },
-                            moveTargets = sectionLabels.filter { it.first != row.sectionId },
-                            onMoveToSection = { stateHolder.moveShoppingListEntryToSection(entry.id, it) },
+                            onLongClick = if (canMove) ({ onMoveEntry(entry, row.sectionId) }) else null,
                             modifier = Modifier.animateItem()
                         )
                     }
                 }
             }
         }
-        item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }
 
+/** A row in its group: the swipe around [ShoppingRowContent], and the moment a tick stays on
+ *  screen before the row goes. Both a tick and a swipe end in [onCheckOff]. */
+@Composable
+private fun ShoppingListRow(
+    entry: ShoppingListEntry,
+    position: LarderGroupPosition,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier,
+    onCheckOff: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
+) {
+    var ticked by remember { mutableStateOf(false) }
+    val currentOnCheckOff by rememberUpdatedState(onCheckOff)
+    LaunchedEffect(ticked) {
+        if (ticked) {
+            delay(TICK_HOLD_MILLIS)
+            currentOnCheckOff()
+        }
+    }
+    val swipe = LarderSwipeAction(
+        icon = LarderIcons.Check,
+        label = null,
+        style = LarderSwipeStyle.Quiet,
+        onSwipe = onCheckOff
+    )
+    val dragShape = RoundedCornerShape(LarderRadius.md)
+    val frame = if (isDragging) {
+        Modifier
+            .larderShadow(LarderTheme.shadows.level3, dragShape)
+            .clip(dragShape)
+    } else {
+        Modifier.larderGroupItem(position)
+    }
+    LarderSwipeRow(
+        startAction = swipe,
+        endAction = swipe,
+        enabled = !isDragging && !ticked,
+        modifier = modifier.then(frame)
+    ) {
+        ShoppingRowContent(
+            entry = entry,
+            ticked = ticked,
+            isDragging = isDragging,
+            dragHandleModifier = dragHandleModifier,
+            onTick = { ticked = true },
+            onIncrement = onIncrement,
+            onDecrement = onDecrement,
+            onClick = onClick,
+            onLongClick = onLongClick
+        )
+    }
+}
+
+/** Tick, name, quantity, handle. Tapping anywhere else opens Add item; a long press offers Move
+ *  to section, which is also the way to move a row without dragging it. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ShoppingRowContent(
+    entry: ShoppingListEntry,
+    ticked: Boolean,
+    isDragging: Boolean,
+    dragHandleModifier: Modifier,
+    onTick: () -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(if (isDragging) scheme.surfaceContainerHigh else scheme.surface)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onLongClickLabel = stringResource(R.string.shopping_section_move_to)
+            )
+            .heightIn(min = ShoppingRowMinHeight)
+            .padding(start = LarderSpace.s1, top = LarderSpace.s1, bottom = LarderSpace.s1)
+    ) {
+        LarderTick(
+            checked = ticked,
+            onCheckedChange = { if (!ticked) onTick() },
+            contentDescription = stringResource(R.string.widget_action_mark_bought, entry.productName)
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = LarderSpace.s1)
+        ) {
+            Text(
+                text = entry.productName,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (ticked) scheme.onSurfaceVariant else scheme.onSurface,
+                textDecoration = if (ticked) TextDecoration.LineThrough else null,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            val barcode = entry.barcode
+            if (!barcode.isNullOrBlank()) {
+                Text(
+                    text = stringResource(R.string.barcode_format, barcode),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = scheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        // min 0: at quantity 1 the minus stays on and takes the row off, with Undo, like a tick.
+        LarderStepper(
+            value = entry.quantity,
+            onValueChange = { if (it > entry.quantity) onIncrement() else onDecrement() },
+            min = 0,
+            decreaseDescription = stringResource(R.string.shopping_list_quantity_decrease_content_description),
+            increaseDescription = stringResource(R.string.shopping_list_quantity_increase_content_description),
+            outlined = false
+        )
+        ShoppingGrip(
+            description = stringResource(R.string.shopping_list_drag_handle_content_description),
+            dragHandleModifier = dragHandleModifier
+        )
+    }
+}
+
+@Composable
+private fun ShoppingGrip(description: String, dragHandleModifier: Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        // Consumes the handle's touch-down after the drag detector has seen it, so the row
+        // around it doesn't also start its long-press timer and open Move to section mid-drag.
+        modifier = Modifier
+            .pointerInput(Unit) {
+                awaitEachGesture { awaitFirstDown(requireUnconsumed = false).consume() }
+            }
+            .then(dragHandleModifier)
+            .size(width = ShoppingGripWidth, height = LarderSize.touch)
+    ) {
+        LarderIcon(
+            LarderIcons.GripVertical,
+            contentDescription = description,
+            size = ShoppingSmallIcon,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/** The toggle takes the free space, so the menu and handle stay pinned right however long the
+ *  name is. The main list has neither. */
 @Composable
 private fun ShoppingSectionHeader(
     label: String,
@@ -328,127 +543,181 @@ private fun ShoppingSectionHeader(
     onToggle: () -> Unit,
     onRename: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Null when the section is already at that end. The drag's equivalent without a drag. */
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null
 ) {
+    val scheme = MaterialTheme.colorScheme
     val chevronRotation by animateFloatAsState(if (collapsed) -90f else 0f, label = "sectionChevron")
-    val background by animateColorAsState(
-        if (isDragging) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.background,
-        label = "sectionHeaderBackground"
-    )
     val stateText = stringResource(if (collapsed) R.string.shopping_section_collapsed else R.string.shopping_section_expanded)
+    val dragShape = RoundedCornerShape(LarderRadius.md)
     var showMenu by remember { mutableStateOf(false) }
-    Surface(color = background, shape = RoundedCornerShape(10.dp), modifier = modifier.fillMaxWidth()) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (isDragging) {
+                    Modifier
+                        .larderShadow(LarderTheme.shadows.level3, dragShape)
+                        .background(scheme.surfaceContainerHigh, dragShape)
+                } else {
+                    Modifier
+                }
+            )
+            .heightIn(min = LarderSize.touch)
+    ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
             modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
+                .weight(1f)
+                .heightIn(min = LarderSize.touch)
                 .clickable(enabled = toggleEnabled, role = Role.Button, onClick = onToggle)
                 .semantics { stateDescription = stateText }
-                .padding(start = 4.dp, top = 6.dp, bottom = 2.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.ExpandMore,
+            LarderIcon(
+                LarderIcons.ChevronDown,
                 contentDescription = null,
-                tint = TextSecondary,
-                modifier = Modifier
-                    .size(20.dp)
-                    .rotate(chevronRotation)
+                size = ShoppingSmallIcon,
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier.rotate(chevronRotation)
             )
-            Spacer(Modifier.size(6.dp))
-            // Label and count share the free space, so the menu and drag handle stay pinned to
-            // the right edge however long the name is.
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            Text(
+                text = itemCount.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                color = scheme.onSurfaceVariant
+            )
+        }
+        if (!isDefault) {
+            Box {
+                LarderIconButton(
+                    icon = LarderIcons.EllipsisVertical,
+                    contentDescription = stringResource(R.string.shopping_section_options, label),
+                    onClick = { showMenu = true }
                 )
-                Spacer(Modifier.size(8.dp))
-                Text(
-                    text = itemCount.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary.copy(alpha = 0.7f)
-                )
-            }
-            if (!isDefault) {
-                Box {
-                    IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.shopping_section_options, label),
-                            tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false },
+                    shape = RoundedCornerShape(LarderRadius.md),
+                    containerColor = scheme.surfaceContainerHigh
+                ) {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.shopping_section_rename),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = scheme.onSurface
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onRename()
+                        }
+                    )
+                    onMoveUp?.let { move ->
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.shopping_section_rename)) },
+                            text = {
+                                Text(
+                                    stringResource(R.string.category_settings_move_up),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = scheme.onSurface
+                                )
+                            },
                             onClick = {
                                 showMenu = false
-                                onRename()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.shopping_section_delete), color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                onDelete()
+                                move()
                             }
                         )
                     }
+                    onMoveDown?.let { move ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(R.string.category_settings_move_down),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = scheme.onSurface
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                move()
+                            }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.shopping_section_delete),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = scheme.error
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onDelete()
+                        }
+                    )
                 }
-                Icon(
-                    imageVector = Icons.Default.DragHandle,
-                    contentDescription = stringResource(R.string.shopping_section_drag_handle_content_description),
-                    tint = TextSecondary,
-                    modifier = dragHandleModifier
-                        .padding(horizontal = 8.dp)
-                        .size(20.dp)
-                )
             }
+            ShoppingGrip(
+                description = stringResource(R.string.shopping_section_drag_handle_content_description),
+                dragHandleModifier = dragHandleModifier
+            )
         }
     }
 }
 
-/** Name prompt for creating or renaming a section. */
+/** [ids] with [sectionId] moved [delta] places, or null when it's missing or already at that
+ *  end, so the menu can leave the item out. */
+internal fun movedSectionOrder(ids: List<String>, sectionId: String, delta: Int): List<String>? {
+    val from = ids.indexOf(sectionId)
+    if (from < 0 || delta == 0) return null
+    val to = from + delta
+    if (to !in ids.indices) return null
+    return ids.toMutableList().apply { add(to, removeAt(from)) }
+}
+
+private fun previewEntry(name: String, quantity: Int = 1, barcode: String? = null) = ShoppingListEntry(
+    id = name,
+    productName = name,
+    barcode = barcode,
+    quantity = quantity,
+    addedDate = DateUtils.today()
+)
+
 @Composable
-internal fun ShoppingSectionNameDialog(
-    title: String,
-    initialName: String,
-    onConfirm: (String) -> Unit,
-    onDismiss: () -> Unit
-) {
-    var value by remember { mutableStateOf(TextFieldValue(initialName, TextRange(initialName.length))) }
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = { value = it },
-                placeholder = { Text(stringResource(R.string.shopping_section_name_placeholder)) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester)
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = { onConfirm(value.text) }, enabled = value.text.isNotBlank()) {
-                Text(stringResource(R.string.shopping_section_save), color = BrandPrimary)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.share_recipe_cancel_button))
-            }
-        }
-    )
+private fun PreviewRow(entry: ShoppingListEntry, ticked: Boolean = false, isDragging: Boolean = false) {
+    ShoppingRowContent(entry, ticked, isDragging, Modifier, {}, {}, {}, {}, null)
+}
+
+@PreviewLightDark
+@Composable
+private fun ShoppingRowPreview() = LarderPreview {
+    LarderGroup {
+        PreviewRow(previewEntry("Semi-skimmed milk", quantity = 2))
+        PreviewRow(previewEntry("Greek yoghurt", quantity = 2, barcode = "5200435000027"))
+        PreviewRow(previewEntry("Sourdough bread"), ticked = true)
+        PreviewRow(previewEntry("Молоко ультрапастеризованное безлактозное 3,2%", quantity = 12))
+        PreviewRow(previewEntry("Natural yoghurt"), isDragging = true)
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun ShoppingSectionHeaderPreview() = LarderPreview {
+    ShoppingSectionHeader("Shopping list", 2, false, false, true, true, Modifier, {}, {}, {})
+    ShoppingSectionHeader("Dairy aisle", 2, false, false, false, true, Modifier, {}, {}, {})
+    ShoppingSectionHeader("Household", 1, true, false, false, true, Modifier, {}, {}, {})
+    ShoppingSectionHeader("Бытовая химия и товары для дома и кухни", 4, false, false, false, true, Modifier, {}, {}, {})
+    ShoppingSectionHeader("Dairy aisle", 2, true, true, false, true, Modifier, {}, {}, {})
 }

@@ -21,18 +21,17 @@ struct FoodTrackerApp: App {
         #if !DEBUG
         FirebaseApp.configure()
         #endif
+        LarderTheme.applyGlobalAppearance()
     }
 
     var body: some Scene {
         WindowGroup {
             RootTabView()
-                .tint(Color(red: 13/255, green: 148/255, blue: 136/255)) // Teal Brand color
+                .readsWindowWidth()
+                .tint(LarderColor.primary)
                 .preferredColorScheme(settingsStore.settings.theme.colorScheme)
                 .onAppear {
-                    // The permission alert would cover the store screenshots.
-                    if !Self.isTakingScreenshots {
-                        IOSNotificationManager.shared.requestAuthorization()
-                    }
+                    IOSNotificationManager.shared.configure()
                     // Re-asserted on every start rather than only when Settings changes: region
                     // monitoring is an OS-level registration that outlives the process, and
                     // permission can be revoked from Settings between runs.

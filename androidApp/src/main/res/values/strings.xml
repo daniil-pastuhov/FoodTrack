@@ -8,18 +8,18 @@
 
     <string name="nav_label_home">Home</string>
     <string name="nav_label_calendar">Calendar</string>
-    <string name="nav_label_shopping_list">Shopping List</string>
+    <string name="nav_label_shopping_list">Shopping</string>
     <string name="nav_label_settings">Settings</string>
 
-    <string name="metric_expired">Expired</string>
+    <string name="metric_expired">Past date</string>
     <string name="metric_soon">Soon</string>
     <string name="metric_fresh">Fresh</string>
 
-    <string name="search_placeholder">Search products or brands...</string>
+    <string name="search_placeholder">Search products or brands</string>
     <string name="clear_content_description">Clear</string>
 
-    <string name="filter_all_locations">All Locations</string>
-    <string name="filter_all_categories">All Categories</string>
+    <string name="filter_all_locations">All locations</string>
+    <string name="filter_all_categories">All categories</string>
     <string name="filter_content_description">Filters</string>
     <string name="filters_sheet_title">Filters</string>
 
@@ -28,11 +28,11 @@
     <string name="tab_expired">Expired</string>
 
     <string name="sort_content_description">Sort</string>
-    <string name="sort_sheet_title">Sort By</string>
-    <string name="sort_option_expiry_date">Expiry Date</string>
+    <string name="sort_sheet_title">Sort by</string>
+    <string name="sort_option_expiry_date">Expiry date</string>
     <string name="sort_option_name">Name</string>
-    <string name="sort_option_date_added">Date Added</string>
-    <string name="sort_option_storage_location">Storage Location</string>
+    <string name="sort_option_date_added">Date added</string>
+    <string name="sort_option_storage_location">Storage location</string>
 
     <string name="empty_state_title">No items found</string>
     <string name="empty_state_subtitle">Tap \'Scan Item\' to scan a barcode or add your groceries.</string>
@@ -40,7 +40,7 @@
     <string name="back_content_description">Back</string>
 
     <string name="edit_item_title">Edit Item</string>
-    <string name="add_item_title">Add to Pantry</string>
+    <string name="add_item_title">Add item</string>
     <string name="barcode_format">Barcode: %1$s</string>
     <string name="new_item_placeholder">New Item</string>
     <string name="photo_suggestions_title">Looks like…</string>
@@ -114,16 +114,16 @@
     <string name="food_label_pizza">Pizza</string>
     <string name="food_label_sandwich">Sandwich</string>
     <string name="food_label_food">Food</string>
-    <string name="product_name_label">Product Name *</string>
-    <string name="brand_label">Brand / Manufacturer</string>
-    <string name="expiry_section_title">Best Before / Expiration Date</string>
+    <string name="product_name_label">Product name *</string>
+    <string name="brand_label">Brand</string>
+    <string name="expiry_section_title">Best before</string>
     <string name="expiry_suggestion_remembered">Same as last time · %1$s</string>
     <string name="expiry_suggestion_category">%1$s default · %2$s</string>
     <plurals name="expiry_suggestion_days">
         <item quantity="one">%1$d day</item>
         <item quantity="other">%1$d days</item>
     </plurals>
-    <string name="expiry_date_implausible_warning">This date is more than %1$d years from today. Please double-check the year.</string>
+    <string name="expiry_date_implausible_warning">This date is over %1$d years away. Check the year.</string>
     <string name="quick_date_3_days">+3 Days</string>
     <string name="quick_date_1_week">+1 Week</string>
     <string name="quick_date_2_weeks">+2 Weeks</string>
@@ -133,30 +133,30 @@
     <string name="quantity_label">Quantity</string>
     <string name="quantity_decrease_content_description">Decrease quantity</string>
     <string name="quantity_increase_content_description">Increase quantity</string>
-    <string name="notes_label">Notes (e.g. opened, quantity, shelf)</string>
     <string name="update_item_button">Update Item</string>
     <!-- %1$s is the selected storage location, e.g. "Fridge" -->
     <string name="save_item_button">Save to %1$s</string>
     <string name="date_picker_ok">OK</string>
     <string name="date_picker_cancel">Cancel</string>
 
-    <string name="manual_entry_button">Manual Entry</string>
+    <string name="manual_entry_button">Type it in</string>
     <string name="camera_off_title">The camera is off</string>
     <string name="camera_off_body">BestBefore needs the camera to scan. You can still add food by hand.</string>
     <string name="camera_off_open_settings">Open settings</string>
+    <string name="camera_off_allow">Allow camera</string>
     <string name="camera_off_add_by_hand">Type it in</string>
     <string name="scan_mode_batch">Batch</string>
-    <string name="reticle_hint_batch">Keep scanning — everything lands in the list below</string>
+    <string name="reticle_hint_batch">Keep scanning. Everything lands in the list</string>
     <string name="scan_mode_receipt">Receipt</string>
-    <string name="reticle_hint_receipt">Fit the whole receipt in frame, then tap to read it</string>
+    <string name="reticle_hint_receipt">Fit the whole receipt in the frame, then tap to read it</string>
     <string name="scan_receipt_button">Read receipt</string>
-    <string name="receipt_nothing_found">No products found on that receipt — try again with the whole receipt in frame</string>
+    <string name="receipt_nothing_found">No products found on that receipt. Try again with the whole receipt in frame</string>
     <plurals name="receipt_lines_added">
-        <item quantity="one">Added %1$d item from the receipt — check it below</item>
-        <item quantity="other">Added %1$d items from the receipt — check them below</item>
+        <item quantity="one">Added %1$d item from the receipt. Check it below</item>
+        <item quantity="other">Added %1$d items from the receipt. Check them below</item>
     </plurals>
     <string name="batch_queue_empty">Scan a product to start the list</string>
-    <string name="batch_queue_remove_content_description">Remove from list</string>
+    <string name="batch_queue_remove_content_description">Remove from list: %1$s</string>
     <string name="batch_queue_needs_date">Check date</string>
     <string name="batch_commit_button">Add all</string>
     <string name="batch_clear_button">Clear</string>
@@ -165,29 +165,29 @@
         <item quantity="other">%1$d items queued</item>
     </plurals>
     <plurals name="batch_added_snackbar">
-        <item quantity="one">Added %1$d item</item>
-        <item quantity="other">Added %1$d items</item>
+        <item quantity="one">%1$d item added</item>
+        <item quantity="other">%1$d items added</item>
     </plurals>
     <string name="duplicate_dialog_title">Already in your pantry</string>
-    <string name="duplicate_dialog_message">You already have %1$s. Add one more to it, or create a separate entry?</string>
+    <string name="duplicate_dialog_message">You already have %1$s. Add one more to it, or keep this one separate?</string>
     <string name="duplicate_dialog_add_one">Add one more</string>
     <string name="duplicate_dialog_separate">Keep separate</string>
     <string name="duplicate_added_snackbar">%1$s is now %2$d</string>
     <string name="in_pantry_count">In your pantry: %1$d</string>
     <string name="scan_mode_barcode">Barcode</string>
-    <string name="scan_mode_date_ocr">Date OCR</string>
+    <string name="scan_mode_date_ocr">Date</string>
     <string name="scan_mode_photo">Photo</string>
-    <string name="reticle_hint_barcode">Align product barcode within frame</string>
-    <string name="reticle_hint_date_ocr">Point camera at printed expiration date\n(e.g., \'EXP 24.11.2026\')</string>
-    <string name="reticle_hint_photo">Position product in center to snap a picture</string>
-    <string name="torch_toggle_content_description">Toggle flashlight</string>
+    <string name="reticle_hint_barcode">Line up the barcode inside the frame</string>
+    <string name="reticle_hint_date_ocr">Point at the printed date, like EXP 24.11.2026</string>
+    <string name="reticle_hint_photo">Put the product in the middle, then take the picture</string>
+    <string name="torch_toggle_content_description">Torch</string>
     <string name="expiry_date_found_format">Expiry Date Found: %1$s</string>
-    <string name="looking_up_product">Looking up product in Open Food Facts...</string>
-    <string name="scan_date_button">Scan Date</string>
+    <string name="looking_up_product">Looking up this product…</string>
+    <string name="scan_date_button">Scan date</string>
     <string name="continue_button">Continue</string>
 
     <string name="product_not_found_title">Product not found</string>
-    <string name="switch_to_photo_button">Try Photo Mode</string>
+    <string name="switch_to_photo_button">Photo mode</string>
 
     <string name="take_photo_button">Take photo</string>
     <string name="photo_captured_title">Photo captured</string>
@@ -213,7 +213,7 @@
     <string name="shopping_list_add_button">Add</string>
     <string name="shopping_list_scan_content_description">Scan product</string>    <string name="shopping_list_share_content_description">Share or import list</string>
     <string name="shopping_list_share_dialog_title">Share list</string>
-    <string name="shopping_list_share_dialog_message">Send your list to someone else, or bring one in. Imported items are added to your list — nothing is replaced.</string>
+    <string name="shopping_list_share_dialog_message">Send your list to someone else, or bring one in. Imported items are added to your list, nothing is replaced.</string>
     <string name="shopping_list_share_as_text">Share as text</string>
     <string name="shopping_list_share_as_qr">Show QR code</string>
     <string name="shopping_list_share_qr_content_description">QR code containing the shopping list</string>
@@ -224,8 +224,8 @@
     <string name="shopping_list_import_placeholder">Milk\nBread (2)</string>
     <string name="shopping_list_import_confirm">Import</string>
     <plurals name="shopping_list_import_added">
-        <item quantity="one">Added %1$d item</item>
-        <item quantity="other">Added %1$d items</item>
+        <item quantity="one">%1$d item added</item>
+        <item quantity="other">%1$d items added</item>
     </plurals>
     <string name="shopping_list_import_all_present">Everything on that list is already here</string>
     <string name="shopping_list_import_nothing">Nothing to import from that</string>
@@ -237,7 +237,6 @@
     <string name="shopping_section_rename">Rename section</string>
     <string name="shopping_section_delete">Delete</string>
     <string name="shopping_section_delete_title">Delete “%1$s”?</string>
-    <string name="shopping_section_delete_message">Its items move to the main list.</string>
     <string name="shopping_section_save">Save</string>
     <string name="shopping_section_name_placeholder">e.g. Dairy aisle</string>
     <string name="shopping_section_move_to">Move to section</string>
@@ -256,14 +255,13 @@
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
     <string name="action_get_recipe_ideas">Get recipe ideas</string>
-    <string name="delete_selected_dialog_title">Delete selected items?</string>
     <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">I also have these other items at home, in case any of them are useful too:</string>
     <string name="recipe_prompt_other_items_omitted">(+%1$d more items not shown)</string>
     <string name="share_recipe_dialog_title">Get recipe ideas</string>
     <string name="share_recipe_include_other_items_title">Include other pantry items</string>
-    <string name="share_recipe_include_other_items_subtitle">Optional — lets the AI suggest recipes using more of what you already have</string>
+    <string name="share_recipe_include_other_items_subtitle">Optional. Lets the assistant suggest recipes using more of what you have.</string>
     <string name="share_recipe_share_button">Share</string>
     <string name="share_recipe_cancel_button">Cancel</string>
 
@@ -295,30 +293,27 @@
         <item quantity="other">%d years expired</item>
     </plurals>
 
-    <string name="notification_channel_name">Expiry alerts for each item</string>
+    <string name="notification_channel_name">Reminders for each item</string>
     <string name="notification_channel_desc">One notification per product, shortly before it expires</string>
     <string name="notification_digest_channel_name">Expiry summary</string>
     <string name="notification_digest_channel_desc">One notification listing what expires in the coming week</string>
-    <string name="notif_title_today">Product Expires Today! ⚠️</string>
-    <string name="notif_title_soon">Product Expiring Soon! ⚠️</string>
+    <string name="notif_title_today">Best used today</string>
+    <string name="notif_title_soon">Best used soon</string>
     <string name="notif_title_past">Worth a look</string>
-    <string name="notif_body_today_format">%1$s expires today. Make sure to consume it!</string>
+    <string name="notif_body_today_format">%1$s reaches its date today.</string>
+    <string name="notif_body_tomorrow_format">%1$s reaches its date tomorrow.</string>
     <plurals name="notif_body_soon_format">
-        <item quantity="one">%1$s expires in %2$d day. Make sure to consume it!</item>
-        <item quantity="other">%1$s expires in %2$d days. Make sure to consume it!</item>
+        <item quantity="one">%1$s reaches its date in %2$d day.</item>
+        <item quantity="other">%1$s reaches its date in %2$d days.</item>
     </plurals>
     <plurals name="notif_body_past_format">
         <item quantity="one">%1$s is %2$d day past its date.</item>
         <item quantity="other">%1$s is %2$d days past its date.</item>
     </plurals>
-    <string name="notif_fallback_title">Food Expiration Alert</string>
-    <string name="notif_fallback_body">A product in your pantry is expiring soon.</string>
+    <string name="notif_fallback_title">Reminder from your pantry</string>
+    <string name="notif_fallback_body">Something in your pantry reaches its date soon.</string>
     <string name="notif_action_used">Used it</string>
     <string name="notif_action_snooze">Tomorrow</string>
-    <plurals name="notif_action_still_good">
-        <item quantity="one">Still good +%1$dd</item>
-        <item quantity="other">Still good +%1$dd</item>
-    </plurals>
     <string name="shortcut_scan_barcode_short">Scan</string>
     <string name="shortcut_scan_barcode_long">Scan a barcode</string>
     <string name="shortcut_add_item_short">Add item</string>
@@ -393,10 +388,10 @@
     <string name="settings_notifications_blocked">Notifications are turned off for this app in your phone\'s settings, so reminders won\'t arrive.</string>
     <string name="settings_notifications_open_settings">Open settings</string>
 
-    <string name="settings_section_expiring_soon">Expiring Soon Threshold</string>
+    <string name="settings_section_expiring_soon">Expiring soon threshold</string>
     <string name="settings_expiring_soon_desc">Items expiring within this many days are flagged as \'Expiring Soon\'</string>
 
-    <string name="settings_section_locations">Storage Locations</string>
+    <string name="settings_section_locations">Storage locations</string>
     <string name="settings_locations_desc">Tap the star to set the default for new items</string>
     <string name="settings_remember_last_location">Remember last storage location</string>
     <string name="settings_remember_last_location_desc">Products you haven\'t added before start in the storage location you picked last time</string>
@@ -422,7 +417,7 @@
 
     <string name="settings_section_categories">Categories</string>
     <string name="settings_categories_desc">Rename, reorder, or hide the categories detected from your products</string>
-    <string name="settings_manage_categories_button">Manage Categories</string>
+    <string name="settings_manage_categories_button">Manage categories</string>
 
     <string name="category_settings_title">Categories</string>
     <string name="category_settings_description">Drag to reorder. Tap the pencil to rename a category, or turn it off to hide it everywhere.</string>
@@ -438,8 +433,8 @@
     <string name="category_settings_shelf_life_field_label">Days</string>
     <string name="category_settings_shelf_life_clear">Clear</string>
     <plurals name="category_settings_shelf_life_days_format">
-        <item quantity="one">%1$d d</item>
-        <item quantity="other">%1$d d</item>
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
     </plurals>
     <string name="category_settings_rename_content_description">Rename category</string>
 
@@ -470,6 +465,7 @@
     <string name="widget_shopping_list_title">Shopping List</string>
     <string name="widget_shopping_list_empty">Your shopping list is empty</string>
     <string name="widget_action_used">Used one</string>
+    <string name="widget_action_used_item">Used one: %1$s</string>
     <string name="widget_action_mark_bought">Mark %1$s as bought</string>
 
     <string name="widget_overview_label">Pantry Overview</string>
@@ -485,17 +481,17 @@
     <string name="restore_mode_replace_subtitle">Deletes what\'s on this device first, settings included.</string>
     <string name="backup_export_success">Backup saved</string>
     <string name="backup_export_failed">Couldn\'t save the backup</string>
-    <string name="backup_import_malformed">That file isn\'t a BestBefore backup</string>
+    <string name="backup_import_malformed">That file isn\'t a BestBefore backup. Nothing was changed.</string>
     <string name="backup_import_unsupported">That backup was made by a newer version of the app</string>
     <string name="backup_import_empty">That backup has nothing to restore</string>
     <plurals name="backup_import_success">
         <item quantity="one">Restored %1$d item</item>
         <item quantity="other">Restored %1$d items</item>
     </plurals>
-    <string name="settings_clear_data_button">Clear All Pantry Data</string>
+    <string name="settings_clear_data_button">Clear all pantry data</string>
     <string name="clear_data_dialog_title">Clear all pantry data?</string>
     <string name="clear_data_dialog_message">This removes every item from your pantry and cancels any pending expiry reminders. This cannot be undone.</string>
-    <string name="clear_data_confirm">Clear Data</string>
+    <string name="clear_data_confirm">Clear all data</string>
     <string name="settings_section_stores">Shopping reminders</string>
     <string name="settings_store_reminders_enabled">Remind me near a shop</string>
     <string name="settings_store_reminders_desc">Shows your shopping list when you stop at one of your saved shops. Uses your location in the background; BestBefore doesn\'t send it to us or share it with anyone.</string>
@@ -520,7 +516,7 @@
     </plurals>
 
     <string name="date_captured_title">Expiry date read</string>
-    <string name="scan_again_button">Scan Again</string>
+    <string name="scan_again_button">Scan again</string>
     <string name="shopping_list_scan_unsupported">Open the scanner from your pantry to import a shared list</string>
     <string name="batch_discard_title">Discard scanned items?</string>
     <plurals name="batch_discard_message">
@@ -529,4 +525,245 @@
     </plurals>
     <string name="batch_discard_confirm">Discard</string>
     <string name="batch_discard_keep">Keep scanning</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Loading</string>
+    <string name="status_today">Today</string>
+    <string name="status_tomorrow">Tomorrow</string>
+    <plurals name="status_days_over">
+        <item quantity="one">%d day over</item>
+        <item quantity="other">%d days over</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s saved to %2$s</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">%d item deleted</item>
+        <item quantity="other">%d items deleted</item>
+    </plurals>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Next up: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">Nothing needs using this week</string>
+    <string name="home_section_use_first">Use first</string>
+    <string name="home_section_later_this_week">Later this week</string>
+    <string name="home_section_later">Later</string>
+    <string name="home_clear_filters">Clear filters</string>
+    <string name="home_search_description">Search</string>
+    <string name="home_filters_on_description">Filters, on</string>
+    <string name="home_empty_title">Your shelves are empty</string>
+    <string name="home_empty_message">Scan your first product and it will show up here, soonest date first.</string>
+    <string name="home_empty_scan">Scan a product</string>
+    <string name="home_empty_add_by_hand">Add by hand</string>
+    <string name="home_no_results_title">Nothing matches “%1$s”</string>
+    <string name="home_no_results_message">Check the spelling, or try the brand name.</string>
+    <string name="home_clear_search">Clear search</string>
+    <string name="home_no_filter_results_title">Nothing matches these filters</string>
+    <string name="home_no_filter_results_message">Try another location or category.</string>
+    <string name="home_reminders_off_title">Reminders are off</string>
+    <string name="home_reminders_off_message">Notifications are turned off for BestBefore in your phone\'s settings.</string>
+    <string name="home_dismiss">Dismiss</string>
+    <string name="home_swipe_to_list">To list</string>
+    <string name="home_use_one_item">Use one: %1$s</string>
+    <string name="home_used_one_snackbar">Used one %1$s. %2$d left.</string>
+    <string name="home_location_label">Location</string>
+    <string name="home_category_label">Category</string>
+    <string name="home_best_before_label">Best before</string>
+    <string name="home_notes_label">Notes</string>
+    <string name="home_done">Done</string>
+    <string name="detail_close">Close</string>
+    <string name="detail_edit">Edit</string>
+    <string name="detail_to_shopping_list">To shopping list</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Unprocessed</string>
+    <string name="detail_nova_2">Culinary ingredients</string>
+    <string name="detail_nova_3">Processed</string>
+    <string name="detail_nova_4">Ultra-processed</string>
+    <string name="detail_credit">Product data from Open Food Facts</string>
+    <string name="detail_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
+    <string name="detail_choose_item">Choose an item to see its details.</string>
+    <string name="recipe_intro">BestBefore writes a prompt from %1$s for you to share with an AI assistant. Nothing leaves your device until you choose where to send it.</string>
+    <string name="recipe_names_two">%1$s and %2$s</string>
+    <string name="recipe_names_three">%1$s, %2$s and %3$s</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s thing to use by tomorrow</item>
+        <item quantity="other">%1$s things to use by tomorrow</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s thing is past its date</item>
+        <item quantity="other">%1$s things are past their date</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d result</item>
+        <item quantity="other">%d results</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d of %2$d item</item>
+        <item quantity="other">%1$d of %2$d items</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Show %d item</item>
+        <item quantity="other">Show %d items</item>
+    </plurals>
+    <plurals name="recipe_names_more">
+        <item quantity="one">%1$s, %2$s and %3$d other</item>
+        <item quantity="other">%1$s, %2$s and %3$d others</item>
+    </plurals>
+    <plurals name="recipe_include_others_count">
+        <item quantity="one">Adds your other item, so the assistant can use more of what you have.</item>
+        <item quantity="other">Adds your other %d items, so the assistant can use more of what you have.</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>One</item>
+        <item>Two</item>
+        <item>Three</item>
+        <item>Four</item>
+        <item>Five</item>
+        <item>Six</item>
+        <item>Seven</item>
+        <item>Eight</item>
+        <item>Nine</item>
+        <item>Ten</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>on Monday</item>
+        <item>on Tuesday</item>
+        <item>on Wednesday</item>
+        <item>on Thursday</item>
+        <item>on Friday</item>
+        <item>on Saturday</item>
+        <item>on Sunday</item>
+    </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Close scanner</string>
+    <string name="scan_torch_on">On</string>
+    <string name="scan_torch_off">Off</string>
+    <string name="scan_idle_results_title">Results show up here</string>
+    <string name="scan_idle_results_message">Scan a barcode and the product appears on this side.</string>
+    <string name="scan_idle_date_title">The date shows up here</string>
+    <string name="scan_idle_date_message">Hold the camera steady on the printed date.</string>
+    <string name="scan_idle_photo_title">Your photo shows up here</string>
+    <string name="scan_idle_photo_message">Take a picture to get name suggestions.</string>
+    <string name="scan_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
+    <string name="scan_offline_title">You\'re offline</string>
+    <string name="scan_offline_message">Couldn\'t look this product up. You can carry on by hand, and the barcode stays with the item.</string>
+    <string name="scan_try_again">Try again</string>
+    <string name="scan_continue_by_hand">Continue by hand</string>
+    <string name="scan_best_before_format">Best before %1$s</string>
+    <string name="scan_date_from_barcode">Read from the barcode</string>
+    <string name="scan_date_from_packaging">Read from the packaging</string>
+    <string name="scan_use_this_date">Use this date</string>
+    <string name="scan_reading_receipt">Reading the receipt…</string>
+    <string name="receipt_queue_empty">Read a receipt to start the list</string>
+    <string name="scan_queue_cleared">Queue cleared</string>
+    <string name="scan_capture_failed">Couldn\'t capture photo. Try again.</string>
+    <string name="batch_queue_estimated_format">Estimated %1$s</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Reminders</string>
+    <string name="settings_group_kitchen">Your kitchen</string>
+    <string name="settings_notifications_blocked_title">Reminders are off</string>
+    <string name="settings_off">Off</string>
+    <string name="settings_allergens_none">None yet</string>
+    <string name="settings_add_allergen_label">Add an allergen</string>
+    <string name="settings_data_summary">Backup and clear data</string>
+    <string name="settings_location_default">Default</string>
+    <string name="settings_location_taken">You already have a location called %1$s</string>
+    <string name="settings_rename_location_format">Rename: %1$s</string>
+    <string name="settings_delete_location_format">Delete: %1$s</string>
+    <string name="settings_set_default_location_format">Set as default: %1$s</string>
+    <string name="settings_remove_format">Remove: %1$s</string>
+    <string name="settings_try_again">Try again</string>
+    <string name="restore_mode_cancel">Don\'t import</string>
+    <string name="clear_data_keep">Keep my pantry</string>
+    <string name="category_settings_empty_title">No categories yet</string>
+    <string name="category_settings_scan">Scan a product</string>
+    <string name="category_settings_move_up">Move up</string>
+    <string name="category_settings_move_down">Move down</string>
+    <string name="category_settings_move_done">Done</string>
+    <string name="category_settings_rename_field_label">Category name</string>
+    <string name="category_settings_rename_confirm">Rename</string>
+    <string name="category_settings_rename_format">Rename category: %1$s</string>
+    <string name="category_settings_drag_handle_format">Drag to reorder: %1$s</string>
+    <string name="category_settings_show_format">Show: %1$s</string>
+    <string name="category_settings_shelf_life_format">Set default shelf life: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Default shelf life for %1$s</string>
+    <string name="category_settings_shelf_life_range">From 0 to 3650 days</string>
+    <string name="category_settings_shelf_life_error">Enter a number from 0 to 3650, which is about 10 years</string>
+    <string name="category_settings_shelf_life_save">Save</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">This removes %1$d item and cancels its reminders. You can\'t undo this.</item>
+        <item quantity="other">This removes all %1$d items and cancels their reminders. You can\'t undo this.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Shopping list</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d thing to buy</item>
+        <item quantity="other">%d things to buy</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Nothing to buy</string>
+    <string name="shopping_list_already_listed">%1$s is already on your list</string>
+    <string name="shopping_list_check_off">Check off</string>
+    <string name="shopping_list_import_label">Your list</string>
+    <string name="shopping_list_close">Close</string>
+    <string name="shopping_list_done">Done</string>
+    <string name="shopping_sections_label">Sections</string>
+    <string name="shopping_section_name_label">Section name</string>
+    <string name="shopping_section_keep">Keep section</string>
+    <string name="shopping_section_delete_confirm">Delete section</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">Its %d item moves to the main list.</item>
+        <item quantity="other">Its %d items move to the main list.</item>
+    </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Add a name so you can find this later</string>
+    <string name="add_see_details">See details</string>
+    <string name="add_notes_placeholder">e.g. opened, quantity, shelf</string>
+    <string name="discard_changes_title">Discard changes?</string>
+    <string name="discard_changes_confirm">Discard changes</string>
+    <string name="discard_changes_keep">Keep editing</string>
+    <string name="discard_new_message">This item hasn\'t been saved, so it won\'t be added to your pantry.</string>
+    <string name="discard_edit_message">Your changes to %1$s won\'t be saved. The item stays as it was.</string>
+
+
+    <!-- Larder: Calendar -->
+    <string name="calendar_pane_title">What\'s due</string>
+    <string name="calendar_used_snackbar">%1$s used</string>
+    <string name="calendar_tossed_snackbar">%1$s tossed</string>
+    <string name="calendar_empty_message">Add food with its date and it will show up here, on the day it is due.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Get started</string>
+    <string name="onboarding_welcome_title">Reminds you before food goes off, not after.</string>
+    <string name="onboarding_private_title">Private by design</string>
+    <string name="onboarding_private_body">No account and no ads. Your pantry stays on your device.</string>
+    <string name="onboarding_notifications_title">A quiet nudge, the day before</string>
+    <string name="onboarding_notifications_body">We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Best used soon</string>
+    <string name="onboarding_sample_body">Greek yoghurt reaches its date tomorrow.</string>
+    <string name="onboarding_sample_description">Example reminder: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Turn on reminders</string>
+    <string name="onboarding_not_now">Not now</string>
+    <string name="onboarding_camera_title">Scan it instead of typing</string>
+    <string name="onboarding_camera_body">Point the camera at a product and %1$s fills in the details for you. Photos stay on your device.</string>
+    <string name="onboarding_camera_barcodes_title">Barcodes</string>
+    <string name="onboarding_camera_barcodes_body">Finds the product and its name</string>
+    <string name="onboarding_camera_dates_title">Printed dates</string>
+    <string name="onboarding_camera_dates_body">Reads the date from the pack</string>
+    <string name="onboarding_camera_allow">Allow the camera</string>
+    <string name="onboarding_ready_title">Ready for your first item</string>
+    <string name="onboarding_ready_body">Bring something from the fridge and scan it. It takes a few seconds.</string>
+    <string name="onboarding_skip">Skip for now</string>
+    <string name="onboarding_declined_title">You can start without them</string>
+    <string name="onboarding_declined_body">Everything else works. You can change your mind at any time.</string>
+    <string name="onboarding_declined_reminders_title">Reminders are off</string>
+    <string name="onboarding_declined_reminders_body">Home will show a note with a way to turn them on</string>
+    <string name="onboarding_declined_camera_title">The camera is off</string>
+    <string name="onboarding_declined_camera_body">The scanner will show how to allow it</string>
+    <string name="onboarding_add_by_hand">Add an item by hand</string>
 </resources>

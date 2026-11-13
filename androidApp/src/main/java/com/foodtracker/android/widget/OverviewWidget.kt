@@ -5,8 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.LocalContext
@@ -17,22 +15,17 @@ import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.itemsIndexed
 import androidx.glance.appwidget.provideContent
-import androidx.glance.background
 import androidx.glance.layout.Column
-import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.padding
-import androidx.glance.text.Text
-import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.flow.first
-import kotlinx.datetime.LocalDate
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -82,7 +75,7 @@ class OverviewWidget : GlanceAppWidget(), KoinComponent {
                     shoppingEntries = shoppingEntries
                 )
             }
-            OverviewWidgetContent(rows = rows, today = window.today)
+            OverviewWidgetContent(rows = rows, window = window)
         }
     }
 }
@@ -121,13 +114,8 @@ private fun OverviewRow.stableId(): Long = when (this) {
 }
 
 @Composable
-private fun OverviewWidgetContent(rows: List<OverviewRow>, today: LocalDate) {
-    Column(
-        modifier = GlanceModifier
-            .fillMaxSize()
-            .background(ColorProvider(R.color.widget_background))
-            .padding(12.dp)
-    ) {
+private fun OverviewWidgetContent(rows: List<OverviewRow>, window: ExpiryWindow) {
+    WidgetSurface {
         // defaultWeight() gives the list a bounded height (rather than wrap-content), which is
         // what makes it actually scroll instead of just clipping past the widget's edge.
         LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
@@ -136,7 +124,7 @@ private fun OverviewWidgetContent(rows: List<OverviewRow>, today: LocalDate) {
                     it is OverviewRow.ExpiryItem || it is OverviewRow.ShoppingItem
                 }
                 Column {
-                    OverviewRowContent(row, today)
+                    OverviewRowContent(row, window)
                     if (nextIsSameSectionItem && (row is OverviewRow.ExpiryItem || row is OverviewRow.ShoppingItem)) {
                         WidgetRowDivider()
                     }
@@ -147,7 +135,7 @@ private fun OverviewWidgetContent(rows: List<OverviewRow>, today: LocalDate) {
 }
 
 @Composable
-private fun OverviewRowContent(row: OverviewRow, today: LocalDate) {
+private fun OverviewRowContent(row: OverviewRow, window: ExpiryWindow) {
     val context = LocalContext.current
     when (row) {
         is OverviewRow.Header -> {
@@ -160,14 +148,8 @@ private fun OverviewRowContent(row: OverviewRow, today: LocalDate) {
                 modifier = GlanceModifier.clickable(actionStartActivity(openIntent))
             )
         }
-        is OverviewRow.Empty -> {
-            Text(
-                text = row.message,
-                modifier = GlanceModifier.padding(bottom = 4.dp),
-                style = TextStyle(fontSize = 13.sp, color = ColorProvider(R.color.widget_on_background_muted))
-            )
-        }
-        is OverviewRow.ExpiryItem -> ExpiryRow(row.item, today)
+        is OverviewRow.Empty -> WidgetEmptyText(row.message, GlanceModifier.padding(bottom = LarderSpace.s1))
+        is OverviewRow.ExpiryItem -> ExpiryRow(row.item, window)
         is OverviewRow.ShoppingItem -> ShoppingListRow(row.entry)
     }
 }

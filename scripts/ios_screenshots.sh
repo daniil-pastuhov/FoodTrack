@@ -7,7 +7,8 @@
 #
 # The demo data is loaded through the debug-only -demoBackup / -demoTab launch arguments (see
 # RootTabView.applyScreenshotLaunchArguments), so release builds are unaffected. Dates in the demo
-# pantry are relative to today, so the "expires today / tomorrow" badges always read right.
+# pantry (scripts/demo_backup.py) are relative to today, so the "expires today / tomorrow" badges
+# always read right. SETTLE=<seconds> waits longer before each capture on a slow machine.
 set -euo pipefail
 
 ROOT=${0:A:h:h}
@@ -41,65 +42,28 @@ xcrun simctl install "$UDID" "$DERIVED/Build/Products/Debug-iphonesimulator/Food
 DATA=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data)
 mkdir -p "$DATA/tmp"
 
+# A fresh simulator's first few launches can stay blank white for a while (the app waits on
+# system services there), so launch until a capture shows the page's cream rather than white.
+for TRY in {1..12}; do
+  xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" >/dev/null
+  sleep ${SETTLE:-4}
+  xcrun simctl io "$UDID" screenshot ${SCREEN:+--display="$SCREEN"} "$DATA/tmp/warmup.png" >/dev/null 2>&1
+  # Pillow, as frame_screenshots.py needs: white a third of the way down the left edge means
+  # nothing has been drawn yet.
+  python3 -c 'import sys; from PIL import Image; im = Image.open(sys.argv[1]).convert("RGB")
+sys.exit(im.getpixel((8, im.height // 3)) == (255, 255, 255))' "$DATA/tmp/warmup.png" && break
+  echo "warming up ($TRY)"
+done
+
 for LANG_CODE in en ru nb; do
   mkdir -p "$OUT/$LANG_CODE"
-  python3 - "$LANG_CODE" "$DATA/tmp/demo.json" <<'PY'
-import datetime, json, sys, uuid
-lang, out = sys.argv[1], sys.argv[2]
-today = datetime.date.today()
-day = lambda offset: (today + datetime.timedelta(days=offset)).isoformat()
-# Stored keys stay English (the app translates built-in locations and categories itself);
-# only the product names are per language.
-names = {
-    "en": ["Sourdough bread", "Baby spinach", "Greek yoghurt", "Semi-skimmed milk", "Salmon fillet",
-           "Strawberries", "Orange juice", "Free-range eggs", "Cheddar", "Chicken breast",
-           "Frozen peas", "Dark chocolate", "Spaghetti",
-           "Butter", "Bananas", "Tomatoes", "Coffee beans", "Oat milk"],
-    "ru": ["Бородинский хлеб", "Шпинат", "Кефир", "Молоко 2,5%", "Филе лосося",
-           "Клубника", "Апельсиновый сок", "Яйца", "Сыр", "Куриное филе",
-           "Зелёный горошек", "Тёмный шоколад", "Гречка",
-           "Сливочное масло", "Бананы", "Помидоры", "Кофе в зёрнах", "Творог"],
-    "nb": ["Grovbrød", "Babyspinat", "Gresk yoghurt", "Lettmelk", "Laksefilet",
-           "Jordbær", "Appelsinjuice", "Egg", "Gulost", "Kyllingfilet",
-           "Frosne erter", "Mørk sjokolade", "Spagetti",
-           "Smør", "Bananer", "Tomater", "Kaffebønner", "Brunost"],
-}[lang]
-pantry = [  # (storage location, category, days until expiry, quantity)
-    ("Pantry", "Bakery", -1, 1), ("Fridge", "Vegetables", 0, 1), ("Fridge", "Dairy", 1, 2),
-    ("Fridge", "Dairy", 2, 1), ("Fridge", "Meat & fish", 3, 2), ("Fridge", "Fruit", 4, 1),
-    ("Fridge", "Drinks", 6, 1), ("Fridge", "Dairy", 9, 1), ("Fridge", "Dairy", 12, 1),
-    ("Freezer", "Meat & fish", 45, 2), ("Freezer", "Vegetables", 120, 1),
-    ("Pantry", "Sweets", 90, 1), ("Pantry", "Pantry", 300, 2),
-]
-shopping = [("Dairy", 1), ("Fruit", 6), ("Vegetables", 4), ("Drinks", 1), ("Dairy", 2)]
-items = [{
-    "id": str(uuid.uuid4()), "name": names[i], "brand": None, "barcode": None, "imageUrl": None,
-    "expiryDate": day(offset), "addedDate": day(-(i % 5) - 1), "storageLocation": location,
-    "category": category, "quantity": quantity, "notes": None, "essential": True,
-} for i, (location, category, offset, quantity) in enumerate(pantry)]
-entries = [{
-    "id": str(uuid.uuid4()), "productName": names[len(pantry) + i], "barcode": None,
-    "category": category, "quantity": quantity, "addedDate": day(0), "sortOrder": float(i),
-} for i, (category, quantity) in enumerate(shopping)]
-document = {
-    "version": 1, "exportedAtEpochMillis": 0, "items": items, "shoppingList": entries,
-    "categoryPreferences": [], "products": [], "knownProductNames": [],
-    "settings": {
-        "notifications": {"enabled": True, "leadDays": 1, "hour": 9, "minute": 0},
-        "expiringSoonDays": 3, "storageLocations": ["Fridge", "Freezer", "Pantry"],
-        "defaultStorageLocation": "Pantry", "rememberLastStorageLocation": True,
-        "lastUsedStorageLocation": None, "theme": "SYSTEM", "sortOption": "EXPIRY_DATE",
-        "allergens": [], "stores": [], "storeRemindersEnabled": False,
-    },
-}
-json.dump(document, open(out, "w"), ensure_ascii=False)
-PY
+  python3 "$ROOT/scripts/demo_backup.py" "$LANG_CODE" "$DATA/tmp/demo.json"
   N=1
   for TAB in home calendar shopping settings; do
     xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" \
       -demoBackup "$DATA/tmp/demo.json" -demoTab "$TAB" \
       -AppleLanguages "($LANG_CODE)" -AppleLocale "$LANG_CODE" >/dev/null
-    sleep 4
+    sleep ${SETTLE:-4}
     xcrun simctl io "$UDID" screenshot ${SCREEN:+--display="$SCREEN"} "$OUT/$LANG_CODE/$N-$TAB.png" >/dev/null 2>&1
     N=$((N + 1))
   done

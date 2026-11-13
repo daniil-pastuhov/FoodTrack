@@ -2,8 +2,12 @@ package com.foodtracker.android.data.local
 
 import androidx.room.Dao
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
+
+/** Under SQLite's limit of 999 bound variables on the oldest Android versions we support. */
+internal const val MAX_IDS_PER_QUERY = 500
 
 @Dao
 interface PantryDao {
@@ -23,6 +27,25 @@ interface PantryDao {
 
     @Query("DELETE FROM pantry_items WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("SELECT * FROM pantry_items WHERE id IN (:ids)")
+    suspend fun getChunkByIds(ids: List<String>): List<PantryItemEntity>
+
+    @Query("DELETE FROM pantry_items WHERE id IN (:ids)")
+    suspend fun deleteChunkByIds(ids: List<String>)
+
+    @Upsert
+    suspend fun upsertAll(items: List<PantryItemEntity>)
+
+    @Transaction
+    suspend fun getByIds(ids: List<String>): List<PantryItemEntity> =
+        ids.chunked(MAX_IDS_PER_QUERY).flatMap { getChunkByIds(it) }
+
+    /** One transaction, so observers see a single change however many chunks it takes. */
+    @Transaction
+    suspend fun deleteByIds(ids: List<String>) {
+        ids.chunked(MAX_IDS_PER_QUERY).forEach { deleteChunkByIds(it) }
+    }
 
     @Query("DELETE FROM pantry_items")
     suspend fun clearAll()

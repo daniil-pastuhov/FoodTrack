@@ -86,8 +86,26 @@ class RememberLastStorageLocationTest {
     }
 
     @Test
+    fun testTheSameLocationAgainIsNotSavedAgain() {
+        val fixture = Fixture(
+            settings = AppSettings(lastUsedStorageLocation = "Freezer", onboardingCompleted = true)
+        )
+        try {
+            fixture.stateHolder.saveItem(pantryItem("peas", "Freezer"))
+
+            assertEquals("Freezer", fixture.settings.lastUsedStorageLocation)
+            assertEquals(0, fixture.settingsRepository.saveCount)
+        } finally {
+            fixture.close()
+        }
+    }
+
+    @Test
     fun testNothingIsRememberedWhileTheFeatureIsOff() {
-        val fixture = Fixture(settings = AppSettings(rememberLastStorageLocation = false))
+        // Onboarding already done, because a first item would otherwise be a settings write.
+        val fixture = Fixture(
+            settings = AppSettings(rememberLastStorageLocation = false, onboardingCompleted = true)
+        )
         try {
             fixture.stateHolder.saveItem(pantryItem("milk", "Freezer"))
 
