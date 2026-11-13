@@ -147,8 +147,10 @@ class CallableErrorTest {
 
     @Test
     fun thePurchaseAccountIdIsAVersion5UuidOfTheUid() {
-        // Python: uuid.uuid5(uuid.UUID("c986cefb-e1ed-4b35-9023-b2e93c4b42a2"), "abc123")
-        assertEquals("aed6646c-752d-5dd0-b6da-945b88bd5df2", purchaseAccountId("abc123"), "matches RFC 9562 UUIDv5")
+        assertEquals("6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48", PURCHASE_ACCOUNT_NAMESPACE, "the namespace iOS and the server use")
+        // Python: uuid.uuid5(uuid.UUID("6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48"), "test-uid")
+        assertEquals("8e3ec052-71cd-54df-a198-9e3f69fbc9d9", purchaseAccountId("test-uid"), "matches RFC 4122 UUIDv5")
+        assertEquals("1e7c2566-647e-5044-9bbb-85fedc8b3c81", purchaseAccountId("abc123"), "a second uid")
         assertEquals(purchaseAccountId("abc123"), purchaseAccountId("abc123"), "deterministic")
         assertEquals(false, purchaseAccountId("abc124") == purchaseAccountId("abc123"), "per user")
     }

@@ -24,10 +24,10 @@ import kotlin.coroutines.resumeWithException
 const val RECIPE_FUNCTIONS_REGION = "europe-west1"
 
 /**
- * The namespace of [purchaseAccountId]. It must match the server's (functions/CONTRACT.md);
- * chosen here before the contract defined one, so it is to be reconciled with it.
+ * The namespace of [purchaseAccountId], shared with the server (functions/CONTRACT.md) and with
+ * iOS's `appAccountToken`. Changing it unbinds every purchase from its buyer.
  */
-internal const val PURCHASE_ACCOUNT_NAMESPACE = "c986cefb-e1ed-4b35-9023-b2e93c4b42a2"
+internal const val PURCHASE_ACCOUNT_NAMESPACE = "6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48"
 
 /**
  * The value set as Play's `obfuscatedAccountId` for the Firebase user [uid]: a name-based UUID
