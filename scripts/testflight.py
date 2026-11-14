@@ -25,6 +25,10 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     python3 scripts/testflight.py listing [--apply]
     python3 scripts/testflight.py screenshots [--apply]
 
+    # Read-only: the raw screenshot sets and App Asset Library images and placements of that
+    # version, to check the folders' mapping against the account (GET requests only).
+    python3 scripts/testflight.py screenshots --inspect [--dump FILE]
+
 Reads ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the .p8 file), the same as ios_release.sh.
 Needs the `cryptography` package for the ES256 token signature.
 """
@@ -666,6 +670,186 @@ def sync_screenshots(asc, localizations, apply, root=LISTING_DIR):
     return changed
 
 
+# --- Inspecting what App Store Connect holds (read-only) -----------------------------------------
+
+class ReadOnlyAsc:
+    """Wraps an Asc so that anything but a GET raises: `screenshots --inspect` can't write."""
+
+    def __init__(self, asc):
+        self._asc = asc
+
+    def call(self, method, path, params=None, body=None):
+        if method != "GET":
+            raise AssertionError(f"read-only: refused {method} {path}")
+        return self._asc.call(method, path, params)
+
+    app_id = Asc.app_id
+
+
+def get_all(asc, path, params=None, pages=20):
+    """Every item of a list endpoint, following links.next. Returns (data, included)."""
+    data, included = [], []
+    for _ in range(pages):
+        response = asc.call("GET", path, params)
+        data += response.get("data") or []
+        included += response.get("included") or []
+        following = (response.get("links") or {}).get("next")
+        if not following or not following.startswith(API):
+            break
+        parsed = urllib.parse.urlsplit(following[len(API):])
+        path, params = parsed.path, dict(urllib.parse.parse_qsl(parsed.query))
+    return data, included
+
+
+# The App Asset Library display classes of the folders in store-listing/app-store/
+# (developer.apple.com/documentation/appstoreconnectapi/appassetlibrarydisplayclass).
+INSPECT_DISPLAY_CLASSES = ("IPHONE_DUO", "IPHONE_DYNAMIC_ISLAND_LARGE_DISPLAY",
+                           "IPHONE_DYNAMIC_ISLAND_MEDIUM_DISPLAY", "IPAD_13_DISPLAY")
+
+
+def strings_in(value):
+    """Every string anywhere inside a JSON value."""
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, dict):
+        return set().union(*map(strings_in, value.values())) if value else set()
+    if isinstance(value, list):
+        return set().union(*map(strings_in, value)) if value else set()
+    return set()
+
+
+def dump(label, value, indent="    "):
+    print(f"{indent}{label}: {json.dumps(value, ensure_ascii=False, sort_keys=True)}")
+
+
+def inspect_ref_data(asc, record):
+    """Prints the parts of the asset library's reference data that concern the folders here:
+    their placement groups, display classes, APP_SCREENSHOT spec mappings, the specs those name,
+    and the App Store version feature's limits."""
+    data, _ = get_all(asc, "/appAssetLibraryRefData")
+    record["appAssetLibraryRefData"] = data
+    for datum in data:
+        attrs = datum.get("attributes") or {}
+        groups = attrs.get("placementProfileGroups") or []
+        print(f"  ref data {datum.get('id')}: {len(groups)} placement groups, "
+              f"{len(attrs.get('displayClasses') or [])} display classes, "
+              f"{len(attrs.get('imageSpecs') or [])} image specs, "
+              f"{len(attrs.get('placementTypes') or [])} placement types")
+        relevant = [g for g in groups if g.get("displayClassId") in INSPECT_DISPLAY_CLASSES
+                    or "DUO" in json.dumps(g)]
+        relevant_ids = {g.get("placementProfileGroupId") for g in relevant} - {None}
+        for group in relevant:
+            dump("placement group", group)
+        print("    every placement group id: " + ", ".join(
+            sorted(str(g.get("placementProfileGroupId")) for g in groups)))
+        for display in attrs.get("displayClasses") or []:
+            if display.get("displayClassId") in INSPECT_DISPLAY_CLASSES or "DUO" in json.dumps(display):
+                dump("display class", display)
+        spec_ids = set()
+        for placement_type in attrs.get("placementTypes") or []:
+            if placement_type.get("placementTypeId") != "APP_SCREENSHOT":
+                continue
+            dump("APP_SCREENSHOT accepts", placement_type.get("acceptsAssetCategories"))
+            for mapping in placement_type.get("specMappings") or []:
+                found = strings_in(mapping)
+                if found & relevant_ids or "DUO" in json.dumps(mapping):
+                    dump("APP_SCREENSHOT spec mapping", mapping)
+                    spec_ids |= found
+        for spec in attrs.get("imageSpecs") or []:
+            if spec.get("specId") in spec_ids:
+                dump("image spec", spec)
+        for feature in attrs.get("features") or []:
+            if "APP_STORE_VERSION" in json.dumps(feature):
+                dump("feature", feature)
+
+
+def inspect_asset_library(asc, app_id, localizations, record):
+    """Prints the app's asset library: its id, its images and each localization's placements."""
+    library = asc.call("GET", f"/apps/{app_id}/assetLibrary").get("data") or {}
+    record["assetLibrary"] = library
+    print(f"Asset library: {json.dumps(library, ensure_ascii=False, sort_keys=True)}")
+    inspect_ref_data(asc, record)
+    if library.get("id"):
+        images, _ = get_all(asc, f"/appAssetLibraries/{library['id']}/images", {"limit": 50})
+        record["images"] = images
+        print(f"  {len(images)} images in the library")
+        for image in images:
+            dump(f"image {image.get('id')}", {k: v for k, v in (image.get("attributes") or {}).items()
+                                              if k != "uploadOperations"})
+    record["placements"] = {}
+    for locale, loc_id in sorted(localizations.items()):
+        placements, included = get_all(
+            asc, f"/appStoreVersionLocalizations/{loc_id}/placements",
+            {"limit": 200, "sort": "placementGroupPosition", "include": "image"})
+        record["placements"][locale] = {"data": placements, "included": included}
+        images = {i.get("id"): i for i in included}
+        print(f"  {locale}: {len(placements)} placements (in placementGroupPosition order)")
+        for placement in placements:
+            attrs = placement.get("attributes") or {}
+            image_ref = ((placement.get("relationships") or {}).get("image") or {}).get("data") or {}
+            image = (images.get(image_ref.get("id")) or {}).get("attributes") or {}
+            print(f"    {attrs.get('placementType')} / {attrs.get('placementGroup')} "
+                  f"[{attrs.get('state')}] placement {placement.get('id')} -> image "
+                  f"{image_ref.get('id')}: {image.get('fileName')!r} "
+                  f"{(image.get('imageAsset') or {}).get('width')}×"
+                  f"{(image.get('imageAsset') or {}).get('height')} spec {image.get('specId')} "
+                  f"ref {image.get('referenceName')!r} [{image.get('state')}]")
+
+
+def inspect_screenshot_sets(asc, localizations, record):
+    """Prints every screenshot set of every localization with its screenshots' raw attributes
+    (upload operations left out) and their relationships and links."""
+    record["screenshotSets"] = {}
+    for locale, loc_id in sorted(localizations.items()):
+        sets, _ = get_all(asc, f"/appStoreVersionLocalizations/{loc_id}/appScreenshotSets",
+                          {"limit": 50})
+        record["screenshotSets"][locale] = []
+        print(f"  {locale} (localization {loc_id}): {len(sets)} screenshot sets")
+        for item in sets:
+            shots, _ = get_all(asc, f"/appScreenshotSets/{item['id']}/appScreenshots", {"limit": 50})
+            record["screenshotSets"][locale].append({"set": item, "screenshots": shots})
+            print(f"    set {item['id']}: "
+                  f"{json.dumps(item.get('attributes'), ensure_ascii=False, sort_keys=True)}")
+            dump("set relationships", item.get("relationships"), "      ")
+            for shot in shots:
+                attrs = {k: v for k, v in (shot.get("attributes") or {}).items()
+                         if k != "uploadOperations"}
+                dump(f"screenshot {shot.get('id')}", attrs, "      ")
+                if shot.get("relationships"):
+                    dump("relationships", shot["relationships"], "        ")
+
+
+def inspect_screenshots(asc, app_id, version, dump_path=None):
+    """Read-only: what the version's screenshot sets and the app's asset library hold, raw, so
+    the mapping of the repo's folders can be checked against the live account. Only GETs."""
+    asc = ReadOnlyAsc(asc)
+    record = {"version": version}
+    print("In the repo:")
+    for locale in listing_locales():
+        for name in (*SCREENSHOT_SETS, *UNSYNCED_SCREENSHOT_FOLDERS):
+            folder = LISTING_DIR / locale / name
+            if folder.is_dir():
+                print(f"  {locale}/{name}: " + ", ".join(
+                    f"{s['name']} {s['dimensions'][0]}×{s['dimensions'][1]} md5 {s['md5']}"
+                    if s["dimensions"] else f"{s['name']} md5 {s['md5']}"
+                    for s in local_screenshots(folder)))
+    localizations = {locale: loc["id"] for locale, loc in localizations_by_locale(
+        asc, f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations").items()}
+    print(f"Localizations: {', '.join(f'{k} {v}' for k, v in sorted(localizations.items()))}")
+    print("Screenshot sets (appScreenshotSets):")
+    inspect_screenshot_sets(asc, localizations, record)
+    try:
+        inspect_asset_library(asc, app_id, localizations, record)
+    except AscError as error:
+        print(f"Asset library: could not be read: {error}")
+        record["assetLibraryError"] = str(error)
+    if dump_path:
+        pathlib.Path(dump_path).write_text(
+            json.dumps(record, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+        print(f"Wrote every response to {dump_path}")
+    return 0
+
+
 # --- Finding what can be edited --------------------------------------------------------------
 
 def app_store_versions(asc, app_id):
@@ -755,12 +939,17 @@ def cmd_listing(args):
 
 
 def cmd_screenshots(args):
-    asc = Asc()
+    inspect = getattr(args, "inspect", False)
+    if inspect and args.apply:
+        sys.exit("--inspect only reads; leave out --apply")
+    asc = ReadOnlyAsc(Asc()) if inspect else Asc()
     app_id = asc.app_id()
     version, _, _, summary = listing_target(asc, app_id, args.version)
     print(summary)
     if version is None:
         return 1 if args.apply else 0
+    if inspect:
+        return inspect_screenshots(asc, app_id, version, args.dump)
     # Screenshots belong to the version alone; the app info's state doesn't matter here.
     editable = version_state(version) in EDITABLE_STATES
     apply = args.apply and editable
@@ -916,6 +1105,12 @@ def main() -> int:
         command.add_argument("--version", help="the version to compare with (default: the one "
                                                "in preparation, else the newest)")
         command.set_defaults(func=func)
+        if name == "screenshots":
+            command.add_argument("--inspect", action="store_true",
+                                 help="read-only: print the raw screenshot sets, asset library "
+                                      "images and placements of the version (GET requests only)")
+            command.add_argument("--dump", metavar="FILE",
+                                 help="with --inspect, also write every response to FILE as JSON")
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
     revoke.set_defaults(func=cmd_revoke_ci_certs)

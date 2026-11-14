@@ -404,5 +404,106 @@ class TargetTests(unittest.TestCase):
         self.assertIn("No App Store version is editable", summary)
 
 
+class InspectFake:
+    """Answers GETs from {path: response} (whole responses, so links.next and included work)."""
+
+    def __init__(self, responses):
+        self.responses = responses
+        self.calls = []
+
+    def call(self, method, path, params=None, body=None):
+        self.calls.append((method, path, dict(params or {})))
+        key = path + ("?" + "&".join(f"{k}={v}" for k, v in sorted(params.items()))
+                      if params and "cursor" in params else "")
+        return self.responses.get(key, {"data": []})
+
+
+class InspectTests(unittest.TestCase):
+    def setUp(self):
+        api = testflight.API
+        duo_shot = {"id": "s1", "type": "appScreenshots", "attributes": {
+            "fileName": "1.png", "sourceFileChecksum": "abc", "imageAsset": {"width": 1398, "height": 2034},
+            "uploadOperations": [{"url": "https://secret.invalid"}]},
+            "relationships": {"appScreenshotSet": {"links": {"self": "x"}}}}
+        self.asc = InspectFake({
+            "/apps": {"data": [{"id": "app1"}]},
+            "/appStoreVersions/v1/appStoreVersionLocalizations": {"data": [loc("vl-gb", "en-GB")]},
+            "/appStoreVersionLocalizations/vl-gb/appScreenshotSets": {"data": [
+                {"id": "set-duo", "attributes": {"screenshotDisplayType": "APP_IPHONE_DUO"}}]},
+            "/appScreenshotSets/set-duo/appScreenshots": {
+                "data": [duo_shot],
+                "links": {"next": f"{api}/appScreenshotSets/set-duo/appScreenshots?cursor=2&limit=50"}},
+            "/appScreenshotSets/set-duo/appScreenshots?cursor=2&limit=50": {"data": [
+                {"id": "s2", "attributes": {"fileName": "1-inner.png",
+                                            "imageAsset": {"width": 2853, "height": 2007}}}]},
+            "/apps/app1/assetLibrary": {"data": {"id": "lib1", "type": "appAssetLibraries"}},
+            "/appAssetLibraryRefData": {"data": [{"id": "ref", "attributes": {
+                "placementProfileGroups": [
+                    {"placementProfileGroupId": "IPHONE_DUO_PROFILE", "displayClassId": "IPHONE_DUO"},
+                    {"placementProfileGroupId": "MAC_PROFILE", "displayClassId": "DEFAULT"}],
+                "displayClasses": [{"displayClassId": "IPHONE_DUO", "screenDimensions": ["1398x2034"]}],
+                "placementTypes": [{"placementTypeId": "APP_SCREENSHOT", "specMappings": [
+                    {"placementGroup": "IPHONE_DUO_PROFILE", "specIds": ["spec-outer"]},
+                    {"placementGroup": "MAC_PROFILE", "specIds": ["spec-mac"]}]}],
+                "imageSpecs": [{"specId": "spec-outer", "shortName": "i1398x2034a0"},
+                               {"specId": "spec-mac", "shortName": "mac"}]}}]},
+            "/appAssetLibraries/lib1/images": {"data": [
+                {"id": "img1", "attributes": {"fileName": "1.png", "specId": "spec-outer"}}]},
+            "/appStoreVersionLocalizations/vl-gb/placements": {
+                "data": [{"id": "p1", "attributes": {"placementType": "APP_SCREENSHOT",
+                                                     "placementGroup": "IPHONE_DUO_PROFILE"},
+                          "relationships": {"image": {"data": {"id": "img1"}}}}],
+                "included": [{"id": "img1", "attributes": {
+                    "fileName": "1.png", "imageAsset": {"width": 1398, "height": 2034}}}]},
+        })
+
+    def run_inspect(self, dump_path=None):
+        return quiet(testflight.inspect_screenshots, testflight.ReadOnlyAsc(self.asc), "app1",
+                     {"id": "v1", "attributes": {}}, dump_path)
+
+    def test_only_gets_and_everything_relevant_is_printed(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            dump_path = pathlib.Path(tmp) / "inspect.json"
+            result, out = self.run_inspect(dump_path)
+            self.assertEqual(result, 0)
+            self.assertEqual({c[0] for c in self.asc.calls}, {"GET"})
+            # Both pages of the set, raw attributes and relationships, without upload URLs.
+            self.assertIn("APP_IPHONE_DUO", out)
+            self.assertIn('"sourceFileChecksum": "abc"', out)
+            self.assertIn("1-inner.png", out)
+            self.assertIn("appScreenshotSet", out)
+            self.assertNotIn("secret.invalid", out)
+            # Reference data narrowed to the groups here; the placement with its image.
+            self.assertIn("IPHONE_DUO_PROFILE", out)
+            self.assertIn("i1398x2034a0", out)
+            self.assertNotIn('"shortName": "mac"', out)
+            self.assertIn("IPHONE_DUO_PROFILE [None] placement p1 -> image img1: '1.png' 1398×2034",
+                          out)
+            self.assertIn('"placementGroup": "IPHONE_DUO_PROFILE"',
+                          dump_path.read_text(encoding="utf-8"))
+
+    def test_an_unreadable_asset_library_still_shows_the_sets(self):
+        real = self.asc.call
+
+        def failing(method, path, params=None, body=None):
+            if path.endswith("/assetLibrary"):
+                raise testflight.AscError(403, "FORBIDDEN")
+            return real(method, path, params, body)
+
+        self.asc.call = failing
+        result, out = self.run_inspect()
+        self.assertEqual(result, 0)
+        self.assertIn("APP_IPHONE_DUO", out)
+        self.assertIn("could not be read: HTTP 403", out)
+
+    def test_read_only_wrapper_refuses_writes(self):
+        wrapper = testflight.ReadOnlyAsc(self.asc)
+        for method in ("POST", "PATCH", "DELETE"):
+            with self.assertRaises(AssertionError):
+                wrapper.call(method, "/appAssetLibraryPlacements", body={})
+        self.assertEqual(self.asc.calls, [])
+        self.assertEqual(wrapper.app_id(), "app1")
+
+
 if __name__ == "__main__":
     unittest.main()
