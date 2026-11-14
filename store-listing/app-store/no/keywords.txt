@@ -1,1 +1,1 @@
-holdbarhet,utløpsdato,matsvinn,mat,kjøleskap,handleliste,strekkode,oppskrift,påminnelse,best før
+utløpsdato,holdbarhetsdato,best før,dato,skann,strekkode,handleliste,påminnelse,matskap,rester,KI,AI

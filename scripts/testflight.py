@@ -43,6 +43,14 @@ API = "https://api.appstoreconnect.apple.com/v1"
 ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
 # One folder per App Store Connect locale, holding promotional_text.txt among others.
 LISTING_DIR = pathlib.Path(__file__).resolve().parent.parent / "store-listing" / "app-store"
+# The other English localizations (en-US, en-AU, en-CA) take the en-GB release notes, as the notes
+# are written once per language, and the en-GB promotional text when they have no folder of their
+# own (en-US has one). Apple asks for What's New in every localization of an update.
+FALLBACK_LOCALE = "en-GB"
+
+
+def fallback(locale):
+    return FALLBACK_LOCALE if locale.startswith("en-") and locale != FALLBACK_LOCALE else None
 # "What to Test" is limited to 4000 characters; the notes are much shorter (Play allows 500).
 WHATS_NEW_LIMIT = 4000
 # App Store version states in which the version and its metadata can still be edited.
@@ -243,6 +251,8 @@ def set_promotional_text(asc, localizations):
     """Sets each localization's promotional text from store-listing/app-store/<locale>/."""
     for locale, localization_id in localizations.items():
         path = LISTING_DIR / locale / "promotional_text.txt"
+        if not path.exists() and fallback(locale):
+            path = LISTING_DIR / fallback(locale) / "promotional_text.txt"
         if not path.exists():
             print(f"::warning::{path.relative_to(LISTING_DIR.parent.parent)} is missing; "
                   f"the {locale} promotional text was not set")
@@ -292,6 +302,9 @@ def cmd_appstore(args):
         "GET", f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations",
         {"limit": 50})["data"]}
     set_promotional_text(asc, localizations)
+    for locale in localizations:
+        if locale not in notes and fallback(locale) in notes:
+            notes[locale] = notes[fallback(locale)]
     for locale, text in notes.items():
         if locale not in localizations:
             print(f"::warning::The App Store listing has no {locale} localization; "

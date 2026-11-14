@@ -1,9 +1,18 @@
 # App Store submission kit
 
 Everything App Store Connect asks for, ready to paste. One folder per listing language:
-`en-GB/` (English, U.K.), `ru/` (Russian), `no/` (Norwegian). Each folder has `name.txt`,
-`subtitle.txt`, `promotional_text.txt`, `keywords.txt`, `description.txt` and these
-screenshot sets, four each, in App Store Connect's media sections of the same name:
+`en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
+`no/` (Norwegian). Each folder has `name.txt`, `subtitle.txt`, `promotional_text.txt`,
+`keywords.txt` and `description.txt`; `scripts/check_store_listing.py` checks them (and the
+Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
+(comma-separated, no spaces after commas, no word that the same language's name or subtitle
+already has), promotional text 170, description 4000. Run it after every edit.
+
+`en-US/` has texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
+primary language's screenshots in a localization that has none, so nothing needs uploading
+there, and the screenshot scripts only make the en-GB, ru and no sets. The en-GB, ru and no
+folders have these screenshot sets, four each, in App Store Connect's media sections of the same
+name:
 
 | Folder | Size | App Store Connect display |
 |---|---|---|
@@ -47,6 +56,39 @@ Google Play's feature graphic (1024×500) from the Android captures. The layouts
 templates, and the search headline stays readable when the image is scaled to 384 px wide, about
 the width search shows it at on an iPhone. Neither image may show prices, URLs, a copyright
 symbol, other platforms or Apple awards.
+
+## Changing the listing texts
+
+Nothing here is uploaded automatically except the promotional text and What's New (below). Paste
+the rest in App Store Connect by hand:
+
+- **Name, subtitle, keywords, description**: these change only with a new app version. Edit
+  them on the version page in "Prepare for Submission" (keywords and description) and under App
+  Information (name, subtitle, which App Store Connect also locks until a version is in
+  preparation), and they go live when that version is approved.
+- **Promotional text**: can change at any time, without a new version. `scripts/testflight.py
+  appstore` (the release PR's merge) sets it on the new version from each folder's
+  `promotional_text.txt`; between releases, paste it on the live version page.
+- **Header and search-result images** (iOS 27): upload `header.png` and `search-result.png`
+  by hand in each language, on the version page. For en-US, upload en-GB's two files.
+- **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by
+  `scripts/testflight.py appstore`; every English localization gets the en-GB notes.
+
+### Adding the en-US localization (once)
+
+On the app's page in App Store Connect, open the language menu next to the version, add
+**English (U.S.)**, and paste `en-US/name.txt`, `subtitle.txt`, `keywords.txt`,
+`promotional_text.txt` and `description.txt` (the name and subtitle under App Information).
+Add it while a version is in preparation, as the name and subtitle can't be set otherwise. The
+U.S. storefront then shows this listing instead of the primary en-GB one, and searches there
+match the en-US keywords.
+
+English (Australia) and English (Canada) need no folder of their own: add them the same way
+and paste the en-GB texts. `scripts/testflight.py` gives every English localization without a
+folder the en-GB promotional text and What's New. Apple's storefront tables say the Australian
+App Store also searches the en-GB keywords, so en-AU keywords could add words en-GB has no room
+for; check Apple's current list ("Localizations by storefront" in App Store Connect Help) before
+counting on it. Without these localizations, both countries see the en-GB listing.
 
 ## 1. One-time setup
 
@@ -227,4 +269,5 @@ The camera is used for barcode scanning, reading printed expiry dates (Vision, o
 - What's New (first version): leave empty, or use `First release.`
 - Pick the build uploaded in step 2.
 - Screenshots, for each language: drag `screenshots/1.png` to `4.png` into "iPhone 6.9" Display",
-  and `ipad-screenshots/1.png` to `4.png` into "iPad 13" Display".
+  and `ipad-screenshots/1.png` to `4.png` into "iPad 13" Display". English (U.S.) has none of
+  its own and shows en-GB's.
