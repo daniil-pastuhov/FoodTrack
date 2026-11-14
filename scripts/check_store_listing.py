@@ -4,7 +4,8 @@
     python3 scripts/check_store_listing.py          # prints every count, exits 1 on a problem
 
 App Store (store-listing/app-store/<locale>/): name and subtitle at most 30 characters, keywords
-at most 100, promotional text at most 170, description at most 4000. Keywords are
+at most 100, promotional text at most 170, description at most 4000; the App Review notes
+(store-listing/app-store/review-notes.txt, one file for every language) at most 4000. Keywords are
 comma-separated with no space after a comma, and no keyword word repeats a word of the same
 locale's name or subtitle (or its English plural/singular), since Apple indexes those already.
 Google Play (store-listing/google-play/<locale>/): title at most 30, short description at most
@@ -21,6 +22,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent / "store-listing"
 APP_STORE_LIMITS = {"name.txt": 30, "subtitle.txt": 30, "keywords.txt": 100,
                     "promotional_text.txt": 170, "description.txt": 4000}
 PLAY_LIMITS = {"title.txt": 30, "short-description.txt": 80, "full-description.txt": 4000}
+REVIEW_NOTES = ("review-notes.txt", 4000)  # in store-listing/app-store/, not per locale
 PLAY_TITLE_WORDS = {"free", "best", "top", "#1", "gratis", "бесплатно", "лучший"}
 UNIT_WORDS = re.compile(r"\b(credits?|tokens?|кредит\w*|токен\w*|kreditt\w*)\b", re.IGNORECASE)
 
@@ -82,6 +84,21 @@ def check_play_title(folder, texts):
         problems.append(f"{(folder / 'title.txt').relative_to(ROOT)}: an emoji or symbol")
 
 
+def check_review_notes():
+    name, limit = REVIEW_NOTES
+    path = ROOT / "app-store" / name
+    if not path.exists():
+        problems.append(f"{path.relative_to(ROOT)}: missing")
+        return
+    text = read(path)
+    flag = "" if 0 < len(text) <= limit else "  <-- over the limit" if text else "  <-- empty"
+    print(f"app-store/{name:16} {len(text):5d} / {limit}{flag}")
+    if flag:
+        problems.append(f"{path.relative_to(ROOT)}: {len(text)} characters (limit {limit})")
+    if UNIT_WORDS.search(text):
+        problems.append(f"{path.relative_to(ROOT)}: calls the paid unit a credit or token")
+
+
 def check(stores=("app-store", "google-play")):
     """Checks the given stores' folders and returns the problems found (empty when all pass).
     scripts/testflight.py and scripts/play_listing.py call this before writing to a store."""
@@ -98,6 +115,8 @@ def check(stores=("app-store", "google-play")):
                 check_keywords(folder, texts)
             else:
                 check_play_title(folder, texts)
+        if store == "app-store":
+            check_review_notes()
     return list(problems)
 
 

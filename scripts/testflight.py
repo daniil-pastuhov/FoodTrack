@@ -17,6 +17,11 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     # Before an archive on CI: revoke the Apple Development certificates earlier runs left behind.
     python3 scripts/testflight.py revoke-ci-certs
 
+    # Read-only: the in-app purchases (state, review screenshot, localizations) and what
+    # `appstore` would do with them; it adds those still to be reviewed to the version's review
+    # submission (--iaps-attached: submit without adding them, after adding them by hand).
+    python3 scripts/testflight.py iaps
+
     # Read-only overview of the app's builds and groups.
     python3 scripts/testflight.py status
 
@@ -52,7 +57,8 @@ import urllib.parse
 import urllib.request
 
 BUNDLE_ID = "com.foodbest.ios"
-API = "https://api.appstoreconnect.apple.com/v1"
+API_ROOT = "https://api.appstoreconnect.apple.com"
+API = API_ROOT + "/v1"
 # Release notes are stored under Play's locale codes; App Store Connect names the same
 # languages as in store-listing/app-store/.
 ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
@@ -114,7 +120,8 @@ class Asc:
         # Tokens live 15 minutes and a processing wait can take longer.
         if time.time() - self.issued > 10 * 60:
             self.token, self.issued = make_token(), time.time()
-        url = API + path
+        # Paths are /v1 ones unless they name /v2/ themselves (the in-app purchase endpoints).
+        url = (API_ROOT if path.startswith("/v2/") else API) + path
         if params:
             url += "?" + urllib.parse.urlencode(params)
         request = urllib.request.Request(
@@ -242,29 +249,190 @@ def version_state(version):
     return attrs.get("appVersionState") or attrs.get("appStoreState")
 
 
-def submit_for_review(asc, app_id, version, release_type):
-    try:
-        # An open submission (not sent yet, or sent back by App Review) is reused: an app can
-        # have only one.
-        open_submissions = asc.call("GET", "/reviewSubmissions", {
-            "filter[app]": app_id, "filter[platform]": "IOS",
-            "filter[state]": "READY_FOR_REVIEW,UNRESOLVED_ISSUES"})["data"]
-        if open_submissions:
-            submission = open_submissions[0]
+# --- In-app purchases: submitted for App Review with the version ---------------------------------
+#
+# developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases (API 4.4.1): an
+# in-app purchase's reviewable metadata lives on an In-App Purchase version, and the version goes
+# to App Review as an item of a review submission (`inAppPurchaseVersion`), as the app version
+# does; POST /v1/inAppPurchaseSubmissions is deprecated. The first in-app purchase of each type
+# must be submitted together with a new app version, in the same submission (App Store Connect
+# Help, "Submit an In-App Purchase"). The API article adds that the review-submission calls
+# "don't apply to that first submission", which it says goes through the website, while the
+# website itself adds these items through the same reviewSubmissionItems endpoint. So the
+# items are added here, in the submission that holds the app version, before it is submitted; a
+# refusal stops the run before anything is sent, and says how to add them on the website, after
+# which a re-run finds them in the submission and carries on.
+
+# Parent states of an in-app purchase that still has to be reviewed.
+IAP_TO_SUBMIT_STATES = {"READY_TO_SUBMIT", "DEVELOPER_ACTION_NEEDED", "REJECTED"}
+# In-App Purchase version states: a draft, or one already in a submission not yet sent.
+IAP_DRAFT_VERSION_STATES = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}
+OPEN_SUBMISSION_STATES = "READY_FOR_REVIEW,UNRESOLVED_ISSUES"
+
+
+def app_iaps(asc, app_id):
+    """The app's in-app purchases with what review needs: the draft version (newest one in
+    PREPARE_FOR_SUBMISSION or READY_FOR_REVIEW), its locales and whether a review screenshot is
+    uploaded."""
+    iaps, _ = get_all(asc, f"/apps/{app_id}/inAppPurchasesV2", {"limit": 200})
+    result = []
+    for iap in iaps:
+        attrs = iap.get("attributes") or {}
+        versions, _ = get_all(asc, f"/v2/inAppPurchases/{iap['id']}/versions", {"limit": 200})
+        drafts = sorted((v for v in versions
+                         if (v.get("attributes") or {}).get("state") in IAP_DRAFT_VERSION_STATES),
+                        key=lambda v: (v.get("attributes") or {}).get("version") or 0, reverse=True)
+        draft = drafts[0] if drafts else None
+        locales = []
+        if draft:
+            localizations, _ = get_all(asc, f"/inAppPurchaseVersions/{draft['id']}/localizations",
+                                       {"limit": 50})
+            locales = sorted((l.get("attributes") or {}).get("locale") or "?" for l in localizations)
+        try:
+            screenshot = asc.call("GET", f"/v2/inAppPurchases/{iap['id']}/appStoreReviewScreenshot")
+            has_screenshot = bool(screenshot.get("data"))
+        except AscError as error:
+            if error.status != 404:
+                raise
+            has_screenshot = False
+        result.append({
+            "id": iap["id"], "product": attrs.get("productId") or iap["id"],
+            "type": attrs.get("inAppPurchaseType"), "state": attrs.get("state"),
+            "version": draft["id"] if draft else None,
+            "version_state": (draft.get("attributes") or {}).get("state") if draft else None,
+            "versions": ", ".join(f"{(v.get('attributes') or {}).get('version')} "
+                                  f"{(v.get('attributes') or {}).get('state')}" for v in versions),
+            "locales": locales, "screenshot": has_screenshot})
+    return result
+
+
+def open_submissions(asc, app_id):
+    """The app's review submissions not sent yet (or sent back), each with the app versions and
+    In-App Purchase versions it holds."""
+    submissions = asc.call("GET", "/reviewSubmissions", {
+        "filter[app]": app_id, "filter[platform]": "IOS",
+        "filter[state]": OPEN_SUBMISSION_STATES}).get("data") or []
+    result = []
+    for submission in submissions:
+        items, _ = get_all(asc, f"/reviewSubmissions/{submission['id']}/items",
+                           {"include": "appStoreVersion,inAppPurchaseVersion", "limit": 200})
+        held = {"appStoreVersion": set(), "inAppPurchaseVersion": set()}
+        for item in items:
+            for kind in held:
+                linked = ((item.get("relationships") or {}).get(kind) or {}).get("data") or {}
+                if linked.get("id"):
+                    held[kind].add(linked["id"])
+        result.append({"submission": submission, "versions": held["appStoreVersion"],
+                       "iap_versions": held["inAppPurchaseVersion"]})
+    return result
+
+
+def plan_iaps(iaps, submissions, version_id):
+    """What `appstore` does with each in-app purchase. Returns (submission to use or None for a
+    new one, [(iap, action, detail)]), where action is "add" (an item for its draft version),
+    "held" (already in that submission), "elsewhere" (in another open submission: stop),
+    "missing" (to review but no draft version: stop), "skip" or "warn"."""
+    chosen = next((s for s in submissions if version_id in s["versions"]), None)
+    draft_ids = {i["version"] for i in iaps if i["version"]}
+    chosen = chosen or next((s for s in submissions if s["iap_versions"] & draft_ids), None)
+    chosen = chosen or (submissions[0] if submissions else None)
+    plan = []
+    for iap in iaps:
+        held_in = [s for s in submissions if iap["version"] and iap["version"] in s["iap_versions"]]
+        if chosen and iap["version"] in chosen["iap_versions"]:
+            plan.append((iap, "held", "already in the review submission"))
+        elif held_in:
+            plan.append((iap, "elsewhere", "its version is in another open review submission ("
+                         + ", ".join(s["submission"]["id"] for s in held_in) + ")"))
+        elif iap["state"] in IAP_TO_SUBMIT_STATES or iap["version_state"] == "PREPARE_FOR_SUBMISSION":
+            if iap["version_state"] == "PREPARE_FOR_SUBMISSION":
+                plan.append((iap, "add", "added to the review submission with the app version"))
+            elif iap["state"] == "READY_TO_SUBMIT":
+                plan.append((iap, "missing", "no In-App Purchase version in PREPARE_FOR_SUBMISSION "
+                             f"(versions: {iap['versions'] or 'none'})"))
+            else:
+                plan.append((iap, "warn", f"{iap['state']} with no draft version; left out"))
+        elif iap["state"] in ("MISSING_METADATA", "WAITING_FOR_UPLOAD", "PROCESSING_CONTENT"):
+            plan.append((iap, "warn", f"{iap['state']}: not ready for review; left out"))
         else:
-            submission = asc.call("POST", "/reviewSubmissions", body={"data": {
-                "type": "reviewSubmissions", "attributes": {"platform": "IOS"},
-                "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
-        items = asc.call("GET", f"/reviewSubmissions/{submission['id']}/items",
-                         {"include": "appStoreVersion"})["data"]
-        if not any((item["relationships"].get("appStoreVersion", {}).get("data") or {}).get("id")
-                   == version["id"] for item in items):
+            plan.append((iap, "skip", f"{iap['state']}: nothing to do"))
+    return chosen, plan
+
+
+def describe_iaps(plan):
+    for iap, action, detail in plan:
+        print(f"  {iap['product']} ({iap['type'] or '?'}, id {iap['id']}): {iap['state']}; draft "
+              f"version {iap['version'] or 'none'} {iap['version_state'] or ''}; review screenshot "
+              f"{'yes' if iap['screenshot'] else 'NO'}; localizations "
+              f"{', '.join(iap['locales']) or 'none'}")
+        print(f"    -> {detail}")
+
+
+IAP_BY_HAND = (
+    "Add them by hand, then re-run the job: in App Store Connect, open each in-app purchase "
+    "(Monetization > In-App Purchases), click Add for Review and add it to the draft submission "
+    "that holds this app version (or, where the version page still has the section, App Store "
+    "Connect > the version page > In-App Purchases and Subscriptions > select them > Save). Don't "
+    "click Submit for Review there; the job submits the version and the purchases together. "
+    "If App Store Connect shows them in the version's submission but this job can't see them, "
+    "re-run it with --iaps-attached.")
+
+
+def submit_for_review(asc, app_id, version, release_type, iaps_attached=False):
+    """Puts the app version and every in-app purchase still to be reviewed into one review
+    submission and sends it. Stops before sending when an in-app purchase can't be added."""
+    try:
+        iaps = app_iaps(asc, app_id)
+        submissions = open_submissions(asc, app_id)
+        chosen, plan = plan_iaps(iaps, submissions, version["id"])
+        if iaps:
+            print("In-app purchases:")
+            describe_iaps(plan)
+        for iap, action, detail in plan:
+            if action == "warn":
+                print(f"::warning::In-app purchase {iap['product']}: {detail}")
+        blocking = [(iap, detail) for iap, action, detail in plan if action in ("elsewhere", "missing")]
+        if blocking and not iaps_attached:
+            sys.exit("::error::Not submitted: these in-app purchases can't go into this version's "
+                     "review submission:\n" + "\n".join(f"- {i['product']}: {d}" for i, d in blocking)
+                     + "\nPut the app version and the purchases in one draft submission (App Store "
+                     "Connect > App Review > Drafts), then re-run the job.")
+        submission = chosen["submission"] if chosen else asc.call("POST", "/reviewSubmissions", body={
+            "data": {"type": "reviewSubmissions", "attributes": {"platform": "IOS"},
+                     "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
+        if not chosen or version["id"] not in chosen["versions"]:
             asc.call("POST", "/reviewSubmissionItems", body={"data": {
                 "type": "reviewSubmissionItems", "relationships": {
                     "reviewSubmission": {"data": {"type": "reviewSubmissions",
                                                   "id": submission["id"]}},
                     "appStoreVersion": {"data": {"type": "appStoreVersions",
                                                  "id": version["id"]}}}}})
+        # After the app version: the first in-app purchase of a type is reviewed with it.
+        refused = []
+        for iap, action, _ in plan:
+            if action != "add":
+                continue
+            if iaps_attached:
+                print(f"  {iap['product']}: not added (--iaps-attached)")
+                continue
+            try:
+                asc.call("POST", "/reviewSubmissionItems", body={"data": {
+                    "type": "reviewSubmissionItems", "relationships": {
+                        "reviewSubmission": {"data": {"type": "reviewSubmissions",
+                                                      "id": submission["id"]}},
+                        "inAppPurchaseVersion": {"data": {"type": "inAppPurchaseVersions",
+                                                          "id": iap["version"]}}}}})
+                print(f"  {iap['product']}: added to the review submission")
+            except AscError as error:
+                if error.status not in (403, 409, 422):
+                    raise
+                refused.append((iap, error.body))
+        if refused:
+            sys.exit("::error::App Store Connect refused to add these in-app purchases to the "
+                     "review submission, so the version was not submitted (a build that sells them "
+                     "would be rejected without them):\n"
+                     + "\n".join(f"- {i['product']}: {body}" for i, body in refused)
+                     + "\n" + IAP_BY_HAND)
         asc.call("PATCH", f"/reviewSubmissions/{submission['id']}", body={"data": {
             "type": "reviewSubmissions", "id": submission["id"],
             "attributes": {"submitted": True}}})
@@ -277,6 +445,33 @@ def submit_for_review(asc, app_id, version, release_type):
     when = "once Apple approves it" if release_type == "AFTER_APPROVAL" else \
         "when you release it in App Store Connect after approval"
     print(f"Submitted for App Review; it goes live {when}")
+    left = [iap["product"] for iap in app_iaps(asc, app_id) if iap["state"] == "READY_TO_SUBMIT"]
+    if left:
+        print(f"::warning::Still READY_TO_SUBMIT after the submission: {', '.join(left)}. Check in "
+              "App Store Connect that they are in review with the version.")
+    return 0
+
+
+def cmd_iaps(args):
+    """Read-only: the app's in-app purchases and what `appstore` would do with them."""
+    asc = ReadOnlyAsc(Asc())
+    app_id = asc.app_id()
+    version, _, _, summary = listing_target(asc, app_id, args.version)
+    print(summary)
+    iaps = app_iaps(asc, app_id)
+    submissions = open_submissions(asc, app_id)
+    for s in submissions:
+        print(f"Open review submission {s['submission']['id']} "
+              f"({(s['submission'].get('attributes') or {}).get('state')}): "
+              f"{len(s['versions'])} app version(s), {len(s['iap_versions'])} in-app purchase version(s)")
+    if not iaps:
+        print("No in-app purchases")
+        return 0
+    chosen, plan = plan_iaps(iaps, submissions, version["id"] if version else None)
+    print("In-app purchases (what `appstore` would do):")
+    describe_iaps(plan)
+    print("Review submission: " + (f"{chosen['submission']['id']} (open)" if chosen else
+                                   "a new one, with the app version"))
     return 0
 
 
@@ -306,6 +501,8 @@ LISTING_FIELDS = {
 COPIED_ON_CREATE = {"version": ("supportUrl", "marketingUrl"),
                     "info": ("privacyPolicyUrl", "privacyChoicesUrl")}
 RESOURCE_TYPES = {"version": "appStoreVersionLocalizations", "info": "appInfoLocalizations"}
+# The App Review notes (the version's appStoreReviewDetail.notes), one text for all languages.
+REVIEW_NOTES_FILE = "review-notes.txt"
 
 # Screenshot folder -> screenshotDisplayType (developer.apple.com/documentation/
 # appstoreconnectapi/screenshotdisplaytype). The enum names display types by their older
@@ -476,6 +673,49 @@ def sync_listing(asc, version_id, app_info_id, apply, root=LISTING_DIR):
         print(f"  {locale}: no folder in the repo; left as it is")
         result[locale] = version_locs[locale]["id"]
     return result, changed
+
+
+def review_notes(root=LISTING_DIR):
+    """The App Review notes in the repo (store-listing/app-store/review-notes.txt), or None."""
+    path = pathlib.Path(root) / REVIEW_NOTES_FILE
+    return path.read_text(encoding="utf-8").strip() if path.is_file() else None
+
+
+def sync_review_notes(asc, version_id, apply, root=LISTING_DIR):
+    """Writes the version's App Review notes (appStoreReviewDetail.notes) from the repo, and
+    nothing else of the review detail: the contact and demo-account fields stay as App Store
+    Connect has them. Creates the review detail only when the version has none. Returns whether
+    the notes differed."""
+    wanted = review_notes(root)
+    if wanted is None:
+        print(f"  App Review notes: no {REVIEW_NOTES_FILE}; left as they are")
+        return False
+    try:
+        detail = asc.call("GET", f"/appStoreVersions/{version_id}/appStoreReviewDetail").get("data")
+    except AscError as error:
+        if error.status != 404:
+            raise
+        detail = None
+    if not detail:
+        print(f"  App Review notes: no review detail yet; {'creating' if apply else 'would create'} "
+              "one with the notes only")
+        print(*describe_change("notes", "", wanted), sep="\n")
+        if apply:
+            asc.call("POST", "/appStoreReviewDetails", body={"data": {
+                "type": "appStoreReviewDetails", "attributes": {"notes": wanted},
+                "relationships": {"appStoreVersion": {"data": {"type": "appStoreVersions",
+                                                               "id": version_id}}}}})
+        return True
+    current = ((detail.get("attributes") or {}).get("notes") or "").strip()
+    if current == wanted:
+        print("  App Review notes: up to date")
+        return False
+    print(f"  App Review notes: {'updating' if apply else 'would update'}")
+    print(*describe_change("notes", current, wanted), sep="\n")
+    if apply:
+        asc.call("PATCH", f"/appStoreReviewDetails/{detail['id']}", body={"data": {
+            "type": "appStoreReviewDetails", "id": detail["id"], "attributes": {"notes": wanted}}})
+    return True
 
 
 # --- Screenshots ---------------------------------------------------------------------------------
@@ -1091,10 +1331,13 @@ def get_all(asc, path, params=None, pages=20):
         data += response.get("data") or []
         included += response.get("included") or []
         following = (response.get("links") or {}).get("next")
-        if not following or not following.startswith(API):
+        # Only links back to the API itself, so the token never goes anywhere else.
+        if not following or not following.startswith(API_ROOT + "/"):
             break
-        parsed = urllib.parse.urlsplit(following[len(API):])
+        parsed = urllib.parse.urlsplit(following[len(API_ROOT):])
         path, params = parsed.path, dict(urllib.parse.parse_qsl(parsed.query))
+        if path.startswith("/v1/"):
+            path = path[len("/v1"):]
     return data, included
 
 
@@ -1348,6 +1591,7 @@ def cmd_listing(args):
     apply = args.apply and editable
     print("APPLY" if apply else "DRY RUN (pass --apply to write)" if editable else "READ ONLY")
     _, changed = sync_listing(asc, version["id"], app_info["id"], apply)
+    changed |= sync_review_notes(asc, version["id"], apply)
     print(outcome(changed, apply, editable, "listing"))
     return 1 if args.apply and not editable else 0
 
@@ -1388,6 +1632,7 @@ def apply_store_listing(asc, app_id, version, screenshots):
                                "subtitle can't be set")
         print("Applying the store listing from store-listing/app-store/")
         localizations, _ = sync_listing(asc, version["id"], app_info["id"], apply=True)
+        sync_review_notes(asc, version["id"], apply=True)
         if screenshots:
             print("Applying the screenshots")
             sync_screenshots(asc, localizations, apply=True, app_id=app_id)
@@ -1410,7 +1655,7 @@ def cmd_appstore(args):
     if version and version_state(version) == "READY_FOR_REVIEW":
         # Left in a submission that was never sent, e.g. by a run that failed on the last step.
         print(f"App Store version {args.version} is in an unsent review submission; sending it")
-        return submit_for_review(asc, app_id, version, args.release_type)
+        return submit_for_review(asc, app_id, version, args.release_type, args.iaps_attached)
     if version and version_state(version) not in EDITABLE_STATES:
         print(f"App Store version {args.version} is already {version_state(version)}; nothing to do")
         return 0
@@ -1453,7 +1698,7 @@ def cmd_appstore(args):
             "attributes": {"whatsNew": text}}})
         print(f"Set What's New ({locale})")
 
-    return submit_for_review(asc, app_id, version, args.release_type)
+    return submit_for_review(asc, app_id, version, args.release_type, args.iaps_attached)
 
 
 def cmd_status(_args):
@@ -1508,6 +1753,9 @@ def main() -> int:
                           help="go live as soon as Apple approves, or wait for a manual release")
     appstore.add_argument("--screenshots", action="store_true",
                           help="also sync the screenshot sets from store-listing/app-store/")
+    appstore.add_argument("--iaps-attached", action="store_true",
+                          help="submit even though in-app purchases still to be reviewed couldn't "
+                               "be added or seen in the submission, after adding them by hand")
     appstore.set_defaults(func=cmd_appstore)
     for name, func, what in (("listing", cmd_listing, "names, subtitles, keywords, descriptions "
                               "and promotional texts"),
@@ -1525,6 +1773,11 @@ def main() -> int:
                                       "images and placements of the version (GET requests only)")
             command.add_argument("--dump", metavar="FILE",
                                  help="with --inspect, also write every response to FILE as JSON")
+    iaps = commands.add_parser("iaps", help="read-only: the in-app purchases and what `appstore` "
+                                            "would do with them")
+    iaps.add_argument("--version", help="the version to plan for (default: the one in "
+                                        "preparation, else the newest)")
+    iaps.set_defaults(func=cmd_iaps)
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
     revoke.set_defaults(func=cmd_revoke_ci_certs)

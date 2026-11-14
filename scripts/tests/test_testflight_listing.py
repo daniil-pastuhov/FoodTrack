@@ -966,5 +966,209 @@ class InspectTests(unittest.TestCase):
         self.assertEqual(wrapper.app_id(), "app1")
 
 
+def iap(id_, product, state="READY_TO_SUBMIT"):
+    return {"id": id_, "attributes": {"productId": product, "state": state,
+                                      "inAppPurchaseType": "CONSUMABLE"}}
+
+
+def iap_version(id_, number, state):
+    return {"id": id_, "attributes": {"version": number, "state": state}}
+
+
+def item(kind, id_):
+    return {"id": f"item-{id_}", "relationships": {kind: {"data": {"id": id_}}}}
+
+
+class IapTests(unittest.TestCase):
+    """First-time in-app purchases go into the app version's review submission."""
+
+    def setUp(self):
+        self.gets = {
+            "/apps/app/inAppPurchasesV2": [iap("i10", "recipes_10"), iap("i50", "recipes_50"),
+                                           iap("i100", "recipes_100", "MISSING_METADATA")],
+            "/v2/inAppPurchases/i10/versions": [iap_version("v10", 1, "PREPARE_FOR_SUBMISSION")],
+            "/v2/inAppPurchases/i50/versions": [iap_version("v50-old", 1, "REJECTED"),
+                                                iap_version("v50", 2, "PREPARE_FOR_SUBMISSION")],
+            "/v2/inAppPurchases/i10/appStoreReviewScreenshot": {"id": "shot"},
+            "/inAppPurchaseVersions/v10/localizations": [loc("l1", "en-GB"), loc("l2", "ru")],
+            "/reviewSubmissions": [],
+        }
+        self.version = {"id": "asv", "attributes": {}}
+
+    def fake(self, refuse=None):
+        asc = FakeAsc(self.gets)
+        real = asc.call
+
+        def call(method, path, params=None, body=None):
+            if method == "POST" and path == "/reviewSubmissionItems" and refuse and \
+                    "inAppPurchaseVersion" in body["data"]["relationships"]:
+                asc.calls.append((method, path, body))
+                raise testflight.AscError(409, refuse)
+            return real(method, path, params, body)
+
+        asc.call = call
+        return asc
+
+    def submit(self, asc, **kwargs):
+        return quiet(testflight.submit_for_review, asc, "app", self.version, "AFTER_APPROVAL", **kwargs)
+
+    @staticmethod
+    def items(asc):
+        """The review submission items posted, as {relationship: id} without the submission."""
+        return [{k: v["data"]["id"] for k, v in w[2]["data"]["relationships"].items()
+                 if k != "reviewSubmission"}
+                for w in asc.writes("POST") if w[1] == "/reviewSubmissionItems"]
+
+    def test_iaps_are_read_with_their_draft_version_screenshot_and_locales(self):
+        iaps = {i["product"]: i for i in testflight.app_iaps(FakeAsc(self.gets), "app")}
+        self.assertEqual(iaps["recipes_10"]["version"], "v10")
+        self.assertTrue(iaps["recipes_10"]["screenshot"])
+        self.assertEqual(iaps["recipes_10"]["locales"], ["en-GB", "ru"])
+        self.assertEqual(iaps["recipes_50"]["version"], "v50")  # the newest draft
+        self.assertFalse(iaps["recipes_50"]["screenshot"])
+        self.assertIsNone(iaps["recipes_100"]["version"])
+
+    def test_version_first_then_the_iaps_then_submitted(self):
+        asc = self.fake()
+        result, out = self.submit(asc)
+        self.assertEqual(result, 0)
+        self.assertEqual(self.items(asc), [{"appStoreVersion": "asv"},
+                                           {"inAppPurchaseVersion": "v10"},
+                                           {"inAppPurchaseVersion": "v50"}])
+        writes = asc.writes()
+        self.assertEqual(writes[0][1], "/reviewSubmissions")  # created
+        self.assertEqual(writes[-1][0], "PATCH")
+        self.assertEqual(writes[-1][2]["data"]["attributes"], {"submitted": True})
+        self.assertIn("::warning::In-app purchase recipes_100: MISSING_METADATA", out)
+
+    def test_a_refused_iap_stops_before_the_version_is_submitted(self):
+        asc = self.fake(refuse='{"errors":[{"detail":"must be submitted with a new app version"}]}')
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        self.assertIn("refused to add these in-app purchases", str(stop.exception))
+        self.assertIn("Add for Review", str(stop.exception))
+        self.assertIn("must be submitted with a new app version", str(stop.exception))
+        self.assertFalse(asc.writes("PATCH"))
+
+    def test_rerun_reuses_the_submission_holding_them(self):
+        self.gets["/reviewSubmissions"] = [{"id": "rs", "attributes": {"state": "READY_FOR_REVIEW"}}]
+        self.gets["/reviewSubmissions/rs/items"] = [item("appStoreVersion", "asv"),
+                                                    item("inAppPurchaseVersion", "v10"),
+                                                    item("inAppPurchaseVersion", "v50")]
+        self.gets["/v2/inAppPurchases/i10/versions"] = [iap_version("v10", 1, "READY_FOR_REVIEW")]
+        self.gets["/v2/inAppPurchases/i50/versions"] = [iap_version("v50", 2, "READY_FOR_REVIEW")]
+        asc = self.fake()
+        self.submit(asc)
+        self.assertEqual(self.items(asc), [])
+        self.assertEqual([w[1] for w in asc.writes()], ["/reviewSubmissions/rs"])
+
+    def test_iaps_added_by_hand_to_a_draft_are_used_and_the_version_joins_them(self):
+        self.gets["/reviewSubmissions"] = [{"id": "other"}, {"id": "draft"}]
+        self.gets["/reviewSubmissions/draft/items"] = [item("inAppPurchaseVersion", "v10"),
+                                                       item("inAppPurchaseVersion", "v50")]
+        asc = self.fake()
+        self.submit(asc)
+        self.assertEqual(self.items(asc), [{"appStoreVersion": "asv"}])
+        self.assertEqual(asc.writes()[-1][1], "/reviewSubmissions/draft")
+
+    def test_iaps_in_another_submission_than_the_version_stop(self):
+        self.gets["/reviewSubmissions"] = [{"id": "with-version"}, {"id": "with-iaps"}]
+        self.gets["/reviewSubmissions/with-version/items"] = [item("appStoreVersion", "asv")]
+        self.gets["/reviewSubmissions/with-iaps/items"] = [item("inAppPurchaseVersion", "v10")]
+        asc = self.fake()
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        self.assertIn("recipes_10: its version is in another open review submission (with-iaps)",
+                      str(stop.exception))
+        self.assertEqual(asc.writes(), [])
+
+    def test_ready_to_submit_without_a_draft_version_stops(self):
+        self.gets["/v2/inAppPurchases/i50/versions"] = [iap_version("v50-old", 1, "REJECTED")]
+        asc = self.fake()
+        with self.assertRaises(SystemExit) as stop:
+            self.submit(asc)
+        self.assertIn("recipes_50: no In-App Purchase version in PREPARE_FOR_SUBMISSION", str(stop.exception))
+        self.assertEqual(asc.writes(), [])
+
+    def test_iaps_attached_submits_without_adding_them(self):
+        asc = self.fake(refuse="refused")
+        result, out = self.submit(asc, iaps_attached=True)
+        self.assertEqual(result, 0)
+        self.assertEqual(self.items(asc), [{"appStoreVersion": "asv"}])
+        self.assertIn("recipes_10: not added (--iaps-attached)", out)
+        self.assertTrue(asc.writes("PATCH"))
+
+    def test_reviewed_iaps_are_left_alone(self):
+        self.gets["/apps/app/inAppPurchasesV2"] = [iap("i10", "recipes_10", "APPROVED")]
+        self.gets["/v2/inAppPurchases/i10/versions"] = [iap_version("v10", 1, "APPROVED")]
+        asc = self.fake()
+        self.submit(asc)
+        self.assertEqual(self.items(asc), [{"appStoreVersion": "asv"}])
+
+    def test_dry_run_view_only_reads(self):
+        asc = self.fake()
+        version = {"id": "asv", "attributes": {"versionString": "2.1.0", "appVersionState":
+                                               "PREPARE_FOR_SUBMISSION"}}
+        args = mock.Mock(version=None)
+        with mock.patch.object(testflight, "Asc", return_value=asc), \
+                mock.patch.object(testflight, "listing_target",
+                                  return_value=(version, None, True, "2.1.0 is in preparation")):
+            asc.gets["/apps"] = [{"id": "app"}]
+            result, out = quiet(testflight.cmd_iaps, args)
+        self.assertEqual(result, 0)
+        self.assertEqual(asc.writes(), [])
+        self.assertIn("recipes_10 (CONSUMABLE, id i10): READY_TO_SUBMIT; draft version v10 "
+                      "PREPARE_FOR_SUBMISSION; review screenshot yes; localizations en-GB, ru", out)
+        self.assertIn("-> added to the review submission with the app version", out)
+        self.assertIn("review screenshot NO", out)
+        self.assertIn("Review submission: a new one, with the app version", out)
+
+
+class ReviewNotesTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = pathlib.Path(self.tmp.name)
+        (self.root / "review-notes.txt").write_text("Line one.\nStep 2: buy.\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_only_the_notes_are_patched(self):
+        asc = FakeAsc({"/appStoreVersions/v/appStoreReviewDetail": {
+            "id": "rd", "attributes": {"notes": "Old.", "contactEmail": "x@example.invalid",
+                                       "demoAccountRequired": False}}})
+        changed, out = quiet(testflight.sync_review_notes, asc, "v", True, self.root)
+        self.assertTrue(changed)
+        self.assertEqual(asc.writes(), [("PATCH", "/appStoreReviewDetails/rd", {"data": {
+            "type": "appStoreReviewDetails", "id": "rd",
+            "attributes": {"notes": "Line one.\nStep 2: buy."}}})])
+        self.assertIn("+Step 2: buy.", out)
+
+    def test_dry_run_and_up_to_date_write_nothing(self):
+        asc = FakeAsc({"/appStoreVersions/v/appStoreReviewDetail": {
+            "id": "rd", "attributes": {"notes": "Old."}}})
+        changed, out = quiet(testflight.sync_review_notes, asc, "v", False, self.root)
+        self.assertTrue(changed)
+        self.assertIn("would update", out)
+        asc.gets["/appStoreVersions/v/appStoreReviewDetail"]["attributes"]["notes"] = \
+            "Line one.\nStep 2: buy.\n"
+        changed, out = quiet(testflight.sync_review_notes, asc, "v", True, self.root)
+        self.assertFalse(changed)
+        self.assertEqual(asc.writes(), [])
+
+    def test_a_missing_review_detail_is_created_with_the_notes_only(self):
+        asc = FakeAsc({})
+        quiet(testflight.sync_review_notes, asc, "v", True, self.root)
+        (method, path, body), = asc.writes()
+        self.assertEqual((method, path), ("POST", "/appStoreReviewDetails"))
+        self.assertEqual(body["data"]["attributes"], {"notes": "Line one.\nStep 2: buy."})
+        self.assertEqual(body["data"]["relationships"]["appStoreVersion"]["data"]["id"], "v")
+
+    def test_repo_notes_are_within_the_limit(self):
+        notes = testflight.review_notes()
+        self.assertTrue(notes)
+        self.assertLessEqual(len(notes), 4000)
+
+
 if __name__ == "__main__":
     unittest.main()
