@@ -78,23 +78,23 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "en")
     fun aJoinSaysWhatMovedOrWhatWasOwed() {
         val resources = context.resources
-        assertEquals("12 recipes moved from this phone to your account", recipeMergedMessage(resources, 12))
-        assertEquals("1 recipe moved from this phone to your account", recipeMergedMessage(resources, 1))
-        assertEquals("0 recipes moved from this phone to your account", recipeMergedMessage(resources, 0))
-        assertEquals("This phone owed 1 recipe after a store refund. It was taken from your account.", recipeMergedMessage(resources, -1))
-        assertEquals("This phone owed 3 recipes after a store refund. They were taken from your account.", recipeMergedMessage(resources, -3))
+        assertEquals("12 recipes moved from this device to your account", recipeMergedMessage(resources, 12))
+        assertEquals("1 recipe moved from this device to your account", recipeMergedMessage(resources, 1))
+        assertEquals("0 recipes moved from this device to your account", recipeMergedMessage(resources, 0))
+        assertEquals("This device owed 1 recipe after a store refund. It was taken from your account.", recipeMergedMessage(resources, -1))
+        assertEquals("This device owed 3 recipes after a store refund. They were taken from your account.", recipeMergedMessage(resources, -3))
     }
 
     @Test
     @Config(sdk = [34], qualifiers = "ru")
     fun aRussianJoinUsesTheirPlurals() {
         val resources = context.resources
-        assertEquals("После возврата денег в магазине этот телефон был должен 3 рецепта. Они списаны с вашего аккаунта.", recipeMergedMessage(resources, -3))
-        assertEquals("5 рецептов перенесены с этого телефона в ваш аккаунт", recipeMergedMessage(resources, 5))
-        assertEquals("1 рецепт перенесён с этого телефона в ваш аккаунт", recipeMergedMessage(resources, 1))
-        assertEquals("2 рецепта перенесены с этого телефона в ваш аккаунт", recipeMergedMessage(resources, 2))
+        assertEquals("После возврата денег в магазине это устройство было должно 3 рецепта. Они списаны с вашего аккаунта.", recipeMergedMessage(resources, -3))
+        assertEquals("5 рецептов перенесены с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 5))
+        assertEquals("1 рецепт перенесён с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 1))
+        assertEquals("2 рецепта перенесены с этого устройства в ваш аккаунт", recipeMergedMessage(resources, 2))
         assertEquals(
-            "2 рецепта на этом телефоне куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.",
+            "2 рецепта на этом устройстве куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.",
             resources.getQuantityString(R.plurals.recipe_elsewhere_body, 2, 2)
         )
     }
@@ -103,7 +103,7 @@ class RecipePaidWordingTest {
     @Config(sdk = [34], qualifiers = "nb")
     fun theNorwegianBusyStateIsCalm() {
         assertEquals("Serveren vår er opptatt", context.getString(R.string.recipe_writing_busy_title))
-        assertEquals("Denne telefonen skyldte 2 oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.", recipeMergedMessage(context.resources, -2))
+        assertEquals("Denne enheten skyldte 2 oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.", recipeMergedMessage(context.resources, -2))
     }
 
     @Test
@@ -206,7 +206,7 @@ class RecipePaidWordingTest {
     fun theDeleteDialogSaysWhatTheServerKeeps() {
         assertEquals(
             "Your 5 unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; " +
-                "a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.",
+                "a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.",
             context.resources.getQuantityString(R.plurals.recipe_delete_body, 5, 5)
         )
     }

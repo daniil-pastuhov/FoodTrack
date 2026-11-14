@@ -752,16 +752,16 @@
     <string name="recipe_copy_prompt">Kopier ledeteksten</string>
     <string name="recipe_prompt_copied">Ledeteksten er kopiert</string>
     <string name="recipe_prompt_clip_label">Ledetekst for oppskrift</string>
-    <string name="recipe_generate_on_phone">Lag på denne telefonen</string>
+    <string name="recipe_generate_on_phone">Lag på denne enheten</string>
     <string name="recipe_cost_free">Gratis</string>
     <string name="recipe_prompt_hint">Gratis: send ledeteksten til en KI-app du allerede bruker.</string>
     <string name="recipe_tick_hint">Kryss av minst én vare å lage mat med.</string>
-    <string name="recipe_writing_phone_title">Skriver på denne telefonen</string>
+    <string name="recipe_writing_phone_title">Skriver på denne enheten</string>
     <string name="recipe_writing_phone_body">Ingenting sendes noe sted. Dette kan ta et minutt.</string>
     <string name="recipe_stop">Stopp</string>
-    <string name="recipe_failed_phone">Klarte ikke å lage oppskriften på denne telefonen.</string>
+    <string name="recipe_failed_phone">Klarte ikke å lage oppskriften på denne enheten.</string>
     <string name="recipe_try_again">Prøv igjen</string>
-    <string name="recipe_preparing_title">Telefonen gjør seg klar</string>
+    <string name="recipe_preparing_title">Enheten gjør seg klar</string>
     <string name="recipe_preparing_body">Den egne modellen lastes fortsatt ned. Til da kan du dele ledeteksten.</string>
     <string name="recipe_empty_title">Ingenting å lage mat med ennå</string>
     <string name="recipe_empty_body">Legg til det du har hjemme, så velges varene som er nærmest datoen for deg.</string>
@@ -774,12 +774,12 @@
     <string name="recipe_method">Fremgangsmåte</string>
     <string name="recipe_in_pantry">I matskapet</string>
     <string name="recipe_tip">Tips</string>
-    <string name="recipe_source_phone">Laget på denne telefonen · Ingenting ble sendt</string>
-    <string name="recipe_source_server">Laget av serveren vår · Lagret på denne telefonen</string>
+    <string name="recipe_source_phone">Laget på denne enheten · Ingenting ble sendt</string>
+    <string name="recipe_source_server">Laget av serveren vår · Lagret på denne enheten</string>
     <string name="recipe_not_found">Denne oppskriften er ikke lagret lenger.</string>
     <string name="recipe_saved_today">I dag</string>
     <string name="recipe_saved_yesterday">I går</string>
-    <string name="recipe_saved_from_phone">Laget på denne telefonen</string>
+    <string name="recipe_saved_from_phone">Laget på denne enheten</string>
     <string name="recipe_saved_from_pack">Fra pakken din</string>
     <string name="recipe_saved_empty_title">Ingen oppskrifter ennå</string>
     <string name="recipe_saved_empty_body">Oppskrifter og menyer laget i appen lagres her.</string>
@@ -925,12 +925,12 @@
     <string name="recipe_ok">OK</string>
     <string name="recipe_choice_title">Hvor skal oppskriftene dine ligge?</string>
     <string name="recipe_choice_body">Du velger én gang. Du kan logge inn senere fra Oppskriftsinnstillinger.</string>
-    <string name="recipe_choice_phone_title">På denne telefonen, uten konto</string>
-    <string name="recipe_choice_phone_body">Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter telefon, går de du ikke har brukt tapt.</string>
+    <string name="recipe_choice_phone_title">På denne enheten, uten konto</string>
+    <string name="recipe_choice_phone_body">Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter enhet, går de du ikke har brukt tapt.</string>
     <string name="recipe_choice_account_title">I en konto</string>
     <string name="recipe_choice_account_body">Logg inn med Google. Oppskriftene følger deg til en ny telefon, Android eller iPhone, der du logger inn med Google. Vi lagrer konto-ID-en og e-postadressen din.</string>
     <string name="recipe_sign_in_google">Logg på med Google</string>
-    <string name="recipe_apple_on_iphone_hint">Logget inn med Apple på en iPhone? Legg til innlogging med Google der, i Oppskriftsinnstillinger, for å bruke oppskriftene dine på denne telefonen.</string>
+    <string name="recipe_apple_on_iphone_hint">Logget inn med Apple på en iPhone? Legg til innlogging med Google der, i Oppskriftsinnstillinger, for å bruke oppskriftene dine på denne enheten.</string>
     <string name="recipe_have_account_hint">Har du allerede oppskrifter i en konto? Logg inn for å bruke dem her.</string>
     <string name="recipe_store_error_title">Får ikke kontakt med butikken</string>
     <string name="recipe_store_error_body">Sjekk tilkoblingen og prøv igjen. Ingenting ble belastet.</string>
@@ -938,10 +938,10 @@
     <string name="recipe_rejected_body">Butikken melder at det er refundert eller allerede brukt. Hvis du ble belastet og ikke har fått oppskrifter, kontakt butikken for refusjon.</string>
     <string name="recipe_your_recipes">Oppskriftene dine</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">oppskrift på denne telefonen</item>
-        <item quantity="other">oppskrifter på denne telefonen</item>
+        <item quantity="one">oppskrift på denne enheten</item>
+        <item quantity="other">oppskrifter på denne enheten</item>
     </plurals>
-    <string name="recipe_on_phone_body">De hører til denne installasjonen av appen. Sletter du appen eller bytter telefon, går de du ikke har brukt tapt. Logg inn for å ha dem i en konto i stedet; de flyttes over med en gang.</string>
+    <string name="recipe_on_phone_body">De hører til denne installasjonen av appen. Sletter du appen eller bytter enhet, går de du ikke har brukt tapt. Logg inn for å ha dem i en konto i stedet; de flyttes over med en gang.</string>
     <plurals name="recipe_in_account_label">
         <item quantity="one">oppskrift i kontoen din</item>
         <item quantity="other">oppskrifter i kontoen din</item>
@@ -955,8 +955,8 @@
     <string name="recipe_delete_account">Slett konto</string>
     <string name="recipe_sign_out_title">Logge ut?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Den %1$d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne telefonen.</item>
-        <item quantity="other">De %1$d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne telefonen.</item>
+        <item quantity="one">Den %1$d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne enheten.</item>
+        <item quantity="other">De %1$d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne enheten.</item>
     </plurals>
     <string name="recipe_delete_title">Slette kontoen din?</string>
     <string name="recipe_apple_link_left_title">Koblingen til Apple ble ikke fjernet</string>
@@ -970,12 +970,12 @@
     <string name="recipe_allergen_consent_setting_on">Du godtok %1$s. Slå av for å trekke tilbake: da skriver ikke serveren vår oppskrifter mens allergener er satt.</string>
     <string name="recipe_allergen_consent_setting_off">Trengs for oppskrifter fra serveren vår mens allergener er satt. Brukes bare til forespørselen og lagres ikke.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</item>
-        <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</item>
+        <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+        <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
     </plurals>
-    <string name="recipe_merge_title">Legge oppskriftene på denne telefonen til kontoen din?</string>
-    <string name="recipe_merge_body">Kontoen din har allerede %1$d oppskrifter. De %2$d på denne telefonen legges til, så det blir %3$d. Dette kan ikke angres.</string>
-    <string name="recipe_merge_body_unknown">De %1$d oppskriftene på denne telefonen legges til kontoen din. Dette kan ikke angres.</string>
+    <string name="recipe_merge_title">Legge oppskriftene på denne enheten til kontoen din?</string>
+    <string name="recipe_merge_body">Kontoen din har allerede %1$d oppskrifter. De %2$d på denne enheten legges til, så det blir %3$d. Dette kan ikke angres.</string>
+    <string name="recipe_merge_body_unknown">De %1$d oppskriftene på denne enheten legges til kontoen din. Dette kan ikke angres.</string>
     <string name="recipe_merge_confirm">Legg til og logg inn</string>
     <string name="recipe_sign_in_failed">Kunne ikke logge inn. Oppskriftene dine er uendret.</string>
     <string name="recipe_sign_in_in_use">Den innloggingen hører allerede til en annen konto. Oppskriftene dine er uendret.</string>
@@ -989,17 +989,17 @@
     <string name="recipe_busy_body">Forespørselen er tatt vare på og kan fortsatt bli skrevet. Prøv igjen om et minutt for å hente den. De gratis valgene nedenfor virker fortsatt.</string>
     <string name="recipe_elsewhere_title">Et kjøp hører til en annen konto</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d oppskrift på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</item>
-        <item quantity="other">%1$d oppskrifter på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</item>
+        <item quantity="one">%1$d oppskrift på denne enheten ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</item>
+        <item quantity="other">%1$d oppskrifter på denne enheten ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</item>
     </plurals>
     <string name="recipe_rejected_build_body">Denne kopien av appen er satt opp for en annen butikk, så den kan ikke legge til kjøp fra Google Play. Kjøpet ble ikke lagt til oppskriftene dine. Google Play refunderer vanligvis et kjøp som ikke er lagt til innen tre dager. For å kjøpe oppskrifter, installer appen fra Google Play.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d oppskrift flyttet fra denne telefonen til kontoen din</item>
-        <item quantity="other">%1$d oppskrifter flyttet fra denne telefonen til kontoen din</item>
+        <item quantity="one">%1$d oppskrift flyttet fra denne enheten til kontoen din</item>
+        <item quantity="other">%1$d oppskrifter flyttet fra denne enheten til kontoen din</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">Denne telefonen skyldte %1$d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</item>
-        <item quantity="other">Denne telefonen skyldte %1$d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</item>
+        <item quantity="one">Denne enheten skyldte %1$d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</item>
+        <item quantity="other">Denne enheten skyldte %1$d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">En oppskrift du ba om tidligere, er klar. Den ligger i Lagrede oppskrifter.</string>
     <string name="recipe_earlier_menu_saved">En meny du ba om tidligere, er klar. Den ligger i Lagrede oppskrifter.</string>

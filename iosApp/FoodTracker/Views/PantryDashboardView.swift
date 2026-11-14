@@ -302,33 +302,33 @@ struct PantryDashboardView<DetailPane: View>: View {
     }
 
     /// Chips with nothing to show hide, except All and whichever is on, so it can be turned off.
+    /// There are four at most, so where they don't fit on one line (Russian on the iPhone Duo's
+    /// outer screen, large text) they wrap rather than scroll: a scrolling row was cut off hard
+    /// at the content's edge there, by the side strip's safe area, and read as broken.
     private var statusChips: some View {
         let selected = viewModel.selectedFilter
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: LarderSpace.s2) {
-                statusChip(L10n.statusFilterAll, viewModel.items.count, isOn: selected == .all) {
-                    viewModel.selectedFilter = .all
-                }
-                if viewModel.expiredCount > 0 || selected == .expired {
-                    statusChip(L10n.metricExpired, viewModel.expiredCount, isOn: selected == .expired) {
-                        viewModel.toggleMetricFilter(.expired)
-                    }
-                }
-                if viewModel.expiringSoonCount > 0 || selected == .expiringSoon {
-                    statusChip(L10n.metricExpiringSoon, viewModel.expiringSoonCount, isOn: selected == .expiringSoon) {
-                        viewModel.toggleMetricFilter(.expiringSoon)
-                    }
-                }
-                if viewModel.freshCount > 0 || selected == .fresh {
-                    statusChip(L10n.metricFresh, viewModel.freshCount, isOn: selected == .fresh) {
-                        viewModel.toggleMetricFilter(.fresh)
-                    }
+        return FlowLayout(spacing: LarderSpace.s2, rowSpacing: LarderChip.wrapRowSpacing) {
+            statusChip(L10n.statusFilterAll, viewModel.items.count, isOn: selected == .all) {
+                viewModel.selectedFilter = .all
+            }
+            if viewModel.expiredCount > 0 || selected == .expired {
+                statusChip(L10n.metricExpired, viewModel.expiredCount, isOn: selected == .expired) {
+                    viewModel.toggleMetricFilter(.expired)
                 }
             }
-            .padding(.vertical, LarderSpace.s2)
-            .padding(.horizontal, LarderSpace.s4)
+            if viewModel.expiringSoonCount > 0 || selected == .expiringSoon {
+                statusChip(L10n.metricExpiringSoon, viewModel.expiringSoonCount, isOn: selected == .expiringSoon) {
+                    viewModel.toggleMetricFilter(.expiringSoon)
+                }
+            }
+            if viewModel.freshCount > 0 || selected == .fresh {
+                statusChip(L10n.metricFresh, viewModel.freshCount, isOn: selected == .fresh) {
+                    viewModel.toggleMetricFilter(.fresh)
+                }
+            }
         }
-        .padding(.horizontal, -LarderSpace.s4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, LarderSpace.s2)
     }
 
     /// A count over the cap reads "999+" on the chip. A screen reader still gets the real number.

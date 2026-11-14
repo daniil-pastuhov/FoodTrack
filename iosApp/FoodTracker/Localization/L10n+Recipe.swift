@@ -1,9 +1,21 @@
 import Foundation
+import UIKit
 
 /// The Recipe tab's strings, in the "Recipe tab" block of each Localizable.strings. A file of its
 /// own because only the app target has the tab; the widget shares `L10n.swift`.
 extension L10n {
-    private static func text(_ key: String) -> String { NSLocalizedString(key, comment: "") }
+    private static func text(_ key: String) -> String { withDevice(NSLocalizedString(key, comment: "")) }
+
+    /// Names this device where a recipe string says where something happens or stays ("Generate
+    /// on this iPad"): {device} plainly, {the_device} in its definite form, which only Norwegian
+    /// inflects ("denne iPaden"). One sentence per string rather than one per device.
+    static func withDevice(_ text: String) -> String {
+        guard text.contains("device}") else { return text }
+        let pad = UIDevice.current.userInterfaceIdiom == .pad
+        return text
+            .replacingOccurrences(of: "{the_device}", with: NSLocalizedString(pad ? "recipe_the_device_ipad" : "recipe_the_device_iphone", comment: ""))
+            .replacingOccurrences(of: "{device}", with: NSLocalizedString(pad ? "recipe_device_ipad" : "recipe_device_iphone", comment: ""))
+    }
 
     /// Text from the person or the model (an item name, an amount) set inside one of our lines,
     /// wrapped in a first-strong isolate (U+2068 ... U+2069): a Hebrew or Arabic name keeps its
@@ -212,9 +224,9 @@ extension L10n {
 
 /// The paid route's strings. The unit is a "recipe" everywhere the person reads it.
 extension L10n {
-    private static func paid(_ key: String) -> String { NSLocalizedString(key, comment: "") }
+    private static func paid(_ key: String) -> String { withDevice(NSLocalizedString(key, comment: "")) }
     private static func plural(_ key: String, _ count: Int) -> String {
-        String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count)
+        withDevice(String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count))
     }
 
     // Tab

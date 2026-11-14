@@ -123,8 +123,8 @@ extension View {
         modifier(ShellChromeEffect(hideNav: hideNav, hideScan: hideScan))
     }
 
-    /// Tells the shell a tab has pinned an action `height` tall just above the content
-    /// clearance, so snackbars clear it. Pass 0, or leave the screen, to release it.
+    /// Tells the shell a tab has pinned an action `height` tall where Scan sits on Home, a gap
+    /// above the pill, so snackbars clear it. Pass 0, or leave the screen, to release it.
     ///
     ///     content.safeAreaInset(edge: .bottom) { generateButton.onGeometryChange(...) { height = $0 } }
     ///         .shellPinnedAction(height: height)
@@ -158,11 +158,15 @@ struct ShellMetrics: Equatable {
     var isNavVisible: Bool = true
     var isScanVisible: Bool = false
     var isExpanded: Bool = false
-    /// A tab's pinned action, sitting on top of `contentClearance`. See `ShellChrome`.
+    /// A tab's pinned action, a gap above the pill where Scan sits. See `ShellChrome`.
     var pinnedActionHeight: CGFloat = 0
 
     static let defaultPillHeight: CGFloat = 72
-    private static let gap = LarderSpace.s3
+    /// Between floating things: the pill and Scan, or a pinned action, and a snackbar above them.
+    static let shellGap = LarderSpace.s3
+    /// Content's breathing room above whatever floats over it.
+    static let contentGap = LarderSpace.s5
+    private static let gap = shellGap
 
     /// The design's 12pt from the screen edge, or just off the home indicator's safe area.
     var pillBottom: CGFloat { bottomSafeArea > 0 ? LarderSpace.s1 : LarderSpace.s3 }
@@ -174,7 +178,8 @@ struct ShellMetrics: Equatable {
 
     /// Above Scan on phones, above the pill when Scan sits beside it, and above a pinned action.
     var snackbarBottom: CGFloat {
-        if pinnedActionHeight > 0 { return contentClearance + pinnedActionHeight + Self.gap }
+        // A pinned action sits where Scan does on a phone, a gap above the pill.
+        if pinnedActionHeight > 0 { return pillTop + Self.gap + pinnedActionHeight + Self.gap }
         return isScanVisible && !isExpanded ? scanBottom + scanHeight + Self.gap : pillTop + Self.gap
     }
 
@@ -183,6 +188,6 @@ struct ShellMetrics: Equatable {
     /// screens don't reserve any of their own.
     var contentClearance: CGFloat {
         let floatingTop = isScanVisible && !isExpanded ? scanBottom + scanHeight : pillTop
-        return floatingTop + LarderSpace.s5
+        return floatingTop + Self.contentGap
     }
 }

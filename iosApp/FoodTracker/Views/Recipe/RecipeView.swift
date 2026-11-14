@@ -50,16 +50,19 @@ struct RecipeView: View {
                 }
         }
         // Outside the stack, which doesn't pass the shell's clearance on to its content's own
-        // insets: here it sits on top of that clearance, and the form scrolls clear of it.
+        // insets, so the form pads for it itself. The inset starts at the content clearance,
+        // the content gap above the pill; the button comes down by the difference to sit where
+        // Scan sits on Home and Android puts it, the shell gap above the pill. It used to sit
+        // 16pt higher, over more of the form at rest.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsPinnedAction {
                 pinnedAction
+                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { pinnedHeight = $0 }
                     .padding(.horizontal, LarderSpace.s4)
-                    .padding(.vertical, LarderSpace.s2)
                     .frame(maxWidth: isExpanded ? 440 + 2 * LarderSpace.s4 : .infinity)
                     .frame(maxWidth: .infinity, alignment: isExpanded ? .trailing : .center)
                     .padding(.trailing, isExpanded ? LarderSpace.s2 : 0)
-                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { pinnedHeight = $0 }
+                    .padding(.bottom, ShellMetrics.shellGap - ShellMetrics.contentGap)
             }
         }
         .shellPinnedAction(height: showsPinnedAction ? pinnedHeight : 0)
@@ -218,7 +221,8 @@ struct RecipeView: View {
                 .padding(.horizontal, LarderSpace.s4)
                 // The stack keeps the shell's clearance and the pinned action from reaching
                 // this scroll view as insets, so the form leaves room for them itself.
-                .padding(.bottom, LarderSpace.s4 + shellClearance + (showsPinnedAction ? pinnedHeight : 0))
+                // Ends the content gap above the pinned action, as Android's form does.
+                .padding(.bottom, shellClearance + (showsPinnedAction ? pinnedHeight + ShellMetrics.shellGap : LarderSpace.s4))
             }
             .frame(maxWidth: isExpanded ? 960 : .infinity)
             .frame(maxWidth: .infinity)

@@ -357,9 +357,9 @@ fun PinnedAction(
 @PreviewLightDark
 @Composable
 internal fun PinnedActionPreview() = LarderPreview {
-    PinnedAction("Generate on this phone", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
+    PinnedAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
     PinnedAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
-    PinnedAction("Generate on this phone", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
+    PinnedAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
 }
 
 @PreviewLightDark

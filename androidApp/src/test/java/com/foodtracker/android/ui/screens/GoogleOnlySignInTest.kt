@@ -61,7 +61,7 @@ class GoogleOnlySignInTest {
             context.getString(R.string.recipe_choice_account_body)
         )
         assertEquals(
-            "Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this phone.",
+            "Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this device.",
             context.getString(R.string.recipe_apple_on_iphone_hint)
         )
         assertEquals("Already have recipes in an account? Sign in to use them here.", context.getString(R.string.recipe_have_account_hint))
