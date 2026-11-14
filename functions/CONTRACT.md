@@ -305,8 +305,8 @@ Two kinds of failure, decided by the server; `charged` tells the client which wa
 - **Failures caused by the request** (the model refused the ingredients on safety grounds, ran out
   of room, or wrote an answer the server's checks refuse: malformed, too long, a link or contact
   details, markup, an excluded allergen or diet violation, something that is not food, text
-  outside cooking, letters of a script that is neither Latin, Cyrillic nor one the request's own
-  names use, less than 60 % of the letters in the requested language's script, or a leak of its
+  outside cooking, letters outside Latin and Cyrillic that are not a quote of one of the request's own
+  names, less than 60 % of the letters in the requested language's script, or a leak of its
   instructions) are refunded within an allowance tied to what the account
   has bought: **one refunded failure for every 10 credits purchased** over the account's life
   (at least one once anything was bought; credits the store refunded do not count). The

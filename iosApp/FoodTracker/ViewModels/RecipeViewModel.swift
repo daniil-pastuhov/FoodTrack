@@ -240,7 +240,7 @@ final class RecipeViewModel: ObservableObject {
         let request = request(for: items)
         guard !request.items.isEmpty, phase == .idle else { return }
         // More than the server takes: stopped and said so, never sent with some left out.
-        if Set(request.allergens.compactMap(RecipeWire.cleanName)).count > RecipeWire.maxAllergens {
+        if Set(request.allergens.compactMap(RecipeWire.cleanName).map { $0.lowercased() }).count > RecipeWire.maxAllergens {
             failure = .tooManyAllergens(limit: RecipeWire.maxAllergens)
             return
         }

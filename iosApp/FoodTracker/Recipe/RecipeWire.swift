@@ -684,7 +684,10 @@ enum RecipeWire {
                 quantity: item.quantity.map { min(max($0, 0), 9999) }
             )
         }
-        let allergens = Array(Set(request.allergens.compactMap(cleanAllergenName))).sorted().prefix(maxAllergens)
+        // One per name regardless of case, as on Android.
+        var seenAllergens = Set<String>()
+        let allergens = request.allergens.compactMap(cleanAllergenName).sorted()
+            .filter { seenAllergens.insert($0.lowercased()).inserted }.prefix(maxAllergens)
         return GenerateRequest(
             requestId: requestID.uuidString.lowercased(),
             kind: kind,
@@ -740,7 +743,7 @@ enum RecipeWire {
         var seen = Set<String>()
         for raw in allergens.sorted() {
             guard let name = cleanAllergenName(raw) else { return raw }
-            if seen.insert(name).inserted, seen.count > maxAllergens { return raw }
+            if seen.insert(name.lowercased()).inserted, seen.count > maxAllergens { return raw }
         }
         return nil
     }

@@ -148,6 +148,8 @@ interface Scanner {
   canary: string;
   /** Scripts a letter of the answer may be in (see allowedScripts). */
   allowed: ReadonlySet<string>;
+  /** The request's item and allergen names, folded, one per line: what other-script text may quote. */
+  quotable: string;
   /** The requested language's script. */
   wanted: string;
   /** Letters in the wanted script, and letters in any script (Common and Inherited not counted). */
@@ -166,8 +168,9 @@ const SCRIPT_FAMILIES: ReadonlyArray<readonly string[]> = [
  * Norwegian user can own "Сметана", a Russian recipe can say "°C"), plus every script a letter of
  * the request's own item and allergen names is in, so a Greek or Chinese item name can be quoted
  * in an English recipe. Japanese and Korean bring the scripts written alongside them. An answer in
- * a script none of those uses is refused (SCRIPT); one mostly in another allowed script fails the
- * language share (LANGUAGE).
+ * a script none of those uses is refused (SCRIPT), and so is any run of letters outside Latin and
+ * Cyrillic that is not part of one of those names (scan): the answer may quote the user's items in
+ * their own script, but not write anything else in it, since no word list reads other languages.
  */
 export function allowedScripts(req: GenerateRequest): Set<string> {
   const out = new Set<string>(["Latin", "Cyrillic"]);
@@ -202,14 +205,28 @@ function scan(sc: Scanner, s: string): void {
   }
   if (matchesAny(folded, NON_FOOD_TERMS)) bad("NON_FOOD");
   if (matchesAny(folded, SOLICITATION_TERMS)) bad("SOLICITATION");
+  let quote = "";
+  const endRun = () => {
+    if (quote && !sc.quotable.includes(fold(quote))) bad("SCRIPT");
+    quote = "";
+  };
   for (const ch of s) {
-    if (!/\p{L}/u.test(ch)) continue;
-    const script = scriptOf(ch);
-    if (script === "Common" || script === "Inherited") continue;
+    const letter = /\p{L}/u.test(ch);
+    const script = letter || /\p{M}/u.test(ch) ? scriptOf(ch) : "";
+    // A run of letters (with their marks) outside the recipe languages' scripts must be part of
+    // one of the request's own names: quoting "Φέτα" or "豆腐" is fine, free text is not, since no
+    // word list reads it. Common and Inherited letters and marks continue a run that is open.
+    if (script !== "" && script !== "Latin" && script !== "Cyrillic" && (quote !== "" || (script !== "Common" && script !== "Inherited"))) {
+      quote += ch;
+    } else {
+      endRun();
+    }
+    if (!letter || script === "Common" || script === "Inherited") continue;
     if (!sc.allowed.has(script)) bad("SCRIPT");
     sc.letters++;
     if (script === sc.wanted) sc.wantedLetters++;
   }
+  endRun();
 }
 
 function text(sc: Scanner, v: unknown, max: number, min = 1): string {
@@ -383,6 +400,7 @@ function checker(ctx: OutputContext): Checker {
       leakNgrams: ngrams(foldText(ctx.systemInstruction).words, LEAK_NGRAM),
       canary: ctx.canary.toUpperCase(),
       allowed: allowedScripts(ctx.req),
+      quotable: [...ctx.req.ingredients.map((i) => i.name), ...ctx.req.allergens].map(fold).join("\n"),
       wanted: ctx.req.config.language === "ru" || ctx.req.config.language === "uk" ? "Cyrillic" : "Latin",
       wantedLetters: 0,
       letters: 0,

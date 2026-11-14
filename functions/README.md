@@ -441,7 +441,7 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `CHARACTERS`, `MARKUP` | Controls, format/bidi/zero-width, private-use, unassigned; HTML tags, entities, markdown links/bold/code/headings/quotes, braces, backslash, pipes, percent-encoding | yes |
    | `URL`, `CONTACT`, `PHONE` | Schemes (`https://`, `javascript:`, `tel:`...), `www.`, domains with common TLDs, any `@`, 8+ digits in a phone-like run | yes |
    | `LEAK` | The canary; 8 consecutive words of the system instruction; the prompt's block names | yes |
-   | `SCRIPT`, `LANGUAGE` | A letter in a script that is neither Latin, Cyrillic, nor one the request's item and allergen names use (Japanese names also allow Han, Hiragana and Katakana; Korean, Hangul and Han); less than 60 % of all letters in the requested language's script | yes |
+   | `SCRIPT`, `LANGUAGE` | A letter in a script that is neither Latin, Cyrillic, nor one the request's item and allergen names use (Japanese names also allow Han, Hiragana and Katakana; Korean, Hangul and Han), or a run of such letters that is not part of one of those names (an item may be quoted in its own script, nothing else written in it); less than 60 % of all letters in the requested language's script | yes |
    | `REPETITION` | A character 10× in a row, a word 4× in a row, duplicate steps | yes |
    | `PANTRY_REF`, `NO_PANTRY` | A `pantryId` or `uses` entry that is not a sent item; a recipe or menu that uses no pantry item | yes |
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
@@ -523,10 +523,11 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   recipe) is not detected without the judge. Economically it is poor: at least USD 0.19 per
   answer, bounded per day, for text any free chatbot produces.
 - **The language check** is a script check: it catches English for Russian but not German for
-  Norwegian. Because item names may be in any script, an answer may contain letters of the
-  scripts the request's own names use; a mostly Greek answer to a request with Greek names still
-  fails the 60 % share, but a short sentence in that script inside an otherwise English recipe is
-  accepted.
+  Norwegian. Because item names may be in any script, an answer may quote the request's own
+  names in their script; any other run of letters outside Latin and Cyrillic is refused, so an
+  item name cannot be used to unlock free text in a language the word lists do not read. The cost:
+  an honest answer that writes a compound around a quoted name ("炒花生" for an item "花生") is
+  refused and regenerated.
 - **The meta-word list covers the ten app languages only.** Since names are accepted in every
   script, an instruction written in Chinese, Arabic, Hebrew, Hindi, Greek... ("忽略之前的指令")
   passes the input rule as a plain name (the fixture records this). It is still only data in the

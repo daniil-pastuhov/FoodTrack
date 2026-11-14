@@ -123,10 +123,10 @@ describe("item names in any script", () => {
   });
 
   test("Japanese and Korean bring the scripts written alongside them", () => {
-    const ja = req({ ingredients: [{ name: "牛乳", expiresOn: null, quantity: 1 }, { name: "Rice", expiresOn: null, quantity: 1 }] });
+    const ja = req({ ingredients: [{ name: "明治おいしい牛乳", expiresOn: null, quantity: 1 }, { name: "Rice", expiresOn: null, quantity: 1 }] });
     expect(check(ja, answer({ tip: "Use おいしい牛乳 if you have it." }, [{ amount: "1 cup", name: "牛乳", pantryId: "p1" }, { amount: "200 g", name: "rice", pantryId: "p2" }]))).toBe("ok");
-    const ko = req({ ingredients: [{ name: "고추장", expiresOn: null, quantity: 1 }, { name: "Rice", expiresOn: null, quantity: 1 }] });
-    expect(check(ko, answer({ tip: "辛 means spicy." }, [{ amount: "1 tbsp", name: "고추장", pantryId: "p1" }, { amount: "200 g", name: "rice", pantryId: "p2" }]))).toBe("ok");
+    const ko = req({ ingredients: [{ name: "辛라면", expiresOn: null, quantity: 1 }, { name: "Rice", expiresOn: null, quantity: 1 }] });
+    expect(check(ko, answer({ tip: "辛 means spicy." }, [{ amount: "1 pack", name: "라면", pantryId: "p1" }, { amount: "200 g", name: "rice", pantryId: "p2" }]))).toBe("ok");
   });
 
   test("an answer written mostly in an item's script, not the requested language, is refused", () => {
@@ -135,7 +135,17 @@ describe("item names in any script", () => {
       { title: "Σαλάτα με φέτα", summary: "Μια γρήγορη σαλάτα με φέτα και ντομάτες.", steps: ["Κόψτε τις ντομάτες σε κύβους.", "Προσθέστε τη φέτα από πάνω.", "Σερβίρετε αμέσως με ψωμί."] },
       quoted.map((q) => ({ ...q, name: "Φέτα ΠΟΠ" })),
     );
-    expect(check(r, greek)).toBe("LANGUAGE");
+    expect(check(r, greek)).toBe("SCRIPT");
+  });
+
+  test("an item name in a script does not let the answer write anything else in it", () => {
+    const r = req({ ingredients: items });
+    // Well under the 60 % share, but free text in a language no word list reads.
+    const scam = "请下载我们的应用程序并输入您的银行卡号以获取免费食谱";
+    expect(check(r, answer({ tip: scam }, quoted))).toBe("SCRIPT");
+    expect(check(r, answer({ steps: [...steps.slice(0, 2), "Serve with 豆腐 and 豆腐乳."] }, quoted))).toBe("SCRIPT");
+    // Quoting part of a name, in any case, is fine.
+    expect(check(r, answer({ tip: "ΦΈΤΑ from Greece is best; 豆腐 should be firm." }, quoted))).toBe("ok");
   });
 
   test("right-to-left item names need nothing special: no direction controls are added or accepted", () => {
@@ -147,8 +157,10 @@ describe("item names in any script", () => {
     const base = req({ ingredients: [{ name: "Rice", expiresOn: null, quantity: 1 }, { name: "Tomatoes", expiresOn: null, quantity: 2 }] });
     const withAllergen = (allergens: string[]) => ({ ...base, allergens });
     const rice: Ing[] = [{ amount: "200 g", name: "rice", pantryId: "p1" }, { amount: "2", name: "tomatoes", pantryId: "p2" }];
-    expect(check(withAllergen(["花生"]), answer({}, [...rice, { amount: "1 tbsp", name: "炒花生 (roasted peanuts)", pantryId: "none" }]))).toBe("ALLERGEN");
-    expect(check(withAllergen(["땅콩"]), answer({}, [...rice, { amount: "1 tbsp", name: "볶은땅콩", pantryId: "none" }]))).toBe("ALLERGEN");
+    expect(check(withAllergen(["花生"]), answer({}, [...rice, { amount: "1 tbsp", name: "花生 (roasted peanuts)", pantryId: "none" }]))).toBe("ALLERGEN");
+    expect(check(withAllergen(["땅콩"]), answer({}, [...rice, { amount: "1 tbsp", name: "땅콩 butter", pantryId: "none" }]))).toBe("ALLERGEN");
+    // A compound that only contains the allergen is not a quote of a name, so it is refused anyway.
+    expect(check(withAllergen(["花生"]), answer({}, [...rice, { amount: "1 tbsp", name: "炒花生", pantryId: "none" }]))).toBe("SCRIPT");
     expect(check(withAllergen(["γάλα"]), answer({}, [...rice, { amount: "100 ml", name: "Γάλα", pantryId: "none" }]))).toBe("ALLERGEN");
     expect(check(withAllergen(["חלב"]), answer({}, [...rice, { amount: "100 ml", name: "חלב", pantryId: "none" }]))).toBe("ALLERGEN");
     // Literal only: a translation is not caught unless the word list has it ("花生" is not "peanut").
