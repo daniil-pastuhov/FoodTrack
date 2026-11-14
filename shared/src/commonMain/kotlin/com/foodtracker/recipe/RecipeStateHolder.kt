@@ -77,6 +77,10 @@ sealed interface RecipeEvent {
      *  unsafe. */
     data class TooManyAllergens(val count: Int, val limit: Int) : RecipeEvent
 
+    /** Allergens are set and the person refused, or withdrew, sending them to our server.
+     *  Nothing was sent: the free routes still work, and Recipe settings turns it back on. */
+    data object AllergenConsentDeclined : RecipeEvent
+
     /** The phone's model failed or returned something that isn't a recipe. */
     data object Failed : RecipeEvent
 
@@ -242,9 +246,12 @@ class RecipeStateHolder(
                 .distinctUntilChanged()
                 .collect { (loading, rows, allergens) ->
                     val sorted = rows.sortedWith(compareBy<PantryRow> { it.daysRemaining }.thenBy { it.sortName })
+                    val cleaned = cleanAllergens(allergens)
                     _uiState.update {
-                        it.copy(isLoading = loading, rows = sorted, allergens = cleanAllergens(allergens))
+                        it.copy(isLoading = loading, rows = sorted, allergens = cleaned)
                     }
+                    // Not while the settings are still loading: an empty list then isn't the person's.
+                    if (!loading) paid.onAllergensChanged(cleaned.any { it.isNotBlank() })
                 }
         }
         coroutineScope.launch {
@@ -422,6 +429,13 @@ class RecipeStateHolder(
     fun signOut() = paid.signOut()
     fun deleteAccount() = paid.deleteAccount()
     fun consumePaidEvent() = paid.consumeEvent()
+    fun dismissAppleLinkNotice() = paid.dismissAppleLinkNotice()
+
+    // --- Allergen consent --------------------------------------------------------------------
+
+    fun agreeToAllergenConsent() = paid.agreeToAllergenConsent()
+    fun declineAllergenConsent() = paid.declineAllergenConsent()
+    fun setAllergenConsent(on: Boolean) = paid.setAllergenConsent(on)
 
     // --- Saved recipes -----------------------------------------------------------------------
 

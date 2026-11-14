@@ -1,7 +1,9 @@
 package com.foodtracker.android.recipe.paid
 
 import com.foodtracker.recipe.BalanceReply
+import com.foodtracker.recipe.DeleteReply
 import com.foodtracker.recipe.MergeReply
+import com.foodtracker.recipe.appleLinkLeftBehind
 import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
@@ -227,6 +229,25 @@ class CallableErrorTest {
             mergeReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(12), "moved" to JsonPrimitive("3")))),
             "a moved as text is read as nothing moved"
         )
+    }
+
+    @Test
+    fun deleteRepliesReadAppleLinkRemovedOnlyWhenItIsABoolean() {
+        fun reply(vararg fields: Pair<String, kotlinx.serialization.json.JsonElement>) =
+            deleteReplyOf(JsonObject(mapOf("deleted" to JsonPrimitive(true), "balance" to JsonPrimitive(0), *fields)))
+        assertEquals(DeleteReply(appleLinkRemoved = false), reply("appleLinkRemoved" to JsonPrimitive(false)))
+        assertEquals(DeleteReply(appleLinkRemoved = true), reply("appleLinkRemoved" to JsonPrimitive(true)))
+        assertEquals(DeleteReply(), reply(), "no Apple on the account: absent")
+        assertEquals(DeleteReply(), reply("appleLinkRemoved" to JsonPrimitive("false")), "text isn't the contract's")
+        assertEquals(DeleteReply(), reply("appleLinkRemoved" to JsonNull))
+        assertEquals(DeleteReply(), deleteReplyOf(JsonNull), "an answer that isn't an object")
+        assertEquals(false, appleLinkLeftBehind(reply("appleLinkRemoved" to JsonPrimitive("false"))))
+        assertEquals(true, appleLinkLeftBehind(reply("appleLinkRemoved" to JsonPrimitive(false))))
+    }
+
+    @Test
+    fun allergenConsentRequiredIsReadFromTheServer() {
+        assertEquals(ServerError.ALLERGEN_CONSENT_REQUIRED, serverErrorOf(Code.FAILED_PRECONDITION, "ALLERGEN_CONSENT_REQUIRED", null))
     }
 
     @Test

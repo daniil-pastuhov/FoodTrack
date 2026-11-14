@@ -143,7 +143,11 @@ export type ErrorReason =
   | "MERGE_NOT_ALLOWED"
   | "UNKNOWN_REQUEST"
   | "STORE_MISMATCH"
-  | "PURCHASE_ACCOUNT_MISMATCH";
+  | "PURCHASE_ACCOUNT_MISMATCH"
+  | "ALLERGEN_CONSENT_REQUIRED"
+  | "APPLE_NOT_LINKED"
+  | "APPLE_CODE_REJECTED"
+  | "APPLE_UNAVAILABLE";
 
 export function fail(
   code: ConstructorParameters<typeof HttpsError>[0],
@@ -261,6 +265,13 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
   const allergensRaw = v.allergens === undefined ? [] : v.allergens;
   if (!Array.isArray(allergensRaw) || allergensRaw.length > MAX_ALLERGENS) {
     invalid(`allergens must be a list of at most ${MAX_ALLERGENS} names`);
+  }
+  // An allergen list is data concerning health (GDPR Art. 9): sent only after the person's
+  // explicit consent in the app. The server cannot see that consent, but a client that skipped
+  // the step (an old or modified build) is refused here, before any name is read or anything is
+  // stored or charged.
+  if (allergensRaw.length > 0 && v.allergenConsent !== true) {
+    fail("failed-precondition", "ALLERGEN_CONSENT_REQUIRED", "allergens are sent only with allergenConsent: true");
   }
   const allergens = allergensRaw.map((a: unknown, i: number) => validName(a, `allergens[${i}]`));
 

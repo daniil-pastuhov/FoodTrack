@@ -12,7 +12,9 @@ import { menuDates, coursesFor } from "../src/contract";
 import { ANDROID_FIREBASE_APP_ID, IOS_FIREBASE_APP_ID } from "../src/constants";
 import { loadRuntimeConfig } from "../src/model";
 import { verifyPurchase as verifyCore } from "../src/core/purchases";
+import { EnvelopeSealer, LocalKeyWrapper } from "../src/adapters/envelope";
 import {
+  AppleTokenError,
   ConsumptionRejectedError,
   GenerationError,
   InvalidSignatureError,
@@ -71,7 +73,9 @@ export const anonymousUser = () => signUp({});
 export const passwordUser = () => signUp({ email: `${randomUUID()}@example.com`, password: "secret-password" });
 
 export function callerFor(uid: string, provider = "password", authTime = Math.floor(Date.now() / 1000), appId: string | null = null, profileClaims = false): Caller {
-  return { uid, signInProvider: provider, authTime, appId, profileClaims };
+  // The ID token's identities: the sign-in provider (none for anonymous), issued at sign-in.
+  const providers = provider === "anonymous" || provider === "" ? [] : [provider];
+  return { uid, signInProvider: provider, authTime, appId, profileClaims, providers, issuedAt: authTime };
 }
 
 /** verifyPurchase as called from the app that matches the store (Android for Play, iOS for the App Store). */
@@ -304,10 +308,48 @@ export class FakeJudge implements OutputJudge {
   }
 }
 
+/**
+ * Sign in with Apple's token endpoints. A code `code-N` exchanges for `refresh-for-code-N`; codes
+ * in `rejectedCodes` fail as Apple's 400 invalid_grant, and `down` makes every call retryable.
+ */
 export class FakeRevoker implements AppleTokenRevoker {
+  /** Codes revoked through revokeWithAuthorizationCode. */
   codes: string[] = [];
+  /** Codes exchanged through exchangeAuthorizationCode. */
+  exchanged: string[] = [];
+  /** Refresh tokens revoked through revokeRefreshToken. */
+  revokedTokens: string[] = [];
+  rejectedCodes = new Set<string>();
+  down = false;
+  failRevoke = false;
+
+  static tokenFor(code: string): string {
+    return `refresh-for-${code}`;
+  }
+
+  private check(code?: string): void {
+    if (this.down) throw new AppleTokenError("retryable", "Apple /auth/token unreachable (TimeoutError)");
+    if (code !== undefined && this.rejectedCodes.has(code)) {
+      throw new AppleTokenError("rejected", "Apple /auth/token returned 400 invalid_grant");
+    }
+  }
+
   async revokeWithAuthorizationCode(code: string): Promise<void> {
+    this.check(code);
+    if (this.failRevoke) throw new AppleTokenError("retryable", "Apple /auth/revoke returned 503 other");
     this.codes.push(code);
+  }
+
+  async exchangeAuthorizationCode(code: string): Promise<string> {
+    this.check(code);
+    this.exchanged.push(code);
+    return FakeRevoker.tokenFor(code);
+  }
+
+  async revokeRefreshToken(token: string): Promise<void> {
+    this.check();
+    if (this.failRevoke) throw new AppleTokenError("retryable", "Apple /auth/revoke returned 503 other");
+    this.revokedTokens.push(token);
   }
 }
 
@@ -341,6 +383,8 @@ export function makeDeps(): TestDeps {
     generator: new FakeGenerator(),
     judge: new FakeJudge(),
     appleRevoker: new FakeRevoker(),
+    // The real envelope code, with an in-memory key-encryption key in place of Cloud KMS.
+    sealer: new EnvelopeSealer(new LocalKeyWrapper()),
     clock,
     now: clock.now,
     logs,

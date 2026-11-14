@@ -19,6 +19,7 @@ function req(over: Record<string, unknown> = {}, config: Record<string, unknown>
       { name: "Tomatoes", expiresOn: null, quantity: 4 },
     ],
     allergens: [],
+    allergenConsent: true,
     today,
     ...over,
   }, Date.now());

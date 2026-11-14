@@ -68,6 +68,15 @@ enum RecipeFailure: Equatable {
     /// More allergens are set than the server takes in one request (`limit`). Nothing was
     /// written: none is ever left out.
     case tooManyAllergens(limit: Int)
+    /// Allergens are set and the person refused, or withdrew, sending them to our server.
+    /// Nothing was sent; Recipe settings turns it back on, and the free routes still work.
+    case allergenConsentDeclined
+}
+
+/// Where the allergen consent step was opened: before a server request (agreeing sends it) or
+/// from the switch in Recipe settings (agreeing only records it).
+enum AllergenConsentPrompt: Equatable {
+    case beforeWriting, fromSettings
 }
 
 /// The screens pushed from the Recipe tab.
@@ -102,6 +111,10 @@ final class RecipeViewModel: ObservableObject {
     /// Every server instance was busy on the last call: the writing screen says it is trying
     /// again rather than failing.
     @Published private(set) var serverBusyRetrying = false
+    /// The allergen consent step on screen, and where it was opened from; nil when not shown.
+    @Published var consentPrompt: AllergenConsentPrompt?
+    /// The answer to sending allergens to our server, as recorded on this phone.
+    @Published private(set) var allergenConsent: AllergenConsentRecord?
 
     /// Whether the person has changed the ticks since they were picked for them. Until then the
     /// soonest items follow the pantry as it changes.
@@ -116,6 +129,7 @@ final class RecipeViewModel: ObservableObject {
     /// requests so a refused name is never sent twice.
     private var refusedNames = Set<String>()
     private var creditsChanges: AnyCancellable?
+    private var allergenChanges: AnyCancellable?
 
     /// How many of the soonest items are ticked for the person.
     static let defaultTickCount = 3
@@ -138,6 +152,52 @@ final class RecipeViewModel: ObservableObject {
         saved = self.savedStore.all()
         refreshAvailability()
         creditsChanges = credits.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        allergenConsent = credits.storage.allergenConsent
+        // A refusal is forgotten once the allergen list is emptied (`AllergenConsent.afterListChange`).
+        allergenChanges = SettingsStore.shared.$settings
+            .map { AllergenConsent.hasAllergens($0.allergens) }
+            .removeDuplicates()
+            .sink { [weak self] has in self?.allergensChanged(hasAllergens: has) }
+    }
+
+    // MARK: Allergen consent
+
+    private func recordAllergenConsent(_ record: AllergenConsentRecord?) {
+        credits.storage.allergenConsent = record
+        allergenConsent = record
+    }
+
+    private func allergensChanged(hasAllergens: Bool) {
+        let current = credits.storage.allergenConsent
+        let next = AllergenConsent.afterListChange(current, hasAllergens: hasAllergens)
+        if next != current { recordAllergenConsent(next) }
+    }
+
+    /// "Agree and continue" (or "Agree" from Recipe settings): recorded with the time and the
+    /// wording's version. Returns whether the request it was asked for should now be sent.
+    @discardableResult
+    func agreeToAllergenConsent() -> Bool {
+        guard let prompt = consentPrompt else { return false }
+        recordAllergenConsent(AllergenConsentRecord(agreed: true, at: Date(), version: AllergenConsent.version))
+        consentPrompt = nil
+        return prompt == .beforeWriting
+    }
+
+    /// "Cancel": recorded as a refusal, so the step isn't shown on every tap; the server route
+    /// stays blocked while allergens are set, and the free routes are there.
+    func declineAllergenConsent() {
+        guard consentPrompt != nil else { return }
+        recordAllergenConsent(AllergenConsentRecord(agreed: false, at: Date(), version: AllergenConsent.version))
+        consentPrompt = nil
+    }
+
+    /// Recipe settings' switch: off withdraws at once; on shows the consent step first.
+    func setAllergenConsent(_ on: Bool) {
+        if on {
+            if !AllergenConsent.isGiven(allergenConsent) { consentPrompt = .fromSettings }
+        } else {
+            recordAllergenConsent(AllergenConsentRecord(agreed: false, at: Date(), version: AllergenConsent.version))
+        }
     }
 
     /// At launch: purchases waiting for the server, and a generation a closed app interrupted,
@@ -239,6 +299,18 @@ final class RecipeViewModel: ObservableObject {
         let kind: RecipeKind = mode == .menu ? .menu : .recipe
         let request = request(for: items)
         guard !request.items.isEmpty, phase == .idle else { return }
+        // Allergens are health data: sent only with the person's consent, and never left out
+        // instead (a recipe written without them could be unsafe).
+        switch AllergenConsent.step(hasAllergens: AllergenConsent.hasAllergens(request.allergens), record: credits.storage.allergenConsent) {
+        case .ask:
+            consentPrompt = .beforeWriting
+            return
+        case .declined:
+            failure = .allergenConsentDeclined
+            return
+        case .notNeeded, .granted:
+            break
+        }
         // More than the server takes: stopped and said so, never sent with some left out.
         if Set(request.allergens.compactMap(RecipeWire.cleanName).map { $0.lowercased() }).count > RecipeWire.maxAllergens {
             failure = .tooManyAllergens(limit: RecipeWire.maxAllergens)
@@ -481,7 +553,7 @@ final class RecipeViewModel: ObservableObject {
             // Nothing was decided on the server for this attempt: ask again under the same id.
             return .serverFailed(kind, sameRequest: true)
         case .requestIdReused, .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed,
-             .storeMismatch, .purchaseAccountMismatch, .refusedName:
+             .storeMismatch, .purchaseAccountMismatch, .refusedName, .allergenConsentRequired:
             // REQUEST_ID_REUSED: the stored request is already dropped, so "Try again" builds a
             // new one under a new id.
             return .serverFailed(kind, sameRequest: false)

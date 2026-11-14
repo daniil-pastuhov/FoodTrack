@@ -56,6 +56,14 @@ struct RecipeCreditsStorage {
         static let costs = "com.foodtracker.recipe.costs"
         static let blocked = "com.foodtracker.recipe.purchases_blocked"
         static let consentStarts = "com.foodtracker.recipe.consumption_consent_started"
+        static let allergenConsent = "com.foodtracker.recipe.allergen_consent"
+    }
+
+    /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
+    /// wording's version. Nil until asked.
+    var allergenConsent: AllergenConsentRecord? {
+        get { decode(AllergenConsentRecord.self, Key.allergenConsent) }
+        nonmutating set { encode(newValue, Key.allergenConsent) }
     }
 
     /// When the sheet last started a purchase of each product with the consumption line shown,
@@ -174,6 +182,9 @@ final class RecipeCredits: ObservableObject {
     @Published var rejectedByBuild = false
     /// "Add this phone's recipes to your account?"
     @Published var pendingMerge: RecipePendingMerge?
+    /// The account was deleted but the server said Apple's link stayed (`appleLinkRemoved:
+    /// false`): a dialog says how to remove it, until dismissed.
+    @Published var appleLinkLeft = false
 
     let backend: RecipeBackend
     let storage: RecipeCreditsStorage
@@ -612,9 +623,11 @@ final class RecipeCredits: ObservableObject {
                     if merged.moved != 0 { notice = .merged(moved: merged.moved) }
                 }
                 callSucceeded()
+                registerAppleSignIn(credential.appleAuthorizationCode)
                 await refreshBalance()
                 return true
-            case .needsMerge(let merge):
+            case .needsMerge(var merge):
+                merge.appleAuthorizationCode = credential.appleAuthorizationCode
                 pendingMerge = merge
                 return false
             }
@@ -642,6 +655,7 @@ final class RecipeCredits: ObservableObject {
             apply(response)
             if response.moved != 0 { notice = .merged(moved: response.moved) }
             callSucceeded()
+            registerAppleSignIn(merge.appleAuthorizationCode)
         } catch {
             await accountService.cancelMerge()
             note(error)
@@ -697,16 +711,29 @@ final class RecipeCredits: ObservableObject {
             } else {
                 credential = try await GoogleSignInSupport.signIn()
             }
-            try await accountService.deleteAccount(with: credential, backend: backend)
+            let response = try await accountService.deleteAccount(with: credential, backend: backend)
             account = .none
             balance = nil
             notice = .accountDeleted
+            // Rare: the server couldn't revoke Apple's token with the fresh code nor the stored
+            // one. Only then is the person told how to remove the link in Apple's settings.
+            appleLinkLeft = response.leftAppleLink
         } catch RecipeAccountError.cancelled {
             return
         } catch {
             note(error)
             notice = Self.accountNotice(for: error, otherwise: .accountActionFailed)
         }
+    }
+
+    /// Hands an Apple sign-in's code to the server in the background, so Apple's link can be
+    /// removed when the account is deleted, from this phone or from Android. Quiet: the sign-in
+    /// has already succeeded, a failure (an expired or used code, no connection) shows nothing,
+    /// and the next Apple sign-in tries again. Nothing is logged. A Google sign-in has no code.
+    private func registerAppleSignIn(_ code: String?) {
+        guard let code, !code.isEmpty, account.providers.contains(.apple) else { return }
+        let backend = backend
+        Task { try? await backend.registerAppleSignIn(authorizationCode: code) }
     }
 
     /// What an account call's failure tells the person: a generation in flight has its own

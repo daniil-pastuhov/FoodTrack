@@ -728,6 +728,16 @@
 "recipe_sign_in_failed" = "Couldn't sign in. Your recipes are unchanged.";
 "recipe_provider_in_use" = "That sign-in already belongs to another account. Your recipes are unchanged.";
 "recipe_account_deleted" = "Account deleted";
+"recipe_apple_link_left_title" = "Apple link not removed";
+"recipe_apple_link_left_message" = "Your account and its recipes are deleted, but your Apple Account is still linked to this app. To remove the link too, turn off Sign in with Apple for this app in your Apple Account settings.";
+"recipe_allergen_consent_title" = "Send your allergens to our server?";
+"recipe_allergen_consent_message" = "To write this, your allergen list (%@) goes with the ticked items and your preferences to our server and to Google's AI model, so the recipe avoids those foods. Google may process it outside the EU. It is used only for this request and not stored afterwards. You can withdraw this in Recipe settings.\n\nThe free ways, your phone's own model and the shared prompt, don't send it to us.";
+"recipe_allergen_consent_agree" = "Agree and continue";
+"recipe_allergen_consent_agree_only" = "Agree";
+"recipe_allergen_consent_declined" = "Your allergens aren't sent to our server, so it can't write this. Turn sending them on in Recipe settings, or use your phone's model or the shared prompt.";
+"recipe_allergen_consent_setting" = "Send my allergens to our server";
+"recipe_allergen_consent_setting_on" = "You agreed on %@. Turn off to withdraw: our server then won't write recipes while allergens are set.";
+"recipe_allergen_consent_setting_off" = "Needed for recipes from our server while allergens are set. Used only for the request, not stored.";
 "recipe_account_action_failed" = "Couldn't reach our server. Nothing was changed.";
 "recipe_account_busy" = "A recipe is still being written. Try again in a moment.";
 "recipe_purchases_blocked" = "Buying recipes isn't available for this account because earlier purchases were refunded after the recipes were used.";

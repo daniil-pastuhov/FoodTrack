@@ -5,6 +5,7 @@ import { RECENT_SIGN_IN_SECONDS, type Costs } from "../constants";
 import { assertOpen, emptyUser, uidHash, userRef, utcDay, type UserDoc } from "../model";
 import type { Caller, Deps } from "../ports";
 import { blockFlag, mergeKeys } from "./buyers";
+import { APPLE_PROVIDER, dropTokenIfAppleUnlinked, removeAppleLink, revokeStored } from "./appleToken";
 
 type Block = { purchasesBlocked?: true };
 
@@ -57,6 +58,9 @@ function remember(memo: string): void {
 export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance: number; costs: Costs } & Block> {
   const [snap, config] = await Promise.all([userRef(deps.db, caller.uid).get(), deps.config()]);
   const user = snap.data();
+  // Apple unlinked since its token was stored: the token goes (and is revoked). No extra read
+  // unless the ID token says Apple is gone.
+  if (user?.appleToken) await dropTokenIfAppleUnlinked(deps, caller, user.appleToken);
   return {
     balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0,
     costs: config.costs,
@@ -144,14 +148,18 @@ export async function mergeBalance(
     if (spendWindow) merged.spendWindow = spendWindow;
     tx.set(tRef, merged);
     // The tombstone stays: refunds of the source's purchases follow `mergedInto` to the target.
+    // It never keeps an Apple token (an anonymous source should have none; one that does is
+    // revoked below).
+    const { appleToken: sourceAppleToken, ...sourceRest } = src ?? emptyUser();
     tx.set(sRef, {
-      ...(src ?? emptyUser()),
+      ...sourceRest,
       balance: 0,
       mergedInto: caller.uid,
       mergedAt: Timestamp.fromMillis(deps.now()),
     });
-    return { balance: base.balance + moved, moved, target: merged };
+    return { balance: base.balance + moved, moved, target: merged, sourceAppleToken };
   });
+  if (result.sourceAppleToken) await revokeStored(deps, source.uid, result.sourceAppleToken, "merged_source");
 
   try {
     await deps.auth.deleteUser(source.uid);
@@ -166,10 +174,18 @@ export async function mergeBalance(
 
 /**
  * Deletes the caller's account: tombstones the user doc (the balance is forfeited), detaches its
- * purchases (kept, as replay guards), deletes its generations, revokes Sign in with Apple when the
- * client sends a fresh authorization code, and deletes the Auth user.
+ * purchases (kept, as replay guards), deletes its generations, removes Sign in with Apple's link
+ * (with a fresh authorization code when the client sends one, else with the stored refresh
+ * token), and deletes the Auth user. The stored token is gone from the record either way.
+ * `appleLinkRemoved` is present only for an account that carried Apple: false when neither way
+ * worked, so the client can tell the person how to remove the link themselves. Apple's answer
+ * never blocks the deletion.
  */
-export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): Promise<{ deleted: true; balance: 0 }> {
+export async function deleteAccount(
+  deps: Deps,
+  caller: Caller,
+  data: unknown,
+): Promise<{ deleted: true; balance: 0; appleLinkRemoved?: boolean }> {
   const code = (data as { appleAuthorizationCode?: unknown } | null)?.appleAuthorizationCode;
   if (code !== undefined && code !== null && (typeof code !== "string" || code.length > 4096)) {
     fail("invalid-argument", "INVALID_REQUEST", "appleAuthorizationCode must be a string");
@@ -179,13 +195,22 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
     fail("failed-precondition", "RECENT_SIGN_IN_REQUIRED", "Sign in again to delete the account");
   }
 
+  const freshCode = typeof code === "string" && code.length > 0 ? code : undefined;
+
   const uRef = userRef(deps.db, caller.uid);
-  const mergedAway = await deps.db.runTransaction(async (tx) => {
+  const { mergedAway, storedApple } = await deps.db.runTransaction(async (tx) => {
     const user = (await tx.get(uRef)).data();
+    const storedApple = user?.appleToken;
     // A merged-away account holds nothing, and its purchases must keep their uid so refunds still
     // follow `mergedInto` to the account that holds the credits now.
-    if (user?.mergedInto !== undefined) return true;
-    if (user?.deletedAt !== undefined) return false;
+    if (user?.mergedInto !== undefined) {
+      if (storedApple) tx.update(uRef, { appleToken: FieldValue.delete() });
+      return { mergedAway: true, storedApple };
+    }
+    if (user?.deletedAt !== undefined) {
+      if (storedApple) tx.update(uRef, { appleToken: FieldValue.delete() });
+      return { mergedAway: false, storedApple };
+    }
     // Deleting mid-generation would delete the pending reservation before it settles.
     if (user && user.inFlight > 0) fail("failed-precondition", "BUSY", "A recipe is being generated; try again shortly");
     tx.set(uRef, {
@@ -197,13 +222,17 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
       verifyWindow: FieldValue.delete(),
       infraRefunds: FieldValue.delete(),
       spendWindow: FieldValue.delete(),
+      // The tombstone never keeps the token; it is revoked below.
+      appleToken: FieldValue.delete(),
       deletedAt: Timestamp.fromMillis(deps.now()),
     }, { merge: true });
-    return false;
+    return { mergedAway: false, storedApple };
   });
+  const carriesApple = caller.providers.includes(APPLE_PROVIDER) || storedApple !== undefined || freshCode !== undefined;
   if (mergedAway) {
+    const removed = await removeAppleLink(deps, caller.uid, freshCode, storedApple);
     await deps.auth.deleteUser(caller.uid).catch(() => undefined);
-    return { deleted: true, balance: 0 };
+    return { deleted: true, balance: 0, ...(carriesApple ? { appleLinkRemoved: removed } : {}) };
   }
 
   const purchases = await deps.db.collection("purchases").where("uid", "==", caller.uid).get();
@@ -216,17 +245,11 @@ export async function deleteAccount(deps: Deps, caller: Caller, data: unknown): 
   }
   await deps.db.recursiveDelete(uRef.collection("generations"));
 
-  if (typeof code === "string" && code.length > 0) {
-    try {
-      await deps.appleRevoker.revokeWithAuthorizationCode(code);
-    } catch (e) {
-      deps.logger.warn("Sign in with Apple revocation failed", { error: String(e).slice(0, 200) });
-    }
-  }
+  const removed = carriesApple ? await removeAppleLink(deps, caller.uid, freshCode, storedApple) : false;
   try {
     await deps.auth.deleteUser(caller.uid);
   } catch (e) {
     if ((e as { code?: string }).code !== "auth/user-not-found") throw e;
   }
-  return { deleted: true, balance: 0 };
+  return { deleted: true, balance: 0, ...(carriesApple ? { appleLinkRemoved: removed } : {}) };
 }

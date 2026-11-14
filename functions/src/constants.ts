@@ -19,7 +19,8 @@ export const IOS_FIREBASE_APP_ID = "1:1035101174561:ios:27d1027b9220f5d1f0dc60";
 export const PURCHASE_TOKEN_NAMESPACE = "6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48";
 
 /**
- * App Check replay protection on generateRecipe, verifyPurchase, mergeBalance and deleteAccount: each call must carry a fresh
+ * App Check replay protection on generateRecipe, verifyPurchase, mergeBalance, deleteAccount and
+ * registerAppleSignIn: each call must carry a fresh
  * limited-use token, which the server consumes (both clients request limited-use tokens for every
  * callable). The function's service account needs the "Firebase App Check Token Verifier" role
  * (roles/firebaseappcheck.tokenVerifier). A replayed token arrives with `alreadyConsumed: true`
@@ -133,6 +134,18 @@ export const LANGUAGES = ["en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", 
 
 /** deleteAccount requires a sign-in at most this old (non-anonymous accounts). */
 export const RECENT_SIGN_IN_SECONDS = 5 * 60;
+
+/**
+ * The Cloud KMS key that wraps the data keys of stored Sign in with Apple refresh tokens
+ * (adapters/envelope.ts): projects/<project>/locations/<KMS_LOCATION>/keyRings/<KMS_KEY_RING>/cryptoKeys/<KMS_APPLE_TOKEN_KEY>.
+ * Created before deploy (docs/recipe-setup.md); only the functions' service account may use it.
+ */
+export const KMS_LOCATION = "europe-west1";
+export const KMS_KEY_RING = "recipe";
+export const KMS_APPLE_TOKEN_KEY = "apple-refresh-token";
+
+/** Bound to each stored Apple token as additional authenticated data, with the uid. */
+export const appleTokenContext = (uid: string) => `foodtracker/apple-refresh-token/v1/${uid}`;
 
 /** How many `mergedInto` hops a refund follows to find the account that now holds a purchase's credits. */
 export const MERGE_CHAIN_MAX = 5;

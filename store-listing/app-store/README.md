@@ -102,7 +102,7 @@ The result is **4+**.
 
 What the app sends off the phone, and so what Apple counts as collected (data sent to you or a
 partner). `iosApp/FoodTracker/PrivacyInfo.xcprivacy` declares the recipe items below (Purchase History,
-User ID, Email Address, Name, Other User Content); the Firebase SDKs ship their own privacy
+User ID, Email Address, Name, Other User Content, Health); the Firebase SDKs ship their own privacy
 manifests for crash reporting. The
 privacy policy (URL above) has to say the same; it is updated in
 <https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1> (`docs/privacy-policy-changes.md`).
@@ -135,15 +135,27 @@ privacy policy (URL above) has to say the same; it is updated in
     Google provider entry until the account is deleted, and the server cannot remove it. The
     apps never ask Apple for the name. Declaring it is the honest answer; `PrivacyInfo.xcprivacy`
     has the matching Name entry (linked, not tracking, App Functionality).
-  - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities,
-    the recipe settings and the allergen list sent to write a recipe or menu, and the recipe
-    written back (kept on the server for 7 days after it finished, for retries, then deleted).
-    The request itself is not stored, only a hash of it; it is screened automatically for
-    prompt injection, and refused attempts are counted per account per day, without their text.
-  - Open question: whether the **allergen list** should also be declared as **Health & Fitness >
-    Health**. It is a list of ingredients to leave out, chosen by the user, not a medical record;
-    the server uses it to instruct the model and to check the answer, and does not store it.
-    Decide this with the privacy policy wording.
+  - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities
+    and the recipe settings sent to write a recipe or menu, and the recipe written back (kept on
+    the server for 7 days after it finished, for retries, then deleted). The request itself is
+    not stored, only a hash of it; it is screened automatically for prompt injection, and
+    refused attempts are counted per account per day, without their text.
+  - **Health & Fitness > Health**: the **allergen list** from Settings, sent with a server-written
+    recipe or menu. Apple defines Health as "Health and medical data, including ... any other
+    user provided health or medical data"; a list of the person's food allergies is
+    user-provided health data (and data concerning health under GDPR Art. 9), so it is declared
+    here rather than under Sensitive Info (which Apple defines by other categories: racial or
+    ethnic data, sexual orientation, pregnancy, disability, beliefs, union membership, political
+    opinion, genetic or biometric data) or Other Data. Linked, not tracking, App Functionality.
+    It is sent only after the person agreed in the app's consent step (recorded on the phone,
+    withdrawable in Recipe settings; the server refuses allergens without the consent flag), it
+    is used only to instruct the model and check the answer, and it is not stored after the
+    request (only inside the request hash). Not sent at all by the free routes.
+  - Not a separate data type: the **Sign in with Apple refresh token** the server keeps,
+    encrypted with a Cloud KMS key, for accounts that signed in with Apple on an iPhone. It is a
+    credential issued to the app, not data about the person beyond the account already declared
+    (User ID, Email Address), and it is used only to revoke Apple's link when the account is
+    deleted (on iPhone or Android). The privacy policy says so.
 - Not separate data types, but the policy covers them: App Check (App Attest) on every call to
   the server; the IP address, used in memory for per-minute rate limiting and not stored by the
   server, but recorded with each request in Google Cloud's request logs (30 days); log lines with
@@ -161,16 +173,22 @@ privacy policy (URL above) has to say the same; it is updated in
     record, under the user ID and a hash of the sign-in provider's user ID).
   - **Email address**, **Name**: optional (only when signed in; the name only with Google),
     **App functionality**, **Account management**.
-  - **Other user-generated content** (the ingredients and allergens sent, the recipe returned):
-    optional, **App functionality**. Same open question about **Health info** for allergens.
+  - **Other user-generated content** (the ingredients and settings sent, the recipe returned):
+    optional, **App functionality**.
+  - **Health and fitness > Health info** (the allergen list, "Information about a user's health,
+    such as medical records or symptoms"): collected, not shared, optional (only with allergens
+    set, and only after the consent step), **App functionality**; processed ephemerally ("Is
+    this data processed ephemerally?": **Yes**: it is used for the one request and not stored).
   - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings >
-    Account > Delete account). The Auth user (email, name), the server's recipes and the usage
-    counters are deleted; purchase records (with the old user ID, not linked to a name or email),
-    a closed account record with totals, and any refund-after-use record stay. Give the policy
-    URL.
+    Account > Delete account). The Auth user (email, name), the server's recipes, the usage
+    counters and the stored Sign in with Apple token (revoked at Apple first) are deleted;
+    purchase records (with the old user ID, not linked to a name or email), a closed account
+    record with totals, and any refund-after-use record stay. Give the policy URL.
   - Account creation: "Users can create an account" with Google sign-in (OAuth), and the app
     works without one. The Android app has no Sign in with Apple (only the iPhone app offers it);
-    an account made with Apple on an iPhone is used on Android through Google added to it.
+    an account made with Apple on an iPhone is used on Android through Google added to it, and
+    deleting it on Android removes Apple's link too (with the token the server stored at the
+    iPhone sign-in; if that fails, the app says how to remove it in the Apple Account settings).
 
 ## 6. App Review information
 

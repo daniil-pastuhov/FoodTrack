@@ -13,7 +13,7 @@ import {
   type Costs,
   type GenerationKind,
 } from "./constants";
-import type { FailureClass, LlmUsage, Logger } from "./ports";
+import type { FailureClass, LlmUsage, Logger, SealedSecret } from "./ports";
 import type { Menu, Recipe } from "./contract";
 
 export interface UserDoc {
@@ -57,6 +57,19 @@ export interface UserDoc {
   debtMovedTo?: string;
   debtMovedAt?: Timestamp;
   createdAt?: Timestamp;
+  /**
+   * The Sign in with Apple refresh token from the account's last Apple sign-in on an iPhone
+   * (registerAppleSignIn), envelope-encrypted (adapters/envelope.ts) with the uid bound as
+   * additional authenticated data. Kept only to revoke Apple's link when the account is deleted
+   * from either platform; removed (and revoked) on deletion, when Apple is unlinked, and from
+   * every tombstone. Never returned to a client, never logged.
+   */
+  appleToken?: StoredAppleToken;
+}
+
+export interface StoredAppleToken {
+  sealed: SealedSecret;
+  storedAt: Timestamp;
 }
 
 export type PurchaseState = "granted" | "consumed" | "refunded";

@@ -16,6 +16,7 @@ const baseRequest = {
   config: { difficulty: "medium", detail: "stepByStep", servings: 4, maxMinutes: null, mealType: "dinner", diet: "vegan", language: "nb" },
   ingredients: [{ name: "Tomat", expiresOn: today, quantity: 3 }],
   allergens: ["sesame"],
+  allergenConsent: true,
   today,
 };
 

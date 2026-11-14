@@ -2,7 +2,7 @@ import FirebaseCore
 import FirebaseFunctions
 import Foundation
 
-/// The six callables in `functions/`, region europe-west1, every one with App Check. Errors come
+/// The seven callables in `functions/`, region europe-west1, every one with App Check. Errors come
 /// out as `RecipeServerError`.
 struct FirebaseRecipeBackend: RecipeBackend {
     /// The app whose Auth user makes the calls: the default one, or a second one while signing
@@ -40,10 +40,17 @@ struct FirebaseRecipeBackend: RecipeBackend {
         try await call("mergeBalance", MergeBalanceRequest(sourceIdToken: sourceIdToken))
     }
 
-    func deleteAccount(appleAuthorizationCode: String?) async throws {
+    func deleteAccount(appleAuthorizationCode: String?) async throws -> DeleteAccountResponse {
         // The server's own limit is 120 s (it revokes the Apple token and deletes the user).
-        let _: DeleteAccountResponse = try await call(
+        try await call(
             "deleteAccount", DeleteAccountRequest(appleAuthorizationCode: appleAuthorizationCode), timeout: 120
+        )
+    }
+
+    /// Consumes a limited-use App Check token, as the server consumes it.
+    func registerAppleSignIn(authorizationCode: String) async throws {
+        let _: RegisterAppleSignInResponse = try await call(
+            "registerAppleSignIn", RegisterAppleSignInRequest(appleAuthorizationCode: authorizationCode)
         )
     }
 
@@ -56,8 +63,8 @@ struct FirebaseRecipeBackend: RecipeBackend {
         guard let app = appName.flatMap(FirebaseApp.app(name:)) ?? FirebaseApp.app() else {
             throw RecipeServerError.unauthenticated
         }
-        // A limited-use App Check token for `generateRecipe`, `verifyPurchase`, `mergeBalance`
-        // and `deleteAccount`, which consume theirs (CONTRACT.md, "Calling"), so none may be
+        // A limited-use App Check token for `generateRecipe`, `verifyPurchase`, `mergeBalance`,
+        // `deleteAccount` and `registerAppleSignIn`, which consume theirs (CONTRACT.md, "Calling"), so none may be
         // reused: the SDK asks App Check for a new one on every `call`, which covers each
         // fallback to `generateRecipe` and each purchase resubmission, and nothing here keeps a
         // token. `getGeneration` and `getBalance` take an ordinary one.

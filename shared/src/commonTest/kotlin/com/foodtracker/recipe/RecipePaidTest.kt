@@ -26,6 +26,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+/** Most tests send allergens: the person agreed to that long ago. */
+private val agreed = AllergenConsentRecord(agreed = true, atMillis = 0, version = ALLERGEN_CONSENT_VERSION)
+
 private class PaidConfigRepository : RecipeConfigRepository {
     var stored = RecipeConfig()
     override fun get(): RecipeConfig = stored
@@ -67,7 +70,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balanceCosts: RecipeCosts? = null
     var balanceBlocked = false
     var balanceCalls = 0
-    val deleteReplies = ArrayDeque<ServerResult<Unit>>()
+    val deleteReplies = ArrayDeque<ServerResult<DeleteReply>>()
     var deleteCalls = 0
     var attestation = Attestation.OK
     var attests = 0
@@ -103,7 +106,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
             is ServerResult.Err -> current
         }
     }
-    override suspend fun deleteAccount(): ServerResult<Unit> {
+    override suspend fun deleteAccount(): ServerResult<DeleteReply> {
         deleteCalls++
         return deleteReplies.removeFirst()
     }
@@ -231,7 +234,7 @@ class RecipePaidTest {
     private val store = FakeStore()
     private var account = FakeAccount()
     private val saved = PaidSavedRepository()
-    private var paidRepository = InMemoryRecipePaidRepository()
+    private var paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed))
     private var now = 1_000_000L
     private var nextRequest = 0
     private var nextSaved = 0
@@ -272,7 +275,7 @@ class RecipePaidTest {
 
     private fun withBalance(balance: Int, kind: AccountKind = AccountKind.ANONYMOUS) {
         account = FakeAccount(kind)
-        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = balance))
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = balance))
         backend.balance = ServerResult.Ok(balance)
     }
 
@@ -764,7 +767,7 @@ class RecipePaidTest {
         assertEquals(1, holder.uiState.value.serverCost)
 
         backend.balance = ServerResult.Ok(9)
-        paidRepository.save(RecipePaidSnapshot(balance = 9))
+        paidRepository.save(RecipePaidSnapshot(allergenConsent = agreed, balance = 9))
         val rich = holder()
         rich.setMode(RecipeMode.MENU)
         rich.setCourses(2)
@@ -822,7 +825,7 @@ class RecipePaidTest {
     @Test
     fun aRefusalCountsWhatTheServerLastSaidItCosts() = runUnconfined {
         account = FakeAccount(AccountKind.ANONYMOUS)
-        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 10, costs = RecipeCosts(recipe = 2)))
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 10, costs = RecipeCosts(recipe = 2)))
         backend.balance = ServerResult.Ok(10)
         val holder = holder()
         backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.FAILED, balance = 8, charged = true))
@@ -1011,7 +1014,7 @@ class RecipePaidTest {
         assertEquals(12, holder.uiState.value.paid.balance)
 
         account.reauthResults += true
-        backend.deleteReplies += ServerResult.Ok(Unit)
+        backend.deleteReplies += ServerResult.Ok(DeleteReply())
         holder.deleteAccount()
         assertEquals(1, backend.deleteCalls)
         assertEquals(1, account.signOuts)
@@ -1038,7 +1041,7 @@ class RecipePaidTest {
         val holder = holder()
         // Recent enough on the phone's clock, but the server disagrees: signed in again once.
         backend.deleteReplies += ServerResult.Err(ServerError.RECENT_SIGN_IN_REQUIRED)
-        backend.deleteReplies += ServerResult.Ok(Unit)
+        backend.deleteReplies += ServerResult.Ok(DeleteReply())
         account.reauthResults += true
         holder.deleteAccount()
         assertEquals(1, account.reauths)
@@ -1055,7 +1058,7 @@ class RecipePaidTest {
         withBalance(3, AccountKind.SIGNED_IN)
         account = FakeAccount(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE))
         val holder = holder()
-        backend.deleteReplies += ServerResult.Ok(Unit)
+        backend.deleteReplies += ServerResult.Ok(DeleteReply())
         holder.deleteAccount()
         assertEquals(0, account.reauths, "Apple attached no longer forces a sign-in on Android")
         assertEquals(1, backend.deleteCalls)
@@ -1067,7 +1070,7 @@ class RecipePaidTest {
         withBalance(12, AccountKind.SIGNED_IN)
         val holder = holder()
         backend.deleteReplies += ServerResult.Err(ServerError.RECENT_SIGN_IN_REQUIRED)
-        backend.deleteReplies += ServerResult.Ok(Unit)
+        backend.deleteReplies += ServerResult.Ok(DeleteReply())
         account.reauthResults += true
         holder.deleteAccount()
         assertEquals(1, account.reauths)
@@ -1223,7 +1226,7 @@ class RecipePaidTest {
     @Test
     fun aPurchaseThatStillArrivesForABlockedBuyerIsVerified() = runUnconfined {
         account = FakeAccount(AccountKind.ANONYMOUS)
-        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 0, purchasesBlocked = true, paymentPending = true))
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 0, purchasesBlocked = true, paymentPending = true))
         val holder = holder()
         backend.verifyReplies += ServerResult.Ok(
             VerifyReply(VerifyStatus.GRANTED, 10, purchasesBlocked = kotlinx.serialization.json.JsonPrimitive(true))
@@ -1238,7 +1241,7 @@ class RecipePaidTest {
     @Test
     fun theBlockIsLiftedWhenTheServerStopsSayingIt() = runUnconfined {
         withBalance(6)
-        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 6, purchasesBlocked = true))
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 6, purchasesBlocked = true))
         val holder = holder()
         backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe, balance = 5, charged = true))
         holder.generateOnServer()
@@ -1350,7 +1353,7 @@ class RecipePaidTest {
     @Test
     fun clearAllResetsTheFormAndSavedRecipesButNotWhatWasBought() = runUnconfined {
         withBalance(12)
-        paidRepository.save(RecipePaidSnapshot(balance = 12, unverified = listOf(UnverifiedPurchase("tok", 10))))
+        paidRepository.save(RecipePaidSnapshot(allergenConsent = agreed, balance = 12, unverified = listOf(UnverifiedPurchase("tok", 10))))
         val config = PaidConfigRepository().apply { stored = RecipeConfig(servings = 6, language = "de") }
         val holder = RecipeStateHolder(
             pantry = pantry, onDeviceModel = NoModel, savedRecipeRepository = saved, configRepository = config,
@@ -1811,7 +1814,7 @@ class RecipePaidTest {
     @Test
     fun aRefusalWhileNobodyWaitsIsNotRetried() = runUnconfined {
         withBalance(5)
-        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 5, pendingGeneration = heldBread(), pendingSinceMillis = now))
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 5, pendingGeneration = heldBread(), pendingSinceMillis = now))
         // The recovery on opening the tab finds the server never got it, and sends it.
         backend.polls = ArrayDeque(listOf(ServerResult.Err(ServerError.UNKNOWN_REQUEST)))
         backend.generateReplies += refusedIngredient(0)
@@ -1824,7 +1827,7 @@ class RecipePaidTest {
     @Test
     fun aNameRefusedWhileSettlingAnEarlierRequestIsLeftOutOfTheNewOne() = runUnconfined {
         withBalance(5)
-        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 5, pendingGeneration = heldBread(), pendingSinceMillis = now))
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 5, pendingGeneration = heldBread(), pendingSinceMillis = now))
         // The recovery on opening the tab can't reach the server; Generate then settles the
         // earlier request first, and that is where Bread is refused.
         backend.polls = ArrayDeque(listOf(ServerResult.Err(ServerError.OFFLINE), ServerResult.Err(ServerError.UNKNOWN_REQUEST)))
@@ -1963,5 +1966,136 @@ class RecipePaidTest {
             assertEquals(ServerError.UNKNOWN, ServerError.fromReason(name, ServerError.INTERNAL), name)
         }
         assertEquals(ServerError.STORE_MISMATCH, ServerError.fromReason("STORE_MISMATCH", ServerError.INTERNAL))
+        assertEquals(ServerError.ALLERGEN_CONSENT_REQUIRED, ServerError.fromReason("ALLERGEN_CONSENT_REQUIRED", ServerError.INTERNAL))
+    }
+
+    // --- Allergen consent ------------------------------------------------------------------
+
+    private fun withoutConsent(balance: Int = 12, record: AllergenConsentRecord? = null) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = balance, allergenConsent = record))
+    }
+
+    @Test
+    fun allergensAreNotSentBeforeTheConsentStepAndAreSentWithTheFlagAfterIt() = runUnconfined {
+        withoutConsent()
+        val holder = holder()
+        holder.generateOnServer()
+        assertTrue(backend.generated.isEmpty(), "nothing goes to the server before the step")
+        assertEquals(ConsentPrompt.BEFORE_WRITING, holder.uiState.value.paid.consentPrompt)
+        assertNull(holder.uiState.value.paid.writing)
+
+        backend.generateReplies += done(11)
+        now = 5_000_000L
+        holder.agreeToAllergenConsent()
+        val request = backend.generated.single()
+        assertEquals(listOf("peanuts"), request.allergens)
+        assertEquals(true, request.allergenConsent)
+        assertNull(holder.uiState.value.paid.consentPrompt)
+        assertEquals(AllergenConsentRecord(agreed = true, atMillis = 5_000_000L, version = ALLERGEN_CONSENT_VERSION), paidRepository.get().allergenConsent)
+        assertEquals(paidRepository.get().allergenConsent, holder.uiState.value.paid.allergenConsent)
+    }
+
+    @Test
+    fun aRefusalIsRememberedAndBlocksTheServerWithoutAskingOnEveryTap() = runUnconfined {
+        withoutConsent()
+        val holder = holder()
+        holder.generateOnServer()
+        holder.declineAllergenConsent()
+        assertNull(holder.uiState.value.paid.consentPrompt)
+        assertEquals(false, paidRepository.get().allergenConsent?.agreed)
+
+        holder.generateOnServer()
+        assertNull(holder.uiState.value.paid.consentPrompt, "not asked again after a refusal")
+        assertEquals(RecipeEvent.AllergenConsentDeclined, holder.uiState.value.event)
+        assertTrue(backend.generated.isEmpty(), "never sent with the allergens left out either")
+    }
+
+    @Test
+    fun emptyingTheAllergenListForgetsARefusalSoNewAllergensAreAskedAbout() = runUnconfined {
+        withoutConsent(record = AllergenConsentRecord(agreed = false, atMillis = 1, version = ALLERGEN_CONSENT_VERSION))
+        val holder = holder()
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = emptySet()))
+        assertNull(paidRepository.get().allergenConsent)
+
+        // No allergens: no step, no flag.
+        backend.generateReplies += done(11)
+        holder.generateOnServer()
+        assertEquals(emptyList(), backend.generated.single().allergens)
+        assertNull(backend.generated.single().allergenConsent)
+
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = setOf("sesame")))
+        holder.generateOnServer()
+        assertEquals(ConsentPrompt.BEFORE_WRITING, holder.uiState.value.paid.consentPrompt)
+        assertEquals(1, backend.generated.size)
+    }
+
+    @Test
+    fun aConsentSurvivesAnEmptiedListAndANewerWordingAsksAgain() = runUnconfined {
+        withoutConsent(record = AllergenConsentRecord(agreed = true, atMillis = 1, version = ALLERGEN_CONSENT_VERSION - 1))
+        val holder = holder()
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = emptySet()))
+        assertEquals(true, paidRepository.get().allergenConsent?.agreed, "a consent is not forgotten with the list")
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = setOf("peanuts")))
+        holder.generateOnServer()
+        assertEquals(ConsentPrompt.BEFORE_WRITING, holder.uiState.value.paid.consentPrompt, "an older wording is asked again")
+        assertTrue(backend.generated.isEmpty())
+    }
+
+    @Test
+    fun withdrawingInRecipeSettingsBlocksAndTurningItBackOnAsksFirst() = runUnconfined {
+        withBalance(12)
+        val holder = holder()
+        holder.setAllergenConsent(false)
+        assertEquals(false, paidRepository.get().allergenConsent?.agreed)
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.AllergenConsentDeclined, holder.uiState.value.event)
+        assertTrue(backend.generated.isEmpty())
+
+        holder.setAllergenConsent(true)
+        assertEquals(ConsentPrompt.FROM_SETTINGS, holder.uiState.value.paid.consentPrompt)
+        assertEquals(false, paidRepository.get().allergenConsent?.agreed, "the switch alone is not a consent")
+        holder.agreeToAllergenConsent()
+        assertEquals(true, paidRepository.get().allergenConsent?.agreed)
+        assertTrue(backend.generated.isEmpty(), "agreeing from settings writes nothing")
+    }
+
+    @Test
+    fun aKeptRequestTheServerRefusesForWantOfConsentIsDropped() = runUnconfined {
+        withBalance(12)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.ALLERGEN_CONSENT_REQUIRED)
+        holder.generateOnServer()
+        assertNull(paidRepository.get().pendingGeneration)
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals(12, holder.uiState.value.paid.balance)
+    }
+
+    // --- Apple's link after deletion -------------------------------------------------------
+
+    @Test
+    fun theAppleInstructionShowsOnlyWhenTheServerSaysTheLinkStayed() = runUnconfined {
+        withBalance(3, AccountKind.SIGNED_IN)
+        account = FakeAccount(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE))
+        val holder = holder()
+        backend.deleteReplies += ServerResult.Ok(DeleteReply(appleLinkRemoved = false))
+        holder.deleteAccount()
+        assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
+        assertTrue(holder.uiState.value.paid.appleLinkLeft)
+        holder.dismissAppleLinkNotice()
+        assertFalse(holder.uiState.value.paid.appleLinkLeft)
+    }
+
+    @Test
+    fun aRemovedOrAbsentAppleLinkSaysNothingExtra() = runUnconfined {
+        for (reply in listOf(DeleteReply(appleLinkRemoved = true), DeleteReply())) {
+            withBalance(3, AccountKind.SIGNED_IN)
+            account = FakeAccount(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE))
+            val holder = holder()
+            backend.deleteReplies += ServerResult.Ok(reply)
+            holder.deleteAccount()
+            assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
+            assertFalse(holder.uiState.value.paid.appleLinkLeft, "$reply")
+        }
     }
 }

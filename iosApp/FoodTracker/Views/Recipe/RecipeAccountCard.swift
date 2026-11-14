@@ -36,6 +36,13 @@ struct RecipeAccountCard: View {
                 .destructive(L10n.recipeDeleteAccount) { Task { await credits.deleteAccount() } },
             ]
         )
+        // Only when the server answered `appleLinkRemoved: false` after deleting.
+        .larderDialog(
+            L10n.recipeAppleLinkLeftTitle,
+            isPresented: Binding(get: { credits.appleLinkLeft }, set: { credits.appleLinkLeft = $0 }),
+            message: L10n.recipeAppleLinkLeftMessage,
+            actions: [.init(L10n.recipeOK)]
+        )
         .larderDialog(
             item: Binding(get: { credits.pendingMerge }, set: { if $0 == nil { credits.pendingMerge = nil } }),
             title: { _ in L10n.recipeMergeTitle },

@@ -39,6 +39,17 @@ struct RecipeSettingsView: View {
                         }
                     }
                     allergensNote
+                    // Where the consent to send allergens to our server is seen and withdrawn.
+                    if model.credits.isPaidRouteAvailable {
+                        LarderSwitch(
+                            L10n.recipeAllergenConsentSetting,
+                            subtitle: allergenConsentSubtitle,
+                            isOn: Binding(
+                                get: { AllergenConsent.isGiven(model.allergenConsent) },
+                                set: { model.setAllergenConsent($0) }
+                            )
+                        )
+                    }
                 }
 
                 RecipeFormCard {
@@ -75,6 +86,16 @@ struct RecipeSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .shellChromeEffect(hideNav: true)
         .task { await model.credits.refreshBalance() }
+        // Turning the switch on: the same consent step as before a request; agreeing only records it.
+        .larderDialog(
+            L10n.recipeAllergenConsentTitle,
+            isPresented: Binding(get: { model.consentPrompt == .fromSettings }, set: { _ in }),
+            message: L10n.recipeAllergenConsentMessage(settingsStore.settings.allergens.sorted()),
+            actions: [
+                .cancel(L10n.cancelButton) { model.declineAllergenConsent() },
+                .init(L10n.recipeAllergenConsentAgreeOnly) { model.agreeToAllergenConsent() },
+            ]
+        )
         .larderSheet(isPresented: $choosingLanguage) {
             LanguagePicker(selection: model.config.language) { language in
                 model.updateConfig { $0.language = language }
@@ -91,6 +112,13 @@ struct RecipeSettingsView: View {
                 .foregroundStyle(LarderColor.onSurface)
                 .accessibilityAddTraits(.isHeader)
         }
+    }
+
+    private var allergenConsentSubtitle: String {
+        if let record = model.allergenConsent, AllergenConsent.isGiven(record) {
+            return L10n.recipeAllergenConsentSettingOn(record.at)
+        }
+        return L10n.recipeAllergenConsentSettingOff
     }
 
     private var allergensNote: some View {

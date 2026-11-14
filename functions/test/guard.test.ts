@@ -10,6 +10,7 @@ const base = {
   config: { difficulty: "easy", detail: "brief", servings: 2, maxMinutes: null, mealType: "any", diet: "none", language: "en" },
   ingredients: [{ name: "Tomat", expiresOn: today, quantity: 3 }],
   allergens: ["sesame"],
+  allergenConsent: true,
   today,
 };
 

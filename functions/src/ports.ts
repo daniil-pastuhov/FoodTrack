@@ -107,9 +107,54 @@ export class ConsumptionRejectedError extends Error {}
 
 // --- Sign in with Apple -----------------------------------------------------------------------
 
+/**
+ * A Sign in with Apple REST call failed. `rejected`: Apple answered 4xx (an expired, used or
+ * foreign code, an invalid client secret); `retryable`: network, timeout, 5xx or misconfiguration.
+ * The message carries only the endpoint, the HTTP status and Apple's `error` code, never a code or
+ * a token.
+ */
+export class AppleTokenError extends Error {
+  constructor(
+    readonly kind: "rejected" | "retryable",
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 export interface AppleTokenRevoker {
-  /** Exchanges a fresh Sign in with Apple authorization code for a token and revokes it. */
+  /** Exchanges a fresh Sign in with Apple authorization code for a token and revokes it. Throws AppleTokenError. */
   revokeWithAuthorizationCode(authorizationCode: string): Promise<void>;
+  /**
+   * Exchanges an authorization code (single use, valid five minutes) at /auth/token and returns
+   * the refresh token. Throws AppleTokenError.
+   */
+  exchangeAuthorizationCode(authorizationCode: string): Promise<string>;
+  /** Revokes a refresh token at /auth/revoke (Apple answers 200 for an already invalid one too). Throws AppleTokenError. */
+  revokeRefreshToken(refreshToken: string): Promise<void>;
+}
+
+// --- Application-level encryption -------------------------------------------------------------
+
+/**
+ * A secret sealed with envelope encryption: a fresh AES-256-GCM data key per value, itself
+ * encrypted ("wrapped") by a key-encryption key the plaintext never reaches (Cloud KMS in
+ * production). All fields are base64 except `kek`, the name of the key that wrapped the data key.
+ */
+export interface SealedSecret {
+  v: 1;
+  kek: string;
+  wrappedKey: string;
+  iv: string;
+  ciphertext: string;
+  tag: string;
+}
+
+export interface SecretSealer {
+  /** `context` is bound to the value as additional authenticated data: opening needs the same context. */
+  seal(plaintext: string, context: string): Promise<SealedSecret>;
+  /** Throws when the value was tampered with, sealed for another context, or the key is unavailable. */
+  open(sealed: SealedSecret, context: string): Promise<string>;
 }
 
 // --- LLM --------------------------------------------------------------------------------------
@@ -206,6 +251,8 @@ export interface Deps {
   generator: RecipeGenerator;
   judge: OutputJudge;
   appleRevoker: AppleTokenRevoker;
+  /** Encrypts the stored Sign in with Apple refresh tokens (adapters/envelope.ts). */
+  sealer: SecretSealer;
   now(): number;
   logger: Logger;
   /** `config/runtime`, parsed fail-closed (cached for CONFIG_CACHE_MS in production). */
@@ -222,4 +269,11 @@ export interface Caller {
   appId: string | null;
   /** The ID token still carries a `name` or `picture` claim (the Auth user has a display name or photo). */
   profileClaims: boolean;
+  /**
+   * Sign-in providers linked to the user when the ID token was issued (the keys of its
+   * `firebase.identities` claim, e.g. `apple.com`, `google.com`). Up to an hour stale.
+   */
+  providers: string[];
+  /** Seconds since epoch when the ID token was issued (`iat`). */
+  issuedAt: number;
 }

@@ -25,6 +25,7 @@ function request(over: Record<string, unknown> = {}) {
       { name: "Crème fraîche 15%", expiresOn: null, quantity: null },
     ],
     allergens: ["peanut"],
+    allergenConsent: true,
     today: new Date().toISOString().slice(0, 10),
     ...over,
   };

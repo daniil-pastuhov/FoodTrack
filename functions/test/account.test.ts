@@ -142,7 +142,9 @@ describe("deleteAccount", () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, caller, { store: "play", purchaseToken: token });
     await db.collection("users").doc(user.uid).collection("generations").doc("g1").set({ state: "done" });
-    expect(await deleteAccount(deps, caller, { appleAuthorizationCode: "apple-code" })).toEqual({ deleted: true, balance: 0 });
+    expect(await deleteAccount(deps, caller, { appleAuthorizationCode: "apple-code" })).toEqual({
+      deleted: true, balance: 0, appleLinkRemoved: true,
+    });
 
     const doc = (await db.collection("users").doc(user.uid).get()).data();
     expect(doc).toMatchObject({ balance: 0, forfeitedBalance: 10 });
@@ -151,8 +153,8 @@ describe("deleteAccount", () => {
     expect((await db.collection("users").doc(user.uid).collection("generations").get()).empty).toBe(true);
     expect(deps.appleRevoker.codes).toEqual(["apple-code"]);
     await expect(auth.getUser(user.uid)).rejects.toMatchObject({ code: "auth/user-not-found" });
-    // Deleting again is harmless.
-    expect(await deleteAccount(deps, caller, {})).toEqual({ deleted: true, balance: 0 });
+    // Deleting again is harmless. Nothing left to revoke Apple with: the client is told so.
+    expect(await deleteAccount(deps, caller, {})).toEqual({ deleted: true, balance: 0, appleLinkRemoved: false });
   });
 
   test("an anonymous install can delete itself without re-authenticating", async () => {

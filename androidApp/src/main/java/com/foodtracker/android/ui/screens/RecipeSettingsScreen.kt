@@ -35,14 +35,19 @@ import com.foodtracker.android.ui.design.LarderIcon
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderListItem
 import com.foodtracker.android.ui.design.LarderSheet
+import com.foodtracker.android.ui.design.LarderSwitch
 import com.foodtracker.android.ui.design.LarderTopBar
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.recipeDietLabel
 import com.foodtracker.android.util.recipeMealLabel
+import com.foodtracker.recipe.AllergenConsentRecord
 import com.foodtracker.recipe.RECIPE_LANGUAGES
 import com.foodtracker.recipe.PaidUiState
+import com.foodtracker.recipe.allergenConsentGiven
+import java.text.DateFormat
+import java.util.Date
 import com.foodtracker.recipe.RecipeConfig
 import com.foodtracker.recipe.RecipeDiet
 import com.foodtracker.recipe.RecipeMealType
@@ -72,7 +77,8 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit) {
                 onBuy = stateHolder::openPacks,
                 onSignOut = stateHolder::signOut,
                 onDelete = stateHolder::deleteAccount
-            )
+            ),
+            onAllergenConsent = stateHolder::setAllergenConsent
         )
     }
     RecipePaidOverlays(state, stateHolder)
@@ -86,7 +92,8 @@ private fun RecipeSettingsContent(
     onChange: ((RecipeConfig) -> RecipeConfig) -> Unit,
     modifier: Modifier = Modifier,
     paid: PaidUiState = PaidUiState(),
-    accountActions: AccountActions = AccountActions()
+    accountActions: AccountActions = AccountActions(),
+    onAllergenConsent: (Boolean) -> Unit = {}
 ) {
     val resources = LocalContext.current.resources
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -126,6 +133,10 @@ private fun RecipeSettingsContent(
                     }
                 }
                 AllergenNote(allergens)
+                // Where the consent to send allergens to our server is seen and withdrawn.
+                if (paid.available) {
+                    AllergenConsentRow(paid.allergenConsent, onAllergenConsent)
+                }
             }
 
             RecipeFormCard(title = stringResource(R.string.recipe_language), icon = LarderIcons.Languages) {
@@ -179,6 +190,25 @@ private fun AllergenNote(allergens: List<String>) {
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+/** Sending allergens to our server: on once agreed (with the date), off to withdraw. Turning it
+ *  on shows the consent step first (RecipePaidOverlays). */
+@Composable
+private fun AllergenConsentRow(record: AllergenConsentRecord?, onChange: (Boolean) -> Unit) {
+    val given = allergenConsentGiven(record)
+    val supporting = if (given && record != null) {
+        val date = DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(record.atMillis))
+        stringResource(R.string.recipe_allergen_consent_setting_on, date)
+    } else {
+        stringResource(R.string.recipe_allergen_consent_setting_off)
+    }
+    LarderListItem(
+        title = stringResource(R.string.recipe_allergen_consent_setting),
+        supporting = supporting,
+        trailing = { LarderSwitch(given, onChange) },
+        onClick = { onChange(!given) }
+    )
 }
 
 /** "Same as the app", then each language in its own name. */

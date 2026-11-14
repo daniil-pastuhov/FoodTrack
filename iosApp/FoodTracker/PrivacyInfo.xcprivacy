@@ -66,10 +66,27 @@
 			</array>
 		</dict>
 		<dict>
-			<!-- The ticked items' names, dates and quantities, the recipe preferences and the
-			     allergen list, sent to write a recipe or menu, and the recipe written back. -->
+			<!-- The ticked items' names, dates and quantities and the recipe preferences, sent to
+			     write a recipe or menu, and the recipe written back. -->
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- The allergen list from Settings, sent with a server-written recipe or menu only
+			     after the person's explicit consent, so the recipe avoids those foods; not stored
+			     after the request. Apple's "Health" covers "any other user provided health or
+			     medical data", which a list of food allergies is. Linked: it travels with the
+			     Firebase Auth user's request. -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeHealth</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<true/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>

@@ -101,11 +101,17 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     var ingredients: [WireIngredient]
     var allergens: [String]
     var today: String
+    /// `true` with a non-empty `allergens`, sent only after the person agreed to send them
+    /// (`AllergenConsent`); nil (left out of the JSON) otherwise. The server refuses allergens
+    /// without it (`ALLERGEN_CONSENT_REQUIRED`). Nil in a request stored by an older version.
+    var allergenConsent: Bool?
 
-    /// Everything the server binds a `requestId` to: the whole body but the id.
+    /// Everything the server binds a `requestId` to: the whole body but the id and the consent
+    /// flag, which isn't an input.
     func hasSameInputs(as other: GenerateRequest) -> Bool {
         var other = other
         other.requestId = requestId
+        other.allergenConsent = allergenConsent
         return self == other
     }
 }
@@ -130,6 +136,17 @@ struct MergeBalanceRequest: Encodable, Sendable {
 
 struct DeleteAccountRequest: Encodable, Sendable {
     var appleAuthorizationCode: String?
+}
+
+/// `registerAppleSignIn`: the authorization code of an Apple sign-in or link, which the server
+/// exchanges for a refresh token it keeps (encrypted) to remove Apple's link when the account is
+/// deleted, from this phone or from Android.
+struct RegisterAppleSignInRequest: Encodable, Sendable {
+    var appleAuthorizationCode: String
+}
+
+struct RegisterAppleSignInResponse: Decodable, Sendable {
+    var registered: Bool?
 }
 
 struct EmptyRequest: Encodable, Sendable {}
@@ -206,8 +223,28 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var purchasesBlocked: WireFlag?
 }
 
-struct DeleteAccountResponse: Decodable, Sendable {
+struct DeleteAccountResponse: Decodable, Sendable, Equatable {
     var deleted: Bool
+    /// Present only for an account that carried Apple: false when the server could not remove
+    /// Apple's link, so the person is told how to do it in Apple's settings. Anything but a
+    /// boolean reads as absent.
+    var appleLinkRemoved: Bool?
+
+    init(deleted: Bool, appleLinkRemoved: Bool? = nil) {
+        self.deleted = deleted
+        self.appleLinkRemoved = appleLinkRemoved
+    }
+
+    enum CodingKeys: String, CodingKey { case deleted, appleLinkRemoved }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        deleted = (try? container.decode(Bool.self, forKey: .deleted)) ?? true
+        appleLinkRemoved = (try? container.decodeIfPresent(Bool.self, forKey: .appleLinkRemoved)) ?? nil
+    }
+
+    /// Whether the deletion left Apple's link in place: only when the server says so.
+    var leftAppleLink: Bool { appleLinkRemoved == false }
 }
 
 // MARK: Errors
@@ -252,6 +289,9 @@ enum RecipeServerError: Error, Equatable, Sendable {
     /// The purchase's `appAccountToken` is another account's (`PURCHASE_ACCOUNT_MISMATCH`).
     /// Nothing was recorded: the transaction is kept for the account that bought it.
     case purchaseAccountMismatch
+    /// Allergens sent without `allergenConsent: true` (`ALLERGEN_CONSENT_REQUIRED`): a request
+    /// stored before the consent step existed. Nothing was charged; a new request carries it.
+    case allergenConsentRequired
     /// `resource-exhausted` without a reason: every server instance is busy (HTTP 429). Nothing
     /// was charged; the same request is sent again after a few seconds.
     case serversBusy
@@ -286,6 +326,7 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "INVALID_REQUEST": return .invalidRequest
         case "STORE_MISMATCH": return .storeMismatch
         case "PURCHASE_ACCOUNT_MISMATCH": return .purchaseAccountMismatch
+        case "ALLERGEN_CONSENT_REQUIRED": return .allergenConsentRequired
         case nil: break
         default: return .unrecognised(charged: charged ?? false)
         }
@@ -695,7 +736,9 @@ enum RecipeWire {
             config: WireRecipeConfig(request.config),
             ingredients: Array(ingredients.prefix(maxIngredients)),
             allergens: Array(allergens),
-            today: isoDay(today)
+            today: isoDay(today),
+            // Built only past the consent step (`writeOnServer`), so allergens here were agreed to.
+            allergenConsent: AllergenConsent.flag(for: Array(allergens))
         )
     }
 
@@ -819,5 +862,65 @@ enum RecipeWire {
         var recipe = recipe
         recipe.source = .server
         return recipe
+    }
+}
+
+// MARK: Allergen consent
+
+/// The person's answer to sending their allergen list to our server: agreed, or refused or
+/// withdrawn, when, and to which wording.
+struct AllergenConsentRecord: Codable, Equatable, Sendable {
+    var agreed: Bool
+    var at: Date
+    var version: Int
+}
+
+/// An allergen list is data concerning health (GDPR Art. 9). It goes to our server, and on to
+/// Google's model, only with the person's explicit consent: asked once, the first time a
+/// server-written recipe or menu would carry it, recorded on this phone with the time and the
+/// wording's version, and withdrawable in Recipe settings. Refused or withdrawn, the server route
+/// is blocked while allergens are set; they are never left out instead, since a recipe written
+/// without them could be unsafe. The phone's own model and the shared prompt send nothing to us.
+/// The same rules as Android's `AllergenConsent.kt`.
+enum AllergenConsent {
+    /// The wording's version (`recipe_allergen_consent_*`); raising it asks everyone again.
+    static let version = 1
+
+    enum Step: Equatable {
+        /// No allergens set: nothing health-related is sent, no flag.
+        case notNeeded
+        /// Agreed to the current wording: sent, with `allergenConsent: true`.
+        case granted
+        /// Never asked, or asked with another wording: ask before sending.
+        case ask
+        /// Refused or withdrawn: not sent; the person is told where to change it.
+        case declined
+    }
+
+    static func step(hasAllergens: Bool, record: AllergenConsentRecord?, version: Int = version) -> Step {
+        guard hasAllergens else { return .notNeeded }
+        guard let record, record.version == version else { return .ask }
+        return record.agreed ? .granted : .declined
+    }
+
+    /// The record once the allergen list is known to be (non-)empty: a refusal is forgotten when
+    /// the list is emptied, so allergens set later are asked about again. A consent stays.
+    static func afterListChange(_ record: AllergenConsentRecord?, hasAllergens: Bool) -> AllergenConsentRecord? {
+        if !hasAllergens, record?.agreed == false { return nil }
+        return record
+    }
+
+    /// The request's `allergenConsent`: true with allergens (the request is only built past the
+    /// step), absent without.
+    static func flag(for allergens: [String]) -> Bool? { allergens.isEmpty ? nil : true }
+
+    /// Whether Recipe settings shows sending allergens as on.
+    static func isGiven(_ record: AllergenConsentRecord?, version: Int = version) -> Bool {
+        record.map { $0.agreed && $0.version == version } ?? false
+    }
+
+    /// Whether any allergen in Settings is set (blank ones don't count).
+    static func hasAllergens(_ allergens: some Sequence<String>) -> Bool {
+        allergens.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
 }

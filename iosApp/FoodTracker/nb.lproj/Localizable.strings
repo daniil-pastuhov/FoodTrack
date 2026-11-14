@@ -728,6 +728,16 @@
 "recipe_sign_in_failed" = "Kunne ikke logge inn. Oppskriftene dine er uendret.";
 "recipe_provider_in_use" = "Den innloggingen hører allerede til en annen konto. Oppskriftene dine er uendret.";
 "recipe_account_deleted" = "Kontoen er slettet";
+"recipe_apple_link_left_title" = "Koblingen til Apple ble ikke fjernet";
+"recipe_apple_link_left_message" = "Kontoen og oppskriftene er slettet, men Apple-kontoen din er fortsatt koblet til denne appen. For å fjerne koblingen også kan du slå av Logg på med Apple for denne appen i innstillingene for Apple-kontoen.";
+"recipe_allergen_consent_title" = "Sende allergenene dine til serveren vår?";
+"recipe_allergen_consent_message" = "For å skrive dette sendes allergenlisten din (%@) sammen med de avkryssede varene og innstillingene dine til serveren vår og til KI-modellen til Google, slik at oppskriften unngår disse matvarene. Google kan behandle den utenfor EU. Den brukes bare til denne forespørselen og lagres ikke etterpå. Du kan trekke tilbake samtykket i oppskriftsinnstillingene.\n\nDe gratis måtene, telefonens egen modell og den delte ledeteksten, sender den ikke til oss.";
+"recipe_allergen_consent_agree" = "Godta og fortsett";
+"recipe_allergen_consent_agree_only" = "Godta";
+"recipe_allergen_consent_declined" = "Allergenene dine sendes ikke til serveren vår, så den kan ikke skrive dette. Slå på sending i oppskriftsinnstillingene, eller bruk telefonens modell eller den delte ledeteksten.";
+"recipe_allergen_consent_setting" = "Send allergenene mine til serveren vår";
+"recipe_allergen_consent_setting_on" = "Du godtok %@. Slå av for å trekke tilbake: da skriver ikke serveren vår oppskrifter mens allergener er satt.";
+"recipe_allergen_consent_setting_off" = "Trengs for oppskrifter fra serveren vår mens allergener er satt. Brukes bare til forespørselen og lagres ikke.";
 "recipe_account_action_failed" = "Fikk ikke kontakt med serveren vår. Ingenting ble endret.";
 "recipe_account_busy" = "En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.";
 "recipe_purchases_blocked" = "Kjøp av oppskrifter er ikke tilgjengelig for denne kontoen fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.";

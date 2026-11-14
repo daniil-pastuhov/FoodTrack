@@ -3,9 +3,9 @@ package com.foodtracker.android.ui.screens
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.foodtracker.android.R
-import com.foodtracker.recipe.AccountKind
-import com.foodtracker.recipe.AccountState
+import com.foodtracker.recipe.DeleteReply
 import com.foodtracker.recipe.SignInProvider
+import com.foodtracker.recipe.appleLinkLeftBehind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -46,10 +46,11 @@ class GoogleOnlySignInTest {
     }
 
     @Test
-    fun onlyAnAccountWithAppleGetsTheAppleLinkNoteWhenDeleted() {
-        assertTrue(deleteLeavesAppleLink(AccountState(AccountKind.SIGNED_IN, both)))
-        assertFalse(deleteLeavesAppleLink(AccountState(AccountKind.SIGNED_IN, google)))
-        assertFalse(deleteLeavesAppleLink(AccountState(AccountKind.ANONYMOUS)))
+    fun theAppleLinkNoticeFollowsOnlyTheServersAnswer() {
+        assertTrue(appleLinkLeftBehind(DeleteReply(appleLinkRemoved = false)))
+        assertFalse(appleLinkLeftBehind(DeleteReply(appleLinkRemoved = true)))
+        // No Apple on the account: the field is absent, and nothing is said.
+        assertFalse(appleLinkLeftBehind(DeleteReply(appleLinkRemoved = null)))
     }
 
     @Test
@@ -69,9 +70,9 @@ class GoogleOnlySignInTest {
             context.getString(R.string.recipe_signed_in_google_and_apple)
         )
         assertEquals("Signed in with Google, Apple", context.getString(R.string.recipe_signed_in_with, signInProvidersText(both)))
-        val note = context.getString(R.string.recipe_delete_apple_note)
-        assertTrue(note, note.startsWith("This account is also linked to your Apple Account. Deleting it here removes the account and its recipes, but not that link."))
-        assertTrue(note, "iPhone app" in note && "Sign in with Apple" in note)
+        val note = context.getString(R.string.recipe_apple_link_left_body)
+        assertTrue(note, note.startsWith("Your account and its recipes are deleted, but your Apple Account is still linked to this app."))
+        assertTrue(note, "Sign in with Apple" in note && "Apple Account settings" in note)
     }
 
     @Test
@@ -89,8 +90,11 @@ class GoogleOnlySignInTest {
             assertTrue(hint, hint.startsWith(start))
             val choice = localized.getString(R.string.recipe_choice_account_body)
             assertTrue("$language: $choice", "Google" in choice && "Apple" !in choice)
-            val note = localized.getString(R.string.recipe_delete_apple_note)
-            assertTrue("$language: $note", "iPhone" in note && "Apple" in note)
+            val note = localized.getString(R.string.recipe_apple_link_left_body)
+            assertTrue("$language: $note", "Apple" in note)
+            // The consent step names the list it sends, in every language.
+            val consent = localized.getString(R.string.recipe_allergen_consent_body, "peanut")
+            assertTrue("$language: $consent", "peanut" in consent && "Google" in consent)
             for (id in listOf(R.string.recipe_signed_in_google, R.string.recipe_signed_in_google_and_apple, R.string.recipe_signed_in_add_google)) {
                 assertTrue(localized.getString(id), "Google" in localized.getString(id))
             }

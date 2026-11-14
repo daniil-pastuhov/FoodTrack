@@ -5,12 +5,12 @@ source of truth is `src/contract.ts`; this file must change with it.
 
 ## Calling
 
-- All six are Firebase **callable** functions in region **`europe-west1`**
+- All seven are Firebase **callable** functions in region **`europe-west1`**
   (`Firebase.functions("europe-west1")` / `Functions.functions(region: "europe-west1")`).
 - Every call needs a signed-in Firebase Auth user (anonymous counts) and a valid **App Check**
   token. A call without either fails with `unauthenticated`.
-- App Check replay protection is **on** for `generateRecipe`, `verifyPurchase`, `mergeBalance`
-  and `deleteAccount` (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a
+- App Check replay protection is **on** for `generateRecipe`, `verifyPurchase`, `mergeBalance`,
+  `deleteAccount` and `registerAppleSignIn` (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a
   fresh **limited-use** token (`limitedUseAppCheckTokens = true` in the Kotlin `getHttpsCallable`
   options, `HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)` in Swift). A reused token
   fails with `unauthenticated` / `APP_CHECK_REPLAYED`; the SDKs fetch a new limited-use token per
@@ -67,12 +67,16 @@ not on `message` (English, for logs).
 | `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
 | `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
-| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`). Retry; the SDK fetches a new limited-use token. |
+| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`). Retry; the SDK fetches a new limited-use token. |
 | `failed-precondition` | `RECENT_SIGN_IN_REQUIRED` | `deleteAccount` needs a sign-in in the last 5 minutes. Re-authenticate, retry. |
 | `failed-precondition` / `permission-denied` | `MERGE_NOT_ALLOWED` | `mergeBalance` refused (see below). |
 | `not-found` | `UNKNOWN_REQUEST` | `getGeneration`: no generation with this `requestId` for this account (never started, or older than the idempotency window below). Re-send `generateRecipe` with the same `requestId` and the same inputs. |
 | `permission-denied` | `STORE_MISMATCH` | `verifyPurchase`: `store: "play"` from an app other than the Android app, or `store: "appstore"` from an app other than the iOS app (decided by the App Check app id). A client bug; nothing was recorded. |
 | `failed-precondition` | `PURCHASE_ACCOUNT_MISMATCH` | `verifyPurchase`: the store reports a purchase account token (see "Purchase account token") that is neither this account's nor that of an account merged into it. Nothing was recorded: do **not** finish the transaction; it can still be redeemed by the account that bought it. |
+| `failed-precondition` | `ALLERGEN_CONSENT_REQUIRED` | `generateRecipe`: a non-empty `allergens` without `"allergenConsent": true` (see "Allergen consent"). Checked before anything else about the allergens; nothing was read, stored or charged. Show the consent step, then send a **new** request. |
+| `failed-precondition` | `APPLE_NOT_LINKED` | `registerAppleSignIn`: the account has no Sign in with Apple linked. Ignore. |
+| `failed-precondition` | `APPLE_CODE_REJECTED` | `registerAppleSignIn`: Apple refused the code (expired after five minutes, already used, or not from this app). Ignore; the next Apple sign-in tries again. |
+| `unavailable` | `APPLE_UNAVAILABLE` | `registerAppleSignIn`: Apple or the key service could not be reached; nothing was stored. Ignore; the next Apple sign-in tries again. |
 | `resource-exhausted` | (none) | All server instances busy (HTTP 429). Nothing was charged; retry after a few seconds. |
 | `internal` | (none) | Server bug or outage. Safe to retry with the same `requestId`. |
 | `unauthenticated` | (none) | No Auth user or no valid App Check token. Builds that cannot attest hide the paid route. |
@@ -253,9 +257,13 @@ Request:
   "config": { "...RecipeConfig" },
   "ingredients": [{ "name": "Pasta", "expiresOn": "2026-11-20", "quantity": 1 }],
   "allergens": ["peanut"],
+  "allergenConsent": true,
   "today": "YYYY-MM-DD (device local date; must be within a day of the server's UTC date)"
 }
 ```
+
+`allergenConsent` (boolean): **required, and `true`, whenever `allergens` is not empty**;
+absent, `null` or anything with an empty list otherwise. See "Allergen consent" below.
 
 `courses` is required for `menu` and must be absent or null for `recipe`. 1 to 30 ingredients.
 Cost: `costs.recipe`, `costs.menu2` or `costs.menu3` (see "Costs"; by default 1, 4, 5).
@@ -288,6 +296,31 @@ set the callable timeout to at least 70 s (recipe) / 190 s (menu). If the call i
 (network, app backgrounded) or answers `IN_PROGRESS`, poll `getGeneration` with the same
 `requestId` until it is `DONE` or `FAILED`; re-sending `generateRecipe` with the same id and body
 is also accepted (it never charges twice within the idempotency window) but spends a limited-use App Check token per call.
+
+#### Allergen consent
+
+The allergen list is data concerning health (GDPR Art. 9) and is sent only with the person's
+explicit consent (Art. 9(2)(a)). Both apps show one consent step before the first server request
+that would carry allergens: what is sent (the allergen list, with the ticked items and the
+preferences), why (so the recipe avoids them), to whom (our server and Google's model, which may
+process it outside the EU), that it is not stored after the request, and two choices (agree and
+continue, or cancel, with a hint that the free routes send nothing to us). The answer is recorded
+on the phone with its time and the wording's version (Android `AllergenConsent.kt`, iOS
+`AllergenConsent` in `RecipeWire.swift`); the step is shown again only when the wording's version
+changes, or after a refusal once the allergen list was emptied and set again. Recipe settings
+has a switch to withdraw it. Without consent (refused or withdrawn) the server route is blocked
+while allergens are set: allergens are never left out instead, since a recipe that ignores one
+could be unsafe. No allergens: no step and no flag.
+
+The server cannot see that consent. It refuses a request with a non-empty `allergens` unless it
+carries `"allergenConsent": true` (`failed-precondition` / `ALLERGEN_CONSENT_REQUIRED`), so an
+old or modified client cannot skip the step silently. The check runs before the allergen names
+are validated, and before anything is reserved, stored or charged. The flag is not one of the
+inputs a `requestId` is bound to (`REQUEST_ID_REUSED` ignores it). The allergens are not stored
+after the request: only a hash of the whole request is kept with the generation, for retries.
+
+The phone's own model and the shared prompt are unaffected: nothing goes to our server (the
+shared prompt includes the allergens in text the person sends elsewhere themselves).
 
 #### Failures and refunds
 
@@ -434,19 +467,58 @@ server (see "Profile data" below).
 ### `deleteAccount`
 
 Request `{ "appleAuthorizationCode": "<optional, from a fresh Sign in with Apple>" }`, with a
-limited-use App Check token. Response `{ "deleted": true, "balance": 0 }`.
+limited-use App Check token. Response `{ "deleted": true, "balance": 0 }`, plus
+`"appleLinkRemoved": true | false` **only for an account that carried Apple** (Apple in the ID
+token's linked providers, a stored Apple token, or a code sent).
 
 - A non-anonymous user must have signed in within the last 5 minutes (`RECENT_SIGN_IN_REQUIRED`
-  otherwise): re-authenticate first. For an Apple-linked account, the re-authentication's
-  `ASAuthorizationAppleIDCredential.authorizationCode` (UTF-8 string) is what to send; the server
-  exchanges and revokes it, as Apple requires. (Alternatively the iOS client may call Firebase's
-  `Auth.auth().revokeToken(withAuthorizationCode:)` itself and omit the field.) Android has no
-  Sign in with Apple, so it re-authenticates with Google and sends no code, also for an account
-  with Apple attached on an iPhone: the account and the Auth user are deleted, but Apple's token
-  is not revoked. Its delete dialog says how to remove that link (delete from the iPhone app, or
-  stop using Sign in with Apple for the app in the Apple Account settings).
+  otherwise): re-authenticate first. For an Apple-linked account on iOS, the re-authentication's
+  `ASAuthorizationAppleIDCredential.authorizationCode` (UTF-8 string) is what to send. Android has
+  no Sign in with Apple, so it re-authenticates with Google and sends no code.
+- Apple's link is removed from either platform, as Apple requires: the server revokes a fresh
+  `appleAuthorizationCode` when one is sent (exchanged at Apple's `/auth/token`, then
+  `/auth/revoke`), and otherwise, or when that fails, the refresh token it stored at the
+  account's last Apple sign-in (`registerAppleSignIn`). The stored token is removed from the
+  account record in the same transaction that tombstones it, whatever Apple answers.
+  `appleLinkRemoved: true`: Apple confirmed a revocation. `false`: neither way worked (no stored
+  token, as for an account whose last Apple sign-in predates `registerAppleSignIn`, or Apple
+  refused or could not be reached). The deletion goes ahead either way, never blocked by Apple.
+  Only on `false` should the client tell the person how to remove the link themselves (turn off
+  Sign in with Apple for the app in the Apple Account settings); absent or `true`: say nothing
+  extra.
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
 - `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.
+
+### `registerAppleSignIn`
+
+iOS only. After every Sign in with Apple that signs in or links Apple (including the account
+that takes over an install after a merge), send its authorization code, with a limited-use App
+Check token:
+
+Request `{ "appleAuthorizationCode": "<ASAuthorizationAppleIDCredential.authorizationCode, UTF-8>" }`
+(1 to 4096 characters), called **as the user that now has Apple linked**. Response
+`{ "registered": true }`.
+
+- The caller must have the `apple.com` provider (from the ID token's `firebase.identities`, or
+  the Auth record when the token predates the link): `APPLE_NOT_LINKED` otherwise.
+- The server exchanges the code at Apple (`client_id` = the bundle id `com.foodbest.ios`) for a
+  refresh token and stores it on the account, replacing an earlier one (which is not revoked).
+  A code is single use and valid for five minutes: send it straight after the sign-in.
+- Failures (`APPLE_CODE_REJECTED`, `APPLE_UNAVAILABLE`, offline, anything else) change nothing
+  and must not be shown: the sign-in has already succeeded. The next Apple sign-in sends a new
+  code. The re-authentication before `deleteAccount` sends its code with `deleteAccount` itself,
+  not here.
+- Never log the code.
+
+**What is stored.** `users/{uid}.appleToken`: the refresh token, envelope-encrypted (a fresh
+AES-256-GCM data key per value, wrapped by the Cloud KMS key
+`projects/<project>/locations/europe-west1/keyRings/recipe/cryptoKeys/apple-refresh-token`, which
+only the functions' service account may use; the uid is bound to both layers as additional
+authenticated data), and the time it was stored. It is never returned to a client and never
+logged. It is removed (and revoked at Apple): when the account is deleted; when Apple is unlinked
+from the account (noticed on the next `getBalance`, confirmed against the Auth record); from a
+merged-away anonymous source's tombstone; and when it cannot be decrypted at deletion. A
+tombstoned (deleted or merged) record never holds one.
 
 ## Profile data
 

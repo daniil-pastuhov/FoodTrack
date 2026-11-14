@@ -53,8 +53,9 @@ enum RecipeAccountError: Error, Equatable {
 struct RecipeSignInCredential {
     let provider: RecipeSignInProvider
     let credential: AuthCredential
-    /// Sign in with Apple's one-time code, which the server exchanges to revoke Apple's tokens
-    /// when the account is deleted.
+    /// Sign in with Apple's one-time code (valid five minutes): after a sign-in or link it goes
+    /// to `registerAppleSignIn`, so the server keeps a token to remove Apple's link at deletion;
+    /// on the re-authentication before deleting, it goes with `deleteAccount` itself.
     let appleAuthorizationCode: String?
 }
 
@@ -64,6 +65,9 @@ struct RecipePendingMerge: Identifiable {
     let id = UUID()
     let accountBalance: Int
     let installBalance: Int
+    /// The Apple sign-in's code, registered once the person has chosen and the account is the
+    /// current user (it may have expired by then: registering is quiet either way).
+    var appleAuthorizationCode: String?
     fileprivate let appName: String
     fileprivate let user: User
 }
@@ -240,17 +244,19 @@ final class RecipeAccount {
         GIDSignIn.sharedInstance.signOut()
     }
 
-    /// The fresh sign-in `deleteAccount` needs, then the deletion. Returns once the server has
-    /// deleted the account and this phone has signed out.
-    func deleteAccount(with credential: RecipeSignInCredential, backend: RecipeBackend) async throws {
+    /// The fresh sign-in `deleteAccount` needs, then the deletion. Returns the server's answer
+    /// once it has deleted the account and this phone has signed out. The fresh Apple code goes
+    /// with the deletion (the server prefers it to the token it stored at sign-in).
+    func deleteAccount(with credential: RecipeSignInCredential, backend: RecipeBackend) async throws -> DeleteAccountResponse {
         guard let user = auth?.currentUser else { throw RecipeAccountError.failed }
         do {
             _ = try await user.reauthenticate(with: credential.credential)
         } catch {
             throw Self.mapped(error)
         }
-        try await backend.deleteAccount(appleAuthorizationCode: credential.appleAuthorizationCode)
+        let response = try await backend.deleteAccount(appleAuthorizationCode: credential.appleAuthorizationCode)
         signOut()
+        return response
     }
 
     /// Overwrites the name Firebase copies onto the user from Google's ID token (Apple's

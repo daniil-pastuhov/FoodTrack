@@ -355,6 +355,23 @@ extension L10n {
     static var recipeSignInFailed: String { paid("recipe_sign_in_failed") }
     static var recipeProviderInUse: String { paid("recipe_provider_in_use") }
     static var recipeAccountDeleted: String { paid("recipe_account_deleted") }
+    static var recipeAppleLinkLeftTitle: String { paid("recipe_apple_link_left_title") }
+    static var recipeAppleLinkLeftMessage: String { paid("recipe_apple_link_left_message") }
+
+    // Allergen consent (`AllergenConsent.version`: raise it when this wording changes; Android
+    // has the same text)
+    static var recipeAllergenConsentTitle: String { paid("recipe_allergen_consent_title") }
+    static func recipeAllergenConsentMessage(_ allergens: [String]) -> String {
+        String(format: paid("recipe_allergen_consent_message"), isolatedList(allergens))
+    }
+    static var recipeAllergenConsentAgree: String { paid("recipe_allergen_consent_agree") }
+    static var recipeAllergenConsentAgreeOnly: String { paid("recipe_allergen_consent_agree_only") }
+    static var recipeAllergenConsentDeclined: String { paid("recipe_allergen_consent_declined") }
+    static var recipeAllergenConsentSetting: String { paid("recipe_allergen_consent_setting") }
+    static func recipeAllergenConsentSettingOn(_ date: Date) -> String {
+        String(format: paid("recipe_allergen_consent_setting_on"), date.formatted(date: .abbreviated, time: .omitted))
+    }
+    static var recipeAllergenConsentSettingOff: String { paid("recipe_allergen_consent_setting_off") }
     static var recipeAccountActionFailed: String { paid("recipe_account_action_failed") }
     static var recipeAccountBusy: String { paid("recipe_account_busy") }
     /// What a join of this install into an account moved: recipes, or a debt after a store
