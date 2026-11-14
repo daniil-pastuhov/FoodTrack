@@ -257,17 +257,26 @@ binding exist on the live project (created and read back 2026-11-14).
 - [ ] Smoke test with `allowSandbox: true`: a licence tester on Android and a sandbox account on
       iOS buy a pack, generate a recipe and a menu and see the balance drop by what `costs` says;
       sign in on the other platform and see the same balance; delete a test account.
-- [ ] Run the manual prompt-injection red-team checklist,
-      [functions/test/injection-prompts.md](../functions/test/injection-prompts.md), against the
-      deployed function (about 25 attempts, USD 1–2). If anything harmful or off-topic gets
-      through, follow functions/README.md, "The output judge" (`shadow` for a week, then
-      `enforce`).
+- [ ] Run the prompt-injection red-team checklist,
+      [functions/test/injection-prompts.md](../functions/test/injection-prompts.md): its cases are
+      in `functions/test/redteam/cases.json` and run with one command against the live model
+      (section "Running it" there): `cd functions && npm run redteam -- plan` prints the plan and
+      the cost estimate offline, then
+      `VERTEX_TOKEN=$(gcloud auth print-access-token --account=<your account>) npm run redteam -- run --yes --repeat 3`
+      runs it (about USD 1 at list prices, stopped by `--max-usd`) and writes a report to
+      `functions/test/redteam/results/`. Items 25 (the judge in shadow mode) and 32 (the
+      3-a-day refund cap) stay manual against the deployed function. If anything harmful or
+      off-topic gets through, follow functions/README.md, "The output judge" (`shadow` for a
+      week, then `enforce`).
 - [ ] Add to that checklist, and run on a real device, cases for item names in non-Latin scripts
       (Chinese, Japanese, Arabic, Hebrew, Hindi, Greek, Thai...) and right-to-left names (Hebrew,
       Arabic, Persian, also mixed with Latin units such as `חלב 3% 1L`): an instruction written in
       such a script as an item name (it passes the input rule; see functions/README.md, "Residual
       risks"), an answer asked to switch to that script, an allergen written in it, and how the
-      recipe and the item list render (direction, quoting of the name in the answer).
+      recipe and the item list render (direction, quoting of the name in the answer). The model
+      side of this is in the red-team file (cases 43–47: Greek, Japanese and Hebrew names, an
+      instruction in Greek and in Chinese, an allergen in Chinese); what is left here is the
+      rendering on a device.
 - [ ] First deploy: check that every `llm_call` log line carries real token counts from
       `usageMetadata` (input, output and thinking tokens, not booked at the worst case;
       `stats/{day}.unknownUsageCalls` stays at 0), and compare the measured cost of the first

@@ -3,13 +3,16 @@
 Everything App Store Connect asks for. The release flow applies the listing texts, the
 screenshots and the header art ("Changing the listing texts" below); the rest is ready to paste. One folder per
 listing language: `en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
-`no/` (Norwegian). Each folder has `name.txt`, `subtitle.txt`, `promotional_text.txt`,
-`keywords.txt` and `description.txt`; `scripts/check_store_listing.py` checks them (and the
-Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
+`no/` (Norwegian), and `en-AU/` (English, Australia) and `en-CA/` (English, Canada) with
+`keywords.txt` alone ("Australia and Canada" below). Each full folder has `name.txt`,
+`subtitle.txt`, `promotional_text.txt`, `keywords.txt` and `description.txt`; another English
+folder may leave any of them out and takes en-GB's. `scripts/check_store_listing.py` checks them
+(and the Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
 (comma-separated, no spaces after commas, no word that the same language's name or subtitle
-already has), promotional text 170, description 4000. Run it after every edit.
+already has, inherited ones included; en-AU also none of en-GB's keywords), promotional text 170,
+description 4000. Run it after every edit.
 
-`en-US/` has texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
+`en-US/`, `en-AU/` and `en-CA/` have texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
 primary language's screenshots in a localization that has none, so nothing needs uploading
 there (the sync places en-GB's header art on it, see below), and the screenshot scripts only
 make the en-GB, ru and no sets. The en-GB, ru and no
@@ -78,7 +81,9 @@ before it submits it for review, and only what differs from App Store Connect:
   subtitle, keywords and description change only with a new version, so they go live when that
   version is approved. A localization the repo has and App Store Connect lacks is added (en-US
   was added this way), with the support, marketing and privacy policy URLs copied from en-GB;
-  those URLs are otherwise never touched.
+  those URLs are otherwise never touched. An English folder without some of the files (en-AU,
+  en-CA) takes en-GB's for them, so a localization added from it has every field; the dry run
+  says per localization which fields come from its folder and which are inherited from en-GB.
 - **Screenshots**: `screenshots/`, `medium-screenshots/` and `ipad-screenshots/` replace each
   localization's set of that display type, in file-number order. Unchanged images (same MD5)
   stay, changed or new ones are uploaded, and images no longer in the folder are deleted. At
@@ -139,11 +144,25 @@ Both compare with the version in preparation. While none is (after a release is 
 before the next merge), they say so and compare with the newest version, which is what the next
 version starts from.
 
-English (Australia) and English (Canada) need no folder of their own: add them in App Store
-Connect and the sync gives them the en-GB texts and What's New. Apple's storefront tables say the Australian
-App Store also searches the en-GB keywords, so en-AU keywords could add words en-GB has no room
-for; check Apple's current list ("Localizations by storefront" in App Store Connect Help) before
-counting on it. Without these localizations, both countries see the en-GB listing.
+### Australia and Canada
+
+Apple's [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations)
+table gives Australia the default language English (Australia), with English (U.K.) as an
+additional one, and Canada English (Canada), with French (Canada). Without an en-AU or en-CA
+localization both showed en-GB, the primary language. Apple says only that the language shown
+"could be impacted by" the storefront's language, the device's settings, the languages added and
+the primary language; which localizations' keywords a storefront searches is not documented. The
+folders follow the usual assumption that a storefront searches the localizations in its row:
+
+- `en-AU/keywords.txt` adds words en-GB has no room for (Australia is assumed to search en-GB's
+  too), so the checker refuses any word of en-GB's keywords, name or subtitle there.
+- `en-CA/keywords.txt` stands on its own (en-GB is not in Canada's row), so it carries the core
+  words again, with "expiration" beside the name's "expiry" and "best before", the Canadian
+  date label.
+
+Everything else (name, subtitle, description, promotional text, What's New, screenshots, header
+and search-result art) is en-GB's, so they need no upkeep beyond their keywords. To give one its
+own text, add that file to its folder. French (Canada) has no listing.
 
 ## 1. One-time setup
 

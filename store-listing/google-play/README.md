@@ -15,6 +15,14 @@ The graphics: `icon-512.png` (all languages), and in each of en-GB, no-NO and ru
 [../app-store/README.md](../app-store/README.md)). `en-US/` has texts only: a translation without
 its own graphics shows the default language's.
 
+There is deliberately no `en-AU/` or `en-CA/` (both are Play listing languages, see Play's
+[list of languages](https://support.google.com/googleplay/android-developer/answer/9844778)).
+Unlike the App Store, Play has no keyword field, so a listing there could only add something
+with its own title and descriptions; Australian and Canadian copies would be the en-GB texts
+word for word, and users whose language has no listing see the default language (en-GB) anyway.
+`play_listing.py` needs every file in a folder (it has no fallback), so add one only together
+with texts that really differ.
+
 ## How it reaches Play
 
 `scripts/play_listing.py` applies this folder; CI runs it with `--images --apply` when a release

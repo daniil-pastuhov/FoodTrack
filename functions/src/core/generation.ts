@@ -407,7 +407,18 @@ function addUsage(a: LlmUsage | undefined, b: LlmUsage | undefined): LlmUsage | 
   };
 }
 
-async function runGenerator(deps: Deps, uid: string, req: GenerateRequest, limits: GenerationLimits, config: RuntimeConfig): Promise<Outcome> {
+/**
+ * The model call and every check on its answer (output rules, quality gate, judge), without
+ * reservation or settle: uses only `deps.generator`, `deps.judge` and `deps.logger`. Exported for
+ * the red-team runner (admin/redteam), which runs exactly this against the live model.
+ */
+export async function runGenerator(
+  deps: Pick<Deps, "generator" | "judge" | "logger">,
+  uid: string,
+  req: GenerateRequest,
+  limits: GenerationLimits,
+  config: RuntimeConfig,
+): Promise<Outcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs);
   const canary = newCanary();
@@ -459,7 +470,7 @@ async function runGenerator(deps: Deps, uid: string, req: GenerateRequest, limit
  * never delivered unchecked). "shadow": the verdict is only logged and the answer is delivered.
  */
 async function runJudge(
-  deps: Deps,
+  deps: Pick<Deps, "judge" | "logger">,
   uid: string,
   req: GenerateRequest,
   config: RuntimeConfig,
