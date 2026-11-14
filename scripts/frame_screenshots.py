@@ -45,6 +45,9 @@ CAPTIONS = {
     "nb": ["Se hva som\nsnart går ut", "Skann pakken,\ndatoen leses av", "Lag mat av det\nsom må brukes først",
            "Meny for tre dager\nrundt det du har", "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
 }
+# App Store Connect keeps the two iPhone Duo sets in one group of at most 10 images per language,
+# so each has five: the shots above without the last, Settings.
+SHOT_LIMITS = {"duo-inner-screenshots": 5, "duo-outer-screenshots": 5}
 
 # The background runs from the top-left corner towards the bottom, through Larder's greens
 # (green.600, 700, 800 and 900 in tokens.json).
@@ -150,6 +153,8 @@ def main():
         raws = sorted((raw_dir / lang).glob("[0-9]-*.png"))
         if len(raws) != len(captions):
             sys.exit(f"expected {len(captions)} screenshots in {raw_dir / lang}, found {len(raws)}")
+        limit = SHOT_LIMITS.get(set_name, len(captions))
+        captions, raws = captions[:limit], raws[:limit]
         store = "google-play" if play else "app-store"
         # Last run's shots past the new count would otherwise stay behind in the set.
         for stale in (ROOT / "store-listing" / store / folder / set_name).glob("[0-9].png"):

@@ -28,8 +28,10 @@ April 2027 they are required for apps built with the iOS 27.1 SDK.
 
 Every set tells the same story, Google Play's too: 1 Home, 2 a scan that has read a product and
 its printed date, 3 a written recipe, 4 a three-day menu, 5 the shopping list, 6 Settings with the
-reminders. Retake them after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo
-pantry (`scripts/demo_backup.py`) in every language, then `scripts/frame_screenshots.py <raw-dir>
+reminders. The two iPhone Duo sets share one group of at most 10 images per language in App
+Store Connect, so they stop at 5 (`SHOT_LIMITS` in `scripts/frame_screenshots.py`). Retake them
+after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
+(`scripts/demo_backup.py`) in every language, then `scripts/frame_screenshots.py <raw-dir>
 <folder>` adds the captions and device frame in Larder's colours (the captions live in that
 script). The Google Play set is made the same way: `ANDROID_SERIAL=<emulator>
 scripts/android_screenshots.sh <raw-dir>`, then `scripts/frame_screenshots.py <raw-dir>
