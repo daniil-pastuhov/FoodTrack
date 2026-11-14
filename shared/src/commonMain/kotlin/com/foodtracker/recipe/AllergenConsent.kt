@@ -8,7 +8,8 @@ import kotlinx.serialization.Serializable
 // wording's version, and withdrawable in Recipe settings. Withdrawn or refused, the server route is
 // blocked while allergens are set: a recipe written without them could be unsafe, so they are
 // never left out instead. The phone's own model and the shared prompt send nothing to us and
-// need no consent. iOS has the same rules in `AllergenConsent.swift`.
+// need no consent. iOS has the same rules in `AllergenConsent`
+// (iosApp/FoodTracker/Recipe/RecipeWire.swift).
 
 /** The version of the consent wording (en/ru/nb `recipe_allergen_consent_*`). Raising it asks
  *  everyone again, whatever they answered before. */

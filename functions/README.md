@@ -279,7 +279,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 |---|---|---|---|
 | `generateRecipe` | 5 (so at most 5 generations in flight service-wide) | 24 (and 12 per uid) | 180 s |
 | `getGeneration` | 1 | 120 | 10 s |
-| `getBalance` | 1 | 120 | 10 s |
+| `getBalance` | 1 | 120 | 30 s (it may revoke a stored Apple token) |
 | `verifyPurchase` | 1 | 30 | 60 s |
 | `mergeBalance` | 1 | 10 | 30 s |
 | `deleteAccount` | 1 | 10 | 120 s |

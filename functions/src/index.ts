@@ -313,7 +313,9 @@ export const getGeneration = onCall(
 
 // SIWA_PRIVATE_KEY: getBalance revokes a stored Apple token once Apple is unlinked (core/appleToken.ts).
 export const getBalance = onCall(
-  { ...callable, secrets: [siwaPrivateKey], timeoutSeconds: 10, maxInstances: LIMITS.getBalance.maxInstances, concurrency: 1 },
+  // 30 s, not 10: after an unlink it may also call Cloud KMS and Apple (up to 10 s each), and a
+  // timeout between removing the token and revoking it would leave Apple's link in place.
+  { ...callable, secrets: [siwaPrivateKey], timeoutSeconds: 30, maxInstances: LIMITS.getBalance.maxInstances, concurrency: 1 },
   (request) =>
     guarded("getBalance", () => withCaller(callerOf(request, throttles.getBalance, false), (d, c) => balanceCore(d, c))),
 );
