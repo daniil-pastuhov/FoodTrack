@@ -11,6 +11,9 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     # version, with the notes as "What's New", and submit it for App Review.
     python3 scripts/testflight.py appstore --version 1.3.0 --notes-dir release-notes/v1.3.0
 
+    # Before an archive on CI: revoke the Apple Development certificates earlier runs left behind.
+    python3 scripts/testflight.py revoke-ci-certs
+
     # Read-only overview of the app's builds and groups.
     python3 scripts/testflight.py status
 
@@ -19,6 +22,7 @@ Needs the `cryptography` package for the ES256 token signature.
 """
 import argparse
 import base64
+import datetime
 import json
 import os
 import pathlib
@@ -318,6 +322,24 @@ def cmd_status(_args):
     return 0
 
 
+# The archive is signed with an Apple Development certificate, and a fresh CI runner has none, so
+# every run makes xcodebuild create one through the API key; its private key is gone with the
+# runner. Nothing reuses them, and once the team's certificate limit is reached signing fails. The
+# team's other apps do the same, so those under a day old are kept, as a running build may need one.
+def cmd_revoke_ci_certs(_args):
+    asc = Asc()
+    cutoff = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=364)
+    certs = asc.call("GET", "/certificates",
+                     {"filter[certificateType]": "DEVELOPMENT", "limit": 200})["data"]
+    for cert in certs:
+        attrs = cert["attributes"]
+        expires = datetime.datetime.strptime(attrs["expirationDate"], "%Y-%m-%dT%H:%M:%S.%f%z")
+        if attrs.get("displayName") == "Created via API" and expires < cutoff:
+            print(f"Revoking {attrs['name']} ({cert['id']}), left by an earlier CI run")
+            asc.call("DELETE", f"/certificates/{cert['id']}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -335,6 +357,8 @@ def main() -> int:
                           help="go live as soon as Apple approves, or wait for a manual release")
     appstore.set_defaults(func=cmd_appstore)
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
+    revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
+    revoke.set_defaults(func=cmd_revoke_ci_certs)
     args = parser.parse_args()
     try:
         return args.func(args)
