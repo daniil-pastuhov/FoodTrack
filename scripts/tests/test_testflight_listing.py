@@ -97,12 +97,43 @@ def quiet(func, *args, **kwargs):
 
 
 class LocaleTests(unittest.TestCase):
-    def test_locale_folders_are_those_with_a_name(self):
+    def test_locale_folders_are_locale_codes_with_a_listing_text(self):
         with tempfile.TemporaryDirectory() as root:
             write_listing(root, "en-GB", name="A")
             write_listing(root, "ru", name="Б")
+            write_listing(root, "en-AU", keywords="k")  # partial: keywords only
+            write_listing(root, "zh-Hans", name="名")
             (pathlib.Path(root) / "iap-review").mkdir()
-            self.assertEqual(testflight.listing_locales(root), ["en-GB", "ru"])
+            write_listing(root, "in-app-event", name="Not a locale")
+            (pathlib.Path(root) / "en-CA").mkdir()  # no listing text
+            self.assertEqual(testflight.listing_locales(root), ["en-AU", "en-GB", "ru", "zh-Hans"])
+
+    def test_partial_english_folder_inherits_the_rest_from_en_gb(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_listing(root, "en-GB", name="N", subtitle="S", keywords="k", promotional_text="P",
+                          description="D")
+            write_listing(root, "en-AU", keywords="au")
+            write_listing(root, "ru", keywords="ру")
+            folders = testflight.listing_locales(root)
+            sources = testflight.listing_files(root, "en-AU", folders)
+            self.assertEqual(sources, {"name.txt": "en-GB", "subtitle.txt": "en-GB",
+                                       "keywords.txt": "en-AU", "promotional_text.txt": "en-GB",
+                                       "description.txt": "en-GB"})
+            self.assertEqual(testflight.read_listing_files(root, sources), {
+                "version": {"keywords": "au", "promotionalText": "P", "description": "D"},
+                "info": {"name": "N", "subtitle": "S"}})
+            self.assertEqual(testflight.describe_sources("en-AU", sources),
+                             "  en-AU: keywords from its folder; name, subtitle, promotionalText, "
+                             "description inherited from en-GB")
+            # Without a folder: everything from en-GB.
+            self.assertEqual(set(testflight.listing_files(root, "en-CA", folders).values()), {"en-GB"})
+            self.assertEqual(testflight.describe_sources(
+                "en-CA", testflight.listing_files(root, "en-CA", folders)),
+                "  en-CA takes the en-GB texts (no folder of its own)")
+            # Other languages have no fallback: only their own files.
+            self.assertEqual(testflight.listing_files(root, "ru", folders), {"keywords.txt": "ru"})
+            self.assertIsNone(testflight.describe_sources(
+                "en-GB", testflight.listing_files(root, "en-GB", folders)))
 
     def test_english_without_a_folder_takes_en_gb(self):
         folders = ["en-GB", "en-US", "ru"]
@@ -203,6 +234,31 @@ class SyncListingTests(unittest.TestCase):
         self.assertFalse(changed)
         self.assertEqual(self.asc.writes(), [])
 
+    def test_partial_folder_patches_its_own_field_and_keeps_inherited_ones(self):
+        write_listing(self.root, "en-AU", keywords="au")
+        (_, changed), out = quiet(testflight.sync_listing, self.asc, "v1", "i1", False, self.root)
+        self.assertIn("  en-AU: keywords from its folder; name, subtitle, promotionalText, "
+                      "description inherited from en-GB", out)
+        self.assertIn("keywords: 'k' -> 'au'", out)
+        self.assertEqual(self.asc.writes(), [])
+        quiet(testflight.sync_listing, self.asc, "v1", "i1", True, self.root)
+        patches = {c[1]: c[2]["data"]["attributes"] for c in self.asc.writes("PATCH")}
+        self.assertEqual(patches["/appStoreVersionLocalizations/vl-au"], {"keywords": "au"})
+
+    def test_new_localization_from_a_partial_folder_has_every_field(self):
+        write_listing(self.root, "en-CA", keywords="ca")
+        (result, _), out = quiet(testflight.sync_listing, self.asc, "v1", "i1", True, self.root)
+        posts = {(p["type"], p["attributes"]["locale"]): p["attributes"]
+                 for p in (c[2]["data"] for c in self.asc.writes("POST"))}
+        self.assertEqual(posts[("appStoreVersionLocalizations", "en-CA")], {
+            "locale": "en-CA", "keywords": "ca", "promotionalText": "Promo", "description": "Desc",
+            "supportUrl": "https://support"})
+        self.assertEqual(posts[("appInfoLocalizations", "en-CA")], {
+            "locale": "en-CA", "name": "BestBefore", "subtitle": "Sub",
+            "privacyPolicyUrl": "https://privacy"})
+        self.assertIn("en-CA", result)
+        self.assertIn("version localization en-CA: creating", out)
+
     def test_new_app_info_localization_needs_a_name(self):
         with self.assertRaises(testflight.ListingError):
             quiet(testflight.sync_resource, self.asc, "info", "ru", None, {"subtitle": "S"},
@@ -222,6 +278,39 @@ class GateTests(unittest.TestCase):
 
     def test_repo_listing_passes(self):
         testflight.check_listing_texts()
+
+    def checked(self, **locales):
+        """check_store_listing.check() over an app-store tree of {locale: {file: text}}."""
+        import check_store_listing
+        with tempfile.TemporaryDirectory() as root:
+            for locale, files in locales.items():
+                write_listing(pathlib.Path(root) / "app-store", locale.replace("_", "-"), **files)
+            with mock.patch.object(check_store_listing, "ROOT", pathlib.Path(root)):
+                return quiet(check_store_listing.check, stores=("app-store",))
+
+    EN_GB = {"name": "BestBefore: Expiry Tracker", "subtitle": "Fridge, pantry & AI recipes",
+             "keywords": "expiration,date", "promotional_text": "P", "description": "D"}
+
+    def test_partial_english_folder_passes_with_inherited_files(self):
+        problems, out = self.checked(en_GB=self.EN_GB, en_CA={"keywords": "best,before"})
+        self.assertEqual([p for p in problems if "review-notes" not in p], [])
+        self.assertIn("(from en-GB)", out)
+
+    def test_inherited_name_counts_for_repeated_words(self):
+        problems, _ = self.checked(en_GB=self.EN_GB, en_CA={"keywords": "expiry,fridges"})
+        self.assertIn("app-store/en-CA/keywords.txt: 'expiry' repeats the name or subtitle", problems)
+        self.assertIn("app-store/en-CA/keywords.txt: 'fridges' repeats the name or subtitle", problems)
+
+    def test_en_au_may_not_repeat_en_gb_keywords_but_en_ca_may(self):
+        problems, _ = self.checked(en_GB=self.EN_GB, en_AU={"keywords": "dates,use"},
+                                   en_CA={"keywords": "dates,use"})
+        self.assertEqual([p for p in problems if "keywords" in p], [
+            "app-store/en-AU/keywords.txt: 'dates' repeats en-GB's keywords, name or subtitle, "
+            "which the same storefront also searches"])
+
+    def test_other_languages_inherit_nothing(self):
+        problems, _ = self.checked(en_GB=self.EN_GB, ru={"keywords": "срок"})
+        self.assertIn("app-store/ru/name.txt: missing", problems)
 
 
 class ScreenshotOrderTests(unittest.TestCase):
@@ -776,6 +865,9 @@ class StoreArtTests(unittest.TestCase):
         self.assertEqual(testflight.store_art(self.root, "ru")["PRODUCT_PAGE_HEADER_ASSET"]["label"],
                          "ru/header.png")
         self.assertEqual(testflight.store_art(self.root, "de-DE"), {})
+        write_listing(self.root, "en-AU", keywords="k")  # a keywords-only folder: en-GB's art
+        self.assertEqual({s["label"] for s in testflight.store_art(self.root, "en-AU").values()},
+                         {"en-GB/header.png", "en-GB/search-result.png"})
 
     def test_dry_run_describes_and_writes_nothing(self):
         asc = self.fake(self.website())
