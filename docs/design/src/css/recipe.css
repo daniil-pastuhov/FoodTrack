@@ -145,3 +145,61 @@
 }
 .recipe .r-saved .text > span { display: block; }
 .recipe .r-go .btn[disabled] { background: var(--color-surface-container-high); color: var(--color-on-surface-variant); opacity: 1; }
+
+/* 2026-11-14: the lone Share prompt is a pill as wide as its label at the trailing edge, like Scan on Home */
+.recipe .r-go.is-compact { left: auto; right: var(--space-4); width: auto; max-width: calc(100% - var(--space-8)); }
+.recipe .r-go.is-compact .btn > span:first-of-type { flex: 0 1 auto; }
+@container (min-width: 700px) {
+  .recipe .r-go.is-compact { right: var(--space-6); bottom: var(--space-3); width: auto; } /* fits level with the pill */
+}
+
+/* Past-date warning (danger tier) and the Send all products line */
+.recipe .r-past { margin-bottom: var(--space-3); }
+.recipe .r-doc .r-past { margin: var(--space-4) 0 0; }
+.recipe .r-doc .r-uses + .r-past { margin: 0 0 var(--space-2); }
+.recipe .r-opt, .recipe .r-sub { margin: var(--space-2) var(--space-2) 0; font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.recipe .r-side > .r-sub { margin-top: calc(var(--space-2) * -1); }
+.recipe .r-uses { margin: 0 0 var(--space-2); display: block; }
+.recipe .r-day { display: block; }
+
+/* More options as a list row */
+.recipe .list-item.r-more { margin: 0; padding: var(--space-2) var(--space-4); border-radius: 0; }
+.recipe .r-more .text > span { display: block; }
+.recipe .r-more .text > :first-child { font: var(--type-label); }
+
+/* Secondary buttons under the form are centred, like LarderButton; only the pinned action carries a cost tag */
+.recipe .r-actions .btn.block.outline { justify-content: center; text-align: center; }
+.recipe .r-actions .btn.block.outline > span:first-of-type { flex: none; }
+
+/* Multi-choice chips: a check on each chosen one, so they read differently from single choice */
+.recipe .r-multi .chip.is-selected { padding-left: var(--space-2); }
+
+/* How recipes work */
+.recipe .r-intro .list-item { align-items: flex-start; padding-block: var(--space-3); }
+.recipe .r-intro .text > span, .recipe .r-intro .text > div { display: block; }
+.recipe .r-intro .text > :first-child { font: var(--type-title-sm); }
+.recipe .r-again { margin: var(--space-3) 0; }
+.recipe .r-done { margin-top: var(--space-4); }
+.recipe .r-how .r-value-row { width: 100%; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.recipe .r-how .r-value-row > svg.lucide { flex: none; color: var(--color-on-surface-variant); }
+.recipe .r-how .text > span { display: block; }
+.recipe .r-how { margin-top: var(--space-3); }
+
+/* Switch rows in Recipe settings */
+.recipe .r-switch { align-items: flex-start; }
+.recipe .r-switch input { margin-top: var(--space-2); }
+.recipe .r-lbl { flex: 1; min-width: 0; display: grid; gap: 2px; padding: var(--space-2) 0; }
+.recipe .r-lbl small { font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+
+/* Shared text preview */
+.recipe .r-shared { white-space: pre-wrap; font: var(--type-body-sm); max-height: 360px; overflow: auto; }
+
+/* Ingredients not from the pantry, to the shopping list */
+.recipe .r-shop-act { display: flex; justify-content: flex-start; margin-top: var(--space-3); }
+.recipe .r-doc > .r-shop-act { margin-top: var(--space-6); }
+.recipe .r-shop .list-item { align-items: center; padding-left: var(--space-2); }
+.recipe .r-shop .text > span { display: block; }
+.recipe .r-shop-row.is-disabled .text > :first-child { color: var(--color-on-surface-variant); }
+.recipe .r-shop .tick[disabled] { cursor: not-allowed; }
+.recipe .r-shop + .actions { position: sticky; bottom: calc(var(--space-6) * -1); margin: 0 calc(var(--space-4) * -1) calc(var(--space-6) * -1); padding: var(--space-3) var(--space-4) var(--space-6); background: var(--color-surface-container-high); }
+.recipe .r-shop .tick[disabled]::before { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-on-surface) 38%, transparent); }

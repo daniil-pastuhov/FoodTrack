@@ -1,6 +1,6 @@
 # Design brief: BestBefore
 
-Status: iterating (full design published 2026-11-04)
+Status: iterating (full design published 2026-11-04; Recipe page redrawn 2026-11-14, rebuilt, not yet republished)
 Artifacts: options https://claude.ai/artifact/TeLu92BMaS1QDhDVj98fPw · design https://claude.ai/artifact/4PMj2X5GtKoCijR5SjktHY
 
 ## Product
@@ -31,11 +31,11 @@ Artifacts: options https://claude.ai/artifact/TeLu92BMaS1QDhDVj98fPw · design h
 | Pantry | Product detail sheet | Is it OK for me? | Nutri-Score, NOVA, allergens, ingredients |
 | Add | Add / edit item | Save with the right date | Name, brand, date + quick dates and suggestions, location, category, quantity, notes, essential, per-item reminder; implausible date warning |
 | Add | Scanner | Capture a product | Modes: Barcode, Date OCR, Photo, Batch, Receipt; lookup, not found, duplicate dialog, allergen warning, torch |
-| Recipe | Recipe tab | What can I cook from what expires first? | Items ticked soonest-first, quick form, three routes: recipe from a pack (server), on this phone (free), prompt for another AI app (free). Menu for 3 days, server only |
+| Recipe | Recipe tab | What can I cook from what expires first? | Items ticked soonest-first, quick form, three routes: recipe from a pack (server), on this device (free), prompt for another AI app (free). Menu for 3 days, server only |
 | Recipe | Recipe and menu | Cook it | Saved automatically; menu is 3 days of 2 or 3 full recipes |
-| Recipe | Saved recipes | Find it again | On this phone only; delete with Undo |
+| Recipe | Saved recipes | Find it again | On this device only; delete with Undo |
 | Recipe | Buying recipes | Buy a pack, know where it is kept | Packs of 10, 50, 100; first purchase chooses no account or sign-in; store and server failures |
-| Recipe | Recipe settings | Set how recipes are written | Difficulty, detail, servings, time, meal, diet, language; account, sign out, delete account (destructive); recipes on this phone: delete my data from our server (destructive) |
+| Recipe | Recipe settings | Set how recipes are written | Difficulty, detail, servings, time (range), meal and diet (multi-choice), send all products, allergen consent, language, how recipes work; account, sign out, delete account (destructive); recipes on this device: delete my data from our server (destructive) |
 | Shopping | Shopping list | What do I need to buy? | Sections, did-you-mean, share text/QR, import, move to section |
 | Settings | Settings | Change a preference | Notifications, threshold, locations, categories, allergens, appearance, stores, backup, clear data (destructive) |
 | Settings | Categories | Organise categories | Reorder, rename, hide, shelf life |
@@ -54,11 +54,11 @@ Pantry data is local, so list screens have no loading, refresh or network error 
 | Product detail | Full info · Partial data, gaps closed · Allergen match (T4) · Long ingredients |
 | Add / edit | New blank · Prefilled from scan · Suggested date · Name missing (T1) · Implausible date (T1 warning) · Date picker · Edit existing · Discard changes (T6) · Long content |
 | Scanner | Barcode ready · Lookup in progress · Found · Found with date · Allergen match (T4) · Not found · Offline lookup (T4, continue by hand) · Date OCR ready · Date found · Photo ready · Photo captured, suggestions · Batch empty · Batch with queue, Check date · Receipt ready · Receipt reading · Nothing found on receipt (T3) · Already in pantry (T6) · Camera denied (T5 with path to settings) |
-| Recipe tab | Ready with recipes · Phone can write too · No recipes (phone / prompt only) · Menu for 3 days · Menu, too few recipes (T4) · Nothing ticked · Writing (server, menu, phone) · Offline (T4) · Could not write, nothing taken (T3) · Refused, counted (T3) · Server paused (T4) · Phone model preparing (T4) · Empty pantry · Russian · First visit: How recipes work (sheet) · Send all products on: "The other N items in your pantry may be used too" under Cook with · Share prompt pinned alone (content-width pill at the end) · No saved recipes yet (no bookmark in the header) · Ticked items past their date (red callout at the top of Cook with) |
-| Recipe and menu | Recipe from a pack · Just arrived (T3) · Written on the phone · Menu · Dish from a menu · Long recipe · Uses items past their date (red callout above the ingredients; menu header and each day) |
+| Recipe tab (`recipe/cook/…`) | ready · ready-phone · no-recipes-phone · no-recipes (Share pill alone, content-width at the end; no bookmark) · free-phone, free-only (paid route not on this install) · send-all · others (Add other items sheet) · ticked-other · past-several (red callout; the single-item callout shows on every default state) · menu · menu-meal (provisional) · menu-short (T4) · none-selected · generating, generating-menu, generating-phone · consent (T6), consent-declined (T3) · offline (T4) · failed (T3, includes a refused poor answer) · not-enough, not-enough-menu (T3, provisional) · refused (T3) · paused (T4) · phone-preparing (T4) · empty · intro, intro-no-device, intro-free (How recipes work) · ru, ru-menu |
+| Recipe and menu (`recipe/result/…`) | recipe · arrived (T3) · phone · extras (pending a "to buy" hint) · shop, shop-some, shop-listed, shop-none, shop-menu, shop-added (T3), shop-ru (Add to shopping list, provisional wording) · menu · dish · share-text · long; past-date callouts above the ingredients, under the menu title and on each day |
 | Saved recipes | Loaded · Empty · Deleted, Undo (T3) |
-| Buying recipes | Packs · Account or not · Adding · Added (T3) · Paid, not added yet (T4) · Payment pending (T4) · Store unavailable (T4) · Not available on this install (App Check refused, nothing charged; T4, no Try again) · Not accepted (T6) |
-| Recipe settings | Send all products off / on · How recipes work · No account · Recipes on this phone · Signed in · Language · Sign out (T6) · Delete account (T6) · Delete this phone's data from our server (T6), Deleted (T3) · Deleting waits for a purchase being confirmed (inline, button off) · Sign-in already has recipes (T6) · Sign-in failed (T3) |
+| Buying recipes (`recipe/buy/…`) | packs · choice · verifying · bought (T3) · not-added (T4) · pending (T4) · store-error (T4) · not-available (App Check refused, nothing charged; T4, no Try again) · rejected (T6) |
+| Recipe settings (`recipe/options/…`) | default · time-any, time-range, time-at-least · meal-one, meal-several, diet-one, diet-several · send-all · consent-on, consent-off · intro · on-phone · delete-device (T6), delete-device-none (T6), delete-waits (inline, button off), device-deleted (T3) · signed-in · language · sign-out (T6) · delete (T6) · link-taken (T6) · account-error (T3) |
 | Shopping | Loaded with sections · Empty · Add with did-you-mean · Item ticked · Section menu, rename, delete section (T6) · Move to section · Share · QR code · List too long for QR (T4) · Import · Import results (T3) · Long list |
 | Settings | Default · Notifications blocked (T4) · Reminder styles · Locations editing · Allergens · Shops: permission disclosure (T6), location failed (T3) · Backup: export success or failure (T3), restore choice (T6), bad file (T3) · Clear all data (T6) |
 | Categories | Loaded · Empty · Rename · Shelf life dialog, out of range (T1) · Reordering |
@@ -126,6 +126,9 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 
 - 2026-11-14 · Ticked items past their date stay pre-ticked (soonest first, however long past) and are used; the Recipe form shows a red callout at the top of Cook with (count and the oldest, live with the ticks), and every recipe, menu and menu day lists its past-date items in red above the ingredients, also in shared text and in the shared prompt · owner decision; no confirmation dialog
 - 2026-11-14 · Cook with lists the 5 soonest items plus anything ticked on both platforms (iOS used to list everything within the "soon" window) · owner request
+- 2026-11-14 · The Recipe page is redrawn to match the apps: one action rule (`RecipeUiState.actions`) decides pinned and secondary buttons; the paid route's absence removes the count, the Recipe / Menu switch and Buy; the page says "this device" as Android does (iOS: iPhone or iPad) · owner request ("change design to follow last changes")
+- 2026-11-14 · Recipe form controls: Time becomes a two-handle range slider (10–120 min, 5-minute steps, an end means no limit, value as text), a new design-system component; Meal and Diet become multi-choice chips with a check on each chosen one ("Any" / "None" clear the rest; several diets all apply); in a menu the meal applies to main courses only. Value and summary wording is provisional until the apps' strings land · owner request
+- 2026-11-14 · Ingredients not from the pantry can go to the shopping list from a recipe, a menu (one action) or a dish: a sheet with every such item ticked by default, staples last but ticked, water never listed, items already on the list unticked and disabled; T3 snackbar after adding. Wording provisional · owner request
 
 ## Options history
 - Round 1: A Larder, B Enamel, C Preserves → A Larder chosen by the user, the closest fit to warm and calm
@@ -160,4 +163,5 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - Recipe: every Russian string on the page is new and needs a translator's check; Norwegian has none yet.
 - Recipe: pack prices on the page are samples; real ones come from the stores.
 - Recipe: Apple and Google sign-in buttons use stand-in icons; the real ones must follow each company's button rules.
-- Recipe: the design HTML (docs/design/src/pages/recipe.html) does not yet draw the 2026-11-14 states (How recipes work, Send all products, the content-width Share pill, the header without Saved, Not available on this install); the apps are the reference until it is rebuilt.
+- Recipe, resolved 2026-11-14: the design HTML now draws the 2026-11-14 states (How recipes work, Send all products, the content-width Share pill, the header without Saved, Not available on this install, past-date warnings, deleting this device's data) and design.html is rebuilt; the artifact still needs republishing from `.artifact/design.html`.
+- Recipe, provisional until app strings land: NOT_ENOUGH_ITEMS ("Tick a few more items"), the time range values, multi-choice meal/diet summaries, the menu meal note, the Add to shopping list wording (en and ru), and the "to buy" hint for extras.
