@@ -107,6 +107,11 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 
 ### 4. Google Play
 
+The app has no production release on Play yet: getting there (a 14-day closed test with at least
+12 testers, then the production-access application) and the App content declarations the Recipe
+release changes are in [play-production.md](play-production.md); tester invitations are in
+[marketing/play-testers/](marketing/play-testers/README.md).
+
 - [ ] Payments profile and merchant account (Monetisation setup), if not there already.
 - [x] (Done by the owner 2026-11-14; Play's test notification reached `playNotifications` and was
       logged as `Play RTDN` / `test`.) **Real-time developer notifications** (Monetisation setup > Real-time developer

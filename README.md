@@ -85,6 +85,14 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
 
+**Google Play production**: the Android app has no production release yet. A new personal
+developer account needs a closed test with at least 12 testers opted in for 14 days in a row
+before it can apply for production access; the steps, dates and declarations are in
+[docs/play-production.md](docs/play-production.md), and the tester invitations in
+[docs/marketing/play-testers/](docs/marketing/play-testers/README.md).
+`PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_status.py` prints, read-only,
+each track's releases, countries and tester groups.
+
 **Store listings**: edit the files in `store-listing/` on the release branch (or before it), and
 the merge puts them in both stores; only what differs is written, the iPhone Duo screenshots
 and the App Store "Header and Search Results" images (`header.png`, `search-result.png`)
