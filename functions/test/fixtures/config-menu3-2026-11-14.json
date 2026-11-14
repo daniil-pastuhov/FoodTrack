@@ -1,0 +1,15 @@
+{
+  "kind": "menu",
+  "courses": 3,
+  "config": { "difficulty": "medium", "detail": "brief", "servings": 4, "minMinutes": 40, "maxMinutes": null, "mealTypes": ["dinner"], "diets": ["vegan", "vegetarian", "glutenFree"], "language": "ru" },
+  "ingredients": [
+    { "name": "Нут", "expiresOn": null, "quantity": 2 },
+    { "name": "Тыква", "expiresOn": "2026-11-15", "quantity": 1 },
+    { "name": "Рис басмати", "expiresOn": null, "quantity": 1 },
+    { "name": "Сметана", "expiresOn": "2026-11-13", "quantity": 1 },
+    { "name": "Кокосовое молоко", "expiresOn": "2026-11-30", "quantity": 1 },
+    { "name": "Груши", "expiresOn": "2026-11-17", "quantity": 3 }
+  ],
+  "allergens": [],
+  "today": "2026-11-14"
+}

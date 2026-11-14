@@ -49,6 +49,8 @@ import com.foodtracker.recipe.allergenConsentGiven
 import java.text.DateFormat
 import java.util.Date
 import com.foodtracker.recipe.RecipeConfig
+import com.foodtracker.recipe.RECIPE_DIET_CHOICES
+import com.foodtracker.recipe.RECIPE_MEAL_CHOICES
 import com.foodtracker.recipe.RecipeDiet
 import com.foodtracker.recipe.RecipeIntro
 import com.foodtracker.recipe.RecipeMealType
@@ -127,19 +129,19 @@ private fun RecipeSettingsContent(
                 DifficultyControl(config.difficulty) { value -> onChange { it.copy(difficulty = value) } }
                 DetailControl(config.detail) { value -> onChange { it.copy(detail = value) } }
                 ServingsControl(config.servings) { value -> onChange { it.copy(servings = value) } }
-                TimeControl(config.maxMinutes) { value -> onChange { it.copy(maxMinutes = value) } }
+                TimeControl(config.minMinutes, config.maxMinutes) { min, max -> onChange { it.copy(minMinutes = min, maxMinutes = max) } }
             }
 
             RecipeFormCard(title = stringResource(R.string.recipe_meal_and_diet), icon = LarderIcons.Utensils) {
                 Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
                     RecipeControlLabel(stringResource(R.string.recipe_meal))
-                    ChipRow(RecipeMealType.entries, config.mealType, { value -> onChange { it.copy(mealType = value) } }) {
+                    MultiChipRow(RECIPE_MEAL_CHOICES, config.mealTypes, recipeMealLabel(resources, RecipeMealType.ANY), { value -> onChange { it.copy(mealTypes = value) } }) {
                         recipeMealLabel(resources, it)
                     }
                 }
                 Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
                     RecipeControlLabel(stringResource(R.string.recipe_diet))
-                    ChipRow(RecipeDiet.entries, config.diet, { value -> onChange { it.copy(diet = value) } }) {
+                    MultiChipRow(RECIPE_DIET_CHOICES, config.diets, recipeDietLabel(resources, RecipeDiet.NONE), { value -> onChange { it.copy(diets = value) } }) {
                         recipeDietLabel(resources, it)
                     }
                 }
@@ -285,7 +287,7 @@ internal fun RecipeSettingsPreview() = LarderTheme {
 internal fun RecipeSettingsChosenPreview() = LarderTheme {
     Surface(color = MaterialTheme.colorScheme.background) {
         RecipeSettingsContent(
-            RecipeConfig(mealType = RecipeMealType.DINNER, diet = RecipeDiet.VEGETARIAN, language = "de"),
+            RecipeConfig(minMinutes = 20, maxMinutes = 45, mealTypes = setOf(RecipeMealType.LUNCH, RecipeMealType.DINNER), diets = setOf(RecipeDiet.VEGETARIAN, RecipeDiet.GLUTEN_FREE), language = "de"),
             appLanguage = "en",
             allergens = listOf("celery", "peanuts"),
             onChange = {}

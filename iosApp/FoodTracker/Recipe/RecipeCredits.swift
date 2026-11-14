@@ -79,6 +79,7 @@ struct RecipeCreditsStorage {
         static let consentStarts = "com.foodtracker.recipe.consumption_consent_started"
         static let allergenConsent = "com.foodtracker.recipe.allergen_consent"
         static let serverTakesOptional = "com.foodtracker.recipe.server_takes_optional"
+        static let serverTakesMultiChoice = "com.foodtracker.recipe.server_takes_multi_choice"
     }
 
     /// The server's last answer that carried a balance said `acceptsOptionalIngredients`: only
@@ -86,6 +87,13 @@ struct RecipeCreditsStorage {
     var serverTakesOptional: Bool {
         get { defaults.bool(forKey: Key.serverTakesOptional) }
         nonmutating set { defaults.set(newValue, forKey: Key.serverTakesOptional) }
+    }
+
+    /// The same for `acceptsMultiChoiceConfig`: only then is a config sent that the legacy values
+    /// can't say exactly (`WireRecipeConfig.make`).
+    var serverTakesMultiChoice: Bool {
+        get { defaults.bool(forKey: Key.serverTakesMultiChoice) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesMultiChoice) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -393,6 +401,7 @@ final class RecipeCredits: ObservableObject {
         }
         // Absent from a server that predates the field, or after a rollback: then nothing extra goes.
         storage.serverTakesOptional = response.acceptsOptionalIngredients?.value ?? false
+        storage.serverTakesMultiChoice = response.acceptsMultiChoiceConfig?.value ?? false
     }
 
     /// The cheapest pack as the store formats its price, once the store has answered (the tab

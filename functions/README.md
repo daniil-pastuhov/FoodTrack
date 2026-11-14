@@ -286,6 +286,23 @@ servings, step by step, 20 allergens of 40 such characters, `outputJudge` in its
 (With every ticked item past its date, which lists all 30 ids in the instruction; measured after
 the date and extras rules. Before them the figures were 13,090 / 14,212 / 14,231 bytes.)
 
+**The multi-choice config adds at most 301 bytes** (November 2026, CONTRACT.md "RecipeConfig"):
+the time range, five meals and three diets at once, measured with everything else at its maximum
+as above. The menu line for the meal and the main courses added 77 bytes to every menu, legacy
+requests included. The largest requests are now:
+
+| request | largest legacy config | largest multi-choice config |
+|---|---|---|
+| recipe | 13,679 bytes, USD 0.08196 | 13,980 bytes, USD 0.08241 |
+| 2-course menu | 14,943 bytes, USD 0.23242 | 15,244 bytes, USD 0.23287 |
+| 3-course menu | 14,962 bytes, USD 0.32244 | 15,263 bytes, USD 0.32289 |
+
+That is under USD 0.0005 a call; the per-user and global arithmetic below is unchanged (one
+3-course menu booked at its worst case, 0.323, still fits the 0.45 a day; a second does not).
+`test/configChoices.test.ts` checks that the fullest config adds under 400 bytes and USD 0.001.
+The response schema changes only in the value of `minutes.maximum` (any multiple of 5 from 10 to
+120 instead of 15, 30, 60 or 1,440); the lower bound is not in it.
+
 Output caps are unchanged, so every figure below holds as it was; `test/optionalIngredients.test.ts`
 checks the inequality for each kind.
 
@@ -794,6 +811,14 @@ courses). A request file is a `generateRecipe` body without `requestId`; it is v
 sent on its own `today`. `--model` and `--thinking` set the model id and thinking level used for
 `thinkingConfig` (defaults `gemini-3.8-flash`, `LOW`, the deployed parameters' defaults). `check`
 uses a fresh canary, so it cannot judge a canary leak, only the verbatim-instruction one.
+
+Three more fixtures use the multi-choice config (CONTRACT.md "RecipeConfig"), to replay after a
+change to the schema or the settings lines: `config-recipe-2026-11-14.json` (20–45 minutes, lunch
+or dinner, vegetarian and gluten-free, two optional items, one of them wheat flour),
+`config-menu2-2026-11-14.json` (2 courses, up to 35 minutes, breakfast or lunch, pescatarian and
+dairy-free, with a chicken fillet and a yoghurt the diets rule out) and
+`config-menu3-2026-11-14.json` (3 courses in Russian, at least 40 minutes, dinner, vegan +
+vegetarian + gluten-free, with a soured cream the diets rule out).
 
 ### Running the functions for the apps
 

@@ -211,7 +211,7 @@ describe("the answer checks", () => {
     expect(res.ok && res.value.ingredients).toEqual([
       { amount: "200 g", name: "pasta", fromPantry: true, pantryIndex: 0 },
       { amount: "a handful", name: "basil", fromPantry: true, optionalIndex: 1 },
-      { amount: "", name: "salt", fromPantry: false },
+      { amount: "", name: "salt", fromPantry: false, staple: true },
     ]);
   });
 

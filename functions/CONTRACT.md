@@ -74,7 +74,7 @@ not on `message` (English, for logs).
 | `permission-denied` | `STORE_MISMATCH` | `verifyPurchase`: `store: "play"` from an app other than the Android app, or `store: "appstore"` from an app other than the iOS app (decided by the App Check app id). A client bug; nothing was recorded. |
 | `failed-precondition` | `PURCHASE_ACCOUNT_MISMATCH` | `verifyPurchase`: the store reports a purchase account token (see "Purchase account token") that is neither this account's nor that of an account merged into it. Nothing was recorded: do **not** finish the transaction; it can still be redeemed by the account that bought it. |
 | `failed-precondition` | `ALLERGEN_CONSENT_REQUIRED` | `generateRecipe`: a non-empty `allergens` without `"allergenConsent": true` (see "Allergen consent"). Checked before anything else about the allergens; nothing was read, stored or charged. Show the consent step, then send a **new** request. |
-| `failed-precondition` | `NOT_ENOUGH_ITEMS` | `generateRecipe`: the ticked items cannot make what was asked, decided before anything is reserved; nothing was charged and no model was called. Either no item is left once the allergens and diet are applied (recipe or menu), or, for a menu, some day of the 3 has no item that may be planned on it (an item may go on any day when it has no date or was already past its date on `today`; otherwise only up to its date). Show "Tick a few more items" (for a menu: "...or ask for a single recipe"), keep the form; a changed request needs a new `requestId`. Clients that do not know this reason show their generic "couldn't write it, nothing was taken" message. |
+| `failed-precondition` | `NOT_ENOUGH_ITEMS` | `generateRecipe`: the ticked items cannot make what was asked, decided before anything is reserved; nothing was charged and no model was called. Either no item is left once the allergens and every selected diet are applied (recipe or menu), or, for a menu, some day of the 3 has no item that may be planned on it (an item may go on any day when it has no date or was already past its date on `today`; otherwise only up to its date). Show "Tick a few more items" (for a menu: "...or ask for a single recipe"), keep the form; a changed request needs a new `requestId`. Clients that do not know this reason show their generic "couldn't write it, nothing was taken" message. |
 | `failed-precondition` | `APPLE_NOT_LINKED` | `registerAppleSignIn`: the account has no Sign in with Apple linked. Ignore. |
 | `failed-precondition` | `APPLE_CODE_REJECTED` | `registerAppleSignIn`: Apple refused the code (expired after five minutes, already used, or not from this app). Ignore; the next Apple sign-in tries again. |
 | `unavailable` | `APPLE_UNAVAILABLE` | `registerAppleSignIn`: Apple or the key service could not be reached; nothing was stored. Ignore; the next Apple sign-in tries again. |
@@ -115,9 +115,23 @@ request fields are ignored, so an old server would accept the field and silently
 flag keeps a new client from sending pantry data a server would not read. Old clients ignore the
 flag and never send the field.
 
+## Capability `acceptsMultiChoiceConfig`
+
+The same pattern for the multi-choice `RecipeConfig` below (a time range, several meals, several
+diets): every response that carries `balance` from a server that reads it carries
+`"acceptsMultiChoiceConfig": true`. Clients send the multi-choice shape only when the latest such
+response said `true`, and only when the legacy shape can't say the same thing; otherwise they send
+the legacy shape with the closest values (see "Legacy mapping"). A multi-choice config has no
+`mealType` or `diet`, which a server from before it requires, so a rolled-back server refuses it
+(`INVALID_REQUEST`, nothing charged) rather than reading part of it; the apps then stop sending it
+until a response says `true` again. Old clients ignore the flag.
+
 ## Types
 
 ### RecipeConfig
+
+Two shapes. **Legacy** (every client before November 2026, and new clients talking to a server
+without `acceptsMultiChoiceConfig`):
 
 | field | type | values |
 |---|---|---|
@@ -128,6 +142,46 @@ flag and never send the field.
 | `mealType` | string | `any` \| `breakfast` \| `lunch` \| `dinner` \| `snack` \| `dessert` |
 | `diet` | string | `none` \| `vegetarian` \| `vegan` \| `pescatarian` \| `glutenFree` \| `dairyFree` |
 | `language` | string | `en` \| `nb` \| `ru` \| `de` \| `es` \| `fr` \| `it` \| `pl` \| `sv` \| `uk` |
+
+`minMinutes`, `mealTypes` and `diets` are absent or `null` there.
+
+**Multi-choice** (a config with `mealTypes` or `diets`): `difficulty`, `detail`, `servings` and
+`language` as above, and
+
+| field | type | values |
+|---|---|---|
+| `minMinutes` | int or null | a multiple of 5 from 10 to 120, or `null` (no lower bound) |
+| `maxMinutes` | int or null | a multiple of 5 from 10 to 120, or `null` (no limit); not below `minMinutes` |
+| `mealTypes` | list of strings, required | distinct values of `breakfast`, `lunch`, `dinner`, `snack`, `dessert`; `[]` is any meal |
+| `diets` | list of strings, required | distinct values of `vegetarian`, `vegan`, `pescatarian`, `glutenFree`, `dairyFree`; `[]` is none |
+| `mealType`, `diet` | absent or `null` | refused otherwise |
+
+Meaning: `maxMinutes` is a limit (the response schema's `minutes.maximum` and the output check);
+`minMinutes` is only a guide ("about that long or more"): nothing is refused for being quicker,
+and it is not in the schema. The dish suits **any one** of `mealTypes`; for a menu only the main
+courses follow it (starters and desserts ignore it), while time and diets hold for every dish.
+**All** of `diets` hold at once: vegetarian and gluten-free is both; the strictest combination wins
+by itself (pescatarian with vegetarian forbids fish; vegan with vegetarian is vegan), so no
+combination is refused. The prompt names only the diets another selected one does not already
+imply, and the answer is checked against every selected diet's word lists (`DIET`). Order in the
+lists does not matter. The price does not change.
+
+A request is bound (`REQUEST_ID_REUSED`, the stored hash) to the config's meaning, not its shape:
+a legacy request hashes exactly as before the multi-choice shape existed, and a multi-choice one
+that the legacy fields could say (no `minMinutes`, `maxMinutes` 15, 30, 60 or null, at most one
+meal and one diet) hashes as that legacy request.
+
+#### Legacy mapping (clients, for a server without the capability)
+
+| selection | sent as |
+|---|---|
+| upper time bound | the largest of 15, 30, 60 not above it (10 → 15); none → `null` |
+| lower time bound | dropped (it is a guide) |
+| one meal / several or none | that meal / `any` |
+| one diet / none | that diet / `none` |
+| several diets, one implying the rest | that one (pescatarian + vegetarian → `vegetarian`; vegan + anything but gluten-free → `vegan`) |
+| vegetarian or pescatarian with dairy-free | `vegan` (it forbids everything they forbid, and also eggs and honey) |
+| gluten-free with any other diet | **not sent**: the app says the combination needs a server update and offers a single diet or the free routes; a diet is never dropped |
 
 ### Ingredient (request)
 
@@ -245,7 +299,8 @@ of it in the answer is not caught unless the word lists have it.
   "servings": 2,
   "difficulty": "easy | medium | ambitious",
   "ingredients": [{ "amount": "200 g", "name": "pasta", "fromPantry": true, "pantryIndex": 0 },
-                  { "amount": "1", "name": "onion", "fromPantry": false }],
+                  { "amount": "1", "name": "onion", "fromPantry": false },
+                  { "amount": "", "name": "salt", "fromPantry": false, "staple": true }],
   "steps": ["string", "..."],
   "tip": "string (optional, absent when none)"
 }
@@ -260,7 +315,12 @@ sent** (entries the server left out still count). With them a client can look up
 its `expiresOn` (for example to warn that a dish uses an item past its date). Both are absent on
 answers generated before they existed; read them as optional. An ingredient with
 `fromPantry: false` is something the cook supplies: a staple, or one of the few common extras the
-model may add when the pantry items alone do not make a proper dish (it may need buying). Every
+model may add when the pantry items alone do not make a proper dish (it may need buying).
+`staple` (optional, `true` or absent) marks such an ingredient whose name is only a staple (water,
+ice, oil, salt, pepper, sugar, vinegar, spices; the server's `STAPLE_WORDS`): the apps leave plain
+water out of "Add to shopping list" and list the other staples last. Absent on answers from before
+it; then every `fromPantry: false` ingredient is listed. `minutes` is never above the request's
+`maxMinutes`. Every
 recipe, and every day of a menu, uses at least one item of `ingredients` (see "Failures and refunds"), and
 `servings` and `difficulty` are always the requested values. Every string is plain text, at most:
 title 100, summary 400, amount 40, ingredient name 80, step 600, tip 300 characters; 1–40
@@ -323,7 +383,8 @@ Response:
 
 ```json
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
-  "costs": { "recipe": 1, "menu2": 4, "menu3": 5 }, "acceptsOptionalIngredients": true }
+  "costs": { "recipe": 1, "menu2": 4, "menu3": 5 }, "acceptsOptionalIngredients": true,
+  "acceptsMultiChoiceConfig": true }
 ```
 
 | status | meaning | `charged` | client action |
@@ -403,9 +464,11 @@ Three kinds of failure, decided by the server; `charged` tells the client which 
   day, then `INFRA_FAILURE_LIMIT`). Requests that could never pass this check are refused
   before anything is reserved (`NOT_ENOUGH_ITEMS`).
 
-Suggested wording: refunded: "Couldn't create it. You weren't charged." Charged: "Couldn't create
-a recipe from these ingredients. It used N credit(s), because the attempt still cost us to run.
-Try fewer or different ingredients." (N = the request's cost.) Do not promise refunds in the UI.
+What the apps show (user-facing copy never says "credit" or "charged"): refunded, a quality
+failure included: "Couldn't write the recipe. No recipe was taken." (a menu: "Couldn't write the
+menu. No recipes were taken."). Charged: "Couldn't make a recipe from these items. It used N
+recipe(s), because the attempt still cost us to run. Try fewer or different items." (N = the
+request's cost.) Do not promise refunds in the UI.
 
 #### Limits
 

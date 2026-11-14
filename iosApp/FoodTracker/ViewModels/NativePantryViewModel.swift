@@ -1361,6 +1361,25 @@ public class NativePantryViewModel: ObservableObject {
         recordProductName(trimmed)
     }
 
+    /// Several names at once through the same path as `addManualShoppingListEntry(_:)` (a recipe's
+    /// "Add to shopping list"); a name already on the list is skipped. Returns how many were added.
+    /// Android: `PantryStateHolder.addShoppingListEntries`.
+    @discardableResult
+    public func addShoppingListEntries(_ productNames: [String]) -> Int {
+        var added = 0
+        var seen = Set<String>()
+        for raw in productNames {
+            let name = raw.trimmingCharacters(in: .whitespaces)
+            let key = name.lowercased()
+            guard !name.isEmpty, seen.insert(key).inserted else { continue }
+            let onList = shoppingList.contains { $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == key }
+            guard !onList else { continue }
+            addManualShoppingListEntry(name)
+            added += 1
+        }
+        return added
+    }
+
     /// As `addManualShoppingListEntry(_:)`, but says when the name was on the list already, so
     /// the screen can tell the person why no row appeared. `onDuplicate` gets the name as it is
     /// written on the list, which may differ in case from what was typed.

@@ -59,11 +59,15 @@ enum RecipePromptBuilder {
         if let minutes = config.maxMinutes {
             lines.append(L10n.recipePromptMaxMinutes(minutes))
         }
-        if config.mealType != .any {
-            lines.append(L10n.recipePromptMeal(config.mealType))
+        if let minutes = config.minMinutes {
+            lines.append(L10n.recipePromptMinMinutes(minutes))
         }
-        if config.diet != .none {
-            lines.append(L10n.recipePromptDiet(config.diet))
+        if !config.mealTypes.isEmpty {
+            lines.append(L10n.recipePromptMeals(RecipeChoices.orderedMeals(config.mealTypes)))
+        }
+        // One line per diet: all of them hold. One another implies is not repeated.
+        for diet in RecipeChoices.promptDiets(config.diets) {
+            lines.append(L10n.recipePromptDiet(diet))
         }
         if !request.allergens.isEmpty {
             lines.append(L10n.recipePromptAllergens(request.allergens.joined(separator: ", ")))
@@ -124,11 +128,21 @@ enum RecipePromptBuilder {
         if let minutes = config.maxMinutes {
             lines.append("- Total time: at most \(minutes) minutes")
         }
-        if config.mealType != .any {
-            lines.append("- Meal: \(englishMeal(config.mealType))")
+        // The upper bound is a limit, the lower one only a guide.
+        if let minutes = config.minMinutes {
+            lines.append("- Aim for about \(minutes) minutes or more; less is fine if the dish needs less")
         }
-        if config.diet != .none {
-            lines.append("- Diet: \(englishDiet(config.diet))")
+        let meals = RecipeChoices.orderedMeals(config.mealTypes).map(englishMeal)
+        if meals.count == 1 {
+            lines.append("- Meal: \(meals[0])")
+        } else if meals.count > 1 {
+            lines.append("- Meal: suits any one of \(meals.joined(separator: ", "))")
+        }
+        let diets = RecipeChoices.promptDiets(config.diets).map(englishDiet)
+        if diets.count == 1 {
+            lines.append("- Diet: \(diets[0])")
+        } else if diets.count > 1 {
+            lines.append("- Diet: all of \(diets.joined(separator: ", "))")
         }
         if !request.allergens.isEmpty {
             lines.append("- Must not contain: \(request.allergens.joined(separator: ", "))")

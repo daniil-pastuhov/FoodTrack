@@ -16,7 +16,7 @@ class OnDeviceRecipePromptTest {
     fun promptListsItemsSoonestFirstAndAsksForJsonInTheChosenLanguage() {
         val prompt = buildOnDeviceRecipePrompt(
             items = listOf(RecipePromptItem("Salmon", 3), RecipePromptItem("Bread", -1), RecipePromptItem("Spinach", 0)),
-            config = config.copy(diet = RecipeDiet.PESCATARIAN, maxMinutes = 15),
+            config = config.copy(diets = setOf(RecipeDiet.PESCATARIAN), maxMinutes = 15),
             languageCode = "nb",
             allergens = listOf("peanuts")
         )
@@ -44,7 +44,7 @@ class OnDeviceRecipePromptTest {
     fun namesAreTrimmedDatesReadRightTheSoonestAreKeptAndTheMealIsSaid() {
         val items = (0 until 40).map { RecipePromptItem("item $it", 40 - it) } +
             RecipePromptItem("  Old bread  ", -3) + RecipePromptItem("x".repeat(MAX_RECIPE_INGREDIENT_NAME) + "  ", 0)
-        val prompt = buildOnDeviceRecipePrompt(items, config.copy(mealType = RecipeMealType.BREAKFAST), "en", emptyList())
+        val prompt = buildOnDeviceRecipePrompt(items, config.copy(mealTypes = setOf(RecipeMealType.BREAKFAST)), "en", emptyList())
 
         assertTrue(prompt.contains("- Old bread (3 days past its date)"), prompt)
         assertTrue(prompt.contains("- " + "x".repeat(MAX_RECIPE_INGREDIENT_NAME) + " ("), "trimmed before the cut")
@@ -150,11 +150,11 @@ class OnDeviceRecipePromptTest {
     fun configAndRecipesUseTheAgreedWireNames() {
         val json = RecipeJson.encodeToString(
             RecipeConfig.serializer(),
-            RecipeConfig(detail = RecipeDetail.STEP_BY_STEP, diet = RecipeDiet.GLUTEN_FREE, maxMinutes = null, language = "uk")
+            RecipeConfig(detail = RecipeDetail.STEP_BY_STEP, diets = setOf(RecipeDiet.GLUTEN_FREE), maxMinutes = null, language = "uk")
         )
         assertTrue(json.contains("\"detail\":\"stepByStep\""), json)
-        assertTrue(json.contains("\"diet\":\"glutenFree\""), json)
-        assertTrue(json.contains("\"mealType\":\"any\""), json)
+        assertTrue(json.contains("\"diets\":[\"glutenFree\"]"), json)
+        assertTrue(json.contains("\"mealTypes\":[]"), json)
         assertTrue(json.contains("\"language\":\"uk\""), json)
         assertTrue(json.contains("\"maxMinutes\":null"), "any time must survive a round trip: $json")
         assertEquals(RecipeConfig(maxMinutes = null), RecipeJson.decodeFromString(RecipeConfig.serializer(), RecipeJson.encodeToString(RecipeConfig.serializer(), RecipeConfig(maxMinutes = null))))

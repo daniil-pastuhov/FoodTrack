@@ -15,6 +15,7 @@ import com.foodtracker.recipe.MenuDay
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.android.R
 import com.foodtracker.recipe.RecipeConfig
+import com.foodtracker.recipe.legacyWireConfig
 import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.RecipeJson
 import com.foodtracker.recipe.RecipePaidSnapshot
@@ -255,7 +256,7 @@ class RecipePaidWordingTest {
             requestId = "8f7d3c1e-5b2a-4c6d-9e0f-1a2b3c4d5e6f",
             kind = WireKind.MENU,
             courses = 2,
-            config = RecipeConfig(maxMinutes = null, language = "nb"),
+            config = legacyWireConfig(RecipeConfig(maxMinutes = null), "nb")!!,
             ingredients = listOf(WireIngredient("Pasta", "2026-11-20", 1)),
             allergens = listOf("peanut"),
             today = "2026-11-13"
@@ -270,6 +271,8 @@ class RecipePaidWordingTest {
         assertEquals(null, config["maxMinutes"])
         assertEquals(true, config.containsKey("maxMinutes"))
         assertEquals("nb", config["language"])
+        assertEquals("any", config["mealType"])
+        assertEquals(true, config.containsKey("diets") && config["diets"] == null)
         assertEquals("2026-11-20", (data["ingredients"] as List<Map<*, *>>).single()["expiresOn"])
     }
 

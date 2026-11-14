@@ -90,6 +90,16 @@ struct RecipeDocument: View {
                         ingredientRow(ingredient)
                     }
                 }
+                // True for staples and extras alike, so no row is labelled wrongly.
+                if recipe.ingredients.contains(where: { !$0.fromPantry }) {
+                    Text(L10n.recipeNotFromPantryHint)
+                        .larderFont(.caption)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, LarderSpace.s2)
+                }
+                RecipeShoppingButton(recipes: [recipe])
+                    .padding(.top, LarderSpace.s3)
 
                 SectionHeader(L10n.recipeMethodTitle)
                     .padding(.top, LarderSpace.s2)
@@ -208,5 +218,123 @@ struct RecipeDocument: View {
             tip: "Low oven temperatures vary.",
             source: .device
         ))))
+    }
+}
+
+// MARK: Add to shopping list
+
+/// What a result screen needs to offer "Add to shopping list": the shopping list's names now, and
+/// how to add some (returning how many were added). Handed down by `RecipeView`; without it
+/// (previews) nothing is offered. Android: `RecipeShoppingActions`.
+struct RecipeShoppingContext {
+    var listedNames: [String] = []
+    var add: (([String]) -> Int)? = nil
+    var openShoppingList: () -> Void = {}
+}
+
+private struct RecipeShoppingKey: EnvironmentKey {
+    static let defaultValue = RecipeShoppingContext()
+}
+
+extension EnvironmentValues {
+    var recipeShopping: RecipeShoppingContext {
+        get { self[RecipeShoppingKey.self] }
+        set { self[RecipeShoppingKey.self] = newValue }
+    }
+}
+
+/// "Add to shopping list" under a recipe's ingredients, or under a menu's title for every day of
+/// it: shown only when `recipes` has an ingredient the cook doesn't have. Opens the sheet; nothing
+/// opens by itself.
+struct RecipeShoppingButton: View {
+    let recipes: [Recipe]
+
+    @Environment(\.recipeShopping) private var shopping
+    @Environment(\.showSnackbar) private var showSnackbar
+    @State private var candidates: [ShoppingCandidate]?
+
+    var body: some View {
+        if shopping.add != nil, !RecipeShopping.candidates(recipes, listedNames: shopping.listedNames).isEmpty {
+            LarderButton(L10n.recipeShoppingAdd, icon: .listPlus, variant: .outline, fullWidth: true) {
+                candidates = RecipeShopping.candidates(recipes, listedNames: shopping.listedNames)
+            }
+            .larderSheet(isPresented: Binding(get: { candidates != nil }, set: { if !$0 { candidates = nil } }), fitsContent: true) {
+                if let candidates {
+                    RecipeShoppingSheet(candidates: candidates) { names in
+                        self.candidates = nil
+                        guard let add = shopping.add else { return }
+                        let added = add(names)
+                        let open = shopping.openShoppingList
+                        showSnackbar(L10n.recipeShoppingAdded(added), actionTitle: L10n.navShopping) { open() }
+                    } onCancel: {
+                        self.candidates = nil
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The ingredients to buy, every one ticked at first (the owner's rule) except those already on
+/// the list, which are shown but can't be ticked. The confirm button counts the ticks.
+struct RecipeShoppingSheet: View {
+    let candidates: [ShoppingCandidate]
+    let onAdd: ([String]) -> Void
+    let onCancel: () -> Void
+
+    @State private var ticked: Set<String>
+
+    init(candidates: [ShoppingCandidate], onAdd: @escaping ([String]) -> Void, onCancel: @escaping () -> Void) {
+        self.candidates = candidates
+        self.onAdd = onAdd
+        self.onCancel = onCancel
+        _ticked = State(initialValue: RecipeShopping.defaultSelection(candidates))
+    }
+
+    var body: some View {
+        LarderSheet(L10n.recipeShoppingTitle(candidates.filter { !$0.alreadyListed }.count)) {
+            Text(L10n.recipeShoppingMessage)
+                .larderFont(.body)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+            LarderGroup {
+                ForEach(candidates, id: \.key) { candidate in
+                    row(candidate)
+                }
+            }
+            VStack(spacing: LarderSpace.s1) {
+                LarderButton(L10n.recipeShoppingConfirm(ticked.count), fullWidth: true) {
+                    onAdd(candidates.filter { ticked.contains($0.key) }.map(\.name))
+                }
+                .disabled(ticked.isEmpty)
+                LarderButton(L10n.cancelButton, variant: .text, fullWidth: true, action: onCancel)
+            }
+            .padding(.top, LarderSpace.s2)
+        }
+    }
+
+    private func row(_ candidate: ShoppingCandidate) -> some View {
+        let enabled = !candidate.alreadyListed
+        return HStack(spacing: LarderSpace.s2) {
+            LarderTick(isOn: ticked.contains(candidate.key), label: candidate.name) {
+                if ticked.contains(candidate.key) { ticked.remove(candidate.key) } else { ticked.insert(candidate.key) }
+            }
+            .disabled(!enabled)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(candidate.name)
+                    .larderFont(.body)
+                    .foregroundStyle(enabled ? LarderColor.onSurface : LarderColor.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !enabled {
+                    Text(L10n.recipeShoppingAlready)
+                        .larderFont(.caption)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.horizontal, LarderSpace.s2)
+        .padding(.vertical, LarderSpace.s1)
+        .accessibilityElement(children: .combine)
     }
 }

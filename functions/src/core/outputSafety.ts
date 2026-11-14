@@ -333,6 +333,16 @@ const DIET_GUARDS = Object.fromEntries(
   Object.entries(DIET_RULES).map(([k, groups]) => [k, groups.map((g) => guardOf(g.terms, g.exempt, g.freeStems))]),
 ) as Record<DietKey, Guard[]>;
 
+/**
+ * The guards of every diet the request selected: they all hold at once (vegetarian and
+ * gluten-free is both), so an ingredient breaking any one of them breaks the request's diet. The
+ * strictest combination wins by itself: pescatarian with vegetarian forbids fish, as vegetarian
+ * does.
+ */
+export function dietGuards(req: GenerateRequest): Guard[] {
+  return req.config.diets.flatMap((d) => DIET_GUARDS[d as DietKey]);
+}
+
 /** A word in a script whose words are a character or two (Chinese, Japanese, Korean, Thai...). */
 const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}\p{Script=Yi}]/u;
 
@@ -414,7 +424,9 @@ function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
   }
   if (names.some((n) => violates(n, ch.allergen))) bad("ALLERGEN");
   if (names.some((n) => violates(n, ch.diet))) bad("DIET");
-  if (!fromPantry) return { amount, name, fromPantry };
+  // A staple (water, oil, salt, pepper, sugar, spices) is marked, so a client can order its shopping
+  // list and leave plain water out of it (CONTRACT.md "Recipe").
+  if (!fromPantry) return { amount, name, fromPantry, ...(isStapleName(name) ? { staple: true as const } : {}) };
   const n = Number((id as string).slice(1)) - 1;
   if ((id as string).startsWith("p")) return { amount, name, fromPantry, pantryIndex: n };
   return { amount, name, fromPantry, optionalIndex: ch.req.optionalIngredients[n].sentIndex ?? n };
@@ -437,7 +449,7 @@ function recipe(ch: Checker, raw: unknown): Recipe {
   const title = text(ch.sc, r.title, LIMITS.title);
   const summary = text(ch.sc, r.summary, LIMITS.summary);
   const minutes = r.minutes;
-  if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < 1 || minutes > LIMITS.minutes) bad("SHAPE");
+  if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < 1 || minutes > (ch.req.config.maxMinutes ?? LIMITS.minutes)) bad("SHAPE");
   if (!Array.isArray(r.ingredients) || r.ingredients.length === 0) bad("SHAPE");
   if ((r.ingredients as unknown[]).length > LIMITS.ingredients) bad("LENGTH");
   const ingredients = (r.ingredients as unknown[]).map((i) => ingredient(ch, i));
@@ -470,7 +482,7 @@ function recipe(ch: Checker, raw: unknown): Recipe {
 }
 
 function checker(ctx: OutputContext): Checker {
-  const diet = ctx.req.config.diet === "none" ? [] : DIET_GUARDS[ctx.req.config.diet as DietKey];
+  const diet = dietGuards(ctx.req);
   return {
     sc: {
       ctx,
@@ -572,15 +584,15 @@ export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<M
 
 /**
  * Whether the request can pass the quality gate at all, decided before anything is reserved or
- * any model is called. A pantry item is usable unless its own name breaks the allergens or the
- * diet (the same guards the answer is checked with, so the model could not use it anyway). A
- * recipe needs one usable item; a menu needs, on each of its 3 days, one usable item it may be
- * planned on that day: no date, already past its date at request time (those may go on any day),
- * or a date on or after that day. Anything thinner is left to the model and its few extras.
+ * any model is called. A pantry item is usable unless its own name breaks the allergens or any
+ * selected diet (the same guards the answer is checked with, so the model could not use it
+ * anyway). A recipe needs one usable item; a menu needs, on each of its 3 days, one usable item it
+ * may be planned on that day: no date, already past its date at request time (those may go on any
+ * day), or a date on or after that day. Anything thinner is left to the model and its few extras.
  */
 export function hasEnoughItems(req: GenerateRequest): boolean {
   const allergen = allergenGuards(req.allergens);
-  const diet = req.config.diet === "none" ? [] : DIET_GUARDS[req.config.diet as DietKey];
+  const diet = dietGuards(req);
   const usable = req.ingredients.filter((i) => {
     const name = foldText(i.name);
     return !violates(name, allergen) && !violates(name, diet);

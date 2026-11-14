@@ -38,11 +38,14 @@ data class RecipePromptStrings(
     val detail: (RecipeDetail) -> String,
     /** "For %1$d people" */
     val servings: (Int) -> String,
-    /** "Ready in %1$d minutes or less" */
+    /** "Ready in %1$d minutes or less": the time slider's upper bound, a limit. */
     val maxMinutes: (Int) -> String,
-    /** Never asked for [RecipeMealType.ANY], which adds no line. */
-    val mealType: (RecipeMealType) -> String,
-    /** Never asked for [RecipeDiet.NONE], which adds no line. */
+    /** "Ideally about %1$d minutes or more": its lower bound, a guide. */
+    val minMinutes: (Int) -> String,
+    /** "Meal: dinner", or for several "Suits any of: breakfast, lunch", given them in the form's
+     *  order. Never asked for none ("Any"), which adds no line. */
+    val mealTypes: (List<RecipeMealType>) -> String,
+    /** One line per diet ([promptDiets]: all of them hold), never [RecipeDiet.NONE]. */
     val diet: (RecipeDiet) -> String,
     /** "Nothing that contains: %1$s", given the allergens already joined. */
     val allergens: (String) -> String,
@@ -137,8 +140,9 @@ internal fun preferenceLines(
         lines += strings.detail(normalized.detail)
         lines += strings.servings(normalized.servings)
         normalized.maxMinutes?.let { lines += strings.maxMinutes(it) }
-        if (normalized.mealType != RecipeMealType.ANY) lines += strings.mealType(normalized.mealType)
-        if (normalized.diet != RecipeDiet.NONE) lines += strings.diet(normalized.diet)
+        normalized.minMinutes?.let { lines += strings.minMinutes(it) }
+        if (normalized.mealTypes.isNotEmpty()) lines += strings.mealTypes(orderedMeals(normalized.mealTypes))
+        promptDiets(normalized.diets).forEach { lines += strings.diet(it) }
         normalized.language?.let { lines += strings.language(it) }
     }
     val cleanAllergens = cleanAllergens(allergens)

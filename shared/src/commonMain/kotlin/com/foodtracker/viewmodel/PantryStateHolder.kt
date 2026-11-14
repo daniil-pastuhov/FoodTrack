@@ -1229,6 +1229,26 @@ class PantryStateHolder(
         }
     }
 
+    /**
+     * Several names at once, one after another through the same path as [addManualShoppingListEntry]
+     * (a recipe's "Add to shopping list"): a name already on the list is skipped. [onComplete] gets
+     * how many were added, on this holder's scope.
+     */
+    fun addShoppingListEntries(productNames: List<String>, onComplete: (added: Int) -> Unit = {}) {
+        val names = productNames.map { it.trim() }.filter { it.isNotBlank() }.distinctBy { it.lowercase() }
+        if (names.isEmpty()) return
+        coroutineScope.launch {
+            var added = 0
+            for (name in names) {
+                if (shoppingListRepository.findByName(name) != null) continue
+                addToShoppingListIfAbsent(name, barcode = null, category = null)
+                recordProductName(name)
+                added++
+            }
+            onComplete(added)
+        }
+    }
+
     /** As [addManualShoppingListEntry], but says when the name was on the list already, so the
      *  screen can tell the person why no row appeared. [onDuplicate] gets the name as it is
      *  written on the list, which may differ in case from what was typed. It runs on this

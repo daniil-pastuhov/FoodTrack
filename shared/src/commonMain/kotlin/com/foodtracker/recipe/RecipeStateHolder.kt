@@ -82,6 +82,16 @@ sealed interface RecipeEvent {
      *  Nothing was sent: the free routes still work, and Recipe settings turns it back on. */
     data object AllergenConsentDeclined : RecipeEvent
 
+    /** The server said the ticked items can't make what was asked (NOT_ENOUGH_ITEMS): once the
+     *  allergens and diets are applied nothing is left, or for a [menu] some day has nothing it
+     *  may use. Nothing was taken; the form stays as it is. */
+    data class NotEnoughItems(val menu: Boolean) : RecipeEvent
+
+    /** The selected diets can't all be sent to the server as it is now (gluten-free with another
+     *  diet, before it reads several diets): nothing was sent, since a recipe ignoring one could
+     *  contain something the person excluded. One diet, or a free route, still works. */
+    data object DietsNeedServerUpdate : RecipeEvent
+
     /** The phone's model failed or returned something that isn't a recipe. */
     data object Failed : RecipeEvent
 

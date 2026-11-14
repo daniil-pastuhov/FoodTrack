@@ -60,21 +60,80 @@ public enum RecipeLanguage: String, Codable, CaseIterable, Sendable {
     }
 }
 
+/// The time slider's scale, in minutes: 10 to 120 in steps of 5. A handle at its end is no bound
+/// on that side (both at the ends: "Any"). Android: `RECIPE_MINUTES_FLOOR` and friends; the server
+/// checks the same numbers (`MINUTES_RANGE`).
+public enum RecipeTime {
+    public static let floor = 10
+    public static let ceiling = 120
+    public static let step = 5
+    /// The legacy `maxMinutes` values, for a server that doesn't say `acceptsMultiChoiceConfig`.
+    public static let legacyLimits = [15, 30, 60]
+
+    /// `minutes` on the scale: the nearest step, within the range.
+    public static func snap(_ minutes: Int) -> Int {
+        let clamped = min(max(minutes, floor), ceiling)
+        return floor + ((clamped - floor + step / 2) / step) * step
+    }
+}
+
+/// The multi-choice rules of the meal and diet chips. Android: `toggledChoice`, `promptDiets`.
+public enum RecipeChoices {
+    /// The meals and diets the chips offer after "Any" / "None", in the form's order.
+    public static let meals: [RecipeMealType] = RecipeMealType.allCases.filter { $0 != .any }
+    public static let diets: [RecipeDiet] = RecipeDiet.allCases.filter { $0 != .none }
+
+    /// A chip tapped in a row whose first chip ("Any", "None": `option` nil) is the empty set:
+    /// that chip clears the others; another toggles itself, and the last one off is the empty set.
+    public static func toggled<T: Hashable>(_ selection: Set<T>, _ option: T?) -> Set<T> {
+        guard let option else { return [] }
+        var next = selection
+        if next.contains(option) { next.remove(option) } else { next.insert(option) }
+        return next
+    }
+
+    /// The selected diets less those another selected one implies (vegan implies vegetarian,
+    /// pescatarian and dairy-free; vegetarian implies pescatarian): what the prompts say. Every
+    /// selected diet is still sent and checked.
+    public static func promptDiets(_ diets: Set<RecipeDiet>) -> [RecipeDiet] {
+        Self.diets.filter { diet in
+            guard diets.contains(diet) else { return false }
+            switch diet {
+            case .vegetarian, .dairyFree: return !diets.contains(.vegan)
+            case .pescatarian: return !diets.contains(.vegan) && !diets.contains(.vegetarian)
+            default: return true
+            }
+        }
+    }
+
+    public static func orderedMeals(_ meals: Set<RecipeMealType>) -> [RecipeMealType] {
+        Self.meals.filter(meals.contains)
+    }
+
+    public static func orderedDiets(_ diets: Set<RecipeDiet>) -> [RecipeDiet] {
+        Self.diets.filter(diets.contains)
+    }
+}
+
 /// How the person wants recipes written. Kept under its own key, outside `AppSettings`, so
-/// backups and the widget's settings read are untouched.
+/// backups and the widget's settings read are untouched. A configuration stored by an earlier
+/// version (one `mealType`, one `diet`, `maxMinutes` 15, 30 or 60) reads into this one.
 public struct RecipeConfig: Codable, Equatable, Sendable {
     public static let servingsRange = 1...12
-    /// The time limits the form offers; nil is "Any".
-    public static let minuteOptions: [Int?] = [15, 30, 60, nil]
 
     public var difficulty: RecipeDifficulty = .easy
     public var detail: RecipeDetail = .standard
     public var servings: Int = 2 {
         didSet { servings = Self.clampServings(servings) }
     }
+    /// The slider's lower handle: a guide only. Nil with it at `RecipeTime.floor`.
+    public var minMinutes: Int? = nil
+    /// The upper handle: a limit. Nil with it at `RecipeTime.ceiling`.
     public var maxMinutes: Int? = 30
-    public var mealType: RecipeMealType = .any
-    public var diet: RecipeDiet = .none
+    /// The dish suits any one of these; empty is "Any".
+    public var mealTypes: Set<RecipeMealType> = []
+    /// Every one of these holds at once; empty is "None".
+    public var diets: Set<RecipeDiet> = []
     /// Nil writes in the app's language.
     public var language: RecipeLanguage? = nil
 
@@ -82,25 +141,48 @@ public struct RecipeConfig: Codable, Equatable, Sendable {
         difficulty: RecipeDifficulty = .easy,
         detail: RecipeDetail = .standard,
         servings: Int = 2,
+        minMinutes: Int? = nil,
         maxMinutes: Int? = 30,
-        mealType: RecipeMealType = .any,
-        diet: RecipeDiet = .none,
+        mealTypes: Set<RecipeMealType> = [],
+        diets: Set<RecipeDiet> = [],
         language: RecipeLanguage? = nil
     ) {
         self.difficulty = difficulty
         self.detail = detail
         self.servings = Self.clampServings(servings)
-        self.maxMinutes = Self.validMinutes(maxMinutes)
-        self.mealType = mealType
-        self.diet = diet
+        self.minMinutes = minMinutes
+        self.maxMinutes = maxMinutes
+        self.mealTypes = mealTypes
+        self.diets = diets
         self.language = language
+        normalize()
     }
 
     /// The language a recipe is written in once "same as the app" is resolved.
     public var resolvedLanguage: RecipeLanguage { language ?? .app }
 
+    /// Minutes on the slider's scale (a bound at its end is none), the lower bound no higher
+    /// than the upper, "Any" and "None" out of the sets. Android: `RecipeConfig.normalized`.
+    public mutating func normalize() {
+        let max = maxMinutes.map(RecipeTime.snap).flatMap { $0 < RecipeTime.ceiling ? $0 : nil }
+        var low = minMinutes.map(RecipeTime.snap).flatMap { $0 > RecipeTime.floor ? $0 : nil }
+        if let l = low, let max { low = Swift.min(l, max) }
+        maxMinutes = max
+        minMinutes = low
+        mealTypes.remove(.any)
+        diets.remove(.none)
+    }
+
+    public func normalized() -> RecipeConfig {
+        var copy = self
+        copy.normalize()
+        return copy
+    }
+
     private enum CodingKeys: String, CodingKey {
-        case difficulty, detail, servings, maxMinutes, mealType, diet, language
+        case difficulty, detail, servings, minMinutes, maxMinutes, mealTypes, diets, language
+        /// Written by earlier versions: one value each.
+        case mealType, diet
     }
 
     /// Lenient: a missing key, or a value a later version added, falls back to the default
@@ -110,17 +192,27 @@ public struct RecipeConfig: Codable, Equatable, Sendable {
         func value<T: RawRepresentable>(_ key: CodingKeys, _ fallback: T) -> T where T.RawValue == String {
             (try? c.decodeIfPresent(String.self, forKey: key)).flatMap { $0.flatMap(T.init(rawValue:)) } ?? fallback
         }
+        func set<T: RawRepresentable & Hashable>(_ key: CodingKeys, legacy: CodingKeys, _: T.Type) -> Set<T> where T.RawValue == String {
+            if c.contains(key) {
+                let raw = (try? c.decodeIfPresent([String].self, forKey: key)).flatMap { $0 } ?? []
+                return Set(raw.compactMap(T.init(rawValue:)))
+            }
+            let old = (try? c.decodeIfPresent(String.self, forKey: legacy)).flatMap { $0.flatMap(T.init(rawValue:)) }
+            return old.map { [$0] } ?? []
+        }
         difficulty = value(.difficulty, RecipeDifficulty.easy)
         detail = value(.detail, RecipeDetail.standard)
         servings = Self.clampServings((try? c.decodeIfPresent(Int.self, forKey: .servings)).flatMap { $0 } ?? 2)
+        minMinutes = (try? c.decodeIfPresent(Int.self, forKey: .minMinutes)).flatMap { $0 }
         if c.contains(.maxMinutes) {
-            maxMinutes = Self.validMinutes((try? c.decodeIfPresent(Int.self, forKey: .maxMinutes)).flatMap { $0 })
+            maxMinutes = (try? c.decodeIfPresent(Int.self, forKey: .maxMinutes)).flatMap { $0 }
         } else {
             maxMinutes = 30
         }
-        mealType = value(.mealType, RecipeMealType.any)
-        diet = value(.diet, RecipeDiet.none)
+        mealTypes = set(.mealTypes, legacy: .mealType, RecipeMealType.self)
+        diets = set(.diets, legacy: .diet, RecipeDiet.self)
         language = (try? c.decodeIfPresent(String.self, forKey: .language)).flatMap { $0.flatMap(RecipeLanguage.init(rawValue:)) }
+        normalize()
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -128,21 +220,16 @@ public struct RecipeConfig: Codable, Equatable, Sendable {
         try c.encode(difficulty, forKey: .difficulty)
         try c.encode(detail, forKey: .detail)
         try c.encode(servings, forKey: .servings)
-        // Written as null rather than left out, so "Any" can't read back as the default 30.
+        try c.encode(minMinutes, forKey: .minMinutes)
+        // Written as null rather than left out, so "no limit" can't read back as the default 30.
         try c.encode(maxMinutes, forKey: .maxMinutes)
-        try c.encode(mealType, forKey: .mealType)
-        try c.encode(diet, forKey: .diet)
+        try c.encode(RecipeChoices.orderedMeals(mealTypes), forKey: .mealTypes)
+        try c.encode(RecipeChoices.orderedDiets(diets), forKey: .diets)
         try c.encode(language, forKey: .language)
     }
 
     static func clampServings(_ value: Int) -> Int {
         min(max(value, servingsRange.lowerBound), servingsRange.upperBound)
-    }
-
-    /// Only the limits the form offers; anything else is "Any".
-    static func validMinutes(_ value: Int?) -> Int? {
-        guard let value, minuteOptions.contains(value) else { return nil }
-        return value
     }
 }
 
@@ -151,11 +238,43 @@ public struct RecipeIngredient: Codable, Equatable, Hashable, Sendable {
     public var amount: String
     public var name: String
     public var fromPantry: Bool
+    /// Server recipes: this ingredient's item in the request's `ingredients` / `optionalIngredients`
+    /// (as sent), when it is one. Nil from older servers, in older saved rows and on-device recipes.
+    public var pantryIndex: Int?
+    public var optionalIndex: Int?
+    /// Server recipes: the server found this non-pantry ingredient to be only a staple.
+    public var staple: Bool
 
-    public init(amount: String, name: String, fromPantry: Bool) {
+    public init(amount: String, name: String, fromPantry: Bool, pantryIndex: Int? = nil, optionalIndex: Int? = nil, staple: Bool = false) {
         self.amount = amount
         self.name = name
         self.fromPantry = fromPantry
+        self.pantryIndex = pantryIndex
+        self.optionalIndex = optionalIndex
+        self.staple = staple
+    }
+
+    private enum CodingKeys: String, CodingKey { case amount, name, fromPantry, pantryIndex, optionalIndex, staple }
+
+    /// Lenient about the optional fields: absent or unreadable reads as none.
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        amount = (try? c.decodeIfPresent(String.self, forKey: .amount)).flatMap { $0 } ?? ""
+        name = try c.decode(String.self, forKey: .name)
+        fromPantry = (try? c.decodeIfPresent(Bool.self, forKey: .fromPantry)).flatMap { $0 } ?? false
+        pantryIndex = (try? c.decodeIfPresent(Int.self, forKey: .pantryIndex)).flatMap { $0 }
+        optionalIndex = (try? c.decodeIfPresent(Int.self, forKey: .optionalIndex)).flatMap { $0 }
+        staple = (try? c.decodeIfPresent(Bool.self, forKey: .staple)).flatMap { $0 } ?? false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(amount, forKey: .amount)
+        try c.encode(name, forKey: .name)
+        try c.encode(fromPantry, forKey: .fromPantry)
+        try c.encodeIfPresent(pantryIndex, forKey: .pantryIndex)
+        try c.encodeIfPresent(optionalIndex, forKey: .optionalIndex)
+        if staple { try c.encode(true, forKey: .staple) }
     }
 }
 
@@ -270,6 +389,24 @@ extension RecipeMenu {
     /// With its past-date warnings: each day's courses get the past-date items among that day's
     /// `uses` (the server's reading of which items the day uses, by the names sent), and the menu
     /// all of `ticked` plus the `optional` ones a day uses. Android: `Menu.withPastDate`.
+    /// For a menu whose dishes carry item indices: each course gets the past-date items it uses
+    /// itself, and the menu every one any course uses. Nil when no dish carries indices (an older
+    /// server); then `withPastDate` works it out from the days' `uses`. Android:
+    /// `Menu.withPastDateByIndex`.
+    func withPastDateByIndex(ticked: [WireIngredient], optional: [WireIngredient], today: String) -> RecipeMenu? {
+        guard days.contains(where: { $0.courses.contains { $0.recipe.hasItemIndices } }) else { return nil }
+        var menu = self
+        for day in menu.days.indices {
+            for course in menu.days[day].courses.indices {
+                let recipe = menu.days[day].courses[course].recipe
+                menu.days[day].courses[course].recipe.pastDate = RecipeWire.pastDate(of: recipe, ticked: ticked, optional: optional, today: today)
+            }
+        }
+        var names = Set<String>()
+        menu.pastDate = menu.days.flatMap { $0.courses.flatMap(\.recipe.pastDate) }.filter { names.insert($0.name.lowercased()).inserted }
+        return menu
+    }
+
     func withPastDate(ticked: [PastDateItem], optional: [PastDateItem]) -> RecipeMenu {
         var seen = Set<String>()
         let all = (ticked + optional).filter { seen.insert($0.name.lowercased()).inserted }
@@ -290,6 +427,12 @@ extension RecipeMenu {
             .filter { names.insert($0.name.lowercased()).inserted }
         return menu
     }
+}
+
+extension Recipe {
+    /// Whether this dish says which request item each pantry ingredient is: answers from servers
+    /// before `pantryIndex` / `optionalIndex` don't.
+    var hasItemIndices: Bool { ingredients.contains { $0.pantryIndex != nil || $0.optionalIndex != nil } }
 }
 
 public enum SavedRecipeKind: String, Codable, Sendable {

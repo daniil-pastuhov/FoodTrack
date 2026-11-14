@@ -14,6 +14,7 @@ import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
 import com.foodtracker.recipe.VerifyReply
 import com.foodtracker.recipe.WireKind
+import com.foodtracker.recipe.acceptsMultiChoiceConfigOf
 import com.foodtracker.recipe.acceptsOptionalIngredientsOf
 import com.foodtracker.recipe.purchasesBlockedOf
 import com.foodtracker.recipe.recipeCostsOf
@@ -140,14 +141,14 @@ internal fun mergeReplyOf(json: JsonElement): MergeReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: return null
     val moved = (reply["moved"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: 0
-    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]))
+    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]))
 }
 
 /** `getBalance`'s reply: the count, and the costs when they came and could be read. */
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.longOrNull?.toInt() ?: return null
-    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]))
+    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]))
 }
 
 internal suspend fun <T> call(

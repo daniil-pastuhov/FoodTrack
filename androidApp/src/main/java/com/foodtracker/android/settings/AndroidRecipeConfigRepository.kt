@@ -5,6 +5,7 @@ import com.foodtracker.recipe.RecipeConfig
 import com.foodtracker.recipe.RecipeConfigRepository
 import com.foodtracker.recipe.RecipeJson
 import com.foodtracker.recipe.RecipeOptions
+import com.foodtracker.recipe.recipeConfigFromStoredJson
 
 /**
  * The Recipe tab's form, under its own key beside `AppSettings` rather than inside it, so the
@@ -17,9 +18,8 @@ class AndroidRecipeConfigRepository(context: Context) : RecipeConfigRepository {
 
     override fun get(): RecipeConfig {
         val json = prefs.getString(KEY_RECIPE_CONFIG, null) ?: return RecipeConfig()
-        return runCatching { RecipeJson.decodeFromString(RecipeConfig.serializer(), json) }
-            .getOrDefault(RecipeConfig())
-            .normalized()
+        // Also a config saved by a version with one meal and one diet (recipeConfigFromStoredJson).
+        return recipeConfigFromStoredJson(json)
     }
 
     override fun save(config: RecipeConfig) {

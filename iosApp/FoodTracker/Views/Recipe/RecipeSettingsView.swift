@@ -23,18 +23,18 @@ struct RecipeSettingsView: View {
                         }
                     }
                     RecipeServingsField(servings: model.binding(\.servings))
-                    RecipeTimeField(maxMinutes: model.binding(\.maxMinutes))
+                    RecipeTimeField(minMinutes: model.binding(\.minMinutes), maxMinutes: model.binding(\.maxMinutes))
                 }
 
                 RecipeFormCard {
                     heading(L10n.recipeSettingsMealDiet, icon: .utensils)
                     RecipeFormField(label: L10n.recipeLabelMeal) {
-                        RecipeChoiceChips(selection: model.binding(\.mealType), options: RecipeMealType.allCases) {
+                        RecipeMultiChips(selection: model.binding(\.mealTypes), options: RecipeChoices.meals, emptyTitle: L10n.recipeMealName(.any)) {
                             L10n.recipeMealName($0)
                         }
                     }
                     RecipeFormField(label: L10n.recipeLabelDiet) {
-                        RecipeChoiceChips(selection: model.binding(\.diet), options: RecipeDiet.allCases) {
+                        RecipeMultiChips(selection: model.binding(\.diets), options: RecipeChoices.diets, emptyTitle: L10n.recipeDietName(.none)) {
                             L10n.recipeDietName($0)
                         }
                     }

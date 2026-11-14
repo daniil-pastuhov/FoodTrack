@@ -26,6 +26,9 @@ struct RecipeMenuView: View {
                     LarderCallout(.error, icon: .triangleAlert, message: warning)
                         .padding(.bottom, LarderSpace.s3)
                 }
+                // One list for every dish of every day; each dish also offers its own.
+                RecipeShoppingButton(recipes: menu.days.flatMap { $0.courses.map(\.recipe) })
+                    .padding(.bottom, LarderSpace.s3)
 
                 ForEach(Array(menu.days.enumerated()), id: \.offset) { dayIndex, day in
                     SectionHeader(Self.dayTitle(day.date))

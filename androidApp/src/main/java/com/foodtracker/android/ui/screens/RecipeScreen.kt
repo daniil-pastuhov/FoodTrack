@@ -75,6 +75,8 @@ import com.foodtracker.android.util.shareRecipePrompt
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.recipe.AccountKind
+import com.foodtracker.recipe.orderedMeals
+import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.AccountState
 import com.foodtracker.recipe.MENU_COURSE_OPTIONS
 import com.foodtracker.recipe.OnDeviceAvailability
@@ -182,6 +184,19 @@ fun RecipeScreen(
                 // With the way to the switch that turns sending them back on.
                 snackbars.show(
                     resources.getString(R.string.recipe_allergen_consent_declined),
+                    resources.getString(R.string.recipe_settings_action)
+                ) { navigator.navigate(LarderRoute.RecipeSettings) }
+            }
+            is RecipeEvent.NotEnoughItems -> {
+                stateHolder.consumeEvent()
+                // The form stays as it is; the next try is a new request.
+                val text = if (event.menu) R.string.recipe_not_enough_items_menu else R.string.recipe_not_enough_items
+                snackbars.show(resources.getString(text), null, null)
+            }
+            RecipeEvent.DietsNeedServerUpdate -> {
+                stateHolder.consumeEvent()
+                snackbars.show(
+                    resources.getString(R.string.recipe_diets_need_update),
                     resources.getString(R.string.recipe_settings_action)
                 ) { navigator.navigate(LarderRoute.RecipeSettings) }
             }
@@ -649,7 +664,21 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
         }
         DifficultyControl(config.difficulty) { value -> actions.onConfigChange { it.copy(difficulty = value) } }
         ServingsControl(config.servings) { value -> actions.onConfigChange { it.copy(servings = value) } }
-        TimeControl(config.maxMinutes) { value -> actions.onConfigChange { it.copy(maxMinutes = value) } }
+        TimeControl(config.minMinutes, config.maxMinutes) { min, max -> actions.onConfigChange { it.copy(minMinutes = min, maxMinutes = max) } }
+        // A menu's starters and desserts ignore the meal; time and diet hold for every dish.
+        if (state.mode == RecipeMode.MENU && config.mealTypes.isNotEmpty()) {
+            val meals = orderedMeals(config.mealTypes)
+            Text(
+                text = resources.getQuantityString(
+                    R.plurals.recipe_menu_meal_note,
+                    meals.size,
+                    meals.size,
+                    meals.joinToString(", ") { recipeMealLabel(resources, it) }
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
     LarderGroup {
         LarderListItem(

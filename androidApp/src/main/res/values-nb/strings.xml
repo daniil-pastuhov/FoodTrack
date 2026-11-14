@@ -748,6 +748,43 @@
     <string name="recipe_detail_summary_step_by_step">Steg for steg</string>
     <string name="recipe_meal_summary_any">Alle måltider</string>
     <string name="recipe_diet_summary_none">Ingen diett</string>
+    <!-- Time range slider, multi-choice meal and diet -->
+    <string name="recipe_time_range">%1$d–%2$d min</string>
+    <string name="recipe_time_up_to">opptil %1$d min</string>
+    <string name="recipe_time_at_least">minst %1$d min</string>
+    <string name="recipe_time_shortest">Korteste tid</string>
+    <string name="recipe_time_longest">Lengste tid</string>
+    <string name="recipe_time_no_minimum">Ingen nedre grense</string>
+    <string name="recipe_time_no_limit">Ingen grense</string>
+    <plurals name="recipe_time_minutes_spoken">
+        <item quantity="one">%d minutt</item>
+        <item quantity="other">%d minutter</item>
+    </plurals>
+    <string name="recipe_time_guide_hint">Den lengste tiden er en grense, den korteste bare en rettesnor.</string>
+    <string name="recipe_prompt_min_minutes">Helst rundt %1$d minutter eller mer</string>
+    <string name="recipe_prompt_meals">Passer til ett av disse måltidene: %1$s</string>
+    <string name="recipe_not_enough_items">Det er for lite å lage mat av når dietten og allergenene er tatt hensyn til. Kryss av for noen flere varer. Ingen oppskrift ble trukket.</string>
+    <string name="recipe_not_enough_items_menu">Det er ikke nok til tre dager. Kryss av for noen flere varer, eller be om én oppskrift. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_diets_need_update">Oppskrifter fra pakker kan ennå ikke kombinere glutenfri med en annen diett. Behold én av dem i oppskriftsinnstillingene, eller bruk modellen på denne enheten eller den delte ledeteksten. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_not_from_pantry_hint">Ingredienser uten «I matskapet»-merket er ikke fra matskapet ditt: basisvarer, eller noe du kanskje må kjøpe.</string>
+    <!-- Add to shopping list -->
+    <string name="recipe_shopping_add">Legg til på handlelisten</string>
+    <string name="recipe_shopping_title">Legg til på handlelisten (%1$d)</string>
+    <string name="recipe_shopping_message">Fjern haken for det du allerede har.</string>
+    <plurals name="recipe_shopping_confirm">
+        <item quantity="one">Legg til %d vare</item>
+        <item quantity="other">Legg til %d varer</item>
+    </plurals>
+    <string name="recipe_shopping_already">Står allerede på listen</string>
+    <plurals name="recipe_shopping_added">
+        <item quantity="one">%d vare lagt til på handlelisten</item>
+        <item quantity="other">%d varer lagt til på handlelisten</item>
+    </plurals>
+    <plurals name="recipe_menu_meal_note">
+        <item quantity="one">%2$s gjelder bare hovedrettene.</item>
+        <item quantity="other">%2$s gjelder bare hovedrettene.</item>
+    </plurals>
+    <string name="recipe_shopping_nothing_added">Alt står allerede på handlelisten</string>
     <string name="recipe_share_prompt">Del ledeteksten</string>
     <string name="recipe_copy_prompt">Kopier ledeteksten</string>
     <string name="recipe_prompt_copied">Ledeteksten er kopiert</string>
@@ -965,7 +1002,7 @@
     <string name="recipe_allergen_consent_body">For å skrive dette sendes allergenlisten din (%1$s) sammen med de avkryssede varene og innstillingene dine til serveren vår og til KI-modellen til Google, slik at oppskriften unngår disse matvarene. Google kan behandle den utenfor EU. Den brukes bare til denne forespørselen og lagres ikke etterpå. Du kan trekke tilbake samtykket i oppskriftsinnstillingene.\n\nDe gratis måtene, telefonens egen modell og den delte ledeteksten, sender den ikke til oss.</string>
     <string name="recipe_allergen_consent_agree">Godta og fortsett</string>
     <string name="recipe_allergen_consent_agree_only">Godta</string>
-    <string name="recipe_allergen_consent_declined">Allergenene dine sendes ikke til serveren vår, så den kan ikke skrive dette. Slå på sending i oppskriftsinnstillingene, eller bruk telefonens modell eller den delte ledeteksten.</string>
+    <string name="recipe_allergen_consent_declined">Allergenene dine sendes ikke til serveren vår, så den kan ikke skrive dette. Slå på sending i oppskriftsinnstillingene, eller bruk modellen på denne enheten eller den delte ledeteksten.</string>
     <string name="recipe_allergen_consent_setting">Send allergenene mine til serveren vår</string>
     <string name="recipe_allergen_consent_setting_on">Du godtok %1$s. Slå av for å trekke tilbake: da skriver ikke serveren vår oppskrifter mens allergener er satt.</string>
     <string name="recipe_allergen_consent_setting_off">Trengs for oppskrifter fra serveren vår mens allergener er satt. Brukes bare til forespørselen og lagres ikke.</string>
@@ -1040,7 +1077,7 @@
     <string name="recipe_intro_prompt_title">Gratis, med hvilken som helst KI-app</string>
     <string name="recipe_intro_prompt_body">Del eller kopier en ferdig ledetekst til KI-appen du allerede bruker.</string>
     <string name="recipe_intro_device_title">Gratis, på denne enheten</string>
-    <string name="recipe_intro_device_body">Enheten skriver oppskriften selv, og ingenting sendes noe sted.</string>
+    <string name="recipe_intro_device_body">Oppskriften lages på selve enheten, og ingenting sendes noe sted.</string>
     <string name="recipe_intro_packs_title">Fra en oppskriftspakke</string>
     <string name="recipe_intro_packs_body">Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$s fra en pakke, en meny %2$s med 2 retter om dagen eller %3$s med 3.</string>
     <string name="recipe_intro_packs_price">Pakker fra %1$s.</string>

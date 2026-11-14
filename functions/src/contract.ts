@@ -17,22 +17,42 @@ import { SUSPICIOUS_INPUT_RULES, normalizeName, type InputRule } from "./core/in
 
 export const DIFFICULTIES = ["easy", "medium", "ambitious"] as const;
 export const DETAILS = ["brief", "standard", "stepByStep"] as const;
+/** The legacy `maxMinutes` values (a config without `mealTypes` / `diets`). */
 export const MAX_MINUTES = [15, 30, 60] as const;
+/** The legacy single `mealType` and `diet`. */
 export const MEAL_TYPES = ["any", "breakfast", "lunch", "dinner", "snack", "dessert"] as const;
 export const DIETS = ["none", "vegetarian", "vegan", "pescatarian", "glutenFree", "dairyFree"] as const;
+/** The choices of `mealTypes` and `diets` (CONTRACT.md "RecipeConfig"); "any meal" and "no diet" are the empty list. */
+export const MEAL_CHOICES = ["breakfast", "lunch", "dinner", "snack", "dessert"] as const;
+export const DIET_CHOICES = ["vegetarian", "vegan", "pescatarian", "glutenFree", "dairyFree"] as const;
+/** `minMinutes` and `maxMinutes` of a multi-choice config: a multiple of `step` in [min, max]. */
+export const MINUTES_RANGE = { min: 10, max: 120, step: 5 } as const;
 export const COURSES = ["starter", "main", "dessert"] as const;
 
 export type Difficulty = (typeof DIFFICULTIES)[number];
 export type Language = (typeof LANGUAGES)[number];
 export type Course = (typeof COURSES)[number];
 
+export type MealChoice = (typeof MEAL_CHOICES)[number];
+export type DietChoice = (typeof DIET_CHOICES)[number];
+
+/**
+ * A validated config, the same whichever shape the client sent (CONTRACT.md "RecipeConfig"): a
+ * legacy config's single `mealType` and `diet` become a list of at most one, "any" and "none"
+ * the empty list.
+ */
 export interface RecipeConfig {
   difficulty: Difficulty;
   detail: (typeof DETAILS)[number];
   servings: number;
-  maxMinutes: (typeof MAX_MINUTES)[number] | null;
-  mealType: (typeof MEAL_TYPES)[number];
-  diet: (typeof DIETS)[number];
+  /** A guide only ("about this long or more"), never enforced; null without one. */
+  minMinutes: number | null;
+  /** A hard limit: the schema's `minutes.maximum` and the output check. Null without one. */
+  maxMinutes: number | null;
+  /** The dish suits any one of these; empty is any meal. In MEAL_CHOICES order, no repeats. */
+  mealTypes: MealChoice[];
+  /** Every one of these holds at once; empty is no diet. In DIET_CHOICES order, no repeats. */
+  diets: DietChoice[];
   language: Language;
 }
 
@@ -77,6 +97,12 @@ export interface RecipeIngredient {
    * that list as sent (entries the server left out still count), so a client can find its date.
    */
   optionalIndex?: number;
+  /**
+   * Present and true only on an ingredient that is not from the pantry and whose name is only a
+   * staple (water, ice, oil, salt, pepper, sugar, vinegar, spices: core/foodTerms.ts STAPLE_WORDS).
+   * Absent otherwise, and in answers saved before it.
+   */
+  staple?: true;
 }
 
 export interface Recipe {
@@ -123,10 +149,16 @@ export interface BlockFlag {
    * not use.
    */
   acceptsOptionalIngredients?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that reads the
+   * multi-choice config (`minMinutes`, `mealTypes`, `diets`). A client sends that shape only after
+   * a response said so; to any other server it sends the legacy single values.
+   */
+  acceptsMultiChoiceConfig?: true;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
-export const CAPABILITIES = { acceptsOptionalIngredients: true } as const;
+export const CAPABILITIES = { acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true } as const;
 
 /** generateRecipe and getGeneration. */
 export interface GenerateResponse extends BlockFlag {
@@ -240,24 +272,83 @@ function validName(v: unknown, field: string): string {
   return r.name;
 }
 
+const present = (v: unknown): boolean => v !== undefined && v !== null;
+
+/**
+ * Either shape of CONTRACT.md "RecipeConfig". A config with `mealTypes` or `diets` is the
+ * multi-choice shape: then both lists are required, `minMinutes` is optional, `maxMinutes` is any
+ * step of MINUTES_RANGE, and the legacy `mealType` and `diet` must be absent or null (so an old
+ * server, which requires them, refuses such a config instead of reading only part of it).
+ * Anything else is the legacy shape, validated exactly as before.
+ */
 export function validateConfig(v: unknown): RecipeConfig {
   if (!isObject(v)) invalid("config must be an object");
   const servings = v.servings;
   if (typeof servings !== "number" || !Number.isInteger(servings) || servings < 1 || servings > 12) {
     invalid("config.servings must be an integer from 1 to 12");
   }
-  const maxMinutes = v.maxMinutes === null || v.maxMinutes === undefined
-    ? null
-    : oneOf(MAX_MINUTES, v.maxMinutes, "config.maxMinutes");
-  return {
+  const common = {
     difficulty: oneOf(DIFFICULTIES, v.difficulty, "config.difficulty"),
     detail: oneOf(DETAILS, v.detail, "config.detail"),
     servings,
-    maxMinutes,
-    mealType: oneOf(MEAL_TYPES, v.mealType, "config.mealType"),
-    diet: oneOf(DIETS, v.diet, "config.diet"),
-    language: oneOf(LANGUAGES, v.language, "config.language"),
   };
+  const language = oneOf(LANGUAGES, v.language, "config.language");
+  if (present(v.mealTypes) || present(v.diets)) {
+    if (present(v.mealType) || present(v.diet)) invalid("config.mealType and config.diet are not allowed with mealTypes and diets");
+    const minMinutes = rangeMinutes(v.minMinutes, "config.minMinutes");
+    const maxMinutes = rangeMinutes(v.maxMinutes, "config.maxMinutes");
+    if (minMinutes !== null && maxMinutes !== null && minMinutes > maxMinutes) invalid("config.minMinutes must not be above config.maxMinutes");
+    return {
+      ...common,
+      minMinutes,
+      maxMinutes,
+      mealTypes: choices(MEAL_CHOICES, v.mealTypes, "config.mealTypes"),
+      diets: choices(DIET_CHOICES, v.diets, "config.diets"),
+      language,
+    };
+  }
+  if (present(v.minMinutes)) invalid("config.minMinutes is only allowed with mealTypes and diets");
+  const maxMinutes = present(v.maxMinutes) ? oneOf(MAX_MINUTES, v.maxMinutes, "config.maxMinutes") : null;
+  const mealType = oneOf(MEAL_TYPES, v.mealType, "config.mealType");
+  const diet = oneOf(DIETS, v.diet, "config.diet");
+  return {
+    ...common,
+    minMinutes: null,
+    maxMinutes,
+    mealTypes: mealType === "any" ? [] : [mealType],
+    diets: diet === "none" ? [] : [diet],
+    language,
+  };
+}
+
+/** null, or a multiple of MINUTES_RANGE.step within it. */
+function rangeMinutes(v: unknown, field: string): number | null {
+  if (!present(v)) return null;
+  const { min, max, step } = MINUTES_RANGE;
+  if (typeof v !== "number" || !Number.isInteger(v) || v < min || v > max || v % step !== 0) {
+    invalid(`${field} must be null or a multiple of ${step} from ${min} to ${max}`);
+  }
+  return v as number;
+}
+
+/** A list of distinct values of `values` (so at most all of them), returned in `values`' order. */
+function choices<T extends string>(values: readonly T[], v: unknown, field: string): T[] {
+  if (!Array.isArray(v) || v.length > values.length) invalid(`${field} must be a list of at most ${values.length} values`);
+  const picked = (v as unknown[]).map((x) => oneOf(values, x, field));
+  if (new Set(picked).size !== picked.length) invalid(`${field} must not repeat a value`);
+  return values.filter((x) => picked.includes(x));
+}
+
+/**
+ * The legacy config values a config is the same as (`maxMinutes`, `mealType`, `diet`), or null
+ * when only the multi-choice shape can say it. A request is bound to its meaning, not its shape:
+ * a legacy request hashes exactly as before the multi-choice shape existed, and so does a
+ * multi-choice one that means the same.
+ */
+export function legacyConfigOf(c: RecipeConfig): [number | null, string, string] | null {
+  if (c.minMinutes !== null || c.mealTypes.length > 1 || c.diets.length > 1) return null;
+  if (c.maxMinutes !== null && !(MAX_MINUTES as readonly number[]).includes(c.maxMinutes)) return null;
+  return [c.maxMinutes, c.mealTypes[0] ?? "any", c.diets[0] ?? "none"];
 }
 
 /** A requestId (any UUID version 1-8), lower-cased. */
@@ -368,10 +459,7 @@ export function inputHashOf(req: GenerateRequest): string {
   const canonical = JSON.stringify({
     kind: inputs.kind,
     courses: inputs.courses ?? null,
-    config: [
-      inputs.config.difficulty, inputs.config.detail, inputs.config.servings, inputs.config.maxMinutes,
-      inputs.config.mealType, inputs.config.diet, inputs.config.language,
-    ],
+    config: configHashPart(inputs.config),
     ingredients: inputs.ingredients.map((i) => [i.name, i.expiresOn, i.quantity]),
     // Only when there are some, so a request without them hashes as it did before the field
     // existed (a retry of a generation stored by the earlier deploy still matches).
@@ -382,6 +470,13 @@ export function inputHashOf(req: GenerateRequest): string {
     today: inputs.today,
   });
   return createHash("sha256").update(canonical).digest("hex");
+}
+
+/** The config's part of inputHashOf: the legacy values when there are some (see legacyConfigOf). */
+function configHashPart(c: RecipeConfig): unknown[] {
+  const legacy = legacyConfigOf(c);
+  if (legacy) return [c.difficulty, c.detail, c.servings, legacy[0], legacy[1], legacy[2], c.language];
+  return [c.difficulty, c.detail, c.servings, { minMinutes: c.minMinutes, maxMinutes: c.maxMinutes, mealTypes: c.mealTypes, diets: c.diets }, c.language];
 }
 
 const PLAY_TOKEN =/^[A-Za-z0-9._:-]{20,2048}$/;
