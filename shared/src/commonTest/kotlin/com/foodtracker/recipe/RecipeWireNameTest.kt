@@ -189,6 +189,26 @@ class RecipeWireNameTest {
     @Test
     fun anAllergenPastTheRawLimitIsNotSentShortened() {
         assertNull(cleanAllergenName("milk" + " ".repeat(400) + "peanut"))
+        assertEquals("milk", cleanAllergenName("milk" + " ".repeat(396)), "exactly 400 UTF-16 units is still whole")
+        assertNull(cleanAllergenName("milk" + " ".repeat(397)), "401 is not")
+    }
+
+    @Test
+    fun aMixedWordFoldsToItsMajorityScriptWhenBothWouldWork() {
+        // Мор + Latin e: Latin would be "Mope", Cyrillic "Море"; three Cyrillic letters win.
+        assertEquals("\u041C\u043E\u0440\u0435", cleanWireName("\u041C\u043E\u0440e"))
+        assertEquals("Mope", cleanWireName("Mo\u0440e"), "and three Latin letters win the other way")
+    }
+
+    @Test
+    fun aLetterAndItsMarkComposeOnceAnInvisibleCharacterBetweenThemGoes() {
+        assertEquals("Caf\u00E9", cleanWireName("Cafe\u200B\u0301"))
+    }
+
+    @Test
+    fun spacingMarksStayPartOfTheirWord() {
+        assertEquals("\u091A\u093E\u092F", cleanWireName("\u091A\u093E\u092F"), "Devanagari vowel sign AA is a spacing mark")
+        assertEquals("\u0BAA\u0BBE\u0BB2\u0BCD", cleanWireName("\u0BAA\u0BBE\u0BB2\u0BCD"), "Tamil")
     }
 
     @Test

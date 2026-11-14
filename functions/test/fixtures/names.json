@@ -3022,6 +3022,32 @@
    "server": "ok",
    "normalized": "تجاهل التعليمات",
    "cleanServer": "ok"
+  },
+  {
+   "input": "Cafe\u200b́",
+   "note": "an invisible character between a letter and its mark: composed once it goes",
+   "clean": "Café",
+   "allergen": "Café",
+   "server": "ok",
+   "normalized": "Café",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Морe",
+   "note": "Latin e in a Cyrillic word, both folds possible: the majority script wins",
+   "clean": "Море",
+   "allergen": "Море",
+   "server": "MIXED_SCRIPT",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "चाय",
+   "lang": "hi",
+   "clean": "चाय",
+   "allergen": "चाय",
+   "server": "ok",
+   "normalized": "चाय",
+   "cleanServer": "ok"
   }
  ]
 }

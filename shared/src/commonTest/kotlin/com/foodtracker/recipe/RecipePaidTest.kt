@@ -1824,6 +1824,20 @@ class RecipePaidTest {
     }
 
     @Test
+    fun allergensThatCleanToTheSameNameAreSentAndCountedOnce() = runUnconfined {
+        withBalance(5)
+        val many = (1..MAX_REQUEST_ALLERGENS).map { "allergen $it" }.toSet()
+        // A fullwidth copy and one with a zero-width space clean to names already in the list.
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = many + "\uFF41llergen 1" + "aller\u200Bgen 2"))
+        val holder = holder()
+        holder.generateOnServer()
+
+        assertEquals(1, backend.generated.size, "not refused as too many")
+        assertEquals(many, backend.generated[0].allergens.toSet())
+        assertEquals(MAX_REQUEST_ALLERGENS, backend.generated[0].allergens.size)
+    }
+
+    @Test
     fun exactlyAsManyAllergensAsTheServerTakesAreAllSent() = runUnconfined {
         withBalance(5)
         val many = (1..MAX_REQUEST_ALLERGENS).map { "allergen $it" }.toSet()

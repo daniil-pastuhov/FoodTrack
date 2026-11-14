@@ -47,6 +47,35 @@ class RecipePaidWordingTest {
 
     @Test
     @Config(sdk = [34], qualifiers = "en")
+    fun newEnglishPluralsAgreeWithTheirCount() {
+        val r = context.resources
+        assertEquals("1 recipe left", r.getQuantityString(R.plurals.recipe_balance_left, 1, 1))
+        assertEquals("3 recipes left", r.getQuantityString(R.plurals.recipe_balance_left, 3, 3))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 1, 1).contains("at most 1 allergen,"))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20).contains("at most 20 allergens,"))
+        assert(r.getQuantityString(R.plurals.recipe_refused_menu, 4, 4).startsWith("Couldn't make a menu"))
+        assert(r.getQuantityString(R.plurals.recipe_refused_menu, 1, 1).startsWith("Couldn't make a menu"))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun newRussianPluralsAgreeWithTheirCount() {
+        val r = context.resources
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20).contains("20 аллергенов"))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 3, 3).contains("3 аллергенов"))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 21, 21).contains("21 аллергена"))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "nb")
+    fun norwegianBusyAndRateLimitSayNothingWasTaken() {
+        val r = context.resources
+        assertEquals("En annen oppskrift skrives fortsatt. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", r.getString(R.string.recipe_failed_server_busy))
+        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", r.getString(R.string.recipe_failed_rate_limited))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
     fun aJoinSaysWhatMovedOrWhatWasOwed() {
         val resources = context.resources
         assertEquals("12 recipes moved from this phone to your account", recipeMergedMessage(resources, 12))
