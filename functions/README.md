@@ -260,8 +260,8 @@ servings, step by step, 20 allergens of 40 such characters, `outputJudge` in its
 | request | largest, no optional items | largest, with optional items |
 |---|---|---|
 | recipe | 13,090 bytes, USD 0.08108 | 12,934 bytes, USD 0.08084 |
-| 2-course menu | 14,172 bytes, USD 0.23126 | 14,028 bytes, USD 0.23104 |
-| 3-course menu | 14,191 bytes, USD 0.32129 | 14,047 bytes, USD 0.32107 |
+| 2-course menu | 14,212 bytes, USD 0.23132 | 14,068 bytes, USD 0.23110 |
+| 3-course menu | 14,231 bytes, USD 0.32135 | 14,087 bytes, USD 0.32113 |
 
 Output caps are unchanged, so every figure below holds as it was; `test/optionalIngredients.test.ts`
 checks the inequality for each kind.
