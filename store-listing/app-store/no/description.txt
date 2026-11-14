@@ -1,33 +1,35 @@
-Matvakt holder oversikt over hva du har i kjøleskapet, fryseren og skapene, og minner deg på maten før den blir dårlig, ikke etterpå.
+Matvakt holder oversikt over holdbarheten på maten i kjøleskapet, fryseren og matskapet: skann matvarene, se hva som bør brukes først, få en påminnelse før maten blir dårlig, og lag en oppskrift av det som snart går ut.
 
 LEGG TIL MAT PÅ SEKUNDER
 • Skann strekkoden, så fylles produktnavn og bilde ut for deg (via Open Food Facts)
 • Rett kameraet mot den påtrykte datoen, så leser Matvakt holdbarhetsdatoen
 • Ta bilde av frukt eller grønnsaker, så foreslår appen hva det er
-• Masseskanning: skann hele handleposen på én gang
-• Les en kvittering og legg til flere varer samtidig
+• Skann flere varer etter hverandre og legg til hele handleposen på én gang
+• Skann en kvittering og legg til flere varer samtidig
 
 GÅ ALDRI GLIPP AV EN DATO
-• Påminnelser noen dager før noe går ut på dato, til tidspunktet du velger
-• «Går snart ut» og «Utløpt» med et blikk
+• Fungerer med både «best før» og «siste forbruksdag»
+• Påminnelser noen dager før noe går ut på dato, på tidspunktet du velger
+• Se «Utløper snart» og «Utløpt» med ett blikk
 • Widgeter på Hjem-skjermen for varer som snart går ut, handlelisten og en rask oversikt
 
 HANDLE SMARTERE
-• Faste varer du bruker opp havner rett på handlelisten
+• Faste varer du bruker opp, havner rett på handlelisten
 • Del listen som tekst eller QR-kode
 • Valgfritt: se handlelisten når du kommer til en butikk du har lagret
 
 LAG MAT AV DET SOM SNART GÅR UT
-• Oppskrift-fanen krysser av varene som er nærmest datoen; endre utvalget, porsjoner, tid, kosthold og mer
-• Gratis: kopier eller del en ferdig forespørsel til AI-appen du allerede bruker
+• Oppskrift-fanen krysser av varene som går ut først; endre utvalget, antall porsjoner, tid, kosthold og mer
+• Gratis: kopier en ferdig ledetekst, eller del den med KI-appen du allerede bruker
 • Gratis på iPhone med Apple Intelligence (iOS 26 eller nyere): oppskriften skrives på selve telefonen
-• Oppskriftspakker (kjøp i appen): oppskrifter skrevet av serveren vår og lagret i appen, og en meny for 3 dager som bruker det som går ut først
+• Oppskriftspakker (kjøp i appen): oppskrifter skrevet av serveren vår og lagret i appen, og en måltidsplan for 3 dager («Meny for 3 dager») som bruker det som går ut først
 
 DINE DATA
 • Ingen reklame, ingen sporing
+• Ingen abonnement: appen er gratis, og oppskriftspakkene er valgfrie engangskjøp
 • Matvarene lagres på iPhonen din; ta sikkerhetskopi når du vil
 • Ingen konto nødvendig, heller ikke for å kjøpe en pakke. Logg inn med Apple eller Google bare hvis du vil bruke oppskriftene på andre telefoner
-• En oppskrift fra en pakke sender varene du krysser av, oppskriftsinnstillingene og allergenene dine til serveren vår. De gratis måtene sender ingenting til oss
+• En oppskrift fra en pakke sender varene du krysser av, oppskriftsinnstillingene og allergenene dine til serveren vår. De gratis alternativene sender ingenting til oss
 • Tilgjengelig på norsk, engelsk og russisk
 
 Kast mindre mat, spar penger og vit alltid hva du har hjemme.

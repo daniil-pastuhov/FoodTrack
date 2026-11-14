@@ -2,6 +2,11 @@
 
 A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Android (Jetpack Compose)** and **iOS (Native SwiftUI)**.
 
+Published as **BestBefore**:
+
+- **iPhone and iPad**: [BestBefore on the App Store](https://apps.apple.com/app/id6818647200)
+- **Google Play**: in closed testing, not public yet
+
 ## Features
 
 - 📷 **Barcode Scanning**: Scan 1D and 2D barcodes (EAN-13, UPC, Code 128, DataBar, QR).
