@@ -105,9 +105,9 @@ class CallableErrorTest {
         assertEquals(null, google.name, "no name kept")
         assertEquals(null, google.photo, "no photo kept")
 
-        val apple = FakeProfile("A Person", null)
-        dropNameAndPhoto(apple)
-        assertEquals(null, apple.name, "Apple's first-sign-in name too")
+        val nameOnly = FakeProfile("A Person", null)
+        dropNameAndPhoto(nameOnly)
+        assertEquals(null, nameOnly.name, "a name without a photo too")
 
         val clean = FakeProfile(null, null)
         dropNameAndPhoto(clean)

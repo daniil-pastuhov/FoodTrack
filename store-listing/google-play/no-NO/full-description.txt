@@ -26,7 +26,7 @@ Matvakt holder oversikt over hva du har i kjøleskapet, fryseren og skapene, og 
 <b>Dine data</b>
 • Ingen reklame, ingen sporing
 • Matvarene lagres på telefonen din; ta sikkerhetskopi når du vil
-• Ingen konto nødvendig, heller ikke for å kjøpe en pakke. Logg inn med Apple eller Google bare hvis du vil bruke oppskriftene på andre telefoner
+• Ingen konto nødvendig, heller ikke for å kjøpe en pakke. Logg inn med Google bare hvis du vil bruke oppskriftene på andre telefoner
 • En oppskrift fra en pakke sender varene du krysser av, oppskriftsinnstillingene og allergenene dine til serveren vår. De gratis måtene sender ingenting til oss
 • Tilgjengelig på norsk, engelsk og russisk
 

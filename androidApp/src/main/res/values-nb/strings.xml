@@ -928,9 +928,10 @@
     <string name="recipe_choice_phone_title">På denne telefonen, uten konto</string>
     <string name="recipe_choice_phone_body">Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter telefon, går de du ikke har brukt tapt.</string>
     <string name="recipe_choice_account_title">I en konto</string>
-    <string name="recipe_choice_account_body">Logg inn med Apple eller Google. Oppskriftene følger deg til en ny telefon og virker på både Android og iPhone. Vi lagrer konto-ID-en og e-postadressen din.</string>
-    <string name="recipe_sign_in_apple">Logg på med Apple</string>
+    <string name="recipe_choice_account_body">Logg inn med Google. Oppskriftene følger deg til en ny telefon, Android eller iPhone, der du logger inn med Google. Vi lagrer konto-ID-en og e-postadressen din.</string>
     <string name="recipe_sign_in_google">Logg på med Google</string>
+    <string name="recipe_apple_on_iphone_hint">Logget inn med Apple på en iPhone? Legg til innlogging med Google der, i Oppskriftsinnstillinger, for å bruke oppskriftene dine på denne telefonen.</string>
+    <string name="recipe_have_account_hint">Har du allerede oppskrifter i en konto? Logg inn for å bruke dem her.</string>
     <string name="recipe_store_error_title">Får ikke kontakt med butikken</string>
     <string name="recipe_store_error_body">Sjekk tilkoblingen og prøv igjen. Ingenting ble belastet.</string>
     <string name="recipe_rejected_title">Dette kjøpet kunne ikke legges til</string>
@@ -946,9 +947,9 @@
         <item quantity="other">oppskrifter i kontoen din</item>
     </plurals>
     <string name="recipe_signed_in_with">Logget inn med %1$s</string>
-    <string name="recipe_signed_in_add_apple">Logg inn på samme måte på en annen telefon for å bruke dem der. For å kunne logge inn med Apple også, legg det til her.</string>
-    <string name="recipe_signed_in_add_google">Logg inn på samme måte på en annen telefon for å bruke dem der. For å kunne logge inn med Google også, legg det til her.</string>
-    <string name="recipe_signed_in_both">Logg inn med én av dem på en annen telefon, Android eller iPhone, for å bruke dem der.</string>
+    <string name="recipe_signed_in_add_google">Innlogging med Apple virker bare i iPhone-appen. Legg til innlogging med Google her for å fortsette å bruke dem på Android.</string>
+    <string name="recipe_signed_in_google">Logg inn med Google på en annen telefon, Android eller iPhone, for å bruke dem der.</string>
+    <string name="recipe_signed_in_google_and_apple">Logg inn med Google på en annen telefon, Android eller iPhone, eller med Apple på en iPhone, for å bruke dem der.</string>
     <string name="recipe_add_sign_in">Legg til innlogging med %1$s</string>
     <string name="recipe_sign_out">Logg ut</string>
     <string name="recipe_delete_account">Slett konto</string>
@@ -958,6 +959,7 @@
         <item quantity="other">De %1$d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne telefonen.</item>
     </plurals>
     <string name="recipe_delete_title">Slette kontoen din?</string>
+    <string name="recipe_delete_apple_note">Denne kontoen er også koblet til Apple-kontoen din. Sletter du den her, fjernes kontoen og oppskriftene, men ikke den koblingen. For å fjerne koblingen også kan du slette kontoen i iPhone-appen i stedet, eller slå av Logg på med Apple for denne appen i innstillingene for Apple-kontoen.</string>
     <plurals name="recipe_delete_body">
         <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</item>
         <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</item>

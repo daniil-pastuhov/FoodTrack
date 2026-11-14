@@ -321,13 +321,18 @@ private fun StorageChoice(sheet: BuySheet.Choice, providers: Set<SignInProvider>
             body = stringResource(R.string.recipe_choice_phone_body),
             onClick = if (busy) null else actions.onWithoutAccount
         )
-        ChoiceCard(
-            icon = LarderIcons.UserRound,
-            title = stringResource(R.string.recipe_choice_account_title),
-            body = stringResource(R.string.recipe_choice_account_body),
-            onClick = null
-        ) {
-            SignInButtons(providers, signingIn = sheet.signingIn, enabled = !busy, onSignIn = actions.onWithAccount)
+        // Without Google configured (a build from a google-services.json without its web
+        // client) there is no sign-in to offer, so no account option either.
+        if (SignInProvider.GOOGLE in providers) {
+            ChoiceCard(
+                icon = LarderIcons.UserRound,
+                title = stringResource(R.string.recipe_choice_account_title),
+                body = stringResource(R.string.recipe_choice_account_body),
+                onClick = null
+            ) {
+                SignInButtons(providers, signingIn = sheet.signingIn, enabled = !busy, onSignIn = actions.onWithAccount)
+                AppleOnIphoneHint()
+            }
         }
     }
     SheetActions {
@@ -336,10 +341,10 @@ private fun StorageChoice(sheet: BuySheet.Choice, providers: Set<SignInProvider>
 }
 
 /**
- * Sign in with Apple and with Google, Apple first as the design has it. Google's is the branded
- * [GoogleSignInButton]. Apple's is still the app's outline button: Apple's guidelines allow a
- * custom Sign in with Apple button on other platforms only with the Apple logo artwork from Apple
- * Design Resources, which is not in the repository yet (see docs/recipe-setup.md).
+ * The sign-in Android offers: Google's branded [GoogleSignInButton], full width, alone. There is no
+ * Sign in with Apple on Android: Apple's guidelines allow a custom button only with Apple's logo
+ * artwork, which can't be redistributed in this public repository, and no button without it. An
+ * account with Apple attached on an iPhone signs in here with its Google sign-in.
  */
 @Composable
 internal fun SignInButtons(
@@ -347,35 +352,27 @@ internal fun SignInButtons(
     signingIn: SignInProvider?,
     enabled: Boolean,
     onSignIn: (SignInProvider) -> Unit,
-    exclude: Set<SignInProvider> = emptySet(),
-    accessibilityLabel: ((SignInProvider) -> String)? = null
+    accessibilityLabel: String? = null
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
-        listOf(SignInProvider.APPLE, SignInProvider.GOOGLE)
-            .filter { it in providers && it !in exclude }
-            .forEach { provider ->
-                when (provider) {
-                    SignInProvider.APPLE -> LarderButton(
-                        text = stringResource(R.string.recipe_sign_in_apple),
-                        onClick = { onSignIn(provider) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(accessibilityLabel?.let { label -> Modifier.semantics { contentDescription = label(provider) } } ?: Modifier),
-                        style = LarderButtonStyle.Outline,
-                        enabled = enabled,
-                        loading = signingIn == provider,
-                        leadingIcon = LarderIcons.Apple
-                    )
-                    SignInProvider.GOOGLE -> GoogleSignInButton(
-                        onClick = { onSignIn(provider) },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = enabled,
-                        loading = signingIn == provider,
-                        accessibilityLabel = accessibilityLabel?.invoke(provider)
-                    )
-                }
-            }
-    }
+    if (SignInProvider.GOOGLE !in providers) return
+    GoogleSignInButton(
+        onClick = { onSignIn(SignInProvider.GOOGLE) },
+        modifier = Modifier.fillMaxWidth(),
+        enabled = enabled,
+        loading = signingIn == SignInProvider.GOOGLE,
+        accessibilityLabel = accessibilityLabel
+    )
+}
+
+/** For someone whose recipes are in an account they made with Apple on an iPhone: that sign-in
+ *  doesn't work here until Google is added to the account there. */
+@Composable
+internal fun AppleOnIphoneHint() {
+    Text(
+        text = stringResource(R.string.recipe_apple_on_iphone_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }
 
 @Composable
@@ -430,7 +427,7 @@ private val previewPacks = listOf(
 private fun SheetPreview(sheet: BuySheet) = LarderTheme {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
         Column(modifier = Modifier.padding(LarderSpace.s4)) {
-            BuySheetBody(sheet, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE), BuySheetActions())
+            BuySheetBody(sheet, setOf(SignInProvider.GOOGLE), BuySheetActions())
         }
     }
 }
@@ -442,6 +439,10 @@ internal fun BuyPacksPreview() = SheetPreview(BuySheet.Packs(previewPacks, "reci
 @PreviewLightDark
 @Composable
 internal fun BuyChoicePreview() = SheetPreview(BuySheet.Choice(previewPacks, "recipes_50"))
+
+@PreviewLightDark
+@Composable
+internal fun BuyChoiceSigningInPreview() = SheetPreview(BuySheet.Choice(previewPacks, "recipes_50", signingIn = SignInProvider.GOOGLE))
 
 @PreviewLightDark
 @Composable

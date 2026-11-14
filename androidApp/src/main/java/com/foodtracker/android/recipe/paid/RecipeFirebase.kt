@@ -136,7 +136,7 @@ class RecipeFirebase(private val context: Context) {
 }
 
 /** The activity in front, for the flows that need one: Play's payment sheet, Credential
- *  Manager, and Apple's sign-in page. Registered from the Application. */
+ *  Manager. Registered from the Application. */
 object CurrentActivity : Application.ActivityLifecycleCallbacks {
     private var resumed: WeakReference<Activity>? = null
 

@@ -440,7 +440,11 @@ limited-use App Check token. Response `{ "deleted": true, "balance": 0 }`.
   otherwise): re-authenticate first. For an Apple-linked account, the re-authentication's
   `ASAuthorizationAppleIDCredential.authorizationCode` (UTF-8 string) is what to send; the server
   exchanges and revokes it, as Apple requires. (Alternatively the iOS client may call Firebase's
-  `Auth.auth().revokeToken(withAuthorizationCode:)` itself and omit the field.)
+  `Auth.auth().revokeToken(withAuthorizationCode:)` itself and omit the field.) Android has no
+  Sign in with Apple, so it re-authenticates with Google and sends no code, also for an account
+  with Apple attached on an iPhone: the account and the Auth user are deleted, but Apple's token
+  is not revoked. Its delete dialog says how to remove that link (delete from the iPhone app, or
+  stop using Sign in with Apple for the app in the Apple Account settings).
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
 - `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.
 

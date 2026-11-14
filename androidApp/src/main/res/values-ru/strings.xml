@@ -1024,9 +1024,10 @@
     <string name="recipe_choice_phone_title">На этом телефоне, без аккаунта</string>
     <string name="recipe_choice_phone_body">Входить никуда не нужно. Рецепты привязаны к этой установке приложения: если удалить приложение или сменить телефон, неиспользованные пропадут.</string>
     <string name="recipe_choice_account_title">В аккаунте</string>
-    <string name="recipe_choice_account_body">Войдите через Apple или Google. Рецепты переедут с вами на новый телефон и работают и на Android, и на iPhone. Мы храним идентификатор аккаунта и адрес почты.</string>
-    <string name="recipe_sign_in_apple">Вход с Apple</string>
+    <string name="recipe_choice_account_body">Войдите через Google. Рецепты переедут с вами на новый телефон, Android или iPhone: везде, где вы войдёте через Google. Мы храним идентификатор аккаунта и адрес почты.</string>
     <string name="recipe_sign_in_google">Вход через аккаунт Google</string>
+    <string name="recipe_apple_on_iphone_hint">Входили через Apple на iPhone? Добавьте там вход через Google в настройках рецептов, чтобы пользоваться рецептами на этом телефоне.</string>
+    <string name="recipe_have_account_hint">Уже есть рецепты в аккаунте? Войдите, чтобы пользоваться ими здесь.</string>
     <string name="recipe_store_error_title">Нет связи с магазином</string>
     <string name="recipe_store_error_body">Проверьте подключение и попробуйте ещё раз. Деньги не списаны.</string>
     <string name="recipe_rejected_title">Эту покупку не удалось добавить</string>
@@ -1046,9 +1047,9 @@
         <item quantity="other">рецепта в вашем аккаунте</item>
     </plurals>
     <string name="recipe_signed_in_with">Вход через %1$s</string>
-    <string name="recipe_signed_in_add_apple">Войдите так же на другом телефоне, чтобы пользоваться ими там. Чтобы входить и через Apple, добавьте его здесь.</string>
-    <string name="recipe_signed_in_add_google">Войдите так же на другом телефоне, чтобы пользоваться ими там. Чтобы входить и через Google, добавьте его здесь.</string>
-    <string name="recipe_signed_in_both">Войдите любым из способов на другом телефоне, Android или iPhone, чтобы пользоваться ими там.</string>
+    <string name="recipe_signed_in_add_google">Вход через Apple работает только в приложении для iPhone. Добавьте здесь вход через Google, чтобы и дальше пользоваться ими на Android.</string>
+    <string name="recipe_signed_in_google">Войдите через Google на другом телефоне, Android или iPhone, чтобы пользоваться ими там.</string>
+    <string name="recipe_signed_in_google_and_apple">Войдите через Google на другом телефоне, Android или iPhone, или через Apple на iPhone, чтобы пользоваться ими там.</string>
     <string name="recipe_add_sign_in">Добавить вход через %1$s</string>
     <string name="recipe_sign_out">Выйти</string>
     <string name="recipe_delete_account">Удалить аккаунт</string>
@@ -1060,6 +1061,7 @@
         <item quantity="other">Ваши %1$d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на телефоне.</item>
     </plurals>
     <string name="recipe_delete_title">Удалить аккаунт?</string>
+    <string name="recipe_delete_apple_note">Этот аккаунт связан и с вашим Аккаунтом Apple. Удаление здесь удалит аккаунт и его рецепты, но не эту связь. Чтобы удалить и её, удалите аккаунт в приложении на iPhone или отключите «Вход с Apple» для этого приложения в настройках Аккаунта Apple.</string>
     <plurals name="recipe_delete_body">
         <item quantity="one">Ваш %1$d неиспользованный рецепт пропадёт, его нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на телефоне.</item>
         <item quantity="few">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на телефоне.</item>

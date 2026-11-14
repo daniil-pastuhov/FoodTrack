@@ -314,10 +314,14 @@ enum class AccountKind {
     SIGNED_IN
 }
 
+/** The sign-ins an account can carry. Android offers only [GOOGLE] ([RecipeAccount.providers]);
+ *  [APPLE] is there because an account made or extended on an iPhone can carry it too. */
 enum class SignInProvider { GOOGLE, APPLE }
 
 data class AccountState(
     val kind: AccountKind = AccountKind.NONE,
+    /** Every sign-in the account carries, including ones this platform doesn't offer (Apple,
+     *  added on an iPhone, on an account signed in with Google on Android). */
     val providers: Set<SignInProvider> = emptySet(),
     /** As the provider gave it: Apple's relay address is shown as it is. */
     val email: String? = null,
@@ -351,7 +355,8 @@ sealed interface SignInResult {
 interface RecipeAccount {
     val state: StateFlow<AccountState>
 
-    /** The sign-ins this build offers; Google needs a configured web client id. */
+    /** The sign-ins this build offers. On Android only Google (it needs a configured web
+     *  client id), never Apple, whatever [AccountState.providers] carries. */
     val providers: Set<SignInProvider>
 
     /** Makes sure there is a user, creating an anonymous one if there is none. Only called once
@@ -371,11 +376,12 @@ interface RecipeAccount {
     suspend fun cancelMerge(merge: PendingMerge)
 
     /** Whether deletion has to sign in again first: the last sign-in is too old for
-     *  `deleteAccount`, or the provider's token has to be revoked from a fresh one (Apple). */
+     *  `deleteAccount`. */
     fun needsFreshSignIn(): Boolean
 
-    /** Signs in again with the account's own provider, as deletion requires, and revokes that
-     *  provider's token where the provider asks for it (Apple). False when cancelled or failed. */
+    /** Signs in again, as deletion requires, with a sign-in this platform offers (Google on
+     *  Android, also for an account that has Apple attached). False when cancelled or failed, or
+     *  when the account has no such sign-in. */
     suspend fun reauthenticateForDeletion(): Boolean
     suspend fun signOut()
 }

@@ -703,8 +703,8 @@
 "recipe_choice_phone_title" = "På denne telefonen, uten konto";
 "recipe_choice_phone_message" = "Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter telefon, går de du ikke har brukt tapt.";
 "recipe_choice_account_title" = "I en konto";
-"recipe_choice_account_message" = "Logg inn med Apple eller Google. Oppskriftene følger deg til en ny telefon og virker på både Android og iPhone. Vi lagrer konto-ID-en og e-postadressen din.";
-"recipe_choice_account_message_apple" = "Logg inn med Apple. Oppskriftene følger deg til en ny telefon og virker på både Android og iPhone. Vi lagrer konto-ID-en og e-postadressen din.";
+"recipe_choice_account_message" = "Logg inn med Apple eller Google. Oppskriftene følger deg til en ny telefon. På en Android-telefon virker bare innlogging med Google, så velg Google, eller legg det til senere, for å bruke dem der også. Vi lagrer konto-ID-en og e-postadressen din.";
+"recipe_choice_account_message_apple" = "Logg inn med Apple. Oppskriftene følger deg til en ny iPhone. Vi lagrer konto-ID-en og e-postadressen din.";
 "recipe_rejected_title" = "Dette kjøpet kunne ikke legges til";
 "recipe_rejected_message" = "Butikken melder at det er refundert eller allerede brukt. Hvis du ble belastet og ikke har fått oppskrifter, kontakt butikken for refusjon.";
 "recipe_rejected_build_message" = "Denne kopien av appen er satt opp for en annen butikk, så den kan ikke legge til kjøp fra App Store. Kjøpet ble ikke lagt til oppskriftene dine. Du kan be Apple om refusjon på reportaproblem.apple.com. For å kjøpe oppskrifter, installer appen fra App Store.";
@@ -713,8 +713,8 @@
 "recipe_have_account_hint" = "Har du allerede oppskrifter i en konto? Logg inn for å bruke dem her.";
 "recipe_signed_in_apple" = "Logget inn med Apple";
 "recipe_signed_in_google" = "Logget inn med Google";
-"recipe_signed_in_hint" = "Logg inn med én av dem på en annen telefon, Android eller iPhone, for å bruke dem der.";
-"recipe_signed_in_hint_add_google" = "Logg inn på samme måte på en annen telefon for å bruke dem der. For å kunne logge inn med Google også, legg det til her.";
+"recipe_signed_in_hint" = "Logg inn med én av dem på en annen iPhone, eller med Google på en Android-telefon, for å bruke dem der.";
+"recipe_signed_in_hint_add_google" = "Logg inn på samme måte på en annen iPhone for å bruke dem der. For å bruke oppskriftene på en Android-telefon også, legg til innlogging med Google.";
 "recipe_signed_in_hint_add_apple" = "Logg inn på samme måte på en annen telefon for å bruke dem der. For å kunne logge inn med Apple også, legg det til her.";
 "recipe_add_google" = "Legg til innlogging med Google";
 "recipe_add_apple" = "Legg til innlogging med Apple";

@@ -703,8 +703,8 @@
 "recipe_choice_phone_title" = "On this phone, no account";
 "recipe_choice_phone_message" = "Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change phone, the ones you haven't used are lost.";
 "recipe_choice_account_title" = "In an account";
-"recipe_choice_account_message" = "Sign in with Apple or Google. Your recipes follow you to a new phone and work on both Android and iPhone. We keep your account ID and email address.";
-"recipe_choice_account_message_apple" = "Sign in with Apple. Your recipes follow you to a new phone and work on both Android and iPhone. We keep your account ID and email address.";
+"recipe_choice_account_message" = "Sign in with Apple or Google. Your recipes follow you to a new phone. On an Android phone only Google sign-in works, so choose Google, or add it later, to use them there too. We keep your account ID and email address.";
+"recipe_choice_account_message_apple" = "Sign in with Apple. Your recipes follow you to a new iPhone. We keep your account ID and email address.";
 "recipe_rejected_title" = "This purchase couldn't be added";
 "recipe_rejected_message" = "The store reports it as refunded or already used. If you were charged and have no recipes, contact the store for a refund.";
 "recipe_rejected_build_message" = "This copy of the app is set up for a different store, so it can't add App Store purchases. The purchase was not added to your recipes. You can ask Apple for a refund at reportaproblem.apple.com. To buy recipes, install the app from the App Store.";
@@ -713,8 +713,8 @@
 "recipe_have_account_hint" = "Already have recipes in an account? Sign in to use them here.";
 "recipe_signed_in_apple" = "Signed in with Apple";
 "recipe_signed_in_google" = "Signed in with Google";
-"recipe_signed_in_hint" = "Sign in with either on another phone, Android or iPhone, to use them there.";
-"recipe_signed_in_hint_add_google" = "Sign in the same way on another phone to use them there. To sign in with Google too, add it here.";
+"recipe_signed_in_hint" = "Sign in with either on another iPhone, or with Google on an Android phone, to use them there.";
+"recipe_signed_in_hint_add_google" = "Sign in the same way on another iPhone to use them there. To use your recipes on an Android phone too, add Google sign-in.";
 "recipe_signed_in_hint_add_apple" = "Sign in the same way on another phone to use them there. To sign in with Apple too, add it here.";
 "recipe_add_google" = "Add Google sign-in";
 "recipe_add_apple" = "Add Apple sign-in";

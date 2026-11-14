@@ -86,9 +86,9 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 
 - [ ] Authentication > Sign-in method > Apple: Services ID as client id, Team ID `S8Q8KHX6G5`, key
       id and the `.p8`. **(agent)**, given the key: Identity Toolkit
-      `defaultSupportedIdpConfigs/apple.com` `appleSignInConfig.codeFlowConfig`. Android signs in
-      to Apple through Firebase's web flow and revokes the Apple token on account deletion
-      (`FirebaseAuth.revokeAccessToken`); both need this.
+      `defaultSupportedIdpConfigs/apple.com` `appleSignInConfig.codeFlowConfig`. Only Android's
+      Apple web flow needed this, and Android no longer signs in with Apple (decision in step 3);
+      iOS signs in natively with the bundle id.
 
 ### 3. App Store Connect
 
@@ -227,19 +227,20 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 - [ ] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md).
-- [ ] Android "Sign in with Apple" button: still the app's outline button with a generic apple
-      icon (`SignInButtons` in `RecipePaidViews.kt`). Apple's guidelines allow a custom button on
-      Android only with the Apple logo artwork from Apple Design Resources
-      (<https://developer.apple.com/design/resources/>, "Sign in with Apple" logos, SVG or PDF,
-      black and white), never a redrawn logo. Download it (it comes under Apple's licence, which
-      the owner accepts), convert the logo-only SVGs to vector drawables
-      `androidApp/src/main/res/drawable/apple_logo_black.xml` and `apple_logo_white.xml`, and
-      the button can then be drawn to the guidelines: black on the light theme, white on the
-      dark one, logo file as tall as the button, system font at 43 % of the button height,
-      title "Sign in with Apple" (ru "Вход с Apple", nb "Logg på med Apple", Apple's own
-      wording, already in the strings), at least 140 × 30 pt. The Google button (Android and
-      iOS) is done: Google's own button on iOS, and on Android a button drawn to Google's
-      branding guidelines with the "G" from Google's asset bundle (`GoogleSignInButton.kt`).
+- [x] Android "Sign in with Apple": **dropped** (owner's decision, 2026-11-14). Apple's guidelines
+      allow a custom button on Android only with Apple's logo artwork, which can't be
+      redistributed in this public repository, and allow no button without a logo, so Android
+      offers Google sign-in only; iOS keeps Apple and Google. An account made with Apple on an
+      iPhone reaches Android once Google is added to it on the iPhone (the apps say so). The
+      Firebase Apple provider's code-flow settings and the Services ID `com.foodbest.ios.signin`
+      exist on the live project but Android no longer uses them; they can stay. The Sign in with
+      Apple key (`SIWA_PRIVATE_KEY`, `SIWA_KEY_ID`) is still needed: the backend uses it to revoke
+      Apple's token when an iPhone deletes an account. Deleting on Android can't revoke it (no Apple
+      authorization code there); the Android delete dialog tells such a person to delete from the
+      iPhone app or to stop using Sign in with Apple for the app in their Apple Account settings.
+      The Google button (Android and iOS) is done: Google's own button on iOS, and on Android a
+      button drawn to Google's branding guidelines with the "G" from Google's asset bundle
+      (`GoogleSignInButton.kt`).
 
 ### App Review switch
 
