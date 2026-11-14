@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
+import com.foodtracker.android.BuildConfig
 import com.foodtracker.android.R
 import com.foodtracker.android.ui.design.GoogleSignInButton
 import com.foodtracker.android.ui.design.LarderButton
@@ -273,6 +274,20 @@ internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actio
                 LarderButton(text = stringResource(R.string.recipe_close), onClick = actions.onDismiss, style = LarderButtonStyle.Text)
             }
         }
+        // App Check refused this install before any money moved: said as it is, with no Try
+        // again, since asking again won't change it. Debug builds also name the cause.
+        BuySheet.NotAvailableHere -> {
+            val body = stringResource(R.string.recipe_not_available_body)
+            LarderCallout(
+                kind = LarderCalloutKind.Info,
+                icon = LarderIcons.CircleAlert,
+                title = stringResource(R.string.recipe_not_available_title),
+                message = if (BuildConfig.DEBUG) body + "\n\n" + stringResource(R.string.recipe_not_available_debug) else body
+            )
+            SheetActions {
+                LarderButton(text = stringResource(R.string.recipe_close), onClick = actions.onDismiss, style = LarderButtonStyle.Text)
+            }
+        }
     }
 }
 
@@ -483,6 +498,10 @@ internal fun BuyVerifyingPreview() = SheetPreview(BuySheet.Packs(previewPacks, "
 @PreviewLightDark
 @Composable
 internal fun BuyStoreErrorPreview() = SheetPreview(BuySheet.StoreUnavailable)
+
+@PreviewLightDark
+@Composable
+internal fun BuyNotAvailableHerePreview() = SheetPreview(BuySheet.NotAvailableHere)
 
 @PreviewLightDark
 @Composable

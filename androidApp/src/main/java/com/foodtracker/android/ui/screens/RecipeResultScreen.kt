@@ -58,6 +58,7 @@ import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.MenuCourseKind
 import com.foodtracker.recipe.MenuCourse
+import com.foodtracker.recipe.PastDateItem
 import com.foodtracker.recipe.MenuDay
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
@@ -67,9 +68,42 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import java.time.format.DateTimeFormatter
 
+/** "Hamburgare (145 days over)": each item with the status chip's own wording, its first letter
+ *  lowered where the wording starts a sentence ("Просрочено…", "Utløpt…"). */
+internal fun pastDateList(resources: Resources, items: List<PastDateItem>): String {
+    val locale = resources.configuration.locales[0]
+    return items.joinToString(", ") { item ->
+        val over = resources.getQuantityString(R.plurals.status_days_over, item.daysOver, item.daysOver)
+        val lowered = if (locale.language == "en") over else over.replaceFirstChar { it.lowercase(locale) }
+        resources.getString(R.string.recipe_past_date_item, isolated(item.name), lowered)
+    }
+}
+
+/** The red line above a written recipe's ingredients and in its shared text, or null with none
+ *  past its date. */
+internal fun pastDateWarning(resources: Resources, items: List<PastDateItem>): String? = when {
+    items.isEmpty() -> null
+    items.size == 1 -> resources.getString(R.string.recipe_past_date_result_one, pastDateList(resources, items))
+    else -> resources.getString(R.string.recipe_past_date_result_many, pastDateList(resources, items))
+}
+
+/** The form's red callout over "Cook with": how many ticked items are past their date and the
+ *  oldest, or null when none is. */
+internal fun pastDateFormWarning(resources: Resources, items: List<PastDateItem>): String? {
+    if (items.isEmpty()) return null
+    val oldest = items.maxOf { it.daysOver }
+    val days = resources.getQuantityString(R.plurals.recipe_past_days, oldest, oldest)
+    return if (items.size == 1) {
+        resources.getString(R.string.recipe_past_date_form_single, days)
+    } else {
+        resources.getQuantityString(R.plurals.recipe_past_date_form, items.size, items.size, days)
+    }
+}
+
 /** A recipe as plain text, for Share: what another app or a message can hold. */
 fun recipeShareText(resources: Resources, recipe: Recipe): String = buildString {
     append(recipe.title)
+    pastDateWarning(resources, recipe.pastDate)?.let { append("\n\n").append("⚠ ").append(it) }
     if (recipe.summary.isNotBlank()) append("\n\n").append(recipe.summary)
     val facts = listOfNotNull(
         recipe.minutes.takeIf { it > 0 }?.let { recipeDurationLabel(resources, it) },
@@ -104,6 +138,7 @@ internal fun menuCourseLabel(resources: Resources, course: MenuCourseKind): Stri
 /** A menu as plain text, for Share: each day with its dishes, then every recipe in full. */
 fun menuShareText(resources: Resources, menu: Menu, today: LocalDate): String = buildString {
     append(resources.getString(R.string.recipe_menu_title))
+    pastDateWarning(resources, menu.pastDate)?.let { append("\n\n").append("⚠ ").append(it) }
     menu.days.forEach { day ->
         append("\n\n").append(menuDayLabel(resources, day.date, today))
         day.courses.forEach { append("\n- ").append(menuCourseLabel(resources, it.course)).append(": ").append(it.recipe.title) }
@@ -255,6 +290,7 @@ internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, c
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            PastDateCallout(menu.pastDate, Modifier.padding(top = LarderSpace.s3))
             menu.days.forEachIndexed { dayIndex, day ->
                 SectionHeader(menuDayLabel(resources, day.date, today))
                 if (day.uses.isNotEmpty()) {
@@ -265,6 +301,8 @@ internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, c
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+                // The day's own share of the menu's past-date items, as each of its dishes says.
+                PastDateCallout(day.courses.firstOrNull()?.recipe?.pastDate.orEmpty(), Modifier.padding(bottom = LarderSpace.s2))
                 LarderGroup {
                     day.courses.forEachIndexed { courseIndex, course ->
                         if (courseIndex > 0) LarderDivider()
@@ -330,6 +368,8 @@ internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false) {
                 )
                 RecipeFact(LarderIcons.Gauge, recipeDifficultyLabel(resources, recipe.difficulty))
             }
+            // Above the ingredients, never in a footer: seen as the recipe opens.
+            PastDateCallout(recipe.pastDate, Modifier.padding(top = LarderSpace.s4))
 
             SectionHeader(stringResource(R.string.recipe_ingredients))
             LarderGroup {
@@ -404,6 +444,18 @@ internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false) {
 }
 
 /** A dish in a menu: its course over its name, the time at the end. */
+/** The red past-date warning of a written recipe, menu or menu day; nothing when none is. */
+@Composable
+internal fun PastDateCallout(items: List<PastDateItem>, modifier: Modifier = Modifier) {
+    val text = pastDateWarning(LocalContext.current.resources, items) ?: return
+    LarderCallout(
+        kind = LarderCalloutKind.Error,
+        icon = LarderIcons.TriangleAlert,
+        message = text,
+        modifier = modifier
+    )
+}
+
 @Composable
 private fun DishRow(course: String, title: String, minutes: String?, onClick: () -> Unit) {
     Row(

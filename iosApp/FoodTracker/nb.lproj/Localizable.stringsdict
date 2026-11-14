@@ -930,5 +930,53 @@
             <string>Denne {the_device} skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
         </dict>
     </dict>
+    <key>recipe_optional_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Den andre varen i matskapet kan også brukes</string>
+            <key>other</key>
+            <string>De %d andre varene i matskapet kan også brukes</string>
+        </dict>
+    </dict>
+    <key>recipe_past_date_form</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%1$d avkryssede varer er gått ut på dato, én for %2$@ siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</string>
+            <key>other</key>
+            <string>%1$d avkryssede varer er gått ut på dato, én for %2$@ siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</string>
+        </dict>
+    </dict>
+    <key>recipe_past_days</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d dag</string>
+            <key>other</key>
+            <string>%d dager</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

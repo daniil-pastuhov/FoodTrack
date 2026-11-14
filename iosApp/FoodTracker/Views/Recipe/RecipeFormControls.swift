@@ -116,6 +116,9 @@ struct RecipeGoButton: View {
     let title: String
     let icon: LarderIconName
     var cost: String? = nil
+    /// As wide as its label, like Scan on Home, for an action with no cost (the shared prompt
+    /// pinned alone); the label still wraps when large text needs it.
+    var compact = false
     let action: () -> Void
 
     @Environment(\.isEnabled) private var isEnabled
@@ -128,7 +131,7 @@ struct RecipeGoButton: View {
                     .larderFont(.label)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: compact ? nil : .infinity, alignment: .leading)
                 if let cost {
                     Text(cost)
                         .larderFont(.caption)
@@ -141,7 +144,7 @@ struct RecipeGoButton: View {
             .foregroundStyle(isEnabled ? LarderColor.onPrimary : LarderColor.onSurfaceVariant)
             .padding(.vertical, LarderSpace.s2)
             .padding(.horizontal, LarderSpace.s5)
-            .frame(maxWidth: .infinity, minHeight: 56)
+            .frame(maxWidth: compact ? nil : .infinity, minHeight: 56)
             .background(
                 isEnabled ? LarderColor.primary : LarderColor.surfaceContainerHigh,
                 in: RoundedRectangle(cornerRadius: LarderRadius.lg)
@@ -161,6 +164,52 @@ private struct RecipeGoButtonStyle: ButtonStyle {
                 RoundedRectangle(cornerRadius: LarderRadius.lg)
                     .fill(LarderColor.onPrimary.opacity(configuration.isPressed ? 0.14 : 0))
             }
+    }
+}
+
+/// "How recipes work": one short sheet, shown by itself the first time the tab opens and from
+/// Recipe settings after that. It names only the ways this device and build really offer, shows a
+/// price only once the store has given one, and its one way out is just "Got it"; "See recipe
+/// packs" is there only where buying is offered. Opening it calls nothing: no account, no App
+/// Check token, nothing from our server. Android: `RecipeIntroSheet`.
+struct RecipeIntroSheet: View {
+    @ObservedObject var model: RecipeViewModel
+
+    private var credits: RecipeCredits { model.credits }
+    /// The phone's model is there, ready or still downloading.
+    private var onDevice: Bool { model.routes.onDevice || model.routes.onDevicePreparing }
+
+    var body: some View {
+        LarderSheet(L10n.recipeIntroTitle) {
+            Text(L10n.recipeIntroMessage)
+                .larderFont(.body)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+            LarderGroup {
+                OnboardingRow(.share2, title: L10n.recipeIntroPromptTitle, supporting: L10n.recipeIntroPromptMessage)
+                if onDevice {
+                    OnboardingRow(.smartphone, title: L10n.recipeIntroDeviceTitle, supporting: L10n.recipeIntroDeviceMessage)
+                }
+                if credits.isPaidRouteAvailable {
+                    OnboardingRow(
+                        .sparkles,
+                        title: L10n.recipeIntroPacksTitle,
+                        supporting: L10n.recipeIntroPacksMessage(credits.costs, lowestPrice: credits.lowestPackPrice)
+                    )
+                }
+            }
+            Text(L10n.recipeIntroAgain)
+                .larderFont(.bodySm)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(spacing: LarderSpace.s1) {
+                LarderButton(L10n.recipeIntroStart, fullWidth: true) { model.dismissIntro() }
+                if credits.canBuy {
+                    LarderButton(L10n.recipeIntroPacksAction, variant: .text, fullWidth: true) { model.introToPacks() }
+                }
+            }
+            .padding(.top, LarderSpace.s2)
+        }
     }
 }
 

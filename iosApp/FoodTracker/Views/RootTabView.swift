@@ -477,8 +477,15 @@ extension RootTabView {
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
     /// recipe, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
     /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`,
-    /// recipeSettings, savedRecipes, recipeResult, which saves a sample recipe first) goes to that
-    /// route, and `-demoAllergen <name>` adds to the allergen list.
+    /// recipeSettings, savedRecipes, recipeResult, which saves a sample recipe first, or the one in
+    /// `-demoRecipe <file>`, likewise recipeMenu, and scan, see below) goes to that route, and
+    /// `-demoAllergen <name>` adds to the allergen list.
+    ///
+    /// `-demoRoute scan -demoScanImage <png> -demoScanBarcode <code> -demoScanDate <yyyy-mm-dd>`
+    /// opens the scanner on that picture instead of the camera, which the simulator lacks, and
+    /// hands the scanner the barcode and then the date as if the camera had read them off it: the
+    /// barcode is looked up as usual (the screenshots put it in the product cache) and the date
+    /// lands on the product as Scan date's does. scripts/demo_scan_image.py draws the picture.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
@@ -513,15 +520,27 @@ extension RootTabView {
             recipeViewModel.path = [.saved]
         case "recipeResult":
             selectedTab = .recipe
-            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe())]
+            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe(demoFile(Recipe.self)))]
         case "recipeMenu":
             selectedTab = .recipe
-            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoMenu())]
+            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoMenu(demoFile(RecipeMenu.self)))]
+        case "scan":
+            if let path = arguments.string(forKey: "demoScanImage"), let image = UIImage(contentsOfFile: path),
+               let barcode = arguments.string(forKey: "demoScanBarcode"),
+               let day = arguments.string(forKey: "demoScanDate"),
+               case let parts = day.split(separator: "-").compactMap({ Int($0) }), parts.count == 3,
+               let date = Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) {
+                ScannerSheetView.demoFeed = ScanDemoFeed(image: image, barcode: barcode, date: date)
+                scannerRequest = ScannerRequest(mode: .barcode)
+            }
         case "buyRecipes":
             selectedTab = .recipe
             recipeViewModel.showsBuySheet = true
         default: break
         }
+        // `-demoRecipeIntro YES`: "How recipes work" as on a first visit (demo launches never
+        // open it by themselves).
+        if arguments.bool(forKey: "demoRecipeIntro") { recipeViewModel.showIntroForDemo() }
         if arguments.object(forKey: "demoRecipeCredits") != nil {
             recipeViewModel.credits.showDemo(
                 balance: arguments.integer(forKey: "demoRecipeCredits"),
@@ -534,6 +553,13 @@ extension RootTabView {
                 recipeViewModel.setMenuCourses(arguments.integer(forKey: "demoRecipeCourses"))
             }
         }
+    }
+
+    /// The JSON file `-demoRecipe` names, decoded, or nil.
+    private func demoFile<T: Decodable>(_ type: T.Type) -> T? {
+        guard let path = UserDefaults.standard.string(forKey: "demoRecipe"),
+              let data = FileManager.default.contents(atPath: path) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
     }
 }
 #endif

@@ -104,6 +104,17 @@ everything else working, including spending the remaining balance. It is set for
 buyer got store refunds of credits they had already used, more than the server allows. Purchases
 that still go through are credited normally.
 
+## Capability `acceptsOptionalIngredients`
+
+Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generateRecipe`,
+`getGeneration`, `mergeBalance`) from a server that reads `optionalIngredients` carries
+`"acceptsOptionalIngredients": true`; a server deployed before the field existed sends nothing.
+Clients send `optionalIngredients` only when the latest such response said `true` (keep the flag
+with the cached balance; absent in a later response withdraws it, as after a rollback). Unknown
+request fields are ignored, so an old server would accept the field and silently not use it; the
+flag keeps a new client from sending pantry data a server would not read. Old clients ignore the
+flag and never send the field.
+
 ## Types
 
 ### RecipeConfig
@@ -127,6 +138,28 @@ that still go through are credited normally.
 | `quantity` | int or null | 0–9999, or `null` |
 
 `allergens` is a list of at most 20 strings under the same "Name rules" as `name`.
+
+#### Optional ingredients
+
+`optionalIngredients` (`generateRecipe`, optional) is the rest of the pantry, which the recipe
+**may** use in addition to `ingredients` ("Send all products" in the apps): absent or `null` is
+none. Same entry shape as `ingredients`, and the list itself (at most 30 entries) and each entry's
+`expiresOn` and `quantity` are checked as strictly (`INVALID_REQUEST`). Names go through the same
+"Name rules", but a name the rules refuse, or one already in the request (ignoring case), is
+**left out**, never refusing the request, and is not counted against the daily rejection limit. Of
+what is left, entries are kept in the order sent until `ingredients` plus the kept optional items
+would exceed **30 names** or **1,050 code points of names** together; an entry that does not fit
+is skipped and a later, shorter one may still be kept. Clients send them soonest date first and
+already capped (the shared rule in the apps), so the server's cut only matters for other clients.
+The caps make the worst-case input of a request with optional items smaller than that of the
+largest request without them (README "Spend ceilings"). The price does not change.
+
+The model gets them in a second data block, labelled optional and framed as untrusted data like
+the first; it must build the dish around `ingredients` and may use optional items where they help.
+An ingredient of the answer that is an optional item has `fromPantry: true`, and a menu day's
+`uses` may name optional items. An answer that uses no item of `ingredients` is still refused
+(`NO_PANTRY`). The kept optional items are part of the inputs a `requestId` is bound to; a request
+without them is bound exactly as before the field existed.
 
 #### Name rules
 
@@ -220,13 +253,15 @@ of it in the answer is not caught unless the word lists have it.
 
 `amount` may be an empty string (e.g. "salt to taste" in `name`). `fromPantry` is decided by the
 server (the model names which pantry item an ingredient is; the server checks it exists).
-`pantryIndex` (integer, optional) is present exactly when `fromPantry` is true: the 0-based index
-into the request's `ingredients` of the item this ingredient is, so a client can look up that
-item and its `expiresOn` (for example to warn that a dish uses an item past its date). It is
-absent on answers generated before it existed; read it as optional. An ingredient with
+`pantryIndex` (integer, optional) is present exactly when the ingredient is one of the request's
+`ingredients`: its 0-based index there. `optionalIndex` (integer, optional) is present exactly
+when it is one of the request's `optionalIngredients`: its 0-based index in that list **as
+sent** (entries the server left out still count). With them a client can look up the item and
+its `expiresOn` (for example to warn that a dish uses an item past its date). Both are absent on
+answers generated before they existed; read them as optional. An ingredient with
 `fromPantry: false` is something the cook supplies: a staple, or one of the few common extras the
 model may add when the pantry items alone do not make a proper dish (it may need buying). Every
-recipe, and every day of a menu, uses at least one pantry item (see "Failures and refunds"), and
+recipe, and every day of a menu, uses at least one item of `ingredients` (see "Failures and refunds"), and
 `servings` and `difficulty` are always the requested values. Every string is plain text, at most:
 title 100, summary 400, amount 40, ingredient name 80, step 600, tip 300 characters; 1–40
 ingredients; steps 1–7 (`brief`), 2–10 (`standard`), 2–18 (`stepByStep`). No line breaks, control
@@ -248,7 +283,8 @@ still render every field as plain text (never as markdown or HTML).
 ```
 
 `uses` is the model's own list of the items a day uses, mapped to their names; it can be
-incomplete. To know exactly which items a dish uses, read the ingredients' `pantryIndex`.
+incomplete. To know exactly which items a dish uses, read the ingredients' `pantryIndex` and
+`optionalIndex`.
 
 Always exactly 3 days: `today`, `today + 1`, `today + 2`, in order. `courses: 2` gives
 `starter, main`; `courses: 3` gives `starter, main, dessert`, always in that order. A model
@@ -268,6 +304,7 @@ Request:
   "courses": 2,
   "config": { "...RecipeConfig" },
   "ingredients": [{ "name": "Pasta", "expiresOn": "2026-11-20", "quantity": 1 }],
+  "optionalIngredients": [{ "name": "Basil", "expiresOn": null, "quantity": 1 }],
   "allergens": ["peanut"],
   "allergenConsent": true,
   "today": "YYYY-MM-DD (device local date; must be within a day of the server's UTC date)"
@@ -278,13 +315,15 @@ Request:
 absent, `null` or anything with an empty list otherwise. See "Allergen consent" below.
 
 `courses` is required for `menu` and must be absent or null for `recipe`. 1 to 30 ingredients.
+`optionalIngredients`: see "Optional ingredients"; send it only to a server that says
+`acceptsOptionalIngredients` (see that section).
 Cost: `costs.recipe`, `costs.menu2` or `costs.menu3` (see "Costs"; by default 1, 4, 5).
 
 Response:
 
 ```json
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
-  "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }
+  "costs": { "recipe": 1, "menu2": 4, "menu3": 5 }, "acceptsOptionalIngredients": true }
 ```
 
 | status | meaning | `charged` | client action |

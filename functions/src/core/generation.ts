@@ -8,6 +8,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
+  CAPABILITIES,
   fail,
   inputHashOf,
   isNameRejection,
@@ -577,7 +578,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   const config = await deps.config();
   const plan = planFor(req, config);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
-  if (!reservation.reserved) return { ...reservation.response, ...(await blockFlag(deps.db, reservation.user, config)) };
+  if (!reservation.reserved) return { ...reservation.response, ...CAPABILITIES, ...(await blockFlag(deps.db, reservation.user, config)) };
   const started = deps.now();
   const outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
   const durationMs = deps.now() - started;
@@ -590,7 +591,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     settled,
     durationMs,
   );
-  return { ...settled.response, ...(await blockFlag(deps.db, settled.user, config)) };
+  return { ...settled.response, ...CAPABILITIES, ...(await blockFlag(deps.db, settled.user, config)) };
 }
 
 /**
@@ -609,5 +610,5 @@ export async function getGeneration(deps: Deps, caller: Caller, data: unknown): 
   const gen = gSnap.data();
   if (!gen) fail("not-found", "UNKNOWN_REQUEST", "No generation with this requestId");
   const user = uSnap.data();
-  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...(await blockFlag(deps.db, user, config)) };
+  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...CAPABILITIES, ...(await blockFlag(deps.db, user, config)) };
 }

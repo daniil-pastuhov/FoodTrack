@@ -10,6 +10,8 @@ import {
   LANGUAGES,
   MAX_ALLERGENS,
   MAX_INGREDIENTS,
+  MAX_OPTIONAL_NAME_CHARS,
+  MAX_TOTAL_INGREDIENTS,
 } from "./constants";
 import { SUSPICIOUS_INPUT_RULES, normalizeName, type InputRule } from "./core/inputSafety";
 
@@ -40,6 +42,8 @@ export interface IngredientInput {
   expiresOn: string | null;
   /** Item count in the pantry, or null when unknown. */
   quantity: number | null;
+  /** Kept optional items only: the entry's index in `optionalIngredients` as the client sent it. */
+  sentIndex?: number;
 }
 
 export interface GenerateRequest {
@@ -48,6 +52,13 @@ export interface GenerateRequest {
   courses?: 2 | 3;
   config: RecipeConfig;
   ingredients: IngredientInput[];
+  /**
+   * The rest of the pantry, which the recipe MAY use as well ("Send all products" in the apps):
+   * validated like `ingredients`, but a name the rules refuse is left out rather than refusing the
+   * request, and what is kept is capped together with `ingredients` (CONTRACT.md "Optional
+   * ingredients"). Empty when the client sent none.
+   */
+  optionalIngredients: IngredientInput[];
   allergens: string[];
   today: string;
 }
@@ -57,10 +68,15 @@ export interface RecipeIngredient {
   name: string;
   fromPantry: boolean;
   /**
-   * Present exactly when fromPantry: the 0-based index of the request's `ingredients` entry this
-   * ingredient is, so a client can find that item and its date. Absent in answers saved before it.
+   * Present exactly when this is one of the request's `ingredients`: its 0-based index there, so
+   * a client can find that item and its date. Absent in answers saved before it.
    */
   pantryIndex?: number;
+  /**
+   * Present exactly when this is one of the request's `optionalIngredients`: its 0-based index in
+   * that list as sent (entries the server left out still count), so a client can find its date.
+   */
+  optionalIndex?: number;
 }
 
 export interface Recipe {
@@ -100,7 +116,17 @@ export type CostsWire = Costs;
  */
 export interface BlockFlag {
   purchasesBlocked?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that reads
+   * `optionalIngredients`. A client sends optional ingredients only after a response said so, so a
+   * server deployed before the field existed (which ignores it) is never sent pantry data it would
+   * not use.
+   */
+  acceptsOptionalIngredients?: true;
 }
+
+/** Spread into every response that carries `balance` (see BlockFlag). */
+export const CAPABILITIES = { acceptsOptionalIngredients: true } as const;
 
 /** generateRecipe and getGeneration. */
 export interface GenerateResponse extends BlockFlag {
@@ -258,15 +284,10 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
     invalid(`ingredients must hold 1 to ${MAX_INGREDIENTS} items`);
   }
   const ingredients = v.ingredients.map((raw: unknown, i: number): IngredientInput => {
-    if (!isObject(raw)) invalid(`ingredients[${i}] must be an object`);
-    const expiresOn = raw.expiresOn === null || raw.expiresOn === undefined ? null : raw.expiresOn;
-    if (expiresOn !== null && !isIsoDate(expiresOn)) invalid(`ingredients[${i}].expiresOn must be YYYY-MM-DD`);
-    const q = raw.quantity === undefined ? null : raw.quantity;
-    if (q !== null && (typeof q !== "number" || !Number.isInteger(q) || q < 0 || q > 9999)) {
-      invalid(`ingredients[${i}].quantity must be an integer from 0 to 9999`);
-    }
-    return { name: validName(raw.name, `ingredients[${i}].name`), expiresOn, quantity: q };
+    const shape = ingredientShape(raw, `ingredients[${i}]`);
+    return { name: validName(raw && (raw as Record<string, unknown>).name, `ingredients[${i}].name`), ...shape };
   });
+  const optionalIngredients = validateOptionalIngredients(v.optionalIngredients, ingredients);
 
   const allergensRaw = v.allergens === undefined ? [] : v.allergens;
   if (!Array.isArray(allergensRaw) || allergensRaw.length > MAX_ALLERGENS) {
@@ -287,9 +308,55 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
     ...(courses ? { courses } : {}),
     config: validateConfig(v.config),
     ingredients,
+    optionalIngredients,
     allergens,
     today: v.today,
   };
+}
+
+/** An ingredient's date and quantity, checked; a malformed one refuses the request. */
+function ingredientShape(raw: unknown, field: string): { expiresOn: string | null; quantity: number | null } {
+  if (!isObject(raw)) invalid(`${field} must be an object`);
+  const expiresOn = raw.expiresOn === null || raw.expiresOn === undefined ? null : raw.expiresOn;
+  if (expiresOn !== null && !isIsoDate(expiresOn)) invalid(`${field}.expiresOn must be YYYY-MM-DD`);
+  const q = raw.quantity === undefined ? null : raw.quantity;
+  if (q !== null && (typeof q !== "number" || !Number.isInteger(q) || q < 0 || q > 9999)) {
+    invalid(`${field}.quantity must be an integer from 0 to 9999`);
+  }
+  return { expiresOn: expiresOn as string | null, quantity: q as number | null };
+}
+
+/**
+ * `optionalIngredients`: absent or null is none. The list itself and each entry's shape are
+ * checked as strictly as `ingredients` (an honest client never gets them wrong), but a name the
+ * rules refuse, or one already in the request, is only left out: an optional item never stops a
+ * recipe, and leaving it out keeps it away from the model just as well. What is kept, in the order
+ * sent (the clients send soonest date first), is capped so that `ingredients` and the kept
+ * optional items together hold at most MAX_TOTAL_INGREDIENTS names and MAX_OPTIONAL_NAME_CHARS
+ * code points of names; an entry that does not fit is skipped. The caps keep the worst-case input
+ * of a request with optional items below that of the largest request without them (README "Spend
+ * ceilings").
+ */
+export function validateOptionalIngredients(v: unknown, ingredients: readonly IngredientInput[]): IngredientInput[] {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > MAX_INGREDIENTS) invalid(`optionalIngredients must be a list of at most ${MAX_INGREDIENTS} items`);
+  const seen = new Set(ingredients.map((i) => i.name.toLowerCase()));
+  let names = ingredients.length;
+  let chars = ingredients.reduce((sum, i) => sum + Array.from(i.name).length, 0);
+  const kept: IngredientInput[] = [];
+  v.forEach((raw: unknown, i: number) => {
+    const shape = ingredientShape(raw, `optionalIngredients[${i}]`);
+    const checked = normalizeName((raw as Record<string, unknown>).name);
+    if (!checked.ok) return;
+    const key = checked.name.toLowerCase();
+    const length = Array.from(checked.name).length;
+    if (seen.has(key) || names + 1 > MAX_TOTAL_INGREDIENTS || chars + length > MAX_OPTIONAL_NAME_CHARS) return;
+    seen.add(key);
+    names++;
+    chars += length;
+    kept.push({ name: checked.name, ...shape, sentIndex: i });
+  });
+  return kept;
 }
 
 /**
@@ -306,6 +373,11 @@ export function inputHashOf(req: GenerateRequest): string {
       inputs.config.mealType, inputs.config.diet, inputs.config.language,
     ],
     ingredients: inputs.ingredients.map((i) => [i.name, i.expiresOn, i.quantity]),
+    // Only when there are some, so a request without them hashes as it did before the field
+    // existed (a retry of a generation stored by the earlier deploy still matches).
+    ...(inputs.optionalIngredients.length > 0
+      ? { optionalIngredients: inputs.optionalIngredients.map((i) => [i.name, i.expiresOn, i.quantity]) }
+      : {}),
     allergens: inputs.allergens,
     today: inputs.today,
   });

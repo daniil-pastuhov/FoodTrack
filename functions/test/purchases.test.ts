@@ -2,6 +2,7 @@ import { DEFAULT_COSTS } from "../src/constants";
 import { HttpsError } from "firebase-functions/v2/https";
 import { deleteAccount } from "../src/core/account";
 import { playPurchaseId, applePurchaseId } from "../src/core/purchases";
+import { InvalidSignatureError, REFUSED_ENVIRONMENT } from "../src/ports";
 import { sweep } from "../src/core/sweeper";
 import { appleTx, balanceOf, callerFor, db, makeDeps, playToken, resetEmulators, setConfig, verifyPurchase, type TestDeps } from "./helpers";
 
@@ -18,6 +19,9 @@ const play = (purchaseToken: string) => ({ store: "play", purchaseToken });
 const apple = (signedTransaction: string) => ({ store: "appstore", signedTransaction });
 const purchase = async (id: string) => (await db.collection("purchases").doc(id).get()).data();
 
+/** The `purchase_not_granted` lines so far: their reason codes, in order. */
+const notGranted = () => deps.logs.filter((l) => l.message === "purchase_not_granted").map((l) => l.data?.reason);
+
 async function reason(p: Promise<unknown>): Promise<string> {
   try {
     await p;
@@ -31,7 +35,7 @@ async function reason(p: Promise<unknown>): Promise<string> {
 describe("Play", () => {
   test("grants credits from Play's product and quantity, then consumes", async () => {
     const token = deps.play.add(playToken(), { productId: "recipes_50", quantity: 2 });
-    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS });
+    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     expect(deps.play.consumed).toEqual([token]);
     const doc = await purchase(playPurchaseId(token));
     expect(doc).toMatchObject({ uid: "alice", productId: "recipes_50", quantity: 2, credits: 100, state: "consumed" });
@@ -42,7 +46,7 @@ describe("Play", () => {
   test("a second submission is a no-op", async () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, alice, play(token));
-    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 10, costs: DEFAULT_COSTS });
+    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 10, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     expect(await balanceOf("alice")).toBe(10);
   });
 
@@ -56,7 +60,7 @@ describe("Play", () => {
   test("a replay under another uid grants nothing", async () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, alice, play(token));
-    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS });
+    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     expect(await balanceOf("bob")).toBe(0);
   });
 
@@ -65,7 +69,7 @@ describe("Play", () => {
     await verifyPurchase(deps, alice, play(token));
     await deleteAccount(deps, alice, {});
     expect((await purchase(playPurchaseId(token)))?.uid).toBeNull();
-    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS });
+    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     // The deleted account itself can do nothing more, though its token is still valid for a while.
     expect(await reason(verifyPurchase(deps, alice, play(deps.play.add(playToken()))))).toBe("ACCOUNT_CLOSED");
   });
@@ -78,6 +82,27 @@ describe("Play", () => {
     expect((await verifyPurchase(deps, alice, play(deps.play.add(playToken(), { productId: "gold_coins" })))).status)
       .toBe("REJECTED_PERMANENT");
     expect(await balanceOf("alice")).toBe(0);
+    expect(notGranted()).toEqual(["PAYMENT_PENDING", "NOT_PURCHASED", "NOT_FOUND", "UNKNOWN_PRODUCT"]);
+    const line = deps.logs.find((l) => l.data?.reason === "UNKNOWN_PRODUCT")!;
+    expect(line).toMatchObject({ level: "warn", data: { status: "REJECTED_PERMANENT", store: "play", env: "production", productId: "gold_coins" } });
+    expect(deps.logs.find((l) => l.data?.reason === "PAYMENT_PENDING")).toMatchObject({ level: "info", data: { status: "RETRY" } });
+    // Only fixed fields: never the token or the uid.
+    for (const l of deps.logs.filter((x) => x.message === "purchase_not_granted")) {
+      expect(Object.keys(l.data!).sort()).toEqual(["env", "productId", "reason", "status", "store", "suppressedSinceLast", "uidHash"]);
+      expect(JSON.stringify(l.data)).not.toContain("alice");
+      expect(JSON.stringify(l.data)).not.toContain("tok-");
+    }
+  });
+
+  test("purchase_not_granted is sampled per reason, so a resubmitting client cannot flood the logs", async () => {
+    // A minute on from the earlier tests' lines: the sampler is per instance, shared by the file.
+    deps.clock.advance(120_000);
+    const token = deps.play.add(playToken(), { purchaseState: "PENDING" });
+    for (let i = 0; i < 12; i++) await verifyPurchase(deps, callerFor(`u${i}`), play(token));
+    expect(notGranted()).toHaveLength(10);
+    deps.clock.advance(61_000);
+    await verifyPurchase(deps, callerFor("u-late"), play(token));
+    expect(deps.logs.filter((l) => l.message === "purchase_not_granted").at(-1)?.data?.suppressedSinceLast).toBe(2);
   });
 
   test("Play being unreachable is RETRY", async () => {
@@ -86,6 +111,7 @@ describe("Play", () => {
     expect((await verifyPurchase(deps, alice, play(token))).status).toBe("RETRY");
     deps.play.failGet = false;
     expect((await verifyPurchase(deps, alice, play(token))).status).toBe("GRANTED");
+    expect(notGranted()).toEqual(["STORE_UNAVAILABLE"]);
   });
 
   test("a failed consume is retried on resubmission and by the sweeper", async () => {
@@ -97,7 +123,7 @@ describe("Play", () => {
     expect(await purchase(playPurchaseId(t1))).toMatchObject({ state: "granted", consumePending: true, consumeAttempts: 1 });
     deps.play.failConsume = false;
     // Resubmission retries the consume (and grants nothing more).
-    expect(await verifyPurchase(deps, alice, play(t1))).toEqual({ status: "ALREADY_GRANTED", balance: 20, costs: DEFAULT_COSTS });
+    expect(await verifyPurchase(deps, alice, play(t1))).toEqual({ status: "ALREADY_GRANTED", balance: 20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     expect((await purchase(playPurchaseId(t1)))?.state).toBe("consumed");
     // The sweeper picks up the other one once it is old enough.
     expect((await sweep(deps)).consumed).toBe(0);
@@ -117,6 +143,8 @@ describe("Play", () => {
     const t3 = deps.play.add(playToken(), { isTest: true });
     expect((await verifyPurchase(deps, alice, play(t3))).status).toBe("RETRY");
     expect(await balanceOf("alice")).toBe(10);
+    expect(notGranted()).toEqual(["SANDBOX_NOT_ALLOWED", "SANDBOX_DAILY_CAP"]);
+    expect(deps.logs.find((l) => l.data?.reason === "SANDBOX_NOT_ALLOWED")).toMatchObject({ level: "info", data: { env: "sandbox", productId: "recipes_10" } });
   });
 
   test("sandbox grants are also capped in credits per day; one larger than the whole cap is rejected", async () => {
@@ -130,6 +158,7 @@ describe("Play", () => {
     const t3 = deps.play.add(playToken(), { isTest: true, productId: "recipes_10" });
     expect((await verifyPurchase(deps, alice, play(t3))).status).toBe("GRANTED");
     expect(await balanceOf("alice")).toBe(110);
+    expect(notGranted()).toEqual(["SANDBOX_TOO_LARGE", "SANDBOX_DAILY_CAP"]);
   });
 
   test("malformed tokens never reach Play", async () => {
@@ -151,7 +180,7 @@ describe("Play", () => {
 describe("App Store", () => {
   test("grants a verified consumable", async () => {
     const tx = appleTx({ productId: "recipes_100", quantity: 1 });
-    expect(await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS });
+    expect(await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     expect(await purchase(applePurchaseId("production", tx.transactionId))).toMatchObject({ uid: "alice", state: "granted" });
   });
 
@@ -170,7 +199,11 @@ describe("App Store", () => {
       .toBe("REJECTED_PERMANENT");
     expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(appleTx({ type: "Non-Consumable" }))))).status)
       .toBe("REJECTED_PERMANENT");
+    expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(appleTx({ productId: "gold_coins" }))))).status)
+      .toBe("REJECTED_PERMANENT");
     expect(await balanceOf("alice")).toBe(0);
+    expect(notGranted()).toEqual(["INVALID_SIGNATURE", "WRONG_BUNDLE", "WRONG_BUNDLE", "UNKNOWN_PRODUCT"]);
+    expect(deps.logs.find((l) => l.data?.reason === "INVALID_SIGNATURE")).toMatchObject({ level: "warn", data: { store: "appstore", env: null, productId: null } });
   });
 
   test("a transaction refunded before submission is rejected and can never be redeemed", async () => {
@@ -182,16 +215,36 @@ describe("App Store", () => {
     deps.appStore.fresh.delete(tx.transactionId);
     expect((await verifyPurchase(deps, bob, apple(jws))).status).toBe("REJECTED_PERMANENT");
     expect(await balanceOf("bob")).toBe(0);
+    expect(notGranted()).toEqual(["REFUNDED_BEFORE_GRANT", "REFUNDED_BEFORE_GRANT"]);
+    // Never the transaction id.
+    expect(JSON.stringify(deps.logs.filter((l) => l.message === "purchase_not_granted"))).not.toContain(tx.transactionId);
+  });
+
+  test("an Xcode transaction, and one Apple doesn't know, are logged by name", async () => {
+    const verify = deps.appStore.verifyTransaction.bind(deps.appStore);
+    deps.appStore.verifyTransaction = async () => {
+      throw new InvalidSignatureError(REFUSED_ENVIRONMENT);
+    };
+    expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(appleTx())))).status).toBe("REJECTED_PERMANENT");
+    deps.appStore.verifyTransaction = verify;
+    const unknown = appleTx();
+    deps.appStore.fresh.set(unknown.transactionId, null);
+    expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(unknown)))).status).toBe("REJECTED_PERMANENT");
+    expect(notGranted()).toEqual(["XCODE_ENVIRONMENT", "NOT_FOUND"]);
+    expect(deps.logs.find((l) => l.data?.reason === "XCODE_ENVIRONMENT")?.level).toBe("info");
   });
 
   test("the App Store Server API being down is RETRY", async () => {
     deps.appStore.failFetch = true;
     expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(appleTx())))).status).toBe("RETRY");
+    expect(notGranted()).toEqual(["STORE_UNAVAILABLE"]);
   });
 
   test("sandbox transactions follow allowSandbox", async () => {
     const tx = appleTx({ environment: "sandbox" });
     expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).status).toBe("REJECTED_PERMANENT");
+    expect(notGranted()).toEqual(["SANDBOX_NOT_ALLOWED"]);
+    expect(deps.logs.find((l) => l.message === "purchase_not_granted")).toMatchObject({ data: { store: "appstore", env: "sandbox" } });
     await setConfig({ allowSandbox: true });
     const tx2 = appleTx({ environment: "sandbox" });
     expect((await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx2)))).status).toBe("GRANTED");

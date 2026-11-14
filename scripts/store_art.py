@@ -44,11 +44,12 @@ SEARCH_SIZE = (3840, 2560)
 SEARCH_SAFE = (836, 765, 3004, 1795)
 
 # Search shows the image about 365 points wide, so the headline is short and large. "\n" is where
-# it breaks.
+# it breaks. It says what the app is for; the first screenshot's caption, shown beside it in
+# search on older systems, says what the home screen shows, so the two don't repeat each other.
 HEADLINES = {
-    "en": "Know what's\nabout to\nexpire",
-    "ru": "Видно,\nчто скоро\nиспортится",
-    "nb": "Se hva\nsom snart\ngår ut",
+    "en": "Eat it\nbefore it\ngoes off",
+    "ru": "Успейте\nсъесть\nвовремя",
+    "nb": "Spis maten\nfør den\ngår ut",
 }
 
 
@@ -84,11 +85,11 @@ def paste_with_shadow(canvas, body, left, top):
 def header(shots, out_path):
     width, height = HEADER_SIZE
     canvas = gradient(width, height).convert("RGBA")
-    # Home in the middle, Recipe and the shopping list a step lower on either side. They run off
-    # the bottom edge; their top halves, with the titles, sit in the safe area.
+    # Home in the middle, the scan and a recipe a step lower on either side. They run off the
+    # bottom edge; their top halves, with the titles, sit in the safe area.
     centre = phone(shots["home"], 820)
     side_width = 700
-    left_phone, right_phone = phone(shots["recipe"], side_width), phone(shots["shopping"], side_width)
+    left_phone, right_phone = phone(shots["scan"], side_width), phone(shots["recipe"], side_width)
     gap = 110
     paste_with_shadow(canvas, left_phone, width // 2 - centre.width // 2 - gap - left_phone.width, 470)
     paste_with_shadow(canvas, right_phone, width // 2 + centre.width // 2 + gap, 470)
@@ -182,7 +183,7 @@ def main():
     raw_dir = Path(sys.argv[1])
     for lang, folder in LISTING_FOLDERS.items():
         shots = {}
-        for tab in ("home", "recipe", "shopping"):
+        for tab in ("home", "scan", "recipe"):
             matches = sorted((raw_dir / lang).glob(f"[0-9]-{tab}.png"))
             if not matches:
                 sys.exit(f"no {tab} screenshot in {raw_dir / lang}")

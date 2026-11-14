@@ -14,7 +14,37 @@ enum RecipePromptBuilder {
         let preferences = sharePreferences(request)
             .map { "- " + $0 }
             .joined(separator: "\n")
-        return L10n.recipePromptIntro + "\n\n" + items + "\n\n" + L10n.recipePromptPreferencesIntro + "\n" + preferences
+        // The cook chose to use these despite their date: said so, so the other AI doesn't drop them.
+        let past = request.items.filter { $0.daysRemaining < 0 }.map(\.name)
+        let pastLine = past.isEmpty ? "" : "\n\n" + L10n.recipePromptPastDate(past.joined(separator: ", "))
+        return L10n.recipePromptIntro + "\n\n" + items + pastLine + otherItemsSection(request.otherItems)
+            + "\n\n" + L10n.recipePromptPreferencesIntro + "\n" + preferences
+    }
+
+    /// Cap on the "other items" section, in characters, as `MAX_OTHER_ITEMS_CHARS` on Android:
+    /// share sheets degrade on very large strings.
+    static let maxOtherItemsChars = 20_000
+
+    /// "Send all products": the rest of the pantry after the main list, soonest first, each with
+    /// how long it has left, as items the recipe may use as well; cut at `maxOtherItemsChars`
+    /// with a note of how many were left out. Empty without any. Android: `buildRecipePrompt`'s
+    /// `otherItems`.
+    static func otherItemsSection(_ others: [RecipeIngredientInput]) -> String {
+        guard !others.isEmpty else { return "" }
+        var section = ""
+        var included = 0
+        for item in others {
+            let line = "- " + L10n.recipePromptItem(name: item.name, expiry: item.expiryText)
+            let lengthIfAdded = section.count + (section.isEmpty ? 0 : 1) + line.count
+            if lengthIfAdded > maxOtherItemsChars { break }
+            if !section.isEmpty { section += "\n" }
+            section += line
+            included += 1
+        }
+        guard included > 0 else { return "" }
+        var text = "\n\n" + L10n.recipePromptOtherItemsIntro + "\n" + section
+        if others.count > included { text += "\n" + L10n.recipePromptOtherItemsOmitted(others.count - included) }
+        return text
     }
 
     /// One line per preference, in the order the form shows them. "Any" and "None" are left out:
@@ -56,14 +86,36 @@ enum RecipePromptBuilder {
         exactly. Never include an ingredient that is or contains a listed allergen. Mark an \
         ingredient as from the pantry only when it is one of the listed pantry items, and then \
         copy that item's name exactly as listed into pantryItem, untranslated. Write every other \
-        text field in \(request.config.resolvedLanguage.englishName).
+        text field in \(request.config.resolvedLanguage.englishName).\(request.otherItems.isEmpty ? "" : " " + onDeviceOtherItemsRule)\
+        \(request.items.contains { $0.daysRemaining < 0 } ? " " + onDevicePastDateRule : "")
         """
     }
+
+    /// The owner's rule: an item past its date is the cook's choice and is used, never dropped
+    /// for its age; the app warns about it itself. As Android's on-device prompt.
+    static let onDevicePastDateRule = "Items past their date are ones the cook has checked and chosen to use: do not leave them out for their date."
+
+    /// With "Send all products": what the second list is for.
+    static let onDeviceOtherItemsRule = """
+        Other items the person also has at home may be listed after the pantry items; use one \
+        only where it helps the dish, none is needed, and they count as pantry items too.
+        """
+
+    /// Items the phone's model sees at most, ticked first, as Android's `MAX_RECIPE_INGREDIENTS`:
+    /// its context is small.
+    static let maxOnDeviceItems = 30
 
     static func onDevicePrompt(for request: RecipeRequest) -> String {
         let config = request.config
         var lines = ["Pantry items, soonest first:"]
-        lines += request.items.map { "- \($0.name) (\(englishExpiry($0.daysRemaining)))" }
+        let main = request.items.prefix(maxOnDeviceItems)
+        lines += main.map { "- \($0.name) (\(englishExpiry($0.daysRemaining)))" }
+        let extra = request.otherItems.prefix(max(0, maxOnDeviceItems - main.count))
+        if !extra.isEmpty {
+            lines.append("")
+            lines.append("Also at home, use only where it helps, none is needed:")
+            lines += extra.map { "- \($0.name) (\(englishExpiry($0.daysRemaining)))" }
+        }
         lines.append("")
         lines.append("Preferences:")
         lines.append("- Difficulty: \(englishDifficulty(config.difficulty))")
@@ -137,6 +189,7 @@ enum RecipePromptBuilder {
     /// A recipe as plain text, for the result screen's Share.
     static func plainText(_ recipe: Recipe) -> String {
         var parts = [recipe.title]
+        if let warning = L10n.recipePastDateWarning(recipe.pastDate) { parts.append("⚠ " + warning) }
         if !recipe.summary.isEmpty { parts.append(recipe.summary) }
         let ingredients = recipe.ingredients.map { ingredient in
             "- " + (ingredient.amount.isEmpty ? ingredient.name : "\(ingredient.amount) \(ingredient.name)")
@@ -153,6 +206,7 @@ enum RecipePromptBuilder {
     /// A menu as plain text: each day's heading, then each course and its full recipe.
     static func plainText(_ menu: RecipeMenu) -> String {
         var parts = [L10n.recipeMenuHeading]
+        if let warning = L10n.recipePastDateWarning(menu.pastDate) { parts.append("⚠ " + warning) }
         for day in menu.days {
             let heading = RecipeMenuView.dayTitle(day.date)
             let courses = day.courses.map { course in

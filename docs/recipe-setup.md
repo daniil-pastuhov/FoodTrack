@@ -284,6 +284,15 @@ binding exist on the live project (created and read back 2026-11-14).
       Delete account; for recipes bought without an account, Recipe settings > Your recipes >
       Delete my data from our server, which deletes the anonymous account). **Check** whether
       Play also wants a web page for deletion requests.
+- [ ] "Send all products" (Recipe settings, off by default): with it on, a recipe from a pack
+      also sends the names, dates and quantities of every other pantry item, as items the recipe
+      may use. The store answers do not change (still User Content > Other User Content / App
+      activity > Other user-generated content, App Functionality, linked, not tracking; only the
+      description in store-listing/app-store/README.md section 5 grew), but the hosted privacy
+      policy's sentence about what is sent must name it before the release that ships it
+      (privacy-policy-changes.md). The server reads the new field only after the next backend
+      deploy (`acceptsOptionalIngredients`, functions/CONTRACT.md); until then the apps send the
+      ticked items only.
 - [x] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for

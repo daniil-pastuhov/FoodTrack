@@ -307,7 +307,9 @@ fun ScanFab(
 /**
  * A tab's one primary action, pinned where Scan sits on Home, above the pill: the Recipe tab's
  * Generate or Share. Full width on phones; the caller sizes it on expanded windows. [cost] is the
- * small pill at the end that says what the action takes ("Free").
+ * small pill at the end that says what the action takes ("Free"). [compact]: as wide as its
+ * label, like Scan, for an action with no cost (the shared prompt alone); the label still wraps
+ * when large text needs it.
  */
 @Composable
 fun PinnedAction(
@@ -316,7 +318,8 @@ fun PinnedAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     cost: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    compact: Boolean = false
 ) {
     val shape = RoundedCornerShape(LarderRadius.lg)
     val scheme = MaterialTheme.colorScheme
@@ -336,7 +339,7 @@ fun PinnedAction(
         LarderIcon(icon, contentDescription = null, tint = content)
         Text(
             text = text,
-            modifier = Modifier.weight(1f),
+            modifier = if (compact) Modifier.weight(1f, fill = false) else Modifier.weight(1f),
             style = MaterialTheme.typography.labelLarge,
             color = content
         )
@@ -359,6 +362,7 @@ fun PinnedAction(
 internal fun PinnedActionPreview() = LarderPreview {
     PinnedAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
     PinnedAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
+    PinnedAction("Share prompt", LarderIcons.Share2, {}, compact = true)
     PinnedAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
 }
 

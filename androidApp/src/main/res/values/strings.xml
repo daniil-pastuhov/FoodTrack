@@ -1036,4 +1036,45 @@
         <item quantity="one">%1$d dish</item>
         <item quantity="other">%1$d dishes</item>
     </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredients</string>
+    <string name="recipe_send_all">Send all products</string>
+    <string name="recipe_send_all_desc">Besides the ticked items, the rest of your pantry is offered as items the recipe may also use. With this on, a recipe from a pack sends the names, dates and quantities of everything in your pantry to our server, and a shared prompt lists them too.</string>
+    <string name="recipe_intro_title">How recipes work</string>
+    <string name="recipe_intro_body">Tick what you want to use up, choose the kind of dish, and get a recipe built around it. Recipes you get in the app are saved on this device as they arrive.</string>
+    <string name="recipe_intro_prompt_title">Free, with any AI app</string>
+    <string name="recipe_intro_prompt_body">Share or copy a ready-made prompt to the AI app you already use.</string>
+    <string name="recipe_intro_device_title">Free, on this device</string>
+    <string name="recipe_intro_device_body">This device writes the recipe itself, and nothing is sent anywhere.</string>
+    <string name="recipe_intro_packs_title">From a recipe pack</string>
+    <string name="recipe_intro_packs_body">Our server writes the recipe, and can also plan a menu for 3 days. A recipe takes %1$s from a pack; a menu takes %2$s with 2 courses a day or %3$s with 3.</string>
+    <string name="recipe_intro_packs_price">Packs from %1$s.</string>
+    <string name="recipe_intro_free_stays">The free ways stay there when you have a pack.</string>
+    <string name="recipe_intro_again">You can open this again in Recipe settings.</string>
+    <string name="recipe_intro_start">Got it</string>
+    <string name="recipe_intro_packs_action">See recipe packs</string>
+    <string name="recipe_intro_settings_supporting">The ways to get a recipe</string>
+    <string name="recipe_not_available_title">Recipes from packs aren\'t available on this install</string>
+    <string name="recipe_not_available_body">Nothing was charged. The free ways still work: share the prompt with an AI app, or write the recipe on this device where it can.</string>
+    <string name="recipe_not_available_debug">Debug build: App Check refused this build. Register the App Check debug token that logcat prints (docs/recipe-setup.md, “Debug builds against the real project”).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">The other item in your pantry may be used too</item>
+        <item quantity="other">The other %1$d items in your pantry may be used too</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">A ticked item is past its date, by %1$s. Check it is still safe to eat, or untick it.</string>
+    <string name="recipe_past_date_result_one">Past its date: %1$s. Check it is still safe to eat before you cook.</string>
+    <string name="recipe_past_date_result_many">Past their date: %1$s. Check they are still safe to eat before you cook.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">These items are past their date, and I have chosen to use them anyway: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
+        <item quantity="other">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
 </resources>

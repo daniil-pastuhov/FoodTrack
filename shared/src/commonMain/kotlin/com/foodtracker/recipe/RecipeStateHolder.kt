@@ -27,7 +27,8 @@ import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-/** How many of the soonest items the tab ticks by itself. */
+/** How many of the soonest items the tab ticks by itself, whatever their date (past it included).
+ *  iOS: `RecipeViewModel.defaultTickCount`. The one place to change it on Android. */
 const val RECIPE_DEFAULT_TICKED = 3
 
 /** How many of the soonest items the tab lists before "Add other items". Ticked items are listed
@@ -111,6 +112,42 @@ sealed interface RecipeEvent {
     data class ServerRefused(val taken: Int) : RecipeEvent
 }
 
+/** A way to get a recipe from the form, each one its own button: a tap on one never falls back
+ *  to another, so a free route never spends a recipe. */
+enum class RecipeAction {
+    /** Our server, from the pack. */
+    SERVER,
+
+    /** The phone's own model, free. */
+    ON_DEVICE,
+
+    /** The prompt to the share sheet, free. */
+    SHARE,
+
+    /** The prompt to the clipboard, free. */
+    COPY,
+
+    /** The pack sheet. */
+    BUY
+}
+
+/**
+ * What the form offers: [primary] is pinned above the pill (null: nothing pinned), [secondary]
+ * sits under the form, in this order. With recipes in the pack the server is pinned and the free
+ * routes stay one tap away; without, the phone's model or the shared prompt is pinned. A menu is
+ * the server's only: no free routes. iOS: `RecipeViewModel.actions`.
+ */
+data class RecipeActions(val primary: RecipeAction?, val secondary: List<RecipeAction>)
+
+/** Where the tab's introduction ("How recipes work") was opened from. */
+enum class RecipeIntro {
+    /** By itself, the first time the tab was opened: closing it marks it seen. */
+    FIRST_OPEN,
+
+    /** From Recipe settings. */
+    FROM_SETTINGS
+}
+
 /** What the tab writes: one recipe, or a menu for three days (server only). */
 enum class RecipeMode { RECIPE, MENU }
 
@@ -140,7 +177,11 @@ data class RecipeUiState(
     val allergens: List<String> = emptyList(),
     /** The server route, the packs and the account behind them. */
     val paid: PaidUiState = PaidUiState(),
-    val event: RecipeEvent? = null
+    val event: RecipeEvent? = null,
+    /** The tab's settings outside the config: "Send all products", the introduction seen. */
+    val options: RecipeOptions = RecipeOptions(),
+    /** The introduction on screen, and where from; null when it isn't. */
+    val intro: RecipeIntro? = null
 ) {
     /** The language recipes are written in. */
     val language: String = config.language ?: appLanguage
@@ -165,6 +206,20 @@ data class RecipeUiState(
     /** Items reachable only through "Add other items". */
     val otherCount: Int = rows.size - shownRows.size
 
+    /** Everything not ticked, soonest first: what "Send all products" offers the recipe as well. */
+    val otherRows: List<PantryRow> = rows.filter { it.id !in selectedIds }
+
+    /** The ticked items past their date, soonest first: the form's red warning, the line in the
+     *  shared prompt, and what a recipe written on the phone carries ([Recipe.pastDate]). */
+    val pastDateTicked: List<PastDateItem> = selectedRows.filter { it.daysRemaining < 0 }.map { PastDateItem(it.item.name, -it.daysRemaining) }
+
+    /** How many items "Send all products" adds to this recipe; 0 with it off. */
+    val optionalCount: Int get() = if (options.sendAllItems) otherRows.size else 0
+
+    /** Something is saved, so the header offers the saved list. Follows the saved recipes as
+     *  they change: the first one written shows it, deleting the last one hides it. */
+    val hasSaved: Boolean get() = saved.isNotEmpty()
+
     val onDeviceRoute: OnDeviceRoute = when (onDeviceAvailability) {
         null -> OnDeviceRoute.CHECKING
         OnDeviceAvailability.UNSUPPORTED -> OnDeviceRoute.HIDDEN
@@ -181,6 +236,29 @@ data class RecipeUiState(
     /** Whether the server can be asked now: a pack with enough left, nothing in the way. */
     val canGenerateOnServer: Boolean
         get() = paid.available && paid.issue != ServerIssue.PAUSED && (paid.balance ?: 0) >= serverCost
+
+    /** The form's actions in this state; see [RecipeActions]. */
+    val actions: RecipeActions
+        get() {
+            if (mode == RecipeMode.MENU) {
+                // The too-few callout and Buy take the button's place; buying is the form's.
+                return if (canGenerateOnServer) RecipeActions(RecipeAction.SERVER, emptyList()) else RecipeActions(null, emptyList())
+            }
+            val onDevice = onDeviceRoute == OnDeviceRoute.READY
+            // Offline or busy, the free routes move up; the count stays in the bar.
+            val primary = when {
+                canGenerateOnServer && paid.issue == null -> RecipeAction.SERVER
+                onDevice -> RecipeAction.ON_DEVICE
+                else -> RecipeAction.SHARE
+            }
+            val secondary = buildList {
+                if (onDevice && primary != RecipeAction.ON_DEVICE) add(RecipeAction.ON_DEVICE)
+                if (primary != RecipeAction.SHARE) add(RecipeAction.SHARE)
+                add(RecipeAction.COPY)
+                if (paid.canBuy && primary != RecipeAction.SERVER) add(RecipeAction.BUY)
+            }
+            return RecipeActions(primary, secondary)
+        }
 }
 
 /**
@@ -215,7 +293,7 @@ class RecipeStateHolder(
 ) {
     private val _uiState = MutableStateFlow(
         configRepository.get().normalized().let { config ->
-            RecipeUiState(config = config, appLanguage = appRecipeLanguage(appLanguage()))
+            RecipeUiState(config = config, appLanguage = appRecipeLanguage(appLanguage()), options = configRepository.getOptions())
                 .withLanguageSupport()
         }
     )
@@ -237,6 +315,9 @@ class RecipeStateHolder(
     )
 
     private var writingJob: Job? = null
+
+    /** A demo or screenshot launch: the introduction never opens by itself in this run. */
+    private var introSuppressed = false
     private val downloadLock = Mutex()
 
     init {
@@ -331,6 +412,59 @@ class RecipeStateHolder(
         _uiState.update { it.copy(courses = courses) }
     }
 
+    /** "Send all products" in Recipe settings. */
+    fun setSendAllItems(on: Boolean) {
+        updateOptions { it.copy(sendAllItems = on) }
+    }
+
+    private fun updateOptions(transform: (RecipeOptions) -> RecipeOptions) {
+        val updated = transform(_uiState.value.options)
+        if (updated == _uiState.value.options) return
+        configRepository.saveOptions(updated)
+        _uiState.update { it.copy(options = updated) }
+    }
+
+    // --- Introduction ------------------------------------------------------------------------
+
+    /**
+     * The tab is on screen: the first time ever, its introduction opens. Never in a demo launch
+     * ([suppressIntroForSession]), and never again once closed. Returns whether it opened, so the
+     * caller can treat it as onboarding (no rating request in this session).
+     */
+    fun onTabShown(): Boolean {
+        val state = _uiState.value
+        if (introSuppressed || state.options.introSeen || state.intro != null) return false
+        _uiState.update { it.copy(intro = RecipeIntro.FIRST_OPEN) }
+        return true
+    }
+
+    /** Recipe settings' "How recipes work". */
+    fun showIntro() {
+        _uiState.update { it.copy(intro = RecipeIntro.FROM_SETTINGS) }
+    }
+
+    /** Closed, whichever way: never opens by itself again. */
+    fun dismissIntro() {
+        _uiState.update { it.copy(intro = null) }
+        updateOptions { it.copy(introSeen = true) }
+    }
+
+    /** The introduction's "See recipe packs": closed, then the pack sheet. */
+    fun introToPacks() {
+        dismissIntro()
+        paid.openPacks()
+    }
+
+    /** A demo or screenshot launch: no introduction opens by itself in this run. */
+    fun suppressIntroForSession() {
+        introSuppressed = true
+    }
+
+    /** Debug-only demo launches that ask for it: shown as on a first open. */
+    fun showIntroForDemo() {
+        _uiState.update { it.copy(intro = RecipeIntro.FIRST_OPEN) }
+    }
+
     // --- On-device route ---------------------------------------------------------------------
 
     /** Writes a recipe with the phone's own model from the ticked items. Saved when it arrives,
@@ -339,8 +473,9 @@ class RecipeStateHolder(
         val state = _uiState.value
         if (state.isBusy || state.selectedRows.isEmpty() || state.onDeviceRoute != OnDeviceRoute.READY) return
         val items = state.selectedRows.map { RecipePromptItem(it.item.name, it.daysRemaining) }
-        val prompt = buildOnDeviceRecipePrompt(items, state.config, state.language, state.allergens)
-        val names = items.map { it.name }
+        val optional = if (state.options.sendAllItems) state.otherRows.map { RecipePromptItem(it.item.name, it.daysRemaining) } else emptyList()
+        val prompt = buildOnDeviceRecipePrompt(items, state.config, state.language, state.allergens, optional)
+        val names = (items + optional).map { it.name }
         _uiState.update { it.copy(isWriting = true, event = null) }
         // Started lazily so writingJob is set before the body can run and report.
         val started = coroutineScope.launch(start = CoroutineStart.LAZY) {
@@ -363,7 +498,8 @@ class RecipeStateHolder(
                     report(RecipeEvent.Failed)
                     return@launch
                 }
-                val saved = SavedRecipe.of(newId(), recipe, nowMillis())
+                // The warning comes from the ticked items' own dates, never from the model's text.
+                val saved = SavedRecipe.of(newId(), recipe.copy(pastDate = state.pastDateTicked), nowMillis())
                 savedRecipeRepository.save(saved)
                 report(RecipeEvent.Written(saved.id), saved)
             } catch (e: CancellationException) {
@@ -462,8 +598,9 @@ class RecipeStateHolder(
      */
     fun clearAll() {
         configRepository.save(RecipeConfig())
+        configRepository.saveOptions(RecipeOptions())
         _uiState.update {
-            it.copy(config = RecipeConfig(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, selection = RecipeSelection.Default)
+            it.copy(config = RecipeConfig(), options = RecipeOptions(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, selection = RecipeSelection.Default)
                 .withLanguageSupport()
         }
         coroutineScope.launch { savedRecipeRepository.clearAll() }

@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """Writes the demo pantry that the store screenshots show, as a backup file both apps restore:
 
-    scripts/demo_backup.py <en|ru|nb> <out.json>
+    scripts/demo_backup.py <en|ru|nb> <out.json> [scan picture url]
 
 Used by scripts/ios_screenshots.sh and scripts/android_screenshots.sh. Dates are relative to
 today, so the "expires today / tomorrow" labels always read right. Item ids are fixed
 ("demo-0" to "demo-12", in the order below), so a script can open a given item; demo-4 is the
-salmon.
+salmon. The product cache holds the yoghurt the scan demo reads (scripts/demo_scan_image.py), so
+its lookup needs no network; [scan picture url] is its picture, where the app can read it.
 """
 import datetime, json, sys
+from demo_scan_image import BARCODE, NAMES as SCAN_NAMES
+
 lang, out = sys.argv[1], sys.argv[2]
+scan_picture = sys.argv[3] if len(sys.argv) > 3 else None
 today = datetime.date.today()
 day = lambda offset: (today + datetime.timedelta(days=offset)).isoformat()
 # Stored keys stay English (the app translates built-in locations and categories itself);
@@ -47,7 +51,11 @@ entries = [{
 } for i, (category, quantity) in enumerate(shopping)]
 document = {
     "version": 1, "exportedAtEpochMillis": 0, "items": items, "shoppingList": entries,
-    "categoryPreferences": [], "products": [], "knownProductNames": [],
+    "categoryPreferences": [],
+    "products": [{"barcode": BARCODE, "name": SCAN_NAMES[lang], "brand": None, "imageUrl": scan_picture,
+                  "category": "Dairy", "shelfLifeDays": None, "storageLocation": "Fridge",
+                  "nutrition": {"nutriScore": None, "novaGroup": None, "allergens": [], "ingredients": None}}],
+    "knownProductNames": [],
     "settings": {
         "notifications": {"enabled": True, "leadDays": 1, "hour": 9, "minute": 0},
         "expiringSoonDays": 3, "storageLocations": ["Fridge", "Freezer", "Pantry"],
