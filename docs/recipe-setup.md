@@ -223,7 +223,9 @@ binding exist on the live project (created and read back 2026-11-14).
 
 ### 8. App Store Server Notifications **(agent)**
 
-- [ ] Version 2, the same URL for production and sandbox:
+- [x] (Done 2026-11-14 through the App Store Connect API; Apple's test notification was
+      delivered in production and in sandbox and logged as `appstore_notification` / `test`.)
+      Version 2, the same URL for production and sandbox:
       `https://europe-west1-bestbefore-f9ee1.cloudfunctions.net/appStoreNotifications` (or the URL
       the deploy printed). App Store Connect API: the app's `subscriptionStatusUrl*` attributes (**Check** the current API);
       or App Information in the console. Then "Request a Test Notification" (App Store Server API)
@@ -231,13 +233,15 @@ binding exist on the live project (created and read back 2026-11-14).
 
 ### 9. Alerts **(agent)**
 
-- [ ] Log-based alerts in Cloud Monitoring on `jsonPayload.message` for the names in
+- [x] (Done 2026-11-14: four policies named "Recipe: …" that email the owner, at most one
+      email an hour each.) Log-based alerts in Cloud Monitoring on `jsonPayload.message` for the names in
       functions/README.md, both "Logs to alert on" tables. At least: `refund_after_use`,
       `buyer_blocked`, `negative_balance_total_grew`, `play_consume_gave_up`,
       `apple_consumption_answer_expired`, `sweep_item_failed`, `callable_failed`,
       `Budget kill switch flipped: generation disabled`, `prompt_rejection_limit`, and
       `prompt_output_rejected` with `code` `OUTPUT_ALLERGEN` or `OUTPUT_LEAK`.
-- [ ] Add email alerts at 25 % and 50 % to the kill-switch budget (the topic only pauses
+- [x] (Done 2026-11-14: thresholds are now 25, 50, 90 and 100 %; the emails go to the billing
+      account's admins.) Add email alerts at 25 % and 50 % to the kill-switch budget (the topic only pauses
       generation; a flood of function calls can cost money on its own, see functions/README.md,
       "Worst-case daily bill").
 
