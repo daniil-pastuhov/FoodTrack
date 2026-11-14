@@ -149,7 +149,7 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       `BUDGET_ALERT_TOPIC`. Done 2026-11-14: all set in `functions/.env.bestbefore-f9ee1`
       (`APPSTORE_KEY_ID=QU395A4DS3`, `SIWA_KEY_ID=A8C76L3W6R`).
 
-### 5a. Cloud KMS key for stored Apple tokens **(to do before the next deploy)**
+### 5a. Cloud KMS key for stored Apple tokens **(done 2026-11-14)**
 
 `registerAppleSignIn` keeps each account's Sign in with Apple refresh token, envelope-encrypted
 with a Cloud KMS key, so `deleteAccount` can remove Apple's link also when the account is deleted
@@ -157,10 +157,10 @@ on Android (functions/README.md, "Stored Sign in with Apple tokens"). The key mu
 the functions' service account may use it, before the functions that use it are deployed. Without
 it nothing breaks for users: `registerAppleSignIn` answers `APPLE_UNAVAILABLE` (the iPhone app
 ignores it), no token is stored, and a deletion from Android answers `appleLinkRemoved: false`
-(the app then shows the manual instruction), as before this change. Nothing here was created on
-the live project yet.
+(the app then shows the manual instruction), as before this change. The key ring, key and the one
+binding exist on the live project (created and read back 2026-11-14).
 
-- [ ] Enable the API, create the key ring and the key, and grant the service account
+- [x] Enable the API, create the key ring and the key, and grant the service account
       encrypt/decrypt on that one key (not on the project). Run as the owner:
       ```bash
       gcloud services enable cloudkms.googleapis.com --project bestbefore-f9ee1
@@ -180,7 +180,7 @@ the live project yet.
       key. A project Owner can still grant itself that, but only through an IAM change, which
       the Admin Activity audit log records; turn on Data Access audit logs for Cloud KMS
       (`DATA_READ`) if every decrypt should be logged too.
-- [ ] Read it back: `gcloud kms keys get-iam-policy apple-refresh-token --keyring recipe
+- [x] Read it back: `gcloud kms keys get-iam-policy apple-refresh-token --keyring recipe
       --location europe-west1 --project bestbefore-f9ee1` shows exactly the one binding.
 - [ ] Rotation: a rotation adds a key version and makes it primary; earlier versions must stay
       **enabled** (never disable or destroy one), because tokens wrapped with them are unwrapped
