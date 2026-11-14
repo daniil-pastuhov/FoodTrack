@@ -4,7 +4,8 @@ import { clientSecret } from "../src/adapters/appleRevoke";
 import { thinkingConfigFor } from "../src/adapters/gemini";
 import { parseProductPurchaseV2 } from "../src/adapters/play";
 import { buildPrompt, responseSchema } from "../src/adapters/prompt";
-import { parseMenu, parseRecipe, validateGenerateRequest } from "../src/contract";
+import { validateGenerateRequest } from "../src/contract";
+import { checkMenuOutput, checkRecipeOutput } from "../src/core/outputSafety";
 import { sampleMenu, sampleRecipe } from "./helpers";
 
 const today = new Date().toISOString().slice(0, 10);
@@ -19,43 +20,52 @@ const baseRequest = {
 };
 
 describe("output parsing", () => {
+  const recipeReq = validateGenerateRequest({ ...baseRequest, kind: "recipe", courses: undefined, config: { ...baseRequest.config, language: "en", diet: "none" } }, Date.now());
+  const ctx = { req: recipeReq, canary: "LRD-TEST", systemInstruction: "" };
   test("a recipe needs every required field", () => {
-    expect(parseRecipe(sampleRecipe())).not.toBeNull();
-    expect(parseRecipe({ ...sampleRecipe(), steps: [] })).toBeNull();
-    expect(parseRecipe({ ...sampleRecipe(), difficulty: "hard" })).toBeNull();
-    expect(parseRecipe({ ...sampleRecipe(), ingredients: [{ amount: "1", name: "x" }] })).toBeNull();
-    expect(parseRecipe({ ...sampleRecipe(), tip: "Serve warm." })?.tip).toBe("Serve warm.");
+    expect(checkRecipeOutput(sampleRecipe(), ctx).ok).toBe(true);
+    expect(checkRecipeOutput({ ...sampleRecipe(), steps: [] }, ctx)).toEqual({ ok: false, rule: "STEPS" });
+    expect(checkRecipeOutput({ ...sampleRecipe(), ingredients: [{ amount: "1", name: "x" }] }, ctx)).toEqual({ ok: false, rule: "SHAPE" });
+    const tipped = checkRecipeOutput({ ...sampleRecipe(), tip: "Serve warm." }, ctx);
+    expect(tipped.ok && tipped.value.tip).toBe("Serve warm.");
   });
 
   test("a menu needs the 3 expected dates and exactly the requested courses, returned in course order", () => {
-    const req = validateGenerateRequest(baseRequest, Date.now());
+    const req = validateGenerateRequest({ ...baseRequest, config: { ...baseRequest.config, language: "en", diet: "none" } }, Date.now());
+    const mctx = { req, canary: "LRD-TEST", systemInstruction: "" };
     const menu = sampleMenu(req);
     menu.days[0].courses.reverse();
-    expect(parseMenu(menu, today, 3)?.days[0].courses.map((c) => c.course)).toEqual(["starter", "main", "dessert"]);
+    const ok = checkMenuOutput(menu, mctx);
+    expect(ok.ok && ok.value.days[0].courses.map((c) => c.course)).toEqual(["starter", "main", "dessert"]);
+    expect(ok.ok && ok.value.days[0].uses).toEqual(["Tomat"]);
     const dup = sampleMenu(req);
     dup.days[1].courses[2] = { ...dup.days[1].courses[1] };
-    expect(parseMenu(dup, today, 3)).toBeNull();
+    expect(checkMenuOutput(dup, mctx).ok).toBe(false);
     const wrongDate = sampleMenu(req);
     wrongDate.days[0].date = "1999-01-01";
-    expect(parseMenu(wrongDate, today, 3)).toBeNull();
-    expect(parseMenu(sampleMenu(req), today, 2)).toBeNull();
+    expect(checkMenuOutput(wrongDate, mctx).ok).toBe(false);
+    expect(checkMenuOutput(sampleMenu(req), { ...mctx, req: { ...req, courses: 2 } }).ok).toBe(false);
   });
 });
 
 describe("prompt", () => {
-  test("pantry names are only in the data block, with the configuration spelled out", () => {
+  test("pantry names are only in the data block; the configuration is spelled out in the system instruction", () => {
     const req = validateGenerateRequest(baseRequest, Date.now());
-    const prompt = buildPrompt(req);
-    expect(prompt).toContain("Norwegian Bokmål");
-    expect(prompt).toContain("vegan");
-    expect(prompt).toContain('PANTRY_DATA:\n```json\n[{"name":"Tomat"');
-    expect(prompt).toContain('["sesame"]');
-    expect(prompt).toContain("starter, main, dessert");
+    const prompt = buildPrompt(req, "LRD-0123456789ABCDEF");
+    expect(prompt.systemInstruction).toContain("Norwegian Bokmål");
+    expect(prompt.systemInstruction).toContain("vegan");
+    expect(prompt.systemInstruction).toContain("starter, main, dessert");
+    expect(prompt.systemInstruction).toContain("LRD-0123456789ABCDEF");
+    expect(prompt.systemInstruction).not.toContain("Tomat");
+    expect(prompt.systemInstruction).not.toContain("sesame");
+    expect(prompt.userText).toBe(
+      `BEGIN_PANTRY_DATA\n{"pantry":[{"id":"p1","name":"Tomat","expiresOn":"${today}","quantity":3}],"allergens":["sesame"]}\nEND_PANTRY_DATA`,
+    );
+    expect(prompt.userText).not.toContain("LRD-");
     const schema = responseSchema(req) as { properties: { days: { minItems: number } } };
     expect(schema.properties.days.minItems).toBe(3);
   });
 });
-
 describe("Gemini thinking config", () => {
   test("gemini-2.x gets budget 0, newer models a thinking level", () => {
     expect(thinkingConfigFor("gemini-2.5-flash", "LOW")).toEqual({ thinkingBudget: 0 });

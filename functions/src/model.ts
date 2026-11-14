@@ -38,6 +38,12 @@ export interface UserDoc {
   buyerKeys?: string[];
   /** Infrastructure failures refunded in the current UTC day (ceiling: infraRefundsPerDay). */
   infraRefunds?: { day: string; count: number };
+  /**
+   * Requests refused in the current UTC day as likely prompt injection: suspicious input names,
+   * answers that failed a suspicious output rule, model safety blocks, judge rejections. At
+   * `rejectedPromptsPerDay`, generation is refused (USER_DAILY_LIMIT) until the next UTC day.
+   */
+  promptRejections?: { day: string; count: number };
   /** Estimated LLM spend in micro-USD in the current UTC day: worst case while in flight, actual after. */
   spendWindow?: { day: string; microUsd: number };
   mergedInto?: string;
@@ -195,9 +201,19 @@ export interface RuntimeConfig {
   consumptionSampleContentProvided: boolean;
   /** The kill switch flips when a budget alert reports cost >= budget * this. */
   budgetKillFraction: number;
+  /** Prompt-injection rejections per user per UTC day after which generation is refused. */
+  rejectedPromptsPerDay: number;
+  /**
+   * The second check on every validated answer: "off" (default), "shadow" (run and log the
+   * verdict, never block) or "enforce" (a verdict other than ok is a content failure).
+   */
+  outputJudge: OutputJudgeMode;
   costs: Costs;
   prices: Prices;
 }
+
+export type OutputJudgeMode = "off" | "shadow" | "enforce";
+export const OUTPUT_JUDGE_MODES: readonly OutputJudgeMode[] = ["off", "shadow", "enforce"];
 
 export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   generationEnabled: true,
@@ -219,6 +235,8 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   refundAbuseThreshold: 2,
   consumptionSampleContentProvided: true,
   budgetKillFraction: 1,
+  rejectedPromptsPerDay: 5,
+  outputJudge: "off",
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES },
 };
@@ -235,6 +253,7 @@ const COUNT_FIELDS = [
   "dailySpendMaxMicroUsd",
   "netMicroUsdPerCredit",
   "perUserDailySpendMicroUsd",
+  "rejectedPromptsPerDay",
 ] as const;
 
 const isCount = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v >= 0;
@@ -295,6 +314,14 @@ export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logge
     const f = data.budgetKillFraction;
     if (typeof f === "number" && Number.isFinite(f) && f > 0 && f <= 2) out.budgetKillFraction = f;
     else bad.push("budgetKillFraction");
+  }
+  if (data.outputJudge !== undefined) {
+    // An invalid value turns the judge on in its strictest mode: never fail open.
+    if ((OUTPUT_JUDGE_MODES as readonly unknown[]).includes(data.outputJudge)) out.outputJudge = data.outputJudge as OutputJudgeMode;
+    else {
+      out.outputJudge = "enforce";
+      bad.push("outputJudge");
+    }
   }
   if (data.costs !== undefined) {
     const c = validCosts(data.costs);

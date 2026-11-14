@@ -6,7 +6,8 @@ import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { randomUUID } from "node:crypto";
-import type { GenerateRequest, Recipe } from "../src/contract";
+import type { GenerateRequest } from "../src/contract";
+import type { Prompt } from "../src/adapters/prompt";
 import { menuDates, coursesFor } from "../src/contract";
 import { ANDROID_FIREBASE_APP_ID, IOS_FIREBASE_APP_ID } from "../src/constants";
 import { loadRuntimeConfig } from "../src/model";
@@ -26,7 +27,10 @@ import {
   type Deps,
   type GenerationLimits,
   type GenerationResult,
+  type JudgeResult,
+  type JudgeVerdict,
   type LlmUsage,
+  type OutputJudge,
   type PlayPurchase,
   type PlayVerifier,
   type RecipeGenerator,
@@ -209,14 +213,16 @@ export class FakeAppStore implements AppStoreVerifier {
   }
 }
 
-export function sampleRecipe(title = "Pantry pasta"): Recipe {
+/** A recipe in the model's answer shape (pantry ids), as the generator returns it. */
+export function sampleRecipe(title = "Pantry pasta") {
   return {
     title,
     summary: "A quick pasta.",
     minutes: 20,
-    servings: 2,
-    difficulty: "easy",
-    ingredients: [{ amount: "200 g", name: "pasta", fromPantry: true }],
+    ingredients: [
+      { amount: "200 g", name: "pasta", pantryId: "p1" },
+      { amount: "", name: "salt", pantryId: "none" },
+    ],
     steps: ["Boil the pasta.", "Toss with sauce."],
   };
 }
@@ -225,13 +231,13 @@ export function sampleMenu(req: GenerateRequest) {
   return {
     days: menuDates(req.today).map((date, d) => ({
       date,
-      uses: ["pasta"],
+      uses: ["p1"],
       courses: coursesFor(req.courses!).map((course) => ({ course, recipe: sampleRecipe(`${course} ${d}`) })),
     })),
   };
 }
 
-type Behaviour = (req: GenerateRequest, signal: AbortSignal) => Promise<unknown>;
+type Behaviour = (req: GenerateRequest, signal: AbortSignal, prompt: Prompt) => Promise<unknown>;
 
 export function fakeUsage(over: Partial<LlmUsage> = {}): LlmUsage {
   return { inputTokens: 1000, outputTokens: 1500, thinkingTokens: 500, model: "fake-model", finishReason: "STOP", ...over };
@@ -243,13 +249,15 @@ export class FakeGenerator implements RecipeGenerator {
   /** Usage reported for successful calls (and content failures from failWith). */
   usage: LlmUsage | undefined = fakeUsage();
   limits: GenerationLimits[] = [];
+  prompts: Prompt[] = [];
   fallback: Behaviour = async (req) => (req.kind === "menu" ? sampleMenu(req) : sampleRecipe());
 
   /** Usage reported for successful calls; undefined means the model reported none. */
-  async generate(req: GenerateRequest, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
+  async generate(req: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
     this.calls++;
     this.limits.push(limits);
-    const output = await (this.next.shift() ?? this.fallback)(req, signal);
+    this.prompts.push(prompt);
+    const output = await (this.next.shift() ?? this.fallback)(req, signal, prompt);
     return { output, ...(this.usage ? { usage: this.usage } : {}) };
   }
 
@@ -272,12 +280,27 @@ export class FakeGenerator implements RecipeGenerator {
     let started!: () => void;
     const startedP = new Promise<void>((r) => (started = r));
     const gate = new Promise<void>((r) => (release = r));
-    this.next.push(async (req) => {
+    this.next.push(async () => {
       started();
       await gate;
-      return sampleRecipe(`slow ${req.requestId}`);
+      return sampleRecipe("Slow pasta");
     });
     return { release, started: startedP };
+  }
+}
+
+/** The output judge: answers `verdict` (or the queued ones) and counts its calls. */
+export class FakeJudge implements OutputJudge {
+  calls = 0;
+  verdict: JudgeVerdict = "ok";
+  next: (() => Promise<JudgeResult>)[] = [];
+  usage: LlmUsage | undefined = fakeUsage({ inputTokens: 800, outputTokens: 5, thinkingTokens: 20 });
+
+  async judge(): Promise<JudgeResult> {
+    this.calls++;
+    const n = this.next.shift();
+    if (n) return n();
+    return { verdict: this.verdict, ...(this.usage ? { usage: this.usage } : {}) };
   }
 }
 
@@ -292,6 +315,7 @@ export interface TestDeps extends Deps {
   play: FakePlay;
   appStore: FakeAppStore;
   generator: FakeGenerator;
+  judge: FakeJudge;
   appleRevoker: FakeRevoker;
   clock: Clock;
   logs: LogLine[];
@@ -315,6 +339,7 @@ export function makeDeps(): TestDeps {
     play: new FakePlay(),
     appStore: new FakeAppStore(),
     generator: new FakeGenerator(),
+    judge: new FakeJudge(),
     appleRevoker: new FakeRevoker(),
     clock,
     now: clock.now,

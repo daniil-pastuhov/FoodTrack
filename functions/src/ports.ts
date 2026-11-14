@@ -4,7 +4,8 @@
  */
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
-import type { GenerateRequest } from "./contract";
+import type { GenerateRequest, Menu, Recipe } from "./contract";
+import type { Prompt } from "./adapters/prompt";
 import type { RuntimeConfig } from "./model";
 
 /** A store error that should make the client try again later (network, 5xx, quota, misconfiguration). */
@@ -135,7 +136,17 @@ export class GenerationError extends Error {
    * `usage`: what the call is known to have used. Absent means unknown (the call may have been
    * billed for anything up to the worst case), so the spend estimate keeps the reserved worst case.
    */
-  constructor(readonly failureClass: FailureClass, message: string, readonly usage?: LlmUsage) {
+  /**
+   * `safety`: set when the model's own safety system refused the prompt or the answer (a fixed
+   * code such as `PROMPT_BLOCKED` or `FINISH_SAFETY`); such a failure counts against the account's
+   * daily prompt-rejection limit.
+   */
+  constructor(
+    readonly failureClass: FailureClass,
+    message: string,
+    readonly usage?: LlmUsage,
+    readonly safety?: string,
+  ) {
     super(message);
   }
 }
@@ -154,8 +165,29 @@ export interface GenerationResult {
 }
 
 export interface RecipeGenerator {
-  /** Throws GenerationError. Must honour `signal` and `limits`. */
-  generate(request: GenerateRequest, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult>;
+  /**
+   * Sends `prompt` (built by the core from `request`; the request is passed for fakes). Throws
+   * GenerationError. Must honour `signal` and `limits`.
+   */
+  generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult>;
+}
+
+/** The optional second check on a validated answer (config/runtime `outputJudge`). */
+export type JudgeVerdict = "ok" | "off_topic" | "unsafe_food" | "harmful";
+
+export interface JudgeResult {
+  verdict: JudgeVerdict;
+  /** Absent when unknown: the call is then booked at its reserved worst case. */
+  usage?: LlmUsage;
+}
+
+export interface OutputJudge {
+  /**
+   * Classifies a validated recipe or menu. Sees only the answer (never the user's input), and
+   * answers with an enum. Throws GenerationError ("content" when the judge's own safety filter
+   * blocked the text, "infra" otherwise).
+   */
+  judge(output: { recipe?: Recipe; menu?: Menu }, signal: AbortSignal): Promise<JudgeResult>;
 }
 
 // --- Wiring -----------------------------------------------------------------------------------
@@ -172,6 +204,7 @@ export interface Deps {
   play: PlayVerifier;
   appStore: AppStoreVerifier;
   generator: RecipeGenerator;
+  judge: OutputJudge;
   appleRevoker: AppleTokenRevoker;
   now(): number;
   logger: Logger;
