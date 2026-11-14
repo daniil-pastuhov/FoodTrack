@@ -2,6 +2,7 @@ package com.foodtracker.android.recipe.paid
 
 import com.foodtracker.recipe.Attestation
 import com.foodtracker.recipe.BalanceReply
+import com.foodtracker.recipe.DeleteReply
 import com.foodtracker.recipe.GenerateReply
 import com.foodtracker.recipe.GenerateRequest
 import com.foodtracker.recipe.MergeReply
@@ -88,14 +89,21 @@ class FirebaseRecipeBackend(
 
     override suspend fun getBalance(): ServerResult<BalanceReply> = callBalance(firebase.functions())
 
-    override suspend fun deleteAccount(): ServerResult<Unit> =
-        // No `appleAuthorizationCode`: Android has no Sign in with Apple to get one from, so an
-        // account with Apple attached (added on an iPhone) is deleted without revoking Apple's
-        // token; the delete dialog tells such a person how to remove that link.
-        when (val result = callRaw(firebase.functions(), "deleteAccount", JsonObject(emptyMap()), 60L)) {
-            is ServerResult.Ok -> ServerResult.Ok(Unit)
+    override suspend fun deleteAccount(): ServerResult<DeleteReply> =
+        // No `appleAuthorizationCode`: Android has no Sign in with Apple to get one from. For an
+        // account with Apple attached (added on an iPhone) the server revokes the Apple token it
+        // stored at that sign-in, and answers `appleLinkRemoved: false` only when it couldn't.
+        when (val result = callRaw(firebase.functions(), "deleteAccount", JsonObject(emptyMap()), 120L)) {
+            is ServerResult.Ok -> ServerResult.Ok(deleteReplyOf(result.value))
             is ServerResult.Err -> result
         }
+}
+
+/** `deleteAccount`'s reply: `appleLinkRemoved` only when it is a real boolean; anything else reads
+ *  as absent, so the manual Apple instruction never shows on a reply that doesn't say so. */
+internal fun deleteReplyOf(json: JsonElement): DeleteReply {
+    val flag = ((json as? JsonObject)?.get("appleLinkRemoved") as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull
+    return DeleteReply(appleLinkRemoved = flag)
 }
 
 /**

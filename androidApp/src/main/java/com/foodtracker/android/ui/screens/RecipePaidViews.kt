@@ -46,6 +46,7 @@ import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.recipe.BuySheet
+import com.foodtracker.recipe.ConsentPrompt
 import com.foodtracker.recipe.MergePrompt
 import com.foodtracker.recipe.PaidEvent
 import com.foodtracker.recipe.PurchaseRejection
@@ -169,6 +170,32 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
             confirmLabel = stringResource(R.string.recipe_ok),
             onConfirm = stateHolder::dismissRejectedPurchase,
             onDismissRequest = stateHolder::dismissRejectedPurchase
+        )
+    }
+
+    // Allergens are health data: what is sent, why, to whom, and that it isn't kept, before the
+    // first server request that carries them (AllergenConsent.kt). Dismissing is not agreeing.
+    paid.consentPrompt?.let { prompt ->
+        LarderDialog(
+            title = stringResource(R.string.recipe_allergen_consent_title),
+            text = stringResource(R.string.recipe_allergen_consent_body, isolatedList(state.allergens.filter { it.isNotBlank() })),
+            confirmLabel = stringResource(
+                if (prompt == ConsentPrompt.BEFORE_WRITING) R.string.recipe_allergen_consent_agree else R.string.recipe_allergen_consent_agree_only
+            ),
+            onConfirm = stateHolder::agreeToAllergenConsent,
+            onDismissRequest = stateHolder::declineAllergenConsent,
+            dismissLabel = stringResource(R.string.recipe_cancel)
+        )
+    }
+
+    // Only when the server answered `appleLinkRemoved: false`: the one way left is Apple's own.
+    if (paid.appleLinkLeft) {
+        LarderDialog(
+            title = stringResource(R.string.recipe_apple_link_left_title),
+            text = stringResource(R.string.recipe_apple_link_left_body),
+            confirmLabel = stringResource(R.string.recipe_ok),
+            onConfirm = stateHolder::dismissAppleLinkNotice,
+            onDismissRequest = stateHolder::dismissAppleLinkNotice
         )
     }
 

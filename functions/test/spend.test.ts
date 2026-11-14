@@ -33,6 +33,7 @@ function request(over: Record<string, unknown> = {}) {
     },
     ingredients: [{ name: "Secretingredient", expiresOn: "2030-01-01", quantity: 1 }],
     allergens: ["peanut"],
+    allergenConsent: true,
     today: new Date().toISOString().slice(0, 10),
     ...over,
   };

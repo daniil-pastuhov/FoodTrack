@@ -47,7 +47,11 @@ protocol RecipeBackend: Sendable {
     func balance() async throws -> BalanceResponse
     func verifyPurchase(signedTransaction: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse
     func mergeBalance(sourceIdToken: String) async throws -> MergeBalanceResponse
-    func deleteAccount(appleAuthorizationCode: String?) async throws
+    /// `appleLinkRemoved` in the answer says whether Apple's link went too (absent without Apple).
+    func deleteAccount(appleAuthorizationCode: String?) async throws -> DeleteAccountResponse
+    /// Hands the server the code of an Apple sign-in or link, so it can remove Apple's link when
+    /// the account is deleted from any phone. Callers ignore its failures.
+    func registerAppleSignIn(authorizationCode: String) async throws
 }
 
 // MARK: Configuration

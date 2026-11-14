@@ -108,6 +108,21 @@ struct RecipeView: View {
             message: L10n.recipeRejectedBuildMessage,
             actions: [.init(L10n.recipeOK)]
         )
+        // Allergens are health data: what is sent, why, to whom, and that it isn't kept, before
+        // the first server request that carries them (`AllergenConsent`).
+        .larderDialog(
+            L10n.recipeAllergenConsentTitle,
+            // Closed only by its two buttons, which both clear the prompt (an alert has no other
+            // way out), so the order SwiftUI resets the binding in doesn't matter.
+            isPresented: Binding(get: { model.consentPrompt == .beforeWriting }, set: { _ in }),
+            message: L10n.recipeAllergenConsentMessage(SettingsStore.shared.settings.allergens.sorted()),
+            actions: [
+                .cancel(L10n.cancelButton) { model.declineAllergenConsent() },
+                .init(L10n.recipeAllergenConsentAgree) {
+                    if model.agreeToAllergenConsent() { model.writeOnServer(from: pantry.items) }
+                },
+            ]
+        )
         .sheet(item: $sharedPrompt) { prompt in
             ActivityView(activityItems: [prompt.text])
         }
@@ -380,6 +395,11 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeAllergenRefused(name))
         case .tooManyAllergens(let limit):
             showSnackbar(L10n.recipeAllergensTooMany(limit))
+        case .allergenConsentDeclined:
+            // With the way to the switch that turns sending them back on.
+            showSnackbar(L10n.recipeAllergenConsentDeclined, actionTitle: L10n.recipeSettingsButton) {
+                model.path.append(.settings)
+            }
         }
     }
 

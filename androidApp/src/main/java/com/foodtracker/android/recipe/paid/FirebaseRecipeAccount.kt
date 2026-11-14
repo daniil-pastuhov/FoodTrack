@@ -230,8 +230,8 @@ class FirebaseRecipeAccount(
         val user = auth.currentUser ?: return false
         val activity = CurrentActivity.activity ?: return false
         // Google, also for an account that has Apple attached on an iPhone: Android can't sign in
-        // with Apple, so no Apple authorization code is sent and the server can't revoke Apple's
-        // token from here (the delete dialog says where to do that).
+        // with Apple, so no Apple authorization code is sent; the server revokes Apple's token with
+        // the one it stored at the iPhone sign-in, and says (`appleLinkRemoved: false`) if it can't.
         if (deletionReauthProvider(user.providerData.map { it.providerId }) != SignInProvider.GOOGLE) return false
         return try {
             val credential = googleCredential(activity) ?: return false

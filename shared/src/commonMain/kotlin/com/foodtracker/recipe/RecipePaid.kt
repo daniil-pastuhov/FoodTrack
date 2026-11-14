@@ -52,6 +52,10 @@ enum class PurchaseRejection {
     WRONG_BUILD
 }
 
+/** Where the allergen consent step was opened: before a server request (agreeing goes on to
+ *  write it) or from the switch in Recipe settings (agreeing only records it). */
+enum class ConsentPrompt { BEFORE_WRITING, FROM_SETTINGS }
+
 /** A sign-in whose account already exists while this phone holds recipes: asked before the two
  *  are joined. */
 data class MergePrompt(val phoneBalance: Int, val accountBalance: Int?)
@@ -115,7 +119,14 @@ data class PaidUiState(
     /** What a recipe and a menu take, as the server last said. */
     val costs: RecipeCosts = RecipeCosts(),
     /** The server won't sell to this account (earlier purchases refunded after use). */
-    val purchasesBlocked: Boolean = false
+    val purchasesBlocked: Boolean = false,
+    /** The account was deleted but the server could not remove Apple's link to the app
+     *  (`appleLinkRemoved: false`): the person is told how, until they dismiss it. */
+    val appleLinkLeft: Boolean = false,
+    /** The answer to sending allergens to our server, as recorded on this phone. */
+    val allergenConsent: AllergenConsentRecord? = null,
+    /** The consent step on screen, and where it was opened from; null when not shown. */
+    val consentPrompt: ConsentPrompt? = null
 ) {
     /** Buying is offered: only once the store has shown it has packs, so there is never a Buy
      *  that leads nowhere; hidden while the server is paused, and while a payment is waiting or
@@ -281,7 +292,8 @@ internal class RecipePaid(
                 purchasesBlocked = kept.purchasesBlocked,
                 unconfirmedRecipes = kept.unverified.filterNot { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
                 elsewhereRecipes = kept.unverified.filter { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
-                paymentPending = kept.paymentPending
+                paymentPending = kept.paymentPending,
+                allergenConsent = kept.allergenConsent
             )
         }
     }
@@ -805,7 +817,10 @@ internal class RecipePaid(
                 is ServerResult.Ok -> {
                     runCatching { account.signOut() }
                     persist { it.copy(balance = null, pendingGeneration = null) }
-                    updatePaid { it.copy(accountBusy = false, issue = null, event = PaidEvent.AccountDeleted) }
+                    // Only when the server says Apple's link stayed is the person told how to
+                    // remove it themselves.
+                    val appleLeft = appleLinkLeftBehind(result.value)
+                    updatePaid { it.copy(accountBusy = false, issue = null, event = PaidEvent.AccountDeleted, appleLinkLeft = appleLeft) }
                 }
                 is ServerResult.Err -> {
                     if (result.error == ServerError.ACCOUNT_CLOSED) {
@@ -823,6 +838,45 @@ internal class RecipePaid(
 
     fun consumeEvent() {
         updatePaid { it.copy(event = null) }
+    }
+
+    fun dismissAppleLinkNotice() {
+        updatePaid { it.copy(appleLinkLeft = false) }
+    }
+
+    // --- Allergen consent (AllergenConsent.kt) -----------------------------------------------
+
+    /** The allergen list in Settings changed: a refusal is forgotten once it is empty. */
+    fun onAllergensChanged(hasAllergens: Boolean) {
+        val current = snapshot.allergenConsent
+        val next = allergenConsentAfterListChange(current, hasAllergens)
+        if (next != current) persist { it.copy(allergenConsent = next) }
+    }
+
+    /** "Agree and continue": recorded with the time and the wording's version; from the Recipe
+     *  tab the request then goes ahead. */
+    fun agreeToAllergenConsent() {
+        val prompt = state.value.paid.consentPrompt ?: return
+        persist { it.copy(allergenConsent = AllergenConsentRecord(agreed = true, atMillis = nowMillis(), version = ALLERGEN_CONSENT_VERSION)) }
+        updatePaid { it.copy(consentPrompt = null) }
+        if (prompt == ConsentPrompt.BEFORE_WRITING) generate()
+    }
+
+    /** "Cancel": recorded as a refusal, so the step isn't shown on every tap; the server route
+     *  stays blocked while allergens are set, and the free routes are there. */
+    fun declineAllergenConsent() {
+        if (state.value.paid.consentPrompt == null) return
+        persist { it.copy(allergenConsent = AllergenConsentRecord(agreed = false, atMillis = nowMillis(), version = ALLERGEN_CONSENT_VERSION)) }
+        updatePaid { it.copy(consentPrompt = null) }
+    }
+
+    /** Recipe settings' switch: off withdraws at once; on shows the consent step first. */
+    fun setAllergenConsent(on: Boolean) {
+        if (on) {
+            if (!allergenConsentGiven(snapshot.allergenConsent)) updatePaid { it.copy(consentPrompt = ConsentPrompt.FROM_SETTINGS) }
+        } else {
+            persist { it.copy(allergenConsent = AllergenConsentRecord(agreed = false, atMillis = nowMillis(), version = ALLERGEN_CONSENT_VERSION)) }
+        }
     }
 
     // --- Generation --------------------------------------------------------------------------
@@ -877,7 +931,9 @@ internal class RecipePaid(
             config = current.config.copy(language = current.language),
             ingredients = ingredients,
             allergens = allergens,
-            today = today().toString()
+            today = today().toString(),
+            // Built only past the consent step (generate), so allergens here were agreed to.
+            allergenConsent = allergenConsentFlag(allergens)
         )
         return Built.Ready(request, leftOut)
     }
@@ -889,6 +945,19 @@ internal class RecipePaid(
         if ((current.paid.balance ?: 0) < current.serverCost) {
             openPacks()
             return
+        }
+        // Allergens are health data: sent only with the person's consent, and never left out
+        // instead (a recipe written without them could be unsafe).
+        when (allergenConsentStep(current.allergens.any { it.isNotBlank() }, snapshot.allergenConsent)) {
+            AllergenConsentStep.ASK -> {
+                updatePaid { it.copy(consentPrompt = ConsentPrompt.BEFORE_WRITING) }
+                return
+            }
+            AllergenConsentStep.DECLINED -> {
+                state.update { it.copy(event = RecipeEvent.AllergenConsentDeclined) }
+                return
+            }
+            AllergenConsentStep.NOT_NEEDED, AllergenConsentStep.GRANTED -> Unit
         }
         val built = when (val result = buildRequest(current)) {
             is Built.Blocked -> {
@@ -1133,6 +1202,13 @@ internal class RecipePaid(
                     ServerError.INTERNAL, ServerError.APP_CHECK_REPLAYED -> {
                         finish(interactive, RecipeEvent.ServerFailed)
                         return Sent.KEPT_OFFLINE
+                    }
+                    // A request kept from before the consent step, sent without the flag: dropped
+                    // (nothing was charged); Try again builds it anew, past the step.
+                    ServerError.ALLERGEN_CONSENT_REQUIRED -> {
+                        persist { it.copy(pendingGeneration = null, pendingSinceMillis = null) }
+                        finish(interactive, RecipeEvent.ServerFailed)
+                        return Sent.SETTLED
                     }
                     ServerError.REQUEST_ID_REUSED -> {
                         // The id is bound to other inputs: never send it again. Try again builds

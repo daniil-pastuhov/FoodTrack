@@ -141,11 +141,11 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
         )
     }
     if (confirmingDelete) {
-        val body = pluralStringResource(R.plurals.recipe_delete_body, balance, balance)
         LarderDialog(
             title = stringResource(R.string.recipe_delete_title),
-            // Android can't sign in with Apple, so deleting here can't revoke Apple's link.
-            text = if (deleteLeavesAppleLink(account)) body + "\n\n" + stringResource(R.string.recipe_delete_apple_note) else body,
+            // Nothing about Apple here: the server removes Apple's link with the token it kept
+            // from the iPhone sign-in, and only if it can't is the person told how (RecipePaidOverlays).
+            text = pluralStringResource(R.plurals.recipe_delete_body, balance, balance),
             confirmLabel = stringResource(R.string.recipe_delete_account),
             onConfirm = {
                 confirmingDelete = false
@@ -175,11 +175,6 @@ internal fun signedInHint(providers: Set<SignInProvider>): Int = when {
  *  account lacks. Apple is never offered, whatever the account carries. */
 internal fun signInsToAdd(offered: Set<SignInProvider>, account: Set<SignInProvider>): Set<SignInProvider> =
     (offered - account) - SignInProvider.APPLE
-
-/** Deleting on Android leaves Apple's link to the app in place: no Apple sign-in here gives the
- *  server an authorization code to revoke it with. */
-internal fun deleteLeavesAppleLink(account: AccountState): Boolean =
-    account.kind == AccountKind.SIGNED_IN && SignInProvider.APPLE in account.providers
 
 @Composable
 private fun BalanceLine(balance: Int, label: String) {

@@ -22,9 +22,10 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
+| `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
-| `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple) and the prompt |
+| `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption) and the prompt |
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
@@ -35,7 +36,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 
 | name | trigger | does |
 |---|---|---|
-| `verifyPurchase`, `generateRecipe`, `mergeBalance`, `deleteAccount` | callable, App Check enforced and limited-use tokens consumed (replays refused) | See CONTRACT.md |
+| `verifyPurchase`, `generateRecipe`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn` | callable, App Check enforced and limited-use tokens consumed (replays refused) | See CONTRACT.md |
 | `getBalance`, `getGeneration` | callable, App Check enforced, token not consumed | See CONTRACT.md |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
@@ -165,6 +166,48 @@ What Firebase Authentication still holds after this (for the privacy policy):
   account (`deleteAccount` deletes the Auth user, and with it all of this).
 - Firebase Auth's own usage logs, if enabled in Cloud Logging, are outside this code.
 
+### Stored Sign in with Apple tokens
+
+Apple requires that deleting an account also revokes its Sign in with Apple tokens. Android has no
+Sign in with Apple, so it can't send a fresh authorization code at deletion as iOS does. So the
+server keeps what it needs from the iPhone sign-in (`src/core/appleToken.ts`, CONTRACT.md
+`registerAppleSignIn`):
+
+- **What**: the refresh token Apple returns for the authorization code of the account's last
+  Apple sign-in or link on an iPhone (`/auth/token`, `client_id` = `com.foodbest.ios`, client
+  secret signed with `SIWA_PRIVATE_KEY`). Nothing else from Apple (no identity token, no access
+  token). The code itself is never stored or logged.
+- **Where**: `users/{uid}.appleToken = {sealed, storedAt}`. Firestore is server-only (deny-all
+  rules) and encrypted at rest by Google already; the token gets application-level encryption on
+  top because it is a long-lived credential for a third party: anyone who can read the database
+  (a console session, an export, a backup, a leaked credential with Datastore access) would
+  otherwise hold it.
+- **How**: envelope encryption (`src/adapters/envelope.ts`). A fresh 256-bit data key per value
+  encrypts the token with AES-256-GCM; the data key is wrapped by Cloud KMS
+  (`europe-west1/keyRings/recipe/cryptoKeys/apple-refresh-token`, software protection level,
+  yearly rotation), and the plaintext token never leaves the function. The uid is bound to both
+  layers as additional authenticated data, so a value copied onto another account does not open.
+  Only `recipe-functions@` holds `roles/cloudkms.cryptoKeyEncrypterDecrypter`, and only on that
+  key. Why KMS and not a data key in Secret Manager: a key in Secret Manager would be readable by
+  whoever can read the secret and would need rotation by hand; KMS keeps the key-encryption key
+  unexportable, rotates it, and logs its use (Data Access logs), for about USD 0.06 a month
+  (docs/recipe-setup.md step 5a has the commands and the price).
+- **Removed** (and revoked at Apple's `/auth/revoke`, best effort): at `deleteAccount` (inside the
+  tombstoning transaction, so even a failed revocation leaves no token; a fresh code from iOS is
+  revoked first and preferred); when Apple is unlinked (a `getBalance` whose ID token, issued
+  after the token was stored, no longer lists `apple.com`, confirmed against the Auth record);
+  from `mergeBalance`'s anonymous source tombstone (it should never have one). A later Apple
+  sign-in replaces the token without revoking the old one (revoking could end the authorization
+  the new one belongs to).
+- **Accounts from before this**: no stored token until their next Apple sign-in on an iPhone.
+  Deleting one on Android answers `appleLinkRemoved: false` and the app shows the manual
+  instruction; deleting on the iPhone uses the fresh code as before.
+- **Emulator / tests**: `EmulatorAppleTokens` and an in-memory key (`LocalKeyWrapper`) stand in
+  for Apple and KMS; the envelope code itself is the real one.
+- Not handled: Apple's server-to-server notifications (consent revoked, account deleted at
+  Apple) are not subscribed to; a token whose Apple authorization was already revoked is simply
+  answered 200 by Apple's revoke endpoint at deletion.
+
 ### Spend control
 
 Every LLM call is priced before it is made and paid for by a credit:
@@ -236,10 +279,11 @@ concurrency 1 below 1 vCPU), 1 instance:
 |---|---|---|---|
 | `generateRecipe` | 5 (so at most 5 generations in flight service-wide) | 24 (and 12 per uid) | 180 s |
 | `getGeneration` | 1 | 120 | 10 s |
-| `getBalance` | 1 | 120 | 10 s |
+| `getBalance` | 1 | 120 | 30 s (it may revoke a stored Apple token) |
 | `verifyPurchase` | 1 | 30 | 60 s |
 | `mergeBalance` | 1 | 10 | 30 s |
 | `deleteAccount` | 1 | 10 | 120 s |
+| `registerAppleSignIn` | 1 | 10 | 30 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 
@@ -322,19 +366,20 @@ Calls a flood can push into Firestore per day = instances × per-instance thrott
 | `verifyPurchase` | 43,200 | 3 reads + 1 write | 0.16 | 0.02 | 0.40 | 0.58 |
 | `mergeBalance` | 14,400 | 2 reads + 2 writes | 0.07 | 0.01 | 0.40 | 0.48 |
 | `deleteAccount` | 14,400 | 3 reads + 1 write | 0.05 | 0.01 | 0.40 | 0.46 |
+| `registerAppleSignIn` (no valid Apple code, so no KMS call) | 14,400 | 2 reads + 1 write | 0.04 | 0.01 | 0.40 | 0.45 |
 | `appStoreNotifications` | (forged bodies never reach Firestore) | 0 | 0 | see below | 0.40 | 0.40 |
-| **infrastructure total** | | | **0.80** | **0.25** | **4.40** | **5.45** |
+| **infrastructure total** | | | **0.84** | **0.26** | **4.80** | **5.90** |
 | model spend, absolute maximum | | | | | | **2.00** |
 
 What this means against the 1000 NOK (≈ USD 95) monthly budget:
 
 - **Model spend** is bounded by code at USD 2.00/day (USD 60/month) and above USD 1.20/day only
   when sales fund it. Without credits nobody can make the model run.
-- **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.05/day.
-- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 4.40/day only
+- **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.10/day.
+- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 4.80/day only
   if every public function is kept busy around the clock (`generateRecipe`'s 5 instances are
   USD 2.00 of it; at 2 instances it was 0.80, so five at once cost USD 1.20 a day more in the
-  worst case). Together the infrastructure worst case is USD 5.45/day (≈ USD 164/month): **a flood
+  worst case). Together the infrastructure worst case is USD 5.90/day (≈ USD 177/month): **a flood
   sustained for a whole month on every endpoint would exceed the budget on its own**; any single
   endpoint's worst case is ≤ USD 2.28/day (≈ USD 68 a month, `generateRecipe`; every other
   endpoint ≤ USD 0.68/day).
@@ -370,6 +415,9 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `apple_consumption_answer_failed` / `apple_consumption_answer_expired` | warning / error | An answer to Apple failed (`reason`: `APPLE_RETRYABLE`, `APPLE_REJECTED`, `LEDGER_UNKNOWN`) or missed the 12-hour window. |
 | `debt_followed_buyer` | warning | A purchase picked up another account's negative balance through a shared buyer key. |
 | `profile_scrub_failed` | warning | Clearing a user's Auth name/photo failed (error code only). |
+| `apple_token_registered` / `apple_token_removed_unlinked` | info | A Sign in with Apple refresh token was stored (`replaced`), or removed after Apple was unlinked. `uidHash` only. |
+| `apple_code_exchange_failed` / `apple_code_revoke_failed` / `apple_token_revoke_failed` | warning | Apple refused or could not be reached (`kind`: `rejected` / `retryable`; `error`: endpoint, HTTP status and Apple's `error` code, never a code or token; `why` for the last). Many `retryable` ones mean the SIWA key or Apple is down; deletions then answer `appleLinkRemoved: false`. |
+| `apple_token_seal_failed` | error | Cloud KMS refused to wrap a token (key missing, IAM, API off: docs/recipe-setup.md step 5a). Nothing was stored. |
 | `sweep_item_failed` | error | One item of the sweeper's queues threw (the rest still ran). |
 | `callable_failed` | error | Unexpected error in a callable (sampled, 5 a minute per instance). |
 | `appstore_notification_rejected` | warning | Sampled: rejected bodies on the public endpoint (fixed `outcome` code + suppressed count). |
@@ -569,8 +617,10 @@ Server-only. Documents:
 - `users/{uid}`: `balance`, `inFlight`, `purchasedCredits`, `consumedCredits`, `refundedCredits`,
   rate windows (`minuteWindow`, `dayWindow`, `verifyWindow`), `spendWindow` (`{day, microUsd}`),
   `infraRefunds` (`{day, count}`), `contentRefundsUsed` and `timeoutRefundsUsed` (lifetime),
-  `buyerKeys`, `profileScrubbedAt`, `debtMovedTo` + `debtMovedAt`, and tombstones `deletedAt` +
-  `forfeitedBalance` or `mergedInto` + `mergedAt`.
+  `buyerKeys`, `profileScrubbedAt`, `debtMovedTo` + `debtMovedAt`, `appleToken` (`{sealed,
+  storedAt}`: the encrypted Sign in with Apple refresh token, see "Stored Sign in with Apple
+  tokens"), and tombstones `deletedAt` + `forfeitedBalance` or `mergedInto` + `mergedAt` (a
+  tombstone never has `appleToken`).
 - `users/{uid}/generations/{requestId}`: `state` (pending | done | failed), `kind`, `courses`,
   `cost`, `inputHash`, `reservedMicroUsd`, `statsDay`, `createdAt`, `deadlineAt`, `charged`,
   `failureClass`, `failureReason`, `usage`, `actualMicroUsd`, `recipe` / `menu`, `expiresAt`
@@ -692,7 +742,11 @@ which holds no secrets and may be committed), or set there beforehand:
 | `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
 | `APPLE_APP_ID` | none | Numeric App Store app id (App Store Connect > App Information > Apple ID) |
 | `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` | none | App Store Server API key id and issuer id |
-| `APPLE_TEAM_ID`, `SIWA_KEY_ID` | none | Team id and Sign in with Apple key id, for token revocation |
+| `APPLE_TEAM_ID`, `SIWA_KEY_ID` | none | Team id and Sign in with Apple key id, for exchanging codes and revoking tokens |
+
+Not a param: the Cloud KMS key for stored Apple tokens has a fixed name
+(`KMS_LOCATION` / `KMS_KEY_RING` / `KMS_APPLE_TOKEN_KEY` in `src/constants.ts`) and must exist
+before deploy (docs/recipe-setup.md step 5a).
 | `PLAY_RTDN_TOPIC` | `play-rtdn` | Pub/Sub topic Play publishes RTDNs to |
 | `BUDGET_ALERT_TOPIC` | `budget-alerts` | Pub/Sub topic the GCP budget publishes to |
 
@@ -718,9 +772,11 @@ What a developer needs to know about the live project `bestbefore-f9ee1`:
   Authentication Admin, Secret Manager Secret Accessor (meant for the two secrets only), Logs
   Writer, Cloud Run Invoker and Eventarc Event Receiver (the scheduled and Pub/Sub triggers invoke
   as this account), and **Firebase App Check Token Verifier** (`roles/firebaseappcheck.tokenVerifier`):
-  `generateRecipe`, `verifyPurchase`, `mergeBalance` and `deleteAccount` consume limited-use App
-  Check tokens (`CONSUME_APP_CHECK_TOKENS`), and without the role every call to them fails. The
-  deploying account needs Service Account User on it.
+  `generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount` and `registerAppleSignIn`
+  consume limited-use App Check tokens (`CONSUME_APP_CHECK_TOKENS`), and without the role every
+  call to them fails. Plus **Cloud KMS CryptoKey Encrypter/Decrypter** on the one key
+  `apple-refresh-token` (not on the project), for the stored Sign in with Apple tokens
+  (docs/recipe-setup.md step 5a). The deploying account needs Service Account User on it.
 - **Auth**: Anonymous, Google and Apple providers (Apple is used by the iOS app only; Android
   offers Google sign-in only). Identity Platform's automatic clean-up of
   anonymous users stays **off**: it would delete paying anonymous buyers.

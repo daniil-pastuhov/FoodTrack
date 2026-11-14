@@ -84,10 +84,15 @@ data class GenerateRequest(
     val config: RecipeConfig,
     val ingredients: List<WireIngredient>,
     val allergens: List<String>,
-    val today: String
+    val today: String,
+    /** `true` with a non-empty [allergens], sent only after the person agreed to send them
+     *  ([allergenConsentStep]); null otherwise. The server refuses allergens without it
+     *  (ALLERGEN_CONSENT_REQUIRED). Not one of the inputs a request id is bound to. */
+    val allergenConsent: Boolean? = null
 ) {
     /** Whether [other] asks for the same thing, whatever its id. */
-    fun sameAskAs(other: GenerateRequest): Boolean = copy(requestId = other.requestId) == other
+    fun sameAskAs(other: GenerateRequest): Boolean =
+        copy(requestId = other.requestId, allergenConsent = other.allergenConsent) == other
 }
 
 @Serializable
@@ -181,6 +186,10 @@ enum class ServerError {
      *  in the store for the account that bought it. */
     PURCHASE_ACCOUNT_MISMATCH,
 
+    /** `generateRecipe`: allergens were sent without `allergenConsent: true` (a request kept from
+     *  before the consent step existed). Nothing was charged; a new request carries the flag. */
+    ALLERGEN_CONSENT_REQUIRED,
+
     /** `resource-exhausted` without a reason (HTTP 429): every server instance is busy. Nothing
      *  was charged; ask again, same request id, after a few seconds. */
     OVERLOADED,
@@ -239,8 +248,15 @@ interface RecipeBackend {
     suspend fun getBalance(): ServerResult<BalanceReply>
 
     /** Deletes the signed-in account on the server. The caller signs out afterwards. */
-    suspend fun deleteAccount(): ServerResult<Unit>
+    suspend fun deleteAccount(): ServerResult<DeleteReply>
 }
+
+/** `deleteAccount`'s answer. [appleLinkRemoved] is null for an account without Apple, false when
+ *  the server could not remove Apple's link (the person is told how to do it themselves). */
+data class DeleteReply(val appleLinkRemoved: Boolean? = null)
+
+/** Whether a deletion left Apple's link to the app in place: only when the server says so. */
+fun appleLinkLeftBehind(reply: DeleteReply): Boolean = reply.appleLinkRemoved == false
 
 /** What [RecipeBackend.attest] found. */
 enum class Attestation {
@@ -413,7 +429,9 @@ data class RecipePaidSnapshot(
     val purchasesBlocked: Boolean = false,
     /** When [pendingGeneration] was first sent. The server keeps an answer for 7 days; past a day
      *  the request is dropped rather than risk it being written, and charged, anew. */
-    val pendingSinceMillis: Long? = null
+    val pendingSinceMillis: Long? = null,
+    /** The person's answer to sending their allergen list to our server ([AllergenConsent]). */
+    val allergenConsent: AllergenConsentRecord? = null
 )
 
 interface RecipePaidRepository {
@@ -429,7 +447,7 @@ object NotAvailableRecipeBackend : RecipeBackend {
     override suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply> = ServerResult.Err(ServerError.UNAUTHENTICATED)
     override suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply> = ServerResult.Err(ServerError.UNAUTHENTICATED)
     override suspend fun getBalance(): ServerResult<BalanceReply> = ServerResult.Err(ServerError.UNAUTHENTICATED)
-    override suspend fun deleteAccount(): ServerResult<Unit> = ServerResult.Err(ServerError.UNAUTHENTICATED)
+    override suspend fun deleteAccount(): ServerResult<DeleteReply> = ServerResult.Err(ServerError.UNAUTHENTICATED)
 }
 
 object NotAvailableRecipeStore : RecipeStore {

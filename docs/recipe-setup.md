@@ -149,6 +149,51 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       `BUDGET_ALERT_TOPIC`. Done 2026-11-14: all set in `functions/.env.bestbefore-f9ee1`
       (`APPSTORE_KEY_ID=QU395A4DS3`, `SIWA_KEY_ID=A8C76L3W6R`).
 
+### 5a. Cloud KMS key for stored Apple tokens **(to do before the next deploy)**
+
+`registerAppleSignIn` keeps each account's Sign in with Apple refresh token, envelope-encrypted
+with a Cloud KMS key, so `deleteAccount` can remove Apple's link also when the account is deleted
+on Android (functions/README.md, "Stored Sign in with Apple tokens"). The key must exist, and only
+the functions' service account may use it, before the functions that use it are deployed. Without
+it nothing breaks for users: `registerAppleSignIn` answers `APPLE_UNAVAILABLE` (the iPhone app
+ignores it), no token is stored, and a deletion from Android answers `appleLinkRemoved: false`
+(the app then shows the manual instruction), as before this change. Nothing here was created on
+the live project yet.
+
+- [ ] Enable the API, create the key ring and the key, and grant the service account
+      encrypt/decrypt on that one key (not on the project). Run as the owner:
+      ```bash
+      gcloud services enable cloudkms.googleapis.com --project bestbefore-f9ee1
+      gcloud kms keyrings create recipe --location europe-west1 --project bestbefore-f9ee1
+      gcloud kms keys create apple-refresh-token --keyring recipe --location europe-west1 \
+        --purpose encryption --protection-level software \
+        --rotation-period 365d --next-rotation-time 2027-11-14T00:00:00Z \
+        --project bestbefore-f9ee1
+      gcloud kms keys add-iam-policy-binding apple-refresh-token --keyring recipe --location europe-west1 \
+        --member serviceAccount:recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com \
+        --role roles/cloudkms.cryptoKeyEncrypterDecrypter --project bestbefore-f9ee1
+      ```
+      The names are fixed in `functions/src/constants.ts` (`KMS_LOCATION`, `KMS_KEY_RING`,
+      `KMS_APPLE_TOKEN_KEY`). Key rings and keys can't be deleted (only their versions destroyed),
+      so check the names before running. Nobody else needs a role on the key: Firestore data, an
+      export or a backup alone does not reveal the tokens, only a principal that can also use this
+      key. A project Owner can still grant itself that, but only through an IAM change, which
+      the Admin Activity audit log records; turn on Data Access audit logs for Cloud KMS
+      (`DATA_READ`) if every decrypt should be logged too.
+- [ ] Read it back: `gcloud kms keys get-iam-policy apple-refresh-token --keyring recipe
+      --location europe-west1 --project bestbefore-f9ee1` shows exactly the one binding.
+- [ ] Rotation: a rotation adds a key version and makes it primary; earlier versions must stay
+      **enabled** (never disable or destroy one), because tokens wrapped with them are unwrapped
+      with them at deletion. Destroying the key would make every stored token unusable
+      (deletions then answer `appleLinkRemoved: false`).
+- Cost (Cloud KMS price list, 2026-11-14): USD 0.06 a month per active software key version
+  (USD 0.000082192 an hour), so about USD 0.06 a month now and USD 0.06 more per yearly rotation,
+  plus USD 0.03 per 10,000 cryptographic operations (one encrypt per Apple sign-in on an iPhone,
+  one decrypt per deletion): negligible.
+- The next deploy also binds `SIWA_PRIVATE_KEY` to `getBalance`, `mergeBalance` and the new
+  `registerAppleSignIn` (they can revoke a stored token); the deploy grants the service account
+  Secret Accessor on that secret as before, no extra step.
+
 ### 6. First deploy **(agent)**
 
 - [x] `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
@@ -234,10 +279,12 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       iPhone reaches Android once Google is added to it on the iPhone (the apps say so). The
       Firebase Apple provider's code-flow settings and the Services ID `com.foodbest.ios.signin`
       exist on the live project but Android no longer uses them; they can stay. The Sign in with
-      Apple key (`SIWA_PRIVATE_KEY`, `SIWA_KEY_ID`) is still needed: the backend uses it to revoke
-      Apple's token when an iPhone deletes an account. Deleting on Android can't revoke it (no Apple
-      authorization code there); the Android delete dialog tells such a person to delete from the
-      iPhone app or to stop using Sign in with Apple for the app in their Apple Account settings.
+      Apple key (`SIWA_PRIVATE_KEY`, `SIWA_KEY_ID`) is still needed: the backend uses it to exchange
+      the code of each Apple sign-in on an iPhone for a refresh token (`registerAppleSignIn`, kept
+      encrypted, step 5a) and to revoke Apple's token when the account is deleted, on the iPhone
+      (with a fresh code) or on Android (with the stored token). Only when neither works does the
+      app, after deleting, tell the person to turn off Sign in with Apple for the app in their
+      Apple Account settings.
       The Google button (Android and iOS) is done: Google's own button on iOS, and on Android a
       button drawn to Google's branding guidelines with the "G" from Google's asset bundle
       (`GoogleSignInButton.kt`).

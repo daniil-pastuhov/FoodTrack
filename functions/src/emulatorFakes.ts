@@ -11,9 +11,13 @@
  * - LLM: returns a canned recipe or menu, in the model's answer shape (pantry ids), which then goes
  *   through the real output checks. An ingredient named "fail infra" or "fail content" makes the
  *   call fail with that class, to exercise refunds. The judge always answers ok.
+ * - Sign in with Apple: any authorization code is exchanged for a random fake refresh token, and
+ *   revoking succeeds; the token is sealed with an in-memory key (LocalKeyWrapper), not Cloud KMS.
  */
+import { randomBytes } from "node:crypto";
 import { coursesFor, menuDates, type GenerateRequest } from "./contract";
 import {
+  type AppleTokenRevoker,
   GenerationError,
   InvalidSignatureError,
   type ConsumptionInfo,
@@ -142,4 +146,14 @@ export class EmulatorJudge implements OutputJudge {
   async judge(): Promise<JudgeResult> {
     return { verdict: "ok", usage: { inputTokens: 500, outputTokens: 5, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" } };
   }
+}
+
+export class EmulatorAppleTokens implements AppleTokenRevoker {
+  async exchangeAuthorizationCode(): Promise<string> {
+    return `emulator-refresh-${randomBytes(12).toString("hex")}`;
+  }
+
+  async revokeRefreshToken(): Promise<void> {}
+
+  async revokeWithAuthorizationCode(): Promise<void> {}
 }

@@ -17,14 +17,31 @@ import { onMessagePublished } from "firebase-functions/v2/pubsub";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import * as logger from "firebase-functions/logger";
 import { defineInt, defineSecret, defineString } from "firebase-functions/params";
-import { CONSUME_APP_CHECK_TOKENS, GENERATE_TIMEOUT_SECONDS, IOS_BUNDLE_ID, REGION } from "./constants";
+import {
+  CONSUME_APP_CHECK_TOKENS,
+  GENERATE_TIMEOUT_SECONDS,
+  IOS_BUNDLE_ID,
+  KMS_APPLE_TOKEN_KEY,
+  KMS_KEY_RING,
+  KMS_LOCATION,
+  REGION,
+} from "./constants";
 import { RuntimeConfigCache, loadRuntimeConfig, type RuntimeConfig } from "./model";
 import type { Caller, Deps } from "./ports";
 import { GeminiOutputJudge, GeminiRecipeGenerator } from "./adapters/gemini";
 import { GooglePlayVerifier } from "./adapters/play";
 import { AppleAppStoreVerifier } from "./adapters/appstore";
 import { AppleSignInRevoker } from "./adapters/appleRevoke";
-import { EmulatorAppStore, EmulatorGenerator, EmulatorJudge, EmulatorPlay, emulatorFakesEnabled } from "./emulatorFakes";
+import { EnvelopeSealer, KmsKeyWrapper, LocalKeyWrapper } from "./adapters/envelope";
+import {
+  EmulatorAppStore,
+  EmulatorAppleTokens,
+  EmulatorGenerator,
+  EmulatorJudge,
+  EmulatorPlay,
+  emulatorFakesEnabled,
+} from "./emulatorFakes";
+import { registerAppleSignIn as registerAppleCore } from "./core/appleToken";
 import { generateRecipe as generateCore, getGeneration as getGenerationCore } from "./core/generation";
 import { verifyPurchase as verifyCore } from "./core/purchases";
 import {
@@ -94,6 +111,20 @@ function configSource(): () => Promise<RuntimeConfig> {
   return () => cache.get();
 }
 
+/**
+ * Sign in with Apple REST client. SIWA_PRIVATE_KEY is bound to every function that can reach it:
+ * registerAppleSignIn, deleteAccount, getBalance (Apple unlinked) and mergeBalance (a source
+ * tombstone holding a token).
+ */
+function appleClient(): AppleSignInRevoker {
+  return new AppleSignInRevoker({
+    teamId: appleTeamId.value(),
+    keyId: siwaKeyId.value(),
+    privateKey: siwaPrivateKey.value(),
+    clientId: IOS_BUNDLE_ID,
+  });
+}
+
 function getDeps(): Deps {
   if (!deps && emulatorFakesEnabled()) {
     logger.warn("EMULATOR_FAKES: fake stores and LLM in use (emulator only)");
@@ -104,7 +135,8 @@ function getDeps(): Deps {
       appStore: new EmulatorAppStore(),
       generator: new EmulatorGenerator(),
       judge: new EmulatorJudge(),
-      appleRevoker: { revokeWithAuthorizationCode: async () => undefined },
+      appleRevoker: new EmulatorAppleTokens(),
+      sealer: new EnvelopeSealer(new LocalKeyWrapper()),
       now: () => Date.now(),
       logger,
       config: configSource(),
@@ -136,15 +168,18 @@ function getDeps(): Deps {
       thinkingLevel: geminiThinking.value(),
       jailbreakFilter: jailbreakFilter.value() === "true",
     }),
+    // Built per call: the Sign in with Apple key is a secret bound only to the functions that use it.
     appleRevoker: {
-      revokeWithAuthorizationCode: (code) =>
-        new AppleSignInRevoker({
-          teamId: appleTeamId.value(),
-          keyId: siwaKeyId.value(),
-          privateKey: siwaPrivateKey.value(),
-          clientId: IOS_BUNDLE_ID,
-        }).revokeWithAuthorizationCode(code),
+      revokeWithAuthorizationCode: (code) => appleClient().revokeWithAuthorizationCode(code),
+      exchangeAuthorizationCode: (code) => appleClient().exchangeAuthorizationCode(code),
+      revokeRefreshToken: (token) => appleClient().revokeRefreshToken(token),
     },
+    sealer: new EnvelopeSealer(
+      new KmsKeyWrapper(
+        `projects/${process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? ""}/locations/${KMS_LOCATION}` +
+          `/keyRings/${KMS_KEY_RING}/cryptoKeys/${KMS_APPLE_TOKEN_KEY}`,
+      ),
+    ),
     now: () => Date.now(),
     logger,
     config: configSource(),
@@ -161,12 +196,15 @@ function callerOf(request: CallableRequest, throttle: CallThrottle, consume: boo
   assertFreshAppCheck(request.app, consume);
   const raw = request.rawRequest;
   throttle.admit(request.auth.uid, clientIp(raw.headers, raw.socket?.remoteAddress), Date.now());
+  const identities = request.auth.token.firebase?.identities;
   return {
     uid: request.auth.uid,
     signInProvider: request.auth.token.firebase?.sign_in_provider ?? "",
     authTime: request.auth.token.auth_time ?? 0,
     appId: request.app?.appId ?? null,
     profileClaims: Boolean(request.auth.token.name || request.auth.token.picture),
+    providers: identities && typeof identities === "object" ? Object.keys(identities) : [],
+    issuedAt: request.auth.token.iat ?? 0,
   };
 }
 
@@ -220,6 +258,7 @@ const LIMITS = {
   verifyPurchase: { maxInstances: 1, perMinute: 30 },
   mergeBalance: { maxInstances: 1, perMinute: 10 },
   deleteAccount: { maxInstances: 1, perMinute: 10 },
+  registerAppleSignIn: { maxInstances: 1, perMinute: 10 },
 } as const;
 
 const throttles = {
@@ -229,6 +268,7 @@ const throttles = {
   verifyPurchase: new CallThrottle(LIMITS.verifyPurchase.perMinute),
   mergeBalance: new CallThrottle(LIMITS.mergeBalance.perMinute),
   deleteAccount: new CallThrottle(LIMITS.deleteAccount.perMinute),
+  registerAppleSignIn: new CallThrottle(LIMITS.registerAppleSignIn.perMinute),
 };
 
 // --- Callables --------------------------------------------------------------------------------
@@ -271,8 +311,11 @@ export const getGeneration = onCall(
       withCaller(callerOf(request, throttles.getGeneration, false), (d, c) => getGenerationCore(d, c, request.data))),
 );
 
+// SIWA_PRIVATE_KEY: getBalance revokes a stored Apple token once Apple is unlinked (core/appleToken.ts).
 export const getBalance = onCall(
-  { ...callable, timeoutSeconds: 10, maxInstances: LIMITS.getBalance.maxInstances, concurrency: 1 },
+  // 30 s, not 10: after an unlink it may also call Cloud KMS and Apple (up to 10 s each), and a
+  // timeout between removing the token and revoking it would leave Apple's link in place.
+  { ...callable, secrets: [siwaPrivateKey], timeoutSeconds: 30, maxInstances: LIMITS.getBalance.maxInstances, concurrency: 1 },
   (request) =>
     guarded("getBalance", () => withCaller(callerOf(request, throttles.getBalance, false), (d, c) => balanceCore(d, c))),
 );
@@ -281,6 +324,7 @@ export const mergeBalance = onCall(
   {
     ...callable,
     consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
+    secrets: [siwaPrivateKey],
     timeoutSeconds: 30,
     maxInstances: LIMITS.mergeBalance.maxInstances,
     concurrency: 1,
@@ -302,6 +346,23 @@ export const deleteAccount = onCall(
   (request) =>
     guarded("deleteAccount", () =>
       deleteCore(getDeps(), callerOf(request, throttles.deleteAccount, CONSUME_APP_CHECK_TOKENS), request.data)),
+);
+
+// The iOS app sends the authorization code of each Apple sign-in or link; the server keeps the
+// refresh token (encrypted) so deleteAccount can revoke it from either platform. App Check
+// consumed: the call takes a single-use credential.
+export const registerAppleSignIn = onCall(
+  {
+    ...callable,
+    consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
+    secrets: [siwaPrivateKey],
+    timeoutSeconds: 30,
+    maxInstances: LIMITS.registerAppleSignIn.maxInstances,
+    concurrency: 1,
+  },
+  (request) =>
+    guarded("registerAppleSignIn", () =>
+      withCaller(callerOf(request, throttles.registerAppleSignIn, CONSUME_APP_CHECK_TOKENS), (d, c) => registerAppleCore(d, c, request.data))),
 );
 
 // --- Background -------------------------------------------------------------------------------

@@ -166,6 +166,14 @@ fun RecipeScreen(
                     resources.getString(R.string.settings_title)
                 ) { navigator.navigate(LarderRoute.Settings) }
             }
+            RecipeEvent.AllergenConsentDeclined -> {
+                stateHolder.consumeEvent()
+                // With the way to the switch that turns sending them back on.
+                snackbars.show(
+                    resources.getString(R.string.recipe_allergen_consent_declined),
+                    resources.getString(R.string.recipe_settings_action)
+                ) { navigator.navigate(LarderRoute.RecipeSettings) }
+            }
             RecipeEvent.Failed -> {
                 stateHolder.consumeEvent()
                 snackbars.show(resources.getString(R.string.recipe_failed_phone), tryAgain) { stateHolder.generateOnDevice() }
