@@ -44,8 +44,10 @@ jobs:
             runner: ubuntu-latest
           # Not ci.yml's xcode-27 runner: on that image, CodeQL's build tracer makes every system
           # binary the build spawns (sandbox-exec first) fail with "Bad CPU type in executable".
-          # The image's default Xcode is fine for analysis, since the app uses no iOS 27 API;
-          # Xcode 27.1 only matters for the shipped app (see ci.yml).
+          # The image's default Xcode is fine for analysis: the one use of an iOS 27 SDK type
+          # (FoundationModelsRecipeModel.swift) is behind `#if compiler(>=6.4)`, so keep new
+          # iOS 27 API behind the same check. Xcode 27.1 only matters for the shipped app (see
+          # ci.yml).
           - language: swift
             build-mode: manual
             runner: macos-latest

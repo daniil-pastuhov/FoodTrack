@@ -36,6 +36,10 @@ struct FoundationModelsRecipeModel: OnDeviceRecipeModel {
     @available(iOS 26.0, *)
     private static func mapped(_ error: Error) -> Error {
         if error is CancellationError { return error }
+        // LanguageModelError is in the iOS 27 SDK only. CodeQL builds with the runner's default,
+        // older Xcode (codeql.yml), whose SDK lacks the type, so compile this out there; the
+        // shipped app is built with Xcode 27.1 (Swift 6.4).
+        #if compiler(>=6.4)
         if #available(iOS 27.0, *), let error = error as? LanguageModelError {
             switch error {
             case .unsupportedLanguageOrLocale: return OnDeviceRecipeError.unsupportedLanguage
@@ -43,6 +47,7 @@ struct FoundationModelsRecipeModel: OnDeviceRecipeModel {
             default: return OnDeviceRecipeError.failed
             }
         }
+        #endif
         if let error = error as? LanguageModelSession.GenerationError {
             switch error {
             case .unsupportedLanguageOrLocale: return OnDeviceRecipeError.unsupportedLanguage
