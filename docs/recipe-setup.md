@@ -112,7 +112,8 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       logged as `Play RTDN` / `test`.) **Real-time developer notifications** (Monetisation setup > Real-time developer
       notifications; no API): topic `projects/bestbefore-f9ee1/topics/play-rtdn`, with one-time
       product (voided purchase) notifications on. "Send test notification".
-- [ ] **Play Integrity**: link the Cloud project (Test and release > App integrity > Play
+- [x] (Linked by the owner 2026-11-14; not yet confirmed by a verified App Check request from a
+      Play-installed build.) **Play Integrity**: link the Cloud project (Test and release > App integrity > Play
       Integrity API; no API).
 - [ ] **Licence testers** (Settings > Licence testing; no API).
 - [ ] Enrol in Play's **15 % service fee tier** (Play Console > account's developer page / account

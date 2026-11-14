@@ -825,7 +825,9 @@ Apple only on the live project; on the emulators, `--play-order` searches the st
      from that address. A Hide My Email address (`…@privaterelay.appleid.com`) accepts mail only
      from sources registered with Apple: in Certificates, Identifiers & Profiles > Services >
      Sign in with Apple for Email Communication > Configure, add your sending address or domain
-     under Email Sources (it must pass SPF, or DKIM for a domain that sends through a provider).
+     under Email Sources (it must pass SPF, or DKIM for a domain that sends through a provider). The
+     owner registered the sending address on 2026-11-14; register any other address before
+     replying from it.
      Apple's steps: <https://developer.apple.com/help/account/capabilities/configure-private-email-relay-service>.
      Do this once, before the first such request.
    - Bought without signing in: the order number is on the store's emailed receipt only. Run
