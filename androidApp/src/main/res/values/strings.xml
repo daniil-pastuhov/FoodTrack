@@ -978,6 +978,17 @@
         <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
         <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
+    <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
+    <string name="recipe_delete_device_data">Delete my data from our server</string>
+    <string name="recipe_delete_device_title">Delete your data from our server?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</string>
+    <string name="recipe_delete_device_confirm">Delete data</string>
+    <string name="recipe_device_data_deleted">Your data is deleted from our server</string>
+    <string name="recipe_delete_waits_for_purchase">A purchase is still being completed. You can delete once it has finished.</string>
     <string name="recipe_merge_title">Add this device\'s recipes to your account?</string>
     <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this device will be added to it, making %3$d. This can\'t be undone.</string>
     <string name="recipe_merge_body_unknown">The %1$d recipes on this device will be added to your account. This can\'t be undone.</string>

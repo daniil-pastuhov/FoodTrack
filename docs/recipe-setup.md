@@ -277,7 +277,9 @@ binding exist on the live project (created and read back 2026-11-14).
       `store-listing/app-store/README.md`, section 5. App Privacy has no API; Play's Data safety
       can be uploaded as CSV through the Play Developer API **(agent)**. Play Console > App
       content: in-app purchases, and account deletion (Recipe tab > Recipe settings > Account >
-      Delete account). **Check** whether Play also wants a web page for deletion requests.
+      Delete account; for recipes bought without an account, Recipe settings > Your recipes >
+      Delete my data from our server, which deletes the anonymous account). **Check** whether
+      Play also wants a web page for deletion requests.
 - [x] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for

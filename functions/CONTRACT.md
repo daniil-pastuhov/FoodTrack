@@ -486,7 +486,14 @@ token's linked providers, a stored Apple token, or a code sent).
   Only on `false` should the client tell the person how to remove the link themselves (turn off
   Sign in with Apple for the app in the Apple Account settings); absent or `true`: say nothing
   extra.
+- An anonymous user (an install that bought without signing in) deletes itself the same way,
+  without re-authenticating and with no code; the apps offer it in that state too.
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
+  Kept: the `users/{uid}` tombstone (balance 0, `forfeitedBalance`, totals, `buyerKeys`), every
+  `purchases/` document (`uid` null, `formerUid` set) and `buyers/` documents. Deleted: the
+  account's `generations` and its rate-limit windows. A purchase made by this uid and not yet
+  verified can never be redeemed afterwards (`ACCOUNT_CLOSED` for the uid, `PURCHASE_ACCOUNT_MISMATCH`
+  for any other), so clients hold deletion back until it is confirmed.
 - `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.
 
 ### `registerAppleSignIn`

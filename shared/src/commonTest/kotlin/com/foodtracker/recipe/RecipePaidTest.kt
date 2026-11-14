@@ -2071,6 +2071,129 @@ class RecipePaidTest {
         assertEquals(12, holder.uiState.value.paid.balance)
     }
 
+    // --- Deleting the recipes kept on this device (anonymous) ---------------------------------
+
+    @Test
+    fun recipesOnThisDeviceAreDeletedFromTheServerWithoutASignIn() = runUnconfined {
+        withBalance(7)
+        account.freshSignInNeeded = true
+        val holder = holder()
+        backend.deleteReplies += ServerResult.Ok(DeleteReply())
+        holder.deleteAccount()
+
+        val paid = holder.uiState.value.paid
+        assertEquals(1, backend.deleteCalls)
+        assertEquals(0, account.reauths, "an anonymous user has no sign-in to repeat")
+        assertEquals(1, account.signOuts)
+        assertEquals(AccountKind.NONE, paid.account.kind, "back to never having bought")
+        assertNull(paid.balance)
+        assertNull(paidRepository.get().balance)
+        assertEquals(PaidEvent.DeviceDataDeleted, paid.event)
+        assertFalse(paid.accountBusy)
+        assertFalse(paid.appleLinkLeft)
+        assertTrue(paid.deletionTried)
+        assertEquals(0, account.anonymousCreated, "no user is made again")
+    }
+
+    @Test
+    fun anInstallWithNoRecipesLeftCanStillDeleteItsData() = runUnconfined {
+        for (balance in listOf(0, -3)) {
+            withBalance(balance)
+            backend.deleteCalls = 0
+            val holder = holder()
+            backend.deleteReplies += ServerResult.Ok(DeleteReply())
+            holder.deleteAccount()
+            assertEquals(1, backend.deleteCalls, "balance $balance")
+            assertEquals(PaidEvent.DeviceDataDeleted, holder.uiState.value.paid.event)
+        }
+    }
+
+    @Test
+    fun withNoUserThereIsNothingToDeleteAndNoUserIsMade() = runUnconfined {
+        val holder = holder()
+        holder.deleteAccount()
+        assertEquals(0, backend.deleteCalls)
+        assertEquals(0, account.anonymousCreated)
+        assertNull(holder.uiState.value.paid.event)
+        assertFalse(holder.uiState.value.paid.deletionTried)
+    }
+
+    @Test
+    fun deletionWaitsWhileAPurchaseIsUnconfirmedOrItsPaymentIsUnderWay() = runUnconfined {
+        for (kind in listOf(AccountKind.ANONYMOUS, AccountKind.SIGNED_IN)) {
+            for (snapshot in listOf(
+                RecipePaidSnapshot(allergenConsent = agreed, balance = 4, unverified = listOf(UnverifiedPurchase("tok", 10))),
+                RecipePaidSnapshot(allergenConsent = agreed, balance = 4, paymentPending = true)
+            )) {
+                account = FakeAccount(kind)
+                paidRepository = InMemoryRecipePaidRepository(snapshot)
+                backend.deleteCalls = 0
+                backend.balance = ServerResult.Ok(4)
+                // Still unconfirmed whenever it is asked about.
+                backend.verifyReplies.clear()
+                repeat(4) { backend.verifyReplies += ServerResult.Err(ServerError.OFFLINE) }
+                store.held = null
+                val holder = holder()
+                assertTrue(holder.uiState.value.paid.deletionWaitsForPurchase, "$kind $snapshot")
+                holder.deleteAccount()
+                val paid = holder.uiState.value.paid
+                assertEquals(0, backend.deleteCalls, "a paid purchase tied to this account would be stranded")
+                assertEquals(PaidEvent.DeletionWaitsForPurchase, paid.event)
+                assertEquals(0, account.signOuts)
+                assertEquals(0, account.reauths)
+                assertEquals(4, paid.balance)
+                assertTrue(paid.deletionTried, "no rating request after trying either")
+            }
+        }
+    }
+
+    @Test
+    fun aPurchaseBelongingToAnotherAccountDoesNotHoldDeletionBack() = runUnconfined {
+        account = FakeAccount(AccountKind.ANONYMOUS)
+        paidRepository = InMemoryRecipePaidRepository(
+            RecipePaidSnapshot(allergenConsent = agreed, balance = 2, unverified = listOf(UnverifiedPurchase("tok", 10, refusedFor = "key-ANONYMOUS")))
+        )
+        store.held = null
+        val holder = holder()
+        assertEquals(10, holder.uiState.value.paid.elsewhereRecipes)
+        assertFalse(holder.uiState.value.paid.deletionWaitsForPurchase)
+        backend.deleteReplies += ServerResult.Ok(DeleteReply())
+        holder.deleteAccount()
+        assertEquals(1, backend.deleteCalls)
+        assertEquals(PaidEvent.DeviceDataDeleted, holder.uiState.value.paid.event)
+    }
+
+    @Test
+    fun deletingRecipesOnThisDeviceWhileOneIsWrittenOrOfflineKeepsThem() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.deleteReplies += ServerResult.Err(ServerError.BUSY)
+        holder.deleteAccount()
+        assertEquals(PaidEvent.AccountBusy, holder.uiState.value.paid.event)
+        holder.consumePaidEvent()
+
+        backend.deleteReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.deleteAccount()
+        val paid = holder.uiState.value.paid
+        assertEquals(PaidEvent.AccountActionFailed, paid.event)
+        assertEquals(ServerIssue.OFFLINE, paid.issue)
+        assertEquals(0, account.signOuts)
+        assertEquals(AccountKind.ANONYMOUS, paid.account.kind)
+        assertEquals(5, paid.balance)
+        assertFalse(paid.accountBusy)
+    }
+
+    @Test
+    fun anInstallAlreadyDeletedElsewhereEndsUpWithoutAUser() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.deleteReplies += ServerResult.Err(ServerError.ACCOUNT_CLOSED)
+        holder.deleteAccount()
+        assertEquals(PaidEvent.DeviceDataDeleted, holder.uiState.value.paid.event)
+        assertEquals(AccountKind.NONE, holder.uiState.value.paid.account.kind)
+        assertNull(holder.uiState.value.paid.balance)
+    }
+
     // --- Apple's link after deletion -------------------------------------------------------
 
     @Test

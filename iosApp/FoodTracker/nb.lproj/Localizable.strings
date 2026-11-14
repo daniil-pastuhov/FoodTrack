@@ -745,6 +745,12 @@
 "recipe_allergen_consent_setting_off" = "Trengs for oppskrifter fra serveren vår mens allergener er satt. Brukes bare til forespørselen og lagres ikke.";
 "recipe_account_action_failed" = "Fikk ikke kontakt med serveren vår. Ingenting ble endret.";
 "recipe_account_busy" = "En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.";
+"recipe_delete_device_data" = "Slett dataene mine fra serveren vår";
+"recipe_delete_device_title" = "Slette dataene dine fra serveren vår?";
+"recipe_delete_device_message_none" = "Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.";
+"recipe_delete_device_confirm" = "Slett dataene";
+"recipe_device_data_deleted" = "Dataene dine er slettet fra serveren vår";
+"recipe_delete_waits_for_purchase" = "Et kjøp er ikke fullført ennå. Du kan slette når det er fullført.";
 "recipe_purchases_blocked" = "Kjøp av oppskrifter er ikke tilgjengelig for denne kontoen fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.";
 "recipe_consumption_note" = "Hvis du ber Apple om refusjon, forteller vi Apple hvor mange av disse oppskriftene du har brukt.";
 "recipe_menu_result_title" = "Meny";

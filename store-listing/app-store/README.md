@@ -253,10 +253,12 @@ privacy policy (URL above) has to say the same; it is updated in
     set, and only after the consent step), **App functionality**; processed ephemerally ("Is
     this data processed ephemerally?": **Yes**: it is used for the one request and not stored).
   - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings >
-    Account > Delete account). The Auth user (email, name), the server's recipes, the usage
-    counters and the stored Sign in with Apple token (revoked at Apple first) are deleted;
-    purchase records (with the old user ID, not linked to a name or email), a closed account
-    record with totals, and any refund-after-use record stay. Give the policy URL.
+    Account > Delete account), and someone who bought without signing in deletes the anonymous
+    account the same way (Recipe settings > Your recipes > Delete my data from our server). The
+    Auth user (email, name; or the anonymous user), the server's recipes, the usage counters and
+    the stored Sign in with Apple token (revoked at Apple first) are deleted; purchase records
+    (with the old user ID, not linked to a name or email), a closed account record with totals,
+    and any refund-after-use record stay. Give the policy URL.
   - Account creation: "Users can create an account" with Google sign-in (OAuth), and the app
     works without one. The Android app has no Sign in with Apple (only the iPhone app offers it);
     an account made with Apple on an iPhone is used on Android through Google added to it, and
@@ -288,7 +290,7 @@ Sandbox purchases are accepted for this review, within a daily limit shared by a
 3. Choose "On this phone, no account", or sign in with Apple to keep the recipes in an account.
 4. Buy the 10-recipe pack with the sandbox account. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
 5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A recipe is taken only when it arrives; a failed attempt normally takes nothing.
-Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
+Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in). Recipes bought without an account ("On this phone, no account") are kept under an anonymous user ID on our server; Recipe tab > Recipe settings > Your recipes > "Delete my data from our server" deletes it (shown once a purchase has been started without an account).
 
 Location is optional and only used for "Shop reminders": Settings → Shopping reminders → turn on "Remind me near a shop", name a shop and tap the location button to save your current position. With "Always" location access, the app shows the shopping list when you arrive at that shop (iOS region monitoring); with "While Using" it only works while the app is open. The app never sends the location anywhere.
 

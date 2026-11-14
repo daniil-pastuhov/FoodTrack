@@ -802,6 +802,22 @@
             <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
         </dict>
     </dict>
+    <key>recipe_delete_device_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
+            <key>other</key>
+            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne {the_device} bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
+        </dict>
+    </dict>
     <key>recipe_server_refused</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
