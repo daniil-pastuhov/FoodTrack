@@ -76,9 +76,12 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    `store-listing/google-play/` (texts, phone screenshots, feature graphics, icon; job
    `play-listing`). It also puts the newest TestFlight build of the version on its App Store
    version, with the notes as "What's New", sets the listing from `store-listing/app-store/`
-   (name, subtitle, keywords, description, promotional text, and the screenshot sets) and submits
-   it for App Review; if the listing can't be applied in full, nothing is submitted and a re-run
-   of the job carries on. It goes live as soon as Apple approves it (set the repository variable
+   (name, subtitle, keywords, description, promotional text, the screenshot sets and the App
+   Review notes) and submits it for App Review together with the in-app purchases still to be
+   reviewed (the first ones must go with a version); if the listing can't be applied in full, or
+   App Store Connect refuses the purchases, nothing is submitted and the job says what to do
+   before a re-run carries on (`store-listing/app-store/README.md`, "Changing the listing
+   texts"). It goes live as soon as Apple approves it (set the repository variable
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
 
@@ -92,6 +95,7 @@ library images and placements):
 ```sh
 ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py listing
 ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py screenshots
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py iaps   # in-app purchases
 PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_listing.py --images
 python3 -m unittest discover -s scripts/tests     # the sync's tests, offline
 ```

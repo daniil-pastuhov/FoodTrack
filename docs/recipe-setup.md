@@ -283,8 +283,8 @@ binding exist on the live project (created and read back 2026-11-14).
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for
       every set, iPhone Duo inner included; none is uploaded to the stores yet. The next release's
       merge uploads them with the new listing texts (`scripts/testflight.py appstore --screenshots`,
-      `scripts/play_listing.py --images --apply`), except the iPhone Duo sets and the App Store
-      header and search-result images, which stay manual (store-listing/app-store/README.md).
+      `scripts/play_listing.py --images --apply`), the iPhone Duo sets and the App Store header
+      and search-result images included (store-listing/app-store/README.md).
 - [x] Android "Sign in with Apple": **dropped** (owner's decision, 2026-11-14). Apple's guidelines
       allow a custom button on Android only with Apple's logo artwork, which can't be
       redistributed in this public repository, and allow no button without a logo, so Android
@@ -308,8 +308,13 @@ Before submitting a version that sells packs, set `allowSandbox: true` and make 
 leave room for the reviewer: `sandboxDailyCap` (default 20 sandbox purchases a day, all users) and
 `sandboxDailyCredits` (default 200 recipes a day). Over a cap the purchase answers `RETRY` and the
 app keeps it to resubmit. While it is on, anyone with a TestFlight build or a sandbox account can
-get recipes free, up to those caps. Turn it off after approval. The review notes in
-`store-listing/app-store/README.md`, section 6, describe the reviewer's path.
+get recipes free, up to those caps. Turn it off after approval. The review notes,
+`store-listing/app-store/review-notes.txt`, describe the reviewer's path; the release job writes
+them to the version and submits the three packs with it (`scripts/testflight.py appstore`; Apple
+requires the first in-app purchases to be reviewed with a new version). If App Store Connect
+refuses to add the packs through the API, the job stops before submitting and says how to add
+them by hand (each pack's page > Add for Review, into the version's draft submission); re-run it
+afterwards. `scripts/testflight.py iaps` shows, read-only, what it would do.
 
 ### Debug builds against the real project
 

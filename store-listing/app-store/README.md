@@ -92,6 +92,20 @@ before it submits it for review, and only what differs from App Store Connect:
   files (en-US, en-AU, en-CA) gets en-GB's placed, reusing the same library image, as Apple
   documents no fallback to the primary language for these. A localization whose folder has
   neither file is left as it is.
+- **App Review notes** (`review-notes.txt`): written to the version's App Review notes; only
+  the notes, never the contact or demo-account fields. A version without a review detail gets
+  one with the notes alone.
+- **In-app purchases**: before submitting, `appstore` puts every in-app purchase still to be
+  reviewed (`READY_TO_SUBMIT`, read from App Store Connect, none hard-coded) into the same
+  review submission as the version: the version's item first, then one item per purchase's
+  draft In-App Purchase version. Apple requires the first purchase of each type to be reviewed
+  with a new app version. Its API article says that first submission goes through the website,
+  so App Store Connect may refuse the items; then nothing is submitted and the job says what to
+  do: on each purchase's page, Add for Review into the draft submission that holds the version
+  (without clicking Submit for Review there), and re-run the job, which finds them in the
+  submission and submits everything together. Purchases already in the submission or in review
+  are left alone. If App Store Connect shows them with the version but the job can't see them,
+  run `appstore` with `--iaps-attached`, which submits without adding them.
 - If any of it fails (a text over a limit, a refused upload), the version is not submitted; fix
   it and re-run the job, which skips what is already applied.
 - **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by the same
@@ -105,7 +119,9 @@ Still by hand, as the sync doesn't write it:
 To see the difference without writing anything (with the `ASC_*` variables of section 2):
 
 ```sh
-python3 scripts/testflight.py listing        # texts; --apply writes
+python3 scripts/testflight.py listing        # texts and App Review notes; --apply writes
+python3 scripts/testflight.py iaps           # read-only: the in-app purchases and what
+                                             # `appstore` would do with them
 python3 scripts/testflight.py screenshots    # screenshot sets; --apply writes
 python3 scripts/testflight.py screenshots --inspect  # read-only: the raw sets, library images
                                                      # and placements, as App Store Connect has them
@@ -162,7 +178,7 @@ From CI, on every push to a `release/v*` branch (see "Releasing" in the top-leve
 | Copyright | `2026 Daniil Pastuhov` |
 | Content rights | Does not contain, show or access third-party content. (Product names and pictures come from Open Food Facts, an open database; if asked, answer yes and that you have the rights under its ODbL/CC BY-SA licences.) |
 | Price | Free, with in-app purchases. Availability: all countries, or pick |
-| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes), USD 3.99 / 10.99 / 18.99 as the base price, the other storefronts converted by Apple. The first ones have to be submitted for review together with an app version (select them on the version page under "In-App Purchases and Subscriptions"). Each needs a display name, description and review screenshot (the "Buy recipes" sheet, `iap-review/buy-recipes-sheet.png`). Setup: `docs/recipe-setup.md` |
+| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes), USD 3.99 / 10.99 / 18.99 as the base price, the other storefronts converted by Apple. The first ones have to be submitted for review together with an app version; the release job adds them to the version's review submission ("Changing the listing texts"), and says how to add them by hand if App Store Connect refuses. Each needs a display name, description and review screenshot (the "Buy recipes" sheet, `iap-review/buy-recipes-sheet.png`). Setup: `docs/recipe-setup.md` |
 | Export compliance | Already answered in Info.plist (`ITSAppUsesNonExemptEncryption = NO`) |
 
 ## 4. Age rating
@@ -273,27 +289,11 @@ privacy policy (URL above) has to say the same; it is updated in
   every sandbox and TestFlight user together: `sandboxDailyCap` (default 20 purchases a day) and
   `sandboxDailyCredits` (default 200 recipes a day); over either, the purchase waits (`RETRY`;
   the app keeps resubmitting it) until the next UTC day. Check that today's use leaves room, and turn it off after approval.
-- Notes (paste as is):
-
-```
-BestBefore needs no account; the pantry stays on the device. Apart from barcode lookups on Open Food Facts and crash reports to Firebase Crashlytics, the app only contacts our server for recipe packs, and only after a purchase is started.
-
-To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by hand), then open the Recipe and Shopping List tabs.
-
-RECIPE TAB AND IN-APP PURCHASES
-The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions). "Menu for 3 days" is server-only and takes several recipes from the pack (currently 4 with two courses a day, 5 with three; the app shows the number before you generate).
-Sandbox purchases are accepted for this review, within a daily limit shared by all sandbox testers. To test the purchase with a sandbox account:
-1. Add an item or two (scan, or "+").
-2. Open the Recipe tab and tap "Buy recipes".
-3. Choose "On this phone, no account", or sign in with Apple to keep the recipes in an account.
-4. Buy the 10-recipe pack with the sandbox account. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
-5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A recipe is taken only when it arrives; a failed attempt normally takes nothing.
-Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
-
-Location is optional and only used for "Shop reminders": Settings → Shopping reminders → turn on "Remind me near a shop", name a shop and tap the location button to save your current position. With "Always" location access, the app shows the shopping list when you arrive at that shop (iOS region monitoring); with "While Using" it only works while the app is open. The app never sends the location anywhere.
-
-The camera is used for barcode scanning, reading printed expiry dates (Vision, on device) and product photos, which stay on the device.
-```
+- Notes: `review-notes.txt` in this folder, the reviewer's walkthrough of the app and the
+  recipe-pack purchase. The release flow writes it to the version's App Review notes
+  (`scripts/testflight.py appstore`, and `testflight.py listing` shows the difference); only
+  the notes are written, never the contact or demo-account fields. At most 4000 characters
+  (`scripts/check_store_listing.py`).
 
 ## 7. Version page
 
