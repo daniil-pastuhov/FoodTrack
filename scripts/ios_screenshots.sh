@@ -25,7 +25,11 @@ SCREEN=${SCREEN:-}
 BUNDLE_ID=com.foodbest.ios
 DERIVED=$ROOT/build/ios-screenshots-derived-data
 
-UDID=$(xcrun simctl list devices available -j | python3 -c '
+# UDID=<udid> picks one simulator when several share a name (it wins over DEVICE_NAME).
+# KEEP_REGION=1 skips the region change below and its reboot: an unfolded iPhone Duo can come back
+# folded after a reboot, and only Xcode's Device Hub can unfold it again. The status bar then
+# keeps the simulator's own clock style ("09:41" in a 24-hour region).
+UDID=${UDID:-$(xcrun simctl list devices available -j | python3 -c '
 import json, sys
 name = sys.argv[1]
 for runtime, devices in json.load(sys.stdin)["devices"].items():
@@ -33,7 +37,7 @@ for runtime, devices in json.load(sys.stdin)["devices"].items():
         for d in devices:
             if d["name"] == name:
                 print(d["udid"]); sys.exit()
-sys.exit("no available simulator named " + name)' "$DEVICE_NAME")
+sys.exit("no available simulator named " + name)' "$DEVICE_NAME")}
 
 xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b >/dev/null
@@ -41,7 +45,9 @@ xcrun simctl bootstatus "$UDID" -b >/dev/null
 # copies from this Mac: a 24-hour one shows "09:41". A US region without a forced clock shows
 # "9:41"; the app's own dates and times follow -AppleLocale below. Takes a reboot to show.
 sim_defaults() { xcrun simctl spawn "$UDID" defaults "$@" 2>/dev/null; }
-if [[ "$(sim_defaults read -g AppleLocale)" != en_US ]] || sim_defaults read -g AppleICUForce24HourTime >/dev/null \
+if [[ -n ${KEEP_REGION:-} ]]; then
+  :
+elif [[ "$(sim_defaults read -g AppleLocale)" != en_US ]] || sim_defaults read -g AppleICUForce24HourTime >/dev/null \
     || sim_defaults read -g AppleICUForce12HourTime >/dev/null; then
   sim_defaults write -g AppleLocale en_US || true
   sim_defaults delete -g AppleICUForce24HourTime || true
