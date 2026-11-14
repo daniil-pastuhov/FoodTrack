@@ -42,7 +42,8 @@ search results show the screenshots.
 | `search-result.png` | 3840×2560 (3:2) | Search results: a headline and the home screen |
 
 `scripts/store_art.py <raw-dir>` makes them from the same raw captures as the iPhone sets (the
-headlines live in that script). The layouts keep key artwork inside the safe areas of Apple's
+headlines live in that script); `scripts/store_art.py <raw-dir> <android-raw-dir>` also makes
+Google Play's feature graphic (1024×500) from the Android captures. The layouts keep key artwork inside the safe areas of Apple's
 templates, and the search headline stays readable when the image is scaled to 384 px wide, about
 the width search shows it at on an iPhone. Neither image may show prices, URLs, a copyright
 symbol, other platforms or Apple awards.
