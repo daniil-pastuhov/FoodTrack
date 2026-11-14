@@ -57,7 +57,7 @@ fun recipePaidRouteBuildAllowed(context: Context): Boolean {
     return installedFromPlay(context)
 }
 
-private fun installedFromPlay(context: Context): Boolean {
+internal fun installedFromPlay(context: Context): Boolean {
     val installer = runCatching {
         val manager = context.packageManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {

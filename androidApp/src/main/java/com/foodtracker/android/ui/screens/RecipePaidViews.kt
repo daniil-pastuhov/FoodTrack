@@ -41,6 +41,7 @@ import com.foodtracker.android.ui.design.LarderIcon
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderSheet
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
+import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
@@ -121,7 +122,9 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
     val snackbars = LocalLarderSnackbars.current
     val resources = LocalContext.current.resources
     val event = paid.event
+    val reviewPrompter = LocalReviewPrompter.current
     LaunchedEffect(event) {
+        reviewPrompter?.onPaidEvent(event)
         val message = when (event) {
             is PaidEvent.RecipesAdded -> resources.getQuantityString(R.plurals.recipe_added, event.count, event.count)
             PaidEvent.SignInFailed -> resources.getString(R.string.recipe_sign_in_failed)

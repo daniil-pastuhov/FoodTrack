@@ -323,6 +323,10 @@ public struct ScannerSheetView: View {
             }
         }
         .statusBarHidden()
+        // A refused camera rules the rating prompt out for this session.
+        .onChange(of: cameraAccess, initial: true) { _, access in
+            if access == .denied || access == .restricted { ReviewPrompter.shared.problemShown() }
+        }
         .task {
             guard cameraAccess == .notDetermined else { return }
             _ = await AVCaptureDevice.requestAccess(for: .video)

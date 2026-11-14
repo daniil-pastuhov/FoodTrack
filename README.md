@@ -2,6 +2,11 @@
 
 A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Android (Jetpack Compose)** and **iOS (Native SwiftUI)**.
 
+Published as **BestBefore**:
+
+- **iPhone and iPad**: [BestBefore on the App Store](https://apps.apple.com/app/id6818647200)
+- **Google Play**: in closed testing, not public yet
+
 ## Features
 
 - 📷 **Barcode Scanning**: Scan 1D and 2D barcodes (EAN-13, UPC, Code 128, DataBar, QR).
@@ -67,11 +72,31 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    and to the internal TestFlight testers, with those notes. Fixes for the release go on the
    branch; each push becomes a new internal build.
 3. **Play closed testing and the App Store**: merging the PR promotes the newest internal Play
-   build of that version to closed testing (`alpha`). It also puts the newest TestFlight build of
-   the version on its App Store version, with the notes as "What's New", and submits it for App
-   Review; it goes live as soon as Apple approves it (set the repository variable
+   build of that version to closed testing (`alpha`), then applies the Play store listing from
+   `store-listing/google-play/` (texts, phone screenshots, feature graphics, icon; job
+   `play-listing`). It also puts the newest TestFlight build of the version on its App Store
+   version, with the notes as "What's New", sets the listing from `store-listing/app-store/`
+   (name, subtitle, keywords, description, promotional text, and the screenshot sets) and submits
+   it for App Review; if the listing can't be applied in full, nothing is submitted and a re-run
+   of the job carries on. It goes live as soon as Apple approves it (set the repository variable
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
+
+**Store listings**: edit the files in `store-listing/` on the release branch (or before it), and
+the merge puts them in both stores; only what differs is written. Still by hand: the App Store
+"Header and Search Results" images (`header.png`, `search-result.png`; no API) and the iPhone
+Duo screenshot sets (no display type in the API). To see the difference with what the stores
+have, without writing anything (`--apply` writes):
+
+```sh
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py listing
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py screenshots
+PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_listing.py --images
+python3 -m unittest discover -s scripts/tests     # the sync's tests, offline
+```
+
+The App Store commands compare with the version in preparation; while none is (between a
+release's submission and the next merge), they compare with the newest version and say so.
 
 **Version**: `Version.xcconfig` holds the one version of both apps. Gradle reads it for Android's
 `versionName`, and it is the Xcode project's base configuration, so the app and the widget get it

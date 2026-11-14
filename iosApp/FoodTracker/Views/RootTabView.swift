@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 import UIKit
 
@@ -22,6 +23,8 @@ struct RootTabView: View {
     @State private var scanHeight: CGFloat = ScanFab.minHeight
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.isExpanded) private var isExpanded
+    /// The OS rating prompt, asked for only when `ReviewPrompter` says so.
+    @Environment(\.requestReview) private var requestReview
 
     /// What the scanner should open in, or nil while it is closed.
     @State private var isKeyboardVisible = false
@@ -168,6 +171,10 @@ struct RootTabView: View {
                     .accessibilityAddTraits(.isModal)
                     .transition(.opacity)
             }
+        }
+        // Onboarding rules the rating prompt out for the session.
+        .onChange(of: showOnboarding) { _, shown in
+            if shown { ReviewPrompter.shared.onboardingShown() }
         }
         .onChange(of: router.route) { _, route in
             guard let route else { return }
@@ -364,6 +371,8 @@ struct RootTabView: View {
     /// same removal (essential items land on the shopping list, with an undo), and any other unit
     /// gets its own undo, since a count changing is easy to miss.
     private func useOne(_ item: PantryItem) {
+        // Used before its date: one of the rating prompt's moments, from the third on.
+        ReviewPrompter.shared.usedOne(daysRemaining: item.daysRemaining) { requestReview() }
         if item.quantity <= 1 {
             viewModel.decrementQuantity(item.id, onItemRemoved: offerItemUndo)
         } else {

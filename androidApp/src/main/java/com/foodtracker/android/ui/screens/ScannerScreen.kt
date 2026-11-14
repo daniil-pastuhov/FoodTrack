@@ -49,6 +49,7 @@ import com.foodtracker.android.camera.ProductImageLabeler
 import com.foodtracker.android.camera.ReceiptTextRecognizer
 import com.foodtracker.android.notification.NotificationHelper
 import com.foodtracker.android.ui.design.LarderDialog
+import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderSnackbar
 import com.foodtracker.android.ui.design.isExpanded
@@ -160,6 +161,9 @@ fun ScannerScreen(
         }
     }
     LaunchedEffect(Unit) { requestCameraIfNeeded() }
+    // A refused camera rules the rating prompt out for this session.
+    val reviewPrompter = LocalReviewPrompter.current
+    LaunchedEffect(cameraAccess.refused) { if (cameraAccess.refused) reviewPrompter?.onProblemShown() }
     // Catches the way back from "Open settings" with the camera allowed, and asks again once
     // whatever cancelled the request has gone.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {

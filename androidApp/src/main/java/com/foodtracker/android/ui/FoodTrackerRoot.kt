@@ -75,6 +75,7 @@ import com.foodtracker.android.ui.navigation.LarderRoute
 import com.foodtracker.android.ui.navigation.LarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalLarderNavigator
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
+import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.navigation.route
 import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
@@ -106,6 +107,7 @@ import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.review.ReviewPrompter
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.HomeConfirmation
 import com.foodtracker.viewmodel.PantryStateHolder
@@ -174,6 +176,8 @@ private val PREDICTIVE_BACK_MAX_CORNER_RADIUS_DP = 32.dp
 fun FoodTrackerRoot(
     stateHolder: PantryStateHolder,
     recipeStateHolder: RecipeStateHolder,
+    /** The rating prompt's hooks; null in previews and tests, where nothing is reported. */
+    reviewPrompter: ReviewPrompter? = null,
     currentScreenState: MutableState<LarderRoute>,
     onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit,
     /** Set by the activity when it is about to ask for background location; see
@@ -263,6 +267,16 @@ fun FoodTrackerRoot(
             val expanded = isExpanded()
             val openPrefilledItem: (ItemPrefill) -> Unit = { prefill ->
                 currentScreen = LarderRoute.AddItem(AddItemMode.Prefilled(prefill))
+            }
+
+            // The rating prompt: onboarding blocks it for the session, and leaving a recipe that
+            // was just written (for anything but its own dishes) is one of its moments.
+            LaunchedEffect(currentScreen) {
+                when (currentScreen) {
+                    LarderRoute.Onboarding -> reviewPrompter?.onOnboardingShown()
+                    is LarderRoute.RecipeResult, is LarderRoute.MenuDish -> Unit
+                    else -> reviewPrompter?.onRecipeLeft()
+                }
             }
 
             LaunchedEffect(Unit) {
@@ -542,6 +556,8 @@ fun FoodTrackerRoot(
             // the same removal (essential items land on the shopping list, with an undo), and any
             // other unit gets its own undo, since a count changing is easy to miss.
             val onUseOneHandler: (PantryItem) -> Unit = { item ->
+                // Used before its date: one of the rating prompt's moments, from the third on.
+                reviewPrompter?.onUsedOne(item.daysRemaining(stateHolder.uiState.value.today))
                 if (item.quantity <= 1) {
                     // Same removal as the stepper's minus, but this was a use, so it says "used".
                     stateHolder.decrementQuantity(item.id) { removedItem ->
@@ -692,7 +708,8 @@ fun FoodTrackerRoot(
 
             CompositionLocalProvider(
                 LocalLarderNavigator provides navigator,
-                LocalLarderSnackbars provides larderSnackbars
+                LocalLarderSnackbars provides larderSnackbars,
+                LocalReviewPrompter provides reviewPrompter
             ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Background preview of the Dashboard, revealed as the current screen

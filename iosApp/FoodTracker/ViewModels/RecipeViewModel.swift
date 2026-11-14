@@ -73,6 +73,17 @@ enum RecipeFailure: Equatable {
     case allergenConsentDeclined
 }
 
+extension RecipeFailure {
+    /// Every snackbar but the two that bring a recipe rules the rating prompt out for the
+    /// session. As Android's `ReviewPrompter.onRecipeEvent`.
+    var blocksReviewPrompt: Bool {
+        switch self {
+        case .arrived, .earlierArrived: return false
+        default: return true
+        }
+    }
+}
+
 /// Where the allergen consent step was opened: before a server request (agreeing sends it) or
 /// from the switch in Recipe settings (agreeing only records it).
 enum AllergenConsentPrompt: Equatable {
@@ -102,7 +113,10 @@ final class RecipeViewModel: ObservableObject {
     /// The tab's navigation stack. Here rather than in the view so a recipe that arrives, or a
     /// way in from Home, can set it while the tab is off screen.
     @Published var path: [RecipeDestination] = []
-    @Published var failure: RecipeFailure?
+    @Published var failure: RecipeFailure? {
+        // A failed or refused generation rules the rating prompt out for the session.
+        didSet { if failure?.blocksReviewPrompt == true { ReviewPrompter.shared.problemShown() } }
+    }
     @Published var mode: RecipeMode = .recipe
     @Published private(set) var menuCourses: Int
     /// Opens the pack sheet: Buy recipes, the count in the bar, or a generation that found the
@@ -512,6 +526,7 @@ final class RecipeViewModel: ObservableObject {
             savedStore.save(entry)
             saved = savedStore.all()
             path = [.result(id: entry.id)]
+            ReviewPrompter.shared.recipeArrived()
             failure = .arrived(balance: response.balance)
         case .failure(let failure):
             self.failure = failure
@@ -640,6 +655,7 @@ final class RecipeViewModel: ObservableObject {
         saved = savedStore.all()
         phase = .idle
         path = [.result(id: entry.id)]
+        ReviewPrompter.shared.recipeArrived()
     }
 
     private func failWriting(_ error: OnDeviceRecipeError) {
