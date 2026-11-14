@@ -277,7 +277,10 @@ binding exist on the live project (created and read back 2026-11-14).
 - [x] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for
-      every set, iPhone Duo inner included; none is uploaded to the stores yet.
+      every set, iPhone Duo inner included; none is uploaded to the stores yet. The next release's
+      merge uploads them with the new listing texts (`scripts/testflight.py appstore --screenshots`,
+      `scripts/play_listing.py --images --apply`), except the iPhone Duo sets and the App Store
+      header and search-result images, which stay manual (store-listing/app-store/README.md).
 - [x] Android "Sign in with Apple": **dropped** (owner's decision, 2026-11-14). Apple's guidelines
       allow a custom button on Android only with Apple's logo artwork, which can't be
       redistributed in this public repository, and allow no button without a logo, so Android

@@ -82,8 +82,12 @@ def check_play_title(folder, texts):
         problems.append(f"{(folder / 'title.txt').relative_to(ROOT)}: an emoji or symbol")
 
 
-def main():
-    for store, limits in (("app-store", APP_STORE_LIMITS), ("google-play", PLAY_LIMITS)):
+def check(stores=("app-store", "google-play")):
+    """Checks the given stores' folders and returns the problems found (empty when all pass).
+    scripts/testflight.py and scripts/play_listing.py call this before writing to a store."""
+    problems.clear()
+    for store in stores:
+        limits = APP_STORE_LIMITS if store == "app-store" else PLAY_LIMITS
         folders = sorted(p.parent for p in (ROOT / store).glob(f"*/{next(iter(limits))}"))
         if not folders:
             problems.append(f"{store}: no locale folders")
@@ -94,6 +98,11 @@ def main():
                 check_keywords(folder, texts)
             else:
                 check_play_title(folder, texts)
+    return list(problems)
+
+
+def main():
+    check()
     if problems:
         print("\nProblems:\n" + "\n".join(f"- {p}" for p in problems))
         return 1
