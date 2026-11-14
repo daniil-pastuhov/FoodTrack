@@ -1,0 +1,14 @@
+{
+  "referenceName": "Recipe tab launch (Major Update)",
+  "badge": "MAJOR_UPDATE",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "HIGH",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "deepLink": "foodtracker://recipe",
+  "primaryLocale": "en-GB",
+  "territories": "app",
+  "releaseDay": null,
+  "publishDaysBefore": 0,
+  "startTimeUtc": "08:00",
+  "durationDays": 30
+}
