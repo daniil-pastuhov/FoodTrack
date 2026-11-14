@@ -29,16 +29,17 @@ Please leave those changes out of your pull request.
 maintainer's Firebase project. If you publish a fork, replace `androidApp/google-services.json` and
 `iosApp/FoodTracker/GoogleService-Info.plist` with configs from your own Firebase project.
 
-**Recipes from packs** (the paid route) don't work in your builds. On Android a debug build hides
-it unless you ask for it, and a release build shows it only when installed from Google Play. On
-iOS a debug build shows it (with the App Check debug provider and, from Xcode, the
-`Recipes.storekit` test products), but the server rejects Xcode StoreKit purchases and calls
-without a registered App Check debug token; a release build needs App Attest. The free routes, the
+**Recipes from packs** (the paid route) don't work against the real backend in your builds. Debug
+builds on both platforms show it, with the App Check debug provider, but the server refuses calls
+without an App Check debug token registered in the maintainer's console, and on iOS it always
+rejects purchases from Xcode's `Recipes.storekit` test products. A release build shows it only
+when installed from Google Play (Android) or on a device with App Attest (iOS). The free routes, the
 shared prompt and the phone's own model, work everywhere. To work on the paid route, run the backend locally with
 fake stores and a fake model (`functions/README.md`, "Running the functions for the apps") and
 point a debug build at it: `./gradlew :androidApp:installDebug -PrecipeEmulatorHost=10.0.2.2` on
-the Android emulator, or the launch argument `-recipeEmulatorHost 127.0.0.1` on the iOS
-simulator.
+the Android emulator (a fake store whose purchases the emulator grants), or the launch argument
+`-recipeEmulatorHost 127.0.0.1` on the iOS simulator (the `Recipes.storekit` products, which the
+emulator accepts as sandbox purchases). Neither needs an App Check token.
 
 **Backend** (`functions/`, Node.js 24, and Java 21+ for the Firestore emulator):
 `cd functions && npm ci && npm run lint && npm test`. The tests run against the emulators under
@@ -67,10 +68,16 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
   recipe backend (Firebase Auth, App Check and the Cloud Functions in `functions/`). Nothing
   else, and nothing at all from the free routes. Pantry data leaves the phone only as the items
   someone ticks for a recipe from a pack.
-- **Purchase records are never deleted.** A `purchases/` document in Firestore is the only thing
-  that stops one store purchase being redeemed twice; account deletion detaches it from the user
-  and keeps it. A change to the wire format goes into `functions/src/contract.ts`,
-  `functions/CONTRACT.md` and both clients together.
+- **Purchase and buyer records are never deleted.** A `purchases/` document in Firestore is the
+  only thing that stops one store purchase being redeemed twice; account deletion detaches it from
+  the user and keeps it. A `buyers/` document is the record of refunds after use that turns buying
+  off. A change to the wire format goes into `functions/src/contract.ts`, `functions/CONTRACT.md`
+  and both clients together.
+- **Name rules live in three places.** The server's `functions/src/core/inputSafety.ts`, the
+  shared `RecipeWireName.kt` and iOS `RecipeWire.swift` must accept and clean pantry and allergen
+  names the same way (CONTRACT.md, "Name rules"); change and test all three.
+- **Costs come from the server.** What a recipe or a menu takes is in every response with a
+  balance; never hard-code it in an app.
 - **Strings come in three languages**: English, Norwegian Bokmål and Russian, on both platforms.
   If you can't translate a new string, add the English text in every language and mention it in
   the pull request.

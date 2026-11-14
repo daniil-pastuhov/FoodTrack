@@ -88,7 +88,7 @@ From CI, on every push to a `release/v*` branch (see "Releasing" in the top-leve
 | Copyright | `2026 Daniil Pastuhov` |
 | Content rights | Does not contain, show or access third-party content. (Product names and pictures come from Open Food Facts, an open database; if asked, answer yes and that you have the rights under its ODbL/CC BY-SA licences.) |
 | Price | Free, with in-app purchases. Availability: all countries, or pick |
-| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes). Prices are set in App Store Connect; this kit doesn't fix them. The first ones have to be submitted for review together with an app version (select them on the version page under "In-App Purchases and Subscriptions"). Each needs a display name, description and review screenshot (the "Buy recipes" sheet). Setup: `docs/recipe-setup.md` |
+| In-app purchases | Three consumables, `recipes_10`, `recipes_50`, `recipes_100` (10, 50 and 100 recipes), USD 3.99 / 10.99 / 18.99 as the base price, the other storefronts converted by Apple. The first ones have to be submitted for review together with an app version (select them on the version page under "In-App Purchases and Subscriptions"). Each needs a display name, description and review screenshot (the "Buy recipes" sheet, `iap-review/buy-recipes-sheet.png`). Setup: `docs/recipe-setup.md` |
 | Export compliance | Already answered in Info.plist (`ITSAppUsesNonExemptEncryption = NO`) |
 
 ## 4. Age rating
@@ -100,9 +100,10 @@ The result is **4+**.
 ## 5. App Privacy ("nutrition label")
 
 What the app sends off the phone, and so what Apple counts as collected (data sent to you or a
-partner). `iosApp/FoodTracker/PrivacyInfo.xcprivacy` declares the recipe items below; the
-Firebase SDKs ship their own privacy manifests for crash reporting. The privacy policy (URL above)
-has to say the same; a draft of its changes is in `docs/privacy-policy-changes.md`.
+partner). `iosApp/FoodTracker/PrivacyInfo.xcprivacy` declares the recipe items below except the
+name (see there); the Firebase SDKs ship their own privacy manifests for crash reporting. The
+privacy policy (URL above) has to say the same; it is updated in
+<https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1> (`docs/privacy-policy-changes.md`).
 
 - **Data collection: "Yes, we collect data from this app."**
 - From everyone, release builds only: crash reports to Firebase Crashlytics. Each **not linked
@@ -115,35 +116,56 @@ has to say the same; a draft of its changes is in `docs/privacy-policy-changes.m
   recipe routes or the rest of the app). Each **linked to the user** (it is stored under their
   Firebase Auth user ID), **not used for tracking**, purpose **App Functionality**:
   - **Purchases > Purchase History**: the packs bought, verified with the App Store and kept as
-    the record that stops one purchase being redeemed twice.
+    the record that stops one purchase being redeemed twice; the buyer's refund-after-use record
+    (`buyers/`, under Apple's app transaction ID), which turns buying off after repeated refunds
+    of used recipes; and, only for purchases made after the Buy sheet showed the line "If you
+    ask Apple for a refund, we tell Apple how many of these recipes you have used.", the share of
+    the purchase used, sent to Apple when the buyer asks Apple for a refund (consumption
+    information: delivered, percentage used, sample content provided; no account or play-time
+    data).
   - **Identifiers > User ID**: the Firebase Auth user ID, anonymous or signed in, that holds the
-    recipe balance.
+    recipe balance, and the buyer identifiers kept with each purchase (Apple's app transaction
+    ID; a code made from the user ID given to the App Store as `appAccountToken`).
   - **Contact Info > Email Address**: only when the buyer signs in with Apple (possibly Apple's
     relay address) or Google.
-  - **Contact Info > Name**: only when the buyer signs in with Google; Firebase Auth keeps the
-    Google profile's display name with the account. (The iOS Apple sign-in asks for the email
-    only.) Check this against the Firebase Auth user record before submitting.
+  - **Contact Info > Name**: only when the buyer signs in with Google. The server clears the
+    name and photo from the Firebase Auth user after sign-in, but Firebase keeps a copy in the
+    Google provider entry until the account is deleted, and the server cannot remove it. The
+    apps never ask Apple for the name. Declaring it is the honest answer; `PrivacyInfo.xcprivacy`
+    should get a matching Name entry (an app change, not in this kit).
   - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities,
     the recipe settings and the allergen list sent to write a recipe or menu, and the recipe
-    written back (kept on the server for 7 days, for retries).
+    written back (kept on the server for 7 days after it finished, for retries, then deleted).
+    The request itself is not stored, only a hash of it; it is screened automatically for
+    prompt injection, and refused attempts are counted per account per day, without their text.
   - Open question: whether the **allergen list** should also be declared as **Health & Fitness >
-    Health**. It is a list of ingredients to leave out, chosen by the user, not a medical record,
-    and the server keeps it only inside the request. Decide this with the privacy policy wording.
+    Health**. It is a list of ingredients to leave out, chosen by the user, not a medical record;
+    the server uses it to instruct the model and to check the answer, and does not store it.
+    Decide this with the privacy policy wording.
+- Not separate data types, but the policy covers them: App Check (App Attest) on every call to
+  the server; the IP address, used in memory for per-minute rate limiting and not stored by the
+  server, but recorded with each request in Google Cloud's request logs (30 days); log lines with
+  a hashed user ID, never names, items or recipes.
 - Barcode lookups go to Open Food Facts without any user or device identifier, and the shared
   prompt goes only to the app the user picks, so neither counts as collection by us.
 - **Tracking: No.**
 - Google Play's Data safety form needs the matching answers. Collected, not shared (Google acts
-  as our processor), encrypted in transit:
+  as our processor; Apple is not involved on Android), encrypted in transit:
   - **Crash logs**, **Diagnostics**, **Device or other IDs**: not optional, **App functionality**
-    (unchanged).
+    (unchanged); add **Fraud prevention, security and compliance** to Device or other IDs for
+    App Check (Play Integrity) and rate limiting.
   - **Purchase history**, **User IDs**: optional (only for buyers), **App functionality**,
-    **Account management**.
-  - **Email address**, **Name**: optional (only when signed in), **App functionality**,
-    **Account management**.
+    **Account management**, **Fraud prevention, security and compliance** (the refund-after-use
+    record, under the user ID and a hash of the sign-in provider's user ID).
+  - **Email address**, **Name**: optional (only when signed in; the name only with Google),
+    **App functionality**, **Account management**.
   - **Other user-generated content** (the ingredients and allergens sent, the recipe returned):
     optional, **App functionality**. Same open question about **Health info** for allergens.
-  - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings > Delete
-    account); say what is kept (see `docs/privacy-policy-changes.md`) and give the policy URL.
+  - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings >
+    Account > Delete account). The Auth user (email, name), the server's recipes and the usage
+    counters are deleted; purchase records (with the old user ID, not linked to a name or email),
+    a closed account record with totals, and any refund-after-use record stay. Give the policy
+    URL.
   - Account creation: "Users can create an account" with Sign in with Apple and Google (OAuth),
     and the app works without one.
 
@@ -153,8 +175,10 @@ has to say the same; a draft of its changes is in `docs/privacy-policy-changes.m
 - Contact: your name, phone and email. Apple only uses these to reach you about the review; they
   are not shown publicly.
 - Before submitting, set `allowSandbox` to `true` in Firestore `config/runtime` (see
-  `functions/README.md`), or the server refuses the reviewer's sandbox purchase, and check that
-  `sandboxDailyCap` leaves room. Turn it off again after approval.
+  `functions/README.md`), or the server refuses the reviewer's sandbox purchase. Its caps apply to
+  every sandbox and TestFlight user together: `sandboxDailyCap` (default 20 purchases a day) and
+  `sandboxDailyCredits` (default 200 recipes a day); over either, the purchase waits (`RETRY`;
+  the app keeps resubmitting it) until the next UTC day. Check that today's use leaves room, and turn it off after approval.
 - Notes (paste as is):
 
 ```
@@ -163,13 +187,13 @@ BestBefore needs no account; the pantry stays on the device. Apart from barcode 
 To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by hand), then open the Recipe and Shopping List tabs.
 
 RECIPE TAB AND IN-APP PURCHASES
-The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions), and "Menu for 3 days" takes 4 recipes with two courses a day, or 5 with three.
-To test the purchase with a sandbox account:
+The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions). "Menu for 3 days" is server-only and takes several recipes from the pack (currently 4 with two courses a day, 5 with three; the app shows the number before you generate).
+Sandbox purchases are accepted for this review, within a daily limit shared by all sandbox testers. To test the purchase with a sandbox account:
 1. Add an item or two (scan, or "+").
 2. Open the Recipe tab and tap "Buy recipes".
 3. Choose "On this phone, no account", or sign in with Apple to keep the recipes in an account.
-4. Buy the 10-recipe pack with the sandbox account. The balance shows 10.
-5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A failed attempt is not charged, apart from repeated requests the model itself refuses.
+4. Buy the 10-recipe pack with the sandbox account. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
+5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A recipe is taken only when it arrives; a failed attempt normally takes nothing.
 Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
 
 Location is optional and only used for "Shop reminders": Settings → Shopping reminders → turn on "Remind me near a shop", name a shop and tap the location button to save your current position. With "Always" location access, the app shows the shopping list when you arrive at that shop (iOS region monitoring); with "While Using" it only works while the app is open. The app never sends the location anywhere.
