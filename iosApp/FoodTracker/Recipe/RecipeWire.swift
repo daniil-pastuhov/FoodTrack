@@ -1047,7 +1047,7 @@ struct AllergenConsentRecord: Codable, Equatable, Sendable {
 /// The same rules as Android's `AllergenConsent.kt`.
 enum AllergenConsent {
     /// The wording's version (`recipe_allergen_consent_*`); raising it asks everyone again.
-    static let version = 1
+    static let version = 2
 
     enum Step: Equatable {
         /// No allergens set: nothing health-related is sent, no flag.
