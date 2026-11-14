@@ -607,7 +607,7 @@
     <string name="detail_nova_2">Кулинарные ингредиенты</string>
     <string name="detail_nova_3">Обработанный</string>
     <string name="detail_nova_4">Ультраобработанный</string>
-    <string name="detail_credit">Данные о продукте из Open Food Facts</string>
+    <string name="detail_credit">Данные и фото продуктов из Open Food Facts (openfoodfacts.org) по лицензиям Open Database License и CC BY-SA</string>
     <string name="detail_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
     <string name="detail_choose_item">Выберите продукт, чтобы увидеть подробности.</string>
     <plurals name="lede_use_by_tomorrow">

@@ -555,7 +555,7 @@
     <string name="detail_nova_2">Matlagingsingredienser</string>
     <string name="detail_nova_3">Bearbeidet</string>
     <string name="detail_nova_4">Ultrabearbeidet</string>
-    <string name="detail_credit">Produktdata fra Open Food Facts</string>
+    <string name="detail_credit">Produktdata og bilder fra Open Food Facts (openfoodfacts.org), under Open Database License og CC BY-SA</string>
     <string name="detail_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
     <string name="detail_choose_item">Velg en vare for å se detaljene.</string>
     <plurals name="lede_use_by_tomorrow">
