@@ -908,6 +908,7 @@
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
     <string name="recipe_balance_description">Осталось рецептов: %1$d. Купить ещё</string>
+    <string name="recipe_balance_only_description">Осталось рецептов: %1$d</string>
     <string name="recipe_mode_label">Что составить</string>
     <string name="recipe_mode_recipe">Рецепт</string>
     <string name="recipe_mode_menu">Меню на 3 дня</string>
@@ -936,7 +937,7 @@
         <item quantity="other">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
     </plurals>
     <string name="recipe_writing_server_title">Составляем рецепт</string>
-    <string name="recipe_writing_server_body">Несколько секунд. Рецепт списывается, только когда он готов.</string>
+    <string name="recipe_writing_server_body">Несколько секунд. С экрана можно уйти: рецепт появится в сохранённых рецептах.</string>
     <string name="recipe_writing_menu_title">Планируем три дня</string>
     <string name="recipe_writing_menu_body">Это может занять до двух минут. С экрана можно уйти: меню появится в сохранённых рецептах.</string>
     <string name="recipe_offline_title">Нет соединения</string>
@@ -1049,6 +1050,38 @@
     <string name="recipe_purchases_blocked">Покупка рецептов недоступна для этого аккаунта: за прошлые покупки вернули деньги после того, как рецепты были использованы.</string>
     <string name="recipe_account_busy">Рецепт ещё составляется. Попробуйте чуть позже.</string>
     <string name="recipe_account_action_failed">Нет связи с нашим сервером. Ничего не изменилось.</string>
+    <string name="recipe_writing_busy_title">Сервер сейчас занят</string>
+    <string name="recipe_writing_busy_body">Пробуем ещё раз через несколько секунд. С экрана можно уйти: готовое появится в сохранённых рецептах.</string>
+    <string name="recipe_busy_title">Сервер сейчас занят</string>
+    <string name="recipe_busy_body">Запрос сохранён, и его ещё могут составить. Попробуйте через минуту, чтобы его получить. Бесплатные способы ниже работают.</string>
+    <string name="recipe_elsewhere_title">Покупка принадлежит другому аккаунту</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d рецепт на этом телефоне куплен в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы его добавить.</item>
+        <item quantity="few">%1$d рецепта на этом телефоне куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</item>
+        <item quantity="many">%1$d рецептов на этом телефоне куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</item>
+        <item quantity="other">%1$d рецепта на этом телефоне куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Эта копия приложения не может добавлять покупки из магазина. Google Play обычно возвращает деньги за покупку, которая не добавлена за три дня, так что делать ничего не нужно. Чтобы купить рецепты, установите приложение из Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d рецепт перенесён с этого телефона в ваш аккаунт</item>
+        <item quantity="few">%1$d рецепта перенесены с этого телефона в ваш аккаунт</item>
+        <item quantity="many">%1$d рецептов перенесены с этого телефона в ваш аккаунт</item>
+        <item quantity="other">%1$d рецепта перенесены с этого телефона в ваш аккаунт</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">После возврата денег в магазине этот телефон был должен %1$d рецепт. Он списан с вашего аккаунта.</item>
+        <item quantity="few">После возврата денег в магазине этот телефон был должен %1$d рецепта. Они списаны с вашего аккаунта.</item>
+        <item quantity="many">После возврата денег в магазине этот телефон был должен %1$d рецептов. Они списаны с вашего аккаунта.</item>
+        <item quantity="other">После возврата денег в магазине этот телефон был должен %1$d рецепта. Они списаны с вашего аккаунта.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">Рецепт, который вы запросили раньше, готов. Он в сохранённых рецептах.</string>
+    <string name="recipe_earlier_menu_saved">Меню, которое вы запросили раньше, готово. Оно в сохранённых рецептах.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">Рецепт, запрошенный раньше, составить не удалось. Списан %1$d рецепт: попытка всё равно потребовала работы сервера.</item>
+        <item quantity="few">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецепта: попытка всё равно потребовала работы сервера.</item>
+        <item quantity="many">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецептов: попытка всё равно потребовала работы сервера.</item>
+        <item quantity="other">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецепта: попытка всё равно потребовала работы сервера.</item>
+    </plurals>
     <string name="recipe_menu_bar_title">Меню</string>
     <string name="recipe_menu_title">Меню на три дня</string>
     <string name="recipe_menu_summary">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</string>

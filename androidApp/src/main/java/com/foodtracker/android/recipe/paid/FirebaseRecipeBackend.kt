@@ -4,6 +4,7 @@ import com.foodtracker.recipe.Attestation
 import com.foodtracker.recipe.BalanceReply
 import com.foodtracker.recipe.GenerateReply
 import com.foodtracker.recipe.GenerateRequest
+import com.foodtracker.recipe.MergeReply
 import com.foodtracker.recipe.RecipeBackend
 import com.foodtracker.recipe.RecipeJson
 import com.foodtracker.recipe.ServerError
@@ -30,7 +31,17 @@ import kotlinx.serialization.json.longOrNull
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-/** The five callables of functions/CONTRACT.md, over Firebase Functions in europe-west1. */
+/**
+ * The callables whose App Check token the server consumes (functions/CONTRACT.md, Calling): each
+ * call carries a fresh limited-use token. The rest (`getGeneration`, `getBalance`) take an
+ * ordinary token, so polling spends no Play Integrity request.
+ */
+internal val CONSUMING_CALLABLES = setOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount")
+
+/** Whether [name] is called with a limited-use App Check token. */
+internal fun usesLimitedUseToken(name: String): Boolean = name in CONSUMING_CALLABLES
+
+/** The callables of functions/CONTRACT.md this backend calls, over Firebase Functions in europe-west1. */
 class FirebaseRecipeBackend(
     private val firebase: RecipeFirebase,
     override val isAvailable: Boolean
@@ -54,16 +65,14 @@ class FirebaseRecipeBackend(
         return call(firebase.functions(), "generateRecipe", RecipeJson.encodeToJsonElement(GenerateRequest.serializer(), request), timeout, GenerateReply.serializer())
     }
 
-    // A normal App Check token, not a limited-use one: the server doesn't consume it, so polling
-    // spends no Play Integrity request.
+    // A normal App Check token (see CONSUMING_CALLABLES).
     override suspend fun getGeneration(requestId: String): ServerResult<GenerateReply> =
         call(
             firebase.functions(),
             "getGeneration",
             JsonObject(mapOf("requestId" to JsonPrimitive(requestId))),
             30L,
-            GenerateReply.serializer(),
-            limitedUseAppCheck = false
+            GenerateReply.serializer()
         )
 
     override suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply> =
@@ -113,6 +122,15 @@ internal suspend fun callBalance(functions: FirebaseFunctions): ServerResult<Bal
         is ServerResult.Err -> result
     }
 
+/** `mergeBalance`'s reply: the joined count, what moved (negative for a debt), the costs and the
+ *  block. Null without a readable balance. */
+internal fun mergeReplyOf(json: JsonElement): MergeReply? {
+    val reply = json as? JsonObject ?: return null
+    val balance = (reply["balance"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: return null
+    val moved = (reply["moved"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: 0
+    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]))
+}
+
 /** `getBalance`'s reply: the count, and the costs when they came and could be read. */
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
@@ -125,9 +143,8 @@ internal suspend fun <T> call(
     name: String,
     data: JsonElement,
     timeoutSeconds: Long,
-    serializer: KSerializer<T>,
-    limitedUseAppCheck: Boolean = true
-): ServerResult<T> = when (val result = callRaw(functions, name, data, timeoutSeconds, limitedUseAppCheck)) {
+    serializer: KSerializer<T>
+): ServerResult<T> = when (val result = callRaw(functions, name, data, timeoutSeconds)) {
     is ServerResult.Ok -> try {
         ServerResult.Ok(RecipeJson.decodeFromJsonElement(serializer, result.value))
     } catch (e: IllegalArgumentException) {
@@ -143,9 +160,8 @@ internal suspend fun callRaw(
     functions: FirebaseFunctions,
     name: String,
     data: JsonElement,
-    timeoutSeconds: Long,
-    limitedUseAppCheck: Boolean = true
-): ServerResult<JsonElement> = retryingReplayedAppCheck { callOnce(functions, name, data, timeoutSeconds, limitedUseAppCheck) }
+    timeoutSeconds: Long
+): ServerResult<JsonElement> = retryingReplayedAppCheck { callOnce(functions, name, data, timeoutSeconds, usesLimitedUseToken(name)) }
 
 internal suspend fun retryingReplayedAppCheck(call: suspend () -> ServerResult<JsonElement>): ServerResult<JsonElement> {
     val first = call()
@@ -194,6 +210,8 @@ internal fun serverErrorOf(code: FirebaseFunctionsException.Code, reason: String
         // The SDK reports a dropped connection as `internal` with the I/O error as its cause.
         FirebaseFunctionsException.Code.INTERNAL ->
             if (cause is IOException || cause is FirebaseNetworkException) ServerError.OFFLINE else ServerError.fromReason(reason, ServerError.INTERNAL)
+        // Without a reason: every server instance is busy (HTTP 429). Nothing was charged.
+        FirebaseFunctionsException.Code.RESOURCE_EXHAUSTED -> ServerError.fromReason(reason, ServerError.OVERLOADED)
         else -> ServerError.fromReason(reason, ServerError.INTERNAL)
     }
 }

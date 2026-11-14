@@ -47,6 +47,7 @@ import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.recipe.BuySheet
 import com.foodtracker.recipe.MergePrompt
 import com.foodtracker.recipe.PaidEvent
+import com.foodtracker.recipe.PurchaseRejection
 import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.RecipeUiState
@@ -86,7 +87,8 @@ internal fun recipePackEachPrice(resources: Resources, pack: StorePack): String?
 /** The count in the bar: what is left of the packs, and the way to buy more. */
 @Composable
 internal fun RecipeBalanceChip(balance: Int, onClick: (() -> Unit)?) {
-    val description = stringResource(R.string.recipe_balance_description, balance)
+    // "Buy more" only where the chip buys: not while buying is off (blocked, paused, waiting).
+    val description = stringResource(if (onClick != null) R.string.recipe_balance_description else R.string.recipe_balance_only_description, balance)
     val scheme = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
@@ -125,6 +127,10 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
             PaidEvent.AccountDeleted -> resources.getString(R.string.recipe_account_deleted)
             PaidEvent.AccountActionFailed -> resources.getString(R.string.recipe_account_action_failed)
             PaidEvent.AccountBusy -> resources.getString(R.string.recipe_account_busy)
+            is PaidEvent.Merged -> recipeMergedMessage(resources, event.moved)
+            is PaidEvent.EarlierSaved ->
+                resources.getString(if (event.menu) R.string.recipe_earlier_menu_saved else R.string.recipe_earlier_recipe_saved)
+            is PaidEvent.EarlierRefused -> resources.getQuantityString(R.plurals.recipe_earlier_refused, event.taken, event.taken)
             null -> null
         }
         if (message != null) {
@@ -150,10 +156,15 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
         )
     }
 
-    if (paid.purchaseRejected) {
+    paid.rejection?.let { rejection ->
         LarderDialog(
             title = stringResource(R.string.recipe_rejected_title),
-            text = stringResource(R.string.recipe_rejected_body),
+            text = stringResource(
+                when (rejection) {
+                    PurchaseRejection.REFUSED -> R.string.recipe_rejected_body
+                    PurchaseRejection.WRONG_BUILD -> R.string.recipe_rejected_build_body
+                }
+            ),
             confirmLabel = stringResource(R.string.recipe_ok),
             onConfirm = stateHolder::dismissRejectedPurchase,
             onDismissRequest = stateHolder::dismissRejectedPurchase
@@ -164,6 +175,14 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
         MergeDialog(prompt, onConfirm = stateHolder::confirmMerge, onCancel = stateHolder::cancelMerge)
     }
 }
+
+/** What a join of this install into an account moved: recipes, or a debt after a store refund. */
+internal fun recipeMergedMessage(resources: Resources, moved: Int): String =
+    if (moved >= 0) {
+        resources.getQuantityString(R.plurals.recipe_merged_moved, moved, moved)
+    } else {
+        resources.getQuantityString(R.plurals.recipe_merged_debt, -moved, -moved)
+    }
 
 @Composable
 private fun MergeDialog(prompt: MergePrompt, onConfirm: () -> Unit, onCancel: () -> Unit) {

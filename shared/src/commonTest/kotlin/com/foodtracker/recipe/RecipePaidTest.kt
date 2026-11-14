@@ -131,13 +131,16 @@ private class FakeStore : RecipeStore {
 private class FakeMerge(override val accountBalance: Int?) : PendingMerge
 
 private class FakeAccount(kind: AccountKind = AccountKind.NONE) : RecipeAccount {
-    val mutableState = MutableStateFlow(AccountState(kind))
+    val mutableState = MutableStateFlow(AccountState(kind, purchaseKey = if (kind == AccountKind.NONE) null else "key-$kind"))
     override val state: StateFlow<AccountState> = mutableState
     override val providers: Set<SignInProvider> = setOf(SignInProvider.GOOGLE, SignInProvider.APPLE)
     var anonymousCreated = 0
     var canCreate = true
     val signInResults = ArrayDeque<SignInResult>()
-    var mergeResult: ServerResult<Int> = ServerResult.Ok(0)
+    var mergeResult: ServerResult<MergeReply> = ServerResult.Ok(MergeReply(0))
+
+    /** Answers before [mergeResult], one per call. */
+    val mergeQueue = ArrayDeque<ServerResult<MergeReply>>()
     var merged = 0
     var cancelledMerges = 0
     var freshSignInNeeded = false
@@ -149,20 +152,21 @@ private class FakeAccount(kind: AccountKind = AccountKind.NONE) : RecipeAccount 
         if (mutableState.value.kind != AccountKind.NONE) return true
         if (!canCreate) return false
         anonymousCreated++
-        mutableState.value = AccountState(AccountKind.ANONYMOUS)
+        mutableState.value = AccountState(AccountKind.ANONYMOUS, purchaseKey = "key-anon-$anonymousCreated")
         return true
     }
     override suspend fun signIn(provider: SignInProvider): SignInResult {
         val result = signInResults.removeFirst()
         if (result == SignInResult.SignedIn) {
-            mutableState.value = AccountState(AccountKind.SIGNED_IN, mutableState.value.providers + provider, "a@b.c")
+            mutableState.value = AccountState(AccountKind.SIGNED_IN, mutableState.value.providers + provider, "a@b.c", "key-signed-in")
         }
         return result
     }
-    override suspend fun completeMerge(merge: PendingMerge): ServerResult<Int> {
+    override suspend fun completeMerge(merge: PendingMerge): ServerResult<MergeReply> {
         merged++
-        if (mergeResult is ServerResult.Ok) mutableState.value = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE))
-        return mergeResult
+        val result = mergeQueue.removeFirstOrNull() ?: mergeResult
+        if (result is ServerResult.Ok) mutableState.value = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), purchaseKey = "key-merged")
+        return result
     }
     override suspend fun cancelMerge(merge: PendingMerge) {
         cancelledMerges++
@@ -226,7 +230,16 @@ class RecipePaidTest {
     private var nextSaved = 0
     private var polls = 0
 
-    private fun TestScope.holder() = RecipeStateHolder(
+    /** Every wait the paid route asked for, in milliseconds. */
+    private val waits = mutableListOf<Long>()
+
+    /** Called at each wait, before the clock moves on. */
+    private var onWait: (RecipeStateHolder?) -> Unit = {}
+    private var current: RecipeStateHolder? = null
+
+    private fun TestScope.holder() = makeHolder().also { current = it }
+
+    private fun TestScope.makeHolder() = RecipeStateHolder(
         pantry = pantry,
         onDeviceModel = NoModel,
         savedRecipeRepository = saved,
@@ -240,9 +253,11 @@ class RecipePaidTest {
         newId = { "saved${nextSaved++}" },
         newRequestId = { "req${nextRequest++}" },
         today = { today },
-        pollDelay = {
+        pollDelay = { millis ->
             polls++
-            now += 3_000
+            waits += millis
+            onWait(current)
+            now += millis
         }
     )
 
@@ -587,6 +602,7 @@ class RecipePaidTest {
         assertEquals(1, saved.rows.value.size, "paid for, so it is kept")
         assertEquals(4, second.uiState.value.paid.balance)
         assertNull(second.uiState.value.event, "a recovery in the background doesn't open anything")
+        assertEquals(PaidEvent.EarlierSaved(menu = false), second.uiState.value.paid.event, "but says it arrived")
     }
 
     @Test
@@ -626,6 +642,8 @@ class RecipePaidTest {
         assertEquals(4, backend.generated.last().config.servings)
         assertEquals(2, saved.rows.value.size)
         assertEquals(3, holder.uiState.value.paid.balance)
+        assertEquals(PaidEvent.EarlierSaved(menu = false), holder.uiState.value.paid.event, "the earlier one is announced, not just saved")
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
     }
 
     @Test
@@ -883,7 +901,7 @@ class RecipePaidTest {
         assertEquals(MergePrompt(12, 38), holder.uiState.value.paid.merge)
         assertEquals(0, account.merged, "nothing moves before the person agrees")
 
-        account.mergeResult = ServerResult.Ok(50)
+        account.mergeResult = ServerResult.Ok(MergeReply(50, 12))
         holder.confirmMerge()
         assertEquals(1, account.merged)
         assertEquals(50, holder.uiState.value.paid.balance)
@@ -908,7 +926,7 @@ class RecipePaidTest {
     fun withNothingOnThePhoneTheJoinNeedsNoQuestion() = runUnconfined {
         withBalance(0)
         val holder = holder()
-        account.mergeResult = ServerResult.Ok(38)
+        account.mergeResult = ServerResult.Ok(MergeReply(38))
         account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
         holder.signIn(SignInProvider.GOOGLE)
         assertNull(holder.uiState.value.paid.merge)
@@ -927,6 +945,8 @@ class RecipePaidTest {
         holder.confirmMerge()
         assertEquals(PaidEvent.SignInFailed, holder.uiState.value.paid.event)
         assertEquals(12, holder.uiState.value.paid.balance)
+        assertEquals(1, account.merged, "a refusal isn't asked again")
+        assertEquals(1, account.cancelledMerges, "the account signed in for the join is let go")
     }
 
     @Test
@@ -1291,5 +1311,350 @@ class RecipePaidTest {
         assertEquals("semi-skimmed", cleanWireName("semi-skimmed"))
         assertNull(cleanWireName("🍞 ,."))
         assertEquals(40, cleanWireName("a".repeat(60))!!.length)
+    }
+
+    // --- Final contract: merge -------------------------------------------------------------
+
+    @Test
+    fun aNegativePhoneBalanceIsJoinedWithoutAskingAndTheDebtCostsAndBlockAreApplied() = runUnconfined {
+        withBalance(-3)
+        val holder = holder()
+        account.mergeResult = ServerResult.Ok(MergeReply(balance = 35, moved = -3, costs = RecipeCosts(1, 3, 4), purchasesBlocked = true))
+        account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
+        holder.signIn(SignInProvider.GOOGLE)
+
+        val paid = holder.uiState.value.paid
+        assertNull(paid.merge, "nothing to ask: the debt has to move")
+        assertEquals(1, account.merged)
+        assertEquals(35, paid.balance)
+        assertEquals(RecipeCosts(1, 3, 4), paid.costs)
+        assertTrue(paid.purchasesBlocked)
+        assertEquals(PaidEvent.Merged(-3), paid.event)
+    }
+
+    @Test
+    fun aJoinThatMovedRecipesSaysHowMany() = runUnconfined {
+        withBalance(12)
+        val holder = holder()
+        account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
+        holder.signIn(SignInProvider.GOOGLE)
+        account.mergeResult = ServerResult.Ok(MergeReply(balance = 50, moved = 12))
+        holder.confirmMerge()
+        assertEquals(PaidEvent.Merged(12), holder.uiState.value.paid.event)
+        assertFalse(holder.uiState.value.paid.purchasesBlocked, "absent means not blocked")
+    }
+
+    @Test
+    fun aBusyServerOnJoiningIsAskedAgainWithGrowingWaitsNotDropped() = runUnconfined {
+        withBalance(0)
+        val holder = holder()
+        account.mergeQueue += ServerResult.Err(ServerError.OVERLOADED)
+        account.mergeQueue += ServerResult.Err(ServerError.BUSY)
+        account.mergeResult = ServerResult.Ok(MergeReply(38))
+        account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
+        holder.signIn(SignInProvider.GOOGLE)
+        assertEquals(3, account.merged)
+        assertEquals(listOf(3_000L, 6_000L), waits)
+        assertEquals(0, account.cancelledMerges)
+        assertEquals(38, holder.uiState.value.paid.balance)
+    }
+
+    @Test
+    fun aJoinThatStaysBusyGivesUpAfterAWhileWithoutLoopingTightly() = runUnconfined {
+        withBalance(0)
+        val holder = holder()
+        account.mergeResult = ServerResult.Err(ServerError.OVERLOADED)
+        account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
+        holder.signIn(SignInProvider.GOOGLE)
+        assertTrue(account.merged in 3..12, "asked a bounded number of times: ${account.merged}")
+        assertTrue(waits.all { it >= 3_000L })
+        assertEquals(1, account.cancelledMerges)
+        assertEquals(PaidEvent.SignInFailed, holder.uiState.value.paid.event)
+    }
+
+    // --- Final contract: purchases ---------------------------------------------------------
+
+    @Test
+    fun aPurchaseFromTheWrongStoreIsDroppedBuyingHiddenAndNotSentAgain() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.verifyReplies += ServerResult.Err(ServerError.STORE_MISMATCH)
+        val purchase = StorePurchase("tok", listOf("recipes_10"), 1, pending = false)
+        store.updates.emit(StoreUpdate.Purchases(listOf(purchase)))
+
+        val paid = holder.uiState.value.paid
+        assertEquals(PurchaseRejection.WRONG_BUILD, paid.rejection)
+        assertTrue(paid.storeRefused)
+        assertFalse(paid.canBuy)
+        assertEquals(0, paid.unconfirmedRecipes)
+        assertTrue(paidRepository.get().unverified.isEmpty())
+        assertEquals(5, paid.balance, "nothing granted")
+
+        // Play still holds it (never consumed): a later resume doesn't send it again.
+        store.held = listOf(purchase)
+        now += 120_000
+        holder.onAppResume()
+        assertEquals(listOf("tok"), backend.verified)
+    }
+
+    @Test
+    fun aPurchaseOfAnotherAccountIsKeptAndSentAgainOnlyWhenAnotherAccountSignsIn() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.verifyReplies += ServerResult.Err(ServerError.PURCHASE_ACCOUNT_MISMATCH)
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("tok", listOf("recipes_10"), 1, pending = false))))
+
+        var paid = holder.uiState.value.paid
+        assertEquals(10, paid.elsewhereRecipes)
+        assertEquals(0, paid.unconfirmedRecipes, "not \"being confirmed\": it waits for its own account")
+        assertNull(paid.rejection, "neither granted nor rejected")
+        assertNull(paid.event)
+        assertEquals(1, paidRepository.get().unverified.size, "kept")
+
+        now += 120_000
+        holder.onAppResume()
+        assertEquals(listOf("tok"), backend.verified, "not sent again for the same account")
+
+        backend.verifyReplies += ServerResult.Ok(VerifyReply(VerifyStatus.GRANTED, 15))
+        account.mutableState.value = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "a@b.c", "key-buyer")
+        paid = holder.uiState.value.paid
+        assertEquals(listOf("tok", "tok"), backend.verified, "sent again for the account now signed in")
+        assertEquals(0, paid.elsewhereRecipes)
+        assertEquals(15, paid.balance)
+    }
+
+    @Test
+    fun aBusyServerOnAPurchaseIsAskedAgainAFewTimesThenLeftForLater() = runUnconfined {
+        withBalance(0)
+        val holder = holder()
+        repeat(10) { backend.verifyReplies += ServerResult.Err(ServerError.OVERLOADED) }
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("tok", listOf("recipes_10"), 1, pending = false))))
+        assertEquals(4, backend.verified.size, "the first try and three more")
+        assertEquals(listOf(3_000L, 6_000L, 12_000L), waits)
+        assertEquals(10, holder.uiState.value.paid.unconfirmedRecipes, "still kept")
+
+        // Coming back to the app at once doesn't send it again; after a while it does.
+        now += 5_000
+        holder.onAppResume()
+        assertEquals(4, backend.verified.size)
+        now += 30_000
+        backend.verifyReplies.clear()
+        backend.verifyReplies += ServerResult.Ok(VerifyReply(VerifyStatus.GRANTED, 10))
+        holder.onAppResume()
+        assertEquals(5, backend.verified.size)
+        assertEquals(10, holder.uiState.value.paid.balance)
+    }
+
+    // --- Final contract: busy server, polling ----------------------------------------------
+
+    @Test
+    fun aBusyServerOnAFirstSendIsAskedAgainWithTheSameIdAndShowsACalmState() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        val busySeen = mutableListOf<Boolean>()
+        onWait = { busySeen += it?.uiState?.value?.paid?.serverBusy == true }
+        backend.generateReplies += ServerResult.Err(ServerError.OVERLOADED)
+        backend.generateReplies += ServerResult.Err(ServerError.OVERLOADED)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0", "req0", "req0"), backend.generated.map { it.requestId })
+        assertEquals(listOf(3_000L, 6_000L), waits)
+        assertEquals(listOf(true, true), busySeen, "busy, trying again, while it waits")
+        val state = holder.uiState.value
+        assertIs<RecipeEvent.Written>(state.event)
+        assertFalse(state.paid.serverBusy)
+        assertNull(state.paid.issue)
+        assertEquals(4, state.paid.balance)
+    }
+
+    @Test
+    fun aServerTooBusyEverToTakeARequestDropsItSoItIsNeverStartedUnasked() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        repeat(100) { backend.generateReplies += ServerResult.Err(ServerError.OVERLOADED) }
+        holder.generateOnServer()
+
+        val state = holder.uiState.value
+        assertEquals(RecipeEvent.ServerFailedLater, state.event, "try later, nothing taken")
+        assertNull(state.paid.issue)
+        assertNull(state.paid.writing)
+        assertFalse(state.paid.serverBusy)
+        assertNull(paidRepository.get().pendingGeneration, "the server holds nothing for it: not kept")
+        assertTrue(backend.generated.size <= 10, "backed off: ${backend.generated.size} calls")
+        assertTrue(waits.all { it in 3_000L..30_000L })
+
+        val calls = backend.generated.size
+        now += 120_000
+        holder.onAppResume()
+        assertEquals(calls, backend.generated.size, "nothing is started in the background")
+    }
+
+    @Test
+    fun aHeldRequestTheServerStaysTooBusyToAnswerForIsKeptAndFetchedOnTryAgain() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        repeat(100) { backend.polls!! += ServerResult.Err(ServerError.OVERLOADED) }
+        holder.generateOnServer()
+
+        val state = holder.uiState.value
+        assertEquals(ServerIssue.BUSY, state.paid.issue)
+        assertNull(state.event, "not an error")
+        assertEquals("req0", paidRepository.get().pendingGeneration?.requestId, "the server holds it: kept with its id")
+
+        backend.polls!!.clear()
+        backend.polls!! += done(4)
+        holder.retryServer()
+        assertEquals(listOf("req0"), backend.generated.map { it.requestId }, "fetched, never started again")
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertNull(holder.uiState.value.paid.issue)
+    }
+
+    @Test
+    fun anEarlierRequestTooBusyToBeTakenIsDroppedAndTheNewOneNotSent() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        holder.updateConfig { it.copy(servings = 4) }
+
+        backend.polls!! += ServerResult.Err(ServerError.UNKNOWN_REQUEST)
+        repeat(100) { backend.generateReplies += ServerResult.Err(ServerError.OVERLOADED) }
+        holder.generateOnServer()
+        assertTrue(backend.generated.all { it.requestId == "req0" }, "the new ask isn't sent behind a busy server")
+        assertNull(paidRepository.get().pendingGeneration, "the old ask, never taken, is dropped")
+        assertEquals(RecipeEvent.ServerFailedLater, holder.uiState.value.event)
+        assertNull(holder.uiState.value.paid.writing)
+    }
+
+    @Test
+    fun aBusyAnswerWhileAskingAboutAHeldRequestKeepsItAndBacksOff() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += ServerResult.Err(ServerError.OVERLOADED)
+        backend.polls!! += ServerResult.Err(ServerError.OVERLOADED)
+        backend.polls!! += done(4)
+        holder.generateOnServer()
+        assertEquals(listOf(3_000L, 3_000L, 6_000L), waits)
+        assertEquals(listOf("req0"), backend.generated.map { it.requestId }, "only asked about, never started again")
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun pollsAreNeverCloserThanThreeSecondsAndSlowDownForALongMenu() = runUnconfined {
+        withBalance(10)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 5, charged = true))
+        repeat(20) { backend.polls!! += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 5, charged = true)) }
+        backend.polls!! += done(5, recipe = null, menu = sampleMenu(3))
+        holder.generateOnServer()
+        assertTrue(waits.all { it >= POLL_MILLIS })
+        assertEquals(SLOW_POLL_MILLIS, waits.last())
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun aBlockOrNewCostsOnAPollApplyAtOnceButTheHeldBalanceDoesnt() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        val costs = buildJsonObject {
+            put("recipe", 2)
+            put("menu2", 4)
+            put("menu3", 5)
+        }
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 3, charged = true, costs = costs, purchasesBlocked = JsonPrimitive(true)))
+        var seen: PaidUiState? = null
+        onWait = { seen = it?.uiState?.value?.paid }
+        backend.polls!! += done(3)
+        holder.generateOnServer()
+        assertEquals(true, seen?.purchasesBlocked)
+        assertEquals(2, seen?.costs?.recipe)
+        assertEquals(5, seen?.balance, "the held balance isn't shown")
+        assertFalse(holder.uiState.value.paid.purchasesBlocked, "the final reply has no block: lifted")
+    }
+
+    @Test
+    fun anEarlierRequestThatFailedAndWasChargedIsAnnounced() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        holder.updateConfig { it.copy(servings = 4) }
+
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.FAILED, balance = 4, charged = true))
+        backend.generateReplies += done(3)
+        holder.generateOnServer()
+        assertEquals(PaidEvent.EarlierRefused(1), holder.uiState.value.paid.event)
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun anEarlierRequestThatStaysBusyHoldsTheNewOneBackAndSaysBusy() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        holder.updateConfig { it.copy(servings = 4) }
+        repeat(100) { backend.polls!! += ServerResult.Err(ServerError.OVERLOADED) }
+        holder.generateOnServer()
+        assertEquals(listOf("req0"), backend.generated.map { it.requestId }, "the new one isn't sent past the earlier one")
+        assertEquals(ServerIssue.BUSY, holder.uiState.value.paid.issue)
+        assertEquals("req0", paidRepository.get().pendingGeneration?.requestId)
+    }
+
+    @Test
+    fun backoffDoublesFromThreeSecondsUpToThirty() {
+        assertEquals(listOf(3_000L, 6_000L, 12_000L, 24_000L, 30_000L, 30_000L), (0..5).map(::backoffMillis))
+    }
+
+    @Test
+    fun wireNamesKeepCombiningMarksAndNumbersOfAnyScript() {
+        assertEquals("किवी", cleanWireName("किवी"))
+        assertEquals("½ lemon", cleanWireName("½ lemon"))
+        assertEquals("Ben Jerry s", cleanWireName("Ben & Jerry's"))
+        assertNull(cleanWireName("🍋"))
+    }
+
+    @Test
+    fun aPurchaseRefusedAsAnotherAccountsWithNoUserKeyIsStillShownAsElsewhere() = runUnconfined {
+        withBalance(5)
+        account.mutableState.value = AccountState(AccountKind.ANONYMOUS)
+        val holder = holder()
+        backend.verifyReplies += ServerResult.Err(ServerError.PURCHASE_ACCOUNT_MISMATCH)
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("tok", listOf("recipes_10"), 1, pending = false))))
+        assertEquals(10, holder.uiState.value.paid.elsewhereRecipes)
+        assertEquals(0, holder.uiState.value.paid.unconfirmedRecipes)
+        now += 120_000
+        holder.onAppResume()
+        assertEquals(listOf("tok"), backend.verified, "not sent again")
+    }
+
+    @Test
+    fun aRateLimitWhileAskingAboutAHeldRequestWaitsAMinute() = runUnconfined {
+        withBalance(5)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += ServerResult.Err(ServerError.RATE_LIMITED)
+        backend.polls!! += done(4)
+        holder.generateOnServer()
+        assertEquals(listOf(POLL_MILLIS, RATE_LIMIT_WAIT_MILLIS), waits)
+    }
+
+    @Test
+    fun theClientsOwnNamesAreNeverReadAsServerReasons() {
+        for (name in listOf("OVERLOADED", "OFFLINE", "UNAUTHENTICATED", "CALLABLE_MISSING", "UNKNOWN")) {
+            assertEquals(ServerError.UNKNOWN, ServerError.fromReason(name, ServerError.INTERNAL), name)
+        }
+        assertEquals(ServerError.STORE_MISMATCH, ServerError.fromReason("STORE_MISMATCH", ServerError.INTERNAL))
     }
 }
