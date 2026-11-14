@@ -37,3 +37,4 @@ Make `src/preview-<page>.html` by copying `index.html` and removing the other pa
 - Tab links in every nav use these targets, so flows connect across pages. Keep these ids exactly:
   `pantry/home/loaded`, `pantry/home/empty`, `recipe/cook/ready`, `shopping/list/loaded`, `settings/main/default`, `add/item/new`, `add/item/prefilled`, `scanner/barcode/ready`, `scanner/barcode/found`, `scanner/date/ready`, `scanner/batch/queue`, `onboarding/first-run/welcome`.
 - Scan buttons go to `scanner/barcode/ready`. The scanner is full-screen, with no tab bar.
+- Recipe tab (2026-11-14): one rule (`RecipeUiState.actions`) picks the pinned action and the buttons under the form; see the table at the end of the Recipe page. The lone Share prompt is a content-width pill at the trailing edge, like Scan. Form controls: Time is the `.range` slider, Meal and Diet are multi-choice `.chip`s with a check when on, single choices stay `.segmented`.
