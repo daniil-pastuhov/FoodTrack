@@ -237,7 +237,7 @@ class ServerNameRuleTest {
             "Ｐａｓｔａ　ｆｒｅｓｃａ", "١٢٣ eggs", "۴ eggs", "eggs ১২", "tofu 豆腐 firm", "Ω-3 oil", "Rød\u200Cbete",
             "a".repeat(39) + "é", "é".repeat(30), "Brød-" + "x".repeat(30) + "-grovt",
             "1. 2. 3. 4. 5. 6. 7. 8. 9. 10.", "&&&", "a&&b", "5%%", "1,,5", "1..5", "1//2", "'a'b'", "A.", "..a",
-            "Ben &", "& &", "Mlеko", "Мlеко", "Ёжик", "Їжак", "x".repeat(500), "\uD83D", "\uDC00a"
+            "Milk\u0483", "a\u2DE0b", "Мо\u0301локо", "Ben &", "& &", "Mlеko", "Мlеко", "Ёжик", "Їжак", "x".repeat(500), "\uD83D", "\uDC00a"
         )
         for (input in inputs) {
             val cleaned = cleanWireName(input) ?: continue

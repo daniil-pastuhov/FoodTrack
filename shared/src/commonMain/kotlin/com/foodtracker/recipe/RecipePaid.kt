@@ -859,8 +859,11 @@ internal class RecipePaid(
         if (ingredients.isEmpty()) {
             return Built.Blocked(leftOut.firstOrNull()?.let { RecipeEvent.IngredientNotSent(it) } ?: RecipeEvent.ServerFailed)
         }
-        val allergens = current.allergens.mapNotNull(::cleanWireName).distinctBy { it.lowercase() }.take(MAX_REQUEST_ALLERGENS)
-        // Never sent without an allergen the person set: a recipe written without it could be unsafe.
+        // Never sent without an allergen the person set, or with part of one cut away (another
+        // script, a word too long): a recipe written without it could be unsafe.
+        val allergens = current.allergens.filter { it.isNotBlank() }.map { raw ->
+            cleanAllergenName(raw) ?: return Built.Blocked(RecipeEvent.AllergenNotSent(raw.trim()))
+        }.distinctBy { it.lowercase() }.take(MAX_REQUEST_ALLERGENS)
         allergens.firstOrNull { it.lowercase() in refusedAllergens }?.let { return Built.Blocked(RecipeEvent.AllergenNotSent(it)) }
         val menu = current.mode == RecipeMode.MENU
         val request = GenerateRequest(
@@ -915,12 +918,26 @@ internal class RecipePaid(
                         }
                     }
                 }
-                val kept = snapshot.pendingGeneration?.takeIf { it.sameAskAs(fresh) }
-                val request = kept ?: fresh
+                // Settling the earlier one may have had a name refused that this one carries too:
+                // built again without it rather than refused a second time.
+                var next = built
+                if (fresh.ingredients.any { it.name.lowercase() in refusedIngredients } ||
+                    fresh.allergens.any { it.lowercase() in refusedAllergens }
+                ) {
+                    when (val rebuilt = buildRequest(current)) {
+                        is Built.Blocked -> {
+                            state.update { it.copy(event = rebuilt.event, paid = it.paid.copy(writing = null, serverBusy = false)) }
+                            return@withLock
+                        }
+                        is Built.Ready -> next = rebuilt
+                    }
+                }
+                val kept = snapshot.pendingGeneration?.takeIf { it.sameAskAs(next.request) }
+                val request = kept ?: next.request
                 if (kept == null) persist { it.copy(pendingGeneration = request, pendingSinceMillis = nowMillis()) }
                 updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE) }
                 // Already sent once with these inputs: asked about, not started again.
-                send(request, interactive = true, start = kept == null, leftOut = built.leftOut)
+                send(request, interactive = true, start = kept == null, leftOut = next.leftOut)
             }
         }
     }
@@ -1167,8 +1184,11 @@ internal class RecipePaid(
                                     finish(interactive, RecipeEvent.ServerFailedLater)
                                     return Sent.SETTLED
                                 }
-                                refusedIngredients += ingredient.name.lowercase()
-                                val rest = request.ingredients.filterIndexed { i, _ -> i != refusedIndex }
+                                val refusedKey = ingredient.name.lowercase()
+                                refusedIngredients += refusedKey
+                                // Every row of that name: another carton of the same milk would be
+                                // refused just the same.
+                                val rest = request.ingredients.filterNot { it.name.lowercase() == refusedKey }
                                 // Once, and only while the person waits: repeated refusals lock the
                                 // account for the day, so this never loops.
                                 if (!interactive || retried || rest.isEmpty()) {

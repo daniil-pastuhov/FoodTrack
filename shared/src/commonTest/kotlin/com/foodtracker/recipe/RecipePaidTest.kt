@@ -1646,6 +1646,19 @@ class RecipePaidTest {
     }
 
     @Test
+    fun everyRowOfARefusedNameIsLeftOut() = runUnconfined {
+        withBalance(5)
+        pantry.value = pantry.value.copy(allRows = listOf(row("bread", -1), row("milk1", 0, "Milk"), row("milk2", 1, "milk")))
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(1)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("Bread"), backend.generated[1].ingredients.map { it.name }, "the other carton would be refused too")
+        assertEquals(listOf("Milk"), assertIs<RecipeEvent.Written>(holder.uiState.value.event).leftOut)
+    }
+
+    @Test
     fun aSecondRefusalIsNotRetriedAgain() = runUnconfined {
         withBalance(5)
         val holder = holder()
@@ -1704,6 +1717,19 @@ class RecipePaidTest {
         holder.generateOnServer()
         assertEquals(1, backend.generated.size, "known refused: not sent at all")
         assertEquals(RecipeEvent.AllergenNotSent("peanuts"), holder.uiState.value.event)
+    }
+
+    @Test
+    fun anAllergenCleaningWouldDropOrShortenIsNeverSentWithout() = runUnconfined {
+        withBalance(5)
+        for (allergen in listOf("φιστίκια", "Schalenfruchtunverträglichkeit", "peanut 花生")) {
+            pantry.value = pantry.value.copy(settings = AppSettings(allergens = setOf("milk", allergen)))
+            val holder = holder()
+            holder.generateOnServer()
+
+            assertTrue(backend.generated.isEmpty(), allergen)
+            assertEquals(RecipeEvent.AllergenNotSent(allergen), holder.uiState.value.event, allergen)
+        }
     }
 
     @Test

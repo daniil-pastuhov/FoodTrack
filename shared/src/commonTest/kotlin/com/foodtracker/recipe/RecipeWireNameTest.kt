@@ -136,6 +136,19 @@ class RecipeWireNameTest {
     }
 
     @Test
+    fun anAllergenIsSentOnlyWhole() {
+        assertEquals("peanuts", cleanAllergenName("peanuts"))
+        assertEquals("Ben & Jerry's", cleanAllergenName("Ben & Jerry's"))
+        assertEquals("tree nuts", cleanAllergenName("tree nuts!"), "punctuation may go")
+        assertEquals("Milk", cleanAllergenName("Мilk"), "a look-alike folded keeps every letter")
+        assertNull(cleanAllergenName("φιστίκια"))
+        assertNull(cleanAllergenName("peanut 花生"), "a word dropped")
+        assertNull(cleanAllergenName("Schalenfruchtunverträglichkeit"), "a part over 28 characters")
+        assertNull(cleanAllergenName("one two three four five six seven eight nine"), "past 8 words")
+        assertNull(cleanAllergenName("٣ eggs"), "a non-ASCII digit")
+    }
+
+    @Test
     fun cleaningIsStable() {
         for (name in REAL_PRODUCT_NAMES + ADVERSARIAL_NAMES.map { it.first }) {
             val once = cleanWireName(name) ?: continue

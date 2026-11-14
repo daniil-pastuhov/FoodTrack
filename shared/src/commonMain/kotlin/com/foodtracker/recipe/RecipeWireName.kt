@@ -41,6 +41,18 @@ fun cleanWireName(name: String): String? {
     return text.takeIf { it.any { c -> c.isWireLetter() || c in '0'..'9' } }
 }
 
+/**
+ * An allergen as sent, only when cleaning kept every letter and digit of it: null when a word
+ * or a part was dropped (another script, a non-ASCII digit, a part over 28 characters, past 8
+ * words or 40 characters). Unlike a pantry item, an allergen must never reach the server
+ * shortened, since a recipe written without part of it could be unsafe.
+ */
+fun cleanAllergenName(name: String): String? {
+    val cleaned = cleanWireName(name) ?: return null
+    fun meaningful(text: String) = normalizeWireText(text).count { it.isLetterOrDigit() }
+    return cleaned.takeIf { meaningful(name.take(RAW_INPUT_LIMIT)) == meaningful(it) && name.length <= RAW_INPUT_LIMIT }
+}
+
 /** The server's normalisation: NFKC, look-alikes folded, invisible characters removed, spaces. */
 internal fun normalizeWireText(raw: String): String {
     // Folded before NFKC too: NFKC turns `´` into a space and a combining accent.
@@ -123,7 +135,10 @@ private fun keepAllowed(text: String): String = buildString(text.length) {
             c.isWireLetter() || c in '0'..'9' || c == ' ' || c == '-' || c in PUNCTUATION -> append(c)
             c.category == CharCategory.NON_SPACING_MARK -> {
                 // A stray mark, or a second one on the same letter ("Zalgo" text), is dropped.
-                if (isNotEmpty() && last().isWireLetter()) append(c)
+                // Only the shared Combining Diacritical Marks: the server counts the Cyrillic
+                // block's own marks (U+0483..., U+2DE0...) as Cyrillic, so one on a Latin letter
+                // would be refused as MIXED_SCRIPT.
+                if (c.code in 0x300..0x36F && isNotEmpty() && last().isWireLetter()) append(c)
             }
             else -> append(' ')
         }
