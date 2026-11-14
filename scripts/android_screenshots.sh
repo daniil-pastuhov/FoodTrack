@@ -24,12 +24,17 @@ export ANDROID_SERIAL
 
 adb wait-for-device
 adb install -r "$APK" >/dev/null
+# Without it, Home and Settings show a "Reminders are off" banner on a new emulator.
+adb shell pm grant $PACKAGE android.permission.POST_NOTIFICATIONS
 # The demo file goes in the app's private files folder through run-as (debug builds allow it):
 # a folder adb creates under /sdcard/Android/data isn't readable by the app.
 DEMO_FILE=/data/data/$PACKAGE/files/demo.json
 adb shell run-as $PACKAGE mkdir -p files
 
 adb shell cmd uimode night no >/dev/null
+# Upright, whatever the emulator was left in: a new headless emulator can start sideways.
+adb shell settings put system accelerometer_rotation 0
+adb shell settings put system user_rotation 0
 
 # A fixed, tidy status bar: 9:41, full signal and battery, no notifications.
 adb shell settings put global sysui_demo_allowed 1

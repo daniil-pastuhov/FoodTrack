@@ -32,14 +32,16 @@ PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO"}
 PLAY_SET = "phone-screenshots"
 PLAY_SIZE = (1080, 1920)
 
-# One caption per tab, in screenshot order (home, recipe, shopping, settings). "\n" is where a
+# One caption per tab, in screenshot order (home, recipe, shopping, settings). The Recipe shot is
+# the tab as everyone sees it, with the soonest items ticked and a free route as the button, so its
+# caption promises a recipe from them, not a free one. "\n" is where a
 # caption breaks on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
 CAPTIONS = {
-    "en": ["Know what's\nabout to expire", "Turn what's left\ninto a recipe",
+    "en": ["Know what's\nabout to expire", "A recipe for what\nneeds using first",
            "Used it up?\nIt's on your list", "Reminders\nwhen it suits you"],
     "ru": ["Видно, что скоро\nиспортится", "Рецепты из того,\nчто пора съесть",
            "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
-    "nb": ["Se hva som\nsnart går ut", "Gjør restene om\ntil en oppskrift",
+    "nb": ["Se hva som\nsnart går ut", "Oppskrift på det\nsom må brukes først",
            "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
 }
 # Google Play has a fifth screenshot, an item's Edit screen, fourth in order.
@@ -111,6 +113,10 @@ def frame(raw_path, caption, out_path, canvas_size=None):
 
     font = ImageFont.truetype(FONT, round(spec["font"]), index=FONT_BOLD_INDEX)
     lines = caption_lines(caption, font, 0.86 * width, spec["wrap"])
+    # A line too long for the canvas (a longer translation) is set smaller rather than clipped.
+    while max(font.getlength(line) for line in lines) > 0.9 * width:
+        spec["font"] *= 0.97
+        font = ImageFont.truetype(FONT, round(spec["font"]), index=FONT_BOLD_INDEX)
     pitch = 1.13 * spec["font"]
     top = spec["caption_top"]
     for i, line in enumerate(lines):

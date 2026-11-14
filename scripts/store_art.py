@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Makes the App Store "Header and Search Results" images (iOS 27 and later) from raw simulator
-screenshots, on the same teal gradient and device bezel as the screenshot sets:
+screenshots, on the same Larder green gradient and device bezel as the screenshot sets:
 
     DEVICE_NAME="iPhone 17 Pro" scripts/ios_screenshots.sh build/raw
     scripts/store_art.py build/raw
@@ -9,14 +9,35 @@ writes store-listing/app-store/<listing folder>/header.png (3840x1646, 21:9: thr
 text, so it suits every language) and search-result.png (3840x2560, 3:2: a headline and the home
 screen). Apple's templates keep key artwork in a safe area, which these layouts stay inside:
 header x 1097-2743, y 493-1154; search results x 836-3004, y 765-1795. The back and share buttons
-sit over the header's top edge. Needs Pillow.
+sit over the header's top edge.
+
+    ANDROID_SERIAL=<emulator> scripts/android_screenshots.sh build/raw-android
+    scripts/store_art.py build/raw build/raw-android
+
+also writes store-listing/google-play/<listing folder>/feature-graphic.png (1024x500): the icon,
+the app's name and a line about it beside the Android home screen. Play may crop the edges or
+put its play button over the middle, so the text keeps clear of the left edge and the phone of
+the right one. Needs Pillow.
 """
 import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from frame_screenshots import BEZEL, FONT, FONT_BOLD_INDEX, LISTING_FOLDERS, ROOT, WHITE, gradient
+from frame_screenshots import (BEZEL, FONT, FONT_BOLD_INDEX, LISTING_FOLDERS, PLAY_FOLDERS, ROOT,
+                               WHITE, gradient)
+
+FEATURE_SIZE = (1024, 500)
+# The feature graphic's name (Android's app_name in each language) and the line under it, the
+# Play short description in brief.
+APP_NAMES = {"en": "BestBefore", "ru": "Срокоед", "nb": "Matvakt"}
+TAGLINES = {
+    "en": "Scan groceries. Track dates.\nWaste less food.",
+    "ru": "Сканируйте продукты.\nСледите за сроками.\nВыбрасывайте меньше.",
+    "nb": "Skann matvarer. Følg datoene.\nKast mindre mat.",
+}
+PLAY_ICON = ROOT / "store-listing" / "google-play" / "icon-512.png"
+FONT_MEDIUM = str(ROOT / "androidApp" / "src" / "main" / "res" / "font" / "vollkorn_medium.ttf")
 
 HEADER_SIZE = (3840, 1646)
 SEARCH_SIZE = (3840, 2560)
@@ -105,6 +126,50 @@ def search_result(shots, headline, out_path):
     save(canvas, out_path)
 
 
+def fitted_font(path, lines, max_width, size):
+    """The largest size up to [size] at which every line fits in [max_width]."""
+    while True:
+        font = ImageFont.truetype(path, size, index=FONT_BOLD_INDEX)
+        if max(font.getlength(line) for line in lines) <= max_width or size <= 8:
+            return font
+        size -= 1
+
+
+def feature_graphic(home, name, tagline, out_path):
+    width, height = FEATURE_SIZE
+    canvas = gradient(width, height).convert("RGBA")
+    draw = ImageDraw.Draw(canvas)
+
+    # The phone on the right runs off the bottom edge, its title and first items in view.
+    body = phone(home, 300)
+    phone_left = width - 84 - body.width
+    paste_with_shadow(canvas, body, phone_left, 46)
+
+    # Icon, name and tagline as one block on the left, centred on the canvas's height.
+    text_left = 72
+    max_width = phone_left - 48 - text_left
+    icon_size = 120
+    icon = Image.open(PLAY_ICON).convert("RGBA").resize((icon_size, icon_size), Image.LANCZOS)
+    mask = Image.new("L", icon.size, 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, icon_size - 1, icon_size - 1),
+                                           radius=round(0.225 * icon_size), fill=255)
+    icon.putalpha(mask)
+    title_font = fitted_font(FONT, [name], max_width, 84)
+    lines = tagline.split("\n")
+    line_font = fitted_font(FONT_MEDIUM, lines, max_width, 34)
+    line_pitch = round(1.3 * line_font.size)
+    gap_icon, gap_title = 30, 22
+    block = icon_size + gap_icon + title_font.size + gap_title + len(lines) * line_pitch
+    top = (height - block) // 2
+    paste_with_shadow(canvas, icon, text_left, top)  # lifts the green icon off the green
+    y = top + icon_size + gap_icon
+    draw.text((text_left, y), name, font=title_font, fill=WHITE, anchor="lt")
+    y += title_font.size + gap_title
+    for i, line in enumerate(lines):
+        draw.text((text_left, y + i * line_pitch), line, font=line_font, fill=WHITE, anchor="lt")
+    save(canvas, out_path)
+
+
 def save(canvas, out_path):
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(out_path)  # no alpha channel, which App Store Connect rejects
@@ -112,7 +177,7 @@ def save(canvas, out_path):
 
 
 def main():
-    if len(sys.argv) != 2:
+    if len(sys.argv) not in (2, 3):
         sys.exit(__doc__)
     raw_dir = Path(sys.argv[1])
     for lang, folder in LISTING_FOLDERS.items():
@@ -125,6 +190,14 @@ def main():
         listing = ROOT / "store-listing" / "app-store" / folder
         header(shots, listing / "header.png")
         search_result(shots, HEADLINES[lang], listing / "search-result.png")
+    if len(sys.argv) == 3:
+        android_dir = Path(sys.argv[2])
+        for lang, folder in PLAY_FOLDERS.items():
+            matches = sorted((android_dir / lang).glob("[0-9]-home.png"))
+            if not matches:
+                sys.exit(f"no home screenshot in {android_dir / lang}")
+            feature_graphic(Image.open(matches[0]).convert("RGB"), APP_NAMES[lang], TAGLINES[lang],
+                            ROOT / "store-listing" / "google-play" / folder / "feature-graphic.png")
 
 
 if __name__ == "__main__":
