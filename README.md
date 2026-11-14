@@ -83,10 +83,11 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    tags `vX.Y.Z` and creates a GitHub release.
 
 **Store listings**: edit the files in `store-listing/` on the release branch (or before it), and
-the merge puts them in both stores; only what differs is written. Still by hand: the App Store
-"Header and Search Results" images (`header.png`, `search-result.png`; no API) and the iPhone
-Duo screenshot sets (no display type in the API). To see the difference with what the stores
-have, without writing anything (`--apply` writes):
+the merge puts them in both stores; only what differs is written, the iPhone Duo screenshots
+included (through the App Asset Library). Still by hand: the App Store "Header and Search
+Results" images (`header.png`, `search-result.png`). To see the difference with what the stores
+have, without writing anything (`--apply` writes; `screenshots --inspect` prints the raw sets,
+library images and placements):
 
 ```sh
 ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py listing

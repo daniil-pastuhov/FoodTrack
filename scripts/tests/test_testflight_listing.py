@@ -28,13 +28,19 @@ def md5(data):
 
 
 class FakeAsc:
-    """Answers GETs from a {path: data} table and records every call."""
+    """Answers GETs from a {path: data} table (or {path: whole response} in responses, for
+    included resources) and records every call."""
 
-    def __init__(self, gets=None):
+    def __init__(self, gets=None, responses=None):
         self.gets = gets or {}
+        self.responses = responses or {}
         self.calls = []
         self.parts = []
         self.created = 0
+        # Library images: id -> (state, specId) once processed; a reserved one gets the spec
+        # image_spec gives its attributes.
+        self.images = {}
+        self.image_spec = lambda attributes: None
 
     def call(self, method, path, params=None, body=None):
         self.calls.append((method, path, body))
@@ -42,12 +48,20 @@ class FakeAsc:
             if path.startswith("/appScreenshots/"):
                 return {"data": {"id": path.rsplit("/", 1)[1],
                                  "attributes": {"assetDeliveryState": {"state": "COMPLETE"}}}}
+            if path.startswith("/appAssetLibraryImages/"):
+                state, spec = self.images[path.rsplit("/", 1)[1]]
+                return {"data": {"attributes": {"state": state, "specId": spec}}}
+            if path in self.responses:
+                return self.responses[path]
             return {"data": self.gets.get(path, [])}
         if method == "POST":
             self.created += 1
             data = {"id": f"new-{self.created}", "type": body["data"]["type"],
                     "attributes": dict(body["data"].get("attributes", {}))}
-            if body["data"]["type"] == "appScreenshots":
+            if body["data"]["type"] == "appAssetLibraryImages":
+                self.images[data["id"]] = (
+                    "PREPARE_FOR_SUBMISSION", self.image_spec(data["attributes"]))
+            if body["data"]["type"] in ("appScreenshots", "appAssetLibraryImages"):
                 size = body["data"]["attributes"]["fileSize"]
                 data["attributes"]["uploadOperations"] = [
                     {"method": "PUT", "url": "https://upload.invalid/a", "offset": 0, "length": size,
@@ -228,6 +242,10 @@ class ScreenshotOrderTests(unittest.TestCase):
                 folder = testflight.LISTING_DIR / locale / name
                 if folder.is_dir():
                     testflight.local_screenshots(folder)
+            # Both iPhone Duo displays share one group of at most 10, and each image must have
+            # its display's size.
+            duo = testflight.local_duo(testflight.LISTING_DIR / locale)
+            self.assertLessEqual(len(duo), testflight.SCREENSHOT_LIMIT, locale)
 
     def test_png_size(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -300,7 +318,6 @@ class SyncScreenshotTests(unittest.TestCase):
         gb = write_listing(self.root, "en-GB", name="N")
         write_listing(self.root, "en-US", name="N")
         (gb / "screenshots").mkdir()
-        (gb / "duo-outer-screenshots").mkdir()
         self.images = {}
         for i in (1, 2, 3):
             data = png(1320, 2868, bytes([i]))
@@ -332,7 +349,6 @@ class SyncScreenshotTests(unittest.TestCase):
         self.assertIn("would delete: 2.png", out)
         self.assertIn("APP_IPHONE_65 sets; left as they are", out)
         self.assertIn("en-US: no screenshot folders", out)
-        self.assertIn("Not synced: en-GB/duo-outer-screenshots", out)
         self.assertIn("1320×2868", out)
 
     def test_apply_deletes_first_then_uploads_commits_and_orders(self):
@@ -402,6 +418,229 @@ class TargetTests(unittest.TestCase):
         self.assertFalse(editable)
         self.assertEqual(version["id"], "a")
         self.assertIn("No App Store version is editable", summary)
+
+
+DUO_SPECS = {"spec-inner": (2853, 2007), "spec-inner-upright": (2007, 2853),
+             "spec-outer": (1398, 2034), "spec-outer-sideways": (2034, 1398)}
+
+
+def duo_ref_data(max_count=10):
+    """Reference data shaped like the live account's: one IPHONE_DUO group for both displays."""
+    return [{"id": "ref", "attributes": {
+        "placementProfileGroups": [
+            {"placementProfileGroupId": "IPHONE_DUO_PROFILE", "displayClassId": "IPHONE_DUO",
+             "platform": "IPHONE_APP_STORE"},
+            {"placementProfileGroupId": "IMESSAGE_IPHONE_DUO_PROFILE", "displayClassId": "IPHONE_DUO",
+             "platform": "IMESSAGE_APP_STORE"},
+            {"placementProfileGroupId": "IPAD_13_PROFILE", "displayClassId": "IPAD_13_DISPLAY",
+             "platform": "IPAD_APP_STORE"}],
+        "placementTypes": [{"placementTypeId": "APP_SCREENSHOT", "specMappings": [
+            {"placementGroupId": "IPHONE_DUO_PROFILE", "specs": sorted(DUO_SPECS)},
+            {"placementGroupId": "IPAD_13_PROFILE", "specs": ["spec-ipad"]}]}],
+        "imageSpecs": [{"specId": k, "shortName": f"i{w}x{h}a0", "dimensions": {
+            "minWidth": w, "maxWidth": w, "minHeight": h, "maxHeight": h}}
+            for k, (w, h) in {**DUO_SPECS, "spec-ipad": (2064, 2752)}.items()],
+        "features": [{"featureId": "APP_STORE_VERSIONS", "placementPolicies": [
+            {"placementType": "APP_SCREENSHOT", "groupLimits": [
+                {"groupIds": ["IPAD_13_PROFILE", "IPHONE_DUO_PROFILE"], "maxCount": max_count}]}]}],
+    }}]
+
+
+def placement(id_, image_id):
+    return {"id": id_, "attributes": {"placementType": "APP_SCREENSHOT",
+                                      "placementGroup": "IPHONE_DUO_PROFILE", "state": "ACTIVE"},
+            "relationships": {"image": {"data": {"type": "appAssetLibraryImages", "id": image_id}}}}
+
+
+def library_image(id_, name, size, reference, state="APPROVED"):
+    spec = next(k for k, v in DUO_SPECS.items() if v == size)
+    return {"id": id_, "attributes": {"fileName": name, "referenceName": reference, "state": state,
+                                      "specId": spec, "imageAsset": {"width": size[0], "height": size[1]}}}
+
+
+class DuoTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = pathlib.Path(self.tmp.name)
+        self.gb = write_listing(self.root, "en-GB", name="N")
+        write_listing(self.root, "en-US", name="N")
+        self.files = {}
+        for folder, size in (("duo-outer-screenshots", (1398, 2034)),
+                             ("duo-inner-screenshots", (2853, 2007))):
+            (self.gb / folder).mkdir()
+            for i in (1, 2):
+                data = png(*size, f"{folder}{i}".encode())
+                (self.gb / folder / f"{i}.png").write_bytes(data)
+                self.files[(folder, i)] = data
+        # As the website leaves them: inner first, reference names without an MD5.
+        self.website = [library_image("w-in1", "1.png", (2853, 2007), "1.png (71)"),
+                        library_image("w-in2", "2.png", (2853, 2007), "2.png (72)"),
+                        library_image("w-out1", "1.png", (1398, 2034), "1.png (75)"),
+                        library_image("w-out2", "2.png", (1398, 2034), "2.png (76)")]
+        self.asc = self.fake(self.website)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def fake(self, placed, library=None):
+        asc = FakeAsc({
+            "/appStoreVersionLocalizations/vl-gb/appScreenshotSets": [
+                {"id": "set-duo", "attributes": {"screenshotDisplayType": "APP_IPHONE_DUO"}}],
+            "/apps/app/assetLibrary": {"id": "lib", "type": "appAssetLibraries"},
+            "/appAssetLibraryRefData": duo_ref_data(),
+            "/appAssetLibraries/lib/images": list(library if library is not None else placed),
+        }, responses={"/appStoreVersionLocalizations/vl-gb/placements": {
+            "data": [placement(f"p-{image['id']}", image["id"]) for image in placed],
+            "included": placed}})
+        asc.image_spec = lambda attrs: ("spec-outer" if "duo-outer" in attrs["referenceName"]
+                                        else "spec-inner")
+        return asc
+
+    def tagged(self, folder, i, id_=None):
+        size = (1398, 2034) if "outer" in folder else (2853, 2007)
+        return library_image(id_ or f"{folder}-{i}", f"{i}.png", size,
+                             f"en-GB/{folder}/{i}.png md5:{md5(self.files[(folder, i)])}")
+
+    def sync(self, apply, asc=None):
+        return quiet(testflight.sync_screenshots, asc or self.asc, {"en-GB": "vl-gb"}, apply,
+                     self.root, app_id="app")
+
+    def test_library_reads_the_one_duo_group_its_specs_and_limit(self):
+        asc = self.fake([], library=[self.tagged("duo-outer-screenshots", 1),
+                                     library_image("x", "x.png", (1398, 2034), "x md5:" + "a" * 32,
+                                                   state="FAILED"),
+                                     library_image("y", "y.png", (1398, 2034), "no tag")])
+        library = testflight.DuoLibrary(asc, "app")
+        self.assertEqual(library.group, "IPHONE_DUO_PROFILE")
+        self.assertEqual(library.limit, 10)
+        self.assertEqual(library.sizes(), set(DUO_SPECS.values()))
+        self.assertEqual(list(library.by_md5),
+                         [md5(self.files[("duo-outer-screenshots", 1)])])
+
+    def test_local_order_is_inner_then_outer_by_number(self):
+        shots = testflight.local_duo(self.gb)
+        self.assertEqual([(s["kind"], s["name"]) for s in shots],
+                         [("inner", "1.png"), ("inner", "2.png"), ("outer", "1.png"), ("outer", "2.png")])
+
+    def test_an_image_in_the_wrong_display_folder_stops(self):
+        (self.gb / "duo-outer-screenshots" / "3.png").write_bytes(png(2853, 2007))
+        with self.assertRaisesRegex(testflight.ListingError, "outer display takes"):
+            testflight.local_duo(self.gb)
+
+    def test_both_displays_share_the_groups_limit(self):
+        for i in range(3, 10):  # 9 outer and 2 inner: each folder within 10, not both
+            (self.gb / "duo-outer-screenshots" / f"{i}.png").write_bytes(png(1398, 2034, bytes([i])))
+        with self.assertRaisesRegex(testflight.ListingError, "at most 10 for both displays"):
+            self.sync(False)
+
+    def test_dry_run_describes_both_sides_and_writes_nothing(self):
+        changed, out = self.sync(False)
+        self.assertTrue(changed)
+        self.assertEqual(self.asc.writes(), [])
+        self.assertNotIn("APP_IPHONE_DUO sets; left as they are", out)
+        self.assertIn("group IPHONE_DUO_PROFILE, at most 10", out)
+        self.assertIn(f"repo outer: duo-outer-screenshots/1.png 1398×2034 md5 "
+                      f"{md5(self.files[('duo-outer-screenshots', 1)])}", out)
+        self.assertIn("App Store Connect inner: 1.png 2853×2007 spec i2853x2007a0, "
+                      "reference '1.png (71)' (md5 none), placement ACTIVE, image APPROVED", out)
+        self.assertIn("would remove the placements of: inner 1.png 2853×2007 (md5 not recorded)", out)
+        self.assertIn("would place: inner 1.png (new upload)", out)
+        self.assertIn("would order as inner 1.png, inner 2.png, outer 1.png, outer 2.png", out)
+
+    def test_apply_replaces_untagged_placements_and_orders_the_group(self):
+        self.sync(True)
+        writes = self.asc.writes()
+        deletes = [w[1] for w in writes if w[0] == "DELETE"]
+        self.assertEqual(deletes, [f"/appAssetLibraryPlacements/p-{i['id']}" for i in self.website])
+        self.assertTrue(all(w[0] == "DELETE" for w in writes[:4]))
+        reserved = [w[2]["data"] for w in writes if w[1] == "/appAssetLibraryImages"]
+        self.assertEqual([r["attributes"]["referenceName"] for r in reserved], [
+            f"en-GB/{folder}/{i}.png md5:{md5(self.files[(folder, i)])}"
+            for folder in ("duo-inner-screenshots", "duo-outer-screenshots") for i in (1, 2)])
+        self.assertEqual({r["attributes"]["category"] for r in reserved}, {"APP_SCREENSHOTS_AND_PREVIEWS"})
+        self.assertEqual(reserved[0]["relationships"]["assetLibrary"]["data"]["id"], "lib")
+        commits = [w[2]["data"]["attributes"] for w in writes
+                   if w[0] == "PATCH" and w[1].startswith("/appAssetLibraryImages/")]
+        self.assertEqual(commits, [{"uploaded": True}] * 4)
+        placed = [w for w in writes if w[1] == "/appAssetLibraryPlacements"]
+        self.assertEqual([p[2]["data"]["attributes"] for p in placed],
+                         [{"placementType": "APP_SCREENSHOT", "placementGroup": "IPHONE_DUO_PROFILE"}] * 4)
+        self.assertEqual(placed[0][2]["data"]["relationships"]["appStoreVersionLocalization"]["data"]["id"],
+                         "vl-gb")
+        order = [w for w in writes if w[1] == "/appAssetLibraryPlacementOrderingRequests"]
+        self.assertEqual(len(order), 1)
+        body = order[0][2]["data"]
+        self.assertEqual(body["attributes"], {"placementGroup": "IPHONE_DUO_PROFILE"})
+        # The placements are created in local order (inner, then outer), and ordered so.
+        self.assertEqual(len(body["relationships"]["orderedPlacements"]["data"]), 4)
+        self.assertEqual(body["relationships"]["appStoreVersionLocalization"]["data"]["id"], "vl-gb")
+        self.assertEqual(writes[-1], order[0])
+        self.assertFalse(any("/appScreenshot" in w[1] for w in writes))
+
+    def test_rerun_with_tagged_placements_changes_nothing(self):
+        placed = [self.tagged(f, i) for f in ("duo-inner-screenshots", "duo-outer-screenshots")
+                  for i in (1, 2)]
+        asc = self.fake(placed)
+        changed, out = self.sync(True, asc)
+        self.assertFalse(changed)
+        self.assertEqual(asc.writes(), [])
+        self.assertIn("up to date", out)
+
+    def test_swapped_order_only_posts_an_ordering_request(self):
+        placed = [self.tagged(f, i) for f in ("duo-outer-screenshots", "duo-inner-screenshots")
+                  for i in (1, 2)]
+        asc = self.fake(placed)
+        self.sync(True, asc)
+        writes = asc.writes()
+        self.assertEqual([w[1] for w in writes], ["/appAssetLibraryPlacementOrderingRequests"])
+        self.assertEqual([p["id"] for p in writes[0][2]["data"]["relationships"]["orderedPlacements"]["data"]],
+                         ["p-duo-inner-screenshots-1", "p-duo-inner-screenshots-2",
+                          "p-duo-outer-screenshots-1", "p-duo-outer-screenshots-2"])
+
+    def test_an_image_already_in_the_library_is_placed_without_uploading(self):
+        placed = [self.tagged("duo-inner-screenshots", 1), self.tagged("duo-inner-screenshots", 2),
+                  self.tagged("duo-outer-screenshots", 1)]
+        asc = self.fake(placed, library=placed + [self.tagged("duo-outer-screenshots", 2, "lib-out2")])
+        _, out = self.sync(True, asc)
+        self.assertIn("placing: outer 2.png (library image lib-out2 has it)", out)
+        writes = asc.writes()
+        self.assertFalse(any(w[1] == "/appAssetLibraryImages" for w in writes))
+        self.assertEqual(asc.parts, [])
+        placed_images = [w[2]["data"]["relationships"]["image"]["data"]["id"]
+                         for w in writes if w[1] == "/appAssetLibraryPlacements"]
+        self.assertEqual(placed_images, ["lib-out2"])
+
+    def test_a_file_matched_to_another_spec_stops(self):
+        self.asc.image_spec = lambda attrs: "spec-ipad"
+        with self.assertRaisesRegex(testflight.ListingError, "not to the 2853×2007 spec"):
+            self.sync(True)
+        self.assertFalse(any(w[1] == "/appAssetLibraryPlacements" for w in self.asc.writes()))
+
+    def test_processing_failure_stops(self):
+        real = self.asc.call
+
+        def failing(method, path, params=None, body=None):
+            result = real(method, path, params, body)
+            if method == "POST" and path == "/appAssetLibraryImages":
+                self.asc.images[result["data"]["id"]] = ("FAILED", None)
+            return result
+
+        self.asc.call = failing
+        with self.assertRaisesRegex(testflight.ListingError, "could not process"):
+            self.sync(True)
+
+    def test_without_the_app_id_the_duo_folders_cannot_sync(self):
+        with self.assertRaisesRegex(testflight.ListingError, "need the app id"):
+            quiet(testflight.sync_screenshots, self.asc, {"en-GB": "vl-gb"}, False, self.root)
+
+    def test_more_than_one_duo_group_is_not_guessed(self):
+        ref = duo_ref_data()
+        ref[0]["attributes"]["placementProfileGroups"].append(
+            {"placementProfileGroupId": "IPHONE_DUO_OTHER", "displayClassId": "IPHONE_DUO",
+             "platform": "IPHONE_APP_STORE"})
+        self.asc.gets["/appAssetLibraryRefData"] = ref
+        with self.assertRaisesRegex(testflight.ListingError, "2 placement groups"):
+            testflight.DuoLibrary(self.asc, "app")
 
 
 class InspectFake:
