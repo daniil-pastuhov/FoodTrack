@@ -314,11 +314,15 @@ public struct RecipeRequest: Equatable, Sendable {
     public var config: RecipeConfig
     /// From app Settings, always applied.
     public var allergens: [String]
+    /// "Send all products": the rest of the pantry, soonest first, as items the recipe may use as
+    /// well. Empty with the setting off.
+    public var otherItems: [RecipeIngredientInput]
 
-    public init(items: [RecipeIngredientInput], config: RecipeConfig, allergens: [String]) {
+    public init(items: [RecipeIngredientInput], config: RecipeConfig, allergens: [String], otherItems: [RecipeIngredientInput] = []) {
         // Soonest first, as every route lists them.
         self.items = items.sorted { $0.daysRemaining < $1.daysRemaining }
         self.config = config
         self.allergens = allergens.sorted()
+        self.otherItems = otherItems.sorted { $0.daysRemaining < $1.daysRemaining }
     }
 }

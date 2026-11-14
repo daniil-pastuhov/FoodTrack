@@ -50,7 +50,9 @@ import java.text.DateFormat
 import java.util.Date
 import com.foodtracker.recipe.RecipeConfig
 import com.foodtracker.recipe.RecipeDiet
+import com.foodtracker.recipe.RecipeIntro
 import com.foodtracker.recipe.RecipeMealType
+import com.foodtracker.recipe.RecipeOptions
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.recipeLanguageEndonym
 
@@ -78,10 +80,16 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit) {
                 onSignOut = stateHolder::signOut,
                 onDelete = stateHolder::deleteAccount
             ),
-            onAllergenConsent = stateHolder::setAllergenConsent
+            onAllergenConsent = stateHolder::setAllergenConsent,
+            options = state.options,
+            onSendAllItems = stateHolder::setSendAllItems,
+            onHowItWorks = stateHolder::showIntro
         )
     }
     RecipePaidOverlays(state, stateHolder)
+    if (state.intro == RecipeIntro.FROM_SETTINGS) {
+        RecipeIntroSheet(state, onDismiss = stateHolder::dismissIntro, onPacks = stateHolder::introToPacks)
+    }
 }
 
 @Composable
@@ -93,7 +101,10 @@ private fun RecipeSettingsContent(
     modifier: Modifier = Modifier,
     paid: PaidUiState = PaidUiState(),
     accountActions: AccountActions = AccountActions(),
-    onAllergenConsent: (Boolean) -> Unit = {}
+    onAllergenConsent: (Boolean) -> Unit = {},
+    options: RecipeOptions = RecipeOptions(),
+    onSendAllItems: (Boolean) -> Unit = {},
+    onHowItWorks: () -> Unit = {}
 ) {
     val resources = LocalContext.current.resources
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -139,6 +150,17 @@ private fun RecipeSettingsContent(
                 }
             }
 
+            // What goes with a recipe besides the ticked items, said plainly: with it on, every
+            // route gets the whole pantry (names, dates, quantities).
+            RecipeFormCard(title = stringResource(R.string.recipe_ingredients_settings), icon = LarderIcons.Refrigerator) {
+                LarderListItem(
+                    title = stringResource(R.string.recipe_send_all),
+                    supporting = stringResource(R.string.recipe_send_all_desc),
+                    trailing = { LarderSwitch(options.sendAllItems, onSendAllItems) },
+                    onClick = { onSendAllItems(!options.sendAllItems) }
+                )
+            }
+
             RecipeFormCard(title = stringResource(R.string.recipe_language), icon = LarderIcons.Languages) {
                 LarderListItem(
                     title = stringResource(R.string.recipe_write_in),
@@ -151,6 +173,16 @@ private fun RecipeSettingsContent(
 
             // Builds without the paid route have no account to speak of.
             if (paid.available) AccountCard(paid, accountActions)
+
+            LarderGroup {
+                LarderListItem(
+                    title = stringResource(R.string.recipe_intro_title),
+                    supporting = stringResource(R.string.recipe_intro_settings_supporting),
+                    leading = { LarderIcon(LarderIcons.Info, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    trailing = { LarderIcon(LarderIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                    onClick = onHowItWorks
+                )
+            }
         }
     }
 

@@ -27,6 +27,10 @@ sealed interface BuySheet {
 
     /** The store can't be reached, or purchases are off on this device. */
     data object StoreUnavailable : BuySheet
+
+    /** App Check refused this install as a purchase started, before any money moved: recipes
+     *  from packs aren't available here. Not a connection problem, so no Try again. */
+    data object NotAvailableHere : BuySheet
 }
 
 /** A lasting condition of the server route (T4). */
@@ -136,7 +140,10 @@ data class PaidUiState(
     /** The consent step on screen, and where it was opened from; null when not shown. */
     val consentPrompt: ConsentPrompt? = null,
     /** A deletion was asked for in this run, whatever came of it: no rating request follows. */
-    val deletionTried: Boolean = false
+    val deletionTried: Boolean = false,
+    /** The cheapest pack as the store formats its price, once the store has been asked (which
+     *  the tab does anyway, to know whether to offer packs); null before, and when it couldn't. */
+    val lowestPrice: String? = null
 ) {
     /** Buying is offered: only once the store has shown it has packs, so there is never a Buy
      *  that leads nowhere; hidden while the server is paused, and while a payment is waiting or
@@ -315,10 +322,15 @@ internal class RecipePaid(
     /** Refused as another account's, and that account (or none) is still the one here. */
     private fun UnverifiedPurchase.isElsewhere(key: String?): Boolean = refusedFor != null && (key == null || refusedFor == key)
 
-    /** What a reply that carries a balance says besides it: the costs, and the block, which is
-     *  `true` or absent (never `false`), so absent lifts it. */
-    private fun RecipePaidSnapshot.withTerms(costs: JsonElement?, blocked: JsonElement?): RecipePaidSnapshot =
-        copy(costs = recipeCostsOf(costs) ?: this.costs, purchasesBlocked = purchasesBlockedOf(blocked))
+    /** What a reply that carries a balance says besides it: the costs, the block, which is
+     *  `true` or absent (never `false`), so absent lifts it, and whether the server reads optional
+     *  items, likewise. */
+    private fun RecipePaidSnapshot.withTerms(costs: JsonElement?, blocked: JsonElement?, optional: JsonElement?): RecipePaidSnapshot =
+        copy(
+            costs = recipeCostsOf(costs) ?: this.costs,
+            purchasesBlocked = purchasesBlockedOf(blocked),
+            serverTakesOptional = acceptsOptionalIngredientsOf(optional)
+        )
 
     /** Whether the route is on screen: only once the store has shown it sells this build a
      *  pack, unless something is held already (a count, a purchase, a payment, a generation),
@@ -392,7 +404,7 @@ internal class RecipePaid(
         balanceAskedAt = nowMillis()
         return when (val result = backend.getBalance()) {
             is ServerResult.Ok -> {
-                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked) }
+                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional) }
                 updatePaid { if (it.issue == ServerIssue.BUSY && held() == null) it.copy(issue = null) else it }
                 updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                 true
@@ -427,10 +439,17 @@ internal class RecipePaid(
         probingPacks = true
         try {
             val packs = runCatching { store.packs() }.getOrNull() ?: return
+            noteLowestPrice(packs)
             noteOffered(packs.any { it.productId in RECIPE_PACKS })
         } finally {
             probingPacks = false
         }
+    }
+
+    /** The cheapest pack's price as the store formats it, for the Recipe introduction. */
+    private fun noteLowestPrice(packs: List<StorePack>) {
+        val lowest = packs.filter { it.productId in RECIPE_PACKS }.minByOrNull { it.priceMicros }?.price
+        if (lowest != null) updatePaid { it.copy(lowestPrice = lowest) }
     }
 
     /** No packs for this build (a debug or sideloaded build Play has no products for): with
@@ -453,6 +472,7 @@ internal class RecipePaid(
             val packs = runCatching { store.packs() }.getOrNull()
                 ?.filter { it.productId in RECIPE_PACKS }
                 ?.sortedBy { it.recipes }
+            packs?.let(::noteLowestPrice)
             if (packs != null && packs.isEmpty()) {
                 // The store answered and sells this build nothing: Buy goes, rather than a sheet
                 // whose Try again could never work.
@@ -491,12 +511,12 @@ internal class RecipePaid(
             // Before any account or payment: a build App Check refuses could take the money and
             // then never be let in to add the recipes.
             if (backend.attest() == Attestation.FAILED) {
-                if (holdsNothing()) {
-                    markUnavailable()
-                } else {
-                    // What is held stays usable; only buying is off for now.
-                    updatePaid { if (it.sheet == checking) it.copy(sheet = BuySheet.StoreUnavailable) else it }
-                }
+                // Said as it is, not as a store or connection problem: nothing was charged, and
+                // the free routes still work. With nothing held the route then hides; what is
+                // held stays usable, and only buying is off.
+                val stillOpen = state.value.paid.sheet == checking
+                if (holdsNothing()) markUnavailable()
+                if (stillOpen) updatePaid { it.copy(sheet = BuySheet.NotAvailableHere) }
                 return@launch
             }
             // Closed while that was asked.
@@ -662,7 +682,7 @@ internal class RecipePaid(
                             current.copy(
                                 unverified = if (settled) current.unverified.filterNot { it.token == purchase.token } else current.unverified,
                                 balance = reply.balance ?: current.balance
-                            ).withTerms(reply.costs, reply.purchasesBlocked)
+                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients)
                         }
                         when (reply.status) {
                             VerifyStatus.GRANTED -> updatePaid { it.copy(event = PaidEvent.RecipesAdded(purchase.recipes)) }
@@ -761,7 +781,7 @@ internal class RecipePaid(
         when (val result = whileBusy(setOf(ServerError.OVERLOADED, ServerError.BUSY)) { account.completeMerge(merge) }) {
             is ServerResult.Ok -> {
                 val reply = result.value
-                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked) }
+                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional) }
                 val event = if (reply.moved != 0) PaidEvent.Merged(reply.moved) else null
                 updatePaid { it.copy(accountBusy = false, merge = null, event = event ?: it.event) }
             }
@@ -949,6 +969,21 @@ internal class RecipePaid(
             return Built.Blocked(RecipeEvent.TooManyAllergens(allergens.size, MAX_REQUEST_ALLERGENS))
         }
         allergens.firstOrNull { it.lowercase() in refusedAllergens }?.let { return Built.Blocked(RecipeEvent.AllergenNotSent(it)) }
+        // "Send all products": the rest of the pantry as items the recipe may use, soonest first,
+        // capped as the server caps them; only to a server that reads them. A name the server
+        // would refuse is simply left out there, so it never stops the request.
+        val optional = if (current.options.sendAllItems && snapshot.serverTakesOptional) {
+            optionalWireIngredients(
+                ingredients,
+                current.otherRows.mapNotNull { row ->
+                    cleanWireName(row.item.name)
+                        ?.takeUnless { it.lowercase() in refusedIngredients }
+                        ?.let { WireIngredient(it, row.item.expiryDate.toString(), row.item.quantity.coerceIn(0, 9999)) }
+                }
+            )
+        } else {
+            emptyList()
+        }
         val menu = current.mode == RecipeMode.MENU
         val request = GenerateRequest(
             requestId = newRequestId(),
@@ -956,6 +991,7 @@ internal class RecipePaid(
             courses = if (menu) current.courses else null,
             config = current.config.copy(language = current.language),
             ingredients = ingredients,
+            optionalIngredients = optional.ifEmpty { null },
             allergens = allergens,
             today = today().toString(),
             // Built only past the consent step (generate), so allergens here were agreed to.
@@ -1142,12 +1178,12 @@ internal class RecipePaid(
                             if (saved == null) {
                                 // The contract promises the content with DONE; without it there is
                                 // nothing to show, and asking again with this id returns the same.
-                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked) }
+                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients) }
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
                             savedRecipeRepository.save(saved)
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (interactive) {
                                 state.update { current ->
@@ -1168,7 +1204,7 @@ internal class RecipePaid(
                             failures = 0
                             // The balance it reports is held, not spent: the count waits for the
                             // result. The costs and the block stand as they are.
-                            persist { it.withTerms(reply.costs, reply.purchasesBlocked) }
+                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients) }
                             if (nowMillis() >= deadline) {
                                 finish(interactive, null, ServerIssue.OFFLINE)
                                 return Sent.KEPT_OFFLINE
@@ -1176,7 +1212,7 @@ internal class RecipePaid(
                             pollDelay(if (nowMillis() - began < SLOW_POLL_AFTER_MILLIS) POLL_MILLIS else SLOW_POLL_MILLIS)
                         }
                         GenerateStatus.FAILED -> {
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (!interactive && reply.charged) updatePaid { it.copy(event = PaidEvent.EarlierRefused(cost)) }
                             finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(cost) else RecipeEvent.ServerFailed)

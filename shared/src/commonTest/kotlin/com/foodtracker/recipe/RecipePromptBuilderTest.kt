@@ -82,16 +82,29 @@ class RecipePromptBuilderTest {
     }
 
     @Test
-    fun listsOtherItemsAlphabeticallyByName() {
+    fun listsOtherItemsSoonestFirstWithTheirDatesAfterTheMainList() {
         val prompt = buildRecipePrompt(
             strings = strings,
             today = today,
             items = listOf(item("Milk", 1)),
-            otherItems = listOf(item("Rice", 200), item("Flour", 300))
+            otherItems = listOf(item("Flour", 300), item("Rice", 200))
         )
 
-        assertTrue(prompt.contains("ALSO: Flour, Rice"), prompt)
+        assertEquals("INTRO\n\n- Milk (1d)\n\nALSO:\n- Rice (200d)\n- Flour (300d)", prompt)
         assertFalse(prompt.contains("more)"), "nothing was dropped, so no overflow note: $prompt")
+    }
+
+    @Test
+    fun otherItemsComeBeforeThePreferences() {
+        val prompt = buildRecipePrompt(
+            strings = strings,
+            today = today,
+            items = listOf(item("Milk", 1)),
+            otherItems = listOf(item("Rice", 200)),
+            config = RecipeConfig()
+        )
+
+        assertTrue(prompt.indexOf("ALSO:") in prompt.indexOf("- Milk") until prompt.indexOf("KEEP:"), prompt)
     }
 
     @Test
@@ -99,7 +112,7 @@ class RecipePromptBuilderTest {
         // Names are padded to a known width so the cap lands at a predictable count rather than
         // depending on how long the test's own strings happen to be.
         val nameLength = 20
-        val perEntry = nameLength + 2 // ", " separator
+        val perEntry = nameLength + "- ".length + " (200d)".length + 1 // a line and its break
         val totalItems = (MAX_OTHER_ITEMS_CHARS / perEntry) + 50
         val others = (0 until totalItems).map { index ->
             item(index.toString().padStart(nameLength, 'a'), 200)
@@ -112,13 +125,13 @@ class RecipePromptBuilderTest {
             otherItems = others
         )
 
-        val section = prompt.substringAfter("ALSO: ").substringBefore(" (+")
+        val section = prompt.substringAfter("ALSO:\n").substringBefore("\n(+")
         assertTrue(
             section.length <= MAX_OTHER_ITEMS_CHARS,
             "other-items section must stay within the cap, was ${section.length}"
         )
 
-        val included = section.split(", ").size
+        val included = section.split("\n").size
         assertTrue(included < totalItems, "some items should have been dropped")
         assertTrue(prompt.contains("(+${totalItems - included} more)"), prompt.takeLast(100))
     }

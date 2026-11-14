@@ -128,6 +128,20 @@ export const CREDITS_PER_CONTENT_REFUND = 10;
 export const CREDITS_PER_TIMEOUT_REFUND = 10;
 
 export const MAX_INGREDIENTS = 30;
+/**
+ * Names in one request when it carries `optionalIngredients`: the ticked ingredients and the kept
+ * optional ones together. The same as MAX_INGREDIENTS, so the model never sees more names than in
+ * the largest request without optional items.
+ */
+export const MAX_TOTAL_INGREDIENTS = 30;
+/**
+ * Code points of names (ticked and kept optional together) in a request that carries optional
+ * items. Chosen so that its worst-case input bound, with the extra instruction lines and the
+ * second data block, stays below the worst case of the largest request without them
+ * (30 names of 40 code points): README "Spend ceilings" shows the arithmetic, and
+ * test/optionalIngredients.test.ts checks it.
+ */
+export const MAX_OPTIONAL_NAME_CHARS = 1050;
 export const MAX_ALLERGENS = 20;
 export const NAME_MAX_LENGTH = 40;
 export const LANGUAGES = ["en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk"] as const;

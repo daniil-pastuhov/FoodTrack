@@ -48,18 +48,23 @@ private fun dayPhrase(days: Int): String = when {
  * language, because small models follow English instructions best, and the reply is asked for
  * as JSON in [Recipe]'s shape so it can be shown and saved like any other recipe. Nothing in it
  * is shown to the person.
+ *
+ * [optional] ("Send all products") is the rest of the pantry, listed after the items to use up
+ * as ones the recipe may use as well; together with [items] at most [MAX_RECIPE_INGREDIENTS],
+ * the soonest first, since the model's context is small.
  */
 fun buildOnDeviceRecipePrompt(
     items: List<RecipePromptItem>,
     config: RecipeConfig,
     languageCode: String,
-    allergens: Collection<String>
+    allergens: Collection<String>,
+    optional: List<RecipePromptItem> = emptyList()
 ): String {
     val normalized = config.normalized()
-    val lines = items
-        .sortedBy { it.daysRemaining }
-        .take(MAX_RECIPE_INGREDIENTS)
-        .joinToString("\n") { "- ${cutName(it.name.trim())} (${dayPhrase(it.daysRemaining)})" }
+    fun line(item: RecipePromptItem) = "- ${cutName(item.name.trim())} (${dayPhrase(item.daysRemaining)})"
+    val main = items.sortedBy { it.daysRemaining }.take(MAX_RECIPE_INGREDIENTS)
+    val lines = main.joinToString("\n", transform = ::line)
+    val extra = optional.sortedBy { it.daysRemaining }.take(MAX_RECIPE_INGREDIENTS - main.size)
     val rules = buildList {
         add(
             "Difficulty: " + when (normalized.difficulty) {
@@ -98,6 +103,10 @@ fun buildOnDeviceRecipePrompt(
         append("Write one home-cooking recipe that uses these items from my kitchen, ")
         append("the ones closest to their date first. Leave out anything that would be unsafe to eat.\n")
         append(lines)
+        if (extra.isNotEmpty()) {
+            append("\n\nI also have these at home. Use any of them only where it helps the dish; none is needed:\n")
+            append(extra.joinToString("\n", transform = ::line))
+        }
         append("\n\nKeep to this:\n")
         append(rules.joinToString("\n") { "- $it" })
         append("\n\nWrite every text value in $language. Keep the JSON keys in English.\n")
@@ -107,7 +116,9 @@ fun buildOnDeviceRecipePrompt(
                 """"difficulty":"${normalized.difficulty.name.lowercase()}",""" +
                 """"ingredients":[{"amount":"100 g","name":"","fromPantry":true}],"steps":[""],"tip":""}"""
         )
-        append("\nSet fromPantry to true only for items from the list above. Leave tip empty if there is none.")
+        append("\nSet fromPantry to true only for items from the ")
+        append(if (extra.isEmpty()) "list above" else "lists above")
+        append(". Leave tip empty if there is none.")
     }
 }
 

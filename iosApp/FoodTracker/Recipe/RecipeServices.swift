@@ -59,6 +59,31 @@ protocol RecipeBackend: Sendable {
 protocol RecipeConfigStore {
     func load() -> RecipeConfig
     func save(_ config: RecipeConfig)
+    /// The tab's settings that aren't part of a request's configuration.
+    func loadOptions() -> RecipeOptions
+    func saveOptions(_ options: RecipeOptions)
+}
+
+/// Recipe settings kept beside `RecipeConfig` but never sent as part of it. Read field by field
+/// with defaults, so options saved by an older version (or none) still load. Android:
+/// `RecipeOptions` in `RecipeServices.kt`.
+struct RecipeOptions: Codable, Equatable, Sendable {
+    /// "Send all products": the rest of the pantry goes with every route as items the recipe may
+    /// use as well, while the ticked items stay the ones to use up. Off until turned on.
+    var sendAllItems = false
+    /// The first-open introduction to the tab was shown and closed.
+    var introSeen = false
+
+    init(sendAllItems: Bool = false, introSeen: Bool = false) {
+        self.sendAllItems = sendAllItems
+        self.introSeen = introSeen
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sendAllItems = (try? container.decodeIfPresent(Bool.self, forKey: .sendAllItems)) ?? false
+        introSeen = (try? container.decodeIfPresent(Bool.self, forKey: .introSeen)) ?? false
+    }
 }
 
 /// The configuration under its own key in the App Group suite, beside `SettingsStore`'s, but
@@ -83,6 +108,23 @@ struct UserDefaultsRecipeConfigStore: RecipeConfigStore {
     func save(_ config: RecipeConfig) {
         if let data = try? JSONEncoder().encode(config) {
             defaults.set(data, forKey: Self.storageKey)
+        }
+    }
+
+    /// Under a key of its own beside the configuration, likewise outside backups.
+    static let optionsKey = "com.foodtracker.recipe_options"
+
+    func loadOptions() -> RecipeOptions {
+        guard let data = defaults.data(forKey: Self.optionsKey),
+              let options = try? JSONDecoder().decode(RecipeOptions.self, from: data) else {
+            return RecipeOptions()
+        }
+        return options
+    }
+
+    func saveOptions(_ options: RecipeOptions) {
+        if let data = try? JSONEncoder().encode(options) {
+            defaults.set(data, forKey: Self.optionsKey)
         }
     }
 }

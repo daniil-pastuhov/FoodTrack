@@ -40,11 +40,11 @@ const give = (uid: string, balance: number) => db.collection("users").doc(uid).s
 
 describe("getBalance", () => {
   test("is 0 for an unknown, deleted or merged account", async () => {
-    expect(await getBalance(deps, callerFor("nobody"))).toEqual({ balance: 0, costs: DEFAULT_COSTS });
+    expect(await getBalance(deps, callerFor("nobody"))).toEqual({ balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     await give("u1", 4);
-    expect(await getBalance(deps, callerFor("u1"))).toEqual({ balance: 4, costs: DEFAULT_COSTS });
+    expect(await getBalance(deps, callerFor("u1"))).toEqual({ balance: 4, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     await db.collection("users").doc("u1").update({ mergedInto: "u2" });
-    expect(await getBalance(deps, callerFor("u1"))).toEqual({ balance: 0, costs: DEFAULT_COSTS });
+    expect(await getBalance(deps, callerFor("u1"))).toEqual({ balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
   });
 });
 
@@ -55,7 +55,7 @@ describe("mergeBalance", () => {
     await give(anon.uid, 7);
     await give(signed.uid, 2);
     const res = await mergeBalance(deps, callerFor(signed.uid), { sourceIdToken: anon.idToken });
-    expect(res).toEqual({ balance: 9, moved: 7, costs: DEFAULT_COSTS });
+    expect(res).toEqual({ balance: 9, moved: 7, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true });
     expect(await balanceOf(anon.uid)).toBe(0);
     expect((await db.collection("users").doc(anon.uid).get()).data()?.mergedInto).toBe(signed.uid);
     await expect(auth.getUser(anon.uid)).rejects.toMatchObject({ code: "auth/user-not-found" });

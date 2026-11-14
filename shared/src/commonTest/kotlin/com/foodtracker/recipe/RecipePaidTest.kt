@@ -31,9 +31,14 @@ private val agreed = AllergenConsentRecord(agreed = true, atMillis = 0, version 
 
 private class PaidConfigRepository : RecipeConfigRepository {
     var stored = RecipeConfig()
+    var storedOptions = RecipeOptions()
     override fun get(): RecipeConfig = stored
     override fun save(config: RecipeConfig) {
         stored = config
+    }
+    override fun getOptions(): RecipeOptions = storedOptions
+    override fun saveOptions(options: RecipeOptions) {
+        storedOptions = options
     }
 }
 
@@ -69,6 +74,8 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balance: ServerResult<Int> = ServerResult.Ok(0)
     var balanceCosts: RecipeCosts? = null
     var balanceBlocked = false
+    /** Whether getBalance says the server reads optional items. */
+    var balanceOptional = false
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<DeleteReply>>()
     var deleteCalls = 0
@@ -102,7 +109,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional))
             is ServerResult.Err -> current
         }
     }
@@ -194,8 +201,17 @@ private class FakeAccount(
 
 private val sampleRecipe = Recipe(title = "Spinach toast", minutes = 10, steps = listOf("Toast."))
 
-private fun done(balance: Int, recipe: Recipe? = sampleRecipe, menu: Menu? = null) =
-    ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = recipe, menu = menu, balance = balance, charged = true))
+private fun done(balance: Int, recipe: Recipe? = sampleRecipe, menu: Menu? = null, acceptsOptional: Boolean = false) =
+    ServerResult.Ok(
+        GenerateReply(
+            GenerateStatus.DONE,
+            recipe = recipe,
+            menu = menu,
+            balance = balance,
+            charged = true,
+            acceptsOptionalIngredients = if (acceptsOptional) JsonPrimitive(true) else null
+        )
+    )
 
 private fun sampleMenu(courses: Int): Menu = Menu(
     (0 until 3).map { day ->
@@ -234,6 +250,7 @@ class RecipePaidTest {
     private val store = FakeStore()
     private var account = FakeAccount()
     private val saved = PaidSavedRepository()
+    private val configRepository = PaidConfigRepository()
     private var paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed))
     private var now = 1_000_000L
     private var nextRequest = 0
@@ -253,7 +270,7 @@ class RecipePaidTest {
         pantry = pantry,
         onDeviceModel = NoModel,
         savedRecipeRepository = saved,
-        configRepository = PaidConfigRepository(),
+        configRepository = configRepository,
         backend = backend,
         store = store,
         account = account,
@@ -427,9 +444,12 @@ class RecipePaidTest {
         val state = holder.uiState.value
         assertEquals(1, backend.attests)
         assertFalse(state.paidRouteAvailable)
-        assertNull(state.paid.sheet)
+        // Said as it is, not as a store or connection problem.
+        assertEquals(BuySheet.NotAvailableHere, state.paid.sheet)
         assertEquals(0, account.anonymousCreated)
         assertTrue(store.bought.isEmpty())
+        holder.dismissPacks()
+        assertNull(holder.uiState.value.paid.sheet)
     }
 
     @Test
@@ -1201,8 +1221,75 @@ class RecipePaidTest {
         val state = holder.uiState.value
         assertTrue(state.paidRouteAvailable, "what was paid for stays")
         assertEquals(5, state.paid.balance)
-        assertEquals(BuySheet.StoreUnavailable, state.paid.sheet)
+        assertEquals(BuySheet.NotAvailableHere, state.paid.sheet)
         assertTrue(store.bought.isEmpty())
+    }
+
+    // --- Send all products -------------------------------------------------------------------
+
+    @Test
+    fun sendAllProductsSendsTheRestOnlyToAServerThatSaysItReadsThem() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        holder.setSendAllItems(true)
+
+        // No reply has said so yet: only the ticked items go.
+        backend.generateReplies += done(4, acceptsOptional = true)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().optionalIngredients)
+
+        // That reply said so: the rest goes too, soonest first, with dates and quantities.
+        backend.generateReplies += done(3, acceptsOptional = true)
+        holder.generateOnServer()
+        assertEquals(
+            listOf(WireIngredient("Milk", "2026-11-06", 2)),
+            backend.generated.last().optionalIngredients
+        )
+        assertEquals(listOf("Bread", "Spinach", "Greek yoghurt 2%"), backend.generated.last().ingredients.map { it.name })
+
+        // A reply without the flag (a rolled-back server) withdraws it.
+        backend.generateReplies += done(2)
+        holder.generateOnServer()
+        backend.generateReplies += done(1)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().optionalIngredients)
+    }
+
+    @Test
+    fun theFlagFromTheBalanceCountsTooAndOffSendsNothingExtra() = runUnconfined {
+        withBalance(5)
+        backend.balanceOptional = true
+        val holder = holder()
+        holder.refresh()
+        backend.generateReplies += done(4, acceptsOptional = true)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().optionalIngredients, "the setting is off")
+
+        holder.setSendAllItems(true)
+        backend.generateReplies += done(3, acceptsOptional = true)
+        holder.generateOnServer()
+        assertEquals(listOf("Milk"), backend.generated.last().optionalIngredients?.map { it.name })
+    }
+
+    @Test
+    fun theOptionalItemsArePartOfWhatARetryMustMatch() = runUnconfined {
+        val base = GenerateRequest("a", WireKind.RECIPE, null, RecipeConfig(), listOf(WireIngredient("Bread", null, 1)), emptyList(), "2026-11-04")
+        assertTrue(base.sameAskAs(base.copy(requestId = "b")))
+        assertFalse(base.sameAskAs(base.copy(optionalIngredients = listOf(WireIngredient("Milk", null, 1)))))
+    }
+
+    @Test
+    fun theCheapestPackPriceIsKnownOnceTheStoreHasBeenAsked() = runUnconfined {
+        val unreachable = store.packs
+        store.packs = null
+        val holder = holder()
+        assertNull(holder.uiState.value.paid.lowestPrice, "no answer from the store, no price")
+        store.packs = unreachable
+        now += 10_000 // past the resume de-duplication
+        holder.refresh()
+        assertEquals("£1.99", holder.uiState.value.paid.lowestPrice)
+        assertEquals(0, account.anonymousCreated, "asking the store creates nobody")
+        assertEquals(0, backend.balanceCalls)
     }
 
     @Test

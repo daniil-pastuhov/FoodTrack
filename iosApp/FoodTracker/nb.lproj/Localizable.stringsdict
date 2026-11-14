@@ -930,5 +930,21 @@
             <string>Denne {the_device} skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
         </dict>
     </dict>
+    <key>recipe_optional_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Den andre varen i matskapet kan også brukes</string>
+            <key>other</key>
+            <string>De %d andre varene i matskapet kan også brukes</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

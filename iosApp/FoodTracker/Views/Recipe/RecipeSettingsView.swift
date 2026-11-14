@@ -52,6 +52,17 @@ struct RecipeSettingsView: View {
                     }
                 }
 
+                // What goes with a recipe besides the ticked items, said plainly: with it on,
+                // every route gets the whole pantry (names, dates, quantities).
+                RecipeFormCard {
+                    heading(L10n.recipeIngredientsSettings, icon: .refrigerator)
+                    LarderSwitch(
+                        L10n.recipeSendAll,
+                        subtitle: L10n.recipeSendAllMessage,
+                        isOn: Binding(get: { model.options.sendAllItems }, set: { model.setSendAllItems($0) })
+                    )
+                }
+
                 RecipeFormCard {
                     heading(L10n.recipeSettingsLanguage, icon: .languages)
                     Button { choosingLanguage = true } label: {
@@ -74,6 +85,18 @@ struct RecipeSettingsView: View {
                 }
 
                 RecipeAccountCard(model: model)
+
+                LarderGroup {
+                    LarderListItem(
+                        L10n.recipeIntroTitle,
+                        supporting: L10n.recipeIntroSettingsSupporting,
+                        onTap: { model.showIntro() }
+                    ) {
+                        LarderIcon(.info).foregroundStyle(LarderColor.onSurfaceVariant)
+                    } trailing: {
+                        LarderIcon(.chevronRight)
+                    }
+                }
             }
             .padding(.horizontal, LarderSpace.s4)
             .padding(.top, LarderSpace.s2)
@@ -96,6 +119,12 @@ struct RecipeSettingsView: View {
                 .init(L10n.recipeAllergenConsentAgreeOnly) { model.agreeToAllergenConsent() },
             ]
         )
+        .larderSheet(
+            isPresented: Binding(get: { model.intro == .fromSettings }, set: { if !$0, model.intro == .fromSettings { model.dismissIntro() } }),
+            fitsContent: true
+        ) {
+            RecipeIntroSheet(model: model)
+        }
         .larderSheet(isPresented: $choosingLanguage) {
             LanguagePicker(selection: model.config.language) { language in
                 model.updateConfig { $0.language = language }

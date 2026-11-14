@@ -58,11 +58,14 @@ struct RecipeView: View {
         // 16pt higher, over more of the form at rest.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if showsPinnedAction {
+                // The shared prompt pinned alone sits as Scan does on Home: a pill as wide as its
+                // label at the trailing edge, not a bar across the form. Actions with a cost stay wide.
+                let compact = model.actions.primary == .share
                 pinnedAction
                     .onGeometryChange(for: CGFloat.self, of: \.size.height) { pinnedHeight = $0 }
                     .padding(.horizontal, LarderSpace.s4)
-                    .frame(maxWidth: isExpanded ? 440 + 2 * LarderSpace.s4 : .infinity)
-                    .frame(maxWidth: .infinity, alignment: isExpanded ? .trailing : .center)
+                    .frame(maxWidth: isExpanded || compact ? 440 + 2 * LarderSpace.s4 : .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity, alignment: isExpanded || compact ? .trailing : .center)
                     .padding(.trailing, isExpanded ? LarderSpace.s2 : 0)
                     .padding(.bottom, ShellMetrics.shellGap - ShellMetrics.contentGap)
             }
@@ -71,6 +74,10 @@ struct RecipeView: View {
         .onAppear {
             model.syncSelection(with: pantry.items)
             model.refreshAvailability()
+            model.reloadSaved()
+            // The first visit ever opens "How recipes work"; like onboarding, it rules the rating
+            // prompt out for the session.
+            if model.onTabShown() { ReviewPrompter.shared.onboardingShown() }
         }
         // Prices from the store, and the count for an install that already has a user. Neither
         // creates a user nor calls our server for anyone who never bought.
@@ -111,6 +118,12 @@ struct RecipeView: View {
         }
         .larderSheet(isPresented: $model.showsBuySheet, fitsContent: true) {
             BuyRecipesSheet(model: model) { model.showsBuySheet = false }
+        }
+        .larderSheet(
+            isPresented: Binding(get: { model.intro == .firstOpen }, set: { if !$0, model.intro == .firstOpen { model.dismissIntro() } }),
+            fitsContent: true
+        ) {
+            RecipeIntroSheet(model: model)
         }
         .larderDialog(
             L10n.recipeRejectedTitle,
@@ -190,7 +203,10 @@ struct RecipeView: View {
             if paid {
                 balanceChip
             }
-            LarderIconButton(.bookmark, label: L10n.recipeSavedButton) { model.path.append(.saved) }
+            // Only once something is saved; it follows the saved list as it changes.
+            if model.hasSaved {
+                LarderIconButton(.bookmark, label: L10n.recipeSavedButton) { model.path.append(.saved) }
+            }
             LarderIconButton(.slidersHorizontal, label: L10n.recipeSettingsButton) { model.path.append(.settings) }
         }
     }
@@ -458,6 +474,16 @@ struct RecipeView: View {
                     }
                 }
             }
+            // "Send all products" is on: one quiet line, so what goes with it is never a surprise.
+            let optional = model.optionalItems(from: items).count
+            if optional > 0 {
+                Text(L10n.recipeOptionalCount(optional))
+                    .larderFont(.bodySm)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, LarderSpace.s2)
+                    .padding(.top, LarderSpace.s2)
+            }
         }
     }
 
@@ -522,7 +548,7 @@ struct RecipeView: View {
             menuActions
         } else if nothingTicked {
             hint(L10n.recipeNoneSelectedHint)
-        } else if model.serverCanWriteRecipe {
+        } else if model.actions.primary == .server {
             // The server is pinned; the free routes follow, the phone's own first.
             VStack(spacing: LarderSpace.s2) {
                 if routes.onDevice {
@@ -533,7 +559,7 @@ struct RecipeView: View {
                 }
                 shareAndCopy
             }
-        } else if routes.onDevice {
+        } else if model.actions.primary == .onDevice {
             VStack(spacing: LarderSpace.s2) {
                 buyOrBlocked
                 shareAndCopy
@@ -597,18 +623,18 @@ struct RecipeView: View {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
-        } else if model.serverCanWriteRecipe {
+        } else if model.actions.primary == .server {
             RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(model.recipeCost)) {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
-        } else if routes.onDevice {
+        } else if model.actions.primary == .onDevice {
             RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
                 model.writeOnDevice(from: pantry.items)
             }
             .disabled(nothingTicked)
         } else {
-            RecipeGoButton(title: L10n.recipeSharePrompt, icon: .share2, action: sharePrompt)
+            RecipeGoButton(title: L10n.recipeSharePrompt, icon: .share2, compact: true, action: sharePrompt)
                 .disabled(nothingTicked)
         }
     }

@@ -82,7 +82,9 @@ import com.foodtracker.recipe.OnDeviceRoute
 import com.foodtracker.recipe.PaidUiState
 import com.foodtracker.recipe.RECIPE_SHOWN_ITEMS
 import com.foodtracker.recipe.RecipeConfig
+import com.foodtracker.recipe.RecipeAction
 import com.foodtracker.recipe.RecipeEvent
+import com.foodtracker.recipe.RecipeIntro
 import com.foodtracker.recipe.RecipeMode
 import com.foodtracker.recipe.RecipeSelection
 import com.foodtracker.recipe.RecipeStateHolder
@@ -96,12 +98,11 @@ import kotlinx.datetime.LocalDate
  *  phone's own model; then the shared prompt. A menu has only the server. */
 internal enum class RecipePrimary { Server, OnDevice, Share, None }
 
-internal fun recipePrimary(state: RecipeUiState): RecipePrimary = when {
-    state.mode == RecipeMode.MENU -> if (state.canGenerateOnServer) RecipePrimary.Server else RecipePrimary.None
-    // Offline, the free routes move up; the count stays in the bar.
-    state.canGenerateOnServer && state.paid.issue == null -> RecipePrimary.Server
-    state.onDeviceRoute == OnDeviceRoute.READY -> RecipePrimary.OnDevice
-    else -> RecipePrimary.Share
+internal fun recipePrimary(state: RecipeUiState): RecipePrimary = when (state.actions.primary) {
+    RecipeAction.SERVER -> RecipePrimary.Server
+    RecipeAction.ON_DEVICE -> RecipePrimary.OnDevice
+    RecipeAction.SHARE -> RecipePrimary.Share
+    RecipeAction.COPY, RecipeAction.BUY, null -> RecipePrimary.None
 }
 
 /**
@@ -132,6 +133,11 @@ fun RecipeScreen(
     }
 
     val reviewPrompter = LocalReviewPrompter.current
+    // The first visit ever opens the introduction; like onboarding, it rules the rating prompt
+    // out for the session.
+    LaunchedEffect(stateHolder) {
+        if (stateHolder.onTabShown()) reviewPrompter?.onOnboardingShown()
+    }
     val event = state.event
     LaunchedEffect(event) {
         // A recipe that just arrived arms the rating prompt for when it is left; anything that
@@ -221,7 +227,9 @@ fun RecipeScreen(
         context,
         state.selectedRows.map { it.item },
         state.config,
-        state.allergens
+        state.allergens,
+        // "Send all products": the rest of the pantry, as items the recipe may use as well.
+        otherItems = if (state.options.sendAllItems) state.otherRows.map { it.item } else emptyList()
     )
 
     RecipeTabContent(
@@ -253,6 +261,10 @@ fun RecipeScreen(
     )
 
     RecipePaidOverlays(state, stateHolder)
+
+    if (state.intro == RecipeIntro.FIRST_OPEN) {
+        RecipeIntroSheet(state, onDismiss = stateHolder::dismissIntro, onPacks = stateHolder::introToPacks)
+    }
 }
 
 internal class RecipeTabActions(
@@ -301,11 +313,14 @@ internal fun RecipeTabContent(
                     if (paid.available) {
                         RecipeBalanceChip(paid.balance ?: 0, onClick = if (paid.canBuy) actions.onBuy else null)
                     }
-                    LarderIconButton(
-                        icon = LarderIcons.Bookmark,
-                        contentDescription = stringResource(R.string.recipe_saved_action),
-                        onClick = actions.onOpenSaved
-                    )
+                    // Only once something is saved; it follows the saved list as it changes.
+                    if (state.hasSaved) {
+                        LarderIconButton(
+                            icon = LarderIcons.Bookmark,
+                            contentDescription = stringResource(R.string.recipe_saved_action),
+                            onClick = actions.onOpenSaved
+                        )
+                    }
                     LarderIconButton(
                         icon = LarderIcons.SlidersHorizontal,
                         contentDescription = stringResource(R.string.recipe_settings_action),
@@ -362,6 +377,9 @@ internal fun RecipeTabContent(
 
         if (showsAction) {
             val nothingTicked = state.selectedIds.isEmpty()
+            // The shared prompt pinned alone sits as Scan does on Home: a pill as wide as its
+            // label at the end, not a bar across the form. Actions with a cost stay wide.
+            val compact = primary == RecipePrimary.Share
             PinnedAction(
                 text = when (primary) {
                     RecipePrimary.Server -> stringResource(
@@ -386,14 +404,21 @@ internal fun RecipeTabContent(
                     else -> null
                 },
                 enabled = !nothingTicked,
+                compact = compact,
                 modifier = Modifier
-                    .align(if (expanded) Alignment.BottomEnd else Alignment.BottomCenter)
+                    .align(if (expanded || compact) Alignment.BottomEnd else Alignment.BottomCenter)
                     .padding(
                         start = LarderSpace.s4,
                         end = if (expanded) PinnedActionEndGap else LarderSpace.s4,
                         bottom = pinnedActionBottom
                     )
-                    .then(if (expanded) Modifier.widthIn(max = 440.dp).fillMaxWidth(0.5f) else Modifier.fillMaxWidth())
+                    .then(
+                        when {
+                            compact -> Modifier.widthIn(max = 440.dp)
+                            expanded -> Modifier.widthIn(max = 440.dp).fillMaxWidth(0.5f)
+                            else -> Modifier.fillMaxWidth()
+                        }
+                    )
                     .onSizeChanged { actionSize = it }
             )
         }
@@ -555,6 +580,16 @@ private fun CookWith(state: RecipeUiState, onToggle: (String) -> Unit, onAddOthe
                 onClick = onAddOthers
             )
         }
+    }
+    // "Send all products" is on: one quiet line, so it is never a surprise what goes with it.
+    val optional = state.optionalCount
+    if (optional > 0) {
+        Text(
+            text = pluralStringResource(R.plurals.recipe_optional_count, optional, optional),
+            modifier = Modifier.padding(start = LarderSpace.s2, top = LarderSpace.s2, end = LarderSpace.s2),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

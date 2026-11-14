@@ -1,6 +1,7 @@
 package com.foodtracker.recipe
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.Serializable
 
 /*
  * What [RecipeStateHolder] needs from the platform, as plain interfaces so it stays free of
@@ -12,7 +13,25 @@ import kotlinx.coroutines.flow.Flow
 interface RecipeConfigRepository {
     fun get(): RecipeConfig
     fun save(config: RecipeConfig)
+
+    /** The tab's own settings that aren't part of a request's config. */
+    fun getOptions(): RecipeOptions
+    fun saveOptions(options: RecipeOptions)
 }
+
+/**
+ * Recipe settings kept beside [RecipeConfig] but never sent as part of it. Every field has a
+ * default, so options saved by an older version (or none) still load. iOS: `RecipeOptions` in
+ * `RecipeServices.swift`.
+ */
+@Serializable
+data class RecipeOptions(
+    /** "Send all products": the rest of the pantry goes with every route as items the recipe
+     *  may use as well, while the ticked items stay the ones to use up. Off until turned on. */
+    val sendAllItems: Boolean = false,
+    /** The first-open introduction to the tab was shown and closed. */
+    val introSeen: Boolean = false
+)
 
 /** Recipes and menus written in the app, kept on this phone only. */
 interface SavedRecipeRepository {

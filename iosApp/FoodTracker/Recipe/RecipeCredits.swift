@@ -16,6 +16,10 @@ enum RecipePurchaseOutcome: Equatable {
     case cancelled
     /// The store, or our server before any money moved, couldn't be reached.
     case storeUnavailable
+    /// App Check (or, with it, the anonymous sign-in) refused this install before any money moved:
+    /// recipes from packs aren't available here. Not a connection problem, so no Try again.
+    /// `appCheck`: it was App Check's own token that was refused (Debug builds name the cause).
+    case notAvailableHere(appCheck: Bool)
     /// The server refused it for good: refunded, or already used.
     case rejected
 }
@@ -74,6 +78,14 @@ struct RecipeCreditsStorage {
         static let blocked = "com.foodtracker.recipe.purchases_blocked"
         static let consentStarts = "com.foodtracker.recipe.consumption_consent_started"
         static let allergenConsent = "com.foodtracker.recipe.allergen_consent"
+        static let serverTakesOptional = "com.foodtracker.recipe.server_takes_optional"
+    }
+
+    /// The server's last answer that carried a balance said `acceptsOptionalIngredients`: only
+    /// then are the other pantry items sent with "Send all products".
+    var serverTakesOptional: Bool {
+        get { defaults.bool(forKey: Key.serverTakesOptional) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesOptional) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -379,6 +391,15 @@ final class RecipeCredits: ObservableObject {
             storage.costs = received
             if received != costs { costs = received }
         }
+        // Absent from a server that predates the field, or after a rollback: then nothing extra goes.
+        storage.serverTakesOptional = response.acceptsOptionalIngredients?.value ?? false
+    }
+
+    /// The cheapest pack as the store formats its price, once the store has answered (the tab
+    /// asks it anyway, to know whether to offer packs); nil before.
+    var lowestPackPrice: String? {
+        guard case .loaded(let packs) = packs else { return nil }
+        return packs.min { $0.product.price < $1.product.price }?.displayPrice
     }
 
     /// What a recipe, or a menu of `courses` courses a day, takes.
@@ -443,6 +464,13 @@ final class RecipeCredits: ObservableObject {
         // App Check works and is never sent; `verifyPurchase` fetches its own.
         do {
             _ = try await AppCheck.appCheck().limitedUseToken()
+        } catch {
+            if RecipeAccount.isNetwork(error) { return .storeUnavailable }
+            // Said as it is, not as a store problem: nothing was charged, the free ways still work.
+            attestationFailed = true
+            return .notAvailableHere(appCheck: true)
+        }
+        do {
             try await ensureUser()
             storage.purchaseChoiceMade = true
         } catch {
@@ -450,7 +478,7 @@ final class RecipeCredits: ObservableObject {
                 return .storeUnavailable
             }
             attestationFailed = true
-            return .storeUnavailable
+            return .notAvailableHere(appCheck: false)
         }
         let result: Product.PurchaseResult
         do {

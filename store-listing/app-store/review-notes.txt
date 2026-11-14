@@ -9,8 +9,8 @@ No login, demo account or sample files are needed.
 - Add food: tap the scan button and scan any food barcode (name and picture come from Open Food Facts), then point the camera at the printed date, or pick a date. "+" adds an item by hand.
 - Home: everything at home, sorted by expiry.
 - Shopping List: essentials move here when used up.
-- Settings: reminders, and optional "Remind me near a shop" (with "Always" location access the app shows the shopping list on arrival at a saved shop; iOS region monitoring; the location is never sent anywhere).
-- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks; on devices with Apple Intelligence (iOS 26 or later) the recipe is written on the device with Apple's Foundation Models. Paid: recipe packs of 10, 50 or 100 recipes; one recipe is one dish written by our server. "Menu for 3 days" is server-only and takes several recipes from the pack (the app shows the number first).
+- Settings: reminders, and optional "Remind me near a shop" (with "Always" location access the app shows the shopping list on arrival at a saved shop; the location is never sent anywhere).
+- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks; on devices with Apple Intelligence (iOS 26 or later) the recipe is written on the device with Apple's Foundation Models. Paid: recipe packs of 10, 50 or 100 recipes; one recipe is one dish written by our server. "Menu for 3 days" is server-only and takes several recipes from the pack.
 
 TO TEST THE PURCHASE (sandbox purchases are accepted during this review, within a daily limit shared by all sandbox testers):
 1. Add an item or two.
@@ -22,7 +22,7 @@ Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), o
 
 4. EXTERNAL SERVICES
 - Open Food Facts (https://world.openfoodfacts.org): on a barcode scan the app requests that product's name, picture and nutrition data. Only the barcode number is sent.
-- Our server (Firebase Cloud Functions, Firebase Authentication, App Check), reached only once a purchase is started: it verifies the purchase with Apple and, for a paid recipe, sends the ticked item names, the recipe settings and the allergen list to Google Gemini (Vertex AI) and returns the recipe. Allergens are sent only after explicit consent.
+- Our server (Firebase Cloud Functions, Firebase Authentication, App Check), reached only once a purchase is started: it verifies the purchase with Apple and, for a paid recipe, sends the ticked item names (all items if "Send all products" is on), the recipe settings and the allergen list to Google Gemini (Vertex AI) and returns the recipe. Allergens are sent only after explicit consent.
 - Sign in with Apple and Google Sign-In, both optional. Payments are Apple in-app purchases only.
 - Firebase Crashlytics for crash reports. No analytics, no ads.
 - On the device: AVFoundation, Vision, Core Location region monitoring, UserNotifications, WidgetKit, SwiftData, StoreKit, Foundation Models.

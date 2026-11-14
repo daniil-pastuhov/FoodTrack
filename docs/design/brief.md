@@ -54,11 +54,11 @@ Pantry data is local, so list screens have no loading, refresh or network error 
 | Product detail | Full info · Partial data, gaps closed · Allergen match (T4) · Long ingredients |
 | Add / edit | New blank · Prefilled from scan · Suggested date · Name missing (T1) · Implausible date (T1 warning) · Date picker · Edit existing · Discard changes (T6) · Long content |
 | Scanner | Barcode ready · Lookup in progress · Found · Found with date · Allergen match (T4) · Not found · Offline lookup (T4, continue by hand) · Date OCR ready · Date found · Photo ready · Photo captured, suggestions · Batch empty · Batch with queue, Check date · Receipt ready · Receipt reading · Nothing found on receipt (T3) · Already in pantry (T6) · Camera denied (T5 with path to settings) |
-| Recipe tab | Ready with recipes · Phone can write too · No recipes (phone / prompt only) · Menu for 3 days · Menu, too few recipes (T4) · Nothing ticked · Writing (server, menu, phone) · Offline (T4) · Could not write, nothing taken (T3) · Refused, counted (T3) · Server paused (T4) · Phone model preparing (T4) · Empty pantry · Russian |
+| Recipe tab | Ready with recipes · Phone can write too · No recipes (phone / prompt only) · Menu for 3 days · Menu, too few recipes (T4) · Nothing ticked · Writing (server, menu, phone) · Offline (T4) · Could not write, nothing taken (T3) · Refused, counted (T3) · Server paused (T4) · Phone model preparing (T4) · Empty pantry · Russian · First visit: How recipes work (sheet) · Send all products on: "The other N items in your pantry may be used too" under Cook with · Share prompt pinned alone (content-width pill at the end) · No saved recipes yet (no bookmark in the header) |
 | Recipe and menu | Recipe from a pack · Just arrived (T3) · Written on the phone · Menu · Dish from a menu · Long recipe |
 | Saved recipes | Loaded · Empty · Deleted, Undo (T3) |
-| Buying recipes | Packs · Account or not · Adding · Added (T3) · Paid, not added yet (T4) · Payment pending (T4) · Store unavailable (T4) · Not accepted (T6) |
-| Recipe settings | No account · Recipes on this phone · Signed in · Language · Sign out (T6) · Delete account (T6) · Delete this phone's data from our server (T6), Deleted (T3) · Deleting waits for a purchase being confirmed (inline, button off) · Sign-in already has recipes (T6) · Sign-in failed (T3) |
+| Buying recipes | Packs · Account or not · Adding · Added (T3) · Paid, not added yet (T4) · Payment pending (T4) · Store unavailable (T4) · Not available on this install (App Check refused, nothing charged; T4, no Try again) · Not accepted (T6) |
+| Recipe settings | Send all products off / on · How recipes work · No account · Recipes on this phone · Signed in · Language · Sign out (T6) · Delete account (T6) · Delete this phone's data from our server (T6), Deleted (T3) · Deleting waits for a purchase being confirmed (inline, button off) · Sign-in already has recipes (T6) · Sign-in failed (T3) |
 | Shopping | Loaded with sections · Empty · Add with did-you-mean · Item ticked · Section menu, rename, delete section (T6) · Move to section · Share · QR code · List too long for QR (T4) · Import · Import results (T3) · Long list |
 | Settings | Default · Notifications blocked (T4) · Reminder styles · Locations editing · Allergens · Shops: permission disclosure (T6), location failed (T3) · Backup: export success or failure (T3), restore choice (T6), bad file (T3) · Clear all data (T6) |
 | Categories | Loaded · Empty · Rename · Shelf life dialog, out of range (T1) · Reordering |
@@ -117,6 +117,13 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - 2026-11-13 · Failures on our side are always given back, but after several in one day the server stops writing until the next day. A recipe that fails because of the request itself (the model refuses it, or it comes back incomplete) is given back a limited number of times, one for every ten recipes bought; after that such failures count. Replaces "three a day" · owner decision; limits abuse without charging honest failures
 - 2026-11-13 · Packs of 10, 50 and 100 recipes cost USD 3.99, 10.99 and 18.99, converted by each store; the page shows them as £3.99, £10.99 and £18.99 samples · owner decision
 
+- 2026-11-14 · Recipe settings gains "Send all products" (off by default): the unticked items go with every route as items the recipe may use, and the setting's description says plainly that their names, dates and quantities then go to our server with a recipe from a pack and into a shared prompt · owner request
+- 2026-11-14 · Share prompt pinned on its own is a content-width pill at the trailing edge, like Scan on Home, on phones, tablets and the Duo's inner screen; actions with a cost stay full width on phones · owner request; the full-width lone button looked heavy
+- 2026-11-14 · The first Recipe visit opens a short "How recipes work" sheet: the free prompt, the phone's own model where it exists, packs (and the 3-day menu) where the paid route exists, with the store's price only once known and costs from the server; "Got it", plus "See recipe packs" where buying is offered; never shown again once closed, reachable from Recipe settings · owner request; soft, no urgency
+- 2026-11-14 · A purchase App Check refuses says "Recipes from packs aren't available on this install", not "Can't reach the store" · truthful errors
+- 2026-11-14 · The Saved recipes button in the Recipe header appears only once something is saved · owner request
+- 2026-11-14 · With recipes in a pack, Generate on this device and Share / Copy prompt stay as secondary buttons under the form; each route is its own tap and never falls back to another · owner request; buying must not take the free ways away
+
 ## Options history
 - Round 1: A Larder, B Enamel, C Preserves → A Larder chosen by the user, the closest fit to warm and calm
 
@@ -150,3 +157,4 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - Recipe: every Russian string on the page is new and needs a translator's check; Norwegian has none yet.
 - Recipe: pack prices on the page are samples; real ones come from the stores.
 - Recipe: Apple and Google sign-in buttons use stand-in icons; the real ones must follow each company's button rules.
+- Recipe: the design HTML (docs/design/src/pages/recipe.html) does not yet draw the 2026-11-14 states (How recipes work, Send all products, the content-width Share pill, the header without Saved, Not available on this install); the apps are the reference until it is rebuilt.

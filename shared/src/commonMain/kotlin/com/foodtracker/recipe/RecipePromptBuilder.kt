@@ -58,10 +58,10 @@ data class RecipePromptStrings(
  * and the language when it isn't the app's), and [allergens], from app Settings, are always
  * excluded. With no [config] the prompt is the plain list, as the digest's share once sent.
  *
- * [otherItems] is an optional list of additional pantry items (e.g. everything not explicitly
- * selected) offered to the AI as extra ingredients it could also use. Only names are listed —
- * their expiry dates aren't relevant to a "here's what else I have" aside — and the list is
- * silently truncated at [MAX_OTHER_ITEMS_CHARS]; see that constant's doc for why.
+ * [otherItems] is the rest of the pantry with "Send all products" on: offered after the main
+ * list as items the recipe may use as well, each with how long it has left, soonest first, the
+ * same way as [items]. The section is cut at [MAX_OTHER_ITEMS_CHARS] (see that constant's doc for
+ * why), with a note of how many were left out.
  */
 fun buildRecipePrompt(
     strings: RecipePromptStrings,
@@ -82,24 +82,24 @@ fun buildRecipePrompt(
         .append(lines)
 
     if (otherItems.isNotEmpty()) {
-        val names = otherItems.map { it.name }.sorted()
-        val otherNames = StringBuilder()
+        val section = StringBuilder()
         var includedCount = 0
-        for (name in names) {
-            val lengthIfAdded = otherNames.length + (if (otherNames.isEmpty()) 0 else 2) + name.length
+        for (item in otherItems.sortedBy { it.daysRemaining(today) }) {
+            val line = "- " + strings.itemFormat(item.name, strings.daysRemainingLabel(item.daysRemaining(today)))
+            val lengthIfAdded = section.length + (if (section.isEmpty()) 0 else 1) + line.length
             if (lengthIfAdded > MAX_OTHER_ITEMS_CHARS) break
-            if (otherNames.isNotEmpty()) otherNames.append(", ")
-            otherNames.append(name)
+            if (section.isNotEmpty()) section.append("\n")
+            section.append(line)
             includedCount++
         }
         if (includedCount > 0) {
             prompt.append("\n\n")
                 .append(strings.otherItemsIntro)
-                .append(" ")
-                .append(otherNames)
+                .append("\n")
+                .append(section)
             val omittedCount = otherItems.size - includedCount
             if (omittedCount > 0) {
-                prompt.append(" ").append(strings.otherItemsOmitted(omittedCount))
+                prompt.append("\n").append(strings.otherItemsOmitted(omittedCount))
             }
         }
     }

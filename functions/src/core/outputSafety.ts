@@ -91,6 +91,21 @@ export const STEP_BOUNDS: Readonly<Record<string, { min: number; max: number }>>
 };
 
 export const pantryIdsFor = (n: number): string[] => Array.from({ length: n }, (_, i) => `p${i + 1}`);
+/** Ids of the optional items ("o1".."oN"), a separate series so the ticked ones keep theirs. */
+export const optionalIdsFor = (n: number): string[] => Array.from({ length: n }, (_, i) => `o${i + 1}`);
+
+/** Every id an answer may refer to, ticked items first, with the item's name. */
+export function idNamesFor(req: GenerateRequest): Array<[string, string]> {
+  const ids = pantryIdsFor(req.ingredients.length);
+  const optional = optionalIdsFor(req.optionalIngredients.length);
+  return [
+    ...req.ingredients.map((i, n): [string, string] => [ids[n], i.name]),
+    ...req.optionalIngredients.map((i, n): [string, string] => [optional[n], i.name]),
+  ];
+}
+
+/** The request's item names, ticked and optional. */
+const itemNames = (req: GenerateRequest): string[] => [...req.ingredients, ...req.optionalIngredients].map((i) => i.name);
 
 class Invalid extends Error {
   constructor(readonly rule: OutputRule) {
@@ -174,7 +189,7 @@ const SCRIPT_FAMILIES: ReadonlyArray<readonly string[]> = [
  */
 export function allowedScripts(req: GenerateRequest): Set<string> {
   const out = new Set<string>(["Latin", "Cyrillic"]);
-  for (const name of [...req.ingredients.map((i) => i.name), ...req.allergens]) {
+  for (const name of [...itemNames(req), ...req.allergens]) {
     for (const ch of name) {
       if (!/\p{L}/u.test(ch)) continue;
       const s = scriptOf(ch);
@@ -333,6 +348,8 @@ interface Checker {
   idToName: Map<string, string>;
   allergen: Guard[];
   diet: Guard[];
+  /** Ingredients that are one of the ticked items: at least one is required (NO_PANTRY). An
+   *  optional item counts as from the pantry but not here. */
   pantryUses: number;
 }
 
@@ -347,7 +364,7 @@ function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
   const fromPantry = id !== "none";
   const names = [foldText(name)];
   if (fromPantry) {
-    ch.pantryUses++;
+    if ((id as string).startsWith("p")) ch.pantryUses++;
     names.push(foldText(ch.idToName.get(id as string)!));
   }
   if (names.some((n) => violates(n, ch.allergen))) bad("ALLERGEN");
@@ -392,7 +409,6 @@ function recipe(ch: Checker, raw: unknown): Recipe {
 }
 
 function checker(ctx: OutputContext): Checker {
-  const ids = pantryIdsFor(ctx.req.ingredients.length);
   const diet = ctx.req.config.diet === "none" ? [] : DIET_GUARDS[ctx.req.config.diet as DietKey];
   return {
     sc: {
@@ -400,13 +416,13 @@ function checker(ctx: OutputContext): Checker {
       leakNgrams: ngrams(foldText(ctx.systemInstruction).words, LEAK_NGRAM),
       canary: ctx.canary.toUpperCase(),
       allowed: allowedScripts(ctx.req),
-      quotable: [...ctx.req.ingredients.map((i) => i.name), ...ctx.req.allergens].map(fold).join("\n"),
+      quotable: [...itemNames(ctx.req), ...ctx.req.allergens].map(fold).join("\n"),
       wanted: ctx.req.config.language === "ru" || ctx.req.config.language === "uk" ? "Cyrillic" : "Latin",
       wantedLetters: 0,
       letters: 0,
     },
     req: ctx.req,
-    idToName: new Map(ids.map((id, i) => [id, ctx.req.ingredients[i].name])),
+    idToName: new Map(idNamesFor(ctx.req)),
     allergen: allergenGuards(ctx.req.allergens),
     diet,
     pantryUses: 0,
@@ -456,7 +472,7 @@ export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<M
       const d = (raw as { days: unknown[] }).days[i];
       if (!isObject(d) || d.date !== dates[i]) bad("SHAPE");
       const day = d as Record<string, unknown>;
-      if (!Array.isArray(day.uses) || day.uses.length > req.ingredients.length) bad("SHAPE");
+      if (!Array.isArray(day.uses) || day.uses.length > ch.idToName.size) bad("SHAPE");
       const uses: string[] = [];
       for (const u of day.uses as unknown[]) {
         if (typeof u !== "string" || !ch.idToName.has(u)) bad("PANTRY_REF");

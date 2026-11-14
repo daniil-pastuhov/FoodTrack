@@ -88,7 +88,8 @@ fun recipeDietLabel(resources: Resources, diet: RecipeDiet): String = resources.
 
 /**
  * Builds a device-language prompt asking an AI assistant for recipe ideas using [items], keeping
- * to the Recipe tab's [config] and leaving out [allergens].
+ * to the Recipe tab's [config] and leaving out [allergens]. [otherItems] ("Send all products")
+ * are listed after them as items the recipe may use as well.
  *
  * The prompt itself is assembled by `shared`'s [buildSharedRecipePrompt]; this only supplies the
  * localized wording.
@@ -97,11 +98,13 @@ fun buildRecipePrompt(
     context: Context,
     items: List<PantryItem>,
     config: RecipeConfig,
-    allergens: Collection<String>
+    allergens: Collection<String>,
+    otherItems: List<PantryItem> = emptyList()
 ): String = buildSharedRecipePrompt(
     strings = recipePromptStrings(context),
     today = DateUtils.today(),
     items = items,
+    otherItems = otherItems,
     config = config,
     allergens = allergens
 )

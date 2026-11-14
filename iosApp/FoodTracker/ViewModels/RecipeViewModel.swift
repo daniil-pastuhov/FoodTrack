@@ -84,6 +84,37 @@ extension RecipeFailure {
     }
 }
 
+/// A way to get a recipe from the form, each its own button: a tap on one never falls back to
+/// another, so a free route never spends a recipe. Android: `RecipeAction`.
+enum RecipeAction: Equatable {
+    case server, onDevice, share, copy, buy
+}
+
+/// What the form offers: `primary` is pinned above the pill (nil: nothing pinned), `secondary`
+/// sits under the form in this order. Android: `RecipeActions` (`RecipeUiState.actions`).
+struct RecipeActions: Equatable {
+    var primary: RecipeAction?
+    var secondary: [RecipeAction]
+
+    /// With recipes in the pack the server is pinned and both free ways stay one tap away; without
+    /// (or offline), the phone's model or the shared prompt is pinned. A menu is the server's only.
+    static func of(isMenu: Bool, serverCanWrite: Bool, offline: Bool, onDevice: Bool, canBuy: Bool) -> RecipeActions {
+        if isMenu { return RecipeActions(primary: serverCanWrite ? .server : nil, secondary: []) }
+        let primary: RecipeAction = serverCanWrite && !offline ? .server : onDevice ? .onDevice : .share
+        var secondary: [RecipeAction] = []
+        if onDevice && primary != .onDevice { secondary.append(.onDevice) }
+        if primary != .share { secondary.append(.share) }
+        secondary.append(.copy)
+        if canBuy && primary != .server { secondary.append(.buy) }
+        return RecipeActions(primary: primary, secondary: secondary)
+    }
+}
+
+/// Where "How recipes work" was opened: by itself on the first visit, or from Recipe settings.
+enum RecipeIntroOrigin: Equatable {
+    case firstOpen, fromSettings
+}
+
 /// Where the allergen consent step was opened: before a server request (agreeing sends it) or
 /// from the switch in Recipe settings (agreeing only records it).
 enum AllergenConsentPrompt: Equatable {
@@ -129,6 +160,13 @@ final class RecipeViewModel: ObservableObject {
     @Published var consentPrompt: AllergenConsentPrompt?
     /// The answer to sending allergens to our server, as recorded on this phone.
     @Published private(set) var allergenConsent: AllergenConsentRecord?
+    /// "Send all products" and whether the introduction was seen.
+    @Published private(set) var options: RecipeOptions
+    /// "How recipes work" on screen, and where from; nil when it isn't.
+    @Published var intro: RecipeIntroOrigin?
+    /// A demo or screenshot launch (any `-demo…` argument): the introduction never opens by
+    /// itself in this run.
+    private var introSuppressed = ReviewPrompter.isDemoLaunch
 
     /// Whether the person has changed the ticks since they were picked for them. Until then the
     /// soonest items follow the pantry as it changes.
@@ -162,6 +200,7 @@ final class RecipeViewModel: ObservableObject {
         let credits = credits ?? RecipeCredits()
         self.credits = credits
         config = configStore.load()
+        options = configStore.loadOptions()
         menuCourses = credits.storage.menuCourses
         saved = self.savedStore.all()
         refreshAvailability()
@@ -237,6 +276,77 @@ final class RecipeViewModel: ObservableObject {
         if languageChanged { refreshAvailability() }
     }
 
+    /// "Send all products" in Recipe settings.
+    func setSendAllItems(_ on: Bool) {
+        updateOptions { $0.sendAllItems = on }
+    }
+
+    private func updateOptions(_ transform: (inout RecipeOptions) -> Void) {
+        var updated = options
+        transform(&updated)
+        guard updated != options else { return }
+        options = updated
+        configStore.saveOptions(updated)
+    }
+
+    // MARK: Introduction
+
+    /// The tab is on screen: the first time ever, "How recipes work" opens. Never in a demo
+    /// launch, never again once closed. Returns whether it opened, so the caller treats it as
+    /// onboarding (no rating request in this session). As Android's `onTabShown`.
+    @discardableResult
+    func onTabShown() -> Bool {
+        guard !introSuppressed, !options.introSeen, intro == nil else { return false }
+        intro = .firstOpen
+        return true
+    }
+
+    /// Recipe settings' "How recipes work".
+    func showIntro() { intro = .fromSettings }
+
+    /// Closed, whichever way: never opens by itself again.
+    func dismissIntro() {
+        intro = nil
+        updateOptions { $0.introSeen = true }
+    }
+
+    /// "See recipe packs": closed, then the pack sheet.
+    func introToPacks() {
+        dismissIntro()
+        if credits.canBuy { showsBuySheet = true }
+    }
+
+    /// `-demoRecipeIntro YES`: shown as on a first open, to look at it.
+    func showIntroForDemo() { intro = .firstOpen }
+
+    /// Something is saved, so the header offers the saved list: the first recipe written shows
+    /// it, deleting the last one hides it.
+    var hasSaved: Bool { !saved.isEmpty }
+
+    /// Reads the saved list again, for changes made outside this view model.
+    func reloadSaved() {
+        let current = savedStore.all()
+        if current.map(\.id) != saved.map(\.id) { saved = current }
+    }
+
+    /// The form's actions now; see `RecipeActions`.
+    var actions: RecipeActions {
+        RecipeActions.of(
+            isMenu: credits.isPaidRouteAvailable && mode == .menu,
+            serverCanWrite: mode == .menu ? serverCanWriteMenu : serverCanWriteRecipe,
+            offline: credits.showsOffline,
+            onDevice: routes.onDevice,
+            canBuy: credits.canBuy
+        )
+    }
+
+    /// What "Send all products" adds from `items`: everything not ticked, soonest first; empty
+    /// with it off.
+    func optionalItems(from items: [PantryItem]) -> [PantryItem] {
+        guard options.sendAllItems else { return [] }
+        return Self.soonestFirst(items.filter { !selectedIDs.contains($0.id) })
+    }
+
     /// Re-asks the model, which can finish downloading or be switched on while the app runs.
     func refreshAvailability() {
         onDeviceAvailability = onDeviceModel.availability(for: config.resolvedLanguage)
@@ -280,7 +390,8 @@ final class RecipeViewModel: ObservableObject {
         RecipeRequest(
             items: selectedItems(from: items).map(RecipeIngredientInput.init),
             config: config,
-            allergens: Array(SettingsStore.shared.settings.allergens)
+            allergens: Array(SettingsStore.shared.settings.allergens),
+            otherItems: optionalItems(from: items).map(RecipeIngredientInput.init)
         )
     }
 
@@ -334,7 +445,11 @@ final class RecipeViewModel: ObservableObject {
             failure = .allergenRefused(allergen)
             return
         }
-        let fresh = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames)
+        // The other items go only to a server that said it reads them (`acceptsOptionalIngredients`).
+        let fresh = RecipeWire.request(
+            for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames,
+            withOptional: options.sendAllItems && credits.storage.serverTakesOptional
+        )
         guard !fresh.ingredients.isEmpty else {
             // Every ticked name was made of characters the server refuses.
             failure = .serverFailed(kind, sameRequest: false)

@@ -13,6 +13,9 @@ struct BuyRecipesSheet: View {
     @State private var step: Step = .packs
     @State private var selectedID: String?
     @State private var storeError = false
+    /// App Check refused this install as the purchase started; `true` when it was App Check's
+    /// own token (Debug builds then name the cause). Nil otherwise.
+    @State private var notAvailableHere: Bool?
 
     private enum Step { case packs, choice }
 
@@ -33,7 +36,16 @@ struct BuyRecipesSheet: View {
 
     private var packs: some View {
         LarderSheet(L10n.recipeBuy) {
-            if storeError || credits.packs == .unreachable || credits.packs == .notOffered {
+            if let appCheck = notAvailableHere {
+                // Not a connection problem: no Try again, since asking again won't change it.
+                LarderCallout(
+                    .info,
+                    icon: .circleAlert,
+                    title: L10n.recipeNotAvailableTitle,
+                    message: L10n.recipeNotAvailableMessage(debugCause: appCheck && Self.isDebugBuild)
+                )
+                LarderButton(L10n.recipeClose, variant: .outline, fullWidth: true, action: onClose)
+            } else if storeError || credits.packs == .unreachable || credits.packs == .notOffered {
                 LarderCallout(
                     .warning,
                     icon: .wifiOff,
@@ -68,6 +80,14 @@ struct BuyRecipesSheet: View {
                     .padding(.vertical, LarderSpace.s8)
             }
         }
+    }
+
+    private static var isDebugBuild: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
     }
 
     /// The middle pack, as most people buy it.
@@ -149,6 +169,8 @@ struct BuyRecipesSheet: View {
                 onClose()
             case .storeUnavailable:
                 storeError = true
+            case .notAvailableHere(let appCheck):
+                notAvailableHere = appCheck
             case .cancelled:
                 break
             }

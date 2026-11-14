@@ -394,6 +394,12 @@ describe("7. verifyPurchase answers from the local record and ties the store to 
       .toBe("STORE_MISMATCH");
     expect(deps.play.getCalls).toBe(0);
     expect(deps.appStore.fetchCalls).toBe(0);
+    const lines = deps.logs.filter((l) => l.message === "purchase_not_granted");
+    expect(lines.map((l) => [l.level, l.data?.status, l.data?.reason, l.data?.store])).toEqual([
+      ["warn", "REFUSED", "STORE_MISMATCH", "play"],
+      ["warn", "REFUSED", "STORE_MISMATCH", "appstore"],
+      ["warn", "REFUSED", "STORE_MISMATCH", "play"],
+    ]);
   });
 });
 
@@ -413,6 +419,7 @@ describe("8. purchases are bound to the buyer's account when the client set the 
     expect((await purchase(playPurchaseId(mine)))?.accountToken).toBe(purchaseAccountToken("alice"));
     const theirs = deps.play.add(playToken(), { obfuscatedExternalAccountId: purchaseAccountToken("bob") });
     expect(await reason(verifyPurchase(deps, callerFor("alice"), { store: "play", purchaseToken: theirs }))).toBe("PURCHASE_ACCOUNT_MISMATCH");
+    expect(deps.logs.filter((l) => l.message === "purchase_not_granted").map((l) => l.data?.reason)).toEqual(["ACCOUNT_MISMATCH"]);
     expect(await purchase(playPurchaseId(theirs))).toBeUndefined();
     expect(await balanceOf("alice")).toBe(10);
     // Still redeemable by its buyer.
@@ -524,5 +531,5 @@ describe("11. emulator fakes", () => {
 
 test("getBalance carries no purchasesBlocked for an ordinary buyer", async () => {
   await verifyPurchase(deps, callerFor("ord"), { store: "play", purchaseToken: deps.play.add(playToken()) });
-  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs });
+  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true });
 });

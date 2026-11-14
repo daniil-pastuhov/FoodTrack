@@ -88,7 +88,12 @@ data class GenerateRequest(
     /** `true` with a non-empty [allergens], sent only after the person agreed to send them
      *  ([allergenConsentStep]); null otherwise. The server refuses allergens without it
      *  (ALLERGEN_CONSENT_REQUIRED). Not one of the inputs a request id is bound to. */
-    val allergenConsent: Boolean? = null
+    val allergenConsent: Boolean? = null,
+    /** The rest of the pantry, which the recipe may use as well ("Send all products"): only to
+     *  a server that said [acceptsOptionalIngredientsOf], already capped by
+     *  [optionalWireIngredients]; null otherwise (and in a request kept by an older version). Part
+     *  of the inputs a request id is bound to. */
+    val optionalIngredients: List<WireIngredient>? = null
 ) {
     /** Whether [other] asks for the same thing, whatever its id. */
     fun sameAskAs(other: GenerateRequest): Boolean =
@@ -112,7 +117,9 @@ data class GenerateReply(
     /** Read with [recipeCostsOf]. */
     val costs: JsonElement? = null,
     /** Read with [purchasesBlockedOf]. */
-    val purchasesBlocked: JsonElement? = null
+    val purchasesBlocked: JsonElement? = null,
+    /** Read with [acceptsOptionalIngredientsOf]. */
+    val acceptsOptionalIngredients: JsonElement? = null
 )
 
 @Serializable
@@ -128,20 +135,36 @@ data class VerifyReply(
     val status: VerifyStatus,
     val balance: Int? = null,
     val costs: JsonElement? = null,
-    val purchasesBlocked: JsonElement? = null
+    val purchasesBlocked: JsonElement? = null,
+    val acceptsOptionalIngredients: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
-data class BalanceReply(val balance: Int, val costs: RecipeCosts? = null, val purchasesBlocked: Boolean = false)
+data class BalanceReply(
+    val balance: Int,
+    val costs: RecipeCosts? = null,
+    val purchasesBlocked: Boolean = false,
+    val acceptsOptional: Boolean = false
+)
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
  *  store refund had left it below zero: the debt moves too), the costs, and the block. */
-data class MergeReply(val balance: Int, val moved: Int = 0, val costs: RecipeCosts? = null, val purchasesBlocked: Boolean = false)
+data class MergeReply(
+    val balance: Int,
+    val moved: Int = 0,
+    val costs: RecipeCosts? = null,
+    val purchasesBlocked: Boolean = false,
+    val acceptsOptional: Boolean = false
+)
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
  *  (absent, false, a string, a number) doesn't. */
 fun purchasesBlockedOf(json: JsonElement?): Boolean =
     (json as? JsonPrimitive)?.takeUnless { it.isString }?.booleanOrNull == true
+
+/** A reply's `acceptsOptionalIngredients` (functions/CONTRACT.md): only a JSON `true` says the
+ *  server reads `optionalIngredients`; absent (a server from before the field) says it doesn't. */
+fun acceptsOptionalIngredientsOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 
 /** A failed call, by the contract's `details.reason`, plus the two the client sees itself. */
 enum class ServerError {
@@ -431,7 +454,10 @@ data class RecipePaidSnapshot(
      *  the request is dropped rather than risk it being written, and charged, anew. */
     val pendingSinceMillis: Long? = null,
     /** The person's answer to sending their allergen list to our server ([AllergenConsent]). */
-    val allergenConsent: AllergenConsentRecord? = null
+    val allergenConsent: AllergenConsentRecord? = null,
+    /** The server's last reply that carried a balance said `acceptsOptionalIngredients`: only
+     *  then are the other pantry items sent with "Send all products". */
+    val serverTakesOptional: Boolean = false
 )
 
 interface RecipePaidRepository {
@@ -486,3 +512,35 @@ const val MAX_REQUEST_ALLERGENS = 20
 const val MAX_WIRE_NAME_LENGTH = 40
 
 // Names are cleaned by cleanWireName (RecipeWireName.kt).
+
+/** Names in one request with optional items: ticked and optional together (CONTRACT.md
+ *  "Optional ingredients"). */
+const val MAX_REQUEST_TOTAL_NAMES = 30
+
+/** Code points of names, ticked and optional together, in a request with optional items. */
+const val MAX_REQUEST_OPTIONAL_NAME_CHARS = 1050
+
+/**
+ * The optional items to send beside [ticked], from [others] (the rest of the pantry, soonest date
+ * first, names already cleaned): as the server keeps them, so what is sent is what is used. A name
+ * already in the request (ignoring case) is left out; then items are taken in order while the
+ * ticked and taken ones together stay within [MAX_REQUEST_TOTAL_NAMES] names and
+ * [MAX_REQUEST_OPTIONAL_NAME_CHARS] code points, an item that doesn't fit being skipped. iOS:
+ * `RecipeWire.optionalIngredients`.
+ */
+fun optionalWireIngredients(ticked: List<WireIngredient>, others: List<WireIngredient>): List<WireIngredient> {
+    val seen = ticked.mapTo(HashSet()) { it.name.lowercase() }
+    var names = ticked.size
+    var chars = ticked.sumOf { codePointsOf(it.name).size }
+    val kept = mutableListOf<WireIngredient>()
+    for (item in others) {
+        val key = item.name.lowercase()
+        val length = codePointsOf(item.name).size
+        if (key in seen || names + 1 > MAX_REQUEST_TOTAL_NAMES || chars + length > MAX_REQUEST_OPTIONAL_NAME_CHARS) continue
+        seen += key
+        names++
+        chars += length
+        kept += item
+    }
+    return kept
+}

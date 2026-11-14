@@ -235,7 +235,7 @@ private struct OnboardingBody: View {
     }
 }
 
-private struct OnboardingRow: View {
+struct OnboardingRow: View {
     let icon: LarderIconName
     let title: String
     let supporting: String

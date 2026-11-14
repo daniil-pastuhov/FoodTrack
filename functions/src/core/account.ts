@@ -1,13 +1,13 @@
 /** getBalance, mergeBalance, deleteAccount, and clearing the name and photo Auth keeps. */
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { fail } from "../contract";
+import { CAPABILITIES, fail } from "../contract";
 import { RECENT_SIGN_IN_SECONDS, type Costs } from "../constants";
 import { assertOpen, emptyUser, uidHash, userRef, utcDay, type UserDoc } from "../model";
 import type { Caller, Deps } from "../ports";
 import { blockFlag, mergeKeys } from "./buyers";
 import { APPLE_PROVIDER, dropTokenIfAppleUnlinked, removeAppleLink, revokeStored } from "./appleToken";
 
-type Block = { purchasesBlocked?: true };
+type Block = { purchasesBlocked?: true; acceptsOptionalIngredients?: true };
 
 /** uid:authTime pairs this instance already handled, so a token's later calls cost no read. Bounded. */
 const scrubbed = new Set<string>();
@@ -64,7 +64,7 @@ export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance:
   return {
     balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0,
     costs: config.costs,
-    ...(await blockFlag(deps.db, user, config)),
+    ...CAPABILITIES, ...(await blockFlag(deps.db, user, config)),
   };
 }
 
@@ -169,7 +169,7 @@ export async function mergeBalance(
   }
   await scrubProfile(deps, caller, true);
   const config = await deps.config();
-  return { balance: result.balance, moved: result.moved, costs: config.costs, ...(await blockFlag(deps.db, result.target, config)) };
+  return { balance: result.balance, moved: result.moved, costs: config.costs, ...CAPABILITIES, ...(await blockFlag(deps.db, result.target, config)) };
 }
 
 /**

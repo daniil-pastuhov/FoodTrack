@@ -774,3 +774,27 @@
 "recipe_prompt_max_minutes" = "Klar på %d minutter eller mindre";
 "recipe_prompt_meal" = "Måltid: %@";
 "recipe_prompt_diet" = "Diett: %@";
+
+/* Recipe tab: Send all products, the introduction (How recipes work), and a purchase App Check refused. */
+"recipe_ingredients_settings" = "Ingredienser";
+"recipe_send_all" = "Send alle varer";
+"recipe_send_all_message" = "I tillegg til de avkryssede varene får oppskriften resten av matskapet som varer den også kan bruke. Når dette er på, sendes navn, datoer og antall for alt i matskapet til serveren vår ved en oppskrift fra en pakke, og de tas også med i ledeteksten du deler.";
+"recipe_intro_title" = "Slik fungerer oppskriftene";
+"recipe_intro_message" = "Kryss av det du vil bruke opp, velg hva slags rett du vil ha, og få en oppskrift bygd rundt det. Oppskrifter du får i appen, lagres på denne {the_device} så snart de kommer.";
+"recipe_intro_prompt_title" = "Gratis, med hvilken som helst KI-app";
+"recipe_intro_prompt_message" = "Del eller kopier en ferdig ledetekst til KI-appen du allerede bruker.";
+"recipe_intro_device_title" = "Gratis, på denne {the_device}";
+"recipe_intro_device_message" = "Oppskriften lages på selve {the_device}, og ingenting sendes noe sted.";
+"recipe_intro_packs_title" = "Fra en oppskriftspakke";
+"recipe_intro_packs_message" = "Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$@ fra en pakke, en meny %2$@ med 2 retter om dagen eller %3$@ med 3.";
+"recipe_intro_packs_price" = "Pakker fra %@.";
+"recipe_intro_free_stays" = "De gratis måtene er der fortsatt når du har en pakke.";
+"recipe_intro_again" = "Du kan åpne dette igjen i oppskriftsinnstillingene.";
+"recipe_intro_start" = "Skjønner";
+"recipe_intro_packs_action" = "Se oppskriftspakker";
+"recipe_intro_settings_supporting" = "Måtene å få en oppskrift på";
+"recipe_not_available_title" = "Oppskrifter fra pakker er ikke tilgjengelige i denne installasjonen";
+"recipe_not_available_message" = "Ingenting ble belastet. De gratis måtene virker fortsatt: del ledeteksten med en KI-app, eller lag oppskriften på denne {the_device} hvis den kan.";
+"recipe_not_available_debug" = "Feilsøkingsbygg: App Check avviste dette bygget. Registrer feilsøkingstokenet for App Check som Xcode-konsollen skriver ut (docs/recipe-setup.md, «Debug builds against the real project»).";
+"recipe_prompt_other_items_intro" = "Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:";
+"recipe_prompt_other_items_omitted" = "(+%d flere varer vises ikke)";
