@@ -115,10 +115,12 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 - [ ] **Licence testers** (Settings > Licence testing; no API).
 - [ ] Enrol in Play's **15 % service fee tier** (Play Console > account's developer page / account
       group; owner only).
-- [ ] Upload a build that contains Play Billing to a testing track: Play refuses to create in-app
+- [x] Upload a build that contains Play Billing to a testing track: Play refuses to create in-app
       products until it has seen one. **(agent)**: a `release/v*` push through CI, or
-      `scripts/play_upload.py`.
-- [ ] Then create the products `recipes_10`, `recipes_50`, `recipes_100` (consumable,
+      `scripts/play_upload.py`. Done 2026-11-14: "Recipe preview 2.0.0 (1062)" on the internal
+      track, built from `feat/recipe` and uploaded by hand.
+- [x] Then create the products `recipes_10`, `recipes_50`, `recipes_100` (consumable; created and
+      read back 2026-11-14, purchase option `buy` active;
       USD 3.99 / 10.99 / 18.99, other regions converted by Play, multi-quantity off, listings in
       en-GB, nb and ru). **(agent)**: `scripts/play_products.py` (dry run by default; `--apply`
       writes). For each product it asks Play to convert the base price into every region's price
