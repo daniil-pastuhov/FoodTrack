@@ -12,15 +12,15 @@ already has), promotional text 170, description 4000. Run it after every edit.
 `en-US/` has texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
 primary language's screenshots in a localization that has none, so nothing needs uploading
 there, and the screenshot scripts only make the en-GB, ru and no sets. The en-GB, ru and no
-folders have these screenshot sets (up to 10 images each), in App Store Connect's media sections
-of the same name:
+folders have these screenshot sets (up to 10 images each; the two iPhone Duo folders share one
+set of 10), in App Store Connect's media sections of the same name:
 
 | Folder | Size | App Store Connect display |
 |---|---|---|
 | `screenshots/` | 1320×2868 | iPhone with Dynamic Island (large display), 6.9" |
 | `medium-screenshots/` | 1206×2622 | iPhone with Dynamic Island (medium display), 6.3"; at least one is required |
 | `duo-inner-screenshots/` | 2853×2007 | iPhone Duo, inner display, held sideways (2007×2853 upright works too) |
-| `duo-outer-screenshots/` | 1398×2034 | iPhone Duo, outer display |
+| `duo-outer-screenshots/` | 1398×2034 | iPhone Duo, outer display (2034×1398 sideways works too) |
 | `ipad-screenshots/` | 2064×2752 | iPad 13" |
 
 iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product page, and from
@@ -74,6 +74,15 @@ before it submits it for review, and only what differs from App Store Connect:
   localization's set of that display type, in file-number order. Unchanged images (same MD5)
   stay, changed or new ones are uploaded, and images no longer in the folder are deleted. At
   most 10 per folder. A localization without these folders (en-US) shows en-GB's.
+- **iPhone Duo screenshots**: `duo-inner-screenshots/` and `duo-outer-screenshots/` go through
+  the App Asset Library, as the set-based API has no Duo display type. Both displays share the
+  version's one `IPHONE_DUO_PROFILE` group, at most 10 images in all, shown inner first and each
+  folder in file-number order; the sync tells the two apart by image size and stops on an image
+  whose size doesn't fit its folder. The library keeps no checksum, so each image the sync
+  uploads carries its MD5 in its reference name (`en-GB/duo-outer-screenshots/1.png
+  md5:…`): unchanged images stay, an image already in the library is placed again without
+  uploading, and images uploaded on the website (which have no MD5) are replaced once. Removed
+  images lose their placement but stay in the library, where older versions may still use them.
 - If any of it fails (a text over a limit, a refused upload), the version is not submitted; fix
   it and re-run the job, which skips what is already applied.
 - **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by the same
@@ -83,10 +92,6 @@ Still by hand, as the API has no way to set them:
 
 - **Header and search-result images** (iOS 27): upload `header.png` and `search-result.png`
   in each language, on the version page. For en-US, upload en-GB's two files.
-- **iPhone Duo screenshots** (`duo-outer-screenshots/`, `duo-inner-screenshots/`): the
-  `screenshotDisplayType` values of the App Store Connect API have no iPhone Duo type, so the
-  sync leaves them out and warns. Apple's newer App Asset Library API has an `IPHONE_DUO`
-  display class; moving the sync to it would cover them.
 - **Promotional text between releases**: it can change without a new version, but the sync only
   writes to a version in preparation; paste it on the live version page.
 
@@ -95,6 +100,8 @@ To see the difference without writing anything (with the `ASC_*` variables of se
 ```sh
 python3 scripts/testflight.py listing        # texts; --apply writes
 python3 scripts/testflight.py screenshots    # screenshot sets; --apply writes
+python3 scripts/testflight.py screenshots --inspect  # read-only: the raw sets, library images
+                                                     # and placements, as App Store Connect has them
 ```
 
 Both compare with the version in preparation. While none is (after a release is submitted and
@@ -286,5 +293,5 @@ The camera is used for barcode scanning, reading printed expiry dates (Vision, o
 - What's New (first version): leave empty, or use `First release.`
 - Pick the build uploaded in step 2.
 - Screenshots: set by the release flow (`scripts/testflight.py appstore --screenshots`; see
-  "Changing the listing texts"), except the iPhone Duo sets and the header and search-result
+  "Changing the listing texts"), except the header and search-result
   images, which are uploaded here by hand. English (U.S.) has none of its own and shows en-GB's.
