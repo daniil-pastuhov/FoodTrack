@@ -115,7 +115,7 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 - [x] (Linked by the owner 2026-11-14; not yet confirmed by a verified App Check request from a
       Play-installed build.) **Play Integrity**: link the Cloud project (Test and release > App integrity > Play
       Integrity API; no API).
-- [ ] **Licence testers** (Settings > Licence testing; no API).
+- [x] **Licence testers** (Settings > Licence testing; no API). Added by the owner 2026-11-14.
 - [ ] Enrol in Play's **15 % service fee tier** (Play Console > account's developer page / account
       group; owner only).
 - [x] Upload a build that contains Play Billing to a testing track: Play refuses to create in-app
@@ -272,7 +272,9 @@ binding exist on the live project (created and read back 2026-11-14).
 
 ### 11. Privacy, store forms, artwork
 
-- [ ] Merge the privacy policy pull request
+- [x] (Merged 2026-11-14; live, with the deletion page at
+      https://daniil-pastuhov.github.io/bestbefore-privacy/delete.html, the URL for Play's
+      account-deletion field.) Merge the privacy policy pull request
       (<https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1>) when the release goes out;
       see [privacy-policy-changes.md](privacy-policy-changes.md).
 - [ ] App Store Connect > App Privacy and Play Console > Data safety: the answers are in
