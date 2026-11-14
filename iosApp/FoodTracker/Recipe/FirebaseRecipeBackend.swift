@@ -2,7 +2,7 @@ import FirebaseCore
 import FirebaseFunctions
 import Foundation
 
-/// The five callables in `functions/`, region europe-west1, every one with App Check. Errors come
+/// The six callables in `functions/`, region europe-west1, every one with App Check. Errors come
 /// out as `RecipeServerError`.
 struct FirebaseRecipeBackend: RecipeBackend {
     /// The app whose Auth user makes the calls: the default one, or a second one while signing
@@ -24,8 +24,9 @@ struct FirebaseRecipeBackend: RecipeBackend {
         try await call("getGeneration", GetGenerationRequest(requestId: requestId), limitedUseToken: false)
     }
 
+    /// Not consumed either: an ordinary token, as `getGeneration`.
     func balance() async throws -> BalanceResponse {
-        try await call("getBalance", EmptyRequest())
+        try await call("getBalance", EmptyRequest(), limitedUseToken: false)
     }
 
     func verifyPurchase(signedTransaction: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse {
@@ -40,8 +41,9 @@ struct FirebaseRecipeBackend: RecipeBackend {
     }
 
     func deleteAccount(appleAuthorizationCode: String?) async throws {
+        // The server's own limit is 120 s (it revokes the Apple token and deletes the user).
         let _: DeleteAccountResponse = try await call(
-            "deleteAccount", DeleteAccountRequest(appleAuthorizationCode: appleAuthorizationCode)
+            "deleteAccount", DeleteAccountRequest(appleAuthorizationCode: appleAuthorizationCode), timeout: 120
         )
     }
 
@@ -54,10 +56,11 @@ struct FirebaseRecipeBackend: RecipeBackend {
         guard let app = appName.flatMap(FirebaseApp.app(name:)) ?? FirebaseApp.app() else {
             throw RecipeServerError.unauthenticated
         }
-        // A limited-use App Check token on every callable but `getGeneration`. `generateRecipe`
-        // and `verifyPurchase` consume theirs (CONTRACT.md, "Calling"), so none may be reused:
-        // the SDK asks App Check for a new one on every `call`, which covers each fallback to
-        // `generateRecipe` and each purchase resubmission, and nothing here keeps a token.
+        // A limited-use App Check token for `generateRecipe`, `verifyPurchase`, `mergeBalance`
+        // and `deleteAccount`, which consume theirs (CONTRACT.md, "Calling"), so none may be
+        // reused: the SDK asks App Check for a new one on every `call`, which covers each
+        // fallback to `generateRecipe` and each purchase resubmission, and nothing here keeps a
+        // token. `getGeneration` and `getBalance` take an ordinary one.
         var callable = FirebaseBootstrap.functions(app: app).httpsCallable(
             name,
             options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: limitedUseToken),
@@ -91,7 +94,8 @@ struct FirebaseRecipeBackend: RecipeBackend {
         return RecipeServerError.from(
             code: name(of: code),
             reason: details?["reason"] as? String,
-            charged: details?["charged"] as? Bool
+            charged: details?["charged"] as? Bool,
+            field: details?["field"] as? String
         )
     }
 

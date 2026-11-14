@@ -9,7 +9,8 @@ import UIKit
 // Who holds the recipes: nobody yet, this install (an anonymous Firebase user, made only when a
 // purchase starts), or an account signed in with Apple or Google. Signing in from an install
 // that holds recipes links the sign-in to the same user where it can, so the recipes stay put,
-// and otherwise moves them over with `mergeBalance`.
+// and otherwise moves them over with `mergeBalance`: always, so a negative balance's debt and
+// the purchases still on their way follow the person too (CONTRACT.md, `mergeBalance`).
 
 enum RecipeSignInProvider: String, CaseIterable, Sendable {
     case apple = "apple.com"
@@ -69,8 +70,10 @@ struct RecipePendingMerge: Identifiable {
 
 /// What a sign-in came to.
 enum RecipeSignInOutcome {
-    /// Same user as before (linked) or a fresh sign-in on an empty install.
-    case signedIn
+    /// Same user as before (linked), a fresh sign-in on an install with no user, or an account
+    /// that took over an install with nothing to ask about (no recipes, or a debt), whose
+    /// anonymous user was merged into it on the way: then the merge's answer.
+    case signedIn(MergeBalanceResponse?)
     /// The account exists and this install holds recipes: ask before moving them.
     case needsMerge(RecipePendingMerge)
 }
@@ -116,7 +119,7 @@ final class RecipeAccount {
             do {
                 let user = try await auth.signIn(with: credential.credential).user
                 await Self.forgetProfile(of: user)
-                return .signedIn
+                return .signedIn(nil)
             } catch {
                 throw Self.mapped(error)
             }
@@ -124,7 +127,7 @@ final class RecipeAccount {
         do {
             _ = try await user.link(with: credential.credential)
             await Self.forgetProfile(of: user)
-            return .signedIn
+            return .signedIn(nil)
         } catch {
             let nsError = error as NSError
             guard nsError.domain == AuthErrors.domain,
@@ -154,10 +157,11 @@ final class RecipeAccount {
             throw Self.mapped(error)
         }
         await Self.forgetProfile(of: signedIn)
-        if installBalance <= 0 {
-            // Nothing to move: the account simply takes over.
-            try await adopt(signedIn)
-            return .signedIn
+        if !Self.asksBeforeMerging(installBalance: installBalance) {
+            // Nothing to ask about, but merged all the same: a negative balance's debt moves
+            // with the person, and a purchase still on its way (whose account token is this
+            // install's uid) stays redeemable by the account.
+            return .signedIn(try await mergeWithoutAsking(into: signedIn))
         }
         let accountBalance: Int
         do {
@@ -172,6 +176,34 @@ final class RecipeAccount {
             appName: Self.mergeAppName,
             user: signedIn
         ))
+    }
+
+    /// Whether taking over this install asks first ("Add this phone's recipes?"): only when it
+    /// holds recipes. Every other install is merged without asking, a debt included.
+    static func asksBeforeMerging(installBalance: Int) -> Bool {
+        installBalance > 0
+    }
+
+    /// The merge for an install with nothing to ask about. MERGE_NOT_ALLOWED (the anonymous
+    /// user is already gone, merged or deleted) leaves nothing to move, so the account takes
+    /// over anyway; any other failure keeps this install's user and fails the sign-in.
+    private func mergeWithoutAsking(into signedIn: User) async throws -> MergeBalanceResponse? {
+        guard let source = auth?.currentUser, source.isAnonymous else {
+            try await adopt(signedIn)
+            return nil
+        }
+        do {
+            let token = try await source.getIDToken()
+            let response = try await FirebaseRecipeBackend(appName: Self.mergeAppName).mergeBalance(sourceIdToken: token)
+            try await adopt(signedIn)
+            return response
+        } catch RecipeServerError.mergeNotAllowed {
+            try await adopt(signedIn)
+            return nil
+        } catch {
+            await deleteMergeApp()
+            throw Self.mapped(error)
+        }
     }
 
     /// "Add and sign in": moves this install's recipes into the account, then makes the account

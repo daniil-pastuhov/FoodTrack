@@ -52,6 +52,16 @@ enum RecipeFailure: Equatable {
     case dailyCap
     /// A recipe or menu arrived; the count after it.
     case arrived(balance: Int)
+    /// A request held from before the form changed finished after all (the server doesn't stop
+    /// an abandoned one, and charges it) and was saved.
+    case earlierArrived(RecipeKind)
+    /// That earlier request failed, and the failure was counted (`taken` is what it cost).
+    case earlierRefused(taken: Int)
+    /// The server refused this ticked item's name; the request went on without it.
+    case itemLeftOut(String)
+    /// An allergen that can't be sent: nothing was written, since a recipe without it could be
+    /// unsafe.
+    case allergenRefused(String)
 }
 
 /// The screens pushed from the Recipe tab.
@@ -83,6 +93,9 @@ final class RecipeViewModel: ObservableObject {
     /// Opens the pack sheet: Buy recipes, the count in the bar, or a generation that found the
     /// pack empty.
     @Published var showsBuySheet = false
+    /// Every server instance was busy on the last call: the writing screen says it is trying
+    /// again rather than failing.
+    @Published private(set) var serverBusyRetrying = false
 
     /// Whether the person has changed the ticks since they were picked for them. Until then the
     /// soonest items follow the pantry as it changes.
@@ -93,6 +106,9 @@ final class RecipeViewModel: ObservableObject {
     private let onDeviceModel: OnDeviceRecipeModel
     let credits: RecipeCredits
     private var writeTask: Task<Void, Never>?
+    /// Item names the server refused this session (lower-cased, as sent), left out of later
+    /// requests so a refused name is never sent twice.
+    private var refusedNames = Set<String>()
     private var creditsChanges: AnyCancellable?
 
     /// How many of the soonest items are ticked for the person.
@@ -217,16 +233,24 @@ final class RecipeViewModel: ObservableObject {
         let kind: RecipeKind = mode == .menu ? .menu : .recipe
         let request = request(for: items)
         guard !request.items.isEmpty, phase == .idle else { return }
-        let fresh = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID())
+        if let allergen = RecipeWire.unsendableAllergen(request.allergens) {
+            failure = .allergenRefused(allergen)
+            return
+        }
+        let fresh = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames)
         guard !fresh.ingredients.isEmpty else {
             // Every ticked name was made of characters the server refuses.
             failure = .serverFailed(kind, sameRequest: false)
             return
         }
-        let wire = RecipeWire.requestToSend(fresh: fresh, held: credits.storage.pendingGeneration)
-        credits.storage.pendingGeneration = wire
+        let held = credits.storage.pendingGeneration
+        let wire = RecipeWire.requestToSend(fresh: fresh, held: held)
+        // A held request for other inputs may still be written, and charged, on the server: it
+        // is fetched (and saved) first, and stays the stored one until it has settled.
+        let earlier = RecipeWire.abandonedRequest(fresh: fresh, held: held)
+        if earlier == nil { credits.storage.pendingGeneration = wire }
         // A held request may already be running or done on the server: asked after, not resent.
-        runServerWrite(wire, start: wire.requestId == fresh.requestId)
+        runServerWrite(wire, start: wire.requestId == fresh.requestId, collecting: earlier)
     }
 
     /// Sends the interrupted request again under its own id: "Try again" after a lost
@@ -241,52 +265,160 @@ final class RecipeViewModel: ObservableObject {
     /// `start`: a new request, sent with `generateRecipe`. Otherwise (resuming a held one) and
     /// for every IN_PROGRESS poll, `getGeneration` asks after it without spending a limited-use
     /// App Check token, falling back to `generateRecipe` with the same id and inputs when the
-    /// server doesn't know the id or predates `getGeneration`.
-    private func runServerWrite(_ wire: GenerateRequest, start: Bool) {
+    /// server doesn't know the id or predates `getGeneration`. `earlier`: a held request for
+    /// other inputs, settled (and its result saved) before `wire` is sent.
+    /// `afterRefusal`: `wire` already left out an item the server refused; a second refusal
+    /// stops rather than trying again.
+    private func runServerWrite(_ wire: GenerateRequest, start: Bool, collecting earlier: GenerateRequest? = nil, afterRefusal: Bool = false) {
         phase = .writingOnServer(wire.kind)
-        let backend = credits.backend
+        serverBusyRetrying = false
         let credits = credits
         writeTask = Task { [weak self] in
-            // IN_PROGRESS is asked again every 3 s, up to 150 s for a recipe and 270 s for a
-            // menu (as Android); past that it is a failure retried under the same id.
-            let deadline = Date().addingTimeInterval(wire.kind == .menu ? 270 : 150)
-            var sendsRequest = start
-            // An older server without `getGeneration`: re-sending is how it is asked.
-            var serverLacksGetGeneration = false
+            var collecting = earlier != nil
             do {
                 try await credits.ensureUser()
-                while true {
-                    let response: GenerateResponse
-                    if sendsRequest || serverLacksGetGeneration {
-                        response = try await backend.generate(wire)
-                    } else {
-                        do {
-                            response = try await backend.generation(requestId: wire.requestId)
-                        } catch let error as RecipeServerError where error.fallsBackToGenerate {
-                            if error == .callableMissing { serverLacksGetGeneration = true }
-                            response = try await backend.generate(wire)
-                        }
+                if let earlier, let self {
+                    let response = try await self.settle(earlier, start: false, mayStart: false)
+                    if let response, response.status == .inProgress {
+                        // Still being written: the server would answer the new one with BUSY.
+                        self.stopServerWrite(with: .busy)
+                        return
                     }
-                    sendsRequest = false
-                    if response.status == .inProgress, Date() < deadline {
-                        credits.apply(response)
-                        try await Task.sleep(for: .seconds(3))
-                        continue
-                    }
-                    self?.finishServerWrite(wire, response)
+                    if let response { self.collectEarlier(earlier, response) }
+                    collecting = false
+                    credits.storage.pendingGeneration = wire
+                }
+                guard let self else { return }
+                guard let response = try await self.settle(wire, start: start, mayStart: true) else {
+                    self.stopServerWrite(with: .serverFailed(wire.kind, sameRequest: true))
                     return
                 }
+                self.finishServerWrite(wire, response)
             } catch is CancellationError {
                 self?.phase = .idle
+                self?.serverBusyRetrying = false
+            } catch RecipeServerError.refusedName(let field) where !collecting {
+                self?.refused(field: field, in: wire, afterRefusal: afterRefusal)
             } catch {
-                self?.failServerWrite(wire, error)
+                // While the earlier request is being asked after, it stays the stored one, and
+                // "Try again" builds the new one again (and asks after the earlier first).
+                if collecting, let earlier {
+                    self?.failServerWrite(earlier, error, retriesFresh: true, kind: wire.kind)
+                } else {
+                    self?.failServerWrite(wire, error)
+                }
             }
         }
+    }
+
+    /// Sends `wire` (`start`) or asks after it until it settles: DONE or FAILED, or still
+    /// IN_PROGRESS when the wait runs out (150 s for a recipe, 270 s for a menu, as Android).
+    /// IN_PROGRESS is asked again every 3 s, never sooner. Busy servers (every instance taken)
+    /// are asked again with the same id after 3, 6, 12, 24, 30 s; and while the server may
+    /// already hold the request, so are the per-minute throttle and BUSY, which say nothing
+    /// about it. `mayStart` false (an abandoned request): never sent with `generateRecipe`, and
+    /// nil when the server never got it.
+    private func settle(_ wire: GenerateRequest, start: Bool, mayStart: Bool) async throws -> GenerateResponse? {
+        let backend = credits.backend
+        let deadline = Date().addingTimeInterval(wire.kind == .menu ? 270 : 150)
+        var sendsRequest = start
+        // An older server without `getGeneration`: re-sending is how it is asked.
+        var serverLacksGetGeneration = false
+        // Whether the server may hold the request: anything but a first send not yet answered.
+        var mayBeHeld = !start
+        var busyAnswers = 0
+        defer { serverBusyRetrying = false }
+        while true {
+            let response: GenerateResponse
+            do {
+                if sendsRequest || serverLacksGetGeneration {
+                    response = try await backend.generate(wire)
+                } else {
+                    do {
+                        response = try await backend.generation(requestId: wire.requestId)
+                    } catch let error as RecipeServerError where error.fallsBackToGenerate {
+                        guard mayStart else { return nil }
+                        if error == .callableMissing { serverLacksGetGeneration = true }
+                        response = try await backend.generate(wire)
+                    }
+                }
+            } catch let error as RecipeServerError
+                where error == .serversBusy || (mayBeHeld && error.keepsAskingAfterHeldRequest) {
+                guard busyAnswers < RecipeWire.maxBusyRetries, Date() < deadline else {
+                    // Kept under its id for "Try again": nothing was charged yet, or it may still
+                    // be written and charged, and the same id never pays twice.
+                    throw RecipeServerError.server
+                }
+                serverBusyRetrying = error == .serversBusy
+                try await Task.sleep(for: RecipeWire.busyRetryDelay(attempt: busyAnswers))
+                busyAnswers += 1
+                continue
+            }
+            serverBusyRetrying = false
+            busyAnswers = 0
+            sendsRequest = false
+            mayBeHeld = true
+            if response.status == .inProgress, Date() < deadline {
+                credits.apply(response)
+                try await Task.sleep(for: .seconds(3))
+                continue
+            }
+            return response
+        }
+    }
+
+    /// The answer for a request held from before the form changed: saved quietly when it
+    /// arrived, the count updated either way. Nothing navigates; the new request follows.
+    private func collectEarlier(_ earlier: GenerateRequest, _ response: GenerateResponse) {
+        credits.apply(response)
+        credits.callSucceeded()
+        switch Self.outcome(of: response, for: earlier, costs: credits.costs) {
+        case .saved(let content):
+            savedStore.save(SavedRecipe(content: content))
+            saved = savedStore.all()
+            failure = .earlierArrived(earlier.kind)
+        case .failure(.serverRefused(_, let taken)):
+            failure = .earlierRefused(taken: taken)
+        case .failure:
+            // Refunded, or nothing usable: nothing to say about a request the person moved on from.
+            break
+        }
+    }
+
+    /// A name the server refused (`INVALID_REQUEST` with `details.field`). Nothing was charged.
+    /// A refused item is left out and the request sent once more under a new id; a refused
+    /// allergen stops it. Never more than one retry: repeated refusals lock the account for the
+    /// day (`USER_DAILY_LIMIT`).
+    private func refused(field: String, in wire: GenerateRequest, afterRefusal: Bool) {
+        credits.storage.pendingGeneration = nil
+        switch RecipeWire.refusedName(field: field, in: wire) {
+        case .ingredient(let index, let name)?:
+            refusedNames.insert(name.lowercased())
+            guard !afterRefusal, let next = RecipeWire.dropping(ingredientAt: index, from: wire, newID: UUID()) else {
+                stopServerWrite(with: .itemLeftOut(name))
+                return
+            }
+            failure = .itemLeftOut(name)
+            credits.storage.pendingGeneration = next
+            runServerWrite(next, start: true, afterRefusal: true)
+        case .allergen(let name)?:
+            stopServerWrite(with: .allergenRefused(name))
+        case nil:
+            stopServerWrite(with: .serverFailed(wire.kind, sameRequest: false))
+        }
+    }
+
+    private func stopServerWrite(with failure: RecipeFailure) {
+        writeTask = nil
+        phase = .idle
+        serverBusyRetrying = false
+        self.failure = failure
     }
 
     private func finishServerWrite(_ wire: GenerateRequest, _ response: GenerateResponse) {
         writeTask = nil
         phase = .idle
+        serverBusyRetrying = false
         credits.apply(response)
         credits.callSucceeded()
         let outcome = Self.outcome(of: response, for: wire, costs: credits.costs)
@@ -303,9 +435,12 @@ final class RecipeViewModel: ObservableObject {
         }
     }
 
-    private func failServerWrite(_ wire: GenerateRequest, _ error: Error) {
+    /// `retriesFresh`: the failure came while asking after an earlier request, so "Try again"
+    /// builds the new one (of `kind`) again rather than resuming the stored one.
+    private func failServerWrite(_ wire: GenerateRequest, _ error: Error, retriesFresh: Bool = false, kind: RecipeKind? = nil) {
         writeTask = nil
         phase = .idle
+        serverBusyRetrying = false
         credits.note(error)
         let serverError = error as? RecipeServerError ?? .server
         if !serverError.isRetryableWithSameID { credits.storage.pendingGeneration = nil }
@@ -313,9 +448,10 @@ final class RecipeViewModel: ObservableObject {
             if credits.canBuy { showsBuySheet = true }
             return
         }
-        if let failure = Self.failure(for: serverError, kind: wire.kind, takenIfCharged: credits.costs.cost(of: wire)) {
-            self.failure = failure
-        }
+        let kind = kind ?? wire.kind
+        guard var failure = Self.failure(for: serverError, kind: kind, takenIfCharged: credits.costs.cost(of: wire)) else { return }
+        if retriesFresh, case .serverFailed = failure { failure = .serverFailed(kind, sameRequest: false) }
+        self.failure = failure
     }
 
     /// The snackbar a failed `generateRecipe` call raises, or nil where a lasting condition's
@@ -330,10 +466,11 @@ final class RecipeViewModel: ObservableObject {
         case .userDailyLimit: return .userDailyLimit
         case .infraFailureLimit: return .infraFailureLimit
         case .dailyCap: return .dailyCap
-        case .server, .appCheckReplayed, .unknownRequest, .callableMissing:
+        case .server, .appCheckReplayed, .unknownRequest, .callableMissing, .serversBusy:
             // Nothing was decided on the server for this attempt: ask again under the same id.
             return .serverFailed(kind, sameRequest: true)
-        case .requestIdReused, .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed:
+        case .requestIdReused, .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed,
+             .storeMismatch, .purchaseAccountMismatch, .refusedName:
             // REQUEST_ID_REUSED: the stored request is already dropped, so "Try again" builds a
             // new one under a new id.
             return .serverFailed(kind, sameRequest: false)
@@ -461,6 +598,13 @@ final class RecipeViewModel: ObservableObject {
     }
 
     #if DEBUG
+    /// `-demoRecipeState busy`: the writing screen while every server instance is busy and the
+    /// request is sent again. Nothing is sent.
+    func showDemoServerBusy() {
+        phase = .writingOnServer(mode == .menu ? .menu : .recipe)
+        serverBusyRetrying = true
+    }
+
     /// `-demoRoute recipeResult`: a recipe as the phone's model would write one, saved so the
     /// result and Saved recipes screens can be seen where the model can't run, as in the
     /// simulator. Returns its id.

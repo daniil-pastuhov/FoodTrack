@@ -79,8 +79,8 @@ struct RecipeView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             model.refreshAvailability()
-            if !credits.unconfirmed.isEmpty {
-                Task { await credits.resubmitUnfinished() }
+            if !credits.unconfirmedHere.isEmpty {
+                Task { await credits.resubmitUnfinished(waitingOnly: true) }
             }
         }
         .onChange(of: model.failure) { _, failure in
@@ -240,7 +240,7 @@ struct RecipeView: View {
     /// without recipes, a payment on its way, generation paused, no connection.
     @ViewBuilder
     private var paidCallouts: some View {
-        if !credits.unconfirmed.isEmpty {
+        if !credits.unconfirmedHere.isEmpty {
             LarderCallout(
                 .warning,
                 icon: .clock,
@@ -255,6 +255,15 @@ struct RecipeView: View {
                 icon: .clock,
                 title: L10n.recipePaymentPendingTitle,
                 message: L10n.recipePaymentPendingMessage
+            )
+        }
+        if credits.showsOtherAccountPurchases {
+            // PURCHASE_ACCOUNT_MISMATCH: kept for the account that bought it.
+            LarderCallout(
+                .info,
+                icon: .userRound,
+                title: L10n.recipeOtherAccountTitle,
+                message: L10n.recipeOtherAccountMessage(credits.otherAccountCredits)
             )
         }
         if paid && credits.serverPaused {
@@ -301,12 +310,13 @@ struct RecipeView: View {
     private func writingOnServer(_ kind: RecipeKind) -> some View {
         VStack(spacing: LarderSpace.s3) {
             LarderSpinner()
-            Text(L10n.recipeWritingServerTitle(kind))
+            Text(model.serverBusyRetrying ? L10n.recipeServerBusyRetryingTitle : L10n.recipeWritingServerTitle(kind))
                 .larderFont(.title)
                 .foregroundStyle(LarderColor.onSurface)
                 .padding(.top, LarderSpace.s2)
                 .accessibilityAddTraits(.isHeader)
-            Text(L10n.recipeWritingServerMessage(kind))
+            // All server instances busy: the same request is sent again shortly, said calmly.
+            Text(model.serverBusyRetrying ? L10n.recipeServerBusyRetrying : L10n.recipeWritingServerMessage(kind))
                 .larderFont(.body)
                 .foregroundStyle(LarderColor.onSurfaceVariant)
                 .frame(maxWidth: 320)
@@ -352,6 +362,14 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeServerDailyCap)
         case .arrived(let balance):
             showSnackbar(L10n.recipeArrived(balance: balance))
+        case .earlierArrived(let kind):
+            showSnackbar(L10n.recipeEarlierArrived(kind))
+        case .earlierRefused(let taken):
+            showSnackbar(L10n.recipeEarlierRefused(taken: taken))
+        case .itemLeftOut(let name):
+            showSnackbar(L10n.recipeItemLeftOut(name))
+        case .allergenRefused(let name):
+            showSnackbar(L10n.recipeAllergenRefused(name))
         }
     }
 
