@@ -102,7 +102,9 @@ struct RecipeCreditsStorage {
     }
 
     /// The generation a lost connection, a server error or a long IN_PROGRESS interrupted,
-    /// retried under the same id. Dropped after 24 hours, past which the server has settled it.
+    /// asked after under the same id. Dropped after 6 days: the server keeps a finished
+    /// generation for 7 days after it finished, so until then asking can only fetch it (or
+    /// start one that never reached the server), never charge a second time.
     var pendingGeneration: GenerateRequest? {
         get {
             guard let savedAt = defaults.object(forKey: Key.generationSavedAt) as? Date,
@@ -115,7 +117,7 @@ struct RecipeCreditsStorage {
         }
     }
 
-    static let pendingGenerationLifetime: TimeInterval = 24 * 60 * 60
+    static let pendingGenerationLifetime: TimeInterval = 6 * 24 * 60 * 60
 
     var menuCourses: Int {
         get { defaults.integer(forKey: Key.courses) == 3 ? 3 : 2 }
@@ -152,6 +154,9 @@ final class RecipeCredits: ObservableObject {
     /// Earlier purchases were refunded after the recipes were used: no way to buy shows, and a
     /// line says why. What is in the balance still works.
     @Published private(set) var purchasesBlocked = false
+    /// The server takes no App Store purchases from this build (`STORE_MISMATCH`), for this
+    /// launch: buying is hidden, and the purchase stays unfinished rather than being lost.
+    @Published private(set) var storeMismatch = false
     @Published private(set) var attestationFailed = false
     /// A server call failed for want of a connection, or the phone has none.
     @Published private(set) var connectionLost = false
@@ -174,6 +179,10 @@ final class RecipeCredits: ObservableObject {
     static let pauseRetryInterval: Double = 5 * 60
     private var retryDelay: Duration = .seconds(15)
     private var submitting = Set<UInt64>()
+    /// Purchases the server refused with STORE_MISMATCH this launch: not sent again on the
+    /// backoff, only at the next launch or on "Try now".
+    private var storeMismatched = Set<UInt64>()
+    private var lastUID: String?
     private var authListener: AuthStateDidChangeListenerHandle?
     private let pathMonitor = NWPathMonitor()
 
@@ -204,8 +213,17 @@ final class RecipeCredits: ObservableObject {
     /// Buy is hidden while generation is paused, while a payment is on its way, so nobody
     /// pays twice, and for an account the server blocks from buying.
     var canBuy: Bool {
-        isPaidRouteAvailable && !serverPaused && unconfirmed.isEmpty && !paymentPending && !purchasesBlocked
+        isPaidRouteAvailable && !serverPaused && unconfirmedHere.isEmpty && !paymentPending && !purchasesBlocked
+            && !storeMismatch
     }
+
+    /// Paid for and not added yet, for this account: what the "being confirmed" callout counts.
+    var unconfirmedHere: [UnconfirmedPurchase] { unconfirmed.filter { !$0.boughtByOtherAccount } }
+
+    /// Purchases that belong to another account, which only signing in to it can add.
+    var showsOtherAccountPurchases: Bool { unconfirmed.contains { $0.boughtByOtherAccount } }
+
+    var otherAccountCredits: Int { unconfirmed.filter(\.boughtByOtherAccount).reduce(0) { $0 + $1.credits } }
 
     /// Where Buy would be, the line that says why it isn't.
     var showsPurchasesBlocked: Bool { isPaidRouteAvailable && purchasesBlocked }
@@ -215,7 +233,7 @@ final class RecipeCredits: ObservableObject {
         account == .none && !storage.purchaseChoiceMade
     }
 
-    var unconfirmedCredits: Int { unconfirmed.reduce(0) { $0 + $1.credits } }
+    var unconfirmedCredits: Int { unconfirmedHere.reduce(0) { $0 + $1.credits } }
 
     var showsOffline: Bool { isPaidRouteAvailable && balance != nil && (connectionLost || !isOnline) }
 
@@ -264,6 +282,12 @@ final class RecipeCredits: ObservableObject {
         account = RecipeAccount.state(of: user)
         balance = account.uid.map { storage.cachedBalance(for: $0) ?? 0 }
         purchasesBlocked = account.uid.map { storage.cachedPurchasesBlocked(for: $0) } ?? false
+        let uid = account.uid
+        defer { lastUID = uid }
+        // Another account now: a purchase that belonged to another one may be this one's.
+        if started, uid != nil, uid != lastUID, unconfirmed.contains(where: \.boughtByOtherAccount) {
+            Task { await resubmitUnfinished() }
+        }
     }
 
     /// Asks the store for the packs, once per launch unless it failed.
@@ -347,6 +371,7 @@ final class RecipeCredits: ObservableObject {
             account = .none
             balance = nil
         case .unauthenticated?: attestationFailed = true
+        case .storeMismatch?: storeMismatch = true
         default: break
         }
     }
@@ -452,10 +477,27 @@ final class RecipeCredits: ObservableObject {
             case .retry:
                 return notAddedYet()
             }
+        } catch RecipeServerError.purchaseAccountMismatch {
+            // Bought by another account: kept unfinished, so that account can still add it,
+            // and not retried on the backoff. Sent again at launch and when the account changes.
+            markBoughtByOtherAccount(transaction.id)
+            return .notAddedYet
+        } catch RecipeServerError.storeMismatch {
+            // A build or setup bug that resending can't fix: not finished (that would lose
+            // the purchase), not retried this launch, and no more buying.
+            storeMismatched.insert(transaction.id)
+            storeMismatch = true
+            return .notAddedYet
         } catch {
             note(error)
             return notAddedYet()
         }
+    }
+
+    private func markBoughtByOtherAccount(_ id: UInt64) {
+        guard let index = unconfirmed.firstIndex(where: { $0.id == id }), !unconfirmed[index].boughtByOtherAccount else { return }
+        unconfirmed[index].boughtByOtherAccount = true
+        storage.unconfirmed = unconfirmed
     }
 
     /// Nil on ACCOUNT_CLOSED, after signing the closed account out.
@@ -473,6 +515,12 @@ final class RecipeCredits: ObservableObject {
         return .notAddedYet
     }
 
+    /// Whether the backoff still has a purchase to send: one this account is waiting for, not
+    /// another account's and not one this build can't submit.
+    private var hasRetryablePurchase: Bool {
+        unconfirmed.contains { !$0.boughtByOtherAccount && !storeMismatched.contains($0.id) }
+    }
+
     private func remember(_ purchase: UnconfirmedPurchase) {
         guard !unconfirmed.contains(where: { $0.id == purchase.id }) else { return }
         unconfirmed.append(purchase)
@@ -482,7 +530,7 @@ final class RecipeCredits: ObservableObject {
     private func forget(_ id: UInt64) {
         unconfirmed.removeAll { $0.id == id }
         storage.unconfirmed = unconfirmed
-        if unconfirmed.isEmpty {
+        if !hasRetryablePurchase {
             retryTask?.cancel()
             retryTask = nil
             retryDelay = .seconds(15)
@@ -490,9 +538,11 @@ final class RecipeCredits: ObservableObject {
     }
 
     /// Every unfinished transaction of ours, again: at launch, on "Try now", when the app comes
-    /// back, and on a backoff while any wait. Records for transactions StoreKit no longer has
-    /// (finished elsewhere) are dropped.
-    func resubmitUnfinished() async {
+    /// back or the account changes, and on a backoff while any wait. Records for transactions
+    /// StoreKit no longer has (finished elsewhere) are dropped. `waitingOnly` (the backoff, the
+    /// app coming back): only those this account is waiting for, not another account's or one
+    /// the server refused for this build.
+    func resubmitUnfinished(waitingOnly: Bool = false) async {
         #if DEBUG
         if demoMode { return }
         #endif
@@ -508,6 +558,11 @@ final class RecipeCredits: ObservableObject {
             forget(record.id)
         }
         for result in pending {
+            let id = result.unsafePayloadValue.id
+            if waitingOnly, storeMismatched.contains(id) || unconfirmed.contains(where: { $0.id == id && $0.boughtByOtherAccount }) {
+                continue
+            }
+            if !waitingOnly { storeMismatched.remove(id) }
             await handle(result)
         }
     }
@@ -520,7 +575,7 @@ final class RecipeCredits: ObservableObject {
             try? await Task.sleep(for: delay)
             guard !Task.isCancelled else { return }
             self?.retryTask = nil
-            await self?.resubmitUnfinished()
+            await self?.resubmitUnfinished(waitingOnly: true)
         }
     }
 
@@ -537,7 +592,10 @@ final class RecipeCredits: ObservableObject {
             let outcome = try await accountService.signIn(with: credential, installBalance: account.isSignedIn ? 0 : (balance ?? 0))
             account = accountService.state
             switch outcome {
-            case .signedIn:
+            case .signedIn(let merged):
+                // An install with nothing to ask about was merged on the way (the debt of a
+                // negative balance follows the person); its answer has the account's balance.
+                if let merged { apply(merged) }
                 callSucceeded()
                 await refreshBalance()
                 return true
@@ -553,7 +611,7 @@ final class RecipeCredits: ObservableObject {
             return false
         } catch {
             note(error)
-            notice = .signInFailed
+            notice = Self.accountNotice(for: error, otherwise: .signInFailed)
             return false
         }
     }
@@ -588,7 +646,7 @@ final class RecipeCredits: ObservableObject {
 
     #if DEBUG
     /// `-demoRecipeCredits <n>` with `-demoRecipeState <state>` (phone, account, unconfirmed,
-    /// pending, paused, offline, blocked): the paid route's screens without a server or a store, for
+    /// pending, paused, offline, blocked, otherAccount, busy): the paid route's screens without a server or a store, for
     /// screenshots and layout checks. Nothing is sent anywhere.
     func showDemo(balance: Int, state: String?) {
         demoMode = true
@@ -602,6 +660,8 @@ final class RecipeCredits: ObservableObject {
         case "paused": serverPaused = true
         case "offline": connectionLost = true
         case "blocked": purchasesBlocked = true
+        case "otherAccount":
+            unconfirmed = [UnconfirmedPurchase(transactionID: 1, productID: "recipes_50", credits: 50, boughtByOtherAccount: true)]
         default: break
         }
     }

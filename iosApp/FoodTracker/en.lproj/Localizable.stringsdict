@@ -626,6 +626,54 @@
             <string>%d recipes left</string>
         </dict>
     </dict>
+    <key>recipe_earlier_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>A recipe you asked for earlier couldn't be made. It used %d recipe, because the attempt still cost us to run.</string>
+            <key>other</key>
+            <string>A recipe you asked for earlier couldn't be made. It used %d recipes, because the attempt still cost us to run.</string>
+        </dict>
+    </dict>
+    <key>recipe_other_account_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d recipe on this phone was bought with another account. Sign in to the account you bought it with to add it.</string>
+            <key>other</key>
+            <string>%d recipes on this phone were bought with another account. Sign in to the account you bought them with to add them.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>You have %d left. A single recipe still works.</string>
+            <key>other</key>
+            <string>You have %d left. A single recipe still works.</string>
+        </dict>
+    </dict>
     <key>recipe_arrived</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -752,38 +800,6 @@
             <string>Your %d unused recipe will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</string>
             <key>other</key>
             <string>Your %d unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</string>
-        </dict>
-    </dict>
-    <key>recipe_menu_server_hint</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>A menu is written on our server and takes %d recipe from a pack.</string>
-            <key>other</key>
-            <string>A menu is written on our server and takes %d recipes from a pack.</string>
-        </dict>
-    </dict>
-    <key>recipe_menu_short_title</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>This menu takes %d recipe</string>
-            <key>other</key>
-            <string>This menu takes %d recipes</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>

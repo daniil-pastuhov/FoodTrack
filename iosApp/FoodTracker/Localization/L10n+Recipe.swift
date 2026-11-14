@@ -220,12 +220,16 @@ extension L10n {
     static func recipeBalanceLeft(_ count: Int) -> String { plural("recipe_balance_left", count) }
     static var recipeBuy: String { paid("recipe_buy") }
     /// `cost` is what a menu of the chosen number of courses takes.
-    static func recipeMenuServerHint(_ cost: Int) -> String { plural("recipe_menu_server_hint", cost) }
-    static func recipeMenuShortTitle(_ cost: Int) -> String { plural("recipe_menu_short_title", cost) }
+    static func recipeMenuServerHint(_ cost: Int) -> String {
+        String(format: paid("recipe_menu_server_hint"), recipeCost(cost))
+    }
+    static func recipeMenuShortTitle(_ cost: Int) -> String {
+        String(format: paid("recipe_menu_short_title"), recipeCost(cost))
+    }
     /// Under the title: what is left, and whether a single recipe still fits in it.
     static func recipeMenuShortMessage(_ balance: Int, recipeCost: Int) -> String {
         if balance <= 0 { return paid("recipe_menu_short_none") }
-        if balance >= recipeCost { return String(format: paid("recipe_menu_short_message"), balance) }
+        if balance >= recipeCost { return plural("recipe_menu_short_message", balance) }
         return recipeBalanceLeft(balance)
     }
 
@@ -253,6 +257,17 @@ extension L10n {
     static var recipeServerUserDailyLimit: String { paid("recipe_server_user_daily_limit") }
     static var recipeServerInfraFailureLimit: String { paid("recipe_server_infra_failure_limit") }
     static func recipeArrived(balance: Int) -> String { plural("recipe_arrived", balance) }
+    /// A request from before the form changed arrived after all, and was saved.
+    static func recipeEarlierArrived(_ kind: RecipeKind) -> String {
+        paid(kind == .menu ? "recipe_earlier_arrived_menu" : "recipe_earlier_arrived")
+    }
+    static func recipeItemLeftOut(_ name: String) -> String { String(format: paid("recipe_item_left_out"), name) }
+    static func recipeAllergenRefused(_ name: String) -> String { String(format: paid("recipe_allergen_refused"), name) }
+    /// Every server instance busy: sent again in a moment.
+    static var recipeServerBusyRetrying: String { paid("recipe_server_busy_retrying") }
+    static var recipeServerBusyRetryingTitle: String { paid("recipe_server_busy_retrying_title") }
+    /// A request from before the form changed failed after all, and that failure was counted.
+    static func recipeEarlierRefused(taken: Int) -> String { plural("recipe_earlier_refused", taken) }
 
     // Lasting conditions
     static var recipeOfflineTitle: String { paid("recipe_offline_title") }
@@ -271,7 +286,7 @@ extension L10n {
     // Buying
     /// What a menu takes with two and with three courses a day, from the server's costs.
     static func recipeBuyMessage(_ costs: RecipeCosts) -> String {
-        String(format: paid("recipe_buy_message"), costs.menu2, costs.menu3)
+        String(format: paid("recipe_buy_message"), recipeCost(costs.menu2), recipeCost(costs.menu3))
     }
     static func recipePackEach(_ price: String) -> String { String(format: paid("recipe_pack_each"), price) }
     static var recipeContinue: String { paid("recipe_continue") }
@@ -329,13 +344,15 @@ extension L10n {
     static var recipeAccountActionFailed: String { paid("recipe_account_action_failed") }
     static var recipeAccountBusy: String { paid("recipe_account_busy") }
     static var recipePurchasesBlocked: String { paid("recipe_purchases_blocked") }
+    static var recipeOtherAccountTitle: String { paid("recipe_other_account_title") }
+    static func recipeOtherAccountMessage(_ credits: Int) -> String { plural("recipe_other_account_message", credits) }
     static var recipeConsumptionNote: String { paid("recipe_consumption_note") }
 
     // Menu
     static var recipeMenuResultTitle: String { paid("recipe_menu_result_title") }
     static var recipeMenuHeading: String { paid("recipe_menu_heading") }
     static func recipeMenuSummary(courses: Int, servings: Int) -> String {
-        String(format: paid(courses >= 3 ? "recipe_menu_summary_3" : "recipe_menu_summary_2"), servings)
+        String(format: paid("recipe_menu_summary"), courses >= 3 ? 3 : 2, servings)
     }
     static func recipeMenuToday(_ date: String) -> String { String(format: paid("recipe_menu_today"), date) }
     static func recipeMenuUses(_ items: String) -> String { String(format: paid("recipe_menu_uses"), items) }

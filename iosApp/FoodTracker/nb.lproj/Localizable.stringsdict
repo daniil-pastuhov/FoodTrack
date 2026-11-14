@@ -626,6 +626,54 @@
             <string>%d oppskrifter igjen</string>
         </dict>
     </dict>
+    <key>recipe_earlier_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %d oppskrift, fordi forsøket likevel kostet oss å kjøre.</string>
+            <key>other</key>
+            <string>En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss å kjøre.</string>
+        </dict>
+    </dict>
+    <key>recipe_other_account_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d oppskrift på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</string>
+            <key>other</key>
+            <string>%d oppskrifter på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Du har %d igjen. Én oppskrift går fortsatt.</string>
+            <key>other</key>
+            <string>Du har %d igjen. Én oppskrift går fortsatt.</string>
+        </dict>
+    </dict>
     <key>recipe_arrived</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -669,9 +717,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d oppskriften din er trygg. De gratis måtene nedenfor virker fortsatt.</string>
+            <string>Den %d oppskriften din er trygg. De gratis valgene nedenfor virker fortsatt.</string>
             <key>other</key>
-            <string>De %d oppskriftene dine er trygge. De gratis måtene nedenfor virker fortsatt.</string>
+            <string>De %d oppskriftene dine er trygge. De gratis valgene nedenfor virker fortsatt.</string>
         </dict>
     </dict>
     <key>recipe_unconfirmed_message</key>
@@ -685,9 +733,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Du har betalt for %d oppskrift, og den er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe på nytt.</string>
+            <string>Du har betalt for %d oppskrift, og den er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</string>
             <key>other</key>
-            <string>Du har betalt for %d oppskrifter, og de er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe på nytt.</string>
+            <string>Du har betalt for %d oppskrifter, og de er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</string>
         </dict>
     </dict>
     <key>recipe_on_phone_label</key>
@@ -733,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d oppskriften din blir i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne telefonen.</string>
+            <string>Den %d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne telefonen.</string>
             <key>other</key>
-            <string>De %d oppskriftene dine blir i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne telefonen.</string>
+            <string>De %d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne telefonen.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -749,41 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Innloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir værende, men er ikke lenger knyttet til deg. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
+            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</string>
             <key>other</key>
-            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Innloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir værende, men er ikke lenger knyttet til deg. Lagrede oppskrifter og matskapet blir på denne telefonen.</string>
-        </dict>
-    </dict>
-    <key>recipe_menu_server_hint</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>En meny lages på serveren vår og bruker %d oppskrift fra en pakke.</string>
-            <key>other</key>
-            <string>En meny lages på serveren vår og bruker %d oppskrifter fra en pakke.</string>
-        </dict>
-    </dict>
-    <key>recipe_menu_short_title</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Denne menyen bruker %d oppskrift</string>
-            <key>other</key>
-            <string>Denne menyen bruker %d oppskrifter</string>
+            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -797,9 +813,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Klarte ikke å lage en oppskrift av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en oppskrift av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
             <key>other</key>
-            <string>Klarte ikke å lage en oppskrift av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en oppskrift av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_refused_menu</key>
@@ -813,9 +829,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Klarte ikke å lage en meny av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en meny av disse varene. Det brukte %d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
             <key>other</key>
-            <string>Klarte ikke å lage en meny av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss penger å kjøre. Prøv færre eller andre varer.</string>
+            <string>Kunne ikke lage en meny av disse varene. Det brukte %d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</string>
         </dict>
     </dict>
     <key>recipe_server_unknown_taken</key>

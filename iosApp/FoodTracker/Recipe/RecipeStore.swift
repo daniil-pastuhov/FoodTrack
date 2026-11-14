@@ -49,16 +49,22 @@ struct UnconfirmedPurchase: Codable, Equatable, Identifiable, Sendable {
     let productID: String
     let credits: Int
     /// Whether it was bought from the sheet with the consumption line shown; `verifyPurchase`
-    /// sends it on every resubmission. False for records an older build saved.
+    /// sends `true` on every resubmission while it is, and nothing otherwise (never `false`,
+    /// which would withdraw it). False for records an older build saved.
     var consumptionConsent: Bool
+    /// The server said the purchase belongs to another account (`PURCHASE_ACCOUNT_MISMATCH`):
+    /// kept unfinished for that account, sent again only at launch and when the account
+    /// changes, and not counted as a payment on its way for this one.
+    var boughtByOtherAccount: Bool
 
     var id: UInt64 { transactionID }
 
-    init(transactionID: UInt64, productID: String, credits: Int, consumptionConsent: Bool = false) {
+    init(transactionID: UInt64, productID: String, credits: Int, consumptionConsent: Bool = false, boughtByOtherAccount: Bool = false) {
         self.transactionID = transactionID
         self.productID = productID
         self.credits = credits
         self.consumptionConsent = consumptionConsent
+        self.boughtByOtherAccount = boughtByOtherAccount
     }
 
     init(from decoder: Decoder) throws {
@@ -67,6 +73,7 @@ struct UnconfirmedPurchase: Codable, Equatable, Identifiable, Sendable {
         productID = try container.decode(String.self, forKey: .productID)
         credits = try container.decode(Int.self, forKey: .credits)
         consumptionConsent = (try? container.decodeIfPresent(Bool.self, forKey: .consumptionConsent)) ?? false
+        boughtByOtherAccount = (try? container.decodeIfPresent(Bool.self, forKey: .boughtByOtherAccount)) ?? false
     }
 }
 
@@ -100,12 +107,15 @@ enum RecipeStoreKit {
         )
     }
 
-    /// Whether a transaction's buyer consented to consumption information: its own record's
-    /// flag once it has one; otherwise whether the sheet started a purchase of that product,
-    /// with the line shown, no later than the transaction (an Ask to Buy approval arrives
-    /// after). A transaction from before this build has neither and reads false.
+    /// Whether a transaction's buyer consented to consumption information: yes once its own
+    /// record says so, or when the sheet started a purchase of that product, with the line
+    /// shown, no later than the transaction (an Ask to Buy approval arrives after, and a
+    /// restart finds only the start). Only ever turns a "don't know" into a yes, never a yes
+    /// into a no: a false here sends nothing (`RecipeWire.consentToSend`), so a resubmission
+    /// can't withdraw a consent the server already has. A transaction from before this build,
+    /// or bought on another device, has neither and reads false.
     static func consumptionConsent(record: UnconfirmedPurchase?, consentStartedAt: Date?, purchaseDate: Date) -> Bool {
-        if let record { return record.consumptionConsent }
+        if record?.consumptionConsent == true { return true }
         guard let consentStartedAt else { return false }
         return consentStartedAt <= purchaseDate
     }
