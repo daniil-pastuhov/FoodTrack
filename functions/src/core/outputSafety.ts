@@ -22,6 +22,8 @@ import {
   DIET_RULES,
   NON_FOOD,
   SOLICITATION,
+  STAPLE_FILLERS,
+  STAPLE_WORDS,
   compileTerms,
   foldText,
   matchesAny,
@@ -46,6 +48,9 @@ export type OutputRule =
   | "REPETITION"
   | "PANTRY_REF"
   | "NO_PANTRY"
+  | "DAY_NO_PANTRY"
+  | "STAPLES_ONLY"
+  | "DUPLICATE_DISH"
   | "NON_FOOD"
   | "SOLICITATION"
   | "ALLERGEN"
@@ -58,7 +63,19 @@ export type OutputRule =
  */
 export const SUSPICIOUS_OUTPUT_RULES: ReadonlySet<OutputRule> = new Set<OutputRule>([
   "CHARACTERS", "MARKUP", "URL", "CONTACT", "PHONE", "LEAK", "SCRIPT", "LANGUAGE", "REPETITION",
-  "PANTRY_REF", "NO_PANTRY", "NON_FOOD", "SOLICITATION", "ALLERGEN", "DIET",
+  "PANTRY_REF", "NON_FOOD", "SOLICITATION", "ALLERGEN", "DIET",
+]);
+
+/**
+ * The quality gate: an answer that is clean but is not what was paid for (a recipe or a menu day
+ * that uses no pantry item, a dish made only of staples, the same dish twice in a menu). Checked
+ * last, after every other rule, so it only ever fires on an otherwise acceptable answer. Settled
+ * as a "quality" failure: the service did not deliver, so it is refunded in full, uses none of the
+ * account's content allowance and is not a prompt rejection; its model spend is booked as usual
+ * and it counts towards infraRefundsPerDay (generation.ts settle).
+ */
+export const QUALITY_OUTPUT_RULES: ReadonlySet<OutputRule> = new Set<OutputRule>([
+  "NO_PANTRY", "DAY_NO_PANTRY", "STAPLES_ONLY", "DUPLICATE_DISH",
 ]);
 
 export type OutputCheck<T> = { ok: true; value: T } | { ok: false; rule: OutputRule };
@@ -325,6 +342,26 @@ export function allergenGuards(allergens: readonly string[]): Guard[] {
   return guards;
 }
 
+// --- Staples (quality gate) ----------------------------------------------------------------------
+
+const STAPLE_TERMS = compileTerms(STAPLE_WORDS);
+const FILLER_WORDS = new Set(STAPLE_FILLERS.map(fold));
+
+/**
+ * Whether a name is only a staple ("freshly ground black pepper", "olivenolje", "4 cups water"):
+ * every word (split at apostrophes too, "d'oliva") a staple word, a filler or a number, and at
+ * least one a staple word.
+ */
+export function isStapleName(name: string): boolean {
+  let staple = false;
+  for (const w of foldText(name).words.flatMap((x) => x.split("'")).filter(Boolean)) {
+    if (/^\p{N}+$/u.test(w) || FILLER_WORDS.has(w)) continue;
+    if (!matchesAny({ words: [w], flat: ` ${w} ` }, STAPLE_TERMS)) return false;
+    staple = true;
+  }
+  return staple;
+}
+
 // --- Recipe and menu ---------------------------------------------------------------------------
 
 interface Checker {
@@ -334,6 +371,10 @@ interface Checker {
   allergen: Guard[];
   diet: Guard[];
   pantryUses: number;
+  /** Quality gate findings, reported only after every other rule passed (see gate). */
+  staplesOnly: boolean;
+  emptyDay: boolean;
+  titles: string[];
 }
 
 function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
@@ -352,7 +393,14 @@ function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
   }
   if (names.some((n) => violates(n, ch.allergen))) bad("ALLERGEN");
   if (names.some((n) => violates(n, ch.diet))) bad("DIET");
-  return { amount, name, fromPantry };
+  if (!fromPantry) return { amount, name, fromPantry };
+  return { amount, name, fromPantry, pantryIndex: Number((id as string).slice(1)) - 1 };
+}
+
+/** An ingredient is a staple when its name is one and, for a pantry item, the item's own name too. */
+function isStaple(ch: Checker, ing: RecipeIngredient): boolean {
+  if (!isStapleName(ing.name)) return false;
+  return ing.pantryIndex === undefined || isStapleName(ch.req.ingredients[ing.pantryIndex].name);
 }
 
 function recipe(ch: Checker, raw: unknown): Recipe {
@@ -365,6 +413,7 @@ function recipe(ch: Checker, raw: unknown): Recipe {
   if (!Array.isArray(r.ingredients) || r.ingredients.length === 0) bad("SHAPE");
   if ((r.ingredients as unknown[]).length > LIMITS.ingredients) bad("LENGTH");
   const ingredients = (r.ingredients as unknown[]).map((i) => ingredient(ch, i));
+  if (ingredients.every((ing) => isStaple(ch, ing))) ch.staplesOnly = true;
   const bounds = STEP_BOUNDS[ch.req.config.detail];
   if (!Array.isArray(r.steps)) bad("SHAPE");
   const rawSteps = r.steps as unknown[];
@@ -375,6 +424,7 @@ function recipe(ch: Checker, raw: unknown): Recipe {
     return text(ch.sc, stripped, LIMITS.step, LIMITS.stepMin);
   });
   if (new Set(steps.map((s) => fold(s))).size < steps.length) bad("REPETITION");
+  ch.titles.push(foldText(title).words.join(" "));
   let tip: string | undefined;
   if (r.tip !== undefined && r.tip !== null && r.tip !== "") {
     tip = text(ch.sc, r.tip, LIMITS.tip, 0) || undefined;
@@ -410,6 +460,9 @@ function checker(ctx: OutputContext): Checker {
     allergen: allergenGuards(ctx.req.allergens),
     diet,
     pantryUses: 0,
+    staplesOnly: false,
+    emptyDay: false,
+    titles: [],
   };
 }
 
@@ -422,6 +475,17 @@ function checkLanguage(ch: Checker): void {
   const { wantedLetters, letters } = ch.sc;
   if (letters === 0) bad("LANGUAGE");
   if (wantedLetters / letters < 0.6) bad("LANGUAGE");
+}
+
+/**
+ * The quality gate, after every other rule (the language check included), so an answer that also
+ * breaks a content rule is always settled as that content failure, never as a refunded quality one.
+ */
+function gate(ch: Checker): void {
+  if (ch.pantryUses === 0) bad("NO_PANTRY");
+  if (ch.emptyDay) bad("DAY_NO_PANTRY");
+  if (ch.staplesOnly) bad("STAPLES_ONLY");
+  if (new Set(ch.titles).size < ch.titles.length) bad("DUPLICATE_DISH");
 }
 
 function run<T>(f: () => T): OutputCheck<T> {
@@ -437,8 +501,8 @@ export function checkRecipeOutput(raw: unknown, ctx: OutputContext): OutputCheck
   return run(() => {
     const ch = checker(ctx);
     const r = recipe(ch, raw);
-    if (ch.pantryUses === 0) bad("NO_PANTRY");
     checkLanguage(ch);
+    gate(ch);
     return r;
   });
 }
@@ -465,17 +529,40 @@ export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<M
       }
       if (!Array.isArray(day.courses) || day.courses.length !== wanted.length) bad("SHAPE");
       const byCourse = new Map<Course, Recipe>();
+      const usesBefore = ch.pantryUses;
       for (const c of day.courses as unknown[]) {
         if (!isObject(c) || !(wanted as unknown[]).includes(c.course) || byCourse.has(c.course as Course)) bad("SHAPE");
         const r = recipe(ch, (c as Record<string, unknown>).recipe);
         byCourse.set((c as Record<string, unknown>).course as Course, r);
       }
+      // Judged from the ingredients' pantry ids, not from the model's own `uses` list.
+      if (ch.pantryUses === usesBefore) ch.emptyDay = true;
       days.push({ date: dates[i], uses, courses: wanted.map((course) => ({ course, recipe: byCourse.get(course)! })) });
     }
-    if (ch.pantryUses === 0) bad("NO_PANTRY");
     checkLanguage(ch);
+    gate(ch);
     return { days };
   });
+}
+
+/**
+ * Whether the request can pass the quality gate at all, decided before anything is reserved or
+ * any model is called. A pantry item is usable unless its own name breaks the allergens or the
+ * diet (the same guards the answer is checked with, so the model could not use it anyway). A
+ * recipe needs one usable item; a menu needs, on each of its 3 days, one usable item it may be
+ * planned on that day: no date, already past its date at request time (those may go on any day),
+ * or a date on or after that day. Anything thinner is left to the model and its few extras.
+ */
+export function hasEnoughItems(req: GenerateRequest): boolean {
+  const allergen = allergenGuards(req.allergens);
+  const diet = req.config.diet === "none" ? [] : DIET_GUARDS[req.config.diet as DietKey];
+  const usable = req.ingredients.filter((i) => {
+    const name = foldText(i.name);
+    return !violates(name, allergen) && !violates(name, diet);
+  });
+  if (req.kind === "recipe") return usable.length > 0;
+  return menuDates(req.today).every((day) =>
+    usable.some((i) => i.expiresOn === null || i.expiresOn < req.today || i.expiresOn >= day));
 }
 
 export function checkOutput(raw: unknown, ctx: OutputContext): OutputCheck<{ recipe?: Recipe; menu?: Menu }> {

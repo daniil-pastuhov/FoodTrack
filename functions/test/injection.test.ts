@@ -245,7 +245,7 @@ describe("a refused answer is a content failure, settled by the refund rules, ne
     const res = await generateRecipe(deps, caller, request());
     expect(res.status).toBe("DONE");
     expect(res.recipe?.ingredients).toEqual([
-      { amount: "200 g", name: "pasta", fromPantry: true },
+      { amount: "200 g", name: "pasta", fromPantry: true, pantryIndex: 0 },
       { amount: "", name: "salt", fromPantry: false },
     ]);
     expect(JSON.stringify((await generations())[0])).not.toContain("pantryId");

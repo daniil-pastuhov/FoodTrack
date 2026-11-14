@@ -74,6 +74,7 @@ not on `message` (English, for logs).
 | `permission-denied` | `STORE_MISMATCH` | `verifyPurchase`: `store: "play"` from an app other than the Android app, or `store: "appstore"` from an app other than the iOS app (decided by the App Check app id). A client bug; nothing was recorded. |
 | `failed-precondition` | `PURCHASE_ACCOUNT_MISMATCH` | `verifyPurchase`: the store reports a purchase account token (see "Purchase account token") that is neither this account's nor that of an account merged into it. Nothing was recorded: do **not** finish the transaction; it can still be redeemed by the account that bought it. |
 | `failed-precondition` | `ALLERGEN_CONSENT_REQUIRED` | `generateRecipe`: a non-empty `allergens` without `"allergenConsent": true` (see "Allergen consent"). Checked before anything else about the allergens; nothing was read, stored or charged. Show the consent step, then send a **new** request. |
+| `failed-precondition` | `NOT_ENOUGH_ITEMS` | `generateRecipe`: the ticked items cannot make what was asked, decided before anything is reserved; nothing was charged and no model was called. Either no item is left once the allergens and diet are applied (recipe or menu), or, for a menu, some day of the 3 has no item that may be planned on it (an item may go on any day when it has no date or was already past its date on `today`; otherwise only up to its date). Show "Tick a few more items" (for a menu: "...or ask for a single recipe"), keep the form; a changed request needs a new `requestId`. Clients that do not know this reason show their generic "couldn't write it, nothing was taken" message. |
 | `failed-precondition` | `APPLE_NOT_LINKED` | `registerAppleSignIn`: the account has no Sign in with Apple linked. Ignore. |
 | `failed-precondition` | `APPLE_CODE_REJECTED` | `registerAppleSignIn`: Apple refused the code (expired after five minutes, already used, or not from this app). Ignore; the next Apple sign-in tries again. |
 | `unavailable` | `APPLE_UNAVAILABLE` | `registerAppleSignIn`: Apple or the key service could not be reached; nothing was stored. Ignore; the next Apple sign-in tries again. |
@@ -210,14 +211,22 @@ of it in the answer is not caught unless the word lists have it.
   "minutes": 25,
   "servings": 2,
   "difficulty": "easy | medium | ambitious",
-  "ingredients": [{ "amount": "200 g", "name": "pasta", "fromPantry": true }],
+  "ingredients": [{ "amount": "200 g", "name": "pasta", "fromPantry": true, "pantryIndex": 0 },
+                  { "amount": "1", "name": "onion", "fromPantry": false }],
   "steps": ["string", "..."],
   "tip": "string (optional, absent when none)"
 }
 ```
 
 `amount` may be an empty string (e.g. "salt to taste" in `name`). `fromPantry` is decided by the
-server (the model names which pantry item an ingredient is; the server checks it exists), and
+server (the model names which pantry item an ingredient is; the server checks it exists).
+`pantryIndex` (integer, optional) is present exactly when `fromPantry` is true: the 0-based index
+into the request's `ingredients` of the item this ingredient is, so a client can look up that
+item and its `expiresOn` (for example to warn that a dish uses an item past its date). It is
+absent on answers generated before it existed; read it as optional. An ingredient with
+`fromPantry: false` is something the cook supplies: a staple, or one of the few common extras the
+model may add when the pantry items alone do not make a proper dish (it may need buying). Every
+recipe, and every day of a menu, uses at least one pantry item (see "Failures and refunds"), and
 `servings` and `difficulty` are always the requested values. Every string is plain text, at most:
 title 100, summary 400, amount 40, ingredient name 80, step 600, tip 300 characters; 1–40
 ingredients; steps 1–7 (`brief`), 2–10 (`standard`), 2–18 (`stepByStep`). No line breaks, control
@@ -237,6 +246,9 @@ still render every field as plain text (never as markdown or HTML).
   ]
 }
 ```
+
+`uses` is the model's own list of the items a day uses, mapped to their names; it can be
+incomplete. To know exactly which items a dish uses, read the ingredients' `pantryIndex`.
 
 Always exactly 3 days: `today`, `today + 1`, `today + 2`, in order. `courses: 2` gives
 `starter, main`; `courses: 3` gives `starter, main, dessert`, always in that order. A model
@@ -324,7 +336,7 @@ shared prompt includes the allergens in text the person sends elsewhere themselv
 
 #### Failures and refunds
 
-Two kinds of failure, decided by the server; `charged` tells the client which way it went.
+Three kinds of failure, decided by the server; `charged` tells the client which way it went.
 
 - **Technical failures** are refunded (`charged: false`), with one limit. Errors before the model
   produced anything are always refunded, and so is a request whose server invocation died before
@@ -345,6 +357,12 @@ Two kinds of failure, decided by the server; `charged` tells the client which wa
   (at least one once anything was bought; credits the store refunded do not count). The
   allowance does not reset daily, and it moves with the credits on `mergeBalance`. Past it, such
   a failure is charged (`charged: true`), because the model's work was still paid for.
+- **Answers that are not what was paid for** (the quality check: a recipe, or a day of a menu,
+  that uses none of the ticked items; a dish made only of water, oil, salt, pepper, sugar or
+  spices; the same dish twice in a menu) are always refunded (`charged: false`) and do not use
+  the allowance above. They count towards the same daily ceiling as technical failures (3 a UTC
+  day, then `INFRA_FAILURE_LIMIT`). Requests that could never pass this check are refused
+  before anything is reserved (`NOT_ENOUGH_ITEMS`).
 
 Suggested wording: refunded: "Couldn't create it. You weren't charged." Charged: "Couldn't create
 a recipe from these ingredients. It used N credit(s), because the attempt still cost us to run.

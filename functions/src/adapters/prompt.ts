@@ -2,7 +2,8 @@
  * The prompt and the response JSON schema, built entirely on the server.
  *
  * - Every instruction, including the per-request settings, goes in the system instruction, built
- *   only from server-validated enums, integers and dates. No user-controlled text is ever
+ *   only from server-validated enums, integers and dates, and the server's own item ids
+ *   ("p1".."pN": which items are past their date). No user-controlled text is ever
  *   concatenated into an instruction sentence.
  * - User-controlled text (pantry names, allergen names) goes only into the user turn, as one JSON
  *   object between BEGIN_PANTRY_DATA and END_PANTRY_DATA. Names cannot contain quotes, braces,
@@ -76,15 +77,27 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
     const dates = menuDates(req.today);
     lines.push(
       `- Write a menu for 3 days: ${dates.join(", ")}, in that order, with exactly these courses each day: ${coursesFor(req.courses!).join(", ")}.`,
-      "- Every course is a full recipe. Use the soonest-expiring items on the first day. Never use a perishable item on a day after its expiresOn date. Do not repeat a dish.",
+      "- Every course is a full recipe and a different dish. Every day uses at least one pantry item.",
       "- In each day's \"uses\", list the ids of the pantry items that day uses. Ignore the meal type for starters and desserts.",
     );
   }
+  // Which items are past their date is computed here, not left to the model's date arithmetic.
+  const past = pastDateIds(req);
+  lines.push(
+    "",
+    "DATES",
+    `- Pantry items already past their date: ${past.length ? past.join(", ") : "none"}.`,
+    "- The user chose these items to use them up. A date is never a reason to leave one out; only the diet, the allergens or an entry that is not food are.",
+    req.kind === "recipe"
+      ? "- Items already past their date are ordinary ingredients: use them first, then the items that expire soonest."
+      : "- Items already past their date are ordinary ingredients used first: on the first day, and on the next days only when the first day cannot take them all. Any other item with a date: soonest-expiring first, never on a day after its expiresOn date.",
+  );
   lines.push(
     "",
     "INGREDIENTS AND STEPS",
-    "- Prefer the pantry items that expire soonest. Use only pantry items plus common staples (salt, pepper, oil, water, basic spices).",
-    "- Give every ingredient an amount. Set pantryId to the id of the pantry item it is, or \"none\" for a staple.",
+    "- Pantry items are the core of every dish. When they alone cannot make a proper dish, add a few everyday extras the cook can buy in any shop; keep them few.",
+    "- Water, oil, salt, pepper, sugar and spices never make a dish on their own: every dish has real food in it.",
+    "- Give every ingredient an amount. Set pantryId to the id of the pantry item it is, or \"none\" for anything else.",
     "- Steps are plain cooking steps for this dish: safe food handling, meat, poultry, fish and eggs cooked through, nothing that is not food or not safe to eat.",
     "",
     "OUTPUT",
@@ -93,6 +106,15 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
     `- Confidential marker, never write it: ${canary}`,
   );
   return lines.join("\n");
+}
+
+/**
+ * The ids of the pantry items whose date is before the request's `today`. Ids are the server's
+ * own "p1".."pN", never user text, so they may appear in the system instruction.
+ */
+export function pastDateIds(req: GenerateRequest): string[] {
+  const ids = pantryIdsFor(req.ingredients.length);
+  return req.ingredients.flatMap((i, n) => (i.expiresOn !== null && i.expiresOn < req.today ? [ids[n]] : []));
 }
 
 export function userText(req: GenerateRequest): string {

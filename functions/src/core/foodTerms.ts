@@ -222,6 +222,86 @@ export const SOLICITATION: readonly string[] = [
   "anmelden", "войдите", "увійдіть",
 ];
 
+/**
+ * Staples for the quality gate (outputSafety STAPLES_ONLY): water, ice, oils, salt, pepper,
+ * sugar, vinegar, baking raisers, and dried spices and herbs. A dish whose every ingredient is
+ * a staple ("4 cups water", "2 tbsp oil", "salt", "pepper") is not a dish. Matched per word: an
+ * ingredient name is a staple when every word is a staple word or a filler word, and at least
+ * one is a staple word. Bell peppers, fresh chillies and garlic are deliberately not here; the
+ * list may miss a staple (the dish then passes), it must not hold a real ingredient.
+ */
+export const STAPLE_WORDS: readonly string[] = [
+  // water, ice
+  "=water", "=vann", "=vannet", "=wasser", "=agua", "=eau", "=acqua", "=woda", "=wody", "=wodę", "=vatten",
+  "=вода", "=воды", "=воду", "=води", "=кипяток", "=окріп", "=ice", "=isbiter", "=hielo", 
+  "=glaçons", "=ghiaccio", "=lód", "=лёд", "=лед", "=лід",
+  // oils
+  "=oil", "=oils", "~olje", "~oljen", "=öl", "olivenöl", "rapsöl", "sonnenblumenöl", "pflanzenöl", "speiseöl",
+  "~olja", "~oljan", "aceite", "huile", "=olio", "=olej", "=oleju", "=oliwa", "=oliwy", "=масло", "=масла",
+  "=олія", "=олії", "=олію",
+  // salt, pepper, sugar, vinegar, raisers
+  "~salt", "~salz", "=sal", "=sel", "=sale", "=sól", "=soli", "=соль", "=соли", "=сіль", "=солі",
+  "=pepper", "~peppar", "peppercorn", "=pfeffer", "pfefferkörner", "pimienta", "poivre", "=pepe", "pieprz", "=перец", "=перца",
+  "=перець", "=перцю", "=sugar", "=sugars", "~sukker", "~socker", "~zucker", "azúcar", "sucre", "zucchero", "cukier",
+  "cukru", "сахар", "цукор", "цукру", "=melis", "vinegar", "~eddik", "~essig", "vinagre", "vinaigre", "aceto",
+  "=ocet", "=octu", "ättika", "уксус", "оцет", "natron", "bakepulver", "backpulver", "bakpulver",
+  // spices and dried herbs
+  "spice", "seasoning", "krydd", "=gewürz", "=gewürze", "gewürzmischung", "especia", "épice", "spezie", "przypraw", "специ", "приправ",
+  "спеці", "herb", "=urter", "=kräuter", "hierba", "herbes", "=erbe", "zioł", "=травы", "=трави", 
+  "cumin", "spisskummen", "kummin", "kreuzkümmel", "comino", "cumino", "=kmin", "кумин", "зира", "cinnamon",
+  "=kanel", "zimt", "canela", "cannelle", "cannella", "cynamon", "кориц", "nutmeg", "=muskat", "muskatnuss", "=muskatnøtt", "moscada",
+  "muscade", "moscata", "muszkat", "cayenne", "kajenn", "curry", "карри", "каррі",
+  "turmeric", "gurkemeie", "gurkmeja", "kurkuma", "cúrcuma", "curcuma", "куркум", "oregano", "орегано", "thyme",
+  "timian", "thymian", "tomillo", "=thym", "=timo", "tymian", "тимьян", "чабрец", "чебрец", "=bay", "laurbær",
+  "lorbeer", "=laurel", "laurier", "alloro", "laurow", "лавров", "=clove", "=cloves", "nellik", "nelken",
+  "=clavo", "=clavos", "girofle", "goździk", "гвоздик", "cardamom", "kardemomme", "kardamom", "cardamome",
+  "кардамон", "allspice", "allehånde", "=vanilla", "=vanilje", "=vanilj", "=vanille", "=vaniglia", "=wanilia", "=ваниль",
+  "vanillezucker", "vaniljesukker", "vaniljsocker", "=soda",
+];
+
+/** Words that may sit beside a staple word without making it a real ingredient. Exact words. */
+export const STAPLE_FILLERS: readonly string[] = [
+  // en
+  "of", "to", "taste", "for", "a", "an", "the", "pinch", "dash", "some", "and", "or", "as", "needed", "optional",
+  "black", "white", "ground", "freshly", "fresh", "sea", "kosher", "coarse", "fine", "flaky", "table", "cold",
+  "warm", "hot", "boiling", "lukewarm", "iced", "extra", "virgin", "light", "neutral", "cooking", "frying",
+  "olive", "vegetable", "sunflower", "rapeseed", "canola", "granulated", "caster", "brown", "icing", "powdered",
+  "dried", "crushed", "flakes", "smoked", "sweet", "mixed", "whole", "leaf", "leaves", "powder", "seeds", "pods",
+  "sticks", "baking", "spray", "splash", "little", "cubes", "cube", "filtered", "cup", "cups", "tsp", "tbsp",
+  "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ml", "dl", "l", "g", "litre", "liter", "ss", "ts",
+  // nb, sv
+  "av", "til", "etter", "smak", "litt", "en", "et", "og", "eller", "sort", "svart", "hvit", "malt", "nykvernet",
+  "kvernet", "grovt", "fint", "kaldt", "varmt", "kokende", "lunkent", "nøytral", "tørket", "knust", "røkt",
+  "søt", "hel", "blad", "pulver", "frø", "till", "efter", "lite", "ett", "och", "vit", "mald", "nymald", "kallt",
+  "kokande", "ljummet", "torkad", "torkade", "krossad", "rökt", "frön", "flingsalt",
+  // de
+  "von", "zum", "nach", "geschmack", "etwas", "ein", "eine", "und", "oder", "schwarzer", "schwarz", "weißer",
+  "weiß", "gemahlen", "gemahlener", "frisch", "grob", "fein", "kaltes", "kalt", "warmes", "heißes", "heiß",
+  "kochendes", "neutrales", "getrocknet", "getrocknete", "geräuchert", "süß", "edelsüß", "ganz", "blätter",
+  "blatt", "samen", "prise",
+  // es, fr, it
+  "de", "al", "gusto", "para", "un", "una", "y", "o", "negra", "blanca", "molida", "recién", "grueso", "gruesa",
+  "fina", "fría", "caliente", "tibia", "hirviendo", "oliva", "virgen", "girasol", "vegetal", "seco", "seca",
+  "secas", "ahumado", "dulce", "entera", "hojas", "hoja", "en", "polvo", "semillas", "pizca", "moreno", "glas",
+  "nuez", "du", "des", "à", "au", "goût", "pour", "et", "ou", "noir", "blanc", "moulu", "frais", "gros", "fin",
+  "fleur", "froide", "froid", "chaude", "chaud", "bouillante", "tiède", "neutre", "tournesol", "colza", "séché",
+  "séchées", "fumé", "doux", "entier", "feuilles", "feuille", "poudre", "graines", "pincée", "noix", "clou",
+  "clous", "di", "d", "q", "b", "qb", "per", "e", "nero", "bianco", "macinato", "fresco", "grosso", "fino",
+  "fredda", "calda", "bollente", "tiepida", "extravergine", "vergine", "semi", "girasole", "secco", "secche",
+  "affumicata", "intero", "foglie", "foglia", "in", "polvere", "pizzico", "noce", "chiodi", "garofano",
+  // pl
+  "do", "smaku", "dla", "i", "lub", "czarny", "biały", "mielony", "świeżo", "gruba", "drobna", "zimna",
+  "ciepła", "gorąca", "wrząca", "z", "oliwek", "rzepakowy", "roślinny", "słonecznikowy", "suszony", "suszone",
+  "wędzona", "słodka", "cała", "liście", "liść", "w", "proszku", "nasiona", "szczypta", "morska", "gałka",
+  // ru, uk
+  "по", "вкусу", "для", "и", "или", "черный", "чёрный", "черного", "молотый", "молотого", "молотая",
+  "свежемолотый", "белый", "крупная", "мелкая", "морская", "холодная", "горячая", "теплая", "тёплая",
+  "растительное", "оливковое", "подсолнечное", "сушеный", "сушёный", "копченая", "сладкая", "целый", "лист",
+  "листья", "порошок", "щепотка", "семена", "за", "смаком", "і", "й", "або", "чорний", "чорного", "мелений",
+  "свіжомелений", "білий", "крупна", "дрібна", "морська", "холодна", "гаряча", "тепла", "рослинна", "оливкова",
+  "соняшникова", "сушений", "копчена", "солодка", "цілий", "листя", "дрібка", "насіння",
+];
+
 export interface CompiledTerm {
   kind: "prefix" | "exact" | "substring" | "suffix";
   text: string;

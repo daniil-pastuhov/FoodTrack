@@ -56,6 +56,11 @@ export interface RecipeIngredient {
   amount: string;
   name: string;
   fromPantry: boolean;
+  /**
+   * Present exactly when fromPantry: the 0-based index of the request's `ingredients` entry this
+   * ingredient is, so a client can find that item and its date. Absent in answers saved before it.
+   */
+  pantryIndex?: number;
 }
 
 export interface Recipe {
@@ -147,7 +152,8 @@ export type ErrorReason =
   | "ALLERGEN_CONSENT_REQUIRED"
   | "APPLE_NOT_LINKED"
   | "APPLE_CODE_REJECTED"
-  | "APPLE_UNAVAILABLE";
+  | "APPLE_UNAVAILABLE"
+  | "NOT_ENOUGH_ITEMS";
 
 export function fail(
   code: ConstructorParameters<typeof HttpsError>[0],
