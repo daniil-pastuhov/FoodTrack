@@ -1,19 +1,20 @@
 #!/bin/zsh
 # Takes the raw App Store screenshots: builds the debug app, loads a demo pantry in each of the
-# app's languages and captures every tab on a 6.9" iPhone simulator (1320x2868, the size App
-# Store Connect requires).
+# app's languages and captures, in this order, Home, a scan that has read a product and its
+# printed date, a written recipe, a three-day menu, the shopping list and Settings on a 6.9"
+# iPhone simulator (1320x2868, the size App Store Connect requires). scripts/android_screenshots.sh
+# takes the same six for Google Play.
 #
 #   scripts/ios_screenshots.sh [output-dir]      # default: build/ios-screenshots
 #
-# The demo data is loaded through the debug-only -demoBackup / -demoTab launch arguments (see
-# RootTabView.applyScreenshotLaunchArguments), so release builds are unaffected. Dates in the demo
-# pantry (scripts/demo_backup.py) are relative to today, so the "expires today / tomorrow" badges
-# always read right. SETTLE=<seconds> waits longer before each capture on a slow machine. It sets
-# the simulator's own region to en_US (with a reboot, the first time), so use a simulator kept for
-# this.
-# The Recipe shot is the tab itself, as on Android (demoTab recipe). For a written recipe instead,
-# RootTabView also takes -demoRoute recipeResult (or recipeMenu, buyRecipes) and
-# -demoRecipeCredits <n>; Android has no such arguments, so the two sets would differ.
+# The demo data is loaded through the debug-only -demoBackup / -demoTab / -demoRoute launch
+# arguments (see RootTabView.applyScreenshotLaunchArguments), so release builds are unaffected.
+# Dates in the demo pantry (scripts/demo_backup.py) are relative to today, so the "expires today /
+# tomorrow" badges always read right. The scan shows a picture drawn by scripts/demo_scan_image.py
+# in place of the camera, which the simulator lacks; the recipe and the menu are
+# scripts/demo_recipes.py's. SETTLE=<seconds> waits longer before each capture on a slow machine.
+# It sets the simulator's own region to en_US (with a reboot, the first time), so use a simulator
+# kept for this.
 set -euo pipefail
 
 ROOT=${0:A:h:h}
@@ -64,6 +65,8 @@ xcodebuild -quiet -project "$ROOT/iosApp/FoodTracker.xcodeproj" -scheme FoodTrac
   -configuration Debug -destination "id=$UDID" -derivedDataPath "$DERIVED" build
 xcrun simctl install "$UDID" "$DERIVED/Build/Products/Debug-iphonesimulator/FoodTracker.app"
 DATA=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data)
+# The scan demo shows a picture rather than the camera, but the scanner asks for the camera first.
+xcrun simctl privacy "$UDID" grant camera "$BUNDLE_ID"
 mkdir -p "$DATA/tmp"
 
 # A fresh simulator's first few launches can stay blank white for a while (the app waits on
@@ -82,16 +85,30 @@ done
 # Each language with its listing's region, so dates read "22 Nov" and times "09:00" as in the
 # U.K., Russia and Norway, like the Google Play set.
 typeset -A REGIONS=(en en_GB ru ru_RU nb nb_NO)
+# The date printed on the scanned pack, and so the one the scan reads.
+SCAN_DATE=$(python3 -c 'import datetime; print(datetime.date.today() + datetime.timedelta(days=12))')
+SCAN_BARCODE=$(cd "$ROOT/scripts" && python3 -c 'from demo_scan_image import BARCODE; print(BARCODE)')
 for LANG_CODE in en ru nb; do
   mkdir -p "$OUT/$LANG_CODE"
-  python3 "$ROOT/scripts/demo_backup.py" "$LANG_CODE" "$DATA/tmp/demo.json"
+  rm -f "$OUT/$LANG_CODE"/*.png(N)
+  python3 "$ROOT/scripts/demo_scan_image.py" "$LANG_CODE" "$SCAN_DATE" "$DATA/tmp/scan.png" "$DATA/tmp/scan-thumb.png"
+  python3 "$ROOT/scripts/demo_backup.py" "$LANG_CODE" "$DATA/tmp/demo.json" "file://$DATA/tmp/scan-thumb.png"
+  python3 "$ROOT/scripts/demo_recipes.py" "$LANG_CODE" "$DATA/tmp/recipe.json" "$DATA/tmp/menu.json"
+  typeset -A SHOTS=(
+    home "-demoTab home"
+    scan "-demoRoute scan -demoScanImage $DATA/tmp/scan.png -demoScanBarcode $SCAN_BARCODE -demoScanDate $SCAN_DATE"
+    recipe "-demoRoute recipeResult -demoRecipe $DATA/tmp/recipe.json"
+    menu "-demoRoute recipeMenu -demoRecipe $DATA/tmp/menu.json"
+    shopping "-demoTab shopping"
+    settings "-demoTab settings"
+  )
   N=1
-  for TAB in home recipe shopping settings; do
+  for SHOT in home scan recipe menu shopping settings; do
     xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" \
-      -demoBackup "$DATA/tmp/demo.json" -demoTab "$TAB" \
+      -demoBackup "$DATA/tmp/demo.json" ${=SHOTS[$SHOT]} \
       -AppleLanguages "($LANG_CODE)" -AppleLocale "${REGIONS[$LANG_CODE]}" >/dev/null
     sleep ${SETTLE:-4}
-    xcrun simctl io "$UDID" screenshot ${SCREEN:+--display="$SCREEN"} "$OUT/$LANG_CODE/$N-$TAB.png" >/dev/null 2>&1
+    xcrun simctl io "$UDID" screenshot ${SCREEN:+--display="$SCREEN"} "$OUT/$LANG_CODE/$N-$SHOT.png" >/dev/null 2>&1
     N=$((N + 1))
   done
   echo "$LANG_CODE: $(ls "$OUT/$LANG_CODE" | wc -l | tr -d ' ') screenshots"

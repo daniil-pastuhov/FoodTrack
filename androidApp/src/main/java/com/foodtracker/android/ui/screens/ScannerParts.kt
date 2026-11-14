@@ -318,6 +318,7 @@ private fun AimArea(frame: Pair<Dp, Dp>?, hint: String?, modifier: Modifier = Mo
                     .weight(1f, fill = false)
                     .width(width)
                     .height(height)
+                    .scanDemoBackdrop()
                     .aimingFrame()
             )
         }

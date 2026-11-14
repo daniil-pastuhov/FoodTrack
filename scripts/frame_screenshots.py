@@ -32,29 +32,22 @@ PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO"}
 PLAY_SET = "phone-screenshots"
 PLAY_SIZE = (1080, 1920)
 
-# One caption per tab, in screenshot order (home, recipe, shopping, settings). The Recipe shot is
-# the tab as everyone sees it, with the soonest items ticked and a free route as the button, so its
-# caption promises a recipe from them, not a free one. "\n" is where a
-# caption breaks on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
+# One caption per screenshot, in order: Home, the scan, a recipe, the three-day menu, the shopping
+# list and Settings. Both stores get the same six. The recipe and the menu are what the routes
+# write, so their captions say what they do, not what they cost. "\n" is where a caption breaks
+# on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
 CAPTIONS = {
-    "en": ["Know what's\nabout to expire", "A recipe for what\nneeds using first",
-           "Used it up?\nIt's on your list", "Reminders\nwhen it suits you"],
-    "ru": ["Видно, что скоро\nиспортится", "Рецепты из того,\nчто пора съесть",
-           "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
-    "nb": ["Se hva som\nsnart går ut", "Oppskrift på det\nsom må brukes først",
-           "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
+    "en": ["Know what's\nabout to expire", "Scan the pack,\nthe date is read", "Cook what needs\nusing first",
+           "A three-day menu\naround what you have", "Used it up?\nIt's on your list",
+           "Reminders\nwhen it suits you"],
+    "ru": ["Видно, что скоро\nиспортится", "Наведите камеру —\nсрок распознан", "Готовьте из того,\nчто пора съесть",
+           "Меню на три дня\nпод ваши продукты", "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
+    "nb": ["Se hva som\nsnart går ut", "Skann pakken,\ndatoen leses av", "Lag mat av det\nsom må brukes først",
+           "Meny for tre dager\nrundt det du har", "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
 }
-# Google Play has a fifth screenshot, an item's Edit screen, fourth in order.
-EDIT_CAPTIONS = {
-    "en": "Date and storage\nin two taps",
-    "ru": "Срок и место —\nв два касания",
-    "nb": "Dato og plassering\nmed to trykk",
-}
-
-
-def play_captions(lang):
-    captions = CAPTIONS[lang]
-    return captions[:3] + [EDIT_CAPTIONS[lang]] + captions[3:]
+# App Store Connect keeps the two iPhone Duo sets in one group of at most 10 images per language,
+# so each has five: the shots above without the last, Settings.
+SHOT_LIMITS = {"duo-inner-screenshots": 5, "duo-outer-screenshots": 5}
 
 # The background runs from the top-left corner towards the bottom, through Larder's greens
 # (green.600, 700, 800 and 900 in tokens.json).
@@ -156,11 +149,17 @@ def main():
     raw_dir, set_name = Path(sys.argv[1]), sys.argv[2]
     play = set_name == PLAY_SET
     for lang, folder in (PLAY_FOLDERS if play else LISTING_FOLDERS).items():
-        captions = play_captions(lang) if play else CAPTIONS[lang]
+        captions = CAPTIONS[lang]
         raws = sorted((raw_dir / lang).glob("[0-9]-*.png"))
         if len(raws) != len(captions):
             sys.exit(f"expected {len(captions)} screenshots in {raw_dir / lang}, found {len(raws)}")
+        limit = SHOT_LIMITS.get(set_name, len(captions))
+        captions, raws = captions[:limit], raws[:limit]
         store = "google-play" if play else "app-store"
+        # Last run's shots past the new count would otherwise stay behind in the set.
+        for stale in (ROOT / "store-listing" / store / folder / set_name).glob("[0-9].png"):
+            if int(stale.stem) > len(captions):
+                stale.unlink()
         for n, (raw, caption) in enumerate(zip(raws, captions), start=1):
             out = ROOT / "store-listing" / store / folder / set_name / f"{n}.png"
             frame(raw, caption, out, PLAY_SIZE if play else None)
