@@ -95,7 +95,10 @@ async function authUser(deps: Deps, uid: string): Promise<UserRecord | null> {
   }
 }
 
-/** Every Auth user whose own email or one of whose provider entries' email is `email` (case-insensitive). */
+/**
+ * The Auth user whose own email is `email`; when none has it, every Auth user with a provider
+ * entry of that email (case-insensitive).
+ */
 async function usersByEmail(deps: Deps, email: string): Promise<Match[]> {
   try {
     const u = await deps.auth.getUserByEmail(email);

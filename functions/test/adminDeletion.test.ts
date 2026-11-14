@@ -11,7 +11,8 @@ import {
   findAccounts,
   type AdminStoreLookups,
 } from "../src/admin/accountRequests";
-import { parseAdminArgs, runAdmin } from "../src/admin/cli";
+import { buildEnv, parseAdminArgs, runAdmin } from "../src/admin/cli";
+import { emulatorStoreLookups } from "../src/admin/stores";
 import { mergeBalance } from "../src/core/account";
 import { registerAppleSignIn } from "../src/core/appleToken";
 import { generateRecipe } from "../src/core/generation";
@@ -309,6 +310,14 @@ describe("command line", () => {
       command: "delete", lookup: { kind: "uid", value: "a" }, kind: "play-order", project: "demo-foodtracker", apply: false,
     });
     expect(parseAdminArgs(["find", "--email", "x@example.com", "--project", "bestbefore-f9ee1"]).project).toBe("bestbefore-f9ee1");
+  });
+
+  test("a live project is refused while the emulator hosts are set; a demo- project is the emulators", () => {
+    expect(process.env.FIRESTORE_EMULATOR_HOST).toBeTruthy();
+    expect(() => buildEnv("bestbefore-f9ee1")).toThrow(/live project but emulator hosts are set/);
+    expect(() => buildEnv("some-other-project")).toThrow(AdminRefusal);
+    const env = buildEnv("demo-foodtracker");
+    expect(env.stores).toBe(emulatorStoreLookups);
   });
 
   test("find and delete print uids and counts, never the email typed", async () => {
