@@ -98,9 +98,10 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       `QU395A4DS3`, issuer `6a34ffeb-1221-45c4-964b-e017e0d01ced`; a production App Store Server API
       lookup of a non-existent transaction id authenticated (answered "not found", no 401).
 - [ ] **Sandbox testers** (Users and Access > Sandbox; the API can't create them).
-- [ ] Upload the updated **review screenshot** from `store-listing/app-store/iap-review/` to each
+- [x] Upload the updated **review screenshot** from `store-listing/app-store/iap-review/` to each
       of the three in-app purchases. **(agent)**: App Store Connect API
-      `inAppPurchaseAppStoreReviewScreenshots`.
+      `inAppPurchaseAppStoreReviewScreenshots`. Done 2026-11-14 (replaced on all
+      three, checksum read back).
 - [ ] Enrol in the **App Store Small Business Program** (15 % commission; web form, owner only).
       The spend ceilings assume a 15 % store fee (`netMicroUsdPerCredit`).
 
@@ -217,6 +218,8 @@ binding exist on the live project (created and read back 2026-11-14).
       Done 2026-11-14 with `generationEnabled: false` and `allowSandbox: false`, so nothing can
       be generated yet. Set `generationEnabled` to `true` (or delete the field) only when the
       steps before the smoke test are done.
+      **2026-11-14: the owner turned `generationEnabled` on** (`allowSandbox` stays `false`), so a
+      real purchase now gets recipes written by the real model. To pause again, set it to `false`.
 
 ### 8. App Store Server Notifications **(agent)**
 
@@ -271,9 +274,10 @@ binding exist on the live project (created and read back 2026-11-14).
       can be uploaded as CSV through the Play Developer API **(agent)**. Play Console > App
       content: in-app purchases, and account deletion (Recipe tab > Recipe settings > Account >
       Delete account). **Check** whether Play also wants a web page for deletion requests.
-- [ ] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
+- [x] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
-      `scripts/frame_screenshots.py` (store-listing/app-store/README.md).
+      `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for
+      every set, iPhone Duo inner included; none is uploaded to the stores yet.
 - [x] Android "Sign in with Apple": **dropped** (owner's decision, 2026-11-14). Apple's guidelines
       allow a custom button on Android only with Apple's logo artwork, which can't be
       redistributed in this public repository, and allow no button without a logo, so Android
