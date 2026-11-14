@@ -196,8 +196,21 @@ export async function deleteAccount(
   }
 
   const freshCode = typeof code === "string" && code.length > 0 ? code : undefined;
+  return eraseAccount(deps, caller.uid, caller.providers, freshCode);
+}
 
-  const uRef = userRef(deps.db, caller.uid);
+/**
+ * The deletion itself, after deleteAccount's checks of the caller (also the entry point of the
+ * owner's admin command, src/admin, which checks the person by email instead). `providers`: the
+ * sign-in providers linked to the account (the ID token's, or the Auth record's).
+ */
+export async function eraseAccount(
+  deps: Deps,
+  uid: string,
+  providers: string[],
+  freshCode: string | undefined,
+): Promise<{ deleted: true; balance: 0; appleLinkRemoved?: boolean }> {
+  const uRef = userRef(deps.db, uid);
   const { mergedAway, storedApple } = await deps.db.runTransaction(async (tx) => {
     const user = (await tx.get(uRef)).data();
     const storedApple = user?.appleToken;
@@ -228,26 +241,26 @@ export async function deleteAccount(
     }, { merge: true });
     return { mergedAway: false, storedApple };
   });
-  const carriesApple = caller.providers.includes(APPLE_PROVIDER) || storedApple !== undefined || freshCode !== undefined;
+  const carriesApple = providers.includes(APPLE_PROVIDER) || storedApple !== undefined || freshCode !== undefined;
   if (mergedAway) {
-    const removed = await removeAppleLink(deps, caller.uid, freshCode, storedApple);
-    await deps.auth.deleteUser(caller.uid).catch(() => undefined);
+    const removed = await removeAppleLink(deps, uid, freshCode, storedApple);
+    await deps.auth.deleteUser(uid).catch(() => undefined);
     return { deleted: true, balance: 0, ...(carriesApple ? { appleLinkRemoved: removed } : {}) };
   }
 
-  const purchases = await deps.db.collection("purchases").where("uid", "==", caller.uid).get();
+  const purchases = await deps.db.collection("purchases").where("uid", "==", uid).get();
   for (let i = 0; i < purchases.docs.length; i += 400) {
     const batch = deps.db.batch();
     // `formerUid` keeps the ledger: a refund after deletion is still attributed (refund after use,
     // consumption answers), while the null `uid` keeps the purchase from being redeemed again.
-    for (const d of purchases.docs.slice(i, i + 400)) batch.update(d.ref, { uid: null, formerUid: caller.uid });
+    for (const d of purchases.docs.slice(i, i + 400)) batch.update(d.ref, { uid: null, formerUid: uid });
     await batch.commit();
   }
   await deps.db.recursiveDelete(uRef.collection("generations"));
 
-  const removed = carriesApple ? await removeAppleLink(deps, caller.uid, freshCode, storedApple) : false;
+  const removed = carriesApple ? await removeAppleLink(deps, uid, freshCode, storedApple) : false;
   try {
-    await deps.auth.deleteUser(caller.uid);
+    await deps.auth.deleteUser(uid);
   } catch (e) {
     if ((e as { code?: string }).code !== "auth/user-not-found") throw e;
   }

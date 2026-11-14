@@ -26,6 +26,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
     "test": "firebase emulators:exec --only auth,firestore --project demo-foodtracker 'vitest run'",
+    "admin": "npm run build --silent && node lib/admin/cli.js",
     "serve": "npm run build && firebase emulators:start --only functions,auth,firestore,pubsub --project demo-foodtracker"
   }
 }
