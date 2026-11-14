@@ -100,13 +100,32 @@ fun shellClearance(
 ): ShellClearance {
     val pillTop = bottomInset + ShellGap + pillHeight
     val stackedScan = !expanded && scanHeight > 0.dp
-    val overlayTop = if (stackedScan) pillTop + ShellGap + scanHeight else pillTop
+    val overlayTop = when {
+        stackedScan -> pillTop + ShellGap + scanHeight
+        // Level with the pill, and as tall as the taller of the two (a pinned action at a large
+        // font scale can outgrow the pill).
+        expanded -> bottomInset + ShellGap + maxOf(pillHeight, scanHeight)
+        else -> pillTop
+    }
     return ShellClearance(
         content = overlayTop + ContentGap,
         scan = if (expanded) bottomInset + ShellGap else pillTop + ShellGap,
         snackbar = overlayTop + ShellGap
     )
 }
+
+/** The gap between a pinned action and the window's end edge on expanded windows. */
+val PinnedActionEndGap = LarderSpace.s6
+
+/**
+ * Whether a pinned action [actionWidth] wide (without [PinnedActionEndGap]) fits level with the
+ * centred pill, to its right with [ShellGap] to spare. When it does, it sits there, as Scan does
+ * on expanded Home, and content only has to clear the pill's height; when it doesn't (a narrow
+ * expanded window), it stacks above the pill. On a tablet the stacked action used to cover the
+ * end of a two-column form at rest ("Copy prompt" and the hint under it).
+ */
+fun pinnedActionFitsBesidePill(windowWidth: Dp, pillWidth: Dp, actionWidth: Dp): Boolean =
+    actionWidth > 0.dp && actionWidth + PinnedActionEndGap + ShellGap <= (windowWidth - pillWidth) / 2
 
 /**
  * Lets a tab screen ask for the shell's floating parts to step aside. Requests are counted, so

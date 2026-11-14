@@ -547,7 +547,7 @@ class RecipePaidTest {
         val request = backend.generated.single()
         assertEquals(WireKind.RECIPE, request.kind)
         assertNull(request.courses)
-        assertEquals(listOf("Bread", "Spinach", "Greek yoghurt 2"), request.ingredients.map { it.name })
+        assertEquals(listOf("Bread", "Spinach", "Greek yoghurt 2%"), request.ingredients.map { it.name })
         assertEquals("2026-11-03", request.ingredients.first().expiresOn)
         assertEquals(2, request.ingredients.first().quantity)
         assertEquals(listOf("peanuts"), request.allergens)
@@ -1305,12 +1305,12 @@ class RecipePaidTest {
     }
 
     @Test
-    fun wireNamesKeepLettersDigitsSpacesAndHyphensOnly() {
-        assertEquals("Ben Jerry s", cleanWireName("Ben & Jerry's"))
+    fun wireNamesKeepWhatTheServerAcceptsAndNothingElse() {
+        assertEquals("Ben & Jerry's", cleanWireName("Ben & Jerry's"))
         assertEquals("Хлеб на закваске", cleanWireName("  Хлеб на закваске! "))
         assertEquals("semi-skimmed", cleanWireName("semi-skimmed"))
         assertNull(cleanWireName("🍞 ,."))
-        assertEquals(40, cleanWireName("a".repeat(60))!!.length)
+        assertEquals("abcdefghijklmnopqrstuvwxyzab", cleanWireName("abcdefghijklmnopqrstuvwxyzab cdefghijklmnopqrstuvwxyz"), "cut at a word end")
     }
 
     // --- Final contract: merge -------------------------------------------------------------
@@ -1617,11 +1617,112 @@ class RecipePaidTest {
     }
 
     @Test
-    fun wireNamesKeepCombiningMarksAndNumbersOfAnyScript() {
-        assertEquals("किवी", cleanWireName("किवी"))
-        assertEquals("½ lemon", cleanWireName("½ lemon"))
-        assertEquals("Ben Jerry s", cleanWireName("Ben & Jerry's"))
+    fun wireNamesDropOtherScriptsAndFoldFractions() {
+        assertNull(cleanWireName("किवी"), "Devanagari isn't one of the server's scripts")
+        assertEquals("1/2 lemon", cleanWireName("½ lemon"))
         assertNull(cleanWireName("🍋"))
+    }
+
+    // --- Refused names -------------------------------------------------------------------------
+
+    private fun refusedIngredient(index: Int, rule: String = "INSTRUCTION") =
+        ServerResult.Err(ServerError.INVALID_REQUEST, RefusedName(RefusedList.INGREDIENT, index, rule))
+
+    @Test
+    fun aRefusedIngredientIsLeftOutOnceWithANewIdAndThePersonIsTold() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(1)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0", "req1"), backend.generated.map { it.requestId }, "a changed request needs a new id")
+        assertEquals(listOf("Bread", "Greek yoghurt 2%"), backend.generated[1].ingredients.map { it.name })
+        assertEquals(backend.generated[0].allergens, backend.generated[1].allergens)
+        val event = assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertEquals(listOf("Spinach"), event.leftOut)
+        assertEquals(4, holder.uiState.value.paid.balance)
+        assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun aSecondRefusalIsNotRetriedAgain() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(0)
+        backend.generateReplies += refusedIngredient(0)
+        holder.generateOnServer()
+
+        assertEquals(2, backend.generated.size, "one retry, never a loop")
+        assertEquals(RecipeEvent.IngredientNotSent("Spinach"), holder.uiState.value.event)
+        assertNull(holder.uiState.value.paid.writing)
+        assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun aRefusedNameIsLeftOutOfLaterRequestsWithoutAskingAgain() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(0)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        holder.consumeEvent()
+
+        backend.generateReplies += done(3)
+        holder.generateOnServer()
+        assertEquals(3, backend.generated.size)
+        assertEquals(listOf("Spinach", "Greek yoghurt 2%"), backend.generated[2].ingredients.map { it.name })
+        assertEquals(listOf("Bread"), assertIs<RecipeEvent.Written>(holder.uiState.value.event).leftOut)
+    }
+
+    @Test
+    fun theOnlyItemRefusedIsNotRetried() = runUnconfined {
+        withBalance(5)
+        pantry.value = pantry.value.copy(allRows = listOf(row("bread", -1)))
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(0)
+        holder.generateOnServer()
+
+        assertEquals(1, backend.generated.size)
+        assertEquals(RecipeEvent.IngredientNotSent("Bread"), holder.uiState.value.event)
+    }
+
+    @Test
+    fun aRefusedAllergenIsNeverDroppedAndStopsTheRequest() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST, RefusedName(RefusedList.ALLERGEN, 0, "INSTRUCTION"))
+        holder.generateOnServer()
+
+        assertEquals(1, backend.generated.size, "never sent again without it")
+        assertEquals(RecipeEvent.AllergenNotSent("peanuts"), holder.uiState.value.event)
+        assertNull(holder.uiState.value.paid.writing)
+        assertEquals(5, holder.uiState.value.paid.balance)
+        assertNull(paidRepository.get().pendingGeneration)
+
+        holder.consumeEvent()
+        holder.generateOnServer()
+        assertEquals(1, backend.generated.size, "known refused: not sent at all")
+        assertEquals(RecipeEvent.AllergenNotSent("peanuts"), holder.uiState.value.event)
+    }
+
+    @Test
+    fun anInvalidRequestWithoutAFieldIsNotRetried() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        holder.generateOnServer()
+        assertEquals(1, backend.generated.size)
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+    }
+
+    @Test
+    fun refusedFieldsAreReadFromTheContractsDetails() {
+        assertEquals(RefusedName(RefusedList.INGREDIENT, 3, "SCRIPT"), refusedNameOf("ingredients[3].name", "SCRIPT"))
+        assertEquals(RefusedName(RefusedList.ALLERGEN, 0, "INSTRUCTION"), refusedNameOf("allergens[0]", "INSTRUCTION"))
+        assertNull(refusedNameOf("config.servings", null))
+        assertNull(refusedNameOf(null, "SCRIPT"))
+        assertNull(refusedNameOf("ingredients[x].name", "SCRIPT"))
     }
 
     @Test

@@ -7,6 +7,8 @@ import com.foodtracker.recipe.GenerateRequest
 import com.foodtracker.recipe.MergeReply
 import com.foodtracker.recipe.RecipeBackend
 import com.foodtracker.recipe.RecipeJson
+import com.foodtracker.recipe.RefusedName
+import com.foodtracker.recipe.refusedNameOf
 import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
 import com.foodtracker.recipe.VerifyReply
@@ -184,13 +186,20 @@ private suspend fun callOnce(
 } catch (e: CancellationException) {
     throw e
 } catch (e: FirebaseFunctionsException) {
-    ServerResult.Err(e.toServerError())
+    val error = e.toServerError()
+    ServerResult.Err(error, if (error == ServerError.INVALID_REQUEST) refusedNameFromDetails(e.details) else null)
 } catch (e: FirebaseNetworkException) {
     ServerResult.Err(ServerError.OFFLINE)
 } catch (e: IOException) {
     ServerResult.Err(ServerError.OFFLINE)
 } catch (e: Exception) {
     ServerResult.Err(ServerError.INTERNAL)
+}
+
+/** The refused pantry or allergen name an INVALID_REQUEST's `details` (`field`, `rule`) points at. */
+internal fun refusedNameFromDetails(details: Any?): RefusedName? {
+    val map = details as? Map<*, *> ?: return null
+    return refusedNameOf(map["field"] as? String, map["rule"] as? String)
 }
 
 internal fun FirebaseFunctionsException.toServerError(): ServerError =

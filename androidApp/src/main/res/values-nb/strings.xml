@@ -868,6 +868,9 @@
     <string name="recipe_failed_limit_today">Det er grensen for i dag. Prøv igjen i morgen. Ingen oppskrifter ble trukket.</string>
     <string name="recipe_failed_trouble_today">Vi har problemer med å skrive oppskrifter akkurat nå. Prøv igjen i morgen. Ingen oppskrifter ble trukket.</string>
     <string name="recipe_failed_server_later">Fikk ikke skrevet den nå. Prøv igjen senere. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_left_out">Skrevet uten «%1$s»: det navnet kunne ikke sendes.</string>
+    <string name="recipe_ingredient_not_sent">«%1$s» kunne ikke sendes. Fjern haken eller gi varen et nytt navn, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_allergen_not_sent">Allergenet ditt «%1$s» kunne ikke sendes, så ingenting ble skrevet. Gi det et nytt navn under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
     <plurals name="recipe_refused">
         <item quantity="one">Kunne ikke lage en oppskrift av disse varene. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
         <item quantity="other">Kunne ikke lage en oppskrift av disse varene. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>

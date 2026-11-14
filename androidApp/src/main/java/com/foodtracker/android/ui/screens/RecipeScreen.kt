@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -58,6 +58,7 @@ import com.foodtracker.android.ui.design.LarderSpinner
 import com.foodtracker.android.ui.design.LedeHeader
 import com.foodtracker.android.ui.design.PantryRow as PantryRowView
 import com.foodtracker.android.ui.design.PinnedAction
+import com.foodtracker.android.ui.design.PinnedActionEndGap
 import com.foodtracker.android.ui.design.SectionHeader
 import com.foodtracker.android.ui.design.categoryIcon
 import com.foodtracker.android.ui.design.expiryStatusLabel
@@ -104,15 +105,16 @@ internal fun recipePrimary(state: RecipeUiState): RecipePrimary = when {
 
 /**
  * The Recipe tab: the soonest items ticked, a short form, and the three routes. The primary
- * action is pinned where Scan sits on Home; the root measures it through [onPinnedActionHeight]
- * so content, the pill and snackbars clear it.
+ * action is pinned where Scan sits on Home; the root measures it through [onPinnedActionSize],
+ * places it ([pinnedActionBottom]: above the pill, or level with it on a wide window) and pads
+ * content and snackbars to clear it.
  */
 @Composable
 fun RecipeScreen(
     stateHolder: RecipeStateHolder,
     bottomOverlayClearance: Dp,
     pinnedActionBottom: Dp,
-    onPinnedActionHeight: (Int) -> Unit
+    onPinnedActionSize: (IntSize) -> Unit
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -135,9 +137,26 @@ fun RecipeScreen(
                 stateHolder.consumeEvent()
                 val saved = stateHolder.savedRecipe(event.savedId)
                 navigator.navigate(LarderRoute.RecipeResult(event.savedId))
-                // T3, and the moment the count drops.
-                event.recipesLeft?.let { left ->
-                    if (saved != null) snackbars.show(resources.getQuantityString(R.plurals.recipe_saved_left, left, left), null, null)
+                if (event.leftOut.isNotEmpty()) {
+                    // What it was written without matters more than the count, which the
+                    // account card shows anyway.
+                    snackbars.show(resources.getString(R.string.recipe_left_out, event.leftOut.joinToString(", ")), null, null)
+                } else {
+                    // T3, and the moment the count drops.
+                    event.recipesLeft?.let { left ->
+                        if (saved != null) snackbars.show(resources.getQuantityString(R.plurals.recipe_saved_left, left, left), null, null)
+                    }
+                }
+            }
+            is RecipeEvent.IngredientNotSent -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_ingredient_not_sent, event.ingredient), null, null)
+            }
+            is RecipeEvent.AllergenNotSent -> {
+                stateHolder.consumeEvent()
+                // Long, with the way to the allergen list: nothing is written until it is fixed.
+                snackbars.show(resources.getString(R.string.recipe_allergen_not_sent, event.allergen), resources.getString(R.string.settings_title)) {
+                    navigator.navigate(LarderRoute.Settings)
                 }
             }
             RecipeEvent.Failed -> {
@@ -179,7 +198,7 @@ fun RecipeScreen(
         state = state,
         bottomOverlayClearance = bottomOverlayClearance,
         pinnedActionBottom = pinnedActionBottom,
-        onPinnedActionHeight = onPinnedActionHeight,
+        onPinnedActionSize = onPinnedActionSize,
         actions = RecipeTabActions(
             onToggle = stateHolder::toggleItem,
             onConfigChange = stateHolder::updateConfig,
@@ -229,7 +248,7 @@ internal fun RecipeTabContent(
     state: RecipeUiState,
     bottomOverlayClearance: Dp,
     pinnedActionBottom: Dp,
-    onPinnedActionHeight: (Int) -> Unit,
+    onPinnedActionSize: (IntSize) -> Unit,
     actions: RecipeTabActions
 ) {
     val expanded = isExpanded()
@@ -241,8 +260,8 @@ internal fun RecipeTabContent(
     // Reported on every composition rather than reset on dispose: an outgoing copy of this
     // screen (a tab or launch transition) disposing after the new one measured used to leave
     // the root with 0, so the end of the form ran under the pill.
-    var actionHeightPx by remember { mutableIntStateOf(0) }
-    SideEffect { onPinnedActionHeight(if (showsAction) actionHeightPx else 0) }
+    var actionSize by remember { mutableStateOf(IntSize.Zero) }
+    SideEffect { onPinnedActionSize(if (showsAction) actionSize else IntSize.Zero) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -341,11 +360,11 @@ internal fun RecipeTabContent(
                     .align(if (expanded) Alignment.BottomEnd else Alignment.BottomCenter)
                     .padding(
                         start = LarderSpace.s4,
-                        end = if (expanded) LarderSpace.s6 else LarderSpace.s4,
+                        end = if (expanded) PinnedActionEndGap else LarderSpace.s4,
                         bottom = pinnedActionBottom
                     )
                     .then(if (expanded) Modifier.widthIn(max = 440.dp).fillMaxWidth(0.5f) else Modifier.fillMaxWidth())
-                    .onSizeChanged { actionHeightPx = it.height }
+                    .onSizeChanged { actionSize = it }
             )
         }
     }

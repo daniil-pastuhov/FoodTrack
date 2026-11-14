@@ -872,6 +872,9 @@
     <string name="recipe_failed_limit_today">That\'s the limit for today. Try again tomorrow. No recipes were taken.</string>
     <string name="recipe_failed_trouble_today">We\'re having trouble writing recipes right now. Try again tomorrow. No recipes were taken.</string>
     <string name="recipe_failed_server_later">Couldn\'t write it right now. Try again later. No recipes were taken.</string>
+    <string name="recipe_left_out">Written without “%1$s”: that name couldn\'t be sent.</string>
+    <string name="recipe_ingredient_not_sent">“%1$s” couldn\'t be sent. Untick it or rename it, then try again. No recipes were taken.</string>
+    <string name="recipe_allergen_not_sent">Your allergen “%1$s” couldn\'t be sent, so nothing was written. Rename it under Allergen warnings in Settings, then try again. No recipes were taken.</string>
     <plurals name="recipe_refused">
         <item quantity="one">Couldn\'t make a recipe from these items. It used %1$d recipe, because the attempt still cost us to run. Try fewer or different items.</item>
         <item quantity="other">Couldn\'t make a recipe from these items. It used %1$d recipes, because the attempt still cost us to run. Try fewer or different items.</item>

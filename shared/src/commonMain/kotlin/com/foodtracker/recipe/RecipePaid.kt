@@ -827,18 +827,43 @@ internal class RecipePaid(
 
     // --- Generation --------------------------------------------------------------------------
 
-    private fun buildRequest(current: RecipeUiState): GenerateRequest? {
+    /** A request ready to send, with the items left out of it because the server refused their
+     *  names earlier in this run; or why none can be sent. */
+    private sealed interface Built {
+        data class Ready(val request: GenerateRequest, val leftOut: List<String>) : Built
+        data class Blocked(val event: RecipeEvent) : Built
+    }
+
+    /**
+     * Names the server refused in this run (lower case, as sent). Left out of later requests
+     * without asking: sending one again would be refused again, and repeated refusals of the
+     * suspicious kind lock the account for the day (USER_DAILY_LIMIT).
+     */
+    private val refusedIngredients = mutableSetOf<String>()
+    private val refusedAllergens = mutableSetOf<String>()
+
+    private fun buildRequest(current: RecipeUiState): Built {
+        val leftOut = mutableListOf<String>()
         val ingredients = current.selectedRows
             .mapNotNull { row ->
                 cleanWireName(row.item.name)?.let { name ->
-                    WireIngredient(name, row.item.expiryDate.toString(), row.item.quantity.coerceIn(0, 9999))
+                    if (name.lowercase() in refusedIngredients) {
+                        leftOut += name
+                        null
+                    } else {
+                        WireIngredient(name, row.item.expiryDate.toString(), row.item.quantity.coerceIn(0, 9999))
+                    }
                 }
             }
             .take(MAX_REQUEST_INGREDIENTS)
-        if (ingredients.isEmpty()) return null
+        if (ingredients.isEmpty()) {
+            return Built.Blocked(leftOut.firstOrNull()?.let { RecipeEvent.IngredientNotSent(it) } ?: RecipeEvent.ServerFailed)
+        }
         val allergens = current.allergens.mapNotNull(::cleanWireName).distinctBy { it.lowercase() }.take(MAX_REQUEST_ALLERGENS)
+        // Never sent without an allergen the person set: a recipe written without it could be unsafe.
+        allergens.firstOrNull { it.lowercase() in refusedAllergens }?.let { return Built.Blocked(RecipeEvent.AllergenNotSent(it)) }
         val menu = current.mode == RecipeMode.MENU
-        return GenerateRequest(
+        val request = GenerateRequest(
             requestId = newRequestId(),
             kind = if (menu) WireKind.MENU else WireKind.RECIPE,
             courses = if (menu) current.courses else null,
@@ -847,6 +872,7 @@ internal class RecipePaid(
             allergens = allergens,
             today = today().toString()
         )
+        return Built.Ready(request, leftOut)
     }
 
     fun generate() {
@@ -857,11 +883,14 @@ internal class RecipePaid(
             openPacks()
             return
         }
-        val fresh = buildRequest(current)
-        if (fresh == null) {
-            state.update { it.copy(event = RecipeEvent.ServerFailed) }
-            return
+        val built = when (val result = buildRequest(current)) {
+            is Built.Blocked -> {
+                state.update { it.copy(event = result.event) }
+                return
+            }
+            is Built.Ready -> result
         }
+        val fresh = built.request
         updatePaid { it.copy(writing = current.mode) }
         state.update { it.copy(event = null) }
         scope.launch {
@@ -891,7 +920,7 @@ internal class RecipePaid(
                 if (kept == null) persist { it.copy(pendingGeneration = request, pendingSinceMillis = nowMillis()) }
                 updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE) }
                 // Already sent once with these inputs: asked about, not started again.
-                send(request, interactive = true, start = kept == null)
+                send(request, interactive = true, start = kept == null, leftOut = built.leftOut)
             }
         }
     }
@@ -956,7 +985,15 @@ internal class RecipePaid(
      * they report events and clear the writing state. Any other run (a recovery, or an earlier
      * request settled before a new one) saves what arrives and says so with a [PaidEvent].
      */
-    private suspend fun send(request: GenerateRequest, interactive: Boolean, start: Boolean = false): Sent {
+    private suspend fun send(
+        request: GenerateRequest,
+        interactive: Boolean,
+        start: Boolean = false,
+        /** Items left out of [request] because the server refused their names: told with the result. */
+        leftOut: List<String> = emptyList(),
+        /** Already sent once with a refused item left out: a second refusal isn't retried. */
+        retried: Boolean = false
+    ): Sent {
         // What it takes as asked, before a reply can bring new costs.
         val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses)
         val began = nowMillis()
@@ -997,7 +1034,7 @@ internal class RecipePaid(
                                 state.update { current ->
                                     current.copy(
                                         saved = listOf(saved) + current.saved.filterNot { it.id == saved.id },
-                                        event = RecipeEvent.Written(saved.id, reply.balance),
+                                        event = RecipeEvent.Written(saved.id, reply.balance, leftOut),
                                         paid = current.paid.copy(writing = null)
                                     )
                                 }
@@ -1113,9 +1150,41 @@ internal class RecipePaid(
                         return Sent.SETTLED
                     }
                     ServerError.INVALID_REQUEST -> {
-                        persist { it.copy(pendingGeneration = null) }
-                        finish(interactive, RecipeEvent.ServerFailed)
-                        return Sent.SETTLED
+                        persist { it.copy(pendingGeneration = null, pendingSinceMillis = null) }
+                        val refused = result.refusedName
+                        val refusedIndex = refused?.index ?: -1
+                        when (refused?.list) {
+                            RefusedList.ALLERGEN -> {
+                                // Never dropped: a recipe written without it could be unsafe.
+                                val allergen = request.allergens.getOrNull(refusedIndex)
+                                if (allergen != null) refusedAllergens += allergen.lowercase()
+                                finish(interactive, allergen?.let { RecipeEvent.AllergenNotSent(it) } ?: RecipeEvent.ServerFailedLater)
+                                return Sent.SETTLED
+                            }
+                            RefusedList.INGREDIENT -> {
+                                val ingredient = request.ingredients.getOrNull(refusedIndex)
+                                if (ingredient == null) {
+                                    finish(interactive, RecipeEvent.ServerFailedLater)
+                                    return Sent.SETTLED
+                                }
+                                refusedIngredients += ingredient.name.lowercase()
+                                val rest = request.ingredients.filterIndexed { i, _ -> i != refusedIndex }
+                                // Once, and only while the person waits: repeated refusals lock the
+                                // account for the day, so this never loops.
+                                if (!interactive || retried || rest.isEmpty()) {
+                                    finish(interactive, RecipeEvent.IngredientNotSent(ingredient.name))
+                                    return Sent.SETTLED
+                                }
+                                // Other inputs: a new id (REQUEST_ID_REUSED otherwise).
+                                val again = request.copy(requestId = newRequestId(), ingredients = rest)
+                                persist { it.copy(pendingGeneration = again, pendingSinceMillis = nowMillis()) }
+                                return send(again, interactive, start = true, leftOut = leftOut + ingredient.name, retried = true)
+                            }
+                            null -> {
+                                finish(interactive, RecipeEvent.ServerFailed)
+                                return Sent.SETTLED
+                            }
+                        }
                     }
                     else -> {
                         // On a first send: the per-minute limit, a reason this app doesn't know
@@ -1172,6 +1241,8 @@ internal class RecipePaid(
     private fun savedFrom(request: GenerateRequest, reply: GenerateReply): SavedRecipe? {
         val created = nowMillis()
         return when (request.kind) {
+            // `fromPantry` is the server's (it checks the model's claim against what was sent); the
+            // phone's own matching is only for recipes the phone wrote (parseRecipeReply).
             WireKind.RECIPE -> reply.recipe?.let { recipe ->
                 SavedRecipe.of(newSavedId(), recipe.copy(source = RecipeSource.SERVER), created)
             }
