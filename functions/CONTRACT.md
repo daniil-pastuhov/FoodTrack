@@ -23,7 +23,10 @@ source of truth is `src/contract.ts`; this file must change with it.
   often than every 3 seconds.
 - Each function runs a small, fixed number of server instances. When they are all busy, a call
   can fail with `resource-exhausted` (HTTP 429) **without** a `details.reason`: nothing was
-  charged; retry after a few seconds (for `generateRecipe`, with the same `requestId`).
+  charged; retry after a few seconds (for `generateRecipe`, with the same `requestId`). For
+  `generateRecipe` that means five generations (from five different accounts) are already
+  running service-wide; a sixth caller gets the 429 until one finishes (up to ~40 s for a recipe,
+  ~2 min for a menu). The other callables run one instance each.
 - JSON field names are camelCase, exactly as below. Unknown request fields are ignored.
 
 ## Costs
@@ -57,7 +60,7 @@ not on `message` (English, for logs).
 | `invalid-argument` | `INVALID_REQUEST` | Bad input. A client bug; do not retry unchanged. |
 | `failed-precondition` | `INSUFFICIENT_CREDITS` | Balance below the cost (see `costs`). Show the pack sheet. |
 | `failed-precondition` | `BUSY` | This account already has a generation in flight (`generateRecipe`, `mergeBalance` of that source, `deleteAccount`). Wait for it; retry later. |
-| `unavailable` | `GENERATION_DISABLED` | Generation is paused: the kill switch is on, or today's spending ceiling for the whole service is reached. Show "temporarily unavailable, try later"; nothing was charged. |
+| `unavailable` | `GENERATION_DISABLED` | Generation is paused: the kill switch is on, or today's spending ceiling for the whole service is reached. The ceiling counts generations still running at their worst case, so this can also last only until other users' menus finish (a minute or two). Show "temporarily unavailable, try later"; nothing was charged. |
 | `failed-precondition` | `ACCOUNT_CLOSED` | Account deleted or merged away. Sign out / start anonymous again. |
 | `resource-exhausted` | `RATE_LIMITED` | Too many calls in a short time (per minute). Back off and retry after a minute. |
 | `resource-exhausted` | `USER_DAILY_LIMIT` | This account reached its daily generation limit (number of generations, or estimated usage). Try again tomorrow (UTC); nothing was charged. |

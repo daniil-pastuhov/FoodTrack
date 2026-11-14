@@ -232,7 +232,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 
 | function | instances | per-instance throttle (calls/min let through to Firestore) | timeout |
 |---|---|---|---|
-| `generateRecipe` | 2 (so at most 2 generations in flight service-wide) | 60 | 180 s |
+| `generateRecipe` | 5 (so at most 5 generations in flight service-wide) | 24 (and 12 per uid) | 180 s |
 | `getGeneration` | 1 | 120 | 10 s |
 | `getBalance` | 1 | 120 | 10 s |
 | `verifyPurchase` | 1 | 30 | 60 s |
@@ -243,9 +243,48 @@ concurrency 1 below 1 vCPU), 1 instance:
 
 Before any Firestore access, every callable is throttled per instance in memory: 30 calls a minute
 per uid, 120 per client address (IPv4 address, or IPv6 /64), and the per-instance ceiling above
-whatever the keys. `config/runtime` is cached in memory for 30 s per instance (a failed read fails
-the call; no stale copy is used), so a flood does not also read the config; the kill switch
-therefore takes up to 30 s to reach running instances (the budget function reads it fresh).
+whatever the keys (`generateRecipe`: 12 per uid instead of 30). `config/runtime` is cached in
+memory for 30 s per instance (a failed read fails the call; no stale copy is used), so a flood
+does not also read the config; the kill switch therefore takes up to 30 s to reach running
+instances (the budget function reads it fresh).
+
+These throttles are per instance, so service-wide each is `maxInstances` × its value. For
+`generateRecipe` the per-instance numbers are set so the totals stay what they were at 2
+instances: 5 × 24 = 120 calls a minute into Firestore (was 2 × 60) and 5 × 12 = 60 a minute per
+uid (was 2 × 30), so one account can still fill at most half of the ceiling. The per-IP limit (120
+per instance) is above the instance ceiling either way, so the ceiling is what binds. The Firestore
+guards (one generation in flight per account, 3 a minute, the spend breaker) do not depend on the
+instance count.
+
+**Why five instances at concurrency 1 for `generateRecipe`, not fewer with higher concurrency.**
+Cloud Run allows concurrency above 1 only at 1 vCPU or more. The two ways to get five generations
+at once, priced busy all day (see the next section for the unit prices):
+
+- 5 instances × 1/6 vCPU, 256 MiB, concurrency 1: 5 × USD 0.40 = **USD 2.00 a day**.
+- 1 instance × 1 vCPU, 256 MiB, concurrency 5: 86,400 × (1 × 0.000024 + 0.25 × 0.0000025) =
+  **USD 2.13 a day** (USD 2.18 at 512 MiB), and anything more than one instance doubles it.
+
+Five small instances are cheaper in the worst case and fit the work: a generation is almost all
+waiting on the model, and the CPU part is small even at 1/6 vCPU (a 20,000-token menu is about
+80 KB of JSON; parsing and validating it is a few milliseconds at full speed, so tens of
+milliseconds at 1/6). Each generation also gets its own 256 MiB, and a crashed or out-of-memory
+instance takes one generation with it, not five. The cost is cold starts: a third, fourth or fifth
+simultaneous generation may start a fresh instance (a few seconds at 1/6 vCPU), which is small
+next to a 10–120 s generation.
+
+**Spend breaker with five in flight.** Each reservation holds its worst case until settle
+replaces it by the measured cost. At the base ceiling (USD 1.20, no sales that week) three
+3-course menus in flight hold 3 × 0.308 = 0.92, so a fourth (0.92 + 0.308 = 1.23 > 1.20) gets
+`GENERATION_DISABLED` until one of them settles (a typical menu then books ≈ 0.11). Five 2-course
+menus (5 × 0.218 = 1.09) or five recipes fit at the base; at the maximum ceiling (USD 2.00) five
+3-course menus (1.54) fit. This is the breaker working as intended, not a new limit.
+
+`getGeneration` stays at 1 instance with a 120-a-minute ceiling: five generations each polled
+every 3 s are 5 × 20 = 100 calls a minute, which leaves 20 a minute for launch recoveries (one
+call each). Each poll is two document reads, well under 100 ms, so the instance is busy about
+1.7 × 0.1 ≈ 17 % of the time. Clients poll only when the `generateRecipe` call itself was cut off,
+and a poll refused with `RATE_LIMITED` is kept and retried after 3 s, so an occasional overflow
+only delays a result.
 
 Client address: the **last** `X-Forwarded-For` entry. Google's Cloud Functions header reference
 (<https://cloud.google.com/functions/docs/reference/headers>) says the first entry is "generally"
@@ -275,14 +314,14 @@ Calls a flood can push into Firestore per day = instances × per-instance thrott
 
 | endpoint | calls/day max | Firestore per call | Firestore USD/day | requests USD/day | instance time USD/day | total USD/day |
 |---|---|---|---|---|---|---|
-| `generateRecipe` (no credits) | 2 × 60 × 1,440 = 172,800 | 2 reads | 0.21 | 0.07 | 0.80 | 1.08 |
+| `generateRecipe` (no credits) | 5 × 24 × 1,440 = 172,800 | 2 reads | 0.21 | 0.07 | 2.00 | 2.28 |
 | `getGeneration` | 172,800 | 2 reads | 0.21 | 0.07 | 0.40 | 0.68 |
 | `getBalance` | 172,800 | 1 read | 0.10 | 0.07 | 0.40 | 0.57 |
 | `verifyPurchase` | 43,200 | 3 reads + 1 write | 0.16 | 0.02 | 0.40 | 0.58 |
 | `mergeBalance` | 14,400 | 2 reads + 2 writes | 0.07 | 0.01 | 0.40 | 0.48 |
 | `deleteAccount` | 14,400 | 3 reads + 1 write | 0.05 | 0.01 | 0.40 | 0.46 |
 | `appStoreNotifications` | (forged bodies never reach Firestore) | 0 | 0 | see below | 0.40 | 0.40 |
-| **infrastructure total** | | | **0.80** | **0.25** | **3.20** | **4.25** |
+| **infrastructure total** | | | **0.80** | **0.25** | **4.40** | **5.45** |
 | model spend, absolute maximum | | | | | | **2.00** |
 
 What this means against the 1000 NOK (≈ USD 95) monthly budget:
@@ -290,11 +329,13 @@ What this means against the 1000 NOK (≈ USD 95) monthly budget:
 - **Model spend** is bounded by code at USD 2.00/day (USD 60/month) and above USD 1.20/day only
   when sales fund it. Without credits nobody can make the model run.
 - **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.05/day.
-- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 3.20/day only
-  if every public function is kept busy around the clock. Together the infrastructure worst case
-  is USD 4.25/day (≈ USD 128/month): **a flood sustained for a whole month on every endpoint would
-  exceed the budget on its own**; any single endpoint's worst case is ≤ USD 1.08/day (≈ USD 32 a
-  month).
+- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 4.40/day only
+  if every public function is kept busy around the clock (`generateRecipe`'s 5 instances are
+  USD 2.00 of it; at 2 instances it was 0.80, so five at once cost USD 1.20 a day more in the
+  worst case). Together the infrastructure worst case is USD 5.45/day (≈ USD 164/month): **a flood
+  sustained for a whole month on every endpoint would exceed the budget on its own**; any single
+  endpoint's worst case is ≤ USD 2.28/day (≈ USD 68 a month, `generateRecipe`; every other
+  endpoint ≤ USD 0.68/day).
 - **Raw junk requests** (no valid token at all) are rejected by the framework but still billed
   per request: at concurrency 1 and, say, 20 ms each, one instance serves ≈ 50 req/s = 4.3 M/day
   = USD 1.73/day in request fees per instance. Nothing in the function can bound that; only

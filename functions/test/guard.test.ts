@@ -46,6 +46,17 @@ describe("guards", () => {
     expect(() => t.admit("fresh", "shared-ip", 1)).toThrow(HttpsError);
   });
 
+  test("a smaller per-uid limit refuses that uid sooner and leaves the ceiling to others", () => {
+    const t = new CallThrottle(24, 12);
+    for (let i = 0; i < 12; i++) t.admit("hog", `ip-${i}`, 0);
+    expect(() => t.admit("hog", "ip-x", 1)).toThrow(HttpsError);
+    // The refused call is not counted against the ceiling: the other half of it is still free.
+    for (let i = 0; i < 12; i++) t.admit(`other-${i}`, `other-ip-${i}`, 2);
+    expect(() => t.admit("late", "late-ip", 3)).toThrow(HttpsError);
+    // A new window admits the uid again.
+    expect(() => t.admit("hog", "ip-0", 60_000)).not.toThrow();
+  });
+
   test("rejected-notification logging is sampled", () => {
     const s = new LogSampler(60_000);
     expect(s.take(0).log).toBe(true);
