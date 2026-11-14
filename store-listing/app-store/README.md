@@ -167,8 +167,9 @@ privacy policy (URL above) has to say the same; it is updated in
     counters are deleted; purchase records (with the old user ID, not linked to a name or email),
     a closed account record with totals, and any refund-after-use record stay. Give the policy
     URL.
-  - Account creation: "Users can create an account" with Sign in with Apple and Google (OAuth),
-    and the app works without one.
+  - Account creation: "Users can create an account" with Google sign-in (OAuth), and the app
+    works without one. The Android app has no Sign in with Apple (only the iPhone app offers it);
+    an account made with Apple on an iPhone is used on Android through Google added to it.
 
 ## 6. App Review information
 

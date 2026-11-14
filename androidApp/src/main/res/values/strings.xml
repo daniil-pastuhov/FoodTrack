@@ -932,9 +932,10 @@
     <string name="recipe_choice_phone_title">On this phone, no account</string>
     <string name="recipe_choice_phone_body">Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change phone, the ones you haven\'t used are lost.</string>
     <string name="recipe_choice_account_title">In an account</string>
-    <string name="recipe_choice_account_body">Sign in with Apple or Google. Your recipes follow you to a new phone and work on both Android and iPhone. We keep your account ID and email address.</string>
-    <string name="recipe_sign_in_apple">Sign in with Apple</string>
+    <string name="recipe_choice_account_body">Sign in with Google. Your recipes follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.</string>
     <string name="recipe_sign_in_google">Sign in with Google</string>
+    <string name="recipe_apple_on_iphone_hint">Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this phone.</string>
+    <string name="recipe_have_account_hint">Already have recipes in an account? Sign in to use them here.</string>
     <string name="recipe_store_error_title">Can\'t reach the store</string>
     <string name="recipe_store_error_body">Check your connection and try again. Nothing was charged.</string>
     <string name="recipe_rejected_title">This purchase couldn\'t be added</string>
@@ -950,9 +951,9 @@
         <item quantity="other">recipes in your account</item>
     </plurals>
     <string name="recipe_signed_in_with">Signed in with %1$s</string>
-    <string name="recipe_signed_in_add_apple">Sign in the same way on another phone to use them there. To sign in with Apple too, add it here.</string>
-    <string name="recipe_signed_in_add_google">Sign in the same way on another phone to use them there. To sign in with Google too, add it here.</string>
-    <string name="recipe_signed_in_both">Sign in with either on another phone, Android or iPhone, to use them there.</string>
+    <string name="recipe_signed_in_add_google">Apple sign-in works only in the iPhone app. Add Google sign-in here to keep using them on Android.</string>
+    <string name="recipe_signed_in_google">Sign in with Google on another phone, Android or iPhone, to use them there.</string>
+    <string name="recipe_signed_in_google_and_apple">Sign in with Google on another phone, Android or iPhone, or with Apple on an iPhone, to use them there.</string>
     <string name="recipe_add_sign_in">Add %1$s sign-in</string>
     <string name="recipe_sign_out">Sign out</string>
     <string name="recipe_delete_account">Delete account</string>
@@ -962,6 +963,7 @@
         <item quantity="other">Your %1$d recipes stay in your account. Sign in again to use them. Saved recipes stay on this phone.</item>
     </plurals>
     <string name="recipe_delete_title">Delete your account?</string>
+    <string name="recipe_delete_apple_note">This account is also linked to your Apple Account. Deleting it here removes the account and its recipes, but not that link. To remove the link too, delete the account in the iPhone app instead, or turn off Sign in with Apple for this app in your Apple Account settings.</string>
     <plurals name="recipe_delete_body">
         <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</item>
         <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</item>

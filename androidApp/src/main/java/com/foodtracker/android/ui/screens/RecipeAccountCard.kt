@@ -1,5 +1,6 @@
 package com.foodtracker.android.ui.screens
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -53,11 +54,18 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
     when (account.kind) {
         AccountKind.NONE -> RecipeFormCard(title = stringResource(R.string.recipe_account), icon = LarderIcons.UserRound) {
             AccountText(stringResource(R.string.recipe_account_none))
+            if (SignInProvider.GOOGLE in paid.providers) {
+                // Someone with recipes in an account, on a new phone, signs in here without buying.
+                AccountText(stringResource(R.string.recipe_have_account_hint))
+                SignInButtons(paid.providers, signingIn = null, enabled = !paid.accountBusy, onSignIn = actions.onSignIn)
+                AppleOnIphoneHint()
+            }
         }
         AccountKind.ANONYMOUS -> RecipeFormCard(title = stringResource(R.string.recipe_your_recipes), icon = LarderIcons.Ticket) {
             BalanceLine(balance, pluralStringResource(R.plurals.recipe_on_phone_label, balance))
             AccountText(stringResource(R.string.recipe_on_phone_body))
             SignInButtons(paid.providers, signingIn = null, enabled = !paid.accountBusy, onSignIn = actions.onSignIn)
+            if (SignInProvider.GOOGLE in paid.providers) AppleOnIphoneHint()
             if (paid.purchasesBlocked) {
                 AccountText(stringResource(R.string.recipe_purchases_blocked))
             } else if (paid.canBuy) {
@@ -72,11 +80,12 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
         }
         AccountKind.SIGNED_IN -> RecipeFormCard(title = stringResource(R.string.recipe_your_recipes), icon = LarderIcons.Ticket) {
             BalanceLine(balance, pluralStringResource(R.plurals.recipe_in_account_label, balance))
-            val signedInWith = account.providers.sortedBy { it.ordinal }.firstOrNull()
             Column {
-                signedInWith?.let {
+                // By name, as text: an account can carry Apple (added on an iPhone) as well as
+                // Google, and Android shows no Apple logo.
+                if (account.providers.isNotEmpty()) {
                     Text(
-                        text = stringResource(R.string.recipe_signed_in_with, account.providers.sortedBy { p -> p.ordinal }.joinToString(", ") { p -> signInProviderName(p) }),
+                        text = stringResource(R.string.recipe_signed_in_with, signInProvidersText(account.providers)),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurface
                     )
@@ -85,27 +94,19 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
                     Text(text = it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            val missing = paid.providers - account.providers
-            AccountText(
-                stringResource(
-                    when {
-                        missing.isEmpty() -> R.string.recipe_signed_in_both
-                        SignInProvider.APPLE in missing -> R.string.recipe_signed_in_add_apple
-                        else -> R.string.recipe_signed_in_add_google
-                    }
+            AccountText(stringResource(signedInHint(account.providers)))
+            // Only Google can be added on Android. Google's own button (its branding allows no
+            // "Add ..." title); the hint above says what adding does, and the spoken label too.
+            val add = signInsToAdd(paid.providers, account.providers)
+            if (add.isNotEmpty()) {
+                SignInButtons(
+                    providers = add,
+                    signingIn = null,
+                    enabled = !paid.accountBusy,
+                    onSignIn = actions.onSignIn,
+                    accessibilityLabel = stringResource(R.string.recipe_add_sign_in, signInProviderName(SignInProvider.GOOGLE))
                 )
-            )
-            // Apple on an iPhone and Google on an Android phone are two accounts unless joined here.
-            // The providers' own sign-in buttons (Google's branding allows no "Add ..." title); the
-            // hint above says what adding does, and the spoken label says it too.
-            val addLabels = missing.associateWith { stringResource(R.string.recipe_add_sign_in, signInProviderName(it)) }
-            SignInButtons(
-                providers = missing,
-                signingIn = null,
-                enabled = !paid.accountBusy,
-                onSignIn = actions.onSignIn,
-                accessibilityLabel = { addLabels.getValue(it) }
-            )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2), verticalAlignment = Alignment.CenterVertically) {
                 LarderButton(
                     text = stringResource(R.string.recipe_sign_out),
@@ -140,9 +141,11 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
         )
     }
     if (confirmingDelete) {
+        val body = pluralStringResource(R.plurals.recipe_delete_body, balance, balance)
         LarderDialog(
             title = stringResource(R.string.recipe_delete_title),
-            text = pluralStringResource(R.plurals.recipe_delete_body, balance, balance),
+            // Android can't sign in with Apple, so deleting here can't revoke Apple's link.
+            text = if (deleteLeavesAppleLink(account)) body + "\n\n" + stringResource(R.string.recipe_delete_apple_note) else body,
             confirmLabel = stringResource(R.string.recipe_delete_account),
             onConfirm = {
                 confirmingDelete = false
@@ -154,6 +157,29 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
         )
     }
 }
+
+/** "Google, Apple": the account's sign-ins by name, Google first. */
+internal fun signInProvidersText(providers: Set<SignInProvider>): String =
+    providers.sortedBy { it.ordinal }.joinToString(", ") { signInProviderName(it) }
+
+/** The line under a signed-in account. Android signs in with Google only, so it names Google as
+ *  the way in on another phone, and Apple only for an iPhone. */
+@StringRes
+internal fun signedInHint(providers: Set<SignInProvider>): Int = when {
+    SignInProvider.GOOGLE !in providers -> R.string.recipe_signed_in_add_google
+    SignInProvider.APPLE in providers -> R.string.recipe_signed_in_google_and_apple
+    else -> R.string.recipe_signed_in_google
+}
+
+/** The sign-ins worth adding here: those this build offers (only ever Google on Android) that the
+ *  account lacks. Apple is never offered, whatever the account carries. */
+internal fun signInsToAdd(offered: Set<SignInProvider>, account: Set<SignInProvider>): Set<SignInProvider> =
+    (offered - account) - SignInProvider.APPLE
+
+/** Deleting on Android leaves Apple's link to the app in place: no Apple sign-in here gives the
+ *  server an authorization code to revoke it with. */
+internal fun deleteLeavesAppleLink(account: AccountState): Boolean =
+    account.kind == AccountKind.SIGNED_IN && SignInProvider.APPLE in account.providers
 
 @Composable
 private fun BalanceLine(balance: Int, label: String) {
@@ -173,7 +199,7 @@ private fun AccountText(text: String) {
     Text(text = text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 
-private val bothProviders = setOf(SignInProvider.GOOGLE, SignInProvider.APPLE)
+private val offered = setOf(SignInProvider.GOOGLE)
 
 @Composable
 private fun AccountPreview(paid: PaidUiState) = LarderTheme {
@@ -184,12 +210,12 @@ private fun AccountPreview(paid: PaidUiState) = LarderTheme {
 
 @Preview
 @Composable
-internal fun AccountNonePreview() = AccountPreview(PaidUiState(available = true, providers = bothProviders))
+internal fun AccountNonePreview() = AccountPreview(PaidUiState(available = true, providers = offered))
 
 @PreviewLightDark
 @Composable
 internal fun AccountOnPhonePreview() = AccountPreview(
-    PaidUiState(available = true, balance = 12, account = AccountState(AccountKind.ANONYMOUS), providers = bothProviders)
+    PaidUiState(available = true, balance = 12, account = AccountState(AccountKind.ANONYMOUS), providers = offered)
 )
 
 @PreviewLightDark
@@ -199,7 +225,19 @@ internal fun AccountSignedInPreview() = AccountPreview(
         available = true,
         balance = 12,
         account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "someone@example.com"),
-        providers = bothProviders
+        providers = offered
+    )
+)
+
+/** Signed in with Google here, on an account that also has Apple, added on an iPhone. */
+@PreviewLightDark
+@Composable
+internal fun AccountSignedInWithAppleTooPreview() = AccountPreview(
+    PaidUiState(
+        available = true,
+        balance = 12,
+        account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE), "k7x2m9@privaterelay.appleid.com"),
+        providers = offered
     )
 )
 
@@ -209,7 +247,11 @@ internal fun AccountSignedInRussianPreview() = AccountPreview(
     PaidUiState(
         available = true,
         balance = 12,
-        account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.APPLE), "k7x2m9@privaterelay.appleid.com"),
-        providers = bothProviders
+        account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE), "k7x2m9@privaterelay.appleid.com"),
+        providers = offered
     )
 )
+
+@Preview(locale = "nb")
+@Composable
+internal fun AccountNoneNorwegianPreview() = AccountPreview(PaidUiState(available = true, providers = offered))

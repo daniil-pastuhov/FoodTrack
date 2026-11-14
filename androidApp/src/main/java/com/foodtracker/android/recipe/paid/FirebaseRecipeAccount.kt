@@ -19,14 +19,10 @@ import com.foodtracker.recipe.SignInResult
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.AuthCredential
-import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.OAuthCredential
-import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +30,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import java.util.Locale
 
 private const val GOOGLE_PROVIDER = "google.com"
 private const val APPLE_PROVIDER = "apple.com"
@@ -43,9 +38,11 @@ private const val APPLE_PROVIDER = "apple.com"
 private const val FRESH_SIGN_IN_MILLIS = 4 * 60_000L
 
 /**
- * Firebase Auth for the paid route: an anonymous user made only when a purchase starts, Google
- * through Credential Manager, and Apple through Firebase's own web flow
- * (`OAuthProvider("apple.com")`), since Android has no native Sign in with Apple.
+ * Firebase Auth for the paid route: an anonymous user made only when a purchase starts, and
+ * Google through Credential Manager. Android offers no Sign in with Apple: Apple's guidelines
+ * allow a custom button only with Apple's logo artwork, which can't be redistributed in this
+ * public repository, and allow no button without it. An account can still carry Apple, added on
+ * an iPhone; it is shown and works here through its Google sign-in.
  *
  * Signing in on a phone that holds an anonymous user links the sign-in to it, so the uid and the
  * recipes stay. When the sign-in already has its own account, the two can't be linked: the
@@ -79,10 +76,7 @@ class FirebaseRecipeAccount(
     }
 
     override val providers: Set<SignInProvider>
-        get() = buildSet {
-            add(SignInProvider.APPLE)
-            if (webClientId != null) add(SignInProvider.GOOGLE)
-        }
+        get() = if (webClientId != null) setOf(SignInProvider.GOOGLE) else emptySet()
 
     private fun stateOf(user: FirebaseUser?): AccountState = when {
         user == null -> AccountState()
@@ -90,13 +84,8 @@ class FirebaseRecipeAccount(
         else -> AccountState(
             purchaseKey = purchaseAccountId(user.uid),
             kind = AccountKind.SIGNED_IN,
-            providers = user.providerData.mapNotNullTo(mutableSetOf()) {
-                when (it.providerId) {
-                    GOOGLE_PROVIDER -> SignInProvider.GOOGLE
-                    APPLE_PROVIDER -> SignInProvider.APPLE
-                    else -> null
-                }
-            },
+            // Apple too, when it was added on an iPhone: shown, never offered here.
+            providers = signInProvidersOf(user.providerData.map { it.providerId }),
             email = user.email ?: user.providerData.firstNotNullOfOrNull { it.email?.takeIf(String::isNotBlank) }
         )
     }
@@ -123,14 +112,13 @@ class FirebaseRecipeAccount(
         return try {
             when (provider) {
                 SignInProvider.GOOGLE -> signInWithGoogle(activity)
-                SignInProvider.APPLE -> signInWithApple(activity)
+                // Not offered on Android (see the class comment).
+                SignInProvider.APPLE -> SignInResult.Failed
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: GetCredentialCancellationException) {
             SignInResult.Cancelled
-        } catch (e: FirebaseAuthException) {
-            if (e.errorCode == "ERROR_WEB_CONTEXT_CANCELED") SignInResult.Cancelled else SignInResult.Failed
         } catch (e: Exception) {
             SignInResult.Failed
         } finally {
@@ -161,34 +149,6 @@ class FirebaseRecipeAccount(
             SignInResult.SignedIn
         } catch (e: FirebaseAuthUserCollisionException) {
             if (user.isAnonymous) prepareMerge(user, e.updatedCredential ?: credential) else SignInResult.InUse
-        }
-    }
-
-    private fun appleProvider(): OAuthProvider = OAuthProvider.newBuilder(APPLE_PROVIDER)
-        .setScopes(listOf("email"))
-        .addCustomParameter("locale", Locale.getDefault().toLanguageTag())
-        .build()
-
-    private suspend fun signInWithApple(activity: Activity): SignInResult {
-        // Apple's page runs in a Custom Tab, and Android can reclaim the activity meanwhile;
-        // a result that arrived that way is picked up here.
-        auth.pendingAuthResult?.let { pending ->
-            pending.awaitResult()
-            dropNameAndPhoto(auth.currentUser)
-            return SignInResult.SignedIn
-        }
-        val user = auth.currentUser ?: run {
-            auth.startActivityForSignInWithProvider(activity, appleProvider()).awaitResult()
-            dropNameAndPhoto(auth.currentUser)
-            return SignInResult.SignedIn
-        }
-        return try {
-            user.startActivityForLinkWithProvider(activity, appleProvider()).awaitResult()
-            dropNameAndPhoto(auth.currentUser)
-            SignInResult.SignedIn
-        } catch (e: FirebaseAuthUserCollisionException) {
-            val credential = e.updatedCredential ?: return SignInResult.Failed
-            if (user.isAnonymous) prepareMerge(user, credential) else SignInResult.InUse
         }
     }
 
@@ -263,34 +223,21 @@ class FirebaseRecipeAccount(
     override fun needsFreshSignIn(): Boolean {
         val user = auth.currentUser ?: return false
         if (user.isAnonymous) return false
-        // Apple's token is revoked from the re-authentication's result, so an Apple-linked
-        // account always signs in again before it is deleted, however recent the last sign-in.
-        if (user.providerData.any { it.providerId == APPLE_PROVIDER }) return true
-        val last = user.metadata?.lastSignInTimestamp ?: return true
-        return System.currentTimeMillis() - last > FRESH_SIGN_IN_MILLIS
+        return signInTooOldForDeletion(user.metadata?.lastSignInTimestamp, System.currentTimeMillis())
     }
 
     override suspend fun reauthenticateForDeletion(): Boolean {
         val user = auth.currentUser ?: return false
         val activity = CurrentActivity.activity ?: return false
-        val providerIds = user.providerData.map { it.providerId }
+        // Google, also for an account that has Apple attached on an iPhone: Android can't sign in
+        // with Apple, so no Apple authorization code is sent and the server can't revoke Apple's
+        // token from here (the delete dialog says where to do that).
+        if (deletionReauthProvider(user.providerData.map { it.providerId }) != SignInProvider.GOOGLE) return false
         return try {
-            if (APPLE_PROVIDER in providerIds) {
-                val result: AuthResult = user.startActivityForReauthenticateWithProvider(activity, appleProvider()).awaitResult()
-                dropNameAndPhoto(auth.currentUser)
-                // Apple asks apps to revoke its tokens when an account is deleted.
-                (result.credential as? OAuthCredential)?.accessToken?.let { token ->
-                    runCatching { auth.revokeAccessToken(token).awaitResult() }
-                }
-                true
-            } else if (GOOGLE_PROVIDER in providerIds) {
-                val credential = googleCredential(activity) ?: return false
-                user.reauthenticate(credential).awaitResult()
-                dropNameAndPhoto(auth.currentUser)
-                true
-            } else {
-                false
-            }
+            val credential = googleCredential(activity) ?: return false
+            user.reauthenticate(credential).awaitResult()
+            dropNameAndPhoto(auth.currentUser)
+            true
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -307,8 +254,27 @@ class FirebaseRecipeAccount(
     }
 }
 
+/** The sign-ins a Firebase user carries, from its provider data's provider ids. */
+internal fun signInProvidersOf(providerIds: Collection<String>): Set<SignInProvider> =
+    providerIds.mapNotNullTo(mutableSetOf()) {
+        when (it) {
+            GOOGLE_PROVIDER -> SignInProvider.GOOGLE
+            APPLE_PROVIDER -> SignInProvider.APPLE
+            else -> null
+        }
+    }
+
+/** How an account signs in again before deletion on Android: Google, whether or not Apple is
+ *  attached too; null for an account without Google (Apple only), which can't here. */
+internal fun deletionReauthProvider(providerIds: Collection<String>): SignInProvider? =
+    if (GOOGLE_PROVIDER in providerIds) SignInProvider.GOOGLE else null
+
+/** Whether the last sign-in is too old for `deleteAccount` (or unknown). */
+internal fun signInTooOldForDeletion(lastSignInMillis: Long?, nowMillis: Long): Boolean =
+    lastSignInMillis == null || nowMillis - lastSignInMillis > FRESH_SIGN_IN_MILLIS
+
 /**
- * The app keeps no names: Google's ID token, and Apple's on a first sign-in, give Firebase the
+ * The app keeps no names: Google's ID token (and Apple's, on an iPhone's first sign-in) give Firebase the
  * person's name (and Google a photo), which Firebase copies onto the user. Cleared straight after
  * every sign-in, link and re-authentication, before anything else uses the user. The copy in the
  * user's provider data can't be cleared from the client.

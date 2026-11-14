@@ -89,8 +89,9 @@ class FirebaseRecipeBackend(
     override suspend fun getBalance(): ServerResult<BalanceReply> = callBalance(firebase.functions())
 
     override suspend fun deleteAccount(): ServerResult<Unit> =
-        // Apple's token is revoked on the phone before this (see FirebaseRecipeAccount), so no
-        // authorization code is sent.
+        // No `appleAuthorizationCode`: Android has no Sign in with Apple to get one from, so an
+        // account with Apple attached (added on an iPhone) is deleted without revoking Apple's
+        // token; the delete dialog tells such a person how to remove that link.
         when (val result = callRaw(firebase.functions(), "deleteAccount", JsonObject(emptyMap()), 60L)) {
             is ServerResult.Ok -> ServerResult.Ok(Unit)
             is ServerResult.Err -> result

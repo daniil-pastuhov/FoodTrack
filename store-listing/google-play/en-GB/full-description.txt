@@ -26,7 +26,7 @@ BestBefore keeps track of what's in your fridge, freezer and cupboards, and remi
 <b>Your data</b>
 • No ads, no tracking
 • Your pantry is stored on your phone; export a backup whenever you like
-• No account needed, not even to buy a pack. Sign in with Apple or Google only if you want your recipes on other phones
+• No account needed, not even to buy a pack. Sign in with Google only if you want your recipes on other phones
 • A recipe from a pack sends the items you tick, your recipe settings and your allergens to our server. The free ways send nothing to us
 • Available in English, Russian and Norwegian
 

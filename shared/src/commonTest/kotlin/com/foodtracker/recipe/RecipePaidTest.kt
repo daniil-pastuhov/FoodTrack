@@ -130,10 +130,14 @@ private class FakeStore : RecipeStore {
 
 private class FakeMerge(override val accountBalance: Int?) : PendingMerge
 
-private class FakeAccount(kind: AccountKind = AccountKind.NONE) : RecipeAccount {
-    val mutableState = MutableStateFlow(AccountState(kind, purchaseKey = if (kind == AccountKind.NONE) null else "key-$kind"))
+private class FakeAccount(
+    kind: AccountKind = AccountKind.NONE,
+    carried: Set<SignInProvider> = if (kind == AccountKind.SIGNED_IN) setOf(SignInProvider.GOOGLE) else emptySet()
+) : RecipeAccount {
+    val mutableState = MutableStateFlow(AccountState(kind, carried, purchaseKey = if (kind == AccountKind.NONE) null else "key-$kind"))
     override val state: StateFlow<AccountState> = mutableState
-    override val providers: Set<SignInProvider> = setOf(SignInProvider.GOOGLE, SignInProvider.APPLE)
+    /** As on Android: Google only, never Apple. */
+    override val providers: Set<SignInProvider> = setOf(SignInProvider.GOOGLE)
     var anonymousCreated = 0
     var canCreate = true
     val signInResults = ArrayDeque<SignInResult>()
@@ -146,6 +150,8 @@ private class FakeAccount(kind: AccountKind = AccountKind.NONE) : RecipeAccount 
     var freshSignInNeeded = false
     var reauthResults = ArrayDeque<Boolean>()
     var reauths = 0
+    /** The sign-ins asked for, in order. */
+    val signIns = mutableListOf<SignInProvider>()
     var signOuts = 0
 
     override suspend fun ensureUser(): Boolean {
@@ -156,6 +162,7 @@ private class FakeAccount(kind: AccountKind = AccountKind.NONE) : RecipeAccount 
         return true
     }
     override suspend fun signIn(provider: SignInProvider): SignInResult {
+        signIns += provider
         val result = signInResults.removeFirst()
         if (result == SignInResult.SignedIn) {
             mutableState.value = AccountState(AccountKind.SIGNED_IN, mutableState.value.providers + provider, "a@b.c", "key-signed-in")
@@ -929,7 +936,7 @@ class RecipePaidTest {
         withBalance(12)
         val holder = holder()
         account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
-        holder.signIn(SignInProvider.APPLE)
+        holder.signIn(SignInProvider.GOOGLE)
         holder.cancelMerge()
         assertEquals(1, account.cancelledMerges)
         assertEquals(0, account.merged)
@@ -975,7 +982,7 @@ class RecipePaidTest {
         assertEquals(12, holder.uiState.value.paid.balance)
 
         account.signInResults += SignInResult.InUse
-        holder.signIn(SignInProvider.APPLE)
+        holder.signIn(SignInProvider.GOOGLE)
         assertEquals(PaidEvent.SignInInUse, holder.uiState.value.paid.event)
     }
 
@@ -1009,6 +1016,49 @@ class RecipePaidTest {
         assertEquals(1, backend.deleteCalls)
         assertEquals(1, account.signOuts)
         assertNull(holder.uiState.value.paid.balance)
+        assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
+    }
+
+    @Test
+    fun androidOffersGoogleOnlyEvenToAnAccountThatCarriesApple() = runUnconfined {
+        withBalance(12, AccountKind.SIGNED_IN)
+        account = FakeAccount(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE))
+        val holder = holder()
+        val paid = holder.uiState.value.paid
+        assertEquals(setOf(SignInProvider.GOOGLE), paid.providers, "no Apple sign-in to start or add")
+        assertEquals(setOf(SignInProvider.GOOGLE, SignInProvider.APPLE), paid.account.providers, "but the account shows what it carries")
+        assertEquals(AccountKind.SIGNED_IN, paid.account.kind)
+        assertEquals(12, paid.balance)
+    }
+
+    @Test
+    fun anAccountWithAppleAttachedIsDeletedAfterSigningInAgainWithGoogle() = runUnconfined {
+        withBalance(12, AccountKind.SIGNED_IN)
+        account = FakeAccount(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE))
+        val holder = holder()
+        // Recent enough on the phone's clock, but the server disagrees: signed in again once.
+        backend.deleteReplies += ServerResult.Err(ServerError.RECENT_SIGN_IN_REQUIRED)
+        backend.deleteReplies += ServerResult.Ok(Unit)
+        account.reauthResults += true
+        holder.deleteAccount()
+        assertEquals(1, account.reauths)
+        assertEquals(2, backend.deleteCalls)
+        assertEquals(emptyList(), account.signIns, "re-authentication isn't a new sign-in, and never Apple")
+        assertEquals(1, account.signOuts)
+        assertNull(holder.uiState.value.paid.balance)
+        assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
+        assertFalse(holder.uiState.value.paid.accountBusy)
+    }
+
+    @Test
+    fun anAppleAttachedAccountWhoseLastSignInIsRecentIsDeletedWithoutAskingAgain() = runUnconfined {
+        withBalance(3, AccountKind.SIGNED_IN)
+        account = FakeAccount(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE))
+        val holder = holder()
+        backend.deleteReplies += ServerResult.Ok(Unit)
+        holder.deleteAccount()
+        assertEquals(0, account.reauths, "Apple attached no longer forces a sign-in on Android")
+        assertEquals(1, backend.deleteCalls)
         assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
     }
 

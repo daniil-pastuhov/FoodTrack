@@ -721,7 +721,8 @@ What a developer needs to know about the live project `bestbefore-f9ee1`:
   `generateRecipe`, `verifyPurchase`, `mergeBalance` and `deleteAccount` consume limited-use App
   Check tokens (`CONSUME_APP_CHECK_TOKENS`), and without the role every call to them fails. The
   deploying account needs Service Account User on it.
-- **Auth**: Anonymous, Google and Apple providers. Identity Platform's automatic clean-up of
+- **Auth**: Anonymous, Google and Apple providers (Apple is used by the iOS app only; Android
+  offers Google sign-in only). Identity Platform's automatic clean-up of
   anonymous users stays **off**: it would delete paying anonymous buyers.
 - **App Check**: Android with Play Integrity, iOS with App Attest; no console enforcement (the
   callables enforce App Check themselves). Play Integrity's minimum device recognition level is

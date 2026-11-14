@@ -11,8 +11,8 @@ You should get a reply within a week. Fixes ship in the next release of both app
 ## Scope
 
 Pantry data stays in a local database on the device. The one backend is for recipes from paid
-packs: Cloud Functions in `functions/`, with Firestore, Firebase Auth (anonymous, Apple, Google)
-and App Check, in the maintainer's Firebase project. Nobody reaches it until they start a
+packs: Cloud Functions in `functions/`, with Firestore, Firebase Auth (anonymous, Google, and Apple
+on iOS only) and App Check, in the maintainer's Firebase project. Nobody reaches it until they start a
 purchase. Reports about the apps themselves, the backend (purchase verification, the recipe
 balance, account deletion, `firestore.rules`), the backup file format, the CI workflow and the
 release scripts in `scripts/` are all in scope.
