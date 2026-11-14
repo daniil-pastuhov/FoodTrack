@@ -837,6 +837,20 @@ class StoreArtTests(unittest.TestCase):
         self.assertFalse(any(w[1] == "/appAssetLibraryImages" for w in asc.writes()
                              if "ru/" in json.dumps(w[2])))
 
+    def test_an_english_localization_without_a_folder_gets_en_gb_art(self):
+        self.localizations["en-AU"] = "vl-au"
+        placed = {loc: [(t, self.tagged(source, n, f"{source}-{n}"))
+                        for n, t in testflight.ART_FILES.items()]
+                  for loc, source in (("vl-gb", "en-GB"), ("vl-us", "en-GB"), ("vl-ru", "ru"))}
+        asc = self.fake(placed)
+        _, out = self.sync(asc, True)
+        self.assertIn("en-AU: no screenshot folders", out)
+        placed_on_au = [w[2]["data"]["relationships"]["image"]["data"]["id"] for w in asc.writes()
+                        if w[1] == "/appAssetLibraryPlacements"
+                        and w[2]["data"]["relationships"]["appStoreVersionLocalization"]["data"]["id"] == "vl-au"]
+        self.assertEqual(sorted(placed_on_au), ["en-GB-header.png", "en-GB-search-result.png"])
+        self.assertFalse(any(w[1] == "/appAssetLibraryImages" for w in asc.writes()))
+
     def test_a_localization_without_art_files_is_left_alone(self):
         for locale in ("en-GB", "ru"):
             for name in testflight.ART_FILES:
