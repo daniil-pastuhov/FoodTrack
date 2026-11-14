@@ -81,18 +81,30 @@ fun buildOnDeviceRecipePrompt(
             }
         )
         add("Servings: ${normalized.servings}")
+        // The upper bound is a limit, the lower one only a guide.
         normalized.maxMinutes?.let { add("Total time: $it minutes or less") }
-        when (normalized.mealType) {
-            RecipeMealType.ANY -> Unit
-            else -> add("Meal: " + normalized.mealType.name.lowercase())
+        normalized.minMinutes?.let { add("Aim for about $it minutes or more; less is fine if the dish needs less") }
+        val meals = orderedMeals(normalized.mealTypes).map { it.name.lowercase() }
+        when (meals.size) {
+            0 -> Unit
+            1 -> add("Meal: " + meals.single())
+            else -> add("Meal: suits any one of " + meals.joinToString(", "))
         }
-        when (normalized.diet) {
-            RecipeDiet.NONE -> Unit
-            RecipeDiet.VEGETARIAN -> add("Diet: vegetarian")
-            RecipeDiet.VEGAN -> add("Diet: vegan")
-            RecipeDiet.PESCATARIAN -> add("Diet: pescatarian")
-            RecipeDiet.GLUTEN_FREE -> add("Diet: gluten-free")
-            RecipeDiet.DAIRY_FREE -> add("Diet: dairy-free")
+        // Every selected diet holds; one another implies is not repeated.
+        val diets = promptDiets(normalized.diets).map { diet ->
+            when (diet) {
+                RecipeDiet.NONE -> "none"
+                RecipeDiet.VEGETARIAN -> "vegetarian"
+                RecipeDiet.VEGAN -> "vegan"
+                RecipeDiet.PESCATARIAN -> "pescatarian"
+                RecipeDiet.GLUTEN_FREE -> "gluten-free"
+                RecipeDiet.DAIRY_FREE -> "dairy-free"
+            }
+        }
+        when (diets.size) {
+            0 -> Unit
+            1 -> add("Diet: " + diets.single())
+            else -> add("Diet: all of " + diets.joinToString(", "))
         }
         // Never cut: an allergen shortened to a different word would not protect anyone.
         val clean = cleanAllergens(allergens)

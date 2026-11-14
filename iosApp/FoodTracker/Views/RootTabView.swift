@@ -231,7 +231,7 @@ struct RootTabView: View {
                 }
                 .transition(.opacity)
             case .recipe:
-                RecipeView(pantry: viewModel, model: recipeViewModel, onScan: { presentScanner() })
+                RecipeView(pantry: viewModel, model: recipeViewModel, onScan: { presentScanner() }, onOpenShopping: { selectedTab = .shopping })
                     .transition(.opacity)
             case .shopping:
                 ShoppingListView(

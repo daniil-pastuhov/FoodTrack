@@ -65,23 +65,80 @@ struct WireCosts: Decodable, Sendable {
     }
 }
 
+/// `generateRecipe`'s `config` (CONTRACT.md "RecipeConfig"), in one of two shapes: legacy
+/// (`maxMinutes` 15 | 30 | 60 | nil, one `mealType`, one `diet`), or multi-choice, only to a server
+/// that says `acceptsMultiChoiceConfig` (`minMinutes`, `maxMinutes` on the slider's scale,
+/// `mealTypes`, `diets`, and no `mealType` or `diet`, so a server from before them, which requires
+/// both, refuses the request rather than reading only part of it). A request stored by an earlier
+/// version decodes as the legacy shape and is sent again unchanged. Android: `WireConfig`.
 struct WireRecipeConfig: Codable, Equatable, Sendable {
     var difficulty: String
     var detail: String
     var servings: Int
     var maxMinutes: Int?
-    var mealType: String
-    var diet: String
+    var mealType: String?
+    var diet: String?
+    var minMinutes: Int?
+    var mealTypes: [String]?
+    var diets: [String]?
     var language: String
 
-    init(_ config: RecipeConfig) {
-        difficulty = config.difficulty.rawValue
-        detail = config.detail.rawValue
-        servings = config.servings
-        maxMinutes = config.maxMinutes
-        mealType = config.mealType.rawValue
-        diet = config.diet.rawValue
-        language = config.resolvedLanguage.rawValue
+    var isMultiChoice: Bool { mealTypes != nil || diets != nil }
+
+    /// What to send for `config`: the legacy shape whenever it says exactly the same, the
+    /// multi-choice shape when it doesn't and the server `takesMultiChoice`, otherwise the closest
+    /// legacy values (`legacy(_:)`); nil when those can't keep every selected diet. Android:
+    /// `wireConfigFor`.
+    static func make(_ config: RecipeConfig, takesMultiChoice: Bool) -> WireRecipeConfig? {
+        let c = config.normalized()
+        let exact = c.minMinutes == nil && (c.maxMinutes.map { RecipeTime.legacyLimits.contains($0) } ?? true)
+            && c.mealTypes.count <= 1 && c.diets.count <= 1
+        if exact || !takesMultiChoice { return legacy(c) }
+        return WireRecipeConfig(
+            difficulty: c.difficulty.rawValue,
+            detail: c.detail.rawValue,
+            servings: c.servings,
+            maxMinutes: c.maxMinutes,
+            mealType: nil,
+            diet: nil,
+            minMinutes: c.minMinutes,
+            mealTypes: RecipeChoices.orderedMeals(c.mealTypes).map(\.rawValue),
+            diets: RecipeChoices.orderedDiets(c.diets).map(\.rawValue),
+            language: c.resolvedLanguage.rawValue
+        )
+    }
+
+    /// The closest legacy config: the lower time bound dropped, the upper the largest of 15, 30, 60
+    /// not above it (10 becomes 15); one meal as it is, several "any"; one diet as it is, several
+    /// the strictest selected one when it implies the rest, otherwise vegan (vegetarian or
+    /// pescatarian with dairy-free); gluten-free with another diet can't be said: nil. Android:
+    /// `legacyWireConfig`.
+    static func legacy(_ config: RecipeConfig) -> WireRecipeConfig? {
+        let c = config.normalized()
+        let diets = RecipeChoices.promptDiets(c.diets)
+        let diet: RecipeDiet
+        if diets.isEmpty {
+            diet = .none
+        } else if diets.count == 1 {
+            diet = diets[0]
+        } else if diets.contains(.glutenFree) {
+            return nil
+        } else {
+            diet = .vegan
+        }
+        let max = c.maxMinutes.map { limit in RecipeTime.legacyLimits.last { $0 <= limit } ?? RecipeTime.legacyLimits[0] }
+        return WireRecipeConfig(
+            difficulty: c.difficulty.rawValue,
+            detail: c.detail.rawValue,
+            servings: c.servings,
+            maxMinutes: max,
+            mealType: (c.mealTypes.count == 1 ? c.mealTypes.first! : .any).rawValue,
+            diet: diet.rawValue,
+            minMinutes: nil,
+            mealTypes: nil,
+            diets: nil,
+            language: c.resolvedLanguage.rawValue
+        )
     }
 }
 
@@ -181,6 +238,8 @@ protocol BalanceCarrying {
     var costs: WireCosts? { get }
     var purchasesBlocked: WireFlag? { get }
     var acceptsOptionalIngredients: WireFlag? { get }
+    /// From a server that reads the multi-choice config: `acceptsMultiChoiceConfig: true`.
+    var acceptsMultiChoiceConfig: WireFlag? { get }
 }
 
 enum GenerateStatus: String, Decodable, Sendable {
@@ -198,6 +257,7 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
+    var acceptsMultiChoiceConfig: WireFlag?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -216,6 +276,7 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
+    var acceptsMultiChoiceConfig: WireFlag?
 }
 
 struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
@@ -223,6 +284,7 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
+    var acceptsMultiChoiceConfig: WireFlag?
 }
 
 /// `moved` can be negative: a store refund's debt moves with the recipes.
@@ -232,6 +294,7 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
+    var acceptsMultiChoiceConfig: WireFlag?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable, Equatable {
@@ -303,6 +366,10 @@ enum RecipeServerError: Error, Equatable, Sendable {
     /// Allergens sent without `allergenConsent: true` (`ALLERGEN_CONSENT_REQUIRED`): a request
     /// stored before the consent step existed. Nothing was charged; a new request carries it.
     case allergenConsentRequired
+    /// The ticked items can't make what was asked once the allergens and diets are applied (for a
+    /// menu, some day has nothing it may use): `NOT_ENOUGH_ITEMS`. Nothing was charged and no model
+    /// was called; a changed request needs a new id.
+    case notEnoughItems
     /// `resource-exhausted` without a reason: every server instance is busy (HTTP 429). Nothing
     /// was charged; the same request is sent again after a few seconds.
     case serversBusy
@@ -338,6 +405,7 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "STORE_MISMATCH": return .storeMismatch
         case "PURCHASE_ACCOUNT_MISMATCH": return .purchaseAccountMismatch
         case "ALLERGEN_CONSENT_REQUIRED": return .allergenConsentRequired
+        case "NOT_ENOUGH_ITEMS": return .notEnoughItems
         case nil: break
         default: return .unrecognised(charged: charged ?? false)
         }
@@ -729,6 +797,18 @@ enum RecipeWire {
         }
     }
 
+    /// The items past their date on `today` that this server dish uses, exactly, by its
+    /// ingredients' indices into the request's `ticked` and `optional` items (in the request's
+    /// order, each once; an index outside them is ignored). Android: `Recipe.pastDateByIndex`.
+    static func pastDate(of recipe: Recipe, ticked: [WireIngredient], optional: [WireIngredient], today: String) -> [PastDateItem] {
+        let tickedUsed = Set(recipe.ingredients.compactMap(\.pantryIndex))
+        let optionalUsed = Set(recipe.ingredients.compactMap(\.optionalIndex))
+        let used = ticked.enumerated().filter { tickedUsed.contains($0.offset) }.map(\.element)
+            + optional.enumerated().filter { optionalUsed.contains($0.offset) }.map(\.element)
+        var seen = Set<String>()
+        return pastDate(of: used, today: today).filter { seen.insert($0.name.lowercased()).inserted }
+    }
+
     /// Days since 1970-01-01 of a `YYYY-MM-DD` date, in the proleptic Gregorian calendar.
     private static func dayNumber(_ iso: String) -> Int? {
         let parts = iso.split(separator: "-").compactMap { Int($0) }
@@ -768,7 +848,9 @@ enum RecipeWire {
     }
 
     /// `withOptional`: "Send all products" is on and the server said it reads them; then the
-    /// request's `otherItems` go as `optionalIngredients`.
+    /// request's `otherItems` go as `optionalIngredients`. `multiChoice`: the server said
+    /// `acceptsMultiChoiceConfig`. Nil when the selected diets can't all be sent to this server
+    /// (`WireRecipeConfig.make`): never sent with one left out.
     static func request(
         for request: RecipeRequest,
         kind: RecipeKind,
@@ -776,8 +858,10 @@ enum RecipeWire {
         requestID: UUID,
         today: Date = Date(),
         excluding refused: Set<String> = [],
-        withOptional: Bool = false
-    ) -> GenerateRequest {
+        withOptional: Bool = false,
+        multiChoice: Bool = false
+    ) -> GenerateRequest? {
+        guard let config = WireRecipeConfig.make(request.config, takesMultiChoice: multiChoice) else { return nil }
         // Names the server refused earlier (lower-cased) stay out: sending one again would only
         // be refused again, and repeated refusals lock the account for the day.
         var seen = refused
@@ -811,7 +895,7 @@ enum RecipeWire {
             requestId: requestID.uuidString.lowercased(),
             kind: kind,
             courses: kind == .menu ? (courses == 3 ? 3 : 2) : nil,
-            config: WireRecipeConfig(request.config),
+            config: config,
             ingredients: Array(ingredients.prefix(maxIngredients)),
             allergens: Array(allergens),
             today: isoDay(today),
@@ -1001,5 +1085,76 @@ enum AllergenConsent {
     /// Whether any allergen in Settings is set (blank ones don't count).
     static func hasAllergens(_ allergens: some Sequence<String>) -> Bool {
         allergens.contains { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+}
+
+// MARK: Shopping list
+
+/// One row of the "Add to shopping list" sheet. `key` is how the shopping list matches names
+/// (trimmed, lower case). Android: `ShoppingCandidate`.
+struct ShoppingCandidate: Equatable, Hashable, Sendable {
+    var name: String
+    var key: String
+    /// On the shopping list already: shown unticked and disabled, never added or counted.
+    var alreadyListed: Bool
+    /// The server marked it a staple: listed last, ticked like the rest.
+    var staple: Bool
+}
+
+/// "Add to shopping list" on a recipe or a menu: the ingredients the cook doesn't have, tidied
+/// and merged for the sheet. Android: `RecipeShopping.kt`, ported by hand.
+enum RecipeShopping {
+    /// The non-pantry ingredients of `recipes`, in order of first appearance with staples last,
+    /// tidied and listed once (ignoring case), marked when `listedNames` has them already. Plain
+    /// water is left out when the server marked it a staple; without that mark every non-pantry
+    /// ingredient is listed.
+    static func candidates(_ recipes: [Recipe], listedNames: [String]) -> [ShoppingCandidate] {
+        let listed = Set(listedNames.map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
+        var order: [String] = []
+        var rows: [String: ShoppingCandidate] = [:]
+        for ingredient in recipes.flatMap(\.ingredients) where !ingredient.fromPantry {
+            guard let name = tidyName(ingredient.name) else { continue }
+            if ingredient.staple && isPlainWater(name) { continue }
+            let key = name.lowercased()
+            if let known = rows[key] {
+                // A staple elsewhere in the menu stays one only if every mention is one.
+                if known.staple && !ingredient.staple { rows[key]?.staple = false }
+            } else {
+                order.append(key)
+                rows[key] = ShoppingCandidate(name: name, key: key, alreadyListed: listed.contains(key), staple: ingredient.staple)
+            }
+        }
+        let all = order.compactMap { rows[$0] }
+        return all.filter { !$0.staple } + all.filter(\.staple)
+    }
+
+    /// What the sheet ticks first: everything not on the list already (the owner's rule).
+    static func defaultSelection(_ candidates: [ShoppingCandidate]) -> Set<String> {
+        Set(candidates.filter { !$0.alreadyListed }.map(\.key))
+    }
+
+    /// An ingredient's name as a list entry: what follows the first comma dropped, whitespace
+    /// collapsed, trailing punctuation trimmed, the first letter capitalised. Nil when empty.
+    static func tidyName(_ raw: String) -> String? {
+        let cut = raw.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? raw
+        let beforeWide = cut.split(separator: "，", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? cut
+        var text = beforeWide.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let trailing: Set<Character> = [".", ";", ":", "-", "–", "—", " "]
+        let leading: Set<Character> = ["-", "–", "—", "•", "*", " "]
+        while let last = text.last, trailing.contains(last) { text.removeLast() }
+        while let first = text.first, leading.contains(first) { text.removeFirst() }
+        guard let first = text.first else { return nil }
+        return first.isLowercase ? first.uppercased() + text.dropFirst() : text
+    }
+
+    /// Water in the ten recipe languages (the server's staple words' first group).
+    private static let waterWords: Set<String> = [
+        "water", "vann", "vannet", "wasser", "agua", "eau", "acqua", "woda", "wody", "wodę", "vatten",
+        "вода", "воды", "воду", "води", "кипяток", "окріп",
+    ]
+
+    /// Whether a name the server marked a staple is water: nobody buys tap water for a recipe.
+    static func isPlainWater(_ name: String) -> Bool {
+        name.lowercased().split { $0.isWhitespace || $0 == "'" || $0 == "’" || $0 == "-" }.contains { waterWords.contains(String($0)) }
     }
 }

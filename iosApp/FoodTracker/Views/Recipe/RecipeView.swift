@@ -11,6 +11,8 @@ struct RecipeView: View {
     @ObservedObject var pantry: NativePantryViewModel
     @ObservedObject var model: RecipeViewModel
     let onScan: () -> Void
+    /// Switches to the Shopping tab, from "Added N to your shopping list".
+    var onOpenShopping: () -> Void = {}
 
     @ObservedObject private var settingsStore = SettingsStore.shared
     @Environment(\.isExpanded) private var isExpanded
@@ -32,6 +34,16 @@ struct RecipeView: View {
     private var isMenu: Bool { paid && model.mode == .menu }
     private var isWriting: Bool { model.phase != .idle }
 
+    /// "Add to shopping list" on a result: the list's names now, the ordinary add path, and the
+    /// way to the Shopping tab.
+    private var shoppingContext: RecipeShoppingContext {
+        RecipeShoppingContext(
+            listedNames: pantry.shoppingList.map(\.productName),
+            add: { [pantry] names in pantry.addShoppingListEntries(names) },
+            openShoppingList: onOpenShopping
+        )
+    }
+
     var body: some View {
         NavigationStack(path: $model.path) {
             root
@@ -51,6 +63,8 @@ struct RecipeView: View {
                     }
                 }
         }
+        // On the stack, so every pushed result has it.
+        .environment(\.recipeShopping, shoppingContext)
         // Outside the stack, which doesn't pass the shell's clearance on to its content's own
         // insets, so the form pads for it itself. The inset starts at the content clearance,
         // the content gap above the pill; the button comes down by the difference to sit where
@@ -433,6 +447,13 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeAllergenConsentDeclined, actionTitle: L10n.recipeSettingsButton) {
                 model.path.append(.settings)
             }
+        case .notEnoughItems(let kind):
+            // The form stays as it is; the next try is a new request.
+            showSnackbar(L10n.recipeNotEnoughItems(kind))
+        case .dietsNeedServerUpdate:
+            showSnackbar(L10n.recipeDietsNeedUpdate, actionTitle: L10n.recipeSettingsButton) {
+                model.path.append(.settings)
+            }
         }
     }
 
@@ -521,7 +542,14 @@ struct RecipeView: View {
             }
             RecipeDifficultyField(selection: model.binding(\.difficulty))
             RecipeServingsField(servings: model.binding(\.servings))
-            RecipeTimeField(maxMinutes: model.binding(\.maxMinutes))
+            RecipeTimeField(minMinutes: model.binding(\.minMinutes), maxMinutes: model.binding(\.maxMinutes))
+            // A menu's starters and desserts ignore the meal; time and diet hold for every dish.
+            if isMenu, !model.config.mealTypes.isEmpty {
+                Text(L10n.recipeMenuMealNote(RecipeChoices.orderedMeals(model.config.mealTypes)))
+                    .larderFont(.caption)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             Button { model.path.append(.settings) } label: {
                 HStack(spacing: LarderSpace.s3) {
                     LarderIcon(.slidersHorizontal).foregroundStyle(LarderColor.onSurfaceVariant)

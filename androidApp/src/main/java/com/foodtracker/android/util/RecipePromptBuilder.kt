@@ -52,7 +52,11 @@ fun recipePromptStrings(context: Context): RecipePromptStrings {
         },
         servings = { context.getString(R.string.recipe_prompt_servings, it) },
         maxMinutes = { context.getString(R.string.recipe_prompt_max_minutes, it) },
-        mealType = { context.getString(R.string.recipe_prompt_meal, recipeMealLabel(resources, it)) },
+        minMinutes = { context.getString(R.string.recipe_prompt_min_minutes, it) },
+        mealTypes = { meals ->
+            val labels = meals.joinToString(", ") { recipeMealLabel(resources, it) }
+            context.getString(if (meals.size == 1) R.string.recipe_prompt_meal else R.string.recipe_prompt_meals, labels)
+        },
         diet = { context.getString(R.string.recipe_prompt_diet, recipeDietLabel(resources, it)) },
         allergens = { context.getString(R.string.recipe_prompt_allergens, it) },
         language = { code -> context.getString(R.string.recipe_prompt_language, languageDisplayName(code)) },

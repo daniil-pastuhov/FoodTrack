@@ -168,7 +168,8 @@ fun RecipeResultScreen(
     savedId: String,
     onBack: () -> Unit,
     onDelete: (String) -> Unit,
-    onOpenDish: (day: Int, course: Int) -> Unit = { _, _ -> }
+    onOpenDish: (day: Int, course: Int) -> Unit = { _, _ -> },
+    shopping: RecipeShoppingActions = RecipeShoppingActions()
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -208,8 +209,8 @@ fun RecipeResultScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
-                recipe != null -> RecipeDocument(recipe)
-                menu != null -> MenuDocument(menu, today, onOpenDish)
+                recipe != null -> RecipeDocument(recipe, shopping = shopping)
+                menu != null -> MenuDocument(menu, today, onOpenDish, shopping)
                 // Still loading, or deleted from another screen.
                 state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
             }
@@ -224,7 +225,8 @@ fun MenuDishScreen(
     savedId: String,
     day: Int,
     course: Int,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    shopping: RecipeShoppingActions = RecipeShoppingActions()
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -255,7 +257,7 @@ fun MenuDishScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
-                dish != null -> RecipeDocument(dish.recipe, partOfMenu = true)
+                dish != null -> RecipeDocument(dish.recipe, partOfMenu = true, shopping = shopping)
                 state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
             }
         }
@@ -264,7 +266,12 @@ fun MenuDishScreen(
 
 /** Three day sections of course rows, each day saying which dated items it uses. */
 @Composable
-internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, course: Int) -> Unit) {
+internal fun MenuDocument(
+    menu: Menu,
+    today: LocalDate,
+    onOpenDish: (day: Int, course: Int) -> Unit,
+    shopping: RecipeShoppingActions = RecipeShoppingActions()
+) {
     val resources = LocalContext.current.resources
     val courses = menu.days.maxOfOrNull { it.courses.size } ?: 0
     val servings = menu.days.firstOrNull()?.courses?.firstOrNull()?.recipe?.servings ?: 0
@@ -291,6 +298,12 @@ internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, c
                 )
             }
             PastDateCallout(menu.pastDate, Modifier.padding(top = LarderSpace.s3))
+            // One list for every dish of every day; each dish also offers its own.
+            AddToShoppingButton(
+                menu.days.flatMap { day -> day.courses.map { it.recipe } },
+                shopping,
+                Modifier.padding(top = LarderSpace.s3).fillMaxWidth()
+            )
             menu.days.forEachIndexed { dayIndex, day ->
                 SectionHeader(menuDayLabel(resources, day.date, today))
                 if (day.uses.isNotEmpty()) {
@@ -332,7 +345,7 @@ internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, c
 }
 
 @Composable
-internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false) {
+internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false, shopping: RecipeShoppingActions = RecipeShoppingActions()) {
     val resources = LocalContext.current.resources
     Column(
         modifier = Modifier
@@ -378,6 +391,8 @@ internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false) {
                     IngredientRow(ingredient)
                 }
             }
+            NotFromPantryHint(recipe, Modifier.padding(top = LarderSpace.s2))
+            AddToShoppingButton(listOf(recipe), shopping, Modifier.padding(top = LarderSpace.s3).fillMaxWidth())
 
             SectionHeader(stringResource(R.string.recipe_method))
             Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s4)) {
@@ -593,7 +608,7 @@ internal fun MenuDocumentPreview() = LarderTheme {
             )
         }
     )
-    Surface(color = MaterialTheme.colorScheme.background) { MenuDocument(menu, today) { _, _ -> } }
+    Surface(color = MaterialTheme.colorScheme.background) { MenuDocument(menu, today, onOpenDish = { _, _ -> }) }
 }
 
 @Preview

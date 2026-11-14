@@ -16,7 +16,7 @@
  * - Nothing stored (earlier recipes, menus, failure reasons) is ever part of a prompt.
  */
 import { randomBytes } from "node:crypto";
-import { coursesFor, menuDates, type GenerateRequest } from "../contract";
+import { coursesFor, menuDates, type DietChoice, type GenerateRequest, type RecipeConfig } from "../contract";
 import { LIMITS, STEP_BOUNDS, idNamesFor, optionalIdsFor, pantryIdsFor } from "../core/outputSafety";
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -44,6 +44,47 @@ const DIET: Record<string, string> = {
   glutenFree: "gluten-free (no wheat, barley, rye, spelt or products made from them)",
   dairyFree: "dairy-free (no milk or anything made from milk)",
 };
+
+/**
+ * Diets another selected diet already implies, left out of the instruction (the output check
+ * still applies every selected one): vegan forbids everything vegetarian, pescatarian and
+ * dairy-free do; vegetarian everything pescatarian does. So "pescatarian and vegetarian" reads as
+ * vegetarian, the strictest combination, and the model never sees "fish allowed" beside "no fish".
+ */
+const IMPLIED_BY: Readonly<Record<DietChoice, readonly DietChoice[]>> = {
+  vegetarian: ["vegan"],
+  vegan: [],
+  pescatarian: ["vegetarian", "vegan"],
+  glutenFree: [],
+  dairyFree: ["vegan"],
+};
+
+export function promptDiets(diets: readonly DietChoice[]): DietChoice[] {
+  return diets.filter((d) => !IMPLIED_BY[d].some((stricter) => diets.includes(stricter)));
+}
+
+/** The time line: the upper bound is a limit (the schema enforces it), the lower one a guide. */
+function timeLine(c: RecipeConfig): string {
+  const guide = c.minMinutes === null
+    ? null
+    : c.minMinutes === c.maxMinutes
+      ? `aim for about ${c.minMinutes} minutes`
+      : `aim for about ${c.minMinutes} minutes or more`;
+  if (c.maxMinutes === null) return guide ? `- Total time: no limit; ${guide} (a guide, not a rule).` : "- Total time: no limit.";
+  return guide ? `- Total time: at most ${c.maxMinutes} minutes; ${guide} (a guide, not a rule).` : `- Total time: at most ${c.maxMinutes} minutes.`;
+}
+
+function mealLine(c: RecipeConfig): string {
+  if (c.mealTypes.length === 0) return "- Meal type: any.";
+  if (c.mealTypes.length === 1) return `- Meal type: ${c.mealTypes[0]}.`;
+  return `- Meal type: any one of ${c.mealTypes.join(", ")}: the dish must suit at least one of them.`;
+}
+
+function dietLine(c: RecipeConfig): string {
+  const diets = promptDiets(c.diets);
+  if (diets.length <= 1) return `- Diet: ${DIET[diets[0] ?? "none"]}. Never use an ingredient that breaks it, even if it is in the pantry.`;
+  return `- Diet: all of these at once: ${diets.map((d) => DIET[d]).join("; ")}. Never use an ingredient that breaks any of them, even if it is in the pantry.`;
+}
 
 /** A fresh marker per request: 16 hex characters after a fixed prefix. */
 export function newCanary(): string {
@@ -75,9 +116,9 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
     `- Difficulty: ${DIFFICULTY[c.difficulty]}.`,
     `- Detail: ${DETAIL[c.detail]}`,
     `- Servings: ${c.servings}.`,
-    c.maxMinutes ? `- Total time: at most ${c.maxMinutes} minutes.` : "- Total time: no limit.",
-    `- Meal type: ${c.mealType === "any" ? "any" : c.mealType}.`,
-    `- Diet: ${DIET[c.diet]}. Never use an ingredient that breaks it, even if it is in the pantry.`,
+    timeLine(c),
+    mealLine(c),
+    dietLine(c),
     "- Allergens: never use a food named in \"allergens\", nor any ingredient that contains or may contain it, even if it is in the pantry. Leave such pantry items out.",
     `- Today is ${req.today}.`,
   ];
@@ -88,7 +129,7 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
     lines.push(
       `- Write a menu for 3 days: ${dates.join(", ")}, in that order, with exactly these courses each day: ${coursesFor(req.courses!).join(", ")}.`,
       "- Every course is a full recipe and a different dish. Every day uses at least one pantry item.",
-      `- In each day's "uses", list the ids of the ${optional ? "pantry and optional" : "pantry"} items that day uses. Ignore the meal type for starters and desserts.`,
+      `- In each day's "uses", list the ids of the ${optional ? "pantry and optional" : "pantry"} items that day uses. The meal type is for the main course only: ignore it for starters and desserts. The time and the diet hold for every course.`,
     );
   }
   // Which items are past their date is computed here, not left to the model's date arithmetic.

@@ -1193,7 +1193,7 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%1$d отмеченный продукт просрочен, самый старый — на %2$@. Проверьте, что их ещё можно есть, или снимите отметку.</string>
+            <string>%1$d отмеченный продукт просрочен, самый старый — на %2$@. Проверьте, что всё это ещё можно есть, или снимите отметки.</string>
             <key>few</key>
             <string>%1$d отмеченных продукта просрочены, самый старый — на %2$@. Проверьте, что их ещё можно есть, или снимите отметку.</string>
             <key>many</key>
@@ -1220,6 +1220,66 @@
             <string>%d дней</string>
             <key>other</key>
             <string>%d дня</string>
+        </dict>
+    </dict>
+    <key>recipe_time_minutes_spoken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d минута</string>
+            <key>few</key>
+            <string>%d минуты</string>
+            <key>many</key>
+            <string>%d минут</string>
+            <key>other</key>
+            <string>%d минуты</string>
+        </dict>
+    </dict>
+    <key>recipe_shopping_confirm</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавить %d продукт</string>
+            <key>few</key>
+            <string>Добавить %d продукта</string>
+            <key>many</key>
+            <string>Добавить %d продуктов</string>
+            <key>other</key>
+            <string>Добавить %d продукта</string>
+        </dict>
+    </dict>
+    <key>recipe_shopping_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавлен %d продукт в список покупок</string>
+            <key>few</key>
+            <string>Добавлено %d продукта в список покупок</string>
+            <key>many</key>
+            <string>Добавлено %d продуктов в список покупок</string>
+            <key>other</key>
+            <string>Добавлено %d продукта в список покупок</string>
         </dict>
     </dict>
 </dict>

@@ -28,7 +28,23 @@ import com.foodtracker.android.util.recipeDietLabel
 import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.MAX_RECIPE_SERVINGS
 import com.foodtracker.recipe.MIN_RECIPE_SERVINGS
-import com.foodtracker.recipe.RECIPE_MAX_MINUTES_OPTIONS
+import com.foodtracker.recipe.RECIPE_DIET_CHOICES
+import com.foodtracker.recipe.RECIPE_MINUTES_CEILING
+import com.foodtracker.recipe.RECIPE_MINUTES_FLOOR
+import com.foodtracker.recipe.RECIPE_MINUTES_STEP
+import com.foodtracker.recipe.orderedMeals
+import com.foodtracker.recipe.snapRecipeMinutes
+import com.foodtracker.recipe.toggledChoice
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.RangeSlider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.contentDescription
+import kotlin.math.roundToInt
 import com.foodtracker.recipe.RecipeConfig
 import com.foodtracker.recipe.RecipeDetail
 import com.foodtracker.recipe.RecipeDiet
@@ -74,13 +90,6 @@ fun recipeDurationLabel(resources: Resources, minutes: Int): String = when {
     else -> resources.getString(R.string.recipe_duration_hours_minutes, minutes / 60, minutes % 60)
 }
 
-/** The time chip's label: "15 min", "30 min", "1 hour" or "Any". */
-fun recipeTimeChipLabel(resources: Resources, maxMinutes: Int?): String = when (maxMinutes) {
-    null -> resources.getString(R.string.recipe_time_any)
-    60 -> resources.getString(R.string.recipe_time_hour)
-    else -> resources.getString(R.string.recipe_time_minutes, maxMinutes)
-}
-
 /** The language picker's label: a language's own name, or "Same as the app (English)". */
 fun recipeLanguageLabel(resources: Resources, language: String?, appLanguage: String): String =
     if (language == null) {
@@ -99,15 +108,15 @@ fun recipeOptionsSummary(resources: Resources, config: RecipeConfig, appLanguage
             RecipeDetail.STEP_BY_STEP -> R.string.recipe_detail_summary_step_by_step
         }
     ),
-    if (config.mealType == RecipeMealType.ANY) {
+    if (config.mealTypes.isEmpty()) {
         resources.getString(R.string.recipe_meal_summary_any)
     } else {
-        recipeMealLabel(resources, config.mealType)
+        orderedMeals(config.mealTypes).joinToString(", ") { recipeMealLabel(resources, it) }
     },
-    if (config.diet == RecipeDiet.NONE) {
+    if (config.diets.isEmpty()) {
         resources.getString(R.string.recipe_diet_summary_none)
     } else {
-        recipeDietLabel(resources, config.diet)
+        RECIPE_DIET_CHOICES.filter { it in config.diets }.joinToString(", ") { recipeDietLabel(resources, it) }
     }
 ).joinToString(" · ")
 
@@ -199,13 +208,121 @@ internal fun ServingsControl(value: Int, onChange: (Int) -> Unit) {
     }
 }
 
+/**
+ * Total cooking time as a range slider with two handles, from [RECIPE_MINUTES_FLOOR] to
+ * [RECIPE_MINUTES_CEILING] in steps of [RECIPE_MINUTES_STEP]. A handle at its end is no bound
+ * (null), so both at the ends is "Any". The current range is written beside the label, and each
+ * handle tells TalkBack which one it is and its value; TalkBack's volume-key adjust (and a
+ * keyboard's arrows) moves a handle one step, so dragging is never needed. Material's RangeSlider
+ * mirrors itself in right-to-left layouts.
+ */
 @Composable
-internal fun TimeControl(value: Int?, onChange: (Int?) -> Unit) {
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+internal fun TimeControl(minMinutes: Int?, maxMinutes: Int?, onChange: (min: Int?, max: Int?) -> Unit) {
     val resources = LocalContext.current.resources
-    Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
-        RecipeControlLabel(stringResource(R.string.recipe_time))
-        ChipRow(options = RECIPE_MAX_MINUTES_OPTIONS + listOf<Int?>(null), selected = value, onSelect = onChange) {
-            recipeTimeChipLabel(resources, it)
+    val floor = RECIPE_MINUTES_FLOOR.toFloat()
+    val ceiling = RECIPE_MINUTES_CEILING.toFloat()
+    // Follows the stored value, and the handles while they move; stored when they are let go.
+    var range by remember(minMinutes, maxMinutes) {
+        mutableStateOf((minMinutes?.toFloat() ?: floor)..(maxMinutes?.toFloat() ?: ceiling))
+    }
+    fun bounds(r: ClosedFloatingPointRange<Float>): Pair<Int?, Int?> {
+        val low = snapRecipeMinutes(r.start.roundToInt())
+        val high = snapRecipeMinutes(r.endInclusive.roundToInt())
+        return low.takeIf { it > RECIPE_MINUTES_FLOOR } to high.takeIf { it < RECIPE_MINUTES_CEILING }
+    }
+    val (low, high) = bounds(range)
+    val shortest = stringResource(R.string.recipe_time_shortest)
+    val longest = stringResource(R.string.recipe_time_longest)
+    val lowSpoken = low?.let { resources.getQuantityString(R.plurals.recipe_time_minutes_spoken, it, it) }
+        ?: stringResource(R.string.recipe_time_no_minimum)
+    val highSpoken = high?.let { resources.getQuantityString(R.plurals.recipe_time_minutes_spoken, it, it) }
+        ?: stringResource(R.string.recipe_time_no_limit)
+    Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s1)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RecipeControlLabel(stringResource(R.string.recipe_time), Modifier.weight(1f))
+            Text(
+                text = recipeTimeRangeLabel(resources, low, high),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+        val colors = SliderDefaults.colors(
+            thumbColor = MaterialTheme.colorScheme.primary,
+            activeTrackColor = MaterialTheme.colorScheme.primary,
+            inactiveTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            activeTickColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.5f),
+            inactiveTickColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+        )
+        val startInteraction = remember { MutableInteractionSource() }
+        val endInteraction = remember { MutableInteractionSource() }
+        RangeSlider(
+            value = range,
+            onValueChange = { range = it },
+            onValueChangeFinished = {
+                val (min, max) = bounds(range)
+                if (min != minMinutes || max != maxMinutes) onChange(min, max)
+            },
+            valueRange = floor..ceiling,
+            steps = (RECIPE_MINUTES_CEILING - RECIPE_MINUTES_FLOOR) / RECIPE_MINUTES_STEP - 1,
+            colors = colors,
+            startInteractionSource = startInteraction,
+            endInteractionSource = endInteraction,
+            startThumb = {
+                SliderDefaults.Thumb(
+                    interactionSource = startInteraction,
+                    colors = colors,
+                    modifier = Modifier.semantics { contentDescription = "$shortest: $lowSpoken" }
+                )
+            },
+            endThumb = {
+                SliderDefaults.Thumb(
+                    interactionSource = endInteraction,
+                    colors = colors,
+                    modifier = Modifier.semantics { contentDescription = "$longest: $highSpoken" }
+                )
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        if (low != null) {
+            Text(
+                text = stringResource(R.string.recipe_time_guide_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** The time range as text: "Any", "Up to 30 min", "At least 40 min", "30 min", "20–45 min". */
+fun recipeTimeRangeLabel(resources: Resources, minMinutes: Int?, maxMinutes: Int?): String = when {
+    minMinutes == null && maxMinutes == null -> resources.getString(R.string.recipe_time_any)
+    minMinutes == null -> resources.getString(R.string.recipe_time_up_to, maxMinutes)
+    maxMinutes == null -> resources.getString(R.string.recipe_time_at_least, minMinutes)
+    minMinutes == maxMinutes -> resources.getString(R.string.recipe_time_minutes, minMinutes)
+    else -> resources.getString(R.string.recipe_time_range, minMinutes, maxMinutes)
+}
+
+/**
+ * A multi-choice chip row whose first chip, [emptyLabel] ("Any", "None"), is the empty selection:
+ * it clears the others, another chip toggles itself and turns the first one off, and turning the
+ * last one off turns the first one back on ([toggledChoice]).
+ */
+@Composable
+internal fun <T> MultiChipRow(
+    options: List<T>,
+    selected: Set<T>,
+    emptyLabel: String,
+    onChange: (Set<T>) -> Unit,
+    label: (T) -> String
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+        verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)
+    ) {
+        LarderChip(label = emptyLabel, selected = selected.isEmpty(), onClick = { onChange(selected.toggledChoice(null)) })
+        options.forEach { option ->
+            LarderChip(label = label(option), selected = option in selected, onClick = { onChange(selected.toggledChoice(option)) })
         }
     }
 }

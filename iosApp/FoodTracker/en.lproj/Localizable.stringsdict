@@ -978,5 +978,53 @@
             <string>%d days</string>
         </dict>
     </dict>
+    <key>recipe_time_minutes_spoken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d minute</string>
+            <key>other</key>
+            <string>%d minutes</string>
+        </dict>
+    </dict>
+    <key>recipe_shopping_confirm</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Add %d item</string>
+            <key>other</key>
+            <string>Add %d items</string>
+        </dict>
+    </dict>
+    <key>recipe_shopping_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Added %d to your shopping list</string>
+            <key>other</key>
+            <string>Added %d to your shopping list</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

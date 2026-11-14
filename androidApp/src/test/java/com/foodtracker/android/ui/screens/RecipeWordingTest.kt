@@ -40,7 +40,7 @@ class RecipeWordingTest {
         val prompt = buildRecipePrompt(
             context,
             listOf(item("Milk", 1)),
-            RecipeConfig(servings = 4, maxMinutes = 15, mealType = RecipeMealType.DINNER, diet = RecipeDiet.VEGAN, language = "de"),
+            RecipeConfig(servings = 4, maxMinutes = 15, mealTypes = setOf(RecipeMealType.DINNER), diets = setOf(RecipeDiet.VEGAN), language = "de"),
             listOf("peanuts")
         )
 
@@ -95,7 +95,7 @@ class RecipeWordingTest {
             "Deutsch · Step by step · Dinner · Vegan",
             recipeOptionsSummary(
                 resources,
-                RecipeConfig(detail = RecipeDetail.STEP_BY_STEP, mealType = RecipeMealType.DINNER, diet = RecipeDiet.VEGAN, language = "de"),
+                RecipeConfig(detail = RecipeDetail.STEP_BY_STEP, mealTypes = setOf(RecipeMealType.DINNER), diets = setOf(RecipeDiet.VEGAN), language = "de"),
                 appLanguage = "en"
             )
         )
@@ -103,6 +103,19 @@ class RecipeWordingTest {
         assertEquals("1 h", recipeDurationLabel(resources, 60))
         assertEquals("1 h 10 min", recipeDurationLabel(resources, 70))
         assertEquals("Same as the app (Norsk bokmål)", recipeLanguageLabel(resources, null, "nb"))
+        assertEquals(
+            "Deutsch · Standard detail · Lunch, Dinner · Vegetarian, Gluten-free",
+            recipeOptionsSummary(
+                resources,
+                RecipeConfig(mealTypes = setOf(RecipeMealType.DINNER, RecipeMealType.LUNCH), diets = setOf(RecipeDiet.GLUTEN_FREE, RecipeDiet.VEGETARIAN), language = "de"),
+                appLanguage = "en"
+            )
+        )
+        assertEquals("Any", recipeTimeRangeLabel(resources, null, null))
+        assertEquals("up to 30 min", recipeTimeRangeLabel(resources, null, 30))
+        assertEquals("at least 40 min", recipeTimeRangeLabel(resources, 40, null))
+        assertEquals("20–45 min", recipeTimeRangeLabel(resources, 20, 45))
+        assertEquals("30 min", recipeTimeRangeLabel(resources, 30, 30))
     }
 
     @Test

@@ -76,6 +76,8 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balanceBlocked = false
     /** Whether getBalance says the server reads optional items. */
     var balanceOptional = false
+    /** Whether getBalance says the server reads the multi-choice config. */
+    var balanceMultiChoice = false
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<DeleteReply>>()
     var deleteCalls = 0
@@ -109,7 +111,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice))
             is ServerResult.Err -> current
         }
     }
@@ -1273,7 +1275,7 @@ class RecipePaidTest {
 
     @Test
     fun theOptionalItemsArePartOfWhatARetryMustMatch() = runUnconfined {
-        val base = GenerateRequest("a", WireKind.RECIPE, null, RecipeConfig(), listOf(WireIngredient("Bread", null, 1)), emptyList(), "2026-11-04")
+        val base = GenerateRequest("a", WireKind.RECIPE, null, WireConfig(), listOf(WireIngredient("Bread", null, 1)), emptyList(), "2026-11-04")
         assertTrue(base.sameAskAs(base.copy(requestId = "b")))
         assertFalse(base.sameAskAs(base.copy(optionalIngredients = listOf(WireIngredient("Milk", null, 1)))))
     }
@@ -1902,7 +1904,7 @@ class RecipePaidTest {
     private fun heldBread() = GenerateRequest(
         requestId = "held",
         kind = WireKind.RECIPE,
-        config = RecipeConfig().copy(language = "en"),
+        config = legacyWireConfig(RecipeConfig(), "en")!!,
         ingredients = listOf(WireIngredient("Bread", "2026-11-03", 2), WireIngredient("Milk", "2026-11-06", 1)),
         allergens = listOf("peanuts"),
         today = "2026-11-04"
@@ -2317,5 +2319,117 @@ class RecipePaidTest {
             assertEquals(PaidEvent.AccountDeleted, holder.uiState.value.paid.event)
             assertFalse(holder.uiState.value.paid.appleLinkLeft, "$reply")
         }
+    }
+
+    // --- Multi-choice config, NOT_ENOUGH_ITEMS, exact past-date warnings ----------------------
+
+    private fun withMultiChoiceServer(balance: Int, takes: Boolean) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(
+            RecipePaidSnapshot(allergenConsent = agreed, balance = balance, serverTakesMultiChoice = takes)
+        )
+        backend.balanceMultiChoice = takes
+    }
+
+    @Test
+    fun aServerThatSaysSoGetsTheMultiChoiceConfig() = runUnconfined {
+        withMultiChoiceServer(5, takes = true)
+        val holder = holder()
+        holder.updateConfig {
+            it.copy(minMinutes = 20, maxMinutes = 45, mealTypes = setOf(RecipeMealType.DINNER, RecipeMealType.LUNCH), diets = setOf(RecipeDiet.GLUTEN_FREE, RecipeDiet.VEGETARIAN))
+        }
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        val config = backend.generated.single().config
+        assertEquals(WireConfig(minMinutes = 20, maxMinutes = 45, mealTypes = listOf(RecipeMealType.LUNCH, RecipeMealType.DINNER), diets = listOf(RecipeDiet.VEGETARIAN, RecipeDiet.GLUTEN_FREE), language = "en"), config)
+        val json = RecipeJson.encodeToString(GenerateRequest.serializer(), backend.generated.single())
+        assertTrue(json.contains("\"mealType\":null") && json.contains("\"diet\":null"), "an old server refuses it rather than reading part of it: $json")
+    }
+
+    @Test
+    fun aServerThatDoesntGetsTheClosestLegacyValues() = runUnconfined {
+        withMultiChoiceServer(5, takes = false)
+        val holder = holder()
+        holder.updateConfig {
+            it.copy(minMinutes = 20, maxMinutes = 45, mealTypes = setOf(RecipeMealType.DINNER, RecipeMealType.LUNCH), diets = setOf(RecipeDiet.VEGETARIAN, RecipeDiet.DAIRY_FREE))
+        }
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(
+            WireConfig(maxMinutes = 30, mealType = RecipeMealType.ANY, diet = RecipeDiet.VEGAN, language = "en"),
+            backend.generated.single().config
+        )
+    }
+
+    @Test
+    fun glutenFreeWithAnotherDietIsNeverSentToAServerThatCantTakeBoth() = runUnconfined {
+        withMultiChoiceServer(5, takes = false)
+        val holder = holder()
+        holder.updateConfig { it.copy(diets = setOf(RecipeDiet.VEGETARIAN, RecipeDiet.GLUTEN_FREE)) }
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.DietsNeedServerUpdate, holder.uiState.value.event)
+        assertTrue(backend.generated.isEmpty())
+        assertEquals(5, holder.uiState.value.paid.balance)
+    }
+
+    @Test
+    fun aMultiChoiceRequestRefusedAsInvalidAsksForTheServersFlagsAgain() = runUnconfined {
+        withMultiChoiceServer(5, takes = true)
+        val holder = holder()
+        holder.updateConfig { it.copy(diets = setOf(RecipeDiet.VEGETARIAN, RecipeDiet.GLUTEN_FREE)) }
+        // A server rolled back to one that reads only the legacy config.
+        backend.balanceMultiChoice = false
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        val before = backend.balanceCalls
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals(before + 1, backend.balanceCalls)
+        holder.consumeEvent()
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.DietsNeedServerUpdate, holder.uiState.value.event, "the next try knows the server can't take both")
+        assertEquals(1, backend.generated.size)
+    }
+
+    @Test
+    fun notEnoughItemsTakesNothingAndTheNextTryIsANewRequest() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.NOT_ENOUGH_ITEMS)
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.NotEnoughItems(menu = false), holder.uiState.value.event)
+        assertEquals(5, holder.uiState.value.paid.balance)
+        assertNull(paidRepository.get().pendingGeneration)
+        holder.consumeEvent()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(2, backend.generated.size)
+        assertTrue(backend.generated[0].requestId != backend.generated[1].requestId)
+    }
+
+    @Test
+    fun aMenuThatHasNotEnoughSaysSo() = runUnconfined {
+        withBalance(10)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        backend.generateReplies += ServerResult.Err(ServerError.NOT_ENOUGH_ITEMS)
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.NotEnoughItems(menu = true), holder.uiState.value.event)
+    }
+
+    @Test
+    fun withItemIndicesTheWarningNamesOnlyWhatTheDishUses() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        // Bread (index 0) is past its date; this dish uses only the spinach (index 1).
+        val usesSpinach = sampleRecipe.copy(ingredients = listOf(RecipeIngredient("100 g", "spinach", fromPantry = true, pantryIndex = 1)))
+        backend.generateReplies += done(4, recipe = usesSpinach)
+        holder.generateOnServer()
+        assertEquals(emptyList<PastDateItem>(), saved.rows.value.single().recipe?.pastDate)
+
+        val usesBread = sampleRecipe.copy(ingredients = listOf(RecipeIngredient("2", "bread", fromPantry = true, pantryIndex = 0)))
+        backend.generateReplies += done(3, recipe = usesBread)
+        holder.consumeEvent()
+        holder.generateOnServer()
+        assertEquals(setOf<List<PastDateItem>?>(emptyList(), listOf(PastDateItem("Bread", 1))), saved.rows.value.mapTo(HashSet()) { it.recipe?.pastDate })
     }
 }

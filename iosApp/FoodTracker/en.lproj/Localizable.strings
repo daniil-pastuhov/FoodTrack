@@ -739,7 +739,7 @@
 "recipe_allergen_consent_message" = "To write this, your allergen list (%@) goes with the ticked items and your preferences to our server and to Google's AI model, so the recipe avoids those foods. Google may process it outside the EU. It is used only for this request and not stored afterwards. You can withdraw this in Recipe settings.\n\nThe free ways, your phone's own model and the shared prompt, don't send it to us.";
 "recipe_allergen_consent_agree" = "Agree and continue";
 "recipe_allergen_consent_agree_only" = "Agree";
-"recipe_allergen_consent_declined" = "Your allergens aren't sent to our server, so it can't write this. Turn sending them on in Recipe settings, or use your phone's model or the shared prompt.";
+"recipe_allergen_consent_declined" = "Your allergens aren't sent to our server, so it can't write this. Turn sending them on in Recipe settings, or use the model on this {device} or the shared prompt.";
 "recipe_allergen_consent_setting" = "Send my allergens to our server";
 "recipe_allergen_consent_setting_on" = "You agreed on %@. Turn off to withdraw: our server then won't write recipes while allergens are set.";
 "recipe_allergen_consent_setting_off" = "Needed for recipes from our server while allergens are set. Used only for the request, not stored.";
@@ -784,7 +784,7 @@
 "recipe_intro_prompt_title" = "Free, with any AI app";
 "recipe_intro_prompt_message" = "Share or copy a ready-made prompt to the AI app you already use.";
 "recipe_intro_device_title" = "Free, on this {device}";
-"recipe_intro_device_message" = "Your {device} writes the recipe itself, and nothing is sent anywhere.";
+"recipe_intro_device_message" = "This {device} writes the recipe itself, and nothing is sent anywhere.";
 "recipe_intro_packs_title" = "From a recipe pack";
 "recipe_intro_packs_message" = "Our server writes the recipe, and can also plan a menu for 3 days. A recipe takes %1$@ from a pack; a menu takes %2$@ with 2 courses a day or %3$@ with 3.";
 "recipe_intro_packs_price" = "Packs from %@.";
@@ -805,3 +805,26 @@
 "recipe_past_date_result_many" = "Past their date: %1$@. Check they are still safe to eat before you cook.";
 "recipe_past_date_item" = "%1$@ (%2$@)";
 "recipe_prompt_past_date" = "These items are past their date, and I have chosen to use them anyway: %1$@.";
+
+/* Recipe: time range, multi-choice meal and diet, NOT_ENOUGH_ITEMS, shopping list */
+"recipe_time_range" = "%1$d–%2$d min";
+"recipe_time_up_to" = "up to %d min";
+"recipe_time_at_least" = "at least %d min";
+"recipe_time_shortest" = "Shortest time";
+"recipe_time_longest" = "Longest time";
+"recipe_time_no_minimum" = "No minimum";
+"recipe_time_no_limit" = "No limit";
+"recipe_time_guide_hint" = "The longest time is a limit; the shortest is only a guide.";
+"recipe_menu_meal_note_one" = "%@ applies to the main courses only.";
+"recipe_menu_meal_note_many" = "%@ apply to the main courses only.";
+"recipe_prompt_min_minutes" = "Ideally about %d minutes or more";
+"recipe_prompt_meals" = "Suitable for any of these meals: %@";
+"recipe_not_enough_items" = "Not enough to cook with once your diet and allergens are left out. Tick a few more items. No recipe was taken.";
+"recipe_not_enough_items_menu" = "Not enough for three days. Tick a few more items, or ask for a single recipe. No recipes were taken.";
+"recipe_diets_need_update" = "Recipes from packs can't combine gluten-free with another diet yet. Keep one of them in Recipe settings, or use the model on this {device} or the shared prompt. No recipes were taken.";
+"recipe_not_from_pantry_hint" = "Ingredients without the “In your pantry” mark aren't from your pantry: staples, or a few things you may need to buy.";
+"recipe_shopping_add" = "Add to shopping list";
+"recipe_shopping_title" = "Add to shopping list (%d)";
+"recipe_shopping_message" = "Untick what you already have.";
+"recipe_shopping_already" = "Already on your list";
+"recipe_shopping_nothing_added" = "Everything is on your shopping list already";

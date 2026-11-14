@@ -71,6 +71,12 @@ enum RecipeFailure: Equatable {
     /// Allergens are set and the person refused, or withdrew, sending them to our server.
     /// Nothing was sent; Recipe settings turns it back on, and the free routes still work.
     case allergenConsentDeclined
+    /// `NOT_ENOUGH_ITEMS`: the ticked items can't make it once the allergens and diets are
+    /// applied (for a menu, some day has nothing it may use). Nothing taken; the form stays.
+    case notEnoughItems(RecipeKind)
+    /// The selected diets can't all be sent to the server as it is now (gluten-free with another
+    /// diet, before it reads several): nothing was sent. Android: `DietsNeedServerUpdate`.
+    case dietsNeedServerUpdate
 }
 
 extension RecipeFailure {
@@ -272,6 +278,7 @@ final class RecipeViewModel: ObservableObject {
     func updateConfig(_ transform: (inout RecipeConfig) -> Void) {
         var updated = config
         transform(&updated)
+        updated.normalize()
         guard updated != config else { return }
         let languageChanged = updated.language != config.language
         config = updated
@@ -466,10 +473,16 @@ final class RecipeViewModel: ObservableObject {
             return
         }
         // The other items go only to a server that said it reads them (`acceptsOptionalIngredients`).
-        let fresh = RecipeWire.request(
+        // The multi-choice config only to a server that said it reads it; otherwise the closest
+        // legacy values, or nothing at all when a selected diet would be lost.
+        guard let fresh = RecipeWire.request(
             for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames,
-            withOptional: options.sendAllItems && credits.storage.serverTakesOptional
-        )
+            withOptional: options.sendAllItems && credits.storage.serverTakesOptional,
+            multiChoice: credits.storage.serverTakesMultiChoice
+        ) else {
+            failure = .dietsNeedServerUpdate
+            return
+        }
         guard !fresh.ingredients.isEmpty else {
             // Every ticked name was made of characters the server refuses.
             failure = .serverFailed(kind, sameRequest: false)
@@ -677,6 +690,10 @@ final class RecipeViewModel: ObservableObject {
         credits.note(error)
         let serverError = error as? RecipeServerError ?? .server
         if !serverError.isRetryableWithSameID { credits.storage.pendingGeneration = nil }
+        // The multi-choice config refused as invalid: the server was rolled back to one that
+        // reads only the legacy config. The next try sends the legacy values (or says it can't);
+        // the next answer with a balance says again what the server reads.
+        if serverError == .invalidRequest, wire.config.isMultiChoice { credits.storage.serverTakesMultiChoice = false }
         if serverError == .insufficientCredits {
             if credits.canBuy { showsBuySheet = true }
             return
@@ -699,6 +716,7 @@ final class RecipeViewModel: ObservableObject {
         case .userDailyLimit: return .userDailyLimit
         case .infraFailureLimit: return .infraFailureLimit
         case .dailyCap: return .dailyCap
+        case .notEnoughItems: return .notEnoughItems(kind)
         case .server, .appCheckReplayed, .unknownRequest, .callableMissing, .serversBusy:
             // Nothing was decided on the server for this attempt: ask again under the same id.
             return .serverFailed(kind, sameRequest: true)
@@ -732,14 +750,16 @@ final class RecipeViewModel: ObservableObject {
         switch response.status {
         case .done:
             // The past-date warning comes from what was sent and its dates on the day it was
-            // asked for, never from the model's text. A recipe names every ticked item past its
-            // date: the reply doesn't say which pantry item an ingredient is (follow-up: a
-            // per-ingredient pantry index).
+            // asked for, never from the model's text: exactly the items a dish uses, by its
+            // ingredients' item indices; without them (an older server) every ticked one.
             let tickedPast = RecipeWire.pastDate(of: wire.ingredients, today: wire.today)
+            let optional = wire.optionalIngredients ?? []
             switch kind {
             case .recipe:
                 if var recipe = response.recipe.map(RecipeWire.markedServer) {
-                    recipe.pastDate = tickedPast
+                    recipe.pastDate = recipe.hasItemIndices
+                        ? RecipeWire.pastDate(of: recipe, ticked: wire.ingredients, optional: optional, today: wire.today)
+                        : tickedPast
                     return .saved(.recipe(recipe))
                 }
             case .menu:
@@ -749,7 +769,10 @@ final class RecipeViewModel: ObservableObject {
                             menu.days[day].courses[course].recipe.source = .server
                         }
                     }
-                    let optionalPast = RecipeWire.pastDate(of: wire.optionalIngredients ?? [], today: wire.today)
+                    if let exact = menu.withPastDateByIndex(ticked: wire.ingredients, optional: optional, today: wire.today) {
+                        return .saved(.menu(exact))
+                    }
+                    let optionalPast = RecipeWire.pastDate(of: optional, today: wire.today)
                     return .saved(.menu(menu.withPastDate(ticked: tickedPast, optional: optionalPast)))
                 }
             }

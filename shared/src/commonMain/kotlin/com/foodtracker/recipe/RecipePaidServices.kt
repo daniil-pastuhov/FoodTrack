@@ -80,8 +80,8 @@ data class GenerateRequest(
     val kind: WireKind,
     /** 2 or 3 for a menu; null for a recipe. */
     val courses: Int? = null,
-    /** With [RecipeConfig.language] resolved, as the server requires a code. */
-    val config: RecipeConfig,
+    /** See [wireConfigFor]: the legacy shape unless the server takes the multi-choice one. */
+    val config: WireConfig,
     val ingredients: List<WireIngredient>,
     val allergens: List<String>,
     val today: String,
@@ -120,6 +120,9 @@ data class GenerateReply(
     val purchasesBlocked: JsonElement? = null,
     /** Read with [acceptsOptionalIngredientsOf]. */
     val acceptsOptionalIngredients: JsonElement? = null
+,
+    /** Read with [acceptsMultiChoiceConfigOf]. */
+    val acceptsMultiChoiceConfig: JsonElement? = null
 )
 
 @Serializable
@@ -136,7 +139,8 @@ data class VerifyReply(
     val balance: Int? = null,
     val costs: JsonElement? = null,
     val purchasesBlocked: JsonElement? = null,
-    val acceptsOptionalIngredients: JsonElement? = null
+    val acceptsOptionalIngredients: JsonElement? = null,
+    val acceptsMultiChoiceConfig: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -144,7 +148,8 @@ data class BalanceReply(
     val balance: Int,
     val costs: RecipeCosts? = null,
     val purchasesBlocked: Boolean = false,
-    val acceptsOptional: Boolean = false
+    val acceptsOptional: Boolean = false,
+    val acceptsMultiChoice: Boolean = false
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -154,7 +159,8 @@ data class MergeReply(
     val moved: Int = 0,
     val costs: RecipeCosts? = null,
     val purchasesBlocked: Boolean = false,
-    val acceptsOptional: Boolean = false
+    val acceptsOptional: Boolean = false,
+    val acceptsMultiChoice: Boolean = false
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -165,6 +171,10 @@ fun purchasesBlockedOf(json: JsonElement?): Boolean =
 /** A reply's `acceptsOptionalIngredients` (functions/CONTRACT.md): only a JSON `true` says the
  *  server reads `optionalIngredients`; absent (a server from before the field) says it doesn't. */
 fun acceptsOptionalIngredientsOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsMultiChoiceConfig` (functions/CONTRACT.md): only a JSON `true` says the server
+ *  reads the time range and the meal and diet lists; absent says it takes only the legacy config. */
+fun acceptsMultiChoiceConfigOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 
 /** A failed call, by the contract's `details.reason`, plus the two the client sees itself. */
 enum class ServerError {
@@ -212,6 +222,11 @@ enum class ServerError {
     /** `generateRecipe`: allergens were sent without `allergenConsent: true` (a request kept from
      *  before the consent step existed). Nothing was charged; a new request carries the flag. */
     ALLERGEN_CONSENT_REQUIRED,
+
+    /** `generateRecipe`: the ticked items can't make what was asked once the allergens and the
+     *  diets are applied (for a menu, some day has no item it may use). Nothing was charged and no
+     *  model was called; a changed request needs a new request id. */
+    NOT_ENOUGH_ITEMS,
 
     /** `resource-exhausted` without a reason (HTTP 429): every server instance is busy. Nothing
      *  was charged; ask again, same request id, after a few seconds. */
@@ -457,7 +472,10 @@ data class RecipePaidSnapshot(
     val allergenConsent: AllergenConsentRecord? = null,
     /** The server's last reply that carried a balance said `acceptsOptionalIngredients`: only
      *  then are the other pantry items sent with "Send all products". */
-    val serverTakesOptional: Boolean = false
+    val serverTakesOptional: Boolean = false,
+    /** The same for `acceptsMultiChoiceConfig`: only then is a config sent that the legacy
+     *  values can't say exactly ([wireConfigFor]). */
+    val serverTakesMultiChoice: Boolean = false
 )
 
 interface RecipePaidRepository {

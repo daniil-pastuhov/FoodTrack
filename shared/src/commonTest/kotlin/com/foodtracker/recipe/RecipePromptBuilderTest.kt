@@ -22,7 +22,8 @@ class RecipePromptBuilderTest {
         detail = { "detail=${it.name}" },
         servings = { "servings=$it" },
         maxMinutes = { "minutes=$it" },
-        mealType = { "meal=${it.name}" },
+        minMinutes = { "atLeast=$it" },
+        mealTypes = { meals -> "meal=" + meals.joinToString("|") { it.name } },
         diet = { "diet=${it.name}" },
         allergens = { "allergens=$it" },
         language = { "language=$it" }
@@ -182,8 +183,8 @@ class RecipePromptBuilderTest {
                 detail = RecipeDetail.STEP_BY_STEP,
                 servings = 4,
                 maxMinutes = 60,
-                mealType = RecipeMealType.DINNER,
-                diet = RecipeDiet.VEGAN,
+                mealTypes = setOf(RecipeMealType.DINNER),
+                diets = setOf(RecipeDiet.VEGAN),
                 language = "de"
             )
         )
@@ -204,7 +205,7 @@ class RecipePromptBuilderTest {
             strings = strings,
             today = today,
             items = listOf(item("Milk", 1)),
-            config = RecipeConfig(maxMinutes = null, mealType = RecipeMealType.ANY, diet = RecipeDiet.NONE, language = null)
+            config = RecipeConfig(maxMinutes = null, mealTypes = emptySet(), diets = emptySet(), language = null)
         )
 
         assertFalse(prompt.contains("minutes="), prompt)
@@ -220,11 +221,13 @@ class RecipePromptBuilderTest {
             strings = strings,
             today = today,
             items = listOf(item("Milk", 1)),
-            config = RecipeConfig(servings = 40, maxMinutes = 45, language = "xx")
+            config = RecipeConfig(servings = 40, minMinutes = 200, maxMinutes = 47, mealTypes = setOf(RecipeMealType.ANY), language = "xx")
         )
 
         assertTrue(prompt.contains("- servings=12"), prompt)
-        assertTrue(prompt.contains("- minutes=30"), prompt)
+        assertTrue(prompt.contains("- minutes=45"), prompt)
+        assertTrue(prompt.contains("- atLeast=45"), "the lower bound is never above the upper: $prompt")
+        assertFalse(prompt.contains("meal="), "\"Any\" is no meal: $prompt")
         assertFalse(prompt.contains("language="), prompt)
     }
 

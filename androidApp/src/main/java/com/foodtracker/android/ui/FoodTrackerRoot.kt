@@ -80,6 +80,7 @@ import com.foodtracker.android.ui.navigation.route
 import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
 import com.foodtracker.android.ui.screens.CategorySettingsScreen
+import com.foodtracker.android.ui.screens.RecipeShoppingActions
 import com.foodtracker.android.ui.screens.HomeListPaneWidth
 import com.foodtracker.android.ui.screens.OnboardingExit
 import com.foodtracker.android.ui.screens.OnboardingScreen
@@ -194,6 +195,11 @@ fun FoodTrackerRoot(
     val settings by remember(stateHolder) {
         stateHolder.uiState.map { it.settings }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.settings)
+
+    // The shopping list's names, for a recipe's "Add to shopping list" (already on the list or not).
+    val shoppingListNames by remember(stateHolder) {
+        stateHolder.uiState.map { state -> state.shoppingList.map { it.productName } }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(stateHolder.uiState.value.shoppingList.map { it.productName })
 
     val shoppingListCount by remember(stateHolder) {
         stateHolder.uiState.map { it.shoppingList.size }.distinctUntilChanged()
@@ -492,6 +498,26 @@ fun FoodTrackerRoot(
                             }
                             snackbarHostState.showSnackbar(message)
                         }
+                    }
+                }
+            }
+
+            // A recipe's "Add to shopping list": the ordinary add path, then how many, with the way to the list.
+            val recipeShopping = RecipeShoppingActions(shoppingListNames) { names ->
+                stateHolder.addShoppingListEntries(names) { added ->
+                    snackbarScope.launch {
+                        snackbarHostState.currentSnackbarData?.dismiss()
+                        val message = if (added > 0) {
+                            context.resources.getQuantityString(R.plurals.recipe_shopping_added, added, added)
+                        } else {
+                            context.getString(R.string.recipe_shopping_nothing_added)
+                        }
+                        val result = snackbarHostState.showSnackbar(
+                            message = message,
+                            actionLabel = context.getString(R.string.nav_label_shopping_list),
+                            duration = SnackbarDuration.Short
+                        )
+                        if (result == SnackbarResult.ActionPerformed) currentScreen = LarderRoute.Shopping
                     }
                 }
             }
@@ -1031,7 +1057,8 @@ fun FoodTrackerRoot(
                                     currentScreen = recipeResultReturn
                                     onDeleteSavedRecipe(id)
                                 },
-                                onOpenDish = { day, course -> currentScreen = LarderRoute.MenuDish(route.savedId, day, course) }
+                                onOpenDish = { day, course -> currentScreen = LarderRoute.MenuDish(route.savedId, day, course) },
+                                shopping = recipeShopping
                             )
                         }
 
@@ -1041,7 +1068,8 @@ fun FoodTrackerRoot(
                                 savedId = route.savedId,
                                 day = route.day,
                                 course = route.course,
-                                onBack = { currentScreen = LarderRoute.RecipeResult(route.savedId) }
+                                onBack = { currentScreen = LarderRoute.RecipeResult(route.savedId) },
+                                shopping = recipeShopping
                             )
                         }
 

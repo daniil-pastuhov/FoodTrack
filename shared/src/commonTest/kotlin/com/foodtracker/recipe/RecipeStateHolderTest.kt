@@ -169,10 +169,10 @@ class RecipeStateHolderTest {
     @Test
     fun configChangesAreNormalisedAndKept() = runUnconfined {
         val holder = holder()
-        holder.updateConfig { it.copy(servings = 99, mealType = RecipeMealType.DINNER) }
+        holder.updateConfig { it.copy(servings = 99, mealTypes = setOf(RecipeMealType.DINNER)) }
 
         assertEquals(12, holder.uiState.value.config.servings)
-        assertEquals(RecipeConfig(servings = 12, mealType = RecipeMealType.DINNER), config.stored)
+        assertEquals(RecipeConfig(servings = 12, mealTypes = setOf(RecipeMealType.DINNER)), config.stored)
 
         holder.updateConfig { it.copy(servings = 12) }
         assertEquals(1, config.saves, "an unchanged config isn't written again")

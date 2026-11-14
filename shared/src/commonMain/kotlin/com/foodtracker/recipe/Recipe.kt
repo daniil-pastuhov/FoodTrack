@@ -23,7 +23,16 @@ data class RecipeIngredient(
     val amount: String = "",
     val name: String,
     /** True for something the person has, ticked or not; the rest is to have or to buy. */
-    val fromPantry: Boolean = false
+    val fromPantry: Boolean = false,
+    /** Server recipes: the index of this ingredient's item in the request's `ingredients`, when
+     *  it is one (functions/CONTRACT.md "Recipe"). Null in answers from older servers, saved
+     *  rows from before it, and recipes the phone wrote. */
+    val pantryIndex: Int? = null,
+    /** The same in the request's `optionalIngredients`, as sent. */
+    val optionalIndex: Int? = null,
+    /** Server recipes: the server found this non-pantry ingredient to be only a staple (water,
+     *  oil, salt, pepper, sugar, spices). False when it didn't, and wherever nobody said. */
+    val staple: Boolean = false
 )
 
 @Serializable
@@ -85,8 +94,39 @@ fun pastDateOf(items: List<WireIngredient>, today: LocalDate): List<PastDateItem
     if (over > 0) PastDateItem(item.name, over.toInt()) else null
 }
 
+/** Whether this dish says which request item each pantry ingredient is ([RecipeIngredient.pantryIndex],
+ *  [RecipeIngredient.optionalIndex]): answers from servers before those fields don't. */
+val Recipe.hasItemIndices: Boolean get() = ingredients.any { it.pantryIndex != null || it.optionalIndex != null }
+
 /**
- * A server menu with its past-date warnings: each day's courses get the past-date items among
+ * The items past their date on [today] that this server dish uses, exactly, by its ingredients'
+ * indices into the request's [ticked] and [optional] items (in the request's order, each once).
+ * An index outside the lists is ignored. iOS: `RecipeWire.pastDateByIndex`.
+ */
+fun Recipe.pastDateByIndex(ticked: List<WireIngredient>, optional: List<WireIngredient>, today: LocalDate): List<PastDateItem> {
+    val tickedUsed = ingredients.mapNotNullTo(HashSet()) { it.pantryIndex }
+    val optionalUsed = ingredients.mapNotNullTo(HashSet()) { it.optionalIndex }
+    val used = ticked.filterIndexed { i, _ -> i in tickedUsed } + optional.filterIndexed { i, _ -> i in optionalUsed }
+    return pastDateOf(used, today).distinctBy { it.name.lowercase() }
+}
+
+/**
+ * A server menu whose dishes carry item indices, with exact past-date warnings: each course gets
+ * the past-date items it uses itself ([pastDateByIndex]), and the menu every one any course uses.
+ * Null when no dish carries indices (an older server): then [withPastDate] works it out from the
+ * days' `uses`.
+ */
+fun Menu.withPastDateByIndex(ticked: List<WireIngredient>, optional: List<WireIngredient>, today: LocalDate): Menu? {
+    if (days.none { day -> day.courses.any { it.recipe.hasItemIndices } }) return null
+    val days = days.map { day ->
+        day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.copy(pastDate = it.recipe.pastDateByIndex(ticked, optional, today))) })
+    }
+    val all = days.flatMap { day -> day.courses.flatMap { it.recipe.pastDate } }.distinctBy { it.name.lowercase() }
+    return copy(days = days, pastDate = all)
+}
+
+/**
+ * A server menu with its past-date warnings, for answers without item indices: each day's courses get the past-date items among
  * that day's `uses` (the server's own reading of which items the day uses, by the names sent),
  * and the menu all of [ticked] plus the [optional] ones a day uses. The ticked ones are listed for
  * the whole menu even when no day names them, since they were asked to be used.

@@ -55,7 +55,7 @@ class AllergenConsentTest {
         val base = GenerateRequest(
             requestId = "a",
             kind = WireKind.RECIPE,
-            config = RecipeConfig(),
+            config = WireConfig(),
             ingredients = listOf(WireIngredient("Bread", null, 1)),
             allergens = listOf("peanut"),
             today = "2026-11-14"
@@ -68,7 +68,7 @@ class AllergenConsentTest {
     fun theFlagIsSentAsJsonTrue() {
         val json = RecipeJson.encodeToString(
             GenerateRequest.serializer(),
-            GenerateRequest("a", WireKind.RECIPE, null, RecipeConfig(), emptyList(), listOf("peanut"), "2026-11-14", allergenConsent = true)
+            GenerateRequest("a", WireKind.RECIPE, null, WireConfig(), emptyList(), listOf("peanut"), "2026-11-14", allergenConsent = true)
         )
         assertTrue("\"allergenConsent\":true" in json, json)
     }

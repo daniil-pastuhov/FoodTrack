@@ -84,10 +84,28 @@ extension L10n {
         }
     }
 
-    /// A time chip: "15 min", "1 hour", "Any".
-    static func recipeTimeOption(_ minutes: Int?) -> String {
-        guard let minutes else { return recipeTimeAny }
-        return minutes == 60 ? text("recipe_time_one_hour") : recipeMinutes(minutes)
+    /// The time range: "Any", "up to 30 min", "at least 40 min", "30 min", "20–45 min". Android:
+    /// `recipeTimeRangeLabel`.
+    static func recipeTimeRange(min low: Int?, max high: Int?) -> String {
+        switch (low, high) {
+        case (nil, nil): return recipeTimeAny
+        case (nil, let high?): return String(format: text("recipe_time_up_to"), high)
+        case (let low?, nil): return String(format: text("recipe_time_at_least"), low)
+        case (let low?, let high?):
+            return low == high ? String(format: text("recipe_time_minutes"), low) : String(format: text("recipe_time_range"), low, high)
+        }
+    }
+    static var recipeTimeShortest: String { text("recipe_time_shortest") }
+    static var recipeTimeLongest: String { text("recipe_time_longest") }
+    static var recipeTimeGuideHint: String { text("recipe_time_guide_hint") }
+    /// A handle's value for VoiceOver: "20 minutes", or "No minimum" / "No limit" at its end.
+    static func recipeTimeSpoken(_ minutes: Int?, lowEnd: Bool) -> String {
+        guard let minutes else { return text(lowEnd ? "recipe_time_no_minimum" : "recipe_time_no_limit") }
+        return String.localizedStringWithFormat(NSLocalizedString("recipe_time_minutes_spoken", comment: ""), minutes)
+    }
+    /// Under a menu's form: the meal applies to its main courses only.
+    static func recipeMenuMealNote(_ meals: [RecipeMealType]) -> String {
+        String(format: text(meals.count == 1 ? "recipe_menu_meal_note_one" : "recipe_menu_meal_note_many"), meals.map(recipeMealName).joined(separator: ", "))
     }
 
     /// A cooking time: "15 min", "1 h 10 min".
@@ -114,8 +132,12 @@ extension L10n {
         return [
             config.resolvedLanguage.endonym,
             detail,
-            config.mealType == .any ? text("recipe_meal_summary_any") : recipeMealName(config.mealType),
-            config.diet == .none ? text("recipe_diet_summary_none") : recipeDietName(config.diet),
+            config.mealTypes.isEmpty
+                ? text("recipe_meal_summary_any")
+                : RecipeChoices.orderedMeals(config.mealTypes).map(recipeMealName).joined(separator: ", "),
+            config.diets.isEmpty
+                ? text("recipe_diet_summary_none")
+                : RecipeChoices.orderedDiets(config.diets).map(recipeDietName).joined(separator: ", "),
         ].joined(separator: " · ")
     }
 
@@ -206,8 +228,13 @@ extension L10n {
     static func recipePromptMaxMinutes(_ minutes: Int) -> String {
         String(format: text("recipe_prompt_max_minutes"), minutes)
     }
-    static func recipePromptMeal(_ meal: RecipeMealType) -> String {
-        String(format: text("recipe_prompt_meal"), recipeMealName(meal))
+    static func recipePromptMinMinutes(_ minutes: Int) -> String {
+        String(format: text("recipe_prompt_min_minutes"), minutes)
+    }
+    /// "Meal: Dinner", or for several "Suitable for any of these meals: Breakfast, Lunch".
+    static func recipePromptMeals(_ meals: [RecipeMealType]) -> String {
+        let names = meals.map(recipeMealName).joined(separator: ", ")
+        return String(format: text(meals.count == 1 ? "recipe_prompt_meal" : "recipe_prompt_meals"), names)
     }
     static func recipePromptDiet(_ diet: RecipeDiet) -> String {
         String(format: text("recipe_prompt_diet"), recipeDietName(diet))
@@ -263,6 +290,20 @@ extension L10n {
     }
     static func recipeServerFailed(_ kind: RecipeKind) -> String {
         paid(kind == .menu ? "recipe_server_failed_menu" : "recipe_server_failed")
+    }
+    /// NOT_ENOUGH_ITEMS: tick a few more (for a menu: or ask for one recipe); nothing taken.
+    static func recipeNotEnoughItems(_ kind: RecipeKind) -> String {
+        paid(kind == .menu ? "recipe_not_enough_items_menu" : "recipe_not_enough_items")
+    }
+    static var recipeDietsNeedUpdate: String { paid("recipe_diets_need_update") }
+    static var recipeNotFromPantryHint: String { paid("recipe_not_from_pantry_hint") }
+    static var recipeShoppingAdd: String { paid("recipe_shopping_add") }
+    static func recipeShoppingTitle(_ count: Int) -> String { String(format: paid("recipe_shopping_title"), count) }
+    static var recipeShoppingMessage: String { paid("recipe_shopping_message") }
+    static var recipeShoppingAlready: String { paid("recipe_shopping_already") }
+    static func recipeShoppingConfirm(_ count: Int) -> String { plural("recipe_shopping_confirm", count) }
+    static func recipeShoppingAdded(_ count: Int) -> String {
+        count > 0 ? plural("recipe_shopping_added", count) : paid("recipe_shopping_nothing_added")
     }
     static func recipeServerRefused(_ kind: RecipeKind, taken: Int) -> String {
         plural(kind == .menu ? "recipe_server_refused_menu" : "recipe_server_refused", taken)

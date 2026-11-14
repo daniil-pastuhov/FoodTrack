@@ -739,7 +739,7 @@
 "recipe_allergen_consent_message" = "For å skrive dette sendes allergenlisten din (%@) sammen med de avkryssede varene og innstillingene dine til serveren vår og til KI-modellen til Google, slik at oppskriften unngår disse matvarene. Google kan behandle den utenfor EU. Den brukes bare til denne forespørselen og lagres ikke etterpå. Du kan trekke tilbake samtykket i oppskriftsinnstillingene.\n\nDe gratis måtene, telefonens egen modell og den delte ledeteksten, sender den ikke til oss.";
 "recipe_allergen_consent_agree" = "Godta og fortsett";
 "recipe_allergen_consent_agree_only" = "Godta";
-"recipe_allergen_consent_declined" = "Allergenene dine sendes ikke til serveren vår, så den kan ikke skrive dette. Slå på sending i oppskriftsinnstillingene, eller bruk telefonens modell eller den delte ledeteksten.";
+"recipe_allergen_consent_declined" = "Allergenene dine sendes ikke til serveren vår, så den kan ikke skrive dette. Slå på sending i oppskriftsinnstillingene, eller bruk modellen på denne {the_device} eller den delte ledeteksten.";
 "recipe_allergen_consent_setting" = "Send allergenene mine til serveren vår";
 "recipe_allergen_consent_setting_on" = "Du godtok %@. Slå av for å trekke tilbake: da skriver ikke serveren vår oppskrifter mens allergener er satt.";
 "recipe_allergen_consent_setting_off" = "Trengs for oppskrifter fra serveren vår mens allergener er satt. Brukes bare til forespørselen og lagres ikke.";
@@ -805,3 +805,26 @@
 "recipe_past_date_result_many" = "Gått ut på dato: %1$@. Sjekk at de fortsatt er trygge å spise før du lager mat.";
 "recipe_past_date_item" = "%1$@ (%2$@)";
 "recipe_prompt_past_date" = "Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$@.";
+
+/* Recipe: time range, multi-choice meal and diet, NOT_ENOUGH_ITEMS, shopping list */
+"recipe_time_range" = "%1$d–%2$d min";
+"recipe_time_up_to" = "opptil %d min";
+"recipe_time_at_least" = "minst %d min";
+"recipe_time_shortest" = "Korteste tid";
+"recipe_time_longest" = "Lengste tid";
+"recipe_time_no_minimum" = "Ingen nedre grense";
+"recipe_time_no_limit" = "Ingen grense";
+"recipe_time_guide_hint" = "Den lengste tiden er en grense, den korteste bare en rettesnor.";
+"recipe_menu_meal_note_one" = "%@ gjelder bare hovedrettene.";
+"recipe_menu_meal_note_many" = "%@ gjelder bare hovedrettene.";
+"recipe_prompt_min_minutes" = "Helst rundt %d minutter eller mer";
+"recipe_prompt_meals" = "Passer til ett av disse måltidene: %@";
+"recipe_not_enough_items" = "Det er for lite å lage mat av når dietten og allergenene er tatt hensyn til. Kryss av for noen flere varer. Ingen oppskrift ble trukket.";
+"recipe_not_enough_items_menu" = "Det er ikke nok til tre dager. Kryss av for noen flere varer, eller be om én oppskrift. Ingen oppskrifter ble trukket.";
+"recipe_diets_need_update" = "Oppskrifter fra pakker kan ennå ikke kombinere glutenfri med en annen diett. Behold én av dem i oppskriftsinnstillingene, eller bruk modellen på denne {the_device} eller den delte ledeteksten. Ingen oppskrifter ble trukket.";
+"recipe_not_from_pantry_hint" = "Ingredienser uten «I matskapet»-merket er ikke fra matskapet ditt: basisvarer, eller noe du kanskje må kjøpe.";
+"recipe_shopping_add" = "Legg til på handlelisten";
+"recipe_shopping_title" = "Legg til på handlelisten (%d)";
+"recipe_shopping_message" = "Fjern haken for det du allerede har.";
+"recipe_shopping_already" = "Står allerede på listen";
+"recipe_shopping_nothing_added" = "Alt står allerede på handlelisten";
