@@ -1,7 +1,7 @@
 # App Store submission kit
 
-Everything App Store Connect asks for. The release flow applies the listing texts and most
-screenshots ("Changing the listing texts" below); the rest is ready to paste. One folder per
+Everything App Store Connect asks for. The release flow applies the listing texts, the
+screenshots and the header art ("Changing the listing texts" below); the rest is ready to paste. One folder per
 listing language: `en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
 `no/` (Norwegian). Each folder has `name.txt`, `subtitle.txt`, `promotional_text.txt`,
 `keywords.txt` and `description.txt`; `scripts/check_store_listing.py` checks them (and the
@@ -11,7 +11,8 @@ already has), promotional text 170, description 4000. Run it after every edit.
 
 `en-US/` has texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
 primary language's screenshots in a localization that has none, so nothing needs uploading
-there, and the screenshot scripts only make the en-GB, ru and no sets. The en-GB, ru and no
+there (the sync places en-GB's header art on it, see below), and the screenshot scripts only
+make the en-GB, ru and no sets. The en-GB, ru and no
 folders have these screenshot sets (up to 10 images each; the two iPhone Duo folders share one
 set of 10), in App Store Connect's media sections of the same name:
 
@@ -83,15 +84,21 @@ before it submits it for review, and only what differs from App Store Connect:
   md5:…`): unchanged images stay, an image already in the library is placed again without
   uploading, and images uploaded on the website (which have no MD5) are replaced once. Removed
   images lose their placement but stay in the library, where older versions may still use them.
+- **Header and search-result images** (`header.png`, `search-result.png`; iOS 27): also
+  through the App Asset Library, the same way, as creative assets placed with the types
+  `PRODUCT_PAGE_HEADER_ASSET` and `APP_STORE_SEARCH_RESULTS_ASSET` (one each per localization).
+  The size is checked against the specs in Apple's reference data first (header 3840×1646,
+  search result 3:2 from 1920×1280 to 3840×2560). Another English localization without the
+  files (en-US, en-AU, en-CA) gets en-GB's placed, reusing the same library image, as Apple
+  documents no fallback to the primary language for these. A localization whose folder has
+  neither file is left as it is.
 - If any of it fails (a text over a limit, a refused upload), the version is not submitted; fix
   it and re-run the job, which skips what is already applied.
 - **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by the same
   command; every English localization gets the en-GB notes.
 
-Still by hand, as the API has no way to set them:
+Still by hand, as the sync doesn't write it:
 
-- **Header and search-result images** (iOS 27): upload `header.png` and `search-result.png`
-  in each language, on the version page. For en-US, upload en-GB's two files.
 - **Promotional text between releases**: it can change without a new version, but the sync only
   writes to a version in preparation; paste it on the live version page.
 
@@ -292,6 +299,6 @@ The camera is used for barcode scanning, reading printed expiry dates (Vision, o
 
 - What's New (first version): leave empty, or use `First release.`
 - Pick the build uploaded in step 2.
-- Screenshots: set by the release flow (`scripts/testflight.py appstore --screenshots`; see
-  "Changing the listing texts"), except the header and search-result
-  images, which are uploaded here by hand. English (U.S.) has none of its own and shows en-GB's.
+- Screenshots and the header and search-result images: set by the release flow
+  (`scripts/testflight.py appstore --screenshots`; see "Changing the listing texts"). English
+  (U.S.) has no screenshots of its own and shows en-GB's; it gets en-GB's header art.
