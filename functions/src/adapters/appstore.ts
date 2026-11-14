@@ -18,6 +18,7 @@ import { IOS_BUNDLE_ID } from "../constants";
 import {
   ConsumptionRejectedError,
   InvalidSignatureError,
+  REFUSED_ENVIRONMENT,
   RetryableStoreError,
   type AppleEnvironment,
   type AppleNotification,
@@ -50,7 +51,7 @@ function envOf(value: unknown): AppleEnvironment {
   if (value === Environment.PRODUCTION) return "production";
   if (value === Environment.SANDBOX) return "sandbox";
   // Never echo the value: it comes from an unverified payload.
-  throw new InvalidSignatureError("refused environment");
+  throw new InvalidSignatureError(REFUSED_ENVIRONMENT);
 }
 
 export function toAppleTransaction(p: JWSTransactionDecodedPayload): AppleTransaction {

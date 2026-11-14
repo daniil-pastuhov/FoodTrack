@@ -66,8 +66,9 @@
 			</array>
 		</dict>
 		<dict>
-			<!-- The ticked items' names, dates and quantities and the recipe preferences, sent to
-			     write a recipe or menu, and the recipe written back. -->
+			<!-- The ticked items' names, dates and quantities (every pantry item's with "Send all
+			     products" on) and the recipe preferences, sent to write a recipe or menu, and the
+			     recipe written back. -->
 			<key>NSPrivacyCollectedDataType</key>
 			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
 			<key>NSPrivacyCollectedDataTypeLinked</key>

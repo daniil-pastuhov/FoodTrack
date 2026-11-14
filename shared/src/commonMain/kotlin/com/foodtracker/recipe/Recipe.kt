@@ -36,8 +36,17 @@ data class Recipe(
     val ingredients: List<RecipeIngredient> = emptyList(),
     val steps: List<String> = emptyList(),
     val tip: String? = null,
-    val source: RecipeSource = RecipeSource.DEVICE
+    val source: RecipeSource = RecipeSource.DEVICE,
+    /** The items this dish was written from that were past their date when it was written, and
+     *  by how many days: shown in red above the ingredients and in its shared text. Local to the
+     *  apps, worked out from the request ([pastDateOf]), never from the model's text; the server
+     *  never sends it, and a row saved before it existed reads as none. */
+    val pastDate: List<PastDateItem> = emptyList()
 )
+
+/** An item past its date, as it was when a recipe was written: [daysOver] days after its date. */
+@Serializable
+data class PastDateItem(val name: String, val daysOver: Int)
 
 @Serializable
 enum class MenuCourseKind {
@@ -61,7 +70,37 @@ data class MenuDay(
 )
 
 @Serializable
-data class Menu(val days: List<MenuDay>)
+data class Menu(
+    val days: List<MenuDay>,
+    /** Every item past its date the menu was written from (see [Recipe.pastDate]): the warning
+     *  under the menu's title. Each course's own recipe carries its day's share. */
+    val pastDate: List<PastDateItem> = emptyList()
+)
+
+/** The [items] (as sent, `expiresOn` `YYYY-MM-DD`) that are past their date on [today], in the
+ *  order given. An item without a date, or with one that can't be read, is not. */
+fun pastDateOf(items: List<WireIngredient>, today: LocalDate): List<PastDateItem> = items.mapNotNull { item ->
+    val date = item.expiresOn?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: return@mapNotNull null
+    val over = today.toEpochDays() - date.toEpochDays()
+    if (over > 0) PastDateItem(item.name, over.toInt()) else null
+}
+
+/**
+ * A server menu with its past-date warnings: each day's courses get the past-date items among
+ * that day's `uses` (the server's own reading of which items the day uses, by the names sent),
+ * and the menu all of [ticked] plus the [optional] ones a day uses. The ticked ones are listed for
+ * the whole menu even when no day names them, since they were asked to be used.
+ */
+fun Menu.withPastDate(ticked: List<PastDateItem>, optional: List<PastDateItem>): Menu {
+    val all = (ticked + optional).distinctBy { it.name.lowercase() }
+    val days = days.map { day ->
+        val used = day.uses.mapTo(HashSet()) { it.lowercase() }
+        val items = all.filter { it.name.lowercase() in used }
+        day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.copy(pastDate = items)) })
+    }
+    val usedAnywhere = days.flatMap { day -> day.courses.flatMap { it.recipe.pastDate } }
+    return copy(days = days, pastDate = (ticked + usedAnywhere).distinctBy { it.name.lowercase() })
+}
 
 @Serializable
 enum class SavedRecipeKind {

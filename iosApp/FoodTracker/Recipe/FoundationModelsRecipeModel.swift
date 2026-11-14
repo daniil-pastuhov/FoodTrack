@@ -93,7 +93,7 @@ struct GeneratedIngredient {
 @available(iOS 26.0, *)
 extension GeneratedRecipe {
     func recipe(for request: RecipeRequest) -> Recipe {
-        let pantryNames = request.items.map(\.name)
+        let pantryNames = (request.items + request.otherItems).map(\.name)
         let tip = tip.trimmingCharacters(in: .whitespacesAndNewlines)
         return Recipe(
             title: title.trimmingCharacters(in: .whitespacesAndNewlines),

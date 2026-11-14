@@ -24,12 +24,19 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-private class FakeConfigRepository(var stored: RecipeConfig = RecipeConfig()) : RecipeConfigRepository {
+private class FakeConfigRepository(
+    var stored: RecipeConfig = RecipeConfig(),
+    var storedOptions: RecipeOptions = RecipeOptions()
+) : RecipeConfigRepository {
     var saves = 0
     override fun get(): RecipeConfig = stored
     override fun save(config: RecipeConfig) {
         saves++
         stored = config
+    }
+    override fun getOptions(): RecipeOptions = storedOptions
+    override fun saveOptions(options: RecipeOptions) {
+        storedOptions = options
     }
 }
 
@@ -358,5 +365,191 @@ class RecipeStateHolderTest {
     @Test
     fun thePaidRouteIsNotOfferedWhileItIsNotThere() = runUnconfined {
         assertFalse(holder().uiState.value.paidRouteAvailable)
+    }
+
+    // --- The form's actions ----------------------------------------------------------------
+
+    private fun formState(balance: Int?, onDevice: Boolean, paidAvailable: Boolean = true, issue: ServerIssue? = null, mode: RecipeMode = RecipeMode.RECIPE) =
+        RecipeUiState(
+            isLoading = false,
+            rows = pantryRows,
+            onDeviceAvailability = if (onDevice) OnDeviceAvailability.AVAILABLE else OnDeviceAvailability.UNSUPPORTED,
+            onDeviceSupportsLanguage = true,
+            mode = mode,
+            paid = PaidUiState(available = paidAvailable, balance = balance, packsOffered = paidAvailable, issue = issue)
+        )
+
+    @Test
+    fun withRecipesInThePackTheServerIsPinnedAndBothFreeWaysStayOffered() {
+        assertEquals(
+            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.ON_DEVICE, RecipeAction.SHARE, RecipeAction.COPY)),
+            formState(balance = 5, onDevice = true).actions
+        )
+        assertEquals(
+            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.SHARE, RecipeAction.COPY)),
+            formState(balance = 5, onDevice = false).actions
+        )
+    }
+
+    @Test
+    fun withoutRecipesTheFreeWaysLeadAndBuyingFollows() {
+        assertEquals(
+            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.COPY, RecipeAction.BUY)),
+            formState(balance = 0, onDevice = true).actions
+        )
+        assertEquals(
+            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.COPY, RecipeAction.BUY)),
+            formState(balance = null, onDevice = false).actions
+        )
+    }
+
+    @Test
+    fun withoutThePaidRouteOnlyTheFreeWaysShow() {
+        assertEquals(
+            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.COPY)),
+            formState(balance = null, onDevice = true, paidAvailable = false).actions
+        )
+        assertEquals(
+            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.COPY)),
+            formState(balance = null, onDevice = false, paidAvailable = false).actions
+        )
+    }
+
+    @Test
+    fun offlineWithRecipesTheFreeWaysMoveUp() {
+        assertEquals(
+            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.COPY, RecipeAction.BUY)),
+            formState(balance = 5, onDevice = true, issue = ServerIssue.OFFLINE).actions
+        )
+    }
+
+    @Test
+    fun aMenuHasOnlyTheServer() {
+        assertEquals(RecipeActions(RecipeAction.SERVER, emptyList()), formState(balance = 5, onDevice = true, mode = RecipeMode.MENU).actions)
+        assertEquals(RecipeActions(null, emptyList()), formState(balance = 2, onDevice = true, mode = RecipeMode.MENU).actions)
+    }
+
+    // --- Past their date -------------------------------------------------------------------
+
+    @Test
+    fun theFormsPastDateWarningFollowsTheTicks() = runUnconfined {
+        val holder = holder()
+        // Bread (1 day over) is among the three soonest, ticked by default.
+        assertEquals(listOf(PastDateItem("Bread", 1)), holder.uiState.value.pastDateTicked)
+        holder.toggleItem("bread")
+        assertTrue(holder.uiState.value.pastDateTicked.isEmpty(), "gone once no ticked item is past its date")
+        holder.toggleItem("bread")
+        assertEquals(1, holder.uiState.value.pastDateTicked.size)
+    }
+
+    @Test
+    fun aRecipeWrittenOnThePhoneKeepsItsPastDateItems() = runUnconfined {
+        model.replies += { GOOD_REPLY }
+        val holder = holder()
+        holder.generateOnDevice()
+        assertEquals(listOf(PastDateItem("Bread", 1)), saved.rows.value.single().recipe?.pastDate)
+        assertTrue(model.prompts.single().contains("Items past their date are ones I have checked and chosen to use"))
+    }
+
+    // --- Send all products -----------------------------------------------------------------
+
+    @Test
+    fun sendAllProductsIsOffUntilTurnedOnAndIsKept() = runUnconfined {
+        val holder = holder()
+        assertFalse(holder.uiState.value.options.sendAllItems)
+        assertEquals(0, holder.uiState.value.optionalCount)
+
+        holder.setSendAllItems(true)
+        assertTrue(config.storedOptions.sendAllItems, "saved with the recipe settings")
+        // Everything but the three ticked: milk, salmon, eggs, cheese, soonest first.
+        assertEquals(listOf("milk", "salmon", "eggs", "cheese"), holder.uiState.value.otherRows.map { it.id })
+        assertEquals(4, holder.uiState.value.optionalCount)
+
+        holder.toggleItem("milk")
+        assertEquals(3, holder.uiState.value.optionalCount, "a newly ticked item is no longer optional")
+
+        assertTrue(holder().uiState.value.options.sendAllItems, "read back on the next start")
+    }
+
+    @Test
+    fun withSendAllProductsThePhonesModelIsOfferedTheRestAsOptional() = runUnconfined {
+        model.replies += { GOOD_REPLY }
+        model.replies += { GOOD_REPLY }
+        val holder = holder()
+
+        holder.generateOnDevice()
+        assertFalse(model.prompts.last().contains("I also have these at home"), "off: only the ticked items")
+
+        holder.setSendAllItems(true)
+        holder.generateOnDevice()
+        val prompt = model.prompts.last()
+        val extra = prompt.substringAfter("I also have these at home").substringBefore("Keep to this")
+        assertEquals(listOf("Milk", "Salmon", "Eggs", "Cheese"), extra.lines().filter { it.startsWith("- ") }.map { it.removePrefix("- ").substringBefore(" (") })
+        assertTrue(prompt.substringBefore("I also have these at home").contains("- Bread"), "the ticked ones stay the main list")
+    }
+
+    @Test
+    fun clearAllTurnsSendAllProductsOffAgain() = runUnconfined {
+        val holder = holder()
+        holder.setSendAllItems(true)
+        holder.clearAll()
+        assertEquals(RecipeOptions(), config.storedOptions)
+        assertFalse(holder.uiState.value.options.sendAllItems)
+    }
+
+    // --- Introduction ----------------------------------------------------------------------
+
+    @Test
+    fun theIntroductionOpensOnTheFirstVisitOnlyAndClosingItIsKept() = runUnconfined {
+        val holder = holder()
+        assertNull(holder.uiState.value.intro)
+
+        assertTrue(holder.onTabShown())
+        assertEquals(RecipeIntro.FIRST_OPEN, holder.uiState.value.intro)
+        assertFalse(holder.onTabShown(), "already open: not opened twice")
+
+        holder.dismissIntro()
+        assertNull(holder.uiState.value.intro)
+        assertTrue(config.storedOptions.introSeen)
+        assertFalse(holder.onTabShown())
+        assertFalse(holder().onTabShown(), "not after a restart either")
+    }
+
+    @Test
+    fun aDemoLaunchNeverOpensTheIntroductionByItself() = runUnconfined {
+        val holder = holder()
+        holder.suppressIntroForSession()
+        assertFalse(holder.onTabShown())
+        assertNull(holder.uiState.value.intro)
+        assertFalse(config.storedOptions.introSeen, "nothing recorded: the next real launch still shows it")
+    }
+
+    @Test
+    fun recipeSettingsOpensTheIntroductionAgain() = runUnconfined {
+        config.storedOptions = RecipeOptions(introSeen = true)
+        val holder = holder()
+        holder.showIntro()
+        assertEquals(RecipeIntro.FROM_SETTINGS, holder.uiState.value.intro)
+        holder.dismissIntro()
+        assertNull(holder.uiState.value.intro)
+    }
+
+    // --- Saved recipes in the header -------------------------------------------------------
+
+    @Test
+    fun theSavedListIsOfferedOnlyWhileSomethingIsSaved() = runUnconfined {
+        val holder = holder()
+        assertFalse(holder.uiState.value.hasSaved)
+
+        model.replies += { GOOD_REPLY }
+        holder.generateOnDevice()
+        assertTrue(holder.uiState.value.hasSaved, "the first written recipe shows it at once")
+
+        val id = holder.uiState.value.saved.single().id
+        holder.deleteSaved(id)
+        assertFalse(holder.uiState.value.hasSaved, "deleting the last one hides it")
+
+        saved.save(SavedRecipe.of("elsewhere", Recipe(title = "Saved elsewhere", steps = listOf("s")), 5L))
+        assertTrue(holder.uiState.value.hasSaved, "follows the store, whoever saved it")
     }
 }

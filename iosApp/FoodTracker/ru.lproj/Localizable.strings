@@ -774,3 +774,34 @@
 "recipe_prompt_max_minutes" = "Не дольше %d минут";
 "recipe_prompt_meal" = "Приём пищи: %@";
 "recipe_prompt_diet" = "Диета: %@";
+
+/* Recipe tab: Send all products, the introduction (How recipes work), and a purchase App Check refused. */
+"recipe_ingredients_settings" = "Продукты";
+"recipe_send_all" = "Отправлять все продукты";
+"recipe_send_all_message" = "Кроме отмеченных продуктов, рецепту предлагаются и остальные продукты из ваших запасов — их можно использовать по желанию. Когда настройка включена, для рецепта из пакета на наш сервер отправляются названия, сроки и количество всех продуктов из ваших запасов, и в запрос для ИИ-приложения они тоже попадают.";
+"recipe_intro_title" = "Как работают рецепты";
+"recipe_intro_message" = "Отметьте продукты, которые хотите израсходовать, выберите, какое блюдо нужно, и получите рецепт из них. Рецепты, полученные в приложении, сразу сохраняются на этом {device}.";
+"recipe_intro_prompt_title" = "Бесплатно — с любым ИИ-приложением";
+"recipe_intro_prompt_message" = "Поделитесь готовым запросом или скопируйте его в ИИ-приложение, которым вы уже пользуетесь.";
+"recipe_intro_device_title" = "Бесплатно — на этом {device}";
+"recipe_intro_device_message" = "Рецепт составляет сам {device}, и ничего никуда не отправляется.";
+"recipe_intro_packs_title" = "Из пакета рецептов";
+"recipe_intro_packs_message" = "Рецепт составляет наш сервер; он же может спланировать меню на 3 дня. Рецепт стоит %1$@ из пакета, меню — %2$@ при 2 блюдах в день или %3$@ при 3.";
+"recipe_intro_packs_price" = "Пакеты — от %@.";
+"recipe_intro_free_stays" = "Бесплатные способы остаются и тогда, когда у вас есть пакет.";
+"recipe_intro_again" = "Это можно снова открыть в настройках рецептов.";
+"recipe_intro_start" = "Понятно";
+"recipe_intro_packs_action" = "Посмотреть пакеты";
+"recipe_intro_settings_supporting" = "Способы получить рецепт";
+"recipe_not_available_title" = "Рецепты из пакетов недоступны в этой установке приложения";
+"recipe_not_available_message" = "Деньги не списаны. Бесплатные способы по-прежнему работают: отправьте запрос в ИИ-приложение или составьте рецепт на этом {device}, если он это умеет.";
+"recipe_not_available_debug" = "Отладочная сборка: App Check отклонил эту сборку. Зарегистрируйте отладочный токен App Check, который выводится в консоли Xcode (docs/recipe-setup.md, «Debug builds against the real project»).";
+"recipe_prompt_other_items_intro" = "У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:";
+"recipe_prompt_other_items_omitted" = "(+ещё %d продуктов не показано)";
+
+/* Recipe tab: items past their date, ticked or used by a written recipe. */
+"recipe_past_date_form_single" = "Отмеченный продукт просрочен на %1$@. Проверьте, что его ещё можно есть, или снимите отметку.";
+"recipe_past_date_result_one" = "Срок годности истёк: %1$@. Перед готовкой проверьте, что продукт ещё можно есть.";
+"recipe_past_date_result_many" = "Срок годности истёк: %1$@. Перед готовкой проверьте, что эти продукты ещё можно есть.";
+"recipe_past_date_item" = "%1$@ (%2$@)";
+"recipe_prompt_past_date" = "У этих продуктов истёк срок годности, но я всё равно хочу их использовать: %1$@.";

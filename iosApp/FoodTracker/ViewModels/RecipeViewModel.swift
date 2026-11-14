@@ -84,6 +84,37 @@ extension RecipeFailure {
     }
 }
 
+/// A way to get a recipe from the form, each its own button: a tap on one never falls back to
+/// another, so a free route never spends a recipe. Android: `RecipeAction`.
+enum RecipeAction: Equatable {
+    case server, onDevice, share, copy, buy
+}
+
+/// What the form offers: `primary` is pinned above the pill (nil: nothing pinned), `secondary`
+/// sits under the form in this order. Android: `RecipeActions` (`RecipeUiState.actions`).
+struct RecipeActions: Equatable {
+    var primary: RecipeAction?
+    var secondary: [RecipeAction]
+
+    /// With recipes in the pack the server is pinned and both free ways stay one tap away; without
+    /// (or offline), the phone's model or the shared prompt is pinned. A menu is the server's only.
+    static func of(isMenu: Bool, serverCanWrite: Bool, offline: Bool, onDevice: Bool, canBuy: Bool) -> RecipeActions {
+        if isMenu { return RecipeActions(primary: serverCanWrite ? .server : nil, secondary: []) }
+        let primary: RecipeAction = serverCanWrite && !offline ? .server : onDevice ? .onDevice : .share
+        var secondary: [RecipeAction] = []
+        if onDevice && primary != .onDevice { secondary.append(.onDevice) }
+        if primary != .share { secondary.append(.share) }
+        secondary.append(.copy)
+        if canBuy && primary != .server { secondary.append(.buy) }
+        return RecipeActions(primary: primary, secondary: secondary)
+    }
+}
+
+/// Where "How recipes work" was opened: by itself on the first visit, or from Recipe settings.
+enum RecipeIntroOrigin: Equatable {
+    case firstOpen, fromSettings
+}
+
 /// Where the allergen consent step was opened: before a server request (agreeing sends it) or
 /// from the switch in Recipe settings (agreeing only records it).
 enum AllergenConsentPrompt: Equatable {
@@ -129,6 +160,13 @@ final class RecipeViewModel: ObservableObject {
     @Published var consentPrompt: AllergenConsentPrompt?
     /// The answer to sending allergens to our server, as recorded on this phone.
     @Published private(set) var allergenConsent: AllergenConsentRecord?
+    /// "Send all products" and whether the introduction was seen.
+    @Published private(set) var options: RecipeOptions
+    /// "How recipes work" on screen, and where from; nil when it isn't.
+    @Published var intro: RecipeIntroOrigin?
+    /// A demo or screenshot launch (any `-demo…` argument): the introduction never opens by
+    /// itself in this run.
+    private var introSuppressed = ReviewPrompter.isDemoLaunch
 
     /// Whether the person has changed the ticks since they were picked for them. Until then the
     /// soonest items follow the pantry as it changes.
@@ -145,10 +183,13 @@ final class RecipeViewModel: ObservableObject {
     private var creditsChanges: AnyCancellable?
     private var allergenChanges: AnyCancellable?
 
-    /// How many of the soonest items are ticked for the person.
+    /// How many of the soonest items are ticked for the person (whatever their date, past it
+    /// included). Android: `RECIPE_DEFAULT_TICKED`. The one place to change it on iOS.
     static let defaultTickCount = 3
-    /// The tab always lists at least this many items, more when more are near their date.
-    static let minimumShownCount = 5
+    /// How many of the soonest items the tab lists before "Add other items"; ticked items are
+    /// listed as well, wherever they fall. Android: `RECIPE_SHOWN_ITEMS`. The one place to
+    /// change it on iOS.
+    static let shownCount = 5
 
     init(
         configStore: RecipeConfigStore = UserDefaultsRecipeConfigStore(),
@@ -162,6 +203,7 @@ final class RecipeViewModel: ObservableObject {
         let credits = credits ?? RecipeCredits()
         self.credits = credits
         config = configStore.load()
+        options = configStore.loadOptions()
         menuCourses = credits.storage.menuCourses
         saved = self.savedStore.all()
         refreshAvailability()
@@ -237,6 +279,94 @@ final class RecipeViewModel: ObservableObject {
         if languageChanged { refreshAvailability() }
     }
 
+    /// "Send all products" in Recipe settings.
+    func setSendAllItems(_ on: Bool) {
+        updateOptions { $0.sendAllItems = on }
+    }
+
+    private func updateOptions(_ transform: (inout RecipeOptions) -> Void) {
+        var updated = options
+        transform(&updated)
+        guard updated != options else { return }
+        options = updated
+        configStore.saveOptions(updated)
+    }
+
+    // MARK: Introduction
+
+    /// The tab is on screen: the first time ever, "How recipes work" opens. Never in a demo
+    /// launch, never again once closed. Returns whether it opened, so the caller treats it as
+    /// onboarding (no rating request in this session). As Android's `onTabShown`.
+    @discardableResult
+    func onTabShown() -> Bool {
+        guard !introSuppressed, !options.introSeen, intro == nil else { return false }
+        intro = .firstOpen
+        return true
+    }
+
+    /// Recipe settings' "How recipes work".
+    func showIntro() { intro = .fromSettings }
+
+    /// Closed, whichever way: never opens by itself again.
+    func dismissIntro() {
+        intro = nil
+        updateOptions { $0.introSeen = true }
+    }
+
+    /// "See recipe packs": closed, then the pack sheet, once the closing sheet has gone (SwiftUI
+    /// won't present a second sheet from the same view while the first is still dismissing).
+    func introToPacks() {
+        dismissIntro()
+        guard credits.canBuy else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            self?.showsBuySheet = true
+        }
+    }
+
+    /// `-demoRecipeIntro YES`: shown as on a first open, to look at it.
+    func showIntroForDemo() { intro = .firstOpen }
+
+    /// Something is saved, so the header offers the saved list: the first recipe written shows
+    /// it, deleting the last one hides it.
+    var hasSaved: Bool { !saved.isEmpty }
+
+    /// Reads the saved list again, for changes made outside this view model.
+    func reloadSaved() {
+        let current = savedStore.all()
+        if current.map(\.id) != saved.map(\.id) { saved = current }
+    }
+
+    /// `items` past their date, soonest first, by how many days: the form's red warning, the
+    /// shared prompt's line and what a recipe written on the phone carries. Android:
+    /// `RecipeUiState.pastDateTicked`.
+    static func pastDate(of items: [PantryItem]) -> [PastDateItem] {
+        soonestFirst(items).filter { $0.daysRemaining < 0 }.map { PastDateItem(name: $0.name, daysOver: -$0.daysRemaining) }
+    }
+
+    /// The ticked items past their date, from `items` (the pantry).
+    func pastDateTicked(from items: [PantryItem]) -> [PastDateItem] {
+        Self.pastDate(of: selectedItems(from: items))
+    }
+
+    /// The form's actions now; see `RecipeActions`.
+    var actions: RecipeActions {
+        RecipeActions.of(
+            isMenu: credits.isPaidRouteAvailable && mode == .menu,
+            serverCanWrite: mode == .menu ? serverCanWriteMenu : serverCanWriteRecipe,
+            offline: credits.showsOffline,
+            onDevice: routes.onDevice,
+            canBuy: credits.canBuy
+        )
+    }
+
+    /// What "Send all products" adds from `items`: everything not ticked, soonest first; empty
+    /// with it off.
+    func optionalItems(from items: [PantryItem]) -> [PantryItem] {
+        guard options.sendAllItems else { return [] }
+        return Self.soonestFirst(items.filter { !selectedIDs.contains($0.id) })
+    }
+
     /// Re-asks the model, which can finish downloading or be switched on while the app runs.
     func refreshAvailability() {
         onDeviceAvailability = onDeviceModel.availability(for: config.resolvedLanguage)
@@ -280,7 +410,8 @@ final class RecipeViewModel: ObservableObject {
         RecipeRequest(
             items: selectedItems(from: items).map(RecipeIngredientInput.init),
             config: config,
-            allergens: Array(SettingsStore.shared.settings.allergens)
+            allergens: Array(SettingsStore.shared.settings.allergens),
+            otherItems: optionalItems(from: items).map(RecipeIngredientInput.init)
         )
     }
 
@@ -334,7 +465,11 @@ final class RecipeViewModel: ObservableObject {
             failure = .allergenRefused(allergen)
             return
         }
-        let fresh = RecipeWire.request(for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames)
+        // The other items go only to a server that said it reads them (`acceptsOptionalIngredients`).
+        let fresh = RecipeWire.request(
+            for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames,
+            withOptional: options.sendAllItems && credits.storage.serverTakesOptional
+        )
         guard !fresh.ingredients.isEmpty else {
             // Every ticked name was made of characters the server refuses.
             failure = .serverFailed(kind, sameRequest: false)
@@ -596,9 +731,17 @@ final class RecipeViewModel: ObservableObject {
         let kind = wire.kind
         switch response.status {
         case .done:
+            // The past-date warning comes from what was sent and its dates on the day it was
+            // asked for, never from the model's text. A recipe names every ticked item past its
+            // date: the reply doesn't say which pantry item an ingredient is (follow-up: a
+            // per-ingredient pantry index).
+            let tickedPast = RecipeWire.pastDate(of: wire.ingredients, today: wire.today)
             switch kind {
             case .recipe:
-                if let recipe = response.recipe { return .saved(.recipe(RecipeWire.markedServer(recipe))) }
+                if var recipe = response.recipe.map(RecipeWire.markedServer) {
+                    recipe.pastDate = tickedPast
+                    return .saved(.recipe(recipe))
+                }
             case .menu:
                 if var menu = response.menu, !menu.days.isEmpty {
                     for day in menu.days.indices {
@@ -606,7 +749,8 @@ final class RecipeViewModel: ObservableObject {
                             menu.days[day].courses[course].recipe.source = .server
                         }
                     }
-                    return .saved(.menu(menu))
+                    let optionalPast = RecipeWire.pastDate(of: wire.optionalIngredients ?? [], today: wire.today)
+                    return .saved(.menu(menu.withPastDate(ticked: tickedPast, optional: optionalPast)))
                 }
             }
             return .failure(.serverFailed(kind, sameRequest: true))
@@ -628,9 +772,12 @@ final class RecipeViewModel: ObservableObject {
         guard !request.items.isEmpty, phase == .idle else { return }
         phase = .writingOnDevice
         let model = onDeviceModel
+        // From the ticked items' own dates, never from the model's text.
+        let pastDate = Self.pastDate(of: selectedItems(from: items))
         writeTask = Task { [weak self] in
             do {
-                let recipe = try await model.write(request)
+                var recipe = try await model.write(request)
+                recipe.pastDate = pastDate
                 self?.finishWriting(with: recipe)
             } catch is CancellationError {
                 self?.phase = .idle
@@ -774,7 +921,8 @@ final class RecipeViewModel: ObservableObject {
         items.sorted {
             $0.expiryDate != $1.expiryDate
                 ? $0.expiryDate < $1.expiryDate
-                : $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                // Lower-cased names, as Android's `sortName`, so both tick the same three.
+                : $0.name.lowercased() < $1.name.lowercased()
         }
     }
 
@@ -783,19 +931,18 @@ final class RecipeViewModel: ObservableObject {
         soonestFirst(items).prefix(defaultTickCount).map(\.id)
     }
 
-    /// The rows on the tab: everything past its date or due within the "soon" window, at least
-    /// five items, and anything else that is ticked, soonest first.
-    static func shownItems(_ items: [PantryItem], selected: Set<String>, expiringSoonDays: Int) -> [PantryItem] {
+    /// The rows on the tab: the five soonest, and anything else that is ticked, soonest first.
+    /// As Android's `RecipeUiState.shownRows`: a large pantry, or one with many items long past
+    /// their date, keeps the form short; the rest is behind "Add other items".
+    static func shownItems(_ items: [PantryItem], selected: Set<String>) -> [PantryItem] {
         soonestFirst(items).enumerated()
-            .filter { index, item in
-                index < minimumShownCount || item.daysRemaining <= expiringSoonDays || selected.contains(item.id)
-            }
+            .filter { index, item in index < shownCount || selected.contains(item.id) }
             .map(\.element)
     }
 
     /// "Add other items" lists what the tab doesn't.
-    static func otherItems(_ items: [PantryItem], selected: Set<String>, expiringSoonDays: Int) -> [PantryItem] {
-        let shown = Set(shownItems(items, selected: selected, expiringSoonDays: expiringSoonDays).map(\.id))
+    static func otherItems(_ items: [PantryItem], selected: Set<String>) -> [PantryItem] {
+        let shown = Set(shownItems(items, selected: selected).map(\.id))
         return soonestFirst(items.filter { !shown.contains($0.id) })
     }
 }

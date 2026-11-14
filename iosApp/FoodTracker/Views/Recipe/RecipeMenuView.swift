@@ -22,6 +22,10 @@ struct RecipeMenuView: View {
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, LarderSpace.s3)
+                if let warning = L10n.recipePastDateWarning(menu.pastDate) {
+                    LarderCallout(.error, icon: .triangleAlert, message: warning)
+                        .padding(.bottom, LarderSpace.s3)
+                }
 
                 ForEach(Array(menu.days.enumerated()), id: \.offset) { dayIndex, day in
                     SectionHeader(Self.dayTitle(day.date))
@@ -31,6 +35,11 @@ struct RecipeMenuView: View {
                             .larderFont(.bodySm)
                             .foregroundStyle(LarderColor.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)
+                            .padding(.bottom, LarderSpace.s2)
+                    }
+                    // The day's own share of the menu's past-date items, as each of its dishes says.
+                    if let warning = L10n.recipePastDateWarning(day.courses.first?.recipe.pastDate ?? []) {
+                        LarderCallout(.error, icon: .triangleAlert, message: warning)
                             .padding(.bottom, LarderSpace.s2)
                     }
                     LarderGroup {

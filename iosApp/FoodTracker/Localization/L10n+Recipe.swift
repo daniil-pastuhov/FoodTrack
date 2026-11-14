@@ -320,6 +320,71 @@ extension L10n {
     static func recipeAdded(_ count: Int) -> String { plural("recipe_added", count) }
     static var recipeStoreErrorTitle: String { paid("recipe_store_error_title") }
     static var recipeStoreErrorMessage: String { paid("recipe_store_error_message") }
+    static var recipeNotAvailableTitle: String { paid("recipe_not_available_title") }
+    /// `debugCause`: Debug builds add why (the App Check debug token isn't registered).
+    static func recipeNotAvailableMessage(debugCause: Bool) -> String {
+        let message = paid("recipe_not_available_message")
+        return debugCause ? message + "\n\n" + paid("recipe_not_available_debug") : message
+    }
+
+    // Send all products
+    static var recipeIngredientsSettings: String { paid("recipe_ingredients_settings") }
+    static var recipeSendAll: String { paid("recipe_send_all") }
+    static var recipeSendAllMessage: String { paid("recipe_send_all_message") }
+    static func recipeOptionalCount(_ count: Int) -> String { plural("recipe_optional_count", count) }
+    static var recipePromptOtherItemsIntro: String { paid("recipe_prompt_other_items_intro") }
+    static func recipePromptOtherItemsOmitted(_ count: Int) -> String {
+        String(format: paid("recipe_prompt_other_items_omitted"), count)
+    }
+
+    // Past their date
+    /// "Hamburgare (145 days over)": each item with the status chip's own wording, its first
+    /// letter lowered where the wording starts a sentence ("Просрочено…", "Utløpt…").
+    static func recipePastDateList(_ items: [PastDateItem]) -> String {
+        let english = Locale.current.language.languageCode?.identifier == "en"
+        return items.map { item in
+            let over = String.localizedStringWithFormat(NSLocalizedString("status_days_over_format", comment: ""), item.daysOver)
+            let lowered = english ? over : over.prefix(1).lowercased() + over.dropFirst()
+            return String(format: paid("recipe_past_date_item"), isolated(item.name), lowered)
+        }.joined(separator: ", ")
+    }
+
+    /// The red line above a written recipe's ingredients and in its shared text; nil with none.
+    static func recipePastDateWarning(_ items: [PastDateItem]) -> String? {
+        guard !items.isEmpty else { return nil }
+        return String(format: paid(items.count == 1 ? "recipe_past_date_result_one" : "recipe_past_date_result_many"), recipePastDateList(items))
+    }
+
+    /// The form's red callout over "Cook with": how many ticked items are past their date and
+    /// the oldest; nil when none is.
+    static func recipePastDateFormWarning(_ items: [PastDateItem]) -> String? {
+        guard let oldest = items.map(\.daysOver).max() else { return nil }
+        let days = plural("recipe_past_days", oldest)
+        if items.count == 1 { return String(format: paid("recipe_past_date_form_single"), days) }
+        return withDevice(String.localizedStringWithFormat(NSLocalizedString("recipe_past_date_form", comment: ""), items.count, days))
+    }
+
+    static func recipePromptPastDate(_ names: String) -> String { String(format: paid("recipe_prompt_past_date"), names) }
+
+    // How recipes work
+    static var recipeIntroTitle: String { paid("recipe_intro_title") }
+    static var recipeIntroMessage: String { paid("recipe_intro_message") }
+    static var recipeIntroPromptTitle: String { paid("recipe_intro_prompt_title") }
+    static var recipeIntroPromptMessage: String { paid("recipe_intro_prompt_message") }
+    static var recipeIntroDeviceTitle: String { paid("recipe_intro_device_title") }
+    static var recipeIntroDeviceMessage: String { paid("recipe_intro_device_message") }
+    static var recipeIntroPacksTitle: String { paid("recipe_intro_packs_title") }
+    /// What a recipe and a menu take, from the server's costs (the fallback before any), then the
+    /// cheapest pack's store price when the store has answered, then that the free ways stay.
+    static func recipeIntroPacksMessage(_ costs: RecipeCosts, lowestPrice: String?) -> String {
+        var text = String(format: paid("recipe_intro_packs_message"), recipeCost(costs.recipe), recipeCost(costs.menu2), recipeCost(costs.menu3))
+        if let lowestPrice { text += " " + String(format: paid("recipe_intro_packs_price"), lowestPrice) }
+        return text + " " + paid("recipe_intro_free_stays")
+    }
+    static var recipeIntroAgain: String { paid("recipe_intro_again") }
+    static var recipeIntroStart: String { paid("recipe_intro_start") }
+    static var recipeIntroPacksAction: String { paid("recipe_intro_packs_action") }
+    static var recipeIntroSettingsSupporting: String { paid("recipe_intro_settings_supporting") }
     static var recipeChoiceTitle: String { paid("recipe_choice_title") }
     static var recipeChoiceMessage: String { paid("recipe_choice_message") }
     static var recipeChoicePhoneTitle: String { paid("recipe_choice_phone_title") }

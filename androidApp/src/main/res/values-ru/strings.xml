@@ -1146,4 +1146,51 @@
         <item quantity="many">%1$d блюд</item>
         <item quantity="other">%1$d блюда</item>
     </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Продукты</string>
+    <string name="recipe_send_all">Отправлять все продукты</string>
+    <string name="recipe_send_all_desc">Кроме отмеченных продуктов, рецепту предлагаются и остальные продукты из ваших запасов — их можно использовать по желанию. Когда настройка включена, для рецепта из пакета на наш сервер отправляются названия, сроки и количество всех продуктов из ваших запасов, и в запрос для ИИ-приложения они тоже попадают.</string>
+    <string name="recipe_intro_title">Как работают рецепты</string>
+    <string name="recipe_intro_body">Отметьте продукты, которые хотите израсходовать, выберите, какое блюдо нужно, и получите рецепт из них. Рецепты, полученные в приложении, сразу сохраняются на этом устройстве.</string>
+    <string name="recipe_intro_prompt_title">Бесплатно — с любым ИИ-приложением</string>
+    <string name="recipe_intro_prompt_body">Поделитесь готовым запросом или скопируйте его в ИИ-приложение, которым вы уже пользуетесь.</string>
+    <string name="recipe_intro_device_title">Бесплатно — на этом устройстве</string>
+    <string name="recipe_intro_device_body">Рецепт составляет само устройство, и ничего никуда не отправляется.</string>
+    <string name="recipe_intro_packs_title">Из пакета рецептов</string>
+    <string name="recipe_intro_packs_body">Рецепт составляет наш сервер; он же может спланировать меню на 3 дня. Рецепт стоит %1$s из пакета, меню — %2$s при 2 блюдах в день или %3$s при 3.</string>
+    <string name="recipe_intro_packs_price">Пакеты — от %1$s.</string>
+    <string name="recipe_intro_free_stays">Бесплатные способы остаются и тогда, когда у вас есть пакет.</string>
+    <string name="recipe_intro_again">Это можно снова открыть в настройках рецептов.</string>
+    <string name="recipe_intro_start">Понятно</string>
+    <string name="recipe_intro_packs_action">Посмотреть пакеты</string>
+    <string name="recipe_intro_settings_supporting">Способы получить рецепт</string>
+    <string name="recipe_not_available_title">Рецепты из пакетов недоступны в этой установке приложения</string>
+    <string name="recipe_not_available_body">Деньги не списаны. Бесплатные способы по-прежнему работают: отправьте запрос в ИИ-приложение или составьте рецепт на этом устройстве, если оно это умеет.</string>
+    <string name="recipe_not_available_debug">Отладочная сборка: App Check отклонил эту сборку. Зарегистрируйте отладочный токен App Check, который выводится в logcat (docs/recipe-setup.md, «Debug builds against the real project»).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+        <item quantity="few">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+        <item quantity="many">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+        <item quantity="other">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">Отмеченный продукт просрочен на %1$s. Проверьте, что его ещё можно есть, или снимите отметку.</string>
+    <string name="recipe_past_date_result_one">Срок годности истёк: %1$s. Перед готовкой проверьте, что продукт ещё можно есть.</string>
+    <string name="recipe_past_date_result_many">Срок годности истёк: %1$s. Перед готовкой проверьте, что эти продукты ещё можно есть.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">У этих продуктов истёк срок годности, но я всё равно хочу их использовать: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d отмеченный продукт просрочен, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="few">%1$d отмеченных продукта просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="many">%1$d отмеченных продуктов просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="other">%1$d отмеченных продукта просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
 </resources>

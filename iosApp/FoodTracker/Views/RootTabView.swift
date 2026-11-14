@@ -522,6 +522,9 @@ extension RootTabView {
             recipeViewModel.showsBuySheet = true
         default: break
         }
+        // `-demoRecipeIntro YES`: "How recipes work" as on a first visit (demo launches never
+        // open it by themselves).
+        if arguments.bool(forKey: "demoRecipeIntro") { recipeViewModel.showIntroForDemo() }
         if arguments.object(forKey: "demoRecipeCredits") != nil {
             recipeViewModel.credits.showDemo(
                 balance: arguments.integer(forKey: "demoRecipeCredits"),

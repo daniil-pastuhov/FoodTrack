@@ -225,6 +225,8 @@ privacy policy (URL above) has to say the same; it is updated in
     apps never ask Apple for the name. Declaring it is the honest answer; `PrivacyInfo.xcprivacy`
     has the matching Name entry (linked, not tracking, App Functionality).
   - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities
+    (with "Send all products" on in Recipe settings, every pantry item's, the others as items the
+    recipe may use)
     and the recipe settings sent to write a recipe or menu, and the recipe written back (kept on
     the server for 7 days after it finished, for retries, then deleted). The request itself is
     not stored, only a hash of it; it is screened automatically for prompt injection, and

@@ -77,6 +77,11 @@ struct RecipeDocument: View {
                         .padding(.bottom, LarderSpace.s3)
                 }
                 facts
+                // Above the ingredients, never in a footer: seen as the recipe opens.
+                if let warning = L10n.recipePastDateWarning(recipe.pastDate) {
+                    LarderCallout(.error, icon: .triangleAlert, message: warning)
+                        .padding(.top, LarderSpace.s3)
+                }
 
                 SectionHeader(L10n.recipeIngredientsTitle)
                     .padding(.top, LarderSpace.s2)

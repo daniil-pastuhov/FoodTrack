@@ -78,6 +78,9 @@ export interface AppleNotification {
 /** Thrown when a signed payload is not genuine, is for another app, or for a refused environment (Xcode). */
 export class InvalidSignatureError extends Error {}
 
+/** The message of the InvalidSignatureError for an Xcode or LocalTesting transaction (logged as XCODE_ENVIRONMENT). */
+export const REFUSED_ENVIRONMENT = "refused environment";
+
 export interface AppStoreVerifier {
   /** Verifies the JWS chain to Apple's root and the bundle id/environment. Throws InvalidSignatureError. */
   verifyTransaction(jws: string): Promise<AppleTransaction>;

@@ -9,7 +9,8 @@
  */
 import { createHash } from "node:crypto";
 import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
-import { fail, validateVerifyRequest, type VerifyResponse, type VerifyStatus } from "../contract";
+import { HttpsError } from "firebase-functions/v2/https";
+import { CAPABILITIES, fail, validateVerifyRequest, type VerifyResponse, type VerifyStatus } from "../contract";
 import {
   ANDROID_FIREBASE_APP_ID,
   CONSUME_MAX_ATTEMPTS,
@@ -34,8 +35,10 @@ import {
   type RuntimeConfig,
   type UserDoc,
 } from "../model";
+import { LogSampler } from "./guard";
 import {
   InvalidSignatureError,
+  REFUSED_ENVIRONMENT,
   RetryableStoreError,
   type AppleTransaction,
   type Caller,
@@ -156,6 +159,8 @@ interface GrantInput {
 
 type GrantOutcome = {
   status: VerifyStatus;
+  /** Why it was not granted, when it wasn't (see NotGrantedReason). */
+  reason?: NotGrantedReason;
   needsConsume: boolean;
   byBlockedBuyer?: boolean;
   net?: number;
@@ -200,8 +205,10 @@ async function grantTx(deps: Deps, uid: string, input: GrantInput, config: Runti
 
     if (existing && !redeemable(existing)) {
       const mine = existing.uid === uid;
+      const status = settledStatus(existing);
       return {
-        status: settledStatus(existing),
+        status,
+        ...(status === "REJECTED_PERMANENT" ? { reason: "REFUNDED_BEFORE_GRANT" as const } : {}),
         needsConsume: mine && existing.store === "play" && existing.state === "granted" && !!existing.purchaseToken,
       };
     }
@@ -232,19 +239,19 @@ async function grantTx(deps: Deps, uid: string, input: GrantInput, config: Runti
           ...(input.transactionId ? { transactionId: input.transactionId } : {}),
         });
       }
-      return { status: "REJECTED_PERMANENT", needsConsume: false };
+      return { status: "REJECTED_PERMANENT", reason: "REFUNDED_BEFORE_GRANT", needsConsume: false };
     }
 
     if (input.env === "sandbox") {
       // Sandbox purchases cost nothing, so they are capped by count and by credits: one
       // recipes_100 bought with quantity 10 would otherwise be 1000 free credits.
-      if (!config.allowSandbox) return { status: "REJECTED_PERMANENT", needsConsume: false };
-      if (credits > config.sandboxDailyCredits) return { status: "REJECTED_PERMANENT", needsConsume: false };
+      if (!config.allowSandbox) return { status: "REJECTED_PERMANENT", reason: "SANDBOX_NOT_ALLOWED", needsConsume: false };
+      if (credits > config.sandboxDailyCredits) return { status: "REJECTED_PERMANENT", reason: "SANDBOX_TOO_LARGE", needsConsume: false };
       const stats = (await tx.get(sRef)).data() ?? {};
       const granted = (stats.sandboxGrants as number | undefined) ?? 0;
       const grantedCredits = (stats.sandboxCredits as number | undefined) ?? 0;
       if (granted >= config.sandboxDailyCap || grantedCredits + credits > config.sandboxDailyCredits) {
-        return { status: "RETRY", needsConsume: false };
+        return { status: "RETRY", reason: "SANDBOX_DAILY_CAP", needsConsume: false };
       }
       tx.set(sRef, { sandboxGrants: FieldValue.increment(1), sandboxCredits: FieldValue.increment(credits) }, { merge: true });
     } else {
@@ -321,7 +328,82 @@ export async function consumePlay(deps: Deps, id: string, productId: string, pur
   return true;
 }
 
-async function verifyPlay(deps: Deps, caller: Caller, purchaseToken: string, consent: boolean | null, config: RuntimeConfig): Promise<VerifyStatus> {
+/**
+ * Why `verifyPurchase` did not grant a purchase: fixed codes for the `purchase_not_granted` log
+ * line (README "Logs to alert on"), one per rule that can refuse or defer it.
+ */
+export type NotGrantedReason =
+  /** Settled before, or reported refunded by the store, without ever being granted. */
+  | "REFUNDED_BEFORE_GRANT"
+  /** A sandbox (or Play test) purchase while `allowSandbox` is off. */
+  | "SANDBOX_NOT_ALLOWED"
+  /** One sandbox purchase worth more than `sandboxDailyCredits`. */
+  | "SANDBOX_TOO_LARGE"
+  /** Today's sandbox grants or credits are used up (RETRY). */
+  | "SANDBOX_DAILY_CAP"
+  /** The store couldn't be asked (RETRY). */
+  | "STORE_UNAVAILABLE"
+  /** Play: the payment is still pending (RETRY). */
+  | "PAYMENT_PENDING"
+  /** Play: the store does not know the token; Apple: no transaction with this id, or a different one. */
+  | "NOT_FOUND"
+  /** Play: cancelled or otherwise not purchased. */
+  | "NOT_PURCHASED"
+  /** A product that is not one of our packs, or a quantity below 1. */
+  | "UNKNOWN_PRODUCT"
+  /** Apple: another app's bundle id, or not a consumable. */
+  | "WRONG_BUNDLE"
+  /** Apple: an Xcode or LocalTesting transaction, which only the StoreKit configuration file signs. */
+  | "XCODE_ENVIRONMENT"
+  /** Apple: the JWS is malformed or its signature does not check out. */
+  | "INVALID_SIGNATURE"
+  /** The purchase's account token is another account's (PURCHASE_ACCOUNT_MISMATCH, an error). */
+  | "ACCOUNT_MISMATCH"
+  /** This app may not redeem that store's purchases (STORE_MISMATCH, an error). */
+  | "STORE_MISMATCH";
+
+/** The rules that point at a fault or a forged request rather than at ordinary life: logged as warnings. */
+const SURPRISING_REASONS: ReadonlySet<NotGrantedReason> = new Set<NotGrantedReason>([
+  "NOT_FOUND", "UNKNOWN_PRODUCT", "WRONG_BUNDLE", "INVALID_SIGNATURE", "ACCOUNT_MISMATCH", "STORE_MISMATCH",
+]);
+
+interface Verdict {
+  status: VerifyStatus;
+  reason?: NotGrantedReason;
+  env?: string;
+  productId?: string;
+}
+
+/**
+ * At most 10 `purchase_not_granted` lines a minute per reason and instance, with the count left
+ * out: a client resubmitting a RETRY (or a looping forger) cannot flood the logs.
+ */
+const notGrantedLogs = new Map<NotGrantedReason, LogSampler>();
+
+function logNotGranted(deps: Deps, caller: Caller, store: "play" | "appstore", status: VerifyStatus | "REFUSED", v: Omit<Verdict, "status">): void {
+  if (!v.reason) return;
+  let sampler = notGrantedLogs.get(v.reason);
+  if (!sampler) {
+    sampler = new LogSampler(60_000, 10);
+    notGrantedLogs.set(v.reason, sampler);
+  }
+  const sample = sampler.take(deps.now());
+  if (!sample.log) return;
+  const fields = {
+    status,
+    reason: v.reason,
+    store,
+    env: v.env ?? null,
+    // From the store's verified answer where there is one; never the token, the JWS or a transaction id.
+    productId: v.productId ? String(v.productId).slice(0, 64) : null,
+    uidHash: uidHash(caller.uid),
+    suppressedSinceLast: sample.suppressed,
+  };
+  if (SURPRISING_REASONS.has(v.reason)) deps.logger.warn("purchase_not_granted", fields);
+  else deps.logger.info("purchase_not_granted", fields);
+}
+
+async function verifyPlay(deps: Deps, caller: Caller, purchaseToken: string, consent: boolean | null, config: RuntimeConfig): Promise<Verdict> {
   const id = playPurchaseId(purchaseToken);
   const existing = (await purchaseRef(deps.db, id).get()).data();
   if (existing && !redeemable(existing)) {
@@ -332,21 +414,25 @@ async function verifyPlay(deps: Deps, caller: Caller, purchaseToken: string, con
         await consumePlay(deps, id, existing.productId, existing.purchaseToken);
       }
     }
-    return settledStatus(existing);
+    const status = settledStatus(existing);
+    return status === "REJECTED_PERMANENT"
+      ? { status, reason: "REFUNDED_BEFORE_GRANT", env: existing.env, productId: existing.productId ?? undefined }
+      : { status };
   }
   let purchase;
   try {
     purchase = await deps.play.getPurchase(purchaseToken);
   } catch (e) {
-    if (e instanceof RetryableStoreError) return "RETRY";
+    if (e instanceof RetryableStoreError) return { status: "RETRY", reason: "STORE_UNAVAILABLE" };
     throw e;
   }
-  if (!purchase) return "REJECTED_PERMANENT";
-  if (purchase.purchaseState === "PENDING") return "RETRY";
-  if (purchase.purchaseState !== "PURCHASED") return "REJECTED_PERMANENT";
+  if (!purchase) return { status: "REJECTED_PERMANENT", reason: "NOT_FOUND" };
+  const seen = { env: purchase.isTest ? "sandbox" : "production", productId: purchase.productId };
+  if (purchase.purchaseState === "PENDING") return { status: "RETRY", reason: "PAYMENT_PENDING", ...seen };
+  if (purchase.purchaseState !== "PURCHASED") return { status: "REJECTED_PERMANENT", reason: "NOT_PURCHASED", ...seen };
   if (!(purchase.productId in PRODUCT_CREDITS) || purchase.quantity < 1) {
     deps.logger.warn("play_unknown_product", { productId: String(purchase.productId).slice(0, 64) });
-    return "REJECTED_PERMANENT";
+    return { status: "REJECTED_PERMANENT", reason: "UNKNOWN_PRODUCT", ...seen };
   }
   await assertAccountToken(deps, caller.uid, purchase.obfuscatedExternalAccountId);
   const refundable = Math.max(0, Math.min(purchase.quantity, purchase.refundableQuantity));
@@ -365,29 +451,40 @@ async function verifyPlay(deps: Deps, caller: Caller, purchaseToken: string, con
   }, config);
   if (outcome.status === "ALREADY_GRANTED") await recordConsent(deps, id, caller.uid, consent);
   if (outcome.needsConsume) await consumePlay(deps, id, purchase.productId, purchaseToken);
-  return outcome.status;
+  return { status: outcome.status, ...(outcome.reason ? { reason: outcome.reason } : {}), ...seen };
 }
 
 function checkAppleTransaction(tx: AppleTransaction): boolean {
   return tx.bundleId === IOS_BUNDLE_ID && tx.type === "Consumable" && tx.productId in PRODUCT_CREDITS && tx.quantity >= 1;
 }
 
-async function verifyApple(deps: Deps, caller: Caller, jws: string, consent: boolean | null, config: RuntimeConfig): Promise<VerifyStatus> {
+/** Why an Apple transaction is not one of ours, or null when it is. */
+function appleMismatch(tx: AppleTransaction): NotGrantedReason | null {
+  if (tx.bundleId !== IOS_BUNDLE_ID || tx.type !== "Consumable") return "WRONG_BUNDLE";
+  if (!(tx.productId in PRODUCT_CREDITS) || tx.quantity < 1) return "UNKNOWN_PRODUCT";
+  return null;
+}
+
+async function verifyApple(deps: Deps, caller: Caller, jws: string, consent: boolean | null, config: RuntimeConfig): Promise<Verdict> {
   let signed: AppleTransaction;
   try {
     signed = await deps.appStore.verifyTransaction(jws);
   } catch (e) {
-    if (e instanceof InvalidSignatureError) return "REJECTED_PERMANENT";
-    if (e instanceof RetryableStoreError) return "RETRY";
+    if (e instanceof InvalidSignatureError) {
+      return { status: "REJECTED_PERMANENT", reason: e.message === REFUSED_ENVIRONMENT ? "XCODE_ENVIRONMENT" : "INVALID_SIGNATURE" };
+    }
+    if (e instanceof RetryableStoreError) return { status: "RETRY", reason: "STORE_UNAVAILABLE" };
     throw e;
   }
-  if (!checkAppleTransaction(signed)) return "REJECTED_PERMANENT";
+  const seen = { env: signed.environment, productId: signed.productId };
+  if (!checkAppleTransaction(signed)) return { status: "REJECTED_PERMANENT", reason: appleMismatch(signed) ?? "WRONG_BUNDLE", ...seen };
   await assertAccountToken(deps, caller.uid, signed.appAccountToken);
   const id = applePurchaseId(signed.environment, signed.transactionId);
   const existing = (await purchaseRef(deps.db, id).get()).data();
   if (existing && !redeemable(existing)) {
     if (existing.uid === caller.uid) await recordConsent(deps, id, caller.uid, consent);
-    return settledStatus(existing);
+    const status = settledStatus(existing);
+    return status === "REJECTED_PERMANENT" ? { status, reason: "REFUNDED_BEFORE_GRANT", ...seen } : { status };
   }
 
   // Fresh copy from Apple: catches a refund issued before the client submitted the transaction.
@@ -395,12 +492,11 @@ async function verifyApple(deps: Deps, caller: Caller, jws: string, consent: boo
   try {
     fresh = await deps.appStore.fetchTransaction(signed.transactionId, signed.environment);
   } catch (e) {
-    if (e instanceof RetryableStoreError || e instanceof InvalidSignatureError) return "RETRY";
+    if (e instanceof RetryableStoreError || e instanceof InvalidSignatureError) return { status: "RETRY", reason: "STORE_UNAVAILABLE", ...seen };
     throw e;
   }
-  if (!fresh || fresh.transactionId !== signed.transactionId || !checkAppleTransaction(fresh)) {
-    return "REJECTED_PERMANENT";
-  }
+  if (!fresh || fresh.transactionId !== signed.transactionId) return { status: "REJECTED_PERMANENT", reason: "NOT_FOUND", ...seen };
+  if (!checkAppleTransaction(fresh)) return { status: "REJECTED_PERMANENT", reason: appleMismatch(fresh) ?? "WRONG_BUNDLE", ...seen };
   const credits = PRODUCT_CREDITS[fresh.productId] * fresh.quantity;
   const outcome = await grant(deps, caller.uid, {
     id,
@@ -415,19 +511,29 @@ async function verifyApple(deps: Deps, caller: Caller, jws: string, consent: boo
     consumptionConsent: consent,
   }, config);
   if (outcome.status === "ALREADY_GRANTED") await recordConsent(deps, id, caller.uid, consent);
-  return outcome.status;
+  return { status: outcome.status, ...(outcome.reason ? { reason: outcome.reason } : {}), env: fresh.environment, productId: fresh.productId };
 }
 
 export async function verifyPurchase(deps: Deps, caller: Caller, data: unknown): Promise<VerifyResponse> {
   const request = validateVerifyRequest(data);
-  assertStoreMatchesApp(caller, request.store);
   const config = await deps.config();
-  await throttleVerify(deps, caller.uid, config);
-  const status = request.store === "play"
-    ? await verifyPlay(deps, caller, request.purchaseToken, request.consumptionConsent, config)
-    : await verifyApple(deps, caller, request.signedTransaction, request.consumptionConsent, config);
+  let verdict: Verdict;
+  try {
+    assertStoreMatchesApp(caller, request.store);
+    await throttleVerify(deps, caller.uid, config);
+    verdict = request.store === "play"
+      ? await verifyPlay(deps, caller, request.purchaseToken, request.consumptionConsent, config)
+      : await verifyApple(deps, caller, request.signedTransaction, request.consumptionConsent, config);
+  } catch (e) {
+    const reason = e instanceof HttpsError ? (e.details as { reason?: string } | undefined)?.reason : undefined;
+    if (reason === "PURCHASE_ACCOUNT_MISMATCH") logNotGranted(deps, caller, request.store, "REFUSED", { reason: "ACCOUNT_MISMATCH" });
+    if (reason === "STORE_MISMATCH") logNotGranted(deps, caller, request.store, "REFUSED", { reason: "STORE_MISMATCH" });
+    throw e;
+  }
+  const status = verdict.status;
+  logNotGranted(deps, caller, request.store, status, verdict);
   const user = (await userRef(deps.db, caller.uid).get()).data();
-  return { status, balance: user?.balance ?? 0, costs: config.costs, ...(await blockFlag(deps.db, user, config)) };
+  return { status, balance: user?.balance ?? 0, costs: config.costs, ...CAPABILITIES, ...(await blockFlag(deps.db, user, config)) };
 }
 
 // ---------------------------------------------------------------------------------------------

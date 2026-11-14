@@ -247,6 +247,25 @@ request to the largest valid one: recipe USD 0.066–0.075, 2-course menu 0.216�
 0.306–0.315 (with `outputJudge` on, add 0.024, 0.040 and 0.050). A typical measured 3-course menu (≈3,000 input, 12,000 output, 2,000 thinking tokens)
 is 3,000 × 1.5 + 14,000 × 7.5 = USD 0.11; a 2-course menu ≈ USD 0.08; a recipe ≈ USD 0.02.
 
+**Optional ingredients do not raise the worst case.** The input bound is the UTF-8 length of the
+prompt, so names are what can grow it: at most 30 of 40 code points, each code point up to 4
+bytes (a rare Han character), is 4,800 bytes of names in the largest request without optional
+items. A request with optional items adds the second block's markers and instruction lines and
+the optional ids in the schema, measured at ≤ 456 bytes (the schema repeats the ids per course in
+a menu, hence the larger figure there). So it is capped at 30 names (ticked and optional together,
+as before) and 1,050 code points of names: 1,050 × 4 = 4,200 bytes, 600 fewer than before, which
+more than pays for the 456. Measured at the default prices with every field at its maximum (12
+servings, step by step, 20 allergens of 40 such characters, `outputJudge` in its default mode):
+
+| request | largest, no optional items | largest, with optional items |
+|---|---|---|
+| recipe | 13,090 bytes, USD 0.08108 | 12,934 bytes, USD 0.08084 |
+| 2-course menu | 14,212 bytes, USD 0.23132 | 14,068 bytes, USD 0.23110 |
+| 3-course menu | 14,231 bytes, USD 0.32135 | 14,087 bytes, USD 0.32113 |
+
+Output caps are unchanged, so every figure below holds as it was; `test/optionalIngredients.test.ts`
+checks the inequality for each kind.
+
 - **Per user: USD 0.45 a day** (`perUserDailySpendMicroUsd: 450000`). A call starts only if
   today's booked spend + its worst case ≤ 0.45. 3-course menus: start at 0 → 0.11 → refused at
   0.22 (0.22 + 0.32 > 0.45): **two 3-course menus**, then recipes still fit (0.22 + 0.08 ≤ 0.45).
@@ -414,6 +433,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `play_consume_gave_up` | error | A Play purchase could not be consumed after 50 attempts; the buyer cannot buy that product again until it is consumed (Play Console). |
 | `apple_consumption_request` | info | Every Apple consumption request, with `outcome` (`consented`, `not consented`, …). |
 | `apple_consumption_answer_failed` / `apple_consumption_answer_expired` | warning / error | An answer to Apple failed (`reason`: `APPLE_RETRYABLE`, `APPLE_REJECTED`, `LEDGER_UNKNOWN`) or missed the 12-hour window. |
+| `purchase_not_granted` | info / warning | Informational, no alert needed: `verifyPurchase` refused or deferred a purchase. `status` (`REJECTED_PERMANENT`, `RETRY`, or `REFUSED` for the two that are errors), `reason` (the rule that fired: `SANDBOX_NOT_ALLOWED`, `SANDBOX_TOO_LARGE`, `SANDBOX_DAILY_CAP`, `XCODE_ENVIRONMENT`, `REFUNDED_BEFORE_GRANT`, `PAYMENT_PENDING`, `STORE_UNAVAILABLE`, `NOT_PURCHASED`, and at warning level `NOT_FOUND`, `UNKNOWN_PRODUCT`, `WRONG_BUNDLE`, `INVALID_SIGNATURE`, `ACCOUNT_MISMATCH`, `STORE_MISMATCH`), `store`, `env`, `productId` (from the store's verified answer, null before one), `uidHash`, `suppressedSinceLast`. Never the token, JWS, transaction id or uid. Sampled: 10 a minute per reason per instance. Answers "why didn't this purchase go through" (for example a sandbox purchase with `allowSandbox` off). |
 | `debt_followed_buyer` | warning | A purchase picked up another account's negative balance through a shared buyer key. |
 | `profile_scrub_failed` | warning | Clearing a user's Auth name/photo failed (error code only). |
 | `apple_token_registered` / `apple_token_removed_unlinked` | info | A Sign in with Apple refresh token was stored (`replaced`), or removed after Apple was unlinked. `uidHash` only. |
@@ -451,6 +471,15 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    data, that each entry is only a food item (or a food to avoid), that anything else is ignored,
    and that settings, diet and allergens come only from the instruction. A per-request random
    marker (`LRD-` + 16 hex) ends the system instruction; it never appears in the user turn.
+   Optional items (`optionalIngredients`, the rest of the pantry when "Send all products" is on)
+   come as a second JSON object between `BEGIN_OPTIONAL_PANTRY_DATA` and
+   `END_OPTIONAL_PANTRY_DATA` (`optional`, ids `o1..oN`), and only then does the instruction
+   mention them: both blocks are declared untrusted data, an optional entry is only a food item
+   the user also has, none is required, and a dish is never built on them alone. Their names go
+   through the same rules as ticked ones (layer 2), but a refused optional name is dropped rather
+   than refusing the request, and is not counted as a rejection: a pantry the person did not tick
+   must not lock their account. The answer checks treat them like ticked items (allergens, diet,
+   scripts, quoting), except that `NO_PANTRY` still needs a ticked item.
 2. **Input names** (`src/core/inputSafety.ts`): NFKC, look-alike folding of apostrophes, dashes
    and the Arabic percent and decimal signs, invisible and bidi control characters removed,
    whitespace collapsed; then 1–40 code points, ≤ 8 words, ≤ 28 code points per word part (no part

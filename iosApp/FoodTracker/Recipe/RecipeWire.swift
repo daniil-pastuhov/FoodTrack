@@ -105,6 +105,11 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     /// (`AllergenConsent`); nil (left out of the JSON) otherwise. The server refuses allergens
     /// without it (`ALLERGEN_CONSENT_REQUIRED`). Nil in a request stored by an older version.
     var allergenConsent: Bool?
+    /// The rest of the pantry, which the recipe may use as well ("Send all products"): only to a
+    /// server that said `acceptsOptionalIngredients`, already capped by
+    /// `RecipeWire.optionalIngredients`; nil (left out of the JSON) otherwise, and in a request
+    /// stored by an older version. Part of the inputs a `requestId` is bound to.
+    var optionalIngredients: [WireIngredient]?
 
     /// Everything the server binds a `requestId` to: the whole body but the id and the consent
     /// flag, which isn't an input.
@@ -169,11 +174,13 @@ struct WireFlag: Decodable, Sendable {
 }
 
 /// Every answer that carries `balance` also carries the costs and, for an account whose
-/// earlier purchases were refunded after the recipes were used, `purchasesBlocked`.
+/// earlier purchases were refunded after the recipes were used, `purchasesBlocked`; and, from a
+/// server that reads `optionalIngredients`, `acceptsOptionalIngredients: true`.
 protocol BalanceCarrying {
     var balance: Int { get }
     var costs: WireCosts? { get }
     var purchasesBlocked: WireFlag? { get }
+    var acceptsOptionalIngredients: WireFlag? { get }
 }
 
 enum GenerateStatus: String, Decodable, Sendable {
@@ -190,6 +197,7 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var charged: Bool
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
+    var acceptsOptionalIngredients: WireFlag?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -207,12 +215,14 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var balance: Int
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
+    var acceptsOptionalIngredients: WireFlag?
 }
 
 struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var balance: Int
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
+    var acceptsOptionalIngredients: WireFlag?
 }
 
 /// `moved` can be negative: a store refund's debt moves with the recipes.
@@ -221,6 +231,7 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var moved: Int
     var costs: WireCosts?
     var purchasesBlocked: WireFlag?
+    var acceptsOptionalIngredients: WireFlag?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable, Equatable {
@@ -706,13 +717,66 @@ enum RecipeWire {
         return String(format: "%04d-%02d-%02d", parts.year ?? 1970, parts.month ?? 1, parts.day ?? 1)
     }
 
+    /// The `items` (as sent, `expiresOn` `YYYY-MM-DD`) past their date on `today` (likewise), in
+    /// the order given. An item without a date, or one that can't be read, is not. Android:
+    /// `pastDateOf`.
+    static func pastDate(of items: [WireIngredient], today: String) -> [PastDateItem] {
+        guard let day = dayNumber(today) else { return [] }
+        return items.compactMap { item in
+            guard let expires = item.expiresOn.flatMap(dayNumber) else { return nil }
+            let over = day - expires
+            return over > 0 ? PastDateItem(name: item.name, daysOver: over) : nil
+        }
+    }
+
+    /// Days since 1970-01-01 of a `YYYY-MM-DD` date, in the proleptic Gregorian calendar.
+    private static func dayNumber(_ iso: String) -> Int? {
+        let parts = iso.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        guard let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else { return nil }
+        return Int((date.timeIntervalSince1970 / 86_400).rounded())
+    }
+
+    /// Names in one request with optional items, ticked and optional together, and their code
+    /// points (CONTRACT.md "Optional ingredients"). As Android's `MAX_REQUEST_TOTAL_NAMES` and
+    /// `MAX_REQUEST_OPTIONAL_NAME_CHARS`.
+    static let maxTotalNames = 30
+    static let maxOptionalNameChars = 1050
+
+    /// The optional items to send beside `ticked`, from `others` (the rest of the pantry, soonest
+    /// first, names already cleaned), as the server keeps them: a name already in the request
+    /// (ignoring case) is left out, then items are taken in order while ticked and taken together
+    /// stay within 30 names and 1,050 code points, an item that doesn't fit being skipped. Android:
+    /// `optionalWireIngredients`.
+    static func optionalIngredients(ticked: [WireIngredient], others: [WireIngredient]) -> [WireIngredient] {
+        var seen = Set(ticked.map { $0.name.lowercased() })
+        var names = ticked.count
+        var chars = ticked.reduce(0) { $0 + $1.name.unicodeScalars.count }
+        var kept: [WireIngredient] = []
+        for item in others {
+            let key = item.name.lowercased()
+            let length = item.name.unicodeScalars.count
+            guard !seen.contains(key), names + 1 <= maxTotalNames, chars + length <= maxOptionalNameChars else { continue }
+            seen.insert(key)
+            names += 1
+            chars += length
+            kept.append(item)
+        }
+        return kept
+    }
+
+    /// `withOptional`: "Send all products" is on and the server said it reads them; then the
+    /// request's `otherItems` go as `optionalIngredients`.
     static func request(
         for request: RecipeRequest,
         kind: RecipeKind,
         courses: Int,
         requestID: UUID,
         today: Date = Date(),
-        excluding refused: Set<String> = []
+        excluding refused: Set<String> = [],
+        withOptional: Bool = false
     ) -> GenerateRequest {
         // Names the server refused earlier (lower-cased) stay out: sending one again would only
         // be refused again, and repeated refusals lock the account for the day.
@@ -725,6 +789,20 @@ enum RecipeWire {
                 quantity: item.quantity.map { min(max($0, 0), 9999) }
             )
         }
+        // A name the server would refuse is simply left out there, so it never stops the request.
+        let optional = withOptional
+            ? optionalIngredients(
+                ticked: Array(ingredients.prefix(maxIngredients)),
+                others: request.otherItems.compactMap { item -> WireIngredient? in
+                    guard let name = cleanName(item.name), !refused.contains(name.lowercased()) else { return nil }
+                    return WireIngredient(
+                        name: name,
+                        expiresOn: item.expiresOn.map { isoDay($0) },
+                        quantity: item.quantity.map { min(max($0, 0), 9999) }
+                    )
+                }
+            )
+            : []
         // One per name regardless of case, as on Android.
         var seenAllergens = Set<String>()
         let allergens = request.allergens.compactMap(cleanAllergenName).sorted()
@@ -738,7 +816,8 @@ enum RecipeWire {
             allergens: Array(allergens),
             today: isoDay(today),
             // Built only past the consent step (`writeOnServer`), so allergens here were agreed to.
-            allergenConsent: AllergenConsent.flag(for: Array(allergens))
+            allergenConsent: AllergenConsent.flag(for: Array(allergens)),
+            optionalIngredients: optional.isEmpty ? nil : optional
         )
     }
 

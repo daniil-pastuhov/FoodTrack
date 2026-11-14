@@ -1030,4 +1030,45 @@
         <item quantity="one">%1$d rett</item>
         <item quantity="other">%1$d retter</item>
     </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredienser</string>
+    <string name="recipe_send_all">Send alle varer</string>
+    <string name="recipe_send_all_desc">I tillegg til de avkryssede varene får oppskriften resten av matskapet som varer den også kan bruke. Når dette er på, sendes navn, datoer og antall for alt i matskapet til serveren vår ved en oppskrift fra en pakke, og de tas også med i ledeteksten du deler.</string>
+    <string name="recipe_intro_title">Slik fungerer oppskriftene</string>
+    <string name="recipe_intro_body">Kryss av det du vil bruke opp, velg hva slags rett du vil ha, og få en oppskrift bygd rundt det. Oppskrifter du får i appen, lagres på denne enheten så snart de kommer.</string>
+    <string name="recipe_intro_prompt_title">Gratis, med hvilken som helst KI-app</string>
+    <string name="recipe_intro_prompt_body">Del eller kopier en ferdig ledetekst til KI-appen du allerede bruker.</string>
+    <string name="recipe_intro_device_title">Gratis, på denne enheten</string>
+    <string name="recipe_intro_device_body">Enheten skriver oppskriften selv, og ingenting sendes noe sted.</string>
+    <string name="recipe_intro_packs_title">Fra en oppskriftspakke</string>
+    <string name="recipe_intro_packs_body">Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$s fra en pakke, en meny %2$s med 2 retter om dagen eller %3$s med 3.</string>
+    <string name="recipe_intro_packs_price">Pakker fra %1$s.</string>
+    <string name="recipe_intro_free_stays">De gratis måtene er der fortsatt når du har en pakke.</string>
+    <string name="recipe_intro_again">Du kan åpne dette igjen i oppskriftsinnstillingene.</string>
+    <string name="recipe_intro_start">Skjønner</string>
+    <string name="recipe_intro_packs_action">Se oppskriftspakker</string>
+    <string name="recipe_intro_settings_supporting">Måtene å få en oppskrift på</string>
+    <string name="recipe_not_available_title">Oppskrifter fra pakker er ikke tilgjengelige i denne installasjonen</string>
+    <string name="recipe_not_available_body">Ingenting ble belastet. De gratis måtene virker fortsatt: del ledeteksten med en KI-app, eller lag oppskriften på denne enheten hvis den kan.</string>
+    <string name="recipe_not_available_debug">Feilsøkingsbygg: App Check avviste dette bygget. Registrer feilsøkingstokenet for App Check som logcat skriver ut (docs/recipe-setup.md, «Debug builds against the real project»).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">Den andre varen i matskapet kan også brukes</item>
+        <item quantity="other">De %1$d andre varene i matskapet kan også brukes</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">En avkrysset vare gikk ut på dato for %1$s siden. Sjekk at den fortsatt er trygg å spise, eller fjern krysset.</string>
+    <string name="recipe_past_date_result_one">Gått ut på dato: %1$s. Sjekk at den fortsatt er trygg å spise før du lager mat.</string>
+    <string name="recipe_past_date_result_many">Gått ut på dato: %1$s. Sjekk at de fortsatt er trygge å spise før du lager mat.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
+        <item quantity="other">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dager</item>
+    </plurals>
 </resources>

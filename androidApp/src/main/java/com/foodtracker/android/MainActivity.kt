@@ -116,11 +116,17 @@ class MainActivity : ComponentActivity() {
      * everything with that backup file, as Settings' Replace restore does, and `--es demoTab
      * <home|recipe|shopping|settings>` opens that tab, or `edit:<item id>` that item's Edit
      * screen. The counterpart of iOS's `-demoBackup` and `-demoTab` launch arguments. A restore
-     * also marks onboarding done, so onboarding is skipped from the next launch on.
+     * also marks onboarding done, so onboarding is skipped from the next launch on. A demo launch
+     * never opens the Recipe tab's introduction by itself; `--ez demoRecipeIntro true` opens it on
+     * purpose (iOS `-demoRecipeIntro`), to look at it.
      */
     private fun loadDemoFromIntent(intent: Intent) {
-        // A rating prompt must never appear in a store screenshot.
-        if (intent.hasExtra(EXTRA_DEMO_BACKUP) || intent.hasExtra(EXTRA_DEMO_TAB)) reviewPrompter.suppressForSession()
+        // A rating prompt, or the Recipe introduction, must never appear in a store screenshot.
+        if (intent.hasExtra(EXTRA_DEMO_BACKUP) || intent.hasExtra(EXTRA_DEMO_TAB) || intent.hasExtra(EXTRA_DEMO_RECIPE_INTRO)) {
+            reviewPrompter.suppressForSession()
+            recipeStateHolder.suppressIntroForSession()
+        }
+        if (intent.getBooleanExtra(EXTRA_DEMO_RECIPE_INTRO, false)) recipeStateHolder.showIntroForDemo()
         intent.getStringExtra(EXTRA_DEMO_BACKUP)?.let { path ->
             val raw = runCatching { java.io.File(path).readText() }.getOrNull()
             if (raw == null) {
@@ -328,6 +334,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_DEMO_BACKUP = "demoBackup"
         private const val EXTRA_DEMO_TAB = "demoTab"
+        private const val EXTRA_DEMO_RECIPE_INTRO = "demoRecipeIntro"
 
         const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
 
