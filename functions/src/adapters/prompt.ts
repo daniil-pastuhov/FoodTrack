@@ -104,8 +104,16 @@ export function userText(req: GenerateRequest): string {
   return ["BEGIN_PANTRY_DATA", JSON.stringify(data), "END_PANTRY_DATA"].join("\n");
 }
 
-function recipeSchema(req: GenerateRequest): Record<string, unknown> {
+/**
+ * `inMenu`: a menu nests this schema under days and courses, and Vertex AI then refuses the
+ * request (400 INVALID_ARGUMENT) when the nested ingredient and step arrays carry maxItems;
+ * minItems alone is accepted (seen on gemini-3.8-flash, 2026-11-14, for 2 and 3 courses).
+ * There the upper bounds are only described, and core/outputSafety.ts enforces them, as it does
+ * for a single recipe too.
+ */
+function recipeSchema(req: GenerateRequest, inMenu = false): Record<string, unknown> {
   const steps = STEP_BOUNDS[req.config.detail];
+  const atMost = (max: number): Record<string, unknown> => (inMenu ? { description: `At most ${max} items.` } : { maxItems: max });
   return {
     type: "object",
     properties: {
@@ -115,7 +123,7 @@ function recipeSchema(req: GenerateRequest): Record<string, unknown> {
       ingredients: {
         type: "array",
         minItems: 1,
-        maxItems: LIMITS.ingredients,
+        ...atMost(LIMITS.ingredients),
         items: {
           type: "object",
           properties: {
@@ -126,7 +134,7 @@ function recipeSchema(req: GenerateRequest): Record<string, unknown> {
           required: ["amount", "name", "pantryId"],
         },
       },
-      steps: { type: "array", minItems: steps.min, maxItems: steps.max, items: { type: "string" } },
+      steps: { type: "array", minItems: steps.min, ...atMost(steps.max), items: { type: "string" } },
       tip: { type: "string", description: "One short sentence." },
     },
     required: ["title", "summary", "minutes", "ingredients", "steps"],
@@ -159,7 +167,7 @@ export function responseSchema(req: GenerateRequest): Record<string, unknown> {
               maxItems: courses.length,
               items: {
                 type: "object",
-                properties: { course: { type: "string", enum: courses }, recipe: recipeSchema(req) },
+                properties: { course: { type: "string", enum: courses }, recipe: recipeSchema(req, true) },
                 required: ["course", "recipe"],
               },
             },

@@ -66,6 +66,29 @@ describe("prompt", () => {
     const schema = responseSchema(req) as { properties: { days: { minItems: number } } };
     expect(schema.properties.days.minItems).toBe(3);
   });
+
+  // Vertex AI answers 400 INVALID_ARGUMENT to a menu whose nested recipe arrays carry maxItems
+  // (seen live on 2026-11-14); a single recipe keeps them.
+  test("a menu's nested recipes describe their upper bounds instead of using maxItems", () => {
+    type Arr = { minItems?: number; maxItems?: number; description?: string };
+    type RecipeSchema = { properties: { ingredients: Arr; steps: Arr } };
+    for (const courses of [2, 3] as const) {
+      const menu = responseSchema(validateGenerateRequest({ ...baseRequest, kind: "menu", courses }, Date.now())) as {
+        properties: { days: { maxItems: number; items: { properties: { courses: { maxItems: number; items: { properties: { recipe: RecipeSchema } } } } } } };
+      };
+      expect(menu.properties.days.maxItems).toBe(3);
+      expect(menu.properties.days.items.properties.courses.maxItems).toBe(courses);
+      const nested = menu.properties.days.items.properties.courses.items.properties.recipe.properties;
+      for (const list of [nested.ingredients, nested.steps]) {
+        expect(list.maxItems).toBeUndefined();
+        expect(list.minItems).toBeGreaterThanOrEqual(1);
+        expect(list.description).toMatch(/^At most \d+ items\.$/);
+      }
+    }
+    const recipe = responseSchema(validateGenerateRequest({ ...baseRequest, kind: "recipe", courses: undefined }, Date.now())) as RecipeSchema;
+    expect(recipe.properties.ingredients.maxItems).toBeGreaterThan(0);
+    expect(recipe.properties.steps.maxItems).toBeGreaterThan(0);
+  });
 });
 describe("Gemini thinking config", () => {
   test("gemini-2.x gets budget 0, newer models a thinking level", () => {
