@@ -253,6 +253,27 @@
   .has-nav .snackbar-host, .has-nav.has-fab-host .snackbar-host { bottom: var(--space-4); }
 }
 
+/* 2026-11-14: multi-choice chips carry a check when on (single choice uses segmented controls) */
+.chip svg.lucide { width: 18px; height: 18px; flex: none; }
+
+/* Range slider: two handles on one track (Recipe time). Each handle is a real slider for assistive tech.
+   --lo / --hi place the filled part, --at places each handle. A handle at its end means "no limit". */
+.range { --lo: 0%; --hi: 100%; position: relative; height: var(--size-touch); margin: 0 12px; touch-action: none; }
+.range-track { position: absolute; left: 0; right: 0; top: 50%; height: 4px; margin-top: -2px; border-radius: var(--radius-full); background: var(--color-outline-variant); }
+.range-track::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--lo); right: calc(100% - var(--hi)); border-radius: inherit; background: var(--color-primary); }
+.range-thumb { position: absolute; top: 50%; left: var(--at, 0%); width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 2px var(--color-surface), var(--elevation-1); cursor: grab; }
+.range-thumb::after { content: ""; position: absolute; inset: -12px; border-radius: 50%; } /* 48dp target */
+.range-thumb:focus-visible, .range-thumb.is-focus { outline: 2px solid var(--color-focus-ring); outline-offset: 4px; }
+.range-thumb.is-dragging { width: 28px; height: 28px; margin: -14px 0 0 -14px; cursor: grabbing; box-shadow: 0 0 0 2px var(--color-surface), 0 0 0 12px color-mix(in srgb, var(--color-primary) 18%, transparent); z-index: 1; }
+.range-tip { position: absolute; bottom: calc(100% + 14px); left: 50%; transform: translateX(-50%); padding: 2px var(--space-2); border-radius: var(--radius-sm); background: var(--color-inverse-surface); color: var(--color-on-inverse-surface); font: var(--type-caption); white-space: nowrap; pointer-events: none; }
+.range.is-disabled .range-track { background: color-mix(in srgb, var(--color-on-surface) 12%, transparent); }
+.range.is-disabled .range-track::after, .range.is-disabled .range-thumb { background: color-mix(in srgb, var(--color-on-surface) 38%, transparent); box-shadow: none; cursor: not-allowed; }
+.range-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: var(--space-3); row-gap: 2px; }
+.range-val { font: var(--type-label); color: var(--color-on-surface); font-variant-numeric: tabular-nums; }
+.range-head > :first-child { font: var(--type-label); color: var(--color-on-surface-variant); }
+.range-head.is-large > * { font: var(--type-title); }
+.r-ctl-demo { display: grid; gap: var(--space-2); width: min(300px, 100%); }
+
 /* Tablet and foldable keep the phone's pill. Scan sits level with it at the bottom right, in thumb reach. */
 @container (min-width: 700px) {
   .has-nav .scroll, .has-nav .scroll.has-fab { padding-bottom: 104px; }

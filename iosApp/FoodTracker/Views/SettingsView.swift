@@ -517,8 +517,7 @@ public struct SettingsView: View {
     /// the user doesn't have to work it out from the individual controls.
     private var reminderPreview: String {
         let notifications = settings.notifications
-        let time = Self.timeDate(hour: notifications.hour, minute: notifications.minute)
-            .formatted(date: .omitted, time: .shortened)
+        let time = Self.timeText(hour: notifications.hour, minute: notifications.minute)
         let eachItem = L10n.settingsReminderPreviewEachItem(leadDays: notifications.leadDays, time: time)
         let summary: String
         switch notifications.digestEveryDays {
@@ -570,6 +569,16 @@ public struct SettingsView: View {
 
     private static func shortWeekdayName(isoDay: Int) -> String {
         Calendar.current.shortStandaloneWeekdaySymbols[isoDay % 7].capitalized
+    }
+
+    /// The reminder time as the time picker beside it shows it ("09:00" in en-GB and nb). The
+    /// formatted(time: .shortened) style drops the leading zero ("9:00"), so the note and the
+    /// field disagreed.
+    private static func timeText(hour: Int, minute: Int) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter.string(from: timeDate(hour: hour, minute: minute))
     }
 
     private static func timeDate(hour: Int, minute: Int) -> Date {

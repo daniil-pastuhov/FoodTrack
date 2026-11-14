@@ -1,0 +1,80 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "6D3C1F2A",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "3.99",
+      "familyShareable" : false,
+      "internalID" : "6D3C1F2B",
+      "localizations" : [
+        {
+          "description" : "10 recipes written by our server",
+          "displayName" : "10 recipes",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "recipes_10",
+      "referenceName" : "10 recipes",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "10.99",
+      "familyShareable" : false,
+      "internalID" : "6D3C1F2C",
+      "localizations" : [
+        {
+          "description" : "50 recipes written by our server",
+          "displayName" : "50 recipes",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "recipes_50",
+      "referenceName" : "50 recipes",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "18.99",
+      "familyShareable" : false,
+      "internalID" : "6D3C1F2D",
+      "localizations" : [
+        {
+          "description" : "100 recipes written by our server",
+          "displayName" : "100 recipes",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "recipes_100",
+      "referenceName" : "100 recipes",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6D3C1F2E",
+    "_developerTeamID" : "S8Q8KHX6G5",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_GB",
+    "_storefront" : "GBR",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

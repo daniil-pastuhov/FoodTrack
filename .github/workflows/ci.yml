@@ -1,7 +1,8 @@
 name: CI
 
-# Every push and pull request: Android and shared unit tests, an Android debug build, and an iOS
-# build, each only when its files changed (see the "changes" job), and none where another run
+# Every push and pull request: Android and shared unit tests, an Android debug build, an iOS build,
+# and the Cloud Functions lint and emulator tests, each only when its files changed (see the
+# "changes" job), and none where another run
 # already built the same code:
 # - a release/v* pull request from this repository (not a fork, whose pushes run nothing here): the
 #   push run of the same commit builds it, and must, as the publish jobs need it;
@@ -16,8 +17,10 @@ name: CI
 # - Each push to a release/vX.Y.Z branch publishes a signed bundle to the Google Play internal
 #   track and, with the IOS_PUBLISH repository variable set to "true", a build to the internal
 #   TestFlight testers, both with the notes in release-notes/vX.Y.Z/.
-# - Merging that branch's PR promotes the same Play build to closed testing (alpha), submits the
-#   newest TestFlight build of the version for App Store review, and tags vX.Y.Z.
+# - Merging that branch's PR promotes the same Play build to closed testing (alpha) and applies
+#   the Play store listing from store-listing/google-play/, sets the App Store listing and
+#   screenshots from store-listing/app-store/ on the version and submits the newest TestFlight
+#   build of it for App Store review, and tags vX.Y.Z.
 # Main itself publishes nothing. The release jobs live in this workflow, not a separate one,
 # because the Play version code is derived from this workflow's run number.
 on:
@@ -54,6 +57,8 @@ jobs:
     outputs:
       android: ${{ steps.decide.outputs.android }}
       ios: ${{ steps.decide.outputs.ios }}
+      functions: ${{ steps.decide.outputs.functions }}
+      scripts: ${{ steps.decide.outputs.scripts }}
     env:
       BUILD_ALL: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/release/v') }}
     steps:
@@ -78,6 +83,16 @@ jobs:
               - 'iosApp/**'
               - 'Version.xcconfig'
               - '.github/workflows/ci.yml'
+            functions:
+              - 'functions/**'
+              - 'firebase.json'
+              - 'firestore.rules'
+              - 'firestore.indexes.json'
+              - '.github/workflows/ci.yml'
+            scripts:
+              - 'scripts/**'
+              - 'store-listing/**'
+              - '.github/workflows/ci.yml'
       - name: Decide
         id: decide
         env:
@@ -87,10 +102,14 @@ jobs:
             ${{ (env.BUILD_ALL == 'true' || steps.filter.outputs.ios == 'true') &&
             !(github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/v') &&
               vars.IOS_PUBLISH == 'true') }}
+          FUNCTIONS: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.functions == 'true' }}
+          SCRIPTS: ${{ env.BUILD_ALL == 'true' || steps.filter.outputs.scripts == 'true' }}
         run: |
           echo "android=$ANDROID" >> "$GITHUB_OUTPUT"
           echo "ios=$IOS" >> "$GITHUB_OUTPUT"
-          echo "Android: $ANDROID, iOS: $IOS"
+          echo "functions=$FUNCTIONS" >> "$GITHUB_OUTPUT"
+          echo "scripts=$SCRIPTS" >> "$GITHUB_OUTPUT"
+          echo "Android: $ANDROID, iOS: $IOS, functions: $FUNCTIONS, scripts: $SCRIPTS"
 
   android:
     name: Android tests and build
@@ -125,6 +144,57 @@ jobs:
             androidApp/build/reports/tests/
             shared/build/reports/tests/
           retention-days: 7
+
+  # Cloud Functions (functions/): lint, typecheck, build, and the tests against the Firestore and
+  # Auth emulators, which need Java. Stores and the LLM are faked, and the demo- project id keeps
+  # the emulators from reaching any real Firebase project. Nothing here deploys.
+  functions:
+    name: Functions lint and tests
+    needs: changes
+    if: needs.changes.outputs.functions == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Cache the emulator binaries
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ hashFiles('functions/package-lock.json') }}
+          restore-keys: firebase-emulators-
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+
+  # The store texts' limits, and the unit tests of the store-listing sync (scripts/tests/, a fake
+  # App Store Connect and Play; no network, no secrets, standard library only).
+  scripts:
+    name: Store listing checks and script tests
+    needs: changes
+    if: needs.changes.outputs.scripts == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_store_listing.py
+      - run: python -m unittest discover -s scripts/tests
 
   ios:
     name: iOS build
@@ -343,6 +413,31 @@ jobs:
             --status "$PLAY_RELEASE_STATUS" \
             --release-notes-dir "release-notes/v$RELEASE_VERSION"
 
+  # The store listing goes out with the release whose features it describes: after the promotion
+  # and in its own edit and job, so a listing problem neither holds back the build nor the tag.
+  # Re-running it is safe: it writes only what still differs from store-listing/google-play/.
+  play-listing:
+    name: Update the Google Play store listing
+    needs: promote-play
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: play-publish
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install upload dependencies
+        run: pip install --quiet google-api-python-client google-auth-httplib2
+      - name: Apply the texts and images from store-listing/google-play/
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: python scripts/play_listing.py --images --apply
+
   # The upload and the wait for its processing are separate jobs, so the testflight-publish group
   # alone could let release-app-store run between them and submit an older build. This waits for
   # the release branch's runs to finish first, outside that group: inside it, it would hold the
@@ -378,7 +473,8 @@ jobs:
       vars.IOS_PUBLISH == 'true'
     needs: wait-for-testflight
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Uploading and processing the screenshot sets takes most of it.
+    timeout-minutes: 45
     concurrency:
       group: testflight-publish
       cancel-in-progress: false
@@ -397,6 +493,8 @@ jobs:
           python-version: "3.12"
       - name: Install App Store Connect API dependencies
         run: pip install --quiet cryptography
+      # Sets the listing and the screenshot sets from store-listing/app-store/ before submitting;
+      # if either fails, nothing is submitted and a re-run continues where it stopped.
       - name: Submit the newest build for App Review
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -406,7 +504,7 @@ jobs:
           echo "$ASC_KEY_P8_BASE64" | base64 --decode > "$RUNNER_TEMP/AuthKey.p8"
           ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" python scripts/testflight.py appstore \
             --version "$RELEASE_VERSION" --notes-dir "release-notes/v$RELEASE_VERSION" \
-            --release-type "$APP_STORE_RELEASE_TYPE"
+            --release-type "$APP_STORE_RELEASE_TYPE" --screenshots
 
   tag-release:
     name: Tag the release

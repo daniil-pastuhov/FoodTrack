@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Matvakt</string>
     <string name="nav_label_home">Hjem</string>
-    <string name="nav_label_calendar">Kalender</string>
+    <string name="nav_label_recipe">Oppskrift</string>
     <string name="nav_label_shopping_list">Handleliste</string>
     <string name="nav_label_settings">Innstillinger</string>
     <string name="app_subtitle">Sporing av matvarer og utløpsdatoer</string>
@@ -253,14 +253,10 @@
     <string name="selection_count_format">%1$d valgt</string>
     <string name="exit_selection_content_description">Avslutt utvalg</string>
     <string name="action_get_recipe_ideas">Få oppskriftsforslag</string>
-    <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå noen oppskrifter jeg kan lage, og prioriter det som nærmer seg utløpsdatoen:</string>
+    <string name="recipe_prompt_intro">Jeg har disse varene hjemme og vil unngå å kaste dem. Foreslå én oppskrift jeg kan lage, og bruk først det som nærmer seg utløpsdatoen:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:</string>
     <string name="recipe_prompt_other_items_omitted">(+%1$d flere varer vises ikke)</string>
-    <string name="share_recipe_dialog_title">Få oppskriftsforslag</string>
-    <string name="share_recipe_include_other_items_title">Inkluder andre varer i matskapet</string>
-    <string name="share_recipe_include_other_items_subtitle">Valgfritt – lar AI-en foreslå oppskrifter med mer av det du allerede har</string>
-    <string name="share_recipe_share_button">Del</string>
     <string name="share_recipe_cancel_button">Avbryt</string>
 
     <string name="expires_today">Utløper i dag</string>
@@ -333,26 +329,6 @@
     <string name="settings_content_description">Innstillinger</string>
     <string name="settings_title">Innstillinger</string>
 
-    <string name="calendar_content_description">Kalender</string>
-    <string name="calendar_previous_month">Forrige måned</string>
-    <string name="calendar_next_month">Neste måned</string>
-    <string name="calendar_no_items_for_day">Ingen varer utløper denne dagen</string>
-    <string name="calendar_section_overdue">Utløpt</string>
-    <string name="calendar_section_today">I dag</string>
-    <string name="calendar_section_tomorrow">I morgen</string>
-    <string name="calendar_section_this_week">Senere denne uken</string>
-    <string name="calendar_section_next_week">Neste uke</string>
-    <string name="calendar_section_later">Senere</string>
-    <string name="calendar_agenda_empty">Ingenting i spiskammeret ennå</string>
-    <string name="calendar_show_all">Vis alle</string>
-    <string name="calendar_swipe_used">Brukt</string>
-    <string name="calendar_swipe_tossed">Kastet</string>
-    <string name="calendar_show_month">Vis måned</string>
-    <string name="calendar_show_week">Vis uke</string>
-    <plurals name="calendar_day_item_count">
-        <item quantity="one">%1$d vare utløper</item>
-        <item quantity="other">%1$d varer utløper</item>
-    </plurals>
 
     <string name="settings_section_notifications">Varsler</string>
     <string name="settings_notifications_enabled">Minn meg på før maten går ut på dato</string>
@@ -582,9 +558,6 @@
     <string name="detail_credit">Produktdata fra Open Food Facts</string>
     <string name="detail_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
     <string name="detail_choose_item">Velg en vare for å se detaljene.</string>
-    <string name="recipe_intro">Matvakt lager en ledetekst av %1$s som du kan dele med en KI-assistent. Ingenting forlater enheten før du velger hvor den skal sendes.</string>
-    <string name="recipe_names_two">%1$s og %2$s</string>
-    <string name="recipe_names_three">%1$s, %2$s og %3$s</string>
     <plurals name="lede_use_by_tomorrow">
         <item quantity="one">%1$s ting å bruke innen i morgen</item>
         <item quantity="other">%1$s ting å bruke innen i morgen</item>
@@ -604,14 +577,6 @@
     <plurals name="home_show_items">
         <item quantity="one">Vis %d vare</item>
         <item quantity="other">Vis %d varer</item>
-    </plurals>
-    <plurals name="recipe_names_more">
-        <item quantity="one">%1$s, %2$s og %3$d til</item>
-        <item quantity="other">%1$s, %2$s og %3$d til</item>
-    </plurals>
-    <plurals name="recipe_include_others_count">
-        <item quantity="one">Legger til den andre varen din, så assistenten kan bruke mer av det du har.</item>
-        <item quantity="other">Legger til de %d andre varene dine, så assistenten kan bruke mer av det du har.</item>
     </plurals>
     <string-array name="lede_number_words">
         <item>Én</item>
@@ -726,17 +691,14 @@
     <string name="discard_edit_message">Endringene i %1$s blir ikke lagret. Varen forblir som den var.</string>
 
 
-    <!-- Larder: Calendar -->
-    <string name="calendar_pane_title">Hva som går ut</string>
-    <string name="calendar_used_snackbar">%1$s brukt</string>
-    <string name="calendar_tossed_snackbar">%1$s kastet</string>
-    <string name="calendar_empty_message">Legg til mat med dato, så dukker den opp her den dagen den går ut.</string>
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s brukt</string>
 
     <!-- Onboarding -->
     <string name="onboarding_get_started">Kom i gang</string>
     <string name="onboarding_welcome_title">Minner deg på det før maten blir dårlig, ikke etterpå.</string>
-    <string name="onboarding_private_title">Privat fra starten av</string>
-    <string name="onboarding_private_body">Ingen konto og ingen reklame. Matlageret ditt blir på enheten din.</string>
+    <string name="onboarding_private_title">Ingen konto nødvendig</string>
+    <string name="onboarding_private_body">Ingen reklame. Matlageret ditt lagres på denne telefonen. En oppskrift fra en pakke sender varene du krysser av og allergenene dine til serveren vår.</string>
     <string name="onboarding_notifications_title">Et stille hint dagen før</string>
     <string name="onboarding_notifications_body">Vi minner deg på det klokken 09:00, dagen før en dato. Du kan endre tidspunktet eller slå av påminnelser i Innstillinger.</string>
     <string name="onboarding_sample_source">%1$s · 09:00</string>
@@ -762,4 +724,351 @@
     <string name="onboarding_declined_camera_title">Kameraet er av</string>
     <string name="onboarding_declined_camera_body">Skanneren viser hvordan du tillater det</string>
     <string name="onboarding_add_by_hand">Legg til et produkt manuelt</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Hva skal vi lage</string>
+    <string name="recipe_saved_action">Lagrede oppskrifter</string>
+    <string name="recipe_settings_action">Oppskriftsinnstillinger</string>
+    <string name="recipe_cook_with">Lag mat med</string>
+    <string name="recipe_add_other">Legg til andre varer</string>
+    <string name="recipe_difficulty">Vanskelighetsgrad</string>
+    <string name="recipe_difficulty_easy">Enkel</string>
+    <string name="recipe_difficulty_medium">Middels</string>
+    <string name="recipe_difficulty_ambitious">Ambisiøs</string>
+    <string name="recipe_servings">Porsjoner</string>
+    <string name="recipe_servings_fewer">Færre</string>
+    <string name="recipe_servings_more">Flere</string>
+    <string name="recipe_time">Tid</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 time</string>
+    <string name="recipe_time_any">Uansett</string>
+    <string name="recipe_more_options">Flere valg</string>
+    <string name="recipe_detail_summary_brief">Kort detaljnivå</string>
+    <string name="recipe_detail_summary_standard">Vanlig detaljnivå</string>
+    <string name="recipe_detail_summary_step_by_step">Steg for steg</string>
+    <string name="recipe_meal_summary_any">Alle måltider</string>
+    <string name="recipe_diet_summary_none">Ingen diett</string>
+    <string name="recipe_share_prompt">Del ledeteksten</string>
+    <string name="recipe_copy_prompt">Kopier ledeteksten</string>
+    <string name="recipe_prompt_copied">Ledeteksten er kopiert</string>
+    <string name="recipe_prompt_clip_label">Ledetekst for oppskrift</string>
+    <string name="recipe_generate_on_phone">Lag på denne enheten</string>
+    <string name="recipe_cost_free">Gratis</string>
+    <string name="recipe_prompt_hint">Gratis: send ledeteksten til en KI-app du allerede bruker.</string>
+    <string name="recipe_tick_hint">Kryss av minst én vare å lage mat med.</string>
+    <string name="recipe_writing_phone_title">Skriver på denne enheten</string>
+    <string name="recipe_writing_phone_body">Ingenting sendes noe sted. Dette kan ta et minutt.</string>
+    <string name="recipe_stop">Stopp</string>
+    <string name="recipe_failed_phone">Klarte ikke å lage oppskriften på denne enheten.</string>
+    <string name="recipe_try_again">Prøv igjen</string>
+    <string name="recipe_preparing_title">Enheten gjør seg klar</string>
+    <string name="recipe_preparing_body">Den egne modellen lastes fortsatt ned. Til da kan du dele ledeteksten.</string>
+    <string name="recipe_empty_title">Ingenting å lage mat med ennå</string>
+    <string name="recipe_empty_body">Legg til det du har hjemme, så velges varene som er nærmest datoen for deg.</string>
+    <string name="recipe_done">Ferdig</string>
+    <string name="recipe_result_title">Oppskrift</string>
+    <string name="recipe_share_recipe">Del oppskriften</string>
+    <string name="recipe_duration_hours">%1$d t</string>
+    <string name="recipe_duration_hours_minutes">%1$d t %2$d min</string>
+    <string name="recipe_ingredients">Ingredienser</string>
+    <string name="recipe_method">Fremgangsmåte</string>
+    <string name="recipe_in_pantry">I matskapet</string>
+    <string name="recipe_tip">Tips</string>
+    <string name="recipe_source_phone">Laget på denne enheten · Ingenting ble sendt</string>
+    <string name="recipe_source_server">Laget av serveren vår · Lagret på denne enheten</string>
+    <string name="recipe_not_found">Denne oppskriften er ikke lagret lenger.</string>
+    <string name="recipe_saved_today">I dag</string>
+    <string name="recipe_saved_yesterday">I går</string>
+    <string name="recipe_saved_from_phone">Laget på denne enheten</string>
+    <string name="recipe_saved_from_pack">Fra pakken din</string>
+    <string name="recipe_saved_empty_title">Ingen oppskrifter ennå</string>
+    <string name="recipe_saved_empty_body">Oppskrifter og menyer laget i appen lagres her.</string>
+    <string name="recipe_deleted">Oppskriften er slettet</string>
+    <string name="recipe_cooking">Matlaging</string>
+    <string name="recipe_cooking_desc">Brukes for hver oppskrift, ledetekst og meny til du endrer dem.</string>
+    <string name="recipe_detail">Detaljnivå</string>
+    <string name="recipe_detail_brief">Kort</string>
+    <string name="recipe_detail_standard">Vanlig</string>
+    <string name="recipe_detail_step_by_step">Steg for steg</string>
+    <string name="recipe_meal_and_diet">Måltid og diett</string>
+    <string name="recipe_meal">Måltid</string>
+    <string name="recipe_meal_any">Alle</string>
+    <string name="recipe_meal_breakfast">Frokost</string>
+    <string name="recipe_meal_lunch">Lunsj</string>
+    <string name="recipe_meal_dinner">Middag</string>
+    <string name="recipe_meal_snack">Mellommåltid</string>
+    <string name="recipe_meal_dessert">Dessert</string>
+    <string name="recipe_diet">Diett</string>
+    <string name="recipe_diet_none">Ingen</string>
+    <string name="recipe_diet_vegetarian">Vegetarisk</string>
+    <string name="recipe_diet_vegan">Vegansk</string>
+    <string name="recipe_diet_pescatarian">Pescetariansk</string>
+    <string name="recipe_diet_gluten_free">Glutenfri</string>
+    <string name="recipe_diet_dairy_free">Melkefri</string>
+    <string name="recipe_allergens_note">Allergenlisten din fra Innstillinger brukes alltid: %1$s.</string>
+    <string name="recipe_allergens_none">ingen ennå</string>
+    <string name="recipe_language">Språk</string>
+    <string name="recipe_write_in">Skriv oppskrifter på</string>
+    <string name="recipe_language_same_as_app">Samme som appen (%1$s)</string>
+    <string name="recipe_account">Konto</string>
+    <string name="recipe_account_none">Ingen konto. Du trenger bare å bestemme deg når du kjøper en pakke, og de gratis måtene bruker aldri en konto.</string>
+    <string name="recipe_prompt_preferences_intro">Ta hensyn til dette:</string>
+    <string name="recipe_prompt_difficulty_easy">Enkel å lage, for en nybegynner</string>
+    <string name="recipe_prompt_difficulty_medium">Middels vanskelig</string>
+    <string name="recipe_prompt_difficulty_ambitious">Ambisiøs, for en ivrig kokk</string>
+    <string name="recipe_prompt_detail_brief">En kort fremgangsmåte i noen få steg</string>
+    <string name="recipe_prompt_detail_standard">Vanlig detaljnivå</string>
+    <string name="recipe_prompt_detail_step_by_step">Hvert steg forklart</string>
+    <string name="recipe_prompt_servings">Porsjoner: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Klar på %1$d minutter eller mindre</string>
+    <string name="recipe_prompt_meal">Måltid: %1$s</string>
+    <string name="recipe_prompt_diet">Diett: %1$s</string>
+    <string name="recipe_prompt_allergens">Ingenting som inneholder: %1$s</string>
+    <string name="recipe_prompt_language">Skriv oppskriften på %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d til i matskapet</item>
+        <item quantity="other">%1$d til i matskapet</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d porsjon</item>
+        <item quantity="other">%1$d porsjoner</item>
+    </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Oppskrifter igjen: %1$d. Kjøp flere</string>
+    <string name="recipe_balance_only_description">Oppskrifter igjen: %1$d</string>
+    <string name="recipe_mode_label">Hva skal lages</string>
+    <string name="recipe_mode_recipe">Oppskrift</string>
+    <string name="recipe_mode_menu">Meny for 3 dager</string>
+    <string name="recipe_courses">Retter per dag</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d rett</item>
+        <item quantity="other">%1$d retter</item>
+    </plurals>
+    <string name="recipe_generate">Lag oppskrift</string>
+    <string name="recipe_generate_menu">Lag meny</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d oppskrift</item>
+        <item quantity="other">%1$d oppskrifter</item>
+    </plurals>
+    <string name="recipe_buy">Kjøp oppskrifter</string>
+    <string name="recipe_menu_hint">En meny skrives på serveren vår og bruker %1$s fra en pakke.</string>
+    <string name="recipe_menu_short_title">En meny bruker %1$s</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
+        <item quantity="other">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
+    </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">%1$d oppskrift igjen</item>
+        <item quantity="other">%1$d oppskrifter igjen</item>
+    </plurals>
+    <string name="recipe_menu_short_none">Du har ingen oppskrifter igjen.</string>
+    <string name="recipe_writing_server_title">Skriver oppskriften din</string>
+    <string name="recipe_writing_server_body">Noen sekunder. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.</string>
+    <string name="recipe_writing_menu_title">Planlegger tre dager</string>
+    <string name="recipe_writing_menu_body">Dette kan ta opptil to minutter. Du kan gå fra denne skjermen; menyen havner i Lagrede oppskrifter.</string>
+    <string name="recipe_offline_title">Ingen tilkobling</string>
+    <string name="recipe_offline_body">Oppskrifter fra pakken trenger internett. De gratis valgene nedenfor virker fortsatt.</string>
+    <string name="recipe_failed_server">Kunne ikke skrive oppskriften. Ingen oppskrift ble trukket.</string>
+    <string name="recipe_failed_server_menu">Klarte ikke å lage menyen. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_failed_limit_today">Det er grensen for i dag. Prøv igjen i morgen. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_failed_trouble_today">Vi har problemer med å skrive oppskrifter akkurat nå. Prøv igjen i morgen. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_failed_server_later">Fikk ikke skrevet den nå. Prøv igjen senere. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_failed_server_busy">En annen oppskrift skrives fortsatt. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_failed_rate_limited">For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_left_out">«%1$s» ble utelatt: det navnet kunne ikke sendes.</string>
+    <string name="recipe_ingredient_not_sent">«%1$s» kunne ikke sendes. Fjern haken eller gi varen et nytt navn, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_allergen_not_sent">Allergenet ditt «%1$s» kunne ikke sendes, så ingenting ble skrevet: en oppskrift uten det er kanskje ikke trygg. Gi det et nytt navn under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %1$d allergen, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</item>
+        <item quantity="other">Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %1$d allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</item>
+    </plurals>
+    <plurals name="recipe_refused">
+        <item quantity="one">Kunne ikke lage en oppskrift av disse varene. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
+        <item quantity="other">Kunne ikke lage en oppskrift av disse varene. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">Kunne ikke lage en meny av disse varene. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
+        <item quantity="other">Kunne ikke lage en meny av disse varene. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
+    </plurals>
+    <string name="recipe_paused_title">Oppskrifter fra pakker er satt på pause</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Den %1$d oppskriften din er trygg. De gratis valgene nedenfor virker fortsatt.</item>
+        <item quantity="other">De %1$d oppskriftene dine er trygge. De gratis valgene nedenfor virker fortsatt.</item>
+    </plurals>
+    <string name="recipe_paused_body_none">De gratis valgene nedenfor virker fortsatt.</string>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d oppskrift lagt til</item>
+        <item quantity="other">%1$d oppskrifter lagt til</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Lagret. %1$d oppskrift igjen</item>
+        <item quantity="other">Lagret. %1$d oppskrifter igjen</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Kjøpet ditt bekreftes</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Du har betalt for %1$d oppskrift, og den er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</item>
+        <item quantity="other">Du har betalt for %1$d oppskrifter, og de er ikke lagt til ennå. Vi fortsetter å prøve; du trenger ikke kjøpe igjen.</item>
+    </plurals>
+    <string name="recipe_try_now">Prøv nå</string>
+    <string name="recipe_pending_title">Venter på betaling</string>
+    <string name="recipe_pending_body">Oppskriftene legges til når butikken bekrefter betalingen. Det kan ta litt tid.</string>
+    <string name="recipe_packs_body">Én oppskrift er én rett skrevet av serveren vår. En meny for 3 dager bruker %1$s med to retter om dagen, %2$s med tre. De utløper ikke.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d oppskrift</item>
+        <item quantity="other">%1$d oppskrifter</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s per oppskrift</string>
+    <string name="recipe_cancel">Avbryt</string>
+    <string name="recipe_back">Tilbake</string>
+    <string name="recipe_close">Lukk</string>
+    <string name="recipe_ok">OK</string>
+    <string name="recipe_choice_title">Hvor skal oppskriftene dine ligge?</string>
+    <string name="recipe_choice_body">Du velger én gang. Du kan logge inn senere fra Oppskriftsinnstillinger.</string>
+    <string name="recipe_choice_phone_title">På denne enheten, uten konto</string>
+    <string name="recipe_choice_phone_body">Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter enhet, går de du ikke har brukt tapt.</string>
+    <string name="recipe_choice_account_title">I en konto</string>
+    <string name="recipe_choice_account_body">Logg inn med Google. Oppskriftene følger deg til en ny telefon, Android eller iPhone, der du logger inn med Google. Vi lagrer konto-ID-en og e-postadressen din.</string>
+    <string name="recipe_sign_in_google">Logg på med Google</string>
+    <string name="recipe_apple_on_iphone_hint">Logget inn med Apple på en iPhone? Legg til innlogging med Google der, i Oppskriftsinnstillinger, for å bruke oppskriftene dine på denne enheten.</string>
+    <string name="recipe_have_account_hint">Har du allerede oppskrifter i en konto? Logg inn for å bruke dem her.</string>
+    <string name="recipe_store_error_title">Får ikke kontakt med butikken</string>
+    <string name="recipe_store_error_body">Sjekk tilkoblingen og prøv igjen. Ingenting ble belastet.</string>
+    <string name="recipe_rejected_title">Dette kjøpet kunne ikke legges til</string>
+    <string name="recipe_rejected_body">Butikken melder at det er refundert eller allerede brukt. Hvis du ble belastet og ikke har fått oppskrifter, kontakt butikken for refusjon.</string>
+    <string name="recipe_your_recipes">Oppskriftene dine</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">oppskrift på denne enheten</item>
+        <item quantity="other">oppskrifter på denne enheten</item>
+    </plurals>
+    <string name="recipe_on_phone_body">De hører til denne installasjonen av appen. Sletter du appen eller bytter enhet, går de du ikke har brukt tapt. Logg inn for å ha dem i en konto i stedet; de flyttes over med en gang.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">oppskrift i kontoen din</item>
+        <item quantity="other">oppskrifter i kontoen din</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Logget inn med %1$s</string>
+    <string name="recipe_signed_in_add_google">Innlogging med Apple virker bare i iPhone-appen. Legg til innlogging med Google her for å fortsette å bruke dem på Android.</string>
+    <string name="recipe_signed_in_google">Logg inn med Google på en annen telefon, Android eller iPhone, for å bruke dem der.</string>
+    <string name="recipe_signed_in_google_and_apple">Logg inn med Google på en annen telefon, Android eller iPhone, eller med Apple på en iPhone, for å bruke dem der.</string>
+    <string name="recipe_add_sign_in">Legg til innlogging med %1$s</string>
+    <string name="recipe_sign_out">Logg ut</string>
+    <string name="recipe_delete_account">Slett konto</string>
+    <string name="recipe_sign_out_title">Logge ut?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Den %1$d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne enheten.</item>
+        <item quantity="other">De %1$d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne enheten.</item>
+    </plurals>
+    <string name="recipe_delete_title">Slette kontoen din?</string>
+    <string name="recipe_apple_link_left_title">Koblingen til Apple ble ikke fjernet</string>
+    <string name="recipe_apple_link_left_body">Kontoen og oppskriftene er slettet, men Apple-kontoen din er fortsatt koblet til denne appen. For å fjerne koblingen også kan du slå av Logg på med Apple for denne appen i innstillingene for Apple-kontoen.</string>
+    <string name="recipe_allergen_consent_title">Sende allergenene dine til serveren vår?</string>
+    <string name="recipe_allergen_consent_body">For å skrive dette sendes allergenlisten din (%1$s) sammen med de avkryssede varene og innstillingene dine til serveren vår og til KI-modellen til Google, slik at oppskriften unngår disse matvarene. Google kan behandle den utenfor EU. Den brukes bare til denne forespørselen og lagres ikke etterpå. Du kan trekke tilbake samtykket i oppskriftsinnstillingene.\n\nDe gratis måtene, telefonens egen modell og den delte ledeteksten, sender den ikke til oss.</string>
+    <string name="recipe_allergen_consent_agree">Godta og fortsett</string>
+    <string name="recipe_allergen_consent_agree_only">Godta</string>
+    <string name="recipe_allergen_consent_declined">Allergenene dine sendes ikke til serveren vår, så den kan ikke skrive dette. Slå på sending i oppskriftsinnstillingene, eller bruk telefonens modell eller den delte ledeteksten.</string>
+    <string name="recipe_allergen_consent_setting">Send allergenene mine til serveren vår</string>
+    <string name="recipe_allergen_consent_setting_on">Du godtok %1$s. Slå av for å trekke tilbake: da skriver ikke serveren vår oppskrifter mens allergener er satt.</string>
+    <string name="recipe_allergen_consent_setting_off">Trengs for oppskrifter fra serveren vår mens allergener er satt. Brukes bare til forespørselen og lagres ikke.</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+        <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+    </plurals>
+    <string name="recipe_delete_device_data">Slett dataene mine fra serveren vår</string>
+    <string name="recipe_delete_device_title">Slette dataene dine fra serveren vår?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne enheten bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+        <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne enheten bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">Den anonyme påloggingen denne enheten bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</string>
+    <string name="recipe_delete_device_confirm">Slett dataene</string>
+    <string name="recipe_device_data_deleted">Dataene dine er slettet fra serveren vår</string>
+    <string name="recipe_delete_waits_for_purchase">Et kjøp er ikke fullført ennå. Du kan slette når det er fullført.</string>
+    <string name="recipe_merge_title">Legge oppskriftene på denne enheten til kontoen din?</string>
+    <string name="recipe_merge_body">Kontoen din har allerede %1$d oppskrifter. De %2$d på denne enheten legges til, så det blir %3$d. Dette kan ikke angres.</string>
+    <string name="recipe_merge_body_unknown">De %1$d oppskriftene på denne enheten legges til kontoen din. Dette kan ikke angres.</string>
+    <string name="recipe_merge_confirm">Legg til og logg inn</string>
+    <string name="recipe_sign_in_failed">Kunne ikke logge inn. Oppskriftene dine er uendret.</string>
+    <string name="recipe_sign_in_in_use">Den innloggingen hører allerede til en annen konto. Oppskriftene dine er uendret.</string>
+    <string name="recipe_account_deleted">Kontoen er slettet</string>
+    <string name="recipe_purchases_blocked">Kjøp av oppskrifter er ikke tilgjengelig for denne kontoen fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.</string>
+    <string name="recipe_account_busy">En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.</string>
+    <string name="recipe_account_action_failed">Fikk ikke kontakt med serveren vår. Ingenting ble endret.</string>
+    <string name="recipe_writing_busy_title">Serveren vår er opptatt</string>
+    <string name="recipe_writing_busy_body">Vi prøver igjen om et øyeblikk. Du kan gå fra denne skjermen; det som kommer, havner i Lagrede oppskrifter.</string>
+    <string name="recipe_busy_title">Serveren vår er opptatt</string>
+    <string name="recipe_busy_body">Forespørselen er tatt vare på og kan fortsatt bli skrevet. Prøv igjen om et minutt for å hente den. De gratis valgene nedenfor virker fortsatt.</string>
+    <string name="recipe_elsewhere_title">Et kjøp hører til en annen konto</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d oppskrift på denne enheten ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</item>
+        <item quantity="other">%1$d oppskrifter på denne enheten ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Denne kopien av appen er satt opp for en annen butikk, så den kan ikke legge til kjøp fra Google Play. Kjøpet ble ikke lagt til oppskriftene dine. Google Play refunderer vanligvis et kjøp som ikke er lagt til innen tre dager. For å kjøpe oppskrifter, installer appen fra Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d oppskrift flyttet fra denne enheten til kontoen din</item>
+        <item quantity="other">%1$d oppskrifter flyttet fra denne enheten til kontoen din</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">Denne enheten skyldte %1$d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</item>
+        <item quantity="other">Denne enheten skyldte %1$d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">En oppskrift du ba om tidligere, er klar. Den ligger i Lagrede oppskrifter.</string>
+    <string name="recipe_earlier_menu_saved">En meny du ba om tidligere, er klar. Den ligger i Lagrede oppskrifter.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre.</item>
+        <item quantity="other">En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre.</item>
+    </plurals>
+    <string name="recipe_menu_bar_title">Meny</string>
+    <string name="recipe_menu_title">Meny for tre dager</string>
+    <string name="recipe_menu_summary">%1$d retter per dag for %2$d, med det som går ut først.</string>
+    <string name="recipe_menu_today">I dag, %1$s</string>
+    <string name="recipe_menu_uses">Bruker %1$s</string>
+    <string name="recipe_course_starter">Forrett</string>
+    <string name="recipe_course_main">Hovedrett</string>
+    <string name="recipe_course_dessert">Dessert</string>
+    <string name="recipe_part_of_menu">Del av Meny for tre dager</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d rett</item>
+        <item quantity="other">%1$d retter</item>
+    </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredienser</string>
+    <string name="recipe_send_all">Send alle varer</string>
+    <string name="recipe_send_all_desc">I tillegg til de avkryssede varene får oppskriften resten av matskapet som varer den også kan bruke. Når dette er på, sendes navn, datoer og antall for alt i matskapet til serveren vår ved en oppskrift fra en pakke, og de tas også med i ledeteksten du deler.</string>
+    <string name="recipe_intro_title">Slik fungerer oppskriftene</string>
+    <string name="recipe_intro_body">Kryss av det du vil bruke opp, velg hva slags rett du vil ha, og få en oppskrift bygd rundt det. Oppskrifter du får i appen, lagres på denne enheten så snart de kommer.</string>
+    <string name="recipe_intro_prompt_title">Gratis, med hvilken som helst KI-app</string>
+    <string name="recipe_intro_prompt_body">Del eller kopier en ferdig ledetekst til KI-appen du allerede bruker.</string>
+    <string name="recipe_intro_device_title">Gratis, på denne enheten</string>
+    <string name="recipe_intro_device_body">Enheten skriver oppskriften selv, og ingenting sendes noe sted.</string>
+    <string name="recipe_intro_packs_title">Fra en oppskriftspakke</string>
+    <string name="recipe_intro_packs_body">Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$s fra en pakke, en meny %2$s med 2 retter om dagen eller %3$s med 3.</string>
+    <string name="recipe_intro_packs_price">Pakker fra %1$s.</string>
+    <string name="recipe_intro_free_stays">De gratis måtene er der fortsatt når du har en pakke.</string>
+    <string name="recipe_intro_again">Du kan åpne dette igjen i oppskriftsinnstillingene.</string>
+    <string name="recipe_intro_start">Skjønner</string>
+    <string name="recipe_intro_packs_action">Se oppskriftspakker</string>
+    <string name="recipe_intro_settings_supporting">Måtene å få en oppskrift på</string>
+    <string name="recipe_not_available_title">Oppskrifter fra pakker er ikke tilgjengelige i denne installasjonen</string>
+    <string name="recipe_not_available_body">Ingenting ble belastet. De gratis måtene virker fortsatt: del ledeteksten med en KI-app, eller lag oppskriften på denne enheten hvis den kan.</string>
+    <string name="recipe_not_available_debug">Feilsøkingsbygg: App Check avviste dette bygget. Registrer feilsøkingstokenet for App Check som logcat skriver ut (docs/recipe-setup.md, «Debug builds against the real project»).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">Den andre varen i matskapet kan også brukes</item>
+        <item quantity="other">De %1$d andre varene i matskapet kan også brukes</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">En avkrysset vare gikk ut på dato for %1$s siden. Sjekk at den fortsatt er trygg å spise, eller fjern krysset.</string>
+    <string name="recipe_past_date_result_one">Gått ut på dato: %1$s. Sjekk at den fortsatt er trygg å spise før du lager mat.</string>
+    <string name="recipe_past_date_result_many">Gått ut på dato: %1$s. Sjekk at de fortsatt er trygge å spise før du lager mat.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
+        <item quantity="other">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dager</item>
+    </plurals>
 </resources>

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Срокоед</string>
     <string name="nav_label_home">Главная</string>
-    <string name="nav_label_calendar">Календарь</string>
+    <string name="nav_label_recipe">Рецепт</string>
     <string name="nav_label_shopping_list">Покупки</string>
     <string name="nav_label_settings">Настройки</string>
     <string name="app_subtitle">Учёт продуктов и сроков годности</string>
@@ -263,14 +263,10 @@
     <string name="selection_count_format">Выбрано: %1$d</string>
     <string name="exit_selection_content_description">Отменить выбор</string>
     <string name="action_get_recipe_ideas">Идеи рецептов</string>
-    <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи несколько рецептов, которые я могу приготовить, отдавая приоритет продуктам с более ранним сроком годности:</string>
+    <string name="recipe_prompt_intro">У меня дома есть эти продукты, и я не хочу, чтобы они пропали. Предложи один рецепт, который я могу приготовить, в первую очередь из продуктов с более ранним сроком годности:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:</string>
     <string name="recipe_prompt_other_items_omitted">(+ещё %1$d продуктов не показано)</string>
-    <string name="share_recipe_dialog_title">Идеи рецептов</string>
-    <string name="share_recipe_include_other_items_title">Включить остальные продукты</string>
-    <string name="share_recipe_include_other_items_subtitle">Необязательно — поможет ИИ предложить рецепты с учётом того, что у вас уже есть</string>
-    <string name="share_recipe_share_button">Поделиться</string>
     <string name="share_recipe_cancel_button">Отмена</string>
 
     <string name="expires_today">Истекает сегодня</string>
@@ -363,28 +359,6 @@
     <string name="settings_content_description">Настройки</string>
     <string name="settings_title">Настройки</string>
 
-    <string name="calendar_content_description">Календарь</string>
-    <string name="calendar_previous_month">Предыдущий месяц</string>
-    <string name="calendar_next_month">Следующий месяц</string>
-    <string name="calendar_no_items_for_day">В этот день ничего не истекает</string>
-    <string name="calendar_section_overdue">Просрочено</string>
-    <string name="calendar_section_today">Сегодня</string>
-    <string name="calendar_section_tomorrow">Завтра</string>
-    <string name="calendar_section_this_week">Позже на этой неделе</string>
-    <string name="calendar_section_next_week">На следующей неделе</string>
-    <string name="calendar_section_later">Позже</string>
-    <string name="calendar_agenda_empty">В кладовой пока пусто</string>
-    <string name="calendar_show_all">Показать все</string>
-    <string name="calendar_swipe_used">Использовано</string>
-    <string name="calendar_swipe_tossed">Выброшено</string>
-    <string name="calendar_show_month">Показать месяц</string>
-    <string name="calendar_show_week">Показать неделю</string>
-    <plurals name="calendar_day_item_count">
-        <item quantity="one">Истекает %1$d продукт</item>
-        <item quantity="few">Истекает %1$d продукта</item>
-        <item quantity="many">Истекает %1$d продуктов</item>
-        <item quantity="other">Истекает %1$d продукта</item>
-    </plurals>
 
     <string name="settings_section_notifications">Уведомления</string>
     <string name="settings_notifications_enabled">Напоминать о сроке годности</string>
@@ -636,9 +610,6 @@
     <string name="detail_credit">Данные о продукте из Open Food Facts</string>
     <string name="detail_allergen_note">Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.</string>
     <string name="detail_choose_item">Выберите продукт, чтобы увидеть подробности.</string>
-    <string name="recipe_intro">Запрос для ИИ-помощника из выбранных продуктов: %1$s. Он покинет устройство, только если вы им поделитесь.</string>
-    <string name="recipe_names_two">%1$s и %2$s</string>
-    <string name="recipe_names_three">%1$s, %2$s и %3$s</string>
     <plurals name="lede_use_by_tomorrow">
         <item quantity="one">%1$s продукт лучше использовать до завтра</item>
         <item quantity="few">%1$s продукта лучше использовать до завтра</item>
@@ -668,18 +639,6 @@
         <item quantity="few">Показать %d продукта</item>
         <item quantity="many">Показать %d продуктов</item>
         <item quantity="other">Показать %d продукта</item>
-    </plurals>
-    <plurals name="recipe_names_more">
-        <item quantity="one">%1$s, %2$s и ещё %3$d</item>
-        <item quantity="few">%1$s, %2$s и ещё %3$d</item>
-        <item quantity="many">%1$s, %2$s и ещё %3$d</item>
-        <item quantity="other">%1$s, %2$s и ещё %3$d</item>
-    </plurals>
-    <plurals name="recipe_include_others_count">
-        <item quantity="one">Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</item>
-        <item quantity="few">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
-        <item quantity="many">Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</item>
-        <item quantity="other">Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</item>
     </plurals>
     <string-array name="lede_number_words">
         <item>Один</item>
@@ -800,17 +759,14 @@
     <string name="discard_edit_message">Изменения в «%1$s» не сохранятся. Продукт останется прежним.</string>
 
 
-    <!-- Larder: Calendar -->
-    <string name="calendar_pane_title">Что истекает</string>
-    <string name="calendar_used_snackbar">%1$s: использовано</string>
-    <string name="calendar_tossed_snackbar">%1$s: выброшено</string>
-    <string name="calendar_empty_message">Добавьте продукт с датой, и он появится здесь в день, когда истекает срок.</string>
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s: использовано</string>
 
     <!-- Onboarding -->
     <string name="onboarding_get_started">Начать</string>
     <string name="onboarding_welcome_title">Напоминает до того, как еда испортится, а не после.</string>
-    <string name="onboarding_private_title">Приватно по умолчанию</string>
-    <string name="onboarding_private_body">Без аккаунта и рекламы. Ваши запасы остаются на вашем устройстве.</string>
+    <string name="onboarding_private_title">Аккаунт не нужен</string>
+    <string name="onboarding_private_body">Без рекламы. Ваши запасы хранятся на этом телефоне. Для рецепта из пакета на наш сервер уходят отмеченные продукты и ваши аллергены.</string>
     <string name="onboarding_notifications_title">Тихое напоминание накануне</string>
     <string name="onboarding_notifications_body">Напомним в 09:00, за день до конца срока. Время можно изменить в настройках, там же напоминания можно отключить.</string>
     <string name="onboarding_sample_source">%1$s · 09:00</string>
@@ -836,4 +792,405 @@
     <string name="onboarding_declined_camera_title">Камера выключена</string>
     <string name="onboarding_declined_camera_body">Сканер покажет, как её разрешить</string>
     <string name="onboarding_add_by_hand">Добавить вручную</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Что приготовить</string>
+    <string name="recipe_saved_action">Сохранённые рецепты</string>
+    <string name="recipe_settings_action">Настройки рецептов</string>
+    <string name="recipe_cook_with">Готовим из</string>
+    <string name="recipe_add_other">Добавить другие продукты</string>
+    <string name="recipe_difficulty">Сложность</string>
+    <string name="recipe_difficulty_easy">Просто</string>
+    <string name="recipe_difficulty_medium">Средне</string>
+    <string name="recipe_difficulty_ambitious">Сложно</string>
+    <string name="recipe_servings">Порции</string>
+    <string name="recipe_servings_fewer">Меньше</string>
+    <string name="recipe_servings_more">Больше</string>
+    <string name="recipe_time">Время</string>
+    <string name="recipe_time_minutes">%1$d мин</string>
+    <string name="recipe_time_hour">1 час</string>
+    <string name="recipe_time_any">Любое</string>
+    <string name="recipe_more_options">Другие параметры</string>
+    <string name="recipe_detail_summary_brief">Краткая подробность</string>
+    <string name="recipe_detail_summary_standard">Обычная подробность</string>
+    <string name="recipe_detail_summary_step_by_step">Пошагово</string>
+    <string name="recipe_meal_summary_any">Любой приём пищи</string>
+    <string name="recipe_diet_summary_none">Без диеты</string>
+    <string name="recipe_share_prompt">Поделиться запросом</string>
+    <string name="recipe_copy_prompt">Скопировать запрос</string>
+    <string name="recipe_prompt_copied">Запрос скопирован</string>
+    <string name="recipe_prompt_clip_label">Запрос для рецепта</string>
+    <string name="recipe_generate_on_phone">Составить на этом устройстве</string>
+    <string name="recipe_cost_free">Бесплатно</string>
+    <string name="recipe_prompt_hint">Бесплатно: отправьте запрос в ИИ-приложение, которым вы уже пользуетесь.</string>
+    <string name="recipe_tick_hint">Отметьте хотя бы один продукт.</string>
+    <string name="recipe_writing_phone_title">Составляем на этом устройстве</string>
+    <string name="recipe_writing_phone_body">Ничего никуда не отправляется. Это может занять минуту.</string>
+    <string name="recipe_stop">Остановить</string>
+    <string name="recipe_failed_phone">Не удалось составить рецепт на этом устройстве.</string>
+    <string name="recipe_try_again">Повторить</string>
+    <string name="recipe_preparing_title">Устройство готовится</string>
+    <string name="recipe_preparing_body">Его собственная модель ещё загружается. А пока поделитесь запросом.</string>
+    <string name="recipe_empty_title">Пока не из чего готовить</string>
+    <string name="recipe_empty_body">Добавьте то, что есть дома, и продукты с ближайшим сроком будут выбраны за вас.</string>
+    <string name="recipe_done">Готово</string>
+    <string name="recipe_result_title">Рецепт</string>
+    <string name="recipe_share_recipe">Поделиться рецептом</string>
+    <string name="recipe_duration_hours">%1$d ч</string>
+    <string name="recipe_duration_hours_minutes">%1$d ч %2$d мин</string>
+    <string name="recipe_ingredients">Ингредиенты</string>
+    <string name="recipe_method">Приготовление</string>
+    <string name="recipe_in_pantry">Есть дома</string>
+    <string name="recipe_tip">Совет</string>
+    <string name="recipe_source_phone">Составлено на этом устройстве · Ничего не отправлялось</string>
+    <string name="recipe_source_server">Составлено нашим сервером · Сохранено на этом устройстве</string>
+    <string name="recipe_not_found">Этот рецепт больше не сохранён.</string>
+    <string name="recipe_saved_today">Сегодня</string>
+    <string name="recipe_saved_yesterday">Вчера</string>
+    <string name="recipe_saved_from_phone">Составлено на этом устройстве</string>
+    <string name="recipe_saved_from_pack">Из вашего пакета</string>
+    <string name="recipe_saved_empty_title">Пока нет рецептов</string>
+    <string name="recipe_saved_empty_body">Здесь хранятся рецепты и меню, составленные в приложении.</string>
+    <string name="recipe_deleted">Рецепт удалён</string>
+    <string name="recipe_cooking">Готовка</string>
+    <string name="recipe_cooking_desc">Применяются ко всем рецептам, запросам и меню, пока вы их не измените.</string>
+    <string name="recipe_detail">Подробность</string>
+    <string name="recipe_detail_brief">Кратко</string>
+    <string name="recipe_detail_standard">Обычно</string>
+    <string name="recipe_detail_step_by_step">Пошагово</string>
+    <string name="recipe_meal_and_diet">Приём пищи и диета</string>
+    <string name="recipe_meal">Приём пищи</string>
+    <string name="recipe_meal_any">Любой</string>
+    <string name="recipe_meal_breakfast">Завтрак</string>
+    <string name="recipe_meal_lunch">Обед</string>
+    <string name="recipe_meal_dinner">Ужин</string>
+    <string name="recipe_meal_snack">Перекус</string>
+    <string name="recipe_meal_dessert">Десерт</string>
+    <string name="recipe_diet">Диета</string>
+    <string name="recipe_diet_none">Нет</string>
+    <string name="recipe_diet_vegetarian">Вегетарианская</string>
+    <string name="recipe_diet_vegan">Веганская</string>
+    <string name="recipe_diet_pescatarian">Пескетарианская</string>
+    <string name="recipe_diet_gluten_free">Без глютена</string>
+    <string name="recipe_diet_dairy_free">Без молочного</string>
+    <string name="recipe_allergens_note">Список аллергенов из настроек применяется всегда: %1$s.</string>
+    <string name="recipe_allergens_none">пока пуст</string>
+    <string name="recipe_language">Язык</string>
+    <string name="recipe_write_in">Язык рецептов</string>
+    <string name="recipe_language_same_as_app">Как в приложении (%1$s)</string>
+    <string name="recipe_account">Аккаунт</string>
+    <string name="recipe_account_none">Аккаунта нет. Решать нужно только при покупке пакета, а бесплатные способы его никогда не используют.</string>
+    <string name="recipe_prompt_preferences_intro">Пожалуйста, учти:</string>
+    <string name="recipe_prompt_difficulty_easy">Простой рецепт, по силам новичку</string>
+    <string name="recipe_prompt_difficulty_medium">Средней сложности</string>
+    <string name="recipe_prompt_difficulty_ambitious">Посложнее, для увлечённого повара</string>
+    <string name="recipe_prompt_detail_brief">Коротко, в несколько шагов</string>
+    <string name="recipe_prompt_detail_standard">Обычная подробность</string>
+    <string name="recipe_prompt_detail_step_by_step">Подробно, каждый шаг</string>
+    <string name="recipe_prompt_servings">Порций: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Не дольше %1$d минут</string>
+    <string name="recipe_prompt_meal">Приём пищи: %1$s</string>
+    <string name="recipe_prompt_diet">Диета: %1$s</string>
+    <string name="recipe_prompt_allergens">Без продуктов, содержащих: %1$s</string>
+    <string name="recipe_prompt_language">Напиши рецепт на языке: %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">Ещё %1$d в ваших запасах</item>
+        <item quantity="few">Ещё %1$d в ваших запасах</item>
+        <item quantity="many">Ещё %1$d в ваших запасах</item>
+        <item quantity="other">Ещё %1$d в ваших запасах</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d порция</item>
+        <item quantity="few">%1$d порции</item>
+        <item quantity="many">%1$d порций</item>
+        <item quantity="other">%1$d порции</item>
+    </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Осталось рецептов: %1$d. Купить ещё</string>
+    <string name="recipe_balance_only_description">Осталось рецептов: %1$d</string>
+    <string name="recipe_mode_label">Что составить</string>
+    <string name="recipe_mode_recipe">Рецепт</string>
+    <string name="recipe_mode_menu">Меню на 3 дня</string>
+    <string name="recipe_courses">Блюд в день</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d блюдо</item>
+        <item quantity="few">%1$d блюда</item>
+        <item quantity="many">%1$d блюд</item>
+        <item quantity="other">%1$d блюда</item>
+    </plurals>
+    <string name="recipe_generate">Составить рецепт</string>
+    <string name="recipe_generate_menu">Составить меню</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d рецепт</item>
+        <item quantity="few">%1$d рецепта</item>
+        <item quantity="many">%1$d рецептов</item>
+        <item quantity="other">%1$d рецепта</item>
+    </plurals>
+    <string name="recipe_buy">Купить рецепты</string>
+    <string name="recipe_menu_hint">Меню составляется на нашем сервере и стоит %1$s из пакета.</string>
+    <string name="recipe_menu_short_title">Для меню нужно %1$s</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">У вас остался %1$d. Отдельный рецепт составить можно.</item>
+        <item quantity="few">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
+        <item quantity="many">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
+        <item quantity="other">У вас осталось %1$d. Отдельный рецепт составить можно.</item>
+    </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">Остался %1$d рецепт</item>
+        <item quantity="few">Осталось %1$d рецепта</item>
+        <item quantity="many">Осталось %1$d рецептов</item>
+        <item quantity="other">Осталось %1$d рецепта</item>
+    </plurals>
+    <string name="recipe_menu_short_none">Рецептов не осталось.</string>
+    <string name="recipe_writing_server_title">Составляем рецепт</string>
+    <string name="recipe_writing_server_body">Несколько секунд. С экрана можно уйти: рецепт появится в сохранённых рецептах.</string>
+    <string name="recipe_writing_menu_title">Планируем три дня</string>
+    <string name="recipe_writing_menu_body">Это может занять до двух минут. С экрана можно уйти: меню появится в сохранённых рецептах.</string>
+    <string name="recipe_offline_title">Нет соединения</string>
+    <string name="recipe_offline_body">Рецептам из пакета нужен интернет. Бесплатные способы ниже работают.</string>
+    <string name="recipe_failed_server">Не удалось составить рецепт. Рецепт не списан.</string>
+    <string name="recipe_failed_server_menu">Не удалось составить меню. Рецепты не списаны.</string>
+    <string name="recipe_failed_limit_today">На сегодня лимит исчерпан. Попробуйте завтра. Рецепты не списаны.</string>
+    <string name="recipe_failed_trouble_today">Сейчас не получается составлять рецепты. Попробуйте завтра. Рецепты не списаны.</string>
+    <string name="recipe_failed_server_later">Сейчас не получилось составить. Попробуйте позже. Рецепты не списаны.</string>
+    <string name="recipe_failed_server_busy">Другой рецепт ещё составляется. Попробуйте через минуту. Рецепты не списаны.</string>
+    <string name="recipe_failed_rate_limited">Слишком много рецептов за короткое время. Попробуйте через минуту. Рецепты не списаны.</string>
+    <string name="recipe_left_out">Продукт «%1$s» не учтён: это название не удалось отправить.</string>
+    <string name="recipe_ingredient_not_sent">Не удалось отправить «%1$s». Снимите отметку или переименуйте продукт и попробуйте снова. Рецепты не списаны.</string>
+    <string name="recipe_allergen_not_sent">Не удалось отправить ваш аллерген «%1$s», поэтому ничего не составлено: рецепт без него может быть небезопасным. Переименуйте его в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">Ничего не составлено: рецепт может учесть не больше %1$d аллергена, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</item>
+        <item quantity="few">Ничего не составлено: рецепт может учесть не больше %1$d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</item>
+        <item quantity="many">Ничего не составлено: рецепт может учесть не больше %1$d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</item>
+        <item quantity="other">Ничего не составлено: рецепт может учесть не больше %1$d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</item>
+    </plurals>
+    <plurals name="recipe_refused">
+        <item quantity="one">Не получилось составить рецепт из этих продуктов. Списан %1$d рецепт: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+        <item quantity="few">Не получилось составить рецепт из этих продуктов. Списано %1$d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+        <item quantity="many">Не получилось составить рецепт из этих продуктов. Списано %1$d рецептов: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+        <item quantity="other">Не получилось составить рецепт из этих продуктов. Списано %1$d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">Не получилось составить меню из этих продуктов. Списан %1$d рецепт: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+        <item quantity="few">Не получилось составить меню из этих продуктов. Списано %1$d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+        <item quantity="many">Не получилось составить меню из этих продуктов. Списано %1$d рецептов: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+        <item quantity="other">Не получилось составить меню из этих продуктов. Списано %1$d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</item>
+    </plurals>
+    <string name="recipe_paused_title">Рецепты из пакетов приостановлены</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Ваш %1$d рецепт сохранён. Бесплатные способы ниже работают.</item>
+        <item quantity="few">Ваши %1$d рецепта сохранены. Бесплатные способы ниже работают.</item>
+        <item quantity="many">Ваши %1$d рецептов сохранены. Бесплатные способы ниже работают.</item>
+        <item quantity="other">Ваши %1$d рецепта сохранены. Бесплатные способы ниже работают.</item>
+    </plurals>
+    <string name="recipe_paused_body_none">Бесплатные способы ниже работают.</string>
+    <plurals name="recipe_added">
+        <item quantity="one">Добавлен %1$d рецепт</item>
+        <item quantity="few">Добавлено %1$d рецепта</item>
+        <item quantity="many">Добавлено %1$d рецептов</item>
+        <item quantity="other">Добавлено %1$d рецепта</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Сохранено. Остался %1$d рецепт</item>
+        <item quantity="few">Сохранено. Осталось %1$d рецепта</item>
+        <item quantity="many">Сохранено. Осталось %1$d рецептов</item>
+        <item quantity="other">Сохранено. Осталось %1$d рецепта</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Покупка подтверждается</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Вы оплатили %1$d рецепт, он ещё не добавлен. Мы продолжаем попытки, покупать заново не нужно.</item>
+        <item quantity="few">Вы оплатили %1$d рецепта, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</item>
+        <item quantity="many">Вы оплатили %1$d рецептов, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</item>
+        <item quantity="other">Вы оплатили %1$d рецепта, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</item>
+    </plurals>
+    <string name="recipe_try_now">Повторить сейчас</string>
+    <string name="recipe_pending_title">Ожидаем оплату</string>
+    <string name="recipe_pending_body">Рецепты добавятся, когда магазин подтвердит оплату. Это может занять время.</string>
+    <string name="recipe_packs_body">Один рецепт — одно блюдо от нашего сервера. Меню на 3 дня стоит %1$s при двух блюдах в день и %2$s при трёх. Срок у рецептов не ограничен.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d рецепт</item>
+        <item quantity="few">%1$d рецепта</item>
+        <item quantity="many">%1$d рецептов</item>
+        <item quantity="other">%1$d рецепта</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s за рецепт</string>
+    <string name="recipe_cancel">Отмена</string>
+    <string name="recipe_back">Назад</string>
+    <string name="recipe_close">Закрыть</string>
+    <string name="recipe_ok">ОК</string>
+    <string name="recipe_choice_title">Где хранить ваши рецепты?</string>
+    <string name="recipe_choice_body">Выбор делается один раз. Войти можно и позже, в настройках рецептов.</string>
+    <string name="recipe_choice_phone_title">На этом устройстве, без аккаунта</string>
+    <string name="recipe_choice_phone_body">Входить никуда не нужно. Рецепты привязаны к этой установке приложения: если удалить приложение или сменить устройство, неиспользованные пропадут.</string>
+    <string name="recipe_choice_account_title">В аккаунте</string>
+    <string name="recipe_choice_account_body">Войдите через Google. Рецепты переедут с вами на новый телефон, Android или iPhone: везде, где вы войдёте через Google. Мы храним идентификатор аккаунта и адрес почты.</string>
+    <string name="recipe_sign_in_google">Вход через аккаунт Google</string>
+    <string name="recipe_apple_on_iphone_hint">Входили через Apple на iPhone? Добавьте там вход через Google в настройках рецептов, чтобы пользоваться рецептами на этом устройстве.</string>
+    <string name="recipe_have_account_hint">Уже есть рецепты в аккаунте? Войдите, чтобы пользоваться ими здесь.</string>
+    <string name="recipe_store_error_title">Нет связи с магазином</string>
+    <string name="recipe_store_error_body">Проверьте подключение и попробуйте ещё раз. Деньги не списаны.</string>
+    <string name="recipe_rejected_title">Эту покупку не удалось добавить</string>
+    <string name="recipe_rejected_body">По данным магазина, за неё вернули деньги или она уже использована. Если деньги списаны, а рецептов нет, обратитесь в магазин за возвратом.</string>
+    <string name="recipe_your_recipes">Ваши рецепты</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">рецепт на этом устройстве</item>
+        <item quantity="few">рецепта на этом устройстве</item>
+        <item quantity="many">рецептов на этом устройстве</item>
+        <item quantity="other">рецепта на этом устройстве</item>
+    </plurals>
+    <string name="recipe_on_phone_body">Они привязаны к этой установке приложения. Если удалить приложение или сменить устройство, неиспользованные пропадут. Войдите, чтобы хранить их в аккаунте: они перенесутся сразу.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">рецепт в вашем аккаунте</item>
+        <item quantity="few">рецепта в вашем аккаунте</item>
+        <item quantity="many">рецептов в вашем аккаунте</item>
+        <item quantity="other">рецепта в вашем аккаунте</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Вход через %1$s</string>
+    <string name="recipe_signed_in_add_google">Вход через Apple работает только в приложении для iPhone. Добавьте здесь вход через Google, чтобы и дальше пользоваться ими на Android.</string>
+    <string name="recipe_signed_in_google">Войдите через Google на другом телефоне, Android или iPhone, чтобы пользоваться ими там.</string>
+    <string name="recipe_signed_in_google_and_apple">Войдите через Google на другом телефоне, Android или iPhone, или через Apple на iPhone, чтобы пользоваться ими там.</string>
+    <string name="recipe_add_sign_in">Добавить вход через %1$s</string>
+    <string name="recipe_sign_out">Выйти</string>
+    <string name="recipe_delete_account">Удалить аккаунт</string>
+    <string name="recipe_sign_out_title">Выйти?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Ваш %1$d рецепт останется в аккаунте. Войдите снова, чтобы им пользоваться. Сохранённые рецепты останутся на устройстве.</item>
+        <item quantity="few">Ваши %1$d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на устройстве.</item>
+        <item quantity="many">Ваши %1$d рецептов останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на устройстве.</item>
+        <item quantity="other">Ваши %1$d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на устройстве.</item>
+    </plurals>
+    <string name="recipe_delete_title">Удалить аккаунт?</string>
+    <string name="recipe_apple_link_left_title">Связь с Apple не удалена</string>
+    <string name="recipe_apple_link_left_body">Аккаунт и его рецепты удалены, но ваш Аккаунт Apple всё ещё связан с этим приложением. Чтобы удалить и эту связь, отключите «Вход с Apple» для этого приложения в настройках Аккаунта Apple.</string>
+    <string name="recipe_allergen_consent_title">Отправить ваши аллергены на наш сервер?</string>
+    <string name="recipe_allergen_consent_body">Чтобы написать это, ваш список аллергенов (%1$s) вместе с отмеченными продуктами и вашими настройками отправляется на наш сервер и в ИИ-модель Google, чтобы рецепт обошёлся без этих продуктов. Google может обрабатывать его за пределами ЕС. Список используется только для этого запроса и после него не хранится. Согласие можно отозвать в настройках рецептов.\n\nБесплатные способы, собственная модель телефона и общий запрос, не отправляют его нам.</string>
+    <string name="recipe_allergen_consent_agree">Согласиться и продолжить</string>
+    <string name="recipe_allergen_consent_agree_only">Согласиться</string>
+    <string name="recipe_allergen_consent_declined">Ваши аллергены не отправляются на наш сервер, поэтому он не может это написать. Включите их отправку в настройках рецептов или воспользуйтесь моделью телефона или общим запросом.</string>
+    <string name="recipe_allergen_consent_setting">Отправлять мои аллергены на наш сервер</string>
+    <string name="recipe_allergen_consent_setting_on">Вы согласились %1$s. Выключите, чтобы отозвать согласие: тогда наш сервер не будет писать рецепты, пока заданы аллергены.</string>
+    <string name="recipe_allergen_consent_setting_off">Нужно для рецептов с нашего сервера, когда заданы аллергены. Используется только для запроса и не хранится.</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Ваш %1$d неиспользованный рецепт пропадёт, его нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+        <item quantity="few">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+        <item quantity="many">Ваши %1$d неиспользованных рецептов пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+        <item quantity="other">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+    </plurals>
+    <string name="recipe_delete_device_data">Удалить мои данные с сервера</string>
+    <string name="recipe_delete_device_title">Удалить ваши данные с нашего сервера?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Ваш %1$d неиспользованный рецепт пропадёт, его нельзя вернуть или восстановить. Анонимный вход этого устройства будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+        <item quantity="few">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Анонимный вход этого устройства будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+        <item quantity="many">Ваши %1$d неиспользованных рецептов пропадут, их нельзя вернуть или восстановить. Анонимный вход этого устройства будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+        <item quantity="other">Ваши %1$d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Анонимный вход этого устройства будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">Анонимный вход этого устройства будет удалён с нашего сервера; запись о покупках, если они были, останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на устройстве.</string>
+    <string name="recipe_delete_device_confirm">Удалить данные</string>
+    <string name="recipe_device_data_deleted">Ваши данные удалены с нашего сервера</string>
+    <string name="recipe_delete_waits_for_purchase">Покупка ещё не завершена. Удалить можно будет, когда она завершится.</string>
+    <string name="recipe_merge_title">Добавить рецепты с этого устройства в аккаунт?</string>
+    <string name="recipe_merge_body">В аккаунте уже есть рецептов: %1$d. Ещё %2$d с этого устройства добавятся к ним, всего станет %3$d. Это нельзя отменить.</string>
+    <string name="recipe_merge_body_unknown">Рецепты с этого устройства (%1$d) добавятся в ваш аккаунт. Это нельзя отменить.</string>
+    <string name="recipe_merge_confirm">Добавить и войти</string>
+    <string name="recipe_sign_in_failed">Не удалось войти. Ваши рецепты не изменились.</string>
+    <string name="recipe_sign_in_in_use">Этот вход уже привязан к другому аккаунту. Ваши рецепты не изменились.</string>
+    <string name="recipe_account_deleted">Аккаунт удалён</string>
+    <string name="recipe_purchases_blocked">Покупка рецептов недоступна для этого аккаунта: за прошлые покупки вернули деньги после того, как рецепты были использованы.</string>
+    <string name="recipe_account_busy">Рецепт ещё составляется. Попробуйте чуть позже.</string>
+    <string name="recipe_account_action_failed">Нет связи с нашим сервером. Ничего не изменилось.</string>
+    <string name="recipe_writing_busy_title">Сервер сейчас занят</string>
+    <string name="recipe_writing_busy_body">Пробуем ещё раз через несколько секунд. С экрана можно уйти: готовое появится в сохранённых рецептах.</string>
+    <string name="recipe_busy_title">Сервер сейчас занят</string>
+    <string name="recipe_busy_body">Запрос сохранён, и его ещё могут составить. Попробуйте через минуту, чтобы его получить. Бесплатные способы ниже работают.</string>
+    <string name="recipe_elsewhere_title">Покупка принадлежит другому аккаунту</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d рецепт на этом устройстве куплен в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы его добавить.</item>
+        <item quantity="few">%1$d рецепта на этом устройстве куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</item>
+        <item quantity="many">%1$d рецептов на этом устройстве куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</item>
+        <item quantity="other">%1$d рецепта на этом устройстве куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Эта копия приложения настроена на другой магазин, поэтому не может добавлять покупки из Google Play. Покупка не добавлена к вашим рецептам. Google Play обычно возвращает деньги за покупку, которая не добавлена за три дня. Чтобы купить рецепты, установите приложение из Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d рецепт перенесён с этого устройства в ваш аккаунт</item>
+        <item quantity="few">%1$d рецепта перенесены с этого устройства в ваш аккаунт</item>
+        <item quantity="many">%1$d рецептов перенесены с этого устройства в ваш аккаунт</item>
+        <item quantity="other">%1$d рецепта перенесены с этого устройства в ваш аккаунт</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">После возврата денег в магазине это устройство было должно %1$d рецепт. Он списан с вашего аккаунта.</item>
+        <item quantity="few">После возврата денег в магазине это устройство было должно %1$d рецепта. Они списаны с вашего аккаунта.</item>
+        <item quantity="many">После возврата денег в магазине это устройство было должно %1$d рецептов. Они списаны с вашего аккаунта.</item>
+        <item quantity="other">После возврата денег в магазине это устройство было должно %1$d рецепта. Они списаны с вашего аккаунта.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">Рецепт, который вы запросили раньше, готов. Он в сохранённых рецептах.</string>
+    <string name="recipe_earlier_menu_saved">Меню, которое вы запросили раньше, готово. Оно в сохранённых рецептах.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">Рецепт, запрошенный раньше, составить не удалось. Списан %1$d рецепт: попытка всё равно потребовала работы сервера.</item>
+        <item quantity="few">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецепта: попытка всё равно потребовала работы сервера.</item>
+        <item quantity="many">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецептов: попытка всё равно потребовала работы сервера.</item>
+        <item quantity="other">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецепта: попытка всё равно потребовала работы сервера.</item>
+    </plurals>
+    <string name="recipe_menu_bar_title">Меню</string>
+    <string name="recipe_menu_title">Меню на три дня</string>
+    <string name="recipe_menu_summary">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</string>
+    <string name="recipe_menu_today">Сегодня, %1$s</string>
+    <string name="recipe_menu_uses">Используем: %1$s</string>
+    <string name="recipe_course_starter">Закуска</string>
+    <string name="recipe_course_main">Основное</string>
+    <string name="recipe_course_dessert">Десерт</string>
+    <string name="recipe_part_of_menu">Из меню на три дня</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d блюдо</item>
+        <item quantity="few">%1$d блюда</item>
+        <item quantity="many">%1$d блюд</item>
+        <item quantity="other">%1$d блюда</item>
+    </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Продукты</string>
+    <string name="recipe_send_all">Отправлять все продукты</string>
+    <string name="recipe_send_all_desc">Кроме отмеченных продуктов, рецепту предлагаются и остальные продукты из ваших запасов — их можно использовать по желанию. Когда настройка включена, для рецепта из пакета на наш сервер отправляются названия, сроки и количество всех продуктов из ваших запасов, и в запрос для ИИ-приложения они тоже попадают.</string>
+    <string name="recipe_intro_title">Как работают рецепты</string>
+    <string name="recipe_intro_body">Отметьте продукты, которые хотите израсходовать, выберите, какое блюдо нужно, и получите рецепт из них. Рецепты, полученные в приложении, сразу сохраняются на этом устройстве.</string>
+    <string name="recipe_intro_prompt_title">Бесплатно — с любым ИИ-приложением</string>
+    <string name="recipe_intro_prompt_body">Поделитесь готовым запросом или скопируйте его в ИИ-приложение, которым вы уже пользуетесь.</string>
+    <string name="recipe_intro_device_title">Бесплатно — на этом устройстве</string>
+    <string name="recipe_intro_device_body">Рецепт составляет само устройство, и ничего никуда не отправляется.</string>
+    <string name="recipe_intro_packs_title">Из пакета рецептов</string>
+    <string name="recipe_intro_packs_body">Рецепт составляет наш сервер; он же может спланировать меню на 3 дня. Рецепт стоит %1$s из пакета, меню — %2$s при 2 блюдах в день или %3$s при 3.</string>
+    <string name="recipe_intro_packs_price">Пакеты — от %1$s.</string>
+    <string name="recipe_intro_free_stays">Бесплатные способы остаются и тогда, когда у вас есть пакет.</string>
+    <string name="recipe_intro_again">Это можно снова открыть в настройках рецептов.</string>
+    <string name="recipe_intro_start">Понятно</string>
+    <string name="recipe_intro_packs_action">Посмотреть пакеты</string>
+    <string name="recipe_intro_settings_supporting">Способы получить рецепт</string>
+    <string name="recipe_not_available_title">Рецепты из пакетов недоступны в этой установке приложения</string>
+    <string name="recipe_not_available_body">Деньги не списаны. Бесплатные способы по-прежнему работают: отправьте запрос в ИИ-приложение или составьте рецепт на этом устройстве, если оно это умеет.</string>
+    <string name="recipe_not_available_debug">Отладочная сборка: App Check отклонил эту сборку. Зарегистрируйте отладочный токен App Check, который выводится в logcat (docs/recipe-setup.md, «Debug builds against the real project»).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+        <item quantity="few">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+        <item quantity="many">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+        <item quantity="other">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">Отмеченный продукт просрочен на %1$s. Проверьте, что его ещё можно есть, или снимите отметку.</string>
+    <string name="recipe_past_date_result_one">Срок годности истёк: %1$s. Перед готовкой проверьте, что продукт ещё можно есть.</string>
+    <string name="recipe_past_date_result_many">Срок годности истёк: %1$s. Перед готовкой проверьте, что эти продукты ещё можно есть.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">У этих продуктов истёк срок годности, но я всё равно хочу их использовать: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d отмеченный продукт просрочен, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="few">%1$d отмеченных продукта просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="many">%1$d отмеченных продуктов просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="other">%1$d отмеченных продукта просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
 </resources>

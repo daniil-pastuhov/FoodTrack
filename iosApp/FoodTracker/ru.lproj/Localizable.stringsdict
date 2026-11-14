@@ -362,26 +362,6 @@
 			<string>%d товара в очереди ещё не добавлены.</string>
 		</dict>
 	</dict>
-    <key>calendar_day_item_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@items@</string>
-        <key>items</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Истекает %d продукт</string>
-            <key>few</key>
-            <string>Истекает %d продукта</string>
-            <key>many</key>
-            <string>Истекает %d продуктов</string>
-            <key>other</key>
-            <string>Истекает %d продукта</string>
-        </dict>
-    </dict>
     <key>settings_lead_days_phrase</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -642,46 +622,6 @@
             <string>Показать %d продукта</string>
         </dict>
     </dict>
-    <key>recipe_names_more</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>{a}, {b} и ещё %d</string>
-            <key>few</key>
-            <string>{a}, {b} и ещё %d</string>
-            <key>many</key>
-            <string>{a}, {b} и ещё %d</string>
-            <key>other</key>
-            <string>{a}, {b} и ещё %d</string>
-        </dict>
-    </dict>
-    <key>recipe_include_others_count</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@n@</string>
-        <key>n</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>Добавит ещё %d продукт, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-            <key>few</key>
-            <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-            <key>many</key>
-            <string>Добавит ещё %d продуктов, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-            <key>other</key>
-            <string>Добавит ещё %d продукта, чтобы ИИ мог учесть больше того, что у вас есть.</string>
-        </dict>
-    </dict>
     <key>expires_in_months_format</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
@@ -720,6 +660,566 @@
             <string>Через %d лет</string>
             <key>other</key>
             <string>Через %d года</string>
+        </dict>
+    </dict>
+    <key>recipe_more_in_pantry</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ещё %d в ваших запасах</string>
+            <key>few</key>
+            <string>Ещё %d в ваших запасах</string>
+            <key>many</key>
+            <string>Ещё %d в ваших запасах</string>
+            <key>other</key>
+            <string>Ещё %d в ваших запасах</string>
+        </dict>
+    </dict>
+    <key>recipe_servings_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d порция</string>
+            <key>few</key>
+            <string>%d порции</string>
+            <key>many</key>
+            <string>%d порций</string>
+            <key>other</key>
+            <string>%d порции</string>
+        </dict>
+    </dict>
+    <key>recipe_cost_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d рецепт</string>
+            <key>few</key>
+            <string>%d рецепта</string>
+            <key>many</key>
+            <string>%d рецептов</string>
+            <key>other</key>
+            <string>%d рецепта</string>
+        </dict>
+    </dict>
+    <key>recipe_courses_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d блюдо</string>
+            <key>few</key>
+            <string>%d блюда</string>
+            <key>many</key>
+            <string>%d блюд</string>
+            <key>other</key>
+            <string>%d блюда</string>
+        </dict>
+    </dict>
+    <key>recipe_dishes_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d блюдо</string>
+            <key>few</key>
+            <string>%d блюда</string>
+            <key>many</key>
+            <string>%d блюд</string>
+            <key>other</key>
+            <string>%d блюда</string>
+        </dict>
+    </dict>
+    <key>recipe_balance_left</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Остался %d рецепт</string>
+            <key>few</key>
+            <string>Осталось %d рецепта</string>
+            <key>many</key>
+            <string>Осталось %d рецептов</string>
+            <key>other</key>
+            <string>Осталось %d рецепта</string>
+        </dict>
+    </dict>
+    <key>recipe_earlier_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Рецепт, запрошенный раньше, составить не удалось. Списан %d рецепт: попытка всё равно потребовала работы сервера.</string>
+            <key>few</key>
+            <string>Рецепт, запрошенный раньше, составить не удалось. Списано %d рецепта: попытка всё равно потребовала работы сервера.</string>
+            <key>many</key>
+            <string>Рецепт, запрошенный раньше, составить не удалось. Списано %d рецептов: попытка всё равно потребовала работы сервера.</string>
+            <key>other</key>
+            <string>Рецепт, запрошенный раньше, составить не удалось. Списано %d рецепта: попытка всё равно потребовала работы сервера.</string>
+        </dict>
+    </dict>
+    <key>recipe_other_account_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d рецепт на этом {device} куплен в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы его добавить.</string>
+            <key>few</key>
+            <string>%d рецепта на этом {device} куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</string>
+            <key>many</key>
+            <string>%d рецептов на этом {device} куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</string>
+            <key>other</key>
+            <string>%d рецепта на этом {device} куплены в другом аккаунте. Войдите в аккаунт, с которым покупали, чтобы их добавить.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>У вас остался %d. Отдельный рецепт составить можно.</string>
+            <key>few</key>
+            <string>У вас осталось %d. Отдельный рецепт составить можно.</string>
+            <key>many</key>
+            <string>У вас осталось %d. Отдельный рецепт составить можно.</string>
+            <key>other</key>
+            <string>У вас осталось %d. Отдельный рецепт составить можно.</string>
+        </dict>
+    </dict>
+    <key>recipe_arrived</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Сохранено. Остался %d рецепт</string>
+            <key>few</key>
+            <string>Сохранено. Осталось %d рецепта</string>
+            <key>many</key>
+            <string>Сохранено. Осталось %d рецептов</string>
+            <key>other</key>
+            <string>Сохранено. Осталось %d рецепта</string>
+        </dict>
+    </dict>
+    <key>recipe_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавлен %d рецепт</string>
+            <key>few</key>
+            <string>Добавлено %d рецепта</string>
+            <key>many</key>
+            <string>Добавлено %d рецептов</string>
+            <key>other</key>
+            <string>Добавлено %d рецепта</string>
+        </dict>
+    </dict>
+    <key>recipe_paused_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ваш %d рецепт сохранён. Бесплатные способы ниже работают.</string>
+            <key>few</key>
+            <string>Ваши %d рецепта сохранены. Бесплатные способы ниже работают.</string>
+            <key>many</key>
+            <string>Ваши %d рецептов сохранены. Бесплатные способы ниже работают.</string>
+            <key>other</key>
+            <string>Ваши %d рецепта сохранены. Бесплатные способы ниже работают.</string>
+        </dict>
+    </dict>
+    <key>recipe_unconfirmed_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Вы оплатили %d рецепт, он ещё не добавлен. Мы продолжаем попытки, покупать заново не нужно.</string>
+            <key>few</key>
+            <string>Вы оплатили %d рецепта, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</string>
+            <key>many</key>
+            <string>Вы оплатили %d рецептов, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</string>
+            <key>other</key>
+            <string>Вы оплатили %d рецепта, они ещё не добавлены. Мы продолжаем попытки, покупать заново не нужно.</string>
+        </dict>
+    </dict>
+    <key>recipe_on_phone_label</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>рецепт на этом {device}</string>
+            <key>few</key>
+            <string>рецепта на этом {device}</string>
+            <key>many</key>
+            <string>рецептов на этом {device}</string>
+            <key>other</key>
+            <string>рецепта на этом {device}</string>
+        </dict>
+    </dict>
+    <key>recipe_in_account_label</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>рецепт в вашем аккаунте</string>
+            <key>few</key>
+            <string>рецепта в вашем аккаунте</string>
+            <key>many</key>
+            <string>рецептов в вашем аккаунте</string>
+            <key>other</key>
+            <string>рецепта в вашем аккаунте</string>
+        </dict>
+    </dict>
+    <key>recipe_sign_out_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ваш %d рецепт останется в аккаунте. Войдите снова, чтобы им пользоваться. Сохранённые рецепты останутся на этом {device}.</string>
+            <key>few</key>
+            <string>Ваши %d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на этом {device}.</string>
+            <key>many</key>
+            <string>Ваши %d рецептов останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на этом {device}.</string>
+            <key>other</key>
+            <string>Ваши %d рецепта останутся в аккаунте. Войдите снова, чтобы ими пользоваться. Сохранённые рецепты останутся на этом {device}.</string>
+        </dict>
+    </dict>
+    <key>recipe_delete_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ваш %d неиспользованный рецепт пропадёт, его нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+            <key>few</key>
+            <string>Ваши %d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+            <key>many</key>
+            <string>Ваши %d неиспользованных рецептов пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+            <key>other</key>
+            <string>Ваши %d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Вход и адрес почты будут удалены с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+        </dict>
+    </dict>
+    <key>recipe_delete_device_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ваш %d неиспользованный рецепт пропадёт, его нельзя вернуть или восстановить. Анонимный вход этого {device} будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+            <key>few</key>
+            <string>Ваши %d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Анонимный вход этого {device} будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+            <key>many</key>
+            <string>Ваши %d неиспользованных рецептов пропадут, их нельзя вернуть или восстановить. Анонимный вход этого {device} будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+            <key>other</key>
+            <string>Ваши %d неиспользованных рецепта пропадут, их нельзя вернуть или восстановить. Анонимный вход этого {device} будет удалён с нашего сервера; запись о покупках останется, но уже не будет связана с вами. Сохранённые рецепты и запасы останутся на этом {device}.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списан %d рецепт: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+            <key>few</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списано %d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+            <key>many</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списано %d рецептов: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+            <key>other</key>
+            <string>Не получилось составить рецепт из этих продуктов. Списано %d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Не получилось составить меню из этих продуктов. Списан %d рецепт: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+            <key>few</key>
+            <string>Не получилось составить меню из этих продуктов. Списано %d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+            <key>many</key>
+            <string>Не получилось составить меню из этих продуктов. Списано %d рецептов: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+            <key>other</key>
+            <string>Не получилось составить меню из этих продуктов. Списано %d рецепта: попытка всё равно потребовала работы сервера. Попробуйте меньше или другие продукты.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списан %d рецепт.</string>
+            <key>few</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списано %d рецепта.</string>
+            <key>many</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списано %d рецептов.</string>
+            <key>other</key>
+            <string>Сейчас не удалось составить рецепт. Попробуйте позже. Списано %d рецепта.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списан %d рецепт.</string>
+            <key>few</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецепта.</string>
+            <key>many</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецептов.</string>
+            <key>other</key>
+            <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецепта.</string>
+        </dict>
+    </dict>
+    <key>recipe_allergens_too_many</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергена, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+            <key>few</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+            <key>many</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+            <key>other</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_moved</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d рецепт перенесён с этого {device} в ваш аккаунт</string>
+            <key>few</key>
+            <string>%d рецепта перенесены с этого {device} в ваш аккаунт</string>
+            <key>many</key>
+            <string>%d рецептов перенесены с этого {device} в ваш аккаунт</string>
+            <key>other</key>
+            <string>%d рецепта перенесены с этого {device} в ваш аккаунт</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_debt</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>После возврата денег в магазине этот {device} был должен %d рецепт. Он списан с вашего аккаунта.</string>
+            <key>few</key>
+            <string>После возврата денег в магазине этот {device} был должен %d рецепта. Они списаны с вашего аккаунта.</string>
+            <key>many</key>
+            <string>После возврата денег в магазине этот {device} был должен %d рецептов. Они списаны с вашего аккаунта.</string>
+            <key>other</key>
+            <string>После возврата денег в магазине этот {device} был должен %d рецепта. Они списаны с вашего аккаунта.</string>
+        </dict>
+    </dict>
+    <key>recipe_optional_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Можно использовать и остальные продукты из запасов: ещё %d</string>
+            <key>few</key>
+            <string>Можно использовать и остальные продукты из запасов: ещё %d</string>
+            <key>many</key>
+            <string>Можно использовать и остальные продукты из запасов: ещё %d</string>
+            <key>other</key>
+            <string>Можно использовать и остальные продукты из запасов: ещё %d</string>
+        </dict>
+    </dict>
+    <key>recipe_past_date_form</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%1$d отмеченный продукт просрочен, самый старый — на %2$@. Проверьте, что их ещё можно есть, или снимите отметку.</string>
+            <key>few</key>
+            <string>%1$d отмеченных продукта просрочены, самый старый — на %2$@. Проверьте, что их ещё можно есть, или снимите отметку.</string>
+            <key>many</key>
+            <string>%1$d отмеченных продуктов просрочены, самый старый — на %2$@. Проверьте, что их ещё можно есть, или снимите отметку.</string>
+            <key>other</key>
+            <string>%1$d отмеченных продукта просрочены, самый старый — на %2$@. Проверьте, что их ещё можно есть, или снимите отметку.</string>
+        </dict>
+    </dict>
+    <key>recipe_past_days</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d день</string>
+            <key>few</key>
+            <string>%d дня</string>
+            <key>many</key>
+            <string>%d дней</string>
+            <key>other</key>
+            <string>%d дня</string>
         </dict>
     </dict>
 </dict>

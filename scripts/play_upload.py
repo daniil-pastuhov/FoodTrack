@@ -63,6 +63,22 @@ def find_release(edits, edit_id, track, version):
     return max(matching, key=lambda r: max(int(code) for code in r["versionCodes"]))
 
 
+def publisher(timeout: int = 600, static_discovery: bool = True):
+    """The androidpublisher v3 API, authenticated with the service-account key JSON in
+    PLAY_SERVICE_ACCOUNT_JSON (never a file path in the repo). None when the variable is unset.
+    The default 600 s socket timeout is for bundle uploads; scripts/play_products.py also uses
+    this, with live discovery, because the bundled discovery document predates the one-time
+    products API."""
+    key = os.environ.get("PLAY_SERVICE_ACCOUNT_JSON")
+    if not key:
+        return None
+    credentials = service_account.Credentials.from_service_account_info(
+        json.loads(key), scopes=["https://www.googleapis.com/auth/androidpublisher"]
+    )
+    http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http(timeout=timeout))
+    return build("androidpublisher", "v3", http=http, cache_discovery=False, static_discovery=static_discovery)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--aab", help="path to the .aab to upload")
@@ -83,16 +99,12 @@ def main() -> int:
         parser.error("--promote-from needs --version")
     notes = read_release_notes(args.release_notes_dir) if args.release_notes_dir else None
 
-    key = os.environ.get("PLAY_SERVICE_ACCOUNT_JSON")
-    if not key:
+    # The default 60 s socket timeout is shorter than a ~60 MB bundle upload takes.
+    api = publisher(timeout=600)
+    if api is None:
         print("PLAY_SERVICE_ACCOUNT_JSON is not set", file=sys.stderr)
         return 2
-    credentials = service_account.Credentials.from_service_account_info(
-        json.loads(key), scopes=["https://www.googleapis.com/auth/androidpublisher"]
-    )
-    # The default 60 s socket timeout is shorter than a ~60 MB bundle upload takes.
-    http = google_auth_httplib2.AuthorizedHttp(credentials, http=httplib2.Http(timeout=600))
-    edits = build("androidpublisher", "v3", http=http, cache_discovery=False).edits()
+    edits = api.edits()
 
     edit_id = edits.insert(packageName=PACKAGE_NAME, body={}).execute()["id"]
     try:

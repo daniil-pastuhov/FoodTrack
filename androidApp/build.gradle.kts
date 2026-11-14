@@ -45,6 +45,13 @@ android {
 
         // Read by the firebase_crashlytics_collection_enabled meta-data in AndroidManifest.xml.
         manifestPlaceholders["crashlyticsCollectionEnabled"] = true
+
+        // Debug builds offer the paid Recipe route against the real project, with a debug App
+        // Check token registered in the console (it hides itself when App Check refuses the
+        // build or Play sells it no pack). -PrecipeEmulatorHost=10.0.2.2 points them at the
+        // Firebase emulator suite instead (functions/README.md), with a fake store. Never set
+        // for a release build.
+        buildConfigField("String", "RECIPE_EMULATOR_HOST", "\"\"")
     }
 
     signingConfigs {
@@ -65,6 +72,8 @@ android {
         // Crashes hit while developing would only bury the ones real users run into.
         debug {
             manifestPlaceholders["crashlyticsCollectionEnabled"] = false
+            val emulatorHost = providers.gradleProperty("recipeEmulatorHost").getOrElse("")
+            buildConfigField("String", "RECIPE_EMULATOR_HOST", "\"$emulatorHost\"")
         }
         release {
             isMinifyEnabled = true
@@ -94,6 +103,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -172,6 +182,9 @@ dependencies {
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.mlkit.text.recognition)
     implementation(libs.mlkit.image.labeling)
+    // Gemini Nano through AICore, for writing recipes on the phone. Its minSdk is 26; the app's
+    // is 24, so the manifest overrides it and GeminiNanoRecipeModel checks the API level first.
+    implementation(libs.mlkit.genai.prompt)
 
     implementation(libs.zxing.core)
 
@@ -179,6 +192,18 @@ dependencies {
 
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.crashlytics)
+    // The paid Recipe route. Nothing from these runs until a purchase starts (see
+    // FirebaseRecipeServices); the debug App Check provider is in debug builds only.
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
+    implementation(libs.play.billing.ktx)
+    // The OS rating prompt (In-App Review). Release builds installed from Play only; see ReviewPrompter.
+    implementation(libs.play.review)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.datetime)

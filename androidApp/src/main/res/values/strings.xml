@@ -7,7 +7,7 @@
     <string name="scan_content_description">Scan</string>
 
     <string name="nav_label_home">Home</string>
-    <string name="nav_label_calendar">Calendar</string>
+    <string name="nav_label_recipe">Recipe</string>
     <string name="nav_label_shopping_list">Shopping</string>
     <string name="nav_label_settings">Settings</string>
 
@@ -255,14 +255,10 @@
     <string name="selection_count_format">%1$d selected</string>
     <string name="exit_selection_content_description">Exit selection</string>
     <string name="action_get_recipe_ideas">Get recipe ideas</string>
-    <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest a few recipes I could make, prioritizing whichever ones are closest to their expiration date:</string>
+    <string name="recipe_prompt_intro">I have these groceries at home and want to avoid wasting them. Please suggest one recipe I could make, using the ones closest to their expiration date first:</string>
     <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
     <string name="recipe_prompt_other_items_intro">I also have these other items at home, in case any of them are useful too:</string>
     <string name="recipe_prompt_other_items_omitted">(+%1$d more items not shown)</string>
-    <string name="share_recipe_dialog_title">Get recipe ideas</string>
-    <string name="share_recipe_include_other_items_title">Include other pantry items</string>
-    <string name="share_recipe_include_other_items_subtitle">Optional. Lets the assistant suggest recipes using more of what you have.</string>
-    <string name="share_recipe_share_button">Share</string>
     <string name="share_recipe_cancel_button">Cancel</string>
 
     <string name="expires_today">Expires today</string>
@@ -335,26 +331,6 @@
     <string name="settings_content_description">Settings</string>
     <string name="settings_title">Settings</string>
 
-    <string name="calendar_content_description">Calendar</string>
-    <string name="calendar_previous_month">Previous month</string>
-    <string name="calendar_next_month">Next month</string>
-    <string name="calendar_no_items_for_day">No items expiring on this day</string>
-    <string name="calendar_section_overdue">Overdue</string>
-    <string name="calendar_section_today">Today</string>
-    <string name="calendar_section_tomorrow">Tomorrow</string>
-    <string name="calendar_section_this_week">Later this week</string>
-    <string name="calendar_section_next_week">Next week</string>
-    <string name="calendar_section_later">Later</string>
-    <string name="calendar_agenda_empty">Nothing in your pantry yet</string>
-    <string name="calendar_show_all">Show all</string>
-    <string name="calendar_swipe_used">Used</string>
-    <string name="calendar_swipe_tossed">Tossed</string>
-    <string name="calendar_show_month">Show month</string>
-    <string name="calendar_show_week">Show week</string>
-    <plurals name="calendar_day_item_count">
-        <item quantity="one">%1$d item expiring</item>
-        <item quantity="other">%1$d items expiring</item>
-    </plurals>
 
     <string name="settings_section_notifications">Notifications</string>
     <string name="settings_notifications_enabled">Remind me before food expires</string>
@@ -586,9 +562,6 @@
     <string name="detail_credit">Product data from Open Food Facts</string>
     <string name="detail_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
     <string name="detail_choose_item">Choose an item to see its details.</string>
-    <string name="recipe_intro">BestBefore writes a prompt from %1$s for you to share with an AI assistant. Nothing leaves your device until you choose where to send it.</string>
-    <string name="recipe_names_two">%1$s and %2$s</string>
-    <string name="recipe_names_three">%1$s, %2$s and %3$s</string>
     <plurals name="lede_use_by_tomorrow">
         <item quantity="one">%1$s thing to use by tomorrow</item>
         <item quantity="other">%1$s things to use by tomorrow</item>
@@ -608,14 +581,6 @@
     <plurals name="home_show_items">
         <item quantity="one">Show %d item</item>
         <item quantity="other">Show %d items</item>
-    </plurals>
-    <plurals name="recipe_names_more">
-        <item quantity="one">%1$s, %2$s and %3$d other</item>
-        <item quantity="other">%1$s, %2$s and %3$d others</item>
-    </plurals>
-    <plurals name="recipe_include_others_count">
-        <item quantity="one">Adds your other item, so the assistant can use more of what you have.</item>
-        <item quantity="other">Adds your other %d items, so the assistant can use more of what you have.</item>
     </plurals>
     <string-array name="lede_number_words">
         <item>One</item>
@@ -730,17 +695,14 @@
     <string name="discard_edit_message">Your changes to %1$s won\'t be saved. The item stays as it was.</string>
 
 
-    <!-- Larder: Calendar -->
-    <string name="calendar_pane_title">What\'s due</string>
-    <string name="calendar_used_snackbar">%1$s used</string>
-    <string name="calendar_tossed_snackbar">%1$s tossed</string>
-    <string name="calendar_empty_message">Add food with its date and it will show up here, on the day it is due.</string>
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s used</string>
 
     <!-- Onboarding -->
     <string name="onboarding_get_started">Get started</string>
     <string name="onboarding_welcome_title">Reminds you before food goes off, not after.</string>
-    <string name="onboarding_private_title">Private by design</string>
-    <string name="onboarding_private_body">No account and no ads. Your pantry stays on your device.</string>
+    <string name="onboarding_private_title">No account needed</string>
+    <string name="onboarding_private_body">No ads. Your pantry is kept on this phone. A recipe from a pack sends the items you tick and your allergens to our server.</string>
     <string name="onboarding_notifications_title">A quiet nudge, the day before</string>
     <string name="onboarding_notifications_body">We remind you at 09:00, the day before a date. You can change the time or turn reminders off in Settings.</string>
     <string name="onboarding_sample_source">%1$s · 09:00</string>
@@ -766,4 +728,353 @@
     <string name="onboarding_declined_camera_title">The camera is off</string>
     <string name="onboarding_declined_camera_body">The scanner will show how to allow it</string>
     <string name="onboarding_add_by_hand">Add an item by hand</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">What to cook</string>
+    <string name="recipe_saved_action">Saved recipes</string>
+    <string name="recipe_settings_action">Recipe settings</string>
+    <string name="recipe_cook_with">Cook with</string>
+    <string name="recipe_add_other">Add other items</string>
+    <string name="recipe_difficulty">Difficulty</string>
+    <string name="recipe_difficulty_easy">Easy</string>
+    <string name="recipe_difficulty_medium">Medium</string>
+    <string name="recipe_difficulty_ambitious">Ambitious</string>
+    <string name="recipe_servings">Servings</string>
+    <string name="recipe_servings_fewer">Fewer</string>
+    <string name="recipe_servings_more">More</string>
+    <string name="recipe_time">Time</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 hour</string>
+    <string name="recipe_time_any">Any</string>
+    <string name="recipe_more_options">More options</string>
+    <string name="recipe_detail_summary_brief">Brief detail</string>
+    <string name="recipe_detail_summary_standard">Standard detail</string>
+    <string name="recipe_detail_summary_step_by_step">Step by step</string>
+    <string name="recipe_meal_summary_any">Any meal</string>
+    <string name="recipe_diet_summary_none">No diet</string>
+    <string name="recipe_share_prompt">Share prompt</string>
+    <string name="recipe_copy_prompt">Copy prompt</string>
+    <string name="recipe_prompt_copied">Prompt copied</string>
+    <string name="recipe_prompt_clip_label">Recipe prompt</string>
+    <string name="recipe_generate_on_phone">Generate on this device</string>
+    <string name="recipe_cost_free">Free</string>
+    <string name="recipe_prompt_hint">Free: send the prompt to an AI app you already use.</string>
+    <string name="recipe_tick_hint">Tick at least one item to cook with.</string>
+    <string name="recipe_writing_phone_title">Writing on this device</string>
+    <string name="recipe_writing_phone_body">Nothing is sent anywhere. This can take a minute.</string>
+    <string name="recipe_stop">Stop</string>
+    <string name="recipe_failed_phone">Couldn\'t write the recipe on this device.</string>
+    <string name="recipe_try_again">Try again</string>
+    <string name="recipe_preparing_title">Your device is getting ready</string>
+    <string name="recipe_preparing_body">Its own model is still downloading. Until then, share the prompt.</string>
+    <string name="recipe_empty_title">Nothing to cook with yet</string>
+    <string name="recipe_empty_body">Add what you have at home and the items closest to their date will be picked for you.</string>
+    <string name="recipe_done">Done</string>
+    <string name="recipe_result_title">Recipe</string>
+    <string name="recipe_share_recipe">Share recipe</string>
+    <string name="recipe_duration_hours">%1$d h</string>
+    <string name="recipe_duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="recipe_ingredients">Ingredients</string>
+    <string name="recipe_method">Method</string>
+    <string name="recipe_in_pantry">In your pantry</string>
+    <string name="recipe_tip">Tip</string>
+    <string name="recipe_source_phone">Written on this device · Nothing was sent anywhere</string>
+    <string name="recipe_source_server">Written by our server · Saved on this device</string>
+    <string name="recipe_not_found">This recipe is no longer saved.</string>
+    <string name="recipe_saved_today">Today</string>
+    <string name="recipe_saved_yesterday">Yesterday</string>
+    <string name="recipe_saved_from_phone">Written on this device</string>
+    <string name="recipe_saved_from_pack">From your pack</string>
+    <string name="recipe_saved_empty_title">No recipes yet</string>
+    <string name="recipe_saved_empty_body">Recipes and menus written in the app are kept here.</string>
+    <string name="recipe_deleted">Recipe deleted</string>
+    <string name="recipe_cooking">Cooking</string>
+    <string name="recipe_cooking_desc">Used for every recipe, prompt and menu until you change them.</string>
+    <string name="recipe_detail">Detail</string>
+    <string name="recipe_detail_brief">Brief</string>
+    <string name="recipe_detail_standard">Standard</string>
+    <string name="recipe_detail_step_by_step">Step by step</string>
+    <string name="recipe_meal_and_diet">Meal and diet</string>
+    <string name="recipe_meal">Meal</string>
+    <string name="recipe_meal_any">Any</string>
+    <string name="recipe_meal_breakfast">Breakfast</string>
+    <string name="recipe_meal_lunch">Lunch</string>
+    <string name="recipe_meal_dinner">Dinner</string>
+    <string name="recipe_meal_snack">Snack</string>
+    <string name="recipe_meal_dessert">Dessert</string>
+    <string name="recipe_diet">Diet</string>
+    <string name="recipe_diet_none">None</string>
+    <string name="recipe_diet_vegetarian">Vegetarian</string>
+    <string name="recipe_diet_vegan">Vegan</string>
+    <string name="recipe_diet_pescatarian">Pescatarian</string>
+    <string name="recipe_diet_gluten_free">Gluten-free</string>
+    <string name="recipe_diet_dairy_free">Dairy-free</string>
+    <string name="recipe_allergens_note">Your allergen list from Settings is always applied: %1$s.</string>
+    <string name="recipe_allergens_none">none yet</string>
+    <string name="recipe_language">Language</string>
+    <string name="recipe_write_in">Write recipes in</string>
+    <string name="recipe_language_same_as_app">Same as the app (%1$s)</string>
+    <string name="recipe_account">Account</string>
+    <string name="recipe_account_none">No account. You only need to decide when you buy a pack, and the free routes never use one.</string>
+    <string name="recipe_prompt_preferences_intro">Please keep to this:</string>
+    <string name="recipe_prompt_difficulty_easy">Easy to make, for a beginner</string>
+    <string name="recipe_prompt_difficulty_medium">Medium difficulty</string>
+    <string name="recipe_prompt_difficulty_ambitious">Ambitious, for a keen cook</string>
+    <string name="recipe_prompt_detail_brief">A short method in a few steps</string>
+    <string name="recipe_prompt_detail_standard">A normal level of detail</string>
+    <string name="recipe_prompt_detail_step_by_step">Every step spelled out</string>
+    <string name="recipe_prompt_servings">Servings: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Ready in %1$d minutes or less</string>
+    <string name="recipe_prompt_meal">Meal: %1$s</string>
+    <string name="recipe_prompt_diet">Diet: %1$s</string>
+    <string name="recipe_prompt_allergens">Nothing that contains: %1$s</string>
+    <string name="recipe_prompt_language">Write the recipe in %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d more in your pantry</item>
+        <item quantity="other">%1$d more in your pantry</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d serving</item>
+        <item quantity="other">%1$d servings</item>
+    </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Recipes left: %1$d. Buy more</string>
+    <string name="recipe_balance_only_description">Recipes left: %1$d</string>
+    <string name="recipe_mode_label">What to make</string>
+    <string name="recipe_mode_recipe">Recipe</string>
+    <string name="recipe_mode_menu">Menu for 3 days</string>
+    <string name="recipe_courses">Courses a day</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d course</item>
+        <item quantity="other">%1$d courses</item>
+    </plurals>
+    <string name="recipe_generate">Generate recipe</string>
+    <string name="recipe_generate_menu">Generate menu</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d recipe</item>
+        <item quantity="other">%1$d recipes</item>
+    </plurals>
+    <string name="recipe_buy">Buy recipes</string>
+    <string name="recipe_menu_hint">A menu is written on our server and takes %1$s from a pack.</string>
+    <string name="recipe_menu_short_title">A menu takes %1$s</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">You have %1$d left. A single recipe still works.</item>
+        <item quantity="other">You have %1$d left. A single recipe still works.</item>
+    </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">%1$d recipe left</item>
+        <item quantity="other">%1$d recipes left</item>
+    </plurals>
+    <string name="recipe_menu_short_none">You have no recipes left.</string>
+    <string name="recipe_writing_server_title">Writing your recipe</string>
+    <string name="recipe_writing_server_body">A few seconds. You can leave this screen; the recipe will be in Saved recipes.</string>
+    <string name="recipe_writing_menu_title">Planning three days</string>
+    <string name="recipe_writing_menu_body">This can take up to two minutes. You can leave this screen; the menu will be in Saved recipes.</string>
+    <string name="recipe_offline_title">No connection</string>
+    <string name="recipe_offline_body">Recipes from your pack need the internet. The free routes below still work.</string>
+    <string name="recipe_failed_server">Couldn\'t write the recipe. No recipe was taken.</string>
+    <string name="recipe_failed_server_menu">Couldn\'t write the menu. No recipes were taken.</string>
+    <string name="recipe_failed_limit_today">That\'s the limit for today. Try again tomorrow. No recipes were taken.</string>
+    <string name="recipe_failed_trouble_today">We\'re having trouble writing recipes right now. Try again tomorrow. No recipes were taken.</string>
+    <string name="recipe_failed_server_later">Couldn\'t write it right now. Try again later. No recipes were taken.</string>
+    <string name="recipe_failed_server_busy">Another recipe is still being written. Try again in a minute. No recipes were taken.</string>
+    <string name="recipe_failed_rate_limited">Too many recipes in a short time. Try again in a minute. No recipes were taken.</string>
+    <string name="recipe_left_out">“%1$s” was left out: that name couldn\'t be sent.</string>
+    <string name="recipe_ingredient_not_sent">“%1$s” couldn\'t be sent. Untick it or rename it, then try again. No recipes were taken.</string>
+    <string name="recipe_allergen_not_sent">Your allergen “%1$s” couldn\'t be sent, so nothing was written: a recipe without it might not be safe. Rename it under Allergen warnings in Settings, then try again. No recipes were taken.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">Nothing was written: a recipe can take at most %1$d allergen, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</item>
+        <item quantity="other">Nothing was written: a recipe can take at most %1$d allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</item>
+    </plurals>
+    <plurals name="recipe_refused">
+        <item quantity="one">Couldn\'t make a recipe from these items. It used %1$d recipe, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="other">Couldn\'t make a recipe from these items. It used %1$d recipes, because the attempt still cost us to run. Try fewer or different items.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">Couldn\'t make a menu from these items. It used %1$d recipe, because the attempt still cost us to run. Try fewer or different items.</item>
+        <item quantity="other">Couldn\'t make a menu from these items. It used %1$d recipes, because the attempt still cost us to run. Try fewer or different items.</item>
+    </plurals>
+    <string name="recipe_paused_title">Recipes from packs are paused</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Your %1$d recipe is safe. The free routes below still work.</item>
+        <item quantity="other">Your %1$d recipes are safe. The free routes below still work.</item>
+    </plurals>
+    <string name="recipe_paused_body_none">The free routes below still work.</string>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d recipe added</item>
+        <item quantity="other">%1$d recipes added</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Saved. %1$d recipe left</item>
+        <item quantity="other">Saved. %1$d recipes left</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Your purchase is being confirmed</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">You paid for %1$d recipe and it is not added yet. We keep trying; you don\'t need to buy again.</item>
+        <item quantity="other">You paid for %1$d recipes and they are not added yet. We keep trying; you don\'t need to buy again.</item>
+    </plurals>
+    <string name="recipe_try_now">Try now</string>
+    <string name="recipe_pending_title">Waiting for payment</string>
+    <string name="recipe_pending_body">Your recipes will be added when the store confirms the payment. That can take a while.</string>
+    <string name="recipe_packs_body">One recipe is one dish written by our server. A menu for 3 days takes %1$s with two courses a day, %2$s with three. They don\'t expire.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d recipe</item>
+        <item quantity="other">%1$d recipes</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s each</string>
+    <string name="recipe_cancel">Cancel</string>
+    <string name="recipe_back">Back</string>
+    <string name="recipe_close">Close</string>
+    <string name="recipe_ok">OK</string>
+    <string name="recipe_choice_title">Where should your recipes live?</string>
+    <string name="recipe_choice_body">Choose once. You can sign in later from Recipe settings.</string>
+    <string name="recipe_choice_phone_title">On this device, no account</string>
+    <string name="recipe_choice_phone_body">Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change device, the ones you haven\'t used are lost.</string>
+    <string name="recipe_choice_account_title">In an account</string>
+    <string name="recipe_choice_account_body">Sign in with Google. Your recipes follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.</string>
+    <string name="recipe_sign_in_google">Sign in with Google</string>
+    <string name="recipe_apple_on_iphone_hint">Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this device.</string>
+    <string name="recipe_have_account_hint">Already have recipes in an account? Sign in to use them here.</string>
+    <string name="recipe_store_error_title">Can\'t reach the store</string>
+    <string name="recipe_store_error_body">Check your connection and try again. Nothing was charged.</string>
+    <string name="recipe_rejected_title">This purchase couldn\'t be added</string>
+    <string name="recipe_rejected_body">The store reports it as refunded or already used. If you were charged and have no recipes, contact the store for a refund.</string>
+    <string name="recipe_your_recipes">Your recipes</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">recipe on this device</item>
+        <item quantity="other">recipes on this device</item>
+    </plurals>
+    <string name="recipe_on_phone_body">They stay with this install of the app. If you delete the app or change device, the ones you haven\'t used are lost. Sign in to keep them in an account instead; they move over at once.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">recipe in your account</item>
+        <item quantity="other">recipes in your account</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Signed in with %1$s</string>
+    <string name="recipe_signed_in_add_google">Apple sign-in works only in the iPhone app. Add Google sign-in here to keep using them on Android.</string>
+    <string name="recipe_signed_in_google">Sign in with Google on another phone, Android or iPhone, to use them there.</string>
+    <string name="recipe_signed_in_google_and_apple">Sign in with Google on another phone, Android or iPhone, or with Apple on an iPhone, to use them there.</string>
+    <string name="recipe_add_sign_in">Add %1$s sign-in</string>
+    <string name="recipe_sign_out">Sign out</string>
+    <string name="recipe_delete_account">Delete account</string>
+    <string name="recipe_sign_out_title">Sign out?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Your %1$d recipe stays in your account. Sign in again to use it. Saved recipes stay on this device.</item>
+        <item quantity="other">Your %1$d recipes stay in your account. Sign in again to use them. Saved recipes stay on this device.</item>
+    </plurals>
+    <string name="recipe_delete_title">Delete your account?</string>
+    <string name="recipe_apple_link_left_title">Apple link not removed</string>
+    <string name="recipe_apple_link_left_body">Your account and its recipes are deleted, but your Apple Account is still linked to this app. To remove the link too, turn off Sign in with Apple for this app in your Apple Account settings.</string>
+    <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
+    <string name="recipe_allergen_consent_title">Send your allergens to our server?</string>
+    <string name="recipe_allergen_consent_body">To write this, your allergen list (%1$s) goes with the ticked items and your preferences to our server and to Google\'s AI model, so the recipe avoids those foods. Google may process it outside the EU. It is used only for this request and not stored afterwards. You can withdraw this in Recipe settings.\n\nThe free ways, your phone\'s own model and the shared prompt, don\'t send it to us.</string>
+    <string name="recipe_allergen_consent_agree">Agree and continue</string>
+    <string name="recipe_allergen_consent_agree_only">Agree</string>
+    <string name="recipe_allergen_consent_declined">Your allergens aren\'t sent to our server, so it can\'t write this. Turn sending them on in Recipe settings, or use your phone\'s model or the shared prompt.</string>
+    <string name="recipe_allergen_consent_setting">Send my allergens to our server</string>
+    <string name="recipe_allergen_consent_setting_on">You agreed on %1$s. Turn off to withdraw: our server then won\'t write recipes while allergens are set.</string>
+    <string name="recipe_allergen_consent_setting_off">Needed for recipes from our server while allergens are set. Used only for the request, not stored.</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+    </plurals>
+    <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
+    <string name="recipe_delete_device_data">Delete my data from our server</string>
+    <string name="recipe_delete_device_title">Delete your data from our server?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. The anonymous sign-in this device uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">The anonymous sign-in this device uses is deleted from our server; a record of any purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</string>
+    <string name="recipe_delete_device_confirm">Delete data</string>
+    <string name="recipe_device_data_deleted">Your data is deleted from our server</string>
+    <string name="recipe_delete_waits_for_purchase">A purchase is still being completed. You can delete once it has finished.</string>
+    <string name="recipe_merge_title">Add this device\'s recipes to your account?</string>
+    <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this device will be added to it, making %3$d. This can\'t be undone.</string>
+    <string name="recipe_merge_body_unknown">The %1$d recipes on this device will be added to your account. This can\'t be undone.</string>
+    <string name="recipe_merge_confirm">Add and sign in</string>
+    <string name="recipe_sign_in_failed">Couldn\'t sign in. Your recipes are unchanged.</string>
+    <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your recipes are unchanged.</string>
+    <string name="recipe_account_deleted">Account deleted</string>
+    <string name="recipe_purchases_blocked">Buying recipes isn\'t available for this account because earlier purchases were refunded after the recipes were used.</string>
+    <string name="recipe_account_busy">A recipe is still being written. Try again in a moment.</string>
+    <string name="recipe_account_action_failed">Couldn\'t reach our server. Nothing was changed.</string>
+    <string name="recipe_writing_busy_title">Our server is busy</string>
+    <string name="recipe_writing_busy_body">Trying again in a moment. You can leave this screen; what arrives will be in Saved recipes.</string>
+    <string name="recipe_busy_title">Our server is busy</string>
+    <string name="recipe_busy_body">Your request is kept and may still be written. Try again in a minute to fetch it. The free routes below still work.</string>
+    <string name="recipe_elsewhere_title">A purchase belongs to another account</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d recipe on this device was bought with another account. Sign in to the account you bought it with to add it.</item>
+        <item quantity="other">%1$d recipes on this device were bought with another account. Sign in to the account you bought them with to add them.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">This copy of the app is set up for a different store, so it can\'t add Google Play purchases. The purchase was not added to your recipes. Google Play normally refunds a purchase that isn\'t added within three days. To buy recipes, install the app from Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d recipe moved from this device to your account</item>
+        <item quantity="other">%1$d recipes moved from this device to your account</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">This device owed %1$d recipe after a store refund. It was taken from your account.</item>
+        <item quantity="other">This device owed %1$d recipes after a store refund. They were taken from your account.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">A recipe you asked for earlier is ready. It\'s in Saved recipes.</string>
+    <string name="recipe_earlier_menu_saved">A menu you asked for earlier is ready. It\'s in Saved recipes.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">A recipe you asked for earlier couldn\'t be made. It used %1$d recipe, because the attempt still cost us to run.</item>
+        <item quantity="other">A recipe you asked for earlier couldn\'t be made. It used %1$d recipes, because the attempt still cost us to run.</item>
+    </plurals>
+    <string name="recipe_menu_bar_title">Menu</string>
+    <string name="recipe_menu_title">Menu for three days</string>
+    <string name="recipe_menu_summary">%1$d courses a day for %2$d, using what expires first.</string>
+    <string name="recipe_menu_today">Today, %1$s</string>
+    <string name="recipe_menu_uses">Uses %1$s</string>
+    <string name="recipe_course_starter">Starter</string>
+    <string name="recipe_course_main">Main</string>
+    <string name="recipe_course_dessert">Dessert</string>
+    <string name="recipe_part_of_menu">Part of Menu for three days</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d dish</item>
+        <item quantity="other">%1$d dishes</item>
+    </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredients</string>
+    <string name="recipe_send_all">Send all products</string>
+    <string name="recipe_send_all_desc">Besides the ticked items, the rest of your pantry is offered as items the recipe may also use. With this on, a recipe from a pack sends the names, dates and quantities of everything in your pantry to our server, and a shared prompt lists them too.</string>
+    <string name="recipe_intro_title">How recipes work</string>
+    <string name="recipe_intro_body">Tick what you want to use up, choose the kind of dish, and get a recipe built around it. Recipes you get in the app are saved on this device as they arrive.</string>
+    <string name="recipe_intro_prompt_title">Free, with any AI app</string>
+    <string name="recipe_intro_prompt_body">Share or copy a ready-made prompt to the AI app you already use.</string>
+    <string name="recipe_intro_device_title">Free, on this device</string>
+    <string name="recipe_intro_device_body">This device writes the recipe itself, and nothing is sent anywhere.</string>
+    <string name="recipe_intro_packs_title">From a recipe pack</string>
+    <string name="recipe_intro_packs_body">Our server writes the recipe, and can also plan a menu for 3 days. A recipe takes %1$s from a pack; a menu takes %2$s with 2 courses a day or %3$s with 3.</string>
+    <string name="recipe_intro_packs_price">Packs from %1$s.</string>
+    <string name="recipe_intro_free_stays">The free ways stay there when you have a pack.</string>
+    <string name="recipe_intro_again">You can open this again in Recipe settings.</string>
+    <string name="recipe_intro_start">Got it</string>
+    <string name="recipe_intro_packs_action">See recipe packs</string>
+    <string name="recipe_intro_settings_supporting">The ways to get a recipe</string>
+    <string name="recipe_not_available_title">Recipes from packs aren\'t available on this install</string>
+    <string name="recipe_not_available_body">Nothing was charged. The free ways still work: share the prompt with an AI app, or write the recipe on this device where it can.</string>
+    <string name="recipe_not_available_debug">Debug build: App Check refused this build. Register the App Check debug token that logcat prints (docs/recipe-setup.md, “Debug builds against the real project”).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">The other item in your pantry may be used too</item>
+        <item quantity="other">The other %1$d items in your pantry may be used too</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">A ticked item is past its date, by %1$s. Check it is still safe to eat, or untick it.</string>
+    <string name="recipe_past_date_result_one">Past its date: %1$s. Check it is still safe to eat before you cook.</string>
+    <string name="recipe_past_date_result_many">Past their date: %1$s. Check they are still safe to eat before you cook.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">These items are past their date, and I have chosen to use them anyway: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
+        <item quantity="other">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
 </resources>

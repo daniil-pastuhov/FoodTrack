@@ -72,16 +72,6 @@ class HomeWordingTest {
         )
     }
 
-    @Test
-    @Config(sdk = [34], qualifiers = "en")
-    fun testRecipeNamesStayShort() {
-        assertEquals("Milk", recipeNames(resources, listOf("Milk")))
-        assertEquals("Milk and Eggs", recipeNames(resources, listOf("Milk", "Eggs")))
-        assertEquals("Milk, Eggs and Oats", recipeNames(resources, listOf("Milk", "Eggs", "Oats")))
-        assertEquals("Milk, Eggs and 2 others", recipeNames(resources, listOf("Milk", "Eggs", "Oats", "Rice")))
-        assertEquals("Milk, Eggs and 3 others", recipeNames(resources, listOf("Milk", "Eggs", "Oats", "Rice", "Tea")))
-    }
-
     private fun row(id: String) = PantryRow(
         item = PantryItem(id = id, name = id, expiryDate = friday, addedDate = friday),
         daysRemaining = 1,

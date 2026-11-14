@@ -12,6 +12,7 @@ camerax = "1.6.2"
 mlkit-barcode = "17.3.0"
 mlkit-text = "16.0.1"
 mlkit-image-labeling = "17.0.9"
+mlkit-genai-prompt = "1.0.0-beta5"
 coil = "2.7.0"
 desugar-jdk = "2.1.5"
 room = "2.8.4"
@@ -32,6 +33,10 @@ play-services-location = "21.3.0"
 firebase-bom = "34.19.0"
 google-services = "4.5.0"
 firebase-crashlytics-plugin = "3.0.8"
+play-billing = "9.1.0"
+play-review = "2.0.2"
+credentials = "1.6.0"
+googleid = "1.2.1"
 
 [libraries]
 # KotlinX
@@ -78,6 +83,7 @@ zxing-core = { module = "com.google.zxing:core", version.ref = "zxing-core" }
 mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkit-barcode" }
 mlkit-text-recognition = { module = "com.google.mlkit:text-recognition", version.ref = "mlkit-text" }
 mlkit-image-labeling = { module = "com.google.mlkit:image-labeling", version.ref = "mlkit-image-labeling" }
+mlkit-genai-prompt = { module = "com.google.mlkit:genai-prompt", version.ref = "mlkit-genai-prompt" }
 
 # Geofencing for the "you are near a shop" shopping-list reminder (StoreGeofenceManager).
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "play-services-location" }
@@ -85,6 +91,16 @@ play-services-location = { module = "com.google.android.gms:play-services-locati
 # Crash reporting (Firebase Crashlytics, configured by androidApp/google-services.json)
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebase-bom" }
 firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
+# The paid Recipe route: Auth, the callables and App Check (see functions/CONTRACT.md).
+firebase-auth = { module = "com.google.firebase:firebase-auth" }
+firebase-functions = { module = "com.google.firebase:firebase-functions" }
+firebase-appcheck-playintegrity = { module = "com.google.firebase:firebase-appcheck-playintegrity" }
+firebase-appcheck-debug = { module = "com.google.firebase:firebase-appcheck-debug" }
+play-billing-ktx = { module = "com.android.billingclient:billing-ktx", version.ref = "play-billing" }
+play-review = { module = "com.google.android.play:review", version.ref = "play-review" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleid" }
 
 # Coil image loading
 coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }

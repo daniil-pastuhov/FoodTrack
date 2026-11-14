@@ -2,6 +2,11 @@
 
 A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Android (Jetpack Compose)** and **iOS (Native SwiftUI)**.
 
+Published as **BestBefore**:
+
+- **iPhone and iPad**: [BestBefore on the App Store](https://apps.apple.com/app/id6818647200)
+- **Google Play**: in closed testing, not public yet
+
 ## Features
 
 - 📷 **Barcode Scanning**: Scan 1D and 2D barcodes (EAN-13, UPC, Code 128, DataBar, QR).
@@ -16,14 +21,20 @@ A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Andr
   - Filter by storage location (**Fridge**, **Pantry**, **Freezer**).
   - Search by name or brand.
   - Quick swipe actions to mark items as *Consumed* or *Delete*.
+- 🛒 **Shopping List**: essentials you use up move onto it; share it as text or a QR code.
+- 🍳 **Recipes from what's expiring**: the Recipe tab picks the items closest to their date and writes a recipe in one of three ways:
+  - **Shared prompt** (free): the prompt is copied or shared to an AI app the user already has. Nothing comes back to the app.
+  - **On this phone** (free): Gemini Nano through ML Kit's Prompt API on supported Android phones, Apple Foundation Models on iOS 26 and later. Nothing is sent.
+  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A 3-day menu (2 or 3 courses a day) is server-only and takes several recipes (by default 4 or 5, by the number of courses). What each takes is set by the server, not the app.
 
 ## Project Structure
 
 - `shared/`: Kotlin Multiplatform shared domain, Open Food Facts Ktor client, GS1 parser, Date OCR parsing heuristics, the pantry state holder and repository interfaces. Only the Android app uses it.
 - `androidApp/`: Native Android application built with Jetpack Compose (Material 3), CameraX, Google ML Kit and Room.
 - `iosApp/`: Native iOS application built with SwiftUI, AVFoundation, Apple Vision and SwiftData. It is a separate implementation and does not link `shared/`, so a logic change on one platform has to be ported to the other by hand.
+- `functions/`: the backend for recipes from paid packs, Cloud Functions (TypeScript) on Firebase with Firestore, Auth and App Check. See [functions/README.md](functions/README.md) and the client wire contract in [functions/CONTRACT.md](functions/CONTRACT.md). Owner setup steps: [docs/recipe-setup.md](docs/recipe-setup.md).
 
-The pantry stays on the device: there is no backend, account or sync. The only network calls are barcode lookups on Open Food Facts and, in release builds, crash reports to Firebase Crashlytics.
+The pantry stays on the device, and there is no sync of it. The app's network calls are barcode lookups on Open Food Facts, crash reports to Firebase Crashlytics (release builds), the store's own purchase screens, and, only once someone starts a purchase, the recipe backend: an anonymous Firebase Auth user (or an Apple or Google sign-in, if the buyer chooses one), App Check, and the Cloud Functions. A recipe from a pack sends the names, dates and quantities of the items ticked for it, the recipe settings and the allergen list. Nothing reaches the backend for someone who only uses the free routes.
 
 ## Building and Running
 
@@ -32,6 +43,7 @@ Requires JDK 17 for Android and Xcode for iOS. See [CONTRIBUTING.md](CONTRIBUTIN
 ### Run Unit Tests
 ```bash
 ./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest
+cd functions && npm ci && npm test   # backend, against the Firebase emulators (Node.js 24, Java 21+)
 ```
 
 ### Build Android App
@@ -60,11 +72,36 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    and to the internal TestFlight testers, with those notes. Fixes for the release go on the
    branch; each push becomes a new internal build.
 3. **Play closed testing and the App Store**: merging the PR promotes the newest internal Play
-   build of that version to closed testing (`alpha`). It also puts the newest TestFlight build of
-   the version on its App Store version, with the notes as "What's New", and submits it for App
-   Review; it goes live as soon as Apple approves it (set the repository variable
+   build of that version to closed testing (`alpha`), then applies the Play store listing from
+   `store-listing/google-play/` (texts, phone screenshots, feature graphics, icon; job
+   `play-listing`). It also puts the newest TestFlight build of the version on its App Store
+   version, with the notes as "What's New", sets the listing from `store-listing/app-store/`
+   (name, subtitle, keywords, description, promotional text, the screenshot sets and the App
+   Review notes) and submits it for App Review together with the in-app purchases still to be
+   reviewed (the first ones must go with a version); if the listing can't be applied in full, or
+   App Store Connect refuses the purchases, nothing is submitted and the job says what to do
+   before a re-run carries on (`store-listing/app-store/README.md`, "Changing the listing
+   texts"). It goes live as soon as Apple approves it (set the repository variable
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
+
+**Store listings**: edit the files in `store-listing/` on the release branch (or before it), and
+the merge puts them in both stores; only what differs is written, the iPhone Duo screenshots
+and the App Store "Header and Search Results" images (`header.png`, `search-result.png`)
+included (through the App Asset Library). To see the difference with what the stores have,
+without writing anything (`--apply` writes; `screenshots --inspect` prints the raw sets,
+library images and placements):
+
+```sh
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py listing
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py screenshots
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py iaps   # in-app purchases
+PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_listing.py --images
+python3 -m unittest discover -s scripts/tests     # the sync's tests, offline
+```
+
+The App Store commands compare with the version in preparation; while none is (between a
+release's submission and the next merge), they compare with the newest version and say so.
 
 **Version**: `Version.xcconfig` holds the one version of both apps. Gradle reads it for Android's
 `versionName`, and it is the Xcode project's base configuration, so the app and the widget get it

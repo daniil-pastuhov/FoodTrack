@@ -62,8 +62,8 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             intentIdentifiers: [],
             options: []
         )
-        // The digest names the items rather than only counting them, so it can offer to turn
-        // exactly those into a recipe prompt without the user opening the app first.
+        // The digest names the items rather than only counting them, so it can offer to open the
+        // Recipe tab with exactly those ticked.
         let recipeAction = UNNotificationAction(
             identifier: Self.recipeActionIdentifier,
             title: L10n.notifActionRecipeIdeas,
@@ -92,7 +92,12 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     /// For the "reminders are off" notes, when the prompt is still unanswered because of Not now
     /// in onboarding. Anything saved since was refused by the system, so it is scheduled again.
     public func requestAuthorization(thenSchedule items: [PantryItem]) async {
-        guard await requestAuthorization() == true else { return }
+        let answer = await requestAuthorization()
+        guard answer == true else {
+            // A refusal rules the rating prompt out for this session.
+            if answer == false { ReviewPrompter.shared.problemShown() }
+            return
+        }
         rescheduleAll(items: items)
         scheduleDigestNotification(items: items)
     }
@@ -222,7 +227,7 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
 
     /// How far ahead the digest looks, and how many items it names before collapsing the rest
     /// into "+N more". Three keeps the collapsed notification readable; the rest are still
-    /// included in the recipe prompt the action builds. Mirrors Android's
+    /// ticked on the Recipe tab the action opens. Mirrors Android's
     /// `DigestNotificationReceiver`.
     private nonisolated static let digestWindowDays = 7
     private nonisolated static let namedItemCount = 3
@@ -370,7 +375,9 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
         if action == Self.recipeActionIdentifier,
            let digestItemIds = userInfo["digestItemIds"] as? [String] {
             Task { @MainActor in
-                IOSNotificationManager.shareRecipePrompt(for: digestItemIds)
+                #if !WIDGET_EXTENSION
+                AppRouter.shared.navigate(to: .recipeIdeas(itemIds: digestItemIds))
+                #endif
                 completionHandler()
             }
             return
@@ -410,33 +417,6 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
             completionHandler()
         }
     }
-
-    /// Builds a recipe prompt for the digest's items and hands it to the share sheet, via
-    /// `AppRouter` — a notification response has no view to present from itself.
-    ///
-    /// Reads the items back out of SwiftData rather than trusting names carried in the
-    /// notification: its content was fixed when it was scheduled (see
-    /// `scheduleDigestNotification`), so anything eaten since simply drops out of the prompt.
-    /// Nothing is presented when none of the ids still resolve.
-    ///
-    /// Compiled out of the widget extension, which shares this file for its direct-SwiftData
-    /// helpers but has no `AppRouter` (that is main-app-only, by design) and never handles a
-    /// notification response in the first place.
-    @MainActor
-    private static func shareRecipePrompt(for itemIds: [String]) {
-        #if !WIDGET_EXTENSION
-        let context = ModelContext(NativePantryViewModel.sharedModelContainer)
-        let wanted = Set(itemIds)
-        let descriptor = FetchDescriptor<PantryItemRecord>()
-        let items = ((try? context.fetch(descriptor)) ?? [])
-            .filter { wanted.contains($0.id) }
-            .map { $0.asPantryItem }
-        guard !items.isEmpty else { return }
-        AppRouter.shared.pendingRecipeShare = NativePantryViewModel.recipePrompt(for: items)
-        #endif
-    }
-
-
 
     /// Re-fires this item's reminder tomorrow at the configured reminder time.
     ///

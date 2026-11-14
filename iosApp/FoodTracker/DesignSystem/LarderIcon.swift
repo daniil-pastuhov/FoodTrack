@@ -12,11 +12,14 @@ enum LarderIconName: String, CaseIterable {
     case beef
     case bell
     case bellOff = "bell-off"
+    case bookmark
     case calendarDays = "calendar-days"
+    case calendarRange = "calendar-range"
     case camera
     case cameraOff = "camera-off"
     case carrot
     case check
+    case chefHat = "chef-hat"
     case cherry
     case chevronDown = "chevron-down"
     case chevronLeft = "chevron-left"
@@ -24,7 +27,10 @@ enum LarderIconName: String, CaseIterable {
     case circleAlert = "circle-alert"
     case circleCheck = "circle-check"
     case circleMinus = "circle-minus"
+    case circleUserRound = "circle-user-round"
     case clock
+    case cloud
+    case copy
     case croissant
     case cupSoda = "cup-soda"
     case download
@@ -32,13 +38,16 @@ enum LarderIconName: String, CaseIterable {
     case ellipsisVertical = "ellipsis-vertical"
     case fish
     case flashlight
+    case gauge
     case gripVertical = "grip-vertical"
     case history
     case house
     case image
     case info
+    case languages
     case layers
     case leaf
+    case lightbulb
     case listPlus = "list-plus"
     case mapPin = "map-pin"
     case milk
@@ -56,13 +65,19 @@ enum LarderIconName: String, CaseIterable {
     case share2 = "share-2"
     case shoppingBasket = "shopping-basket"
     case slidersHorizontal = "sliders-horizontal"
+    case smartphone
     case snowflake
     case sparkles
     case star
     case store
+    case ticket
+    case timer
     case trash2 = "trash-2"
     case triangleAlert = "triangle-alert"
     case upload
+    case userRound = "user-round"
+    case users
+    case utensils
     case wifiOff = "wifi-off"
     case x
 

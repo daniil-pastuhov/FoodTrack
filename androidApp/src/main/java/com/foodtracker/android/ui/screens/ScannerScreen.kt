@@ -41,6 +41,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.foodtracker.android.BuildConfig
 import com.foodtracker.android.R
 import com.foodtracker.android.camera.CameraPreviewView
 import com.foodtracker.android.camera.CameraScanMode
@@ -48,6 +49,7 @@ import com.foodtracker.android.camera.ProductImageLabeler
 import com.foodtracker.android.camera.ReceiptTextRecognizer
 import com.foodtracker.android.notification.NotificationHelper
 import com.foodtracker.android.ui.design.LarderDialog
+import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderSnackbar
 import com.foodtracker.android.ui.design.isExpanded
@@ -58,6 +60,7 @@ import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.viewmodel.BatchScanEntry
 import com.foodtracker.viewmodel.PantryStateHolder
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 import java.io.File
@@ -158,6 +161,9 @@ fun ScannerScreen(
         }
     }
     LaunchedEffect(Unit) { requestCameraIfNeeded() }
+    // A refused camera rules the rating prompt out for this session.
+    val reviewPrompter = LocalReviewPrompter.current
+    LaunchedEffect(cameraAccess.refused) { if (cameraAccess.refused) reviewPrompter?.onProblemShown() }
     // Catches the way back from "Open settings" with the camera allowed, and asks again once
     // whatever cancelled the request has gone.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
@@ -414,54 +420,69 @@ fun ScannerScreen(
     // this product's barcode rather than trusted to be about the same scan.
     val inPantry = state.duplicateOf?.takeIf { onUseOne != null && it.barcode == product?.barcode }
 
+    fun barcodeFound(barcode: String) {
+        val importSharedList = onShoppingListScanned
+        // A shared shopping list is a QR code, and so is a product's DataMatrix/QR - they arrive
+        // on the same callback. Route ours away before the lookup, or the whole JSON payload
+        // would be sent to Open Food Facts as a barcode.
+        if (ShoppingListShare.isPayload(barcode)) {
+            if (importSharedList != null) {
+                importSharedList(barcode)
+            } else {
+                // Say so rather than drop it: doing nothing is indistinguishable from the camera
+                // having failed to read the code.
+                showMessage(context.getString(R.string.shopping_list_scan_unsupported))
+            }
+        } else if (currentMode == CameraScanMode.BATCH) {
+            stateHolder.enqueueBatchScan(barcode)
+        } else {
+            val taken = stateHolder.onBarcodeScanned(barcode)
+            // Only where the host offers it, and only outside batch: batch collapses repeats into
+            // one row's quantity by itself, and prompting per scan is exactly the interruption
+            // batch mode exists to avoid. Not for a scan ignored because a result is already
+            // held, either - it would pin another product's pantry row onto the card on screen.
+            if (taken && checkDuplicates) stateHolder.checkForDuplicate(barcode)
+        }
+    }
+
+    fun dateFound(date: LocalDate) {
+        val held = stateHolder.uiState.value
+        if (held.scannedProduct != null) {
+            // Scan date: the date lands on the product, which comes back to show it.
+            stateHolder.onDateOcrDetected(date)
+            dateReadOffPack = true
+            currentMode = CameraScanMode.BARCODE
+        } else if (held.detectedDate == null) {
+            // Held like a barcode result, so the date being confirmed can't change under the
+            // thumb as the camera keeps reading. Scan again lets it go.
+            stateHolder.onDateOcrDetected(date)
+        }
+    }
+
+    // Debug builds only (see ScanDemo); the constant check drops it from release builds.
+    val demoFeed = if (BuildConfig.DEBUG) ScanDemo.feed else null
+
     ScannerScaffold(
         expanded = expanded,
         modifier = modifier,
         picture = {
-            CameraPreviewView(
-                mode = currentMode,
-                onBarcodeFound = { barcode ->
-                    val importSharedList = onShoppingListScanned
-                    // A shared shopping list is a QR code, and so is a product's DataMatrix/QR -
-                    // they arrive on the same callback. Route ours away before the lookup, or the
-                    // whole JSON payload would be sent to Open Food Facts as a barcode.
-                    if (ShoppingListShare.isPayload(barcode)) {
-                        if (importSharedList != null) {
-                            importSharedList(barcode)
-                        } else {
-                            // Say so rather than drop it: doing nothing is indistinguishable
-                            // from the camera having failed to read the code.
-                            showMessage(context.getString(R.string.shopping_list_scan_unsupported))
-                        }
-                    } else if (currentMode == CameraScanMode.BATCH) {
-                        stateHolder.enqueueBatchScan(barcode)
-                    } else {
-                        val taken = stateHolder.onBarcodeScanned(barcode)
-                        // Only where the host offers it, and only outside batch: batch collapses
-                        // repeats into one row's quantity by itself, and prompting per scan is
-                        // exactly the interruption batch mode exists to avoid. Not for a scan
-                        // ignored because a result is already held, either - it would pin
-                        // another product's pantry row onto the card on screen.
-                        if (taken && checkDuplicates) stateHolder.checkForDuplicate(barcode)
-                    }
-                },
-                onDateFound = { date ->
-                    val held = stateHolder.uiState.value
-                    if (held.scannedProduct != null) {
-                        // Scan date: the date lands on the product, which comes back to show it.
-                        stateHolder.onDateOcrDetected(date)
-                        dateReadOffPack = true
-                        currentMode = CameraScanMode.BARCODE
-                    } else if (held.detectedDate == null) {
-                        // Held like a barcode result, so the date being confirmed can't change
-                        // under the thumb as the camera keeps reading. Scan again lets it go.
-                        stateHolder.onDateOcrDetected(date)
-                    }
-                },
-                onImageCaptureReady = { imageCapture = it },
-                torchEnabled = torchEnabled,
-                onTorchAvailabilityChanged = { torchAvailable = it }
-            )
+            if (demoFeed != null) {
+                ScanDemoPicture(
+                    feed = demoFeed,
+                    onBarcodeFound = { barcodeFound(it) },
+                    awaitProduct = { stateHolder.uiState.first { it.scannedProduct != null } },
+                    onDateFound = { dateFound(it) }
+                )
+            } else {
+                CameraPreviewView(
+                    mode = currentMode,
+                    onBarcodeFound = { barcodeFound(it) },
+                    onDateFound = { dateFound(it) },
+                    onImageCaptureReady = { imageCapture = it },
+                    torchEnabled = torchEnabled,
+                    onTorchAvailabilityChanged = { torchAvailable = it }
+                )
+            }
             capturedPhotoUri?.let {
                 AsyncImage(
                     model = it,

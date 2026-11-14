@@ -10,7 +10,6 @@ import com.foodtracker.android.perf.FakeShoppingListRepository
 import com.foodtracker.model.AppSettings
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
-import com.foodtracker.viewmodel.AgendaBucket
 import com.foodtracker.viewmodel.PantryStateHolder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -23,7 +22,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 
 /**
  * An app left running across midnight must not keep showing yesterday's countdowns: the
- * derived rows, counters and agenda are rebuilt when the date moves, not only when an item or
+ * derived rows and counters are rebuilt when the date moves, not only when an item or
  * setting changes.
  */
 class DayRolloverTest {
@@ -32,7 +31,7 @@ class DayRolloverTest {
     private val tuesday = LocalDate(2026, 9, 29)
 
     @Test
-    fun testRefreshingAfterMidnightRederivesLabelsStatusAndAgenda() {
+    fun testRefreshingAfterMidnightRederivesLabelsAndStatus() {
         var today = monday
         val pantry = FakePantryRepository(
             listOf(
@@ -63,7 +62,7 @@ class DayRolloverTest {
             val before = stateHolder.uiState.value
             assertEquals(monday, before.today)
             assertEquals(1, before.allRows.single().daysRemaining)
-            assertEquals(AgendaBucket.TOMORROW, before.agenda.single().bucket)
+            assertEquals(ExpiryStatus.EXPIRING_SOON, before.allRows.single().status)
 
             today = tuesday
             stateHolder.refreshToday()
@@ -72,7 +71,6 @@ class DayRolloverTest {
             assertEquals(tuesday, after.today)
             assertEquals(0, after.allRows.single().daysRemaining)
             assertEquals(ExpiryStatus.EXPIRING_TODAY, after.allRows.single().status)
-            assertEquals(AgendaBucket.TODAY, after.agenda.single().bucket)
             assertEquals(0, after.filteredItems.single().daysRemaining)
         } finally {
             scope.cancel()

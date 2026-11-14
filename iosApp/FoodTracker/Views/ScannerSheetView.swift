@@ -125,6 +125,13 @@ public struct ScannerSheetView: View {
         _mode = State(initialValue: initialMode ?? enabledModes.first ?? .barcode)
     }
 
+    #if DEBUG
+    /// Set by RootTabView's `-demoRoute scan` for the store screenshots: the scanner shows this
+    /// picture in place of the camera and reads its barcode and date. Never set in release builds,
+    /// which don't have it.
+    static var demoFeed: ScanDemoFeed?
+    #endif
+
     /// Slot order for the mode bar: the plain barcode scan first, the two "unpack a whole shop"
     /// modes that extend it next, then the two single-item helpers.
     public static let defaultModes: [IOSCameraMode] = [.barcode, .batch, .receipt, .dateOcr, .photo]
@@ -316,6 +323,10 @@ public struct ScannerSheetView: View {
             }
         }
         .statusBarHidden()
+        // A refused camera rules the rating prompt out for this session.
+        .onChange(of: cameraAccess, initial: true) { _, access in
+            if access == .denied || access == .restricted { ReviewPrompter.shared.problemShown() }
+        }
         .task {
             guard cameraAccess == .notDetermined else { return }
             _ = await AVCaptureDevice.requestAccess(for: .video)
@@ -464,58 +475,15 @@ public struct ScannerSheetView: View {
 
     private var picture: some View {
         ZStack {
-            CameraScannerView(
-                mode: mode,
-                onBarcodeFound: { barcode in
-                    // A shared shopping list is a QR code, and so is a product's DataMatrix/QR -
-                    // they arrive on the same callback. Route ours away before the lookup, or
-                    // the whole JSON payload would be sent to Open Food Facts as a barcode.
-                    guard !ShoppingListShare.isPayload(barcode) else {
-                        guard let onShoppingListScanned else {
-                            // Say so rather than drop it: doing nothing is indistinguishable
-                            // from the camera having failed to read the code.
-                            snackbar = LarderSnackbarContent(message: L10n.shoppingListScanUnsupported)
-                            return
-                        }
-                        onShoppingListScanned(barcode)
-                        dismiss()
-                        return
-                    }
-                    guard mode != .batch else {
-                        viewModel.enqueueBatchScan(barcode)
-                        return
-                    }
-                    // The camera keeps reading barcodes while a result is on screen, so without
-                    // this, nudging the phone towards the next product on the shelf would swap
-                    // the card out from under the user. "Scan again" lets the held one go.
-                    guard !viewModel.isHoldingBarcodeResult else { return }
-                    if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
-                        viewModel.detectedDate = gs1Date
-                    }
-                    viewModel.lookupBarcode(barcode)
-                    // Only where the host offers it, and only outside batch: batch collapses
-                    // repeats into one row's quantity by itself, and prompting per scan is
-                    // exactly the interruption batch mode exists to avoid.
-                    if checkDuplicates {
-                        viewModel.checkForDuplicate(barcode)
-                    }
-                },
-                onDateFound: { date in
-                    if viewModel.scannedProduct != nil {
-                        // Scan date: the date lands on the product, which comes back to show it.
-                        viewModel.detectedDate = date
-                        dateReadOffPack = true
-                        mode = .barcode
-                    } else if viewModel.detectedDate == nil {
-                        // Held like a barcode result, so the date being confirmed can't change
-                        // under the thumb as the camera keeps reading. Scan again lets it go.
-                        viewModel.detectedDate = date
-                    }
-                },
-                onControllerReady: { controller in
-                    cameraController = controller
-                }
-            )
+            #if DEBUG
+            if let demo = Self.demoFeed {
+                ScanDemoPicture(feed: demo, onBarcodeFound: barcodeFound, onDateFound: dateFound)
+            } else {
+                camera
+            }
+            #else
+            camera
+            #endif
             if let url = capturedPhotoURL, let image = UIImage(contentsOfFile: url.path) {
                 GeometryReader { proxy in
                     Image(uiImage: image)
@@ -528,6 +496,65 @@ public struct ScannerSheetView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
+    }
+
+    private var camera: some View {
+        CameraScannerView(
+            mode: mode,
+            onBarcodeFound: barcodeFound,
+            onDateFound: dateFound,
+            onControllerReady: { controller in
+                cameraController = controller
+            }
+        )
+    }
+
+    private func barcodeFound(_ barcode: String) {
+        // A shared shopping list is a QR code, and so is a product's DataMatrix/QR - they arrive
+        // on the same callback. Route ours away before the lookup, or the whole JSON payload
+        // would be sent to Open Food Facts as a barcode.
+        guard !ShoppingListShare.isPayload(barcode) else {
+            guard let onShoppingListScanned else {
+                // Say so rather than drop it: doing nothing is indistinguishable from the camera
+                // having failed to read the code.
+                snackbar = LarderSnackbarContent(message: L10n.shoppingListScanUnsupported)
+                return
+            }
+            onShoppingListScanned(barcode)
+            dismiss()
+            return
+        }
+        guard mode != .batch else {
+            viewModel.enqueueBatchScan(barcode)
+            return
+        }
+        // The camera keeps reading barcodes while a result is on screen, so without this,
+        // nudging the phone towards the next product on the shelf would swap the card out from
+        // under the user. "Scan again" lets the held one go.
+        guard !viewModel.isHoldingBarcodeResult else { return }
+        if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
+            viewModel.detectedDate = gs1Date
+        }
+        viewModel.lookupBarcode(barcode)
+        // Only where the host offers it, and only outside batch: batch collapses repeats into
+        // one row's quantity by itself, and prompting per scan is exactly the interruption batch
+        // mode exists to avoid.
+        if checkDuplicates {
+            viewModel.checkForDuplicate(barcode)
+        }
+    }
+
+    private func dateFound(_ date: Date) {
+        if viewModel.scannedProduct != nil {
+            // Scan date: the date lands on the product, which comes back to show it.
+            viewModel.detectedDate = date
+            dateReadOffPack = true
+            mode = .barcode
+        } else if viewModel.detectedDate == nil {
+            // Held like a barcode result, so the date being confirmed can't change under the
+            // thumb as the camera keeps reading. Scan again lets it go.
+            viewModel.detectedDate = date
+        }
     }
 
     private var controls: some View {
@@ -550,6 +577,11 @@ public struct ScannerSheetView: View {
                 let size = mode.frameSize(expanded: expanded)
                 AimingFrame()
                     .frame(maxWidth: size.width, maxHeight: size.height)
+                    #if DEBUG
+                    .background {
+                        if let demo = Self.demoFeed { ScanDemoBackdrop(image: demo.image) }
+                    }
+                    #endif
             }
             if showsHint {
                 Text(guideText)
@@ -1351,3 +1383,49 @@ private struct CameraOffView: View {
         ScanDateReadout(date: Date(), source: .barcode)
     }
 }
+
+#if DEBUG
+/// What the scan demo shows and reads. See `ScannerSheetView.demoFeed`.
+struct ScanDemoFeed {
+    let image: UIImage
+    let barcode: String
+    let date: Date
+}
+
+/// The demo's stand-in for the camera: reads the barcode and then the printed date off the
+/// picture, in the order the camera reads them on a real scan (barcode first, then Scan date).
+/// The picture itself is `ScanDemoBackdrop`.
+private struct ScanDemoPicture: View {
+    let feed: ScanDemoFeed
+    let onBarcodeFound: (String) -> Void
+    let onDateFound: (Date) -> Void
+
+    var body: some View {
+        Color.clear
+            .task {
+                onBarcodeFound(feed.barcode)
+                try? await Task.sleep(for: .milliseconds(300))
+                onDateFound(feed.date)
+            }
+    }
+}
+
+/// The demo's picture, behind the aiming frame and centred on it, so its barcode sits in the frame
+/// whatever the layout, as it would with the phone held over the pack. 4.5 frame widths wide (see
+/// scripts/demo_scan_image.py), it covers the rest of the camera area too, which clips it.
+private struct ScanDemoBackdrop: View {
+    let image: UIImage
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = proxy.size.width * 4.5
+            Image(uiImage: image)
+                .resizable()
+                .frame(width: width, height: width * image.size.height / image.size.width)
+                .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+#endif

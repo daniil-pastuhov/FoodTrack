@@ -34,3 +34,4 @@ bestbefore-*.json
 # App Store Connect API keys — never commit
 AuthKey_*.p8
 *.p8
+__pycache__/

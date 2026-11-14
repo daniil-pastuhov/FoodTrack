@@ -106,7 +106,9 @@ fun StatusChip(
         verticalAlignment = Alignment.CenterVertically
     ) {
         LarderIcon(icon, contentDescription = null, size = LarderIconSize.Small, tint = content)
-        Text(text = text, style = MaterialTheme.typography.labelMedium, color = content, maxLines = 1, softWrap = false)
+        // One line wherever it fits; at the largest font scales a long status ("Просрочено 1 день
+        // назад") wraps rather than being cut off mid-word, as on iOS.
+        Text(text = text, style = MaterialTheme.typography.labelMedium, color = content)
     }
 }
 

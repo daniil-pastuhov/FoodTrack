@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
@@ -64,6 +66,7 @@ import com.foodtracker.android.ui.design.LocalShellChrome
 import com.foodtracker.android.ui.design.ScanFab
 import com.foodtracker.android.ui.design.ShellChrome
 import com.foodtracker.android.ui.design.isExpanded
+import com.foodtracker.android.ui.design.pinnedActionFitsBesidePill
 import com.foodtracker.android.ui.design.shellClearance
 import com.foodtracker.android.ui.navigation.AddItemMode
 import com.foodtracker.android.ui.navigation.ItemPrefill
@@ -72,16 +75,21 @@ import com.foodtracker.android.ui.navigation.LarderRoute
 import com.foodtracker.android.ui.navigation.LarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalLarderNavigator
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
+import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.navigation.route
 import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
-import com.foodtracker.android.ui.screens.CalendarScreen
 import com.foodtracker.android.ui.screens.CategorySettingsScreen
 import com.foodtracker.android.ui.screens.HomeListPaneWidth
 import com.foodtracker.android.ui.screens.OnboardingExit
 import com.foodtracker.android.ui.screens.OnboardingScreen
 import com.foodtracker.android.ui.screens.holdsFirstScreen
 import com.foodtracker.android.ui.screens.PantryDashboardScreen
+import com.foodtracker.android.ui.screens.MenuDishScreen
+import com.foodtracker.android.ui.screens.RecipeResultScreen
+import com.foodtracker.android.ui.screens.RecipeScreen
+import com.foodtracker.android.ui.screens.RecipeSettingsScreen
+import com.foodtracker.android.ui.screens.SavedRecipesScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
 import com.foodtracker.android.ui.screens.ShoppingListMatchDialog
@@ -98,6 +106,8 @@ import com.foodtracker.model.AppTheme
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
+import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.review.ReviewPrompter
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.HomeConfirmation
 import com.foodtracker.viewmodel.PantryStateHolder
@@ -165,6 +175,9 @@ private val PREDICTIVE_BACK_MAX_CORNER_RADIUS_DP = 32.dp
 @Composable
 fun FoodTrackerRoot(
     stateHolder: PantryStateHolder,
+    recipeStateHolder: RecipeStateHolder,
+    /** The rating prompt's hooks; null in previews and tests, where nothing is reported. */
+    reviewPrompter: ReviewPrompter? = null,
     currentScreenState: MutableState<LarderRoute>,
     onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit,
     /** Set by the activity when it is about to ask for background location; see
@@ -249,9 +262,21 @@ fun FoodTrackerRoot(
             // item, so leaving Home with a pane open doesn't pop a sheet up on the next tab.
             var homePaneItemId by remember { mutableStateOf<String?>(null) }
             var remindersCalloutDismissed by rememberSaveable { mutableStateOf(false) }
+            // Where a recipe's page goes back to: the Recipe tab, or Saved recipes.
+            var recipeResultReturn by remember { mutableStateOf<LarderRoute>(LarderRoute.Recipe) }
             val expanded = isExpanded()
             val openPrefilledItem: (ItemPrefill) -> Unit = { prefill ->
                 currentScreen = LarderRoute.AddItem(AddItemMode.Prefilled(prefill))
+            }
+
+            // The rating prompt: onboarding blocks it for the session, and leaving a recipe that
+            // was just written (for anything but its own dishes) is one of its moments.
+            LaunchedEffect(currentScreen) {
+                when (currentScreen) {
+                    LarderRoute.Onboarding -> reviewPrompter?.onOnboardingShown()
+                    is LarderRoute.RecipeResult, is LarderRoute.MenuDish -> Unit
+                    else -> reviewPrompter?.onRecipeLeft()
+                }
             }
 
             LaunchedEffect(Unit) {
@@ -329,6 +354,10 @@ fun FoodTrackerRoot(
                     is LarderRoute.Scanner -> onNavigateToScannerGlobal(route.mode)
                     is LarderRoute.AddItem -> {
                         scanReturnScreen = currentScreen
+                        currentScreen = route
+                    }
+                    is LarderRoute.RecipeResult -> {
+                        if (currentScreen !is LarderRoute.RecipeResult && currentScreen !is LarderRoute.MenuDish) recipeResultReturn = currentScreen
                         currentScreen = route
                     }
                     else -> currentScreen = route
@@ -527,6 +556,8 @@ fun FoodTrackerRoot(
             // the same removal (essential items land on the shopping list, with an undo), and any
             // other unit gets its own undo, since a count changing is easy to miss.
             val onUseOneHandler: (PantryItem) -> Unit = { item ->
+                // Used before its date: one of the rating prompt's moments, from the third on.
+                reviewPrompter?.onUsedOne(item.daysRemaining(stateHolder.uiState.value.today))
                 if (item.quantity <= 1) {
                     // Same removal as the stepper's minus, but this was a use, so it says "used".
                     stateHolder.decrementQuantity(item.id) { removedItem ->
@@ -534,7 +565,7 @@ fun FoodTrackerRoot(
                         val messageRes = if (removedItem.essential) {
                             R.string.item_added_to_shopping_list_snackbar
                         } else {
-                            R.string.calendar_used_snackbar
+                            R.string.item_used_snackbar
                         }
                         larderSnackbars.show(
                             context.getString(messageRes, removedItem.name),
@@ -559,6 +590,19 @@ fun FoodTrackerRoot(
                         stateHolder.restoreItem(removedItem, removedFromShoppingList = true)
                         com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, removedItem)
                     }
+                }
+            }
+            // Home's multi-select and the digest's Recipe ideas: the Recipe tab with those ticked.
+            val openRecipeWith: (Set<String>) -> Unit = { ids ->
+                recipeStateHolder.selectItems(ids)
+                currentScreen = LarderRoute.Recipe
+            }
+            val onDeleteSavedRecipe: (String) -> Unit = { id ->
+                recipeStateHolder.deleteSaved(id) { removed ->
+                    larderSnackbars.show(
+                        context.getString(R.string.recipe_deleted),
+                        context.getString(R.string.undo_action)
+                    ) { recipeStateHolder.restoreSaved(removed) }
                 }
             }
             val productDetailActions = ProductDetailActions(
@@ -610,7 +654,10 @@ fun FoodTrackerRoot(
                             currentScreen = scanReturnScreen
                         }
                         LarderRoute.Categories -> currentScreen = LarderRoute.Settings
-                        LarderRoute.Settings, LarderRoute.Calendar, LarderRoute.Shopping -> navigateToDashboard()
+                        is LarderRoute.RecipeResult -> currentScreen = recipeResultReturn
+                        is LarderRoute.MenuDish -> currentScreen = LarderRoute.RecipeResult((currentScreen as LarderRoute.MenuDish).savedId)
+                        LarderRoute.SavedRecipes, LarderRoute.RecipeSettings -> currentScreen = LarderRoute.Recipe
+                        LarderRoute.Settings, LarderRoute.Recipe, LarderRoute.Shopping -> navigateToDashboard()
                         is LarderRoute.ProductDetail, LarderRoute.Home, LarderRoute.Onboarding -> Unit
                     }
                 } catch (e: CancellationException) {
@@ -623,20 +670,46 @@ fun FoodTrackerRoot(
             // composables themselves, so no surrounding padding is folded into the numbers.
             val density = LocalDensity.current
             var pillHeightPx by remember { mutableIntStateOf(0) }
+            var pillWidthPx by remember { mutableIntStateOf(0) }
             var scanHeightPx by remember { mutableIntStateOf(0) }
-            val scanVisible = (currentTab == LarderTab.Home || currentTab == LarderTab.Calendar) &&
-                !shellChrome.scanHidden
+            // The Recipe tab's pinned primary action, measured by the tab itself; 0 while the tab
+            // shows no action (writing, empty pantry) or isn't on screen.
+            var recipeActionSize by remember { mutableStateOf(IntSize.Zero) }
+            val recipeActionHeightPx = recipeActionSize.height
+            val scanVisible = currentTab == LarderTab.Home && !shellChrome.scanHidden
+            val recipeActionVisible = currentTab == LarderTab.Recipe && recipeActionHeightPx > 0
             val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val windowWidth = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
+            // On a wide window the action sits level with the pill when it fits beside it, so a
+            // two-column form isn't covered at rest by an action stacked above the pill.
+            val recipeActionBesidePill = expanded && recipeActionVisible && pinnedActionFitsBesidePill(
+                windowWidth = windowWidth,
+                pillWidth = if (shellChrome.navHidden) 0.dp else with(density) { pillWidthPx.toDp() },
+                actionWidth = with(density) { recipeActionSize.width.toDp() }
+            )
             val clearance = shellClearance(
                 bottomInset = navBarInset,
                 pillHeight = if (shellChrome.navHidden) 0.dp else with(density) { pillHeightPx.toDp() },
-                scanHeight = if (scanVisible) with(density) { scanHeightPx.toDp() } else 0.dp,
-                expanded = expanded
+                scanHeight = when {
+                    scanVisible -> with(density) { scanHeightPx.toDp() }
+                    recipeActionVisible -> with(density) { recipeActionHeightPx.toDp() }
+                    else -> 0.dp
+                },
+                // The pinned action stacks above the pill unless it fits level with it.
+                expanded = expanded && (!recipeActionVisible || recipeActionBesidePill)
             )
+            // Level with the pill where it fits, as Scan on expanded Home; above it otherwise.
+            val recipeActionBottom = shellClearance(
+                bottomInset = navBarInset,
+                pillHeight = if (shellChrome.navHidden) 0.dp else with(density) { pillHeightPx.toDp() },
+                scanHeight = 0.dp,
+                expanded = recipeActionBesidePill
+            ).scan
 
             CompositionLocalProvider(
                 LocalLarderNavigator provides navigator,
-                LocalLarderSnackbars provides larderSnackbars
+                LocalLarderSnackbars provides larderSnackbars,
+                LocalReviewPrompter provides reviewPrompter
             ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // Background preview of the Dashboard, revealed as the current screen
@@ -714,14 +787,16 @@ fun FoodTrackerRoot(
                                                 actions = productDetailActions,
                                                 bottomClearance = clearance.content
                                             )
-                                        }
+                                        },
+                                        onRecipeIdeas = openRecipeWith
                                     )
                                 }
-                                LarderRoute.Calendar -> {
-                                    CalendarScreen(
-                                        stateHolder = stateHolder,
-                                        onUseOne = onUseOneHandler,
-                                        bottomOverlayClearance = clearance.content
+                                LarderRoute.Recipe -> {
+                                    RecipeScreen(
+                                        stateHolder = recipeStateHolder,
+                                        bottomOverlayClearance = clearance.content,
+                                        pinnedActionBottom = recipeActionBottom,
+                                        onPinnedActionSize = { recipeActionSize = it }
                                     )
                                 }
                                 LarderRoute.Shopping -> {
@@ -763,6 +838,7 @@ fun FoodTrackerRoot(
                                                 com.foodtracker.android.notification.NotificationHelper.cancelNotification(context, item.id)
                                             }
                                             stateHolder.clearAllData()
+                                            recipeStateHolder.clearAll()
                                             currentScreen = LarderRoute.Home
                                         },
                                         onManageCategories = { currentScreen = LarderRoute.Categories },
@@ -792,7 +868,10 @@ fun FoodTrackerRoot(
                                     selectedTab = currentTab,
                                     onTabSelected = { currentScreen = it.route },
                                     shoppingCount = shoppingListCount,
-                                    modifier = Modifier.onGloballyPositioned { pillHeightPx = it.size.height }
+                                    modifier = Modifier.onGloballyPositioned {
+                                        pillHeightPx = it.size.height
+                                        pillWidthPx = it.size.width
+                                    }
                                 )
                             }
                             AnimatedVisibility(
@@ -940,6 +1019,44 @@ fun FoodTrackerRoot(
                             CategorySettingsScreen(
                                 stateHolder = stateHolder,
                                 onNavigateBack = { currentScreen = LarderRoute.Settings }
+                            )
+                        }
+
+                        is LarderRoute.RecipeResult -> {
+                            RecipeResultScreen(
+                                stateHolder = recipeStateHolder,
+                                savedId = route.savedId,
+                                onBack = { currentScreen = recipeResultReturn },
+                                onDelete = { id ->
+                                    currentScreen = recipeResultReturn
+                                    onDeleteSavedRecipe(id)
+                                },
+                                onOpenDish = { day, course -> currentScreen = LarderRoute.MenuDish(route.savedId, day, course) }
+                            )
+                        }
+
+                        is LarderRoute.MenuDish -> {
+                            MenuDishScreen(
+                                stateHolder = recipeStateHolder,
+                                savedId = route.savedId,
+                                day = route.day,
+                                course = route.course,
+                                onBack = { currentScreen = LarderRoute.RecipeResult(route.savedId) }
+                            )
+                        }
+
+                        LarderRoute.SavedRecipes -> {
+                            SavedRecipesScreen(
+                                stateHolder = recipeStateHolder,
+                                onBack = { currentScreen = LarderRoute.Recipe },
+                                onDelete = onDeleteSavedRecipe
+                            )
+                        }
+
+                        LarderRoute.RecipeSettings -> {
+                            RecipeSettingsScreen(
+                                stateHolder = recipeStateHolder,
+                                onBack = { currentScreen = LarderRoute.Recipe }
                             )
                         }
 

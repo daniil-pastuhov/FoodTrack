@@ -2,10 +2,12 @@ package com.foodtracker.android.ui.design
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -64,7 +66,7 @@ fun isExpanded(): Boolean {
 }
 
 /** The four destinations on the [FloatingNav]. */
-enum class LarderTab { Home, Calendar, Shopping, Settings }
+enum class LarderTab { Home, Recipe, Shopping, Settings }
 
 /** The gap between floating things: the pill and the window edge, Scan and the pill. */
 private val ShellGap = LarderSpace.s3
@@ -98,13 +100,32 @@ fun shellClearance(
 ): ShellClearance {
     val pillTop = bottomInset + ShellGap + pillHeight
     val stackedScan = !expanded && scanHeight > 0.dp
-    val overlayTop = if (stackedScan) pillTop + ShellGap + scanHeight else pillTop
+    val overlayTop = when {
+        stackedScan -> pillTop + ShellGap + scanHeight
+        // Level with the pill, and as tall as the taller of the two (a pinned action at a large
+        // font scale can outgrow the pill).
+        expanded -> bottomInset + ShellGap + maxOf(pillHeight, scanHeight)
+        else -> pillTop
+    }
     return ShellClearance(
         content = overlayTop + ContentGap,
         scan = if (expanded) bottomInset + ShellGap else pillTop + ShellGap,
         snackbar = overlayTop + ShellGap
     )
 }
+
+/** The gap between a pinned action and the window's end edge on expanded windows. */
+val PinnedActionEndGap = LarderSpace.s6
+
+/**
+ * Whether a pinned action [actionWidth] wide (without [PinnedActionEndGap]) fits level with the
+ * centred pill, to its right with [ShellGap] to spare. When it does, it sits there, as Scan does
+ * on expanded Home, and content only has to clear the pill's height; when it doesn't (a narrow
+ * expanded window), it stacks above the pill. On a tablet the stacked action used to cover the
+ * end of a two-column form at rest ("Copy prompt" and the hint under it).
+ */
+fun pinnedActionFitsBesidePill(windowWidth: Dp, pillWidth: Dp, actionWidth: Dp): Boolean =
+    actionWidth > 0.dp && actionWidth + PinnedActionEndGap + ShellGap <= (windowWidth - pillWidth) / 2
 
 /**
  * Lets a tab screen ask for the shell's floating parts to step aside. Requests are counted, so
@@ -161,7 +182,7 @@ fun FloatingNav(
 ) {
     val entries = listOf(
         NavEntry(LarderTab.Home, LarderIcons.House, stringResource(R.string.nav_label_home)),
-        NavEntry(LarderTab.Calendar, LarderIcons.CalendarDays, stringResource(R.string.nav_label_calendar)),
+        NavEntry(LarderTab.Recipe, LarderIcons.ChefHat, stringResource(R.string.nav_label_recipe)),
         NavEntry(LarderTab.Shopping, LarderIcons.ShoppingBasket, stringResource(R.string.nav_label_shopping_list)),
         NavEntry(LarderTab.Settings, LarderIcons.Settings, stringResource(R.string.nav_label_settings))
     )
@@ -255,7 +276,7 @@ private fun NavTab(entry: NavEntry, selected: Boolean, badgeCount: Int, onClick:
     }
 }
 
-/** The labelled Scan button, on Home and Calendar. See [shellClearance] for where it sits. */
+/** The labelled Scan button, on Home only; Recipe pins its own primary action in the same place. See [shellClearance] for where it sits. */
 @Composable
 fun ScanFab(
     onClick: () -> Unit,
@@ -281,6 +302,68 @@ fun ScanFab(
             Text(text = label, style = MaterialTheme.typography.labelLarge)
         }
     }
+}
+
+/**
+ * A tab's one primary action, pinned where Scan sits on Home, above the pill: the Recipe tab's
+ * Generate or Share. Full width on phones; the caller sizes it on expanded windows. [cost] is the
+ * small pill at the end that says what the action takes ("Free"). [compact]: as wide as its
+ * label, like Scan, for an action with no cost (the shared prompt alone); the label still wraps
+ * when large text needs it.
+ */
+@Composable
+fun PinnedAction(
+    text: String,
+    icon: LarderIcons,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    cost: String? = null,
+    enabled: Boolean = true,
+    compact: Boolean = false
+) {
+    val shape = RoundedCornerShape(LarderRadius.lg)
+    val scheme = MaterialTheme.colorScheme
+    val container = if (enabled) scheme.primary else scheme.surfaceContainerHigh
+    val content = if (enabled) scheme.onPrimary else scheme.onSurfaceVariant
+    Row(
+        modifier = modifier
+            .then(if (enabled) Modifier.larderShadow(LarderTheme.shadows.level2, shape) else Modifier)
+            .clip(shape)
+            .background(container, shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(horizontal = LarderSpace.s5, vertical = LarderSpace.s2),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LarderIcon(icon, contentDescription = null, tint = content)
+        Text(
+            text = text,
+            modifier = if (compact) Modifier.weight(1f, fill = false) else Modifier.weight(1f),
+            style = MaterialTheme.typography.labelLarge,
+            color = content
+        )
+        cost?.let {
+            Text(
+                text = it,
+                modifier = Modifier
+                    .border(1.dp, content, RoundedCornerShape(LarderRadius.xl))
+                    .padding(horizontal = LarderSpace.s2, vertical = 2.dp),
+                style = MaterialTheme.typography.labelSmall,
+                color = content,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+@PreviewLightDark
+@Composable
+internal fun PinnedActionPreview() = LarderPreview {
+    PinnedAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
+    PinnedAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
+    PinnedAction("Share prompt", LarderIcons.Share2, {}, compact = true)
+    PinnedAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
 }
 
 @PreviewLightDark
