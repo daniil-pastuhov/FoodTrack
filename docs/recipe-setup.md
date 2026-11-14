@@ -49,9 +49,10 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
   and the reversed client id is a URL scheme in `iosApp/FoodTracker/Info.plist`.
 - App Check: Android registered with Play Integrity, iOS with App Attest, token TTL 1 hour, no
   console enforcement (the callables enforce App Check themselves; leave console enforcement
-  off). **Check**: Play Integrity's `minDeviceRecognitionLevel` reads `NO_INTEGRITY`, so App Check
-  accepts any device Play attests, rooted ones included. That matches "App Check is rate
-  reduction, not the money guard"; raise it only if abuse shows up.
+  off). Play Integrity's minimum device recognition level raised from "no integrity" to **device
+  integrity** (`MEETS_DEVICE_INTEGRITY`) on 2026-11-14, by the owner's decision: Android devices
+  that fail Play's device check (most rooted ones) get no App Check token and can't use the paid
+  route. App Check is still rate reduction, not the money guard.
 - Sign in with Apple capability on the App ID `com.foodbest.ios` (per records).
 - Firestore `(default)`: Native mode, `europe-west1`, delete protection on, and the deny-all
   `firestore.rules` released (2026-11-13). No composite index or TTL policy yet: they come with
@@ -114,13 +115,12 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       `scripts/play_upload.py`.
 - [ ] Then create the products `recipes_10`, `recipes_50`, `recipes_100` (consumable,
       USD 3.99 / 10.99 / 18.99, other regions converted by Play, multi-quantity off, listings in
-      en-GB, nb and ru). **(agent)**: a ready script was prepared outside the repo
-      (`play_create.py` in the session scratchpad): for each product it reads Play's converted
-      regional prices (`convertRegionPrices`, saved beforehand per product), creates the one-time
-      product through `monetization.onetimeproducts.patch` with `allowMissing`, one purchase option
-      `buy` (legacy-compatible, no multi-quantity), activates the option and reads it back; it
-      skips a product that already exists. It is not committed; ask the agent that prepared it, or
-      redo it from that description.
+      en-GB, nb and ru). **(agent)**: `scripts/play_products.py` (dry run by default; `--apply`
+      writes). For each product it asks Play to convert the base price into every region's price
+      (`convertRegionPrices`), creates the one-time product through
+      `monetization.onetimeproducts.patch` with `allowMissing`, with one purchase option `buy`
+      (legacy-compatible, no multi-quantity), activates the option and reads it back; it skips a
+      product that already exists. It authenticates like `scripts/play_upload.py`.
 
 ### 5. Secrets and parameters
 
@@ -184,6 +184,17 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       deployed function (about 25 attempts, USD 1–2). If anything harmful or off-topic gets
       through, follow functions/README.md, "The output judge" (`shadow` for a week, then
       `enforce`).
+- [ ] Add to that checklist, and run on a real device, cases for item names in non-Latin scripts
+      (Chinese, Japanese, Arabic, Hebrew, Hindi, Greek, Thai...) and right-to-left names (Hebrew,
+      Arabic, Persian, also mixed with Latin units such as `חלב 3% 1L`): an instruction written in
+      such a script as an item name (it passes the input rule; see functions/README.md, "Residual
+      risks"), an answer asked to switch to that script, an allergen written in it, and how the
+      recipe and the item list render (direction, quoting of the name in the answer).
+- [ ] First deploy: check that every `llm_call` log line carries real token counts from
+      `usageMetadata` (input, output and thinking tokens, not booked at the worst case;
+      `stats/{day}.unknownUsageCalls` stays at 0), and compare the measured cost of the first
+      recipes and menus with the assumptions in functions/README.md, "Spend ceilings" (≈ USD 0.02
+      a recipe, 0.08 a 2-course menu, 0.11 a 3-course menu) and the prices in "Price table".
 - [ ] Set `allowSandbox` back to `false`, except while a version is in App Review (below).
 
 ### 11. Privacy, store forms, artwork
@@ -199,12 +210,19 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 - [ ] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md).
-- [ ] Android sign-in buttons: "Sign in with Apple" and "Sign in with Google" are app-styled
-      outline buttons (`RecipeSignInButtons` in `RecipePaidViews.kt`). Replace them with the
-      official artwork (Google's button assets, Apple's Sign in with Apple guidelines) before
-      release. iOS uses Apple's `SignInWithAppleButton` and Google's `GoogleSignInButton`; its
-      "Add Google sign-in" in Recipe settings is app-styled and worth checking against Google's
-      branding rules too.
+- [ ] Android "Sign in with Apple" button: still the app's outline button with a generic apple
+      icon (`SignInButtons` in `RecipePaidViews.kt`). Apple's guidelines allow a custom button on
+      Android only with the Apple logo artwork from Apple Design Resources
+      (<https://developer.apple.com/design/resources/>, "Sign in with Apple" logos, SVG or PDF,
+      black and white), never a redrawn logo. Download it (it comes under Apple's licence, which
+      the owner accepts), convert the logo-only SVGs to vector drawables
+      `androidApp/src/main/res/drawable/apple_logo_black.xml` and `apple_logo_white.xml`, and
+      the button can then be drawn to the guidelines: black on the light theme, white on the
+      dark one, logo file as tall as the button, system font at 43 % of the button height,
+      title "Sign in with Apple" (ru "Вход с Apple", nb "Logg på med Apple", Apple's own
+      wording, already in the strings), at least 140 × 30 pt. The Google button (Android and
+      iOS) is done: Google's own button on iOS, and on Android a button drawn to Google's
+      branding guidelines with the "G" from Google's asset bundle (`GoogleSignInButton.kt`).
 
 ### App Review switch
 

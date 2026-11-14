@@ -23,7 +23,8 @@ purchase or past the daily spending limits, to get past the block on buyers who 
 recipes, to make the model write something harmful or unrelated to cooking that the server's
 checks let through (the prompt and every check are in `functions/src`, so say what got past which
 check), or to read or change another person's data. App Check is treated as rate reduction, not as the guard on money (the code is
-public and a genuine build on a rooted or jailbroken device can still attest), so a report that
+public, and a genuine build on a jailbroken iPhone, or on a rooted Android phone that gets past
+Play Integrity's device check, can still attest), so a report that
 only shows App Check can be passed is less useful than one that also gets past the server's
 checks.
 

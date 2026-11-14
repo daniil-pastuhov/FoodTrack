@@ -415,10 +415,11 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    spaced-out letters, a short list of words about the model (`ignore`, `instructions`, `prompt`,
    `system`, `assistant`, `forget`, `json`...) in the ten app languages, also when written with
    Cyrillic or Greek look-alikes or digits. The full rule is in CONTRACT.md "Name rules";
-   `test/fixtures/names.json` holds 180 real product names in 25 languages (`Crème fraîche
+   `test/fixtures/names.json` holds about 180 real product names in 25 languages (`Crème fraîche
    15%`, `Сметана 20%`, `Φέτα ΠΟΠ`, `חלב 3% תנובה`, `可口可乐 Zero`, `明治おいしい牛乳`,
-   `서울우유 1L`, `अमूल दूध`...) and 174 adversarial inputs, with what the server and both
-   apps make of each; all three are tested against it.
+   `서울우유 1L`, `अमूल दूध`...) and about 175 adversarial inputs, with what the server and
+   both apps make of each; all three are tested against it (`test/nameFixture.test.ts`, the
+   shared module's `ServerNameRuleTest`, `iosApp/NameFixtureCheck/check.sh`).
 3. **Model side** (`src/adapters/gemini.ts`). Safety settings are sent explicitly on every call
    (Vertex documents that from gemini-3.5-flash the default is OFF): harassment, hate speech and
    sexual content `BLOCK_LOW_AND_ABOVE`; dangerous content `BLOCK_MEDIUM_AND_ABOVE`, because
@@ -705,45 +706,42 @@ npx firebase functions:secrets:set SIWA_PRIVATE_KEY < AuthKey_YYYYYYYYYY.p8     
 
 ## One-time setup (owner)
 
-1. **Blaze plan** on `bestbefore-f9ee1`, and a **budget** (Billing > Budgets & alerts) with
-   "Connect a Pub/Sub topic" set to `budget-alerts` (create the topic first). Without that topic
-   connection the alert only emails you; the topic is what flips the kill switch.
-2. **Firestore**: create the `(default)` database in Native mode (a European location, e.g.
-   `eur3`), then `cd functions && npx firebase deploy --only firestore --project bestbefore-f9ee1`
-   (rules, sweeper index and the TTL policy).
-   Create `config/runtime` (above).
-3. **Auth**: enable the Anonymous, Google and Apple providers. Leave Identity Platform's automatic
-   clean-up of anonymous users **off**: it would delete paying anonymous buyers.
-4. **App Check**: register the Android app with Play Integrity and the iOS app with App Attest
-   (DeviceCheck as fallback if wanted). Do not turn on console enforcement for other products;
-   the callables enforce it themselves. Debug tokens stay in the console and on your machine, never
-   in the repo or CI logs.
-5. **APIs**: enable Vertex AI API, Google Play Android Developer API, Cloud Pub/Sub, Cloud
-   Scheduler, Secret Manager, Cloud Build, Artifact Registry, Eventarc, Cloud Run.
-6. **Service account** `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com` with only:
-   Cloud Datastore User, Vertex AI User, Firebase Authentication Admin, Secret Manager Secret
-   Accessor (on the two secrets), Logs Writer, and, because the scheduled and Pub/Sub triggers
-   invoke as this account, Cloud Run Invoker and Eventarc Event Receiver; and **Firebase App Check Token Verifier** (`roles/firebaseappcheck.tokenVerifier`), which `generateRecipe`, `verifyPurchase`, `mergeBalance` and `deleteAccount` need to consume limited-use App Check tokens (`CONSUME_APP_CHECK_TOKENS`); without it every call to them fails. Let the
-   deploying account act as it (Service Account User).
-7. **Play Console**: create consumables `recipes_10`, `recipes_50`, `recipes_100` (multi-quantity
-   allowed if you want it). Users and permissions > invite the service account's email with
-   "View financial data" and "Manage orders and subscriptions" for the app (can take up to a day
-   to work). Monetization setup > Real-time developer notifications: topic
-   `projects/bestbefore-f9ee1/topics/play-rtdn`, notification content including **one-time
-   products / voided purchases**; grant `google-play-developer-notifications@system.gserviceaccount.com`
-   Pub/Sub Publisher on that topic. Add licence testers for sandbox testing.
-8. **App Store Connect**: create the three consumables; sign the Paid Apps agreement and banking /
-   tax forms. Users and Access > Integrations > In-App Purchase: generate a key (`.p8`, its key id,
-   the issuer id) and store it as `APPSTORE_PRIVATE_KEY`. App Information > App Store Server
-   Notifications: Version 2, production and sandbox URL
-   `https://europe-west1-bestbefore-f9ee1.cloudfunctions.net/appStoreNotifications` (after the first
-   deploy; check the URL `firebase deploy` prints). Use "Request a Test Notification" to check it.
-9. **Sign in with Apple key** (Certificates, Identifiers & Profiles > Keys, Sign in with Apple
-   enabled for `com.foodbest.ios`) as `SIWA_PRIVATE_KEY`, with its key id and the team id.
-10. Deploy: `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
-   (lint and build run first as predeploy steps).
-11. Update the privacy policy, App Privacy label and Play Data safety form: purchases, a user id,
-    ingredient names sent for generation, email when signed in.
+The owner's checklist, with what is already done on the live project and what is left in order,
+is [docs/recipe-setup.md](../docs/recipe-setup.md); keep that file, not this section, up to date.
+What a developer needs to know about the live project `bestbefore-f9ee1`:
+
+- **Firestore** `(default)`: Native mode in `europe-west1` (the functions' region), delete
+  protection on. `firestore.rules`, `firestore.indexes.json` (the sweeper's indexes) and the TTL
+  policy on `generations.expiresAt` go out with `--only functions,firestore`.
+- **Service account** `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
+  (`FUNCTIONS_SERVICE_ACCOUNT`), with only: Cloud Datastore User, Vertex AI User, Firebase
+  Authentication Admin, Secret Manager Secret Accessor (meant for the two secrets only), Logs
+  Writer, Cloud Run Invoker and Eventarc Event Receiver (the scheduled and Pub/Sub triggers invoke
+  as this account), and **Firebase App Check Token Verifier** (`roles/firebaseappcheck.tokenVerifier`):
+  `generateRecipe`, `verifyPurchase`, `mergeBalance` and `deleteAccount` consume limited-use App
+  Check tokens (`CONSUME_APP_CHECK_TOKENS`), and without the role every call to them fails. The
+  deploying account needs Service Account User on it.
+- **Auth**: Anonymous, Google and Apple providers. Identity Platform's automatic clean-up of
+  anonymous users stays **off**: it would delete paying anonymous buyers.
+- **App Check**: Android with Play Integrity, iOS with App Attest; no console enforcement (the
+  callables enforce App Check themselves). Play Integrity's minimum device recognition level is
+  **device integrity** (`MEETS_DEVICE_INTEGRITY`; raised from "no integrity" by the owner's
+  decision on 2026-11-14), so Android devices that fail Play's device check, rooted ones
+  included, get no App Check token and cannot use the paid route. App Check is still rate
+  reduction, not the guard on money. Debug tokens stay in the console and on your machine, never
+  in the repo or CI logs.
+- **Pub/Sub**: `budget-alerts` (the GCP budget's topic; `budgetKillSwitch`) and `play-rtdn` (Play
+  real-time developer notifications; `playNotifications`).
+- **Stores**: consumables `recipes_10`, `recipes_50`, `recipes_100` on both stores
+  (`PRODUCT_CREDITS` in `src/constants.ts`; Play products are created with
+  `scripts/play_products.py`). The service account reads Play purchases through its Play Console
+  invitation; App Store Server Notifications v2 go to the `appStoreNotifications` URL that
+  `firebase deploy` prints.
+- **Parameters and secrets**: see "Parameters and secrets" above. Deploy:
+  `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
+  (lint and build run first as predeploy steps).
+- **Privacy**: what the backend stores is in "Profile data" and "Firestore" above; the store
+  privacy answers are in `store-listing/app-store/README.md`, section 5.
 
 ## Deploying from CI (not set up)
 

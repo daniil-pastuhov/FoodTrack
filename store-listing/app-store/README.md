@@ -100,8 +100,9 @@ The result is **4+**.
 ## 5. App Privacy ("nutrition label")
 
 What the app sends off the phone, and so what Apple counts as collected (data sent to you or a
-partner). `iosApp/FoodTracker/PrivacyInfo.xcprivacy` declares the recipe items below except the
-name (see there); the Firebase SDKs ship their own privacy manifests for crash reporting. The
+partner). `iosApp/FoodTracker/PrivacyInfo.xcprivacy` declares the recipe items below (Purchase History,
+User ID, Email Address, Name, Other User Content); the Firebase SDKs ship their own privacy
+manifests for crash reporting. The
 privacy policy (URL above) has to say the same; it is updated in
 <https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1> (`docs/privacy-policy-changes.md`).
 
@@ -132,7 +133,7 @@ privacy policy (URL above) has to say the same; it is updated in
     name and photo from the Firebase Auth user after sign-in, but Firebase keeps a copy in the
     Google provider entry until the account is deleted, and the server cannot remove it. The
     apps never ask Apple for the name. Declaring it is the honest answer; `PrivacyInfo.xcprivacy`
-    should get a matching Name entry (an app change, not in this kit).
+    has the matching Name entry (linked, not tracking, App Functionality).
   - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities,
     the recipe settings and the allergen list sent to write a recipe or menu, and the recipe
     written back (kept on the server for 7 days after it finished, for retries, then deleted).

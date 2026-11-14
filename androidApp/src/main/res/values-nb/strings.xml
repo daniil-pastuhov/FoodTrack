@@ -929,8 +929,8 @@
     <string name="recipe_choice_phone_body">Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter telefon, går de du ikke har brukt tapt.</string>
     <string name="recipe_choice_account_title">I en konto</string>
     <string name="recipe_choice_account_body">Logg inn med Apple eller Google. Oppskriftene følger deg til en ny telefon og virker på både Android og iPhone. Vi lagrer konto-ID-en og e-postadressen din.</string>
-    <string name="recipe_sign_in_apple">Logg inn med Apple</string>
-    <string name="recipe_sign_in_google">Logg inn med Google</string>
+    <string name="recipe_sign_in_apple">Logg på med Apple</string>
+    <string name="recipe_sign_in_google">Logg på med Google</string>
     <string name="recipe_store_error_title">Får ikke kontakt med butikken</string>
     <string name="recipe_store_error_body">Sjekk tilkoblingen og prøv igjen. Ingenting ble belastet.</string>
     <string name="recipe_rejected_title">Dette kjøpet kunne ikke legges til</string>

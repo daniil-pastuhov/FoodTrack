@@ -229,8 +229,8 @@ private struct RecipePurchaseChoice: View {
 }
 
 /// Apple's and Google's own buttons. Google's shows only once the project has a Google client
-/// for iOS (see `GoogleSignInSupport`). `only` limits it to one provider, as "Add Google
-/// sign-in" does.
+/// for iOS (see `GoogleSignInSupport`). `only` limits it to one provider, as adding a
+/// second sign-in to an account does.
 struct RecipeSignInButtons: View {
     @ObservedObject var credits: RecipeCredits
     var only: RecipeSignInProvider? = nil
@@ -254,12 +254,9 @@ struct RecipeSignInButtons: View {
                 .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                 .frame(height: LarderSize.touch)
             }
-            if only == .google, GoogleSignInSupport.isConfigured {
-                // Adding Google to an account: the design's own button, as Google's says "Sign in".
-                LarderButton(L10n.recipeAddSignIn(.google), icon: .circleUserRound, variant: .outline, fullWidth: true) {
-                    signInWithGoogle()
-                }
-            } else if only == nil, GoogleSignInSupport.isConfigured {
+            // Google's own button also when adding Google to an account: its branding allows no
+            // other title or logo; the hint above it and the accessibility label say what adding does.
+            if only == nil || only == .google, GoogleSignInSupport.isConfigured {
                 GoogleSignInButton(scheme: colorScheme == .dark ? .dark : .light, style: .wide) {
                     signInWithGoogle()
                 }
