@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { HttpsError } from "firebase-functions/v2/https";
 import type { GenerateContentParameters, GenerateContentResponse } from "@google/genai";
 import { AppleAppStoreVerifier } from "../src/adapters/appstore";
+import { buildPrompt } from "../src/adapters/prompt";
 import { GeminiRecipeGenerator } from "../src/adapters/gemini";
 import { IOS_FIREBASE_APP_ID, ANDROID_FIREBASE_APP_ID, CONSUME_MAX_ATTEMPTS } from "../src/constants";
 import { validateGenerateRequest } from "../src/contract";
@@ -151,7 +152,7 @@ describe("1. no attacker content or unsampled volume in logs", () => {
     };
     const g = new GeminiRecipeGenerator({ project: "p", location: "global", model: "gemini-3.8-flash", thinkingLevel: "LOW" }, models);
     const req = validateGenerateRequest(request(), Date.now());
-    await expect(g.generate(req, new AbortController().signal, { maxOutputTokens: 10, hardTokenCeiling: 20 }))
+    await expect(g.generate(req, buildPrompt(req, "LRD-TEST"), new AbortController().signal, { maxOutputTokens: 10, hardTokenCeiling: 20 }))
       .rejects.toMatchObject({ message: "Vertex AI call failed" });
   });
 });
@@ -324,7 +325,7 @@ describe("5. a stream without usageMetadata is unknown usage, booked at the wors
       },
     };
     const g = new GeminiRecipeGenerator({ project: "p", location: "global", model: "gemini-3.8-flash", thinkingLevel: "LOW" }, models);
-    const res = await g.generate(validateGenerateRequest(request(), Date.now()), new AbortController().signal, { maxOutputTokens: 4096, hardTokenCeiling: 8192 });
+    const res = await g.generate(validateGenerateRequest(request(), Date.now()), buildPrompt(validateGenerateRequest(request(), Date.now()), "LRD-TEST"), new AbortController().signal, { maxOutputTokens: 4096, hardTokenCeiling: 8192 });
     expect(res.usage).toBeUndefined();
 
     await seed("u5", 2);

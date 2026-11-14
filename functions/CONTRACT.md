@@ -54,13 +54,13 @@ not on `message` (English, for logs).
 
 | code | details.reason | meaning / client action |
 |---|---|---|
-| `invalid-argument` | `INVALID_REQUEST` | Bad input. A client bug; do not retry unchanged. |
+| `invalid-argument` | `INVALID_REQUEST` | Bad input. A client bug; do not retry unchanged. When a pantry or allergen name was refused, `details` also has `field` (e.g. `"ingredients[3].name"`, `"allergens[0]"`) and `rule` (see "Name rules"); nothing was charged. |
 | `failed-precondition` | `INSUFFICIENT_CREDITS` | Balance below the cost (see `costs`). Show the pack sheet. |
 | `failed-precondition` | `BUSY` | This account already has a generation in flight (`generateRecipe`, `mergeBalance` of that source, `deleteAccount`). Wait for it; retry later. |
 | `unavailable` | `GENERATION_DISABLED` | Generation is paused: the kill switch is on, or today's spending ceiling for the whole service is reached. Show "temporarily unavailable, try later"; nothing was charged. |
 | `failed-precondition` | `ACCOUNT_CLOSED` | Account deleted or merged away. Sign out / start anonymous again. |
 | `resource-exhausted` | `RATE_LIMITED` | Too many calls in a short time (per minute). Back off and retry after a minute. |
-| `resource-exhausted` | `USER_DAILY_LIMIT` | This account reached its daily generation limit (number of generations, or estimated usage). Try again tomorrow (UTC); nothing was charged. |
+| `resource-exhausted` | `USER_DAILY_LIMIT` | This account reached its daily generation limit (number of generations, estimated usage, or too many requests refused today as prompt injection: see "Name rules"). Try again tomorrow (UTC); nothing was charged. |
 | `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
 | `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
@@ -114,11 +114,59 @@ that still go through are credited normally.
 
 | field | type | rule |
 |---|---|---|
-| `name` | string | 1–40 characters after trimming: letters (any script), digits, space, hyphen. Nothing else (no `'`, `,`, `.`, `&`, `/`, emoji). Clients should drop or clean names that fail. |
+| `name` | string | A food name under the "Name rules" below. |
 | `expiresOn` | string or null | `YYYY-MM-DD`, or `null` for an item without a date |
 | `quantity` | int or null | 0–9999, or `null` |
 
-`allergens` is a list of at most 20 strings with the same character rules as `name`.
+`allergens` is a list of at most 20 strings under the same "Name rules" as `name`.
+
+#### Name rules
+
+The server normalises every name and then checks it (`src/core/inputSafety.ts`). Normalisation,
+which clients need not copy: Unicode NFKC (fullwidth letters and digits become plain ones, `½`
+becomes `1/2`, ligatures split); `’ ‘ ʼ ´` and the backtick become `'`; dashes and minus signs become `-`;
+invisible characters (zero-width spaces and joiners, bidirectional controls, soft hyphen, BOM,
+variation selectors) are removed; tabs, line breaks and every other space become one space; runs
+of spaces and of hyphens collapse to one; leading and trailing spaces are trimmed. Then the name
+must be:
+
+- 1 to 40 characters, at most **8 words** (split on spaces), and every hyphen-separated part of a
+  word at most **28 characters**;
+- made only of: letters of the **Latin or Cyrillic** script (with their diacritics; at most one
+  combining mark per letter), ASCII digits `0-9`, space, `-`, and these in these positions only:
+  `'` between two letters (`Jerry's`), `%` after a digit or a digit and a space (`15%`, `18 %`),
+  `,` `.` `/` between two digits (`0,5`, `1.5`, `1/2`), `.` after a letter when a space or digit
+  follows (`Dr. Oetker`, `n.5`), `&` between letters or spaces, never first or last (`M&S`,
+  `Ben & Jerry's`). Nothing else: no other scripts (Greek, CJK, Arabic, Hebrew...), no emoji, no
+  quotes, brackets, braces, `:`, `#`, `<`, `>`, backslash.
+- not "suspicious": no word mixing Latin and Cyrillic letters (`Pаsta` with a Cyrillic `а`); no
+  encoded-looking word (a hex run of 12+, three or more capitals inside a mixed-case word, many
+  letter/digit switches); no word repeated three times, no character five times in a row, no four
+  single letters in a row (`i g n o r e`); none of a short list of words about the model rather
+  than food (`ignore`, `instructions`, `prompt`, `system`, `assistant`, `json`, `forget`... in the
+  ten app languages, also when spelled with look-alike letters or digits).
+
+A refused name fails the whole request with `INVALID_REQUEST`, `details.field` and `details.rule`
+(`TYPE`, `EMPTY`, `TOO_LONG`, `CHARACTERS`, `SCRIPT`, `WORDS`, `WORD_LENGTH`, or a suspicious rule:
+`MARKS`, `MIXED_SCRIPT`, `ENCODED`, `REPEATED`, `SPACED_LETTERS`, `INSTRUCTION`). Nothing is
+charged. Suspicious refusals, and answers the server refuses as suspicious (see "Failures and
+refunds"), count per account per UTC day; at `config/runtime.rejectedPromptsPerDay` (default 5)
+further generation fails with `USER_DAILY_LIMIT` until the next UTC day.
+
+**Client cleaning (unchanged rule still valid, two additions needed).** The existing cleaning
+(every character other than a letter, digit, space or hyphen becomes a space; runs of spaces
+collapse; cut to 40 characters) still produces names the server accepts for Latin and Cyrillic
+text, so clients that keep it keep working. They must also:
+
+1. Treat letters outside the Latin and Cyrillic scripts (and digits other than ASCII `0-9`) like
+   other refused characters (a space), and drop a name with nothing left.
+2. Keep at most the first 8 words, and drop a word (hyphen part) longer than 28 characters.
+
+Optionally they may keep `'`, `%`, `,`, `.`, `/`, `&` where the rules above allow them, so
+`Crème fraîche 15%` reaches the model as written. If the server still refuses an ingredient
+(`details.field` names it) the client should leave that item out and retry with a **new**
+`requestId`, telling the user; a refused allergen must be shown to the user, never silently
+dropped.
 
 ### Recipe (response)
 
@@ -135,7 +183,13 @@ that still go through are credited normally.
 }
 ```
 
-`amount` may be an empty string (e.g. "salt to taste" in `name`).
+`amount` may be an empty string (e.g. "salt to taste" in `name`). `fromPantry` is decided by the
+server (the model names which pantry item an ingredient is; the server checks it exists), and
+`servings` and `difficulty` are always the requested values. Every string is plain text, at most:
+title 100, summary 400, amount 40, ingredient name 80, step 600, tip 300 characters; 1–40
+ingredients; steps 1–7 (`brief`), 2–10 (`standard`), 2–18 (`stepByStep`). No line breaks, control
+or bidirectional characters, links, e-mail addresses, phone numbers, HTML or markdown. Clients
+still render every field as plain text (never as markdown or HTML).
 
 ### Menu (response)
 
@@ -144,7 +198,7 @@ that still go through are credited normally.
   "days": [
     {
       "date": "YYYY-MM-DD",
-      "uses": ["pantry item names used that day"],
+      "uses": ["pantry item names used that day, exactly as sent in the request"],
       "courses": [{ "course": "starter | main | dessert", "recipe": { "...Recipe" } }]
     }
   ]
@@ -220,7 +274,9 @@ Two kinds of failure, decided by the server; `charged` tells the client which wa
   UTC day (`config/runtime.infraRefundsPerDay`) cannot generate again until the next UTC day.
   Further calls then fail with `INFRA_FAILURE_LIMIT` before anything is charged.
 - **Failures caused by the request** (the model refused the ingredients on safety grounds, ran out
-  of room, or wrote something unusable) are refunded within an allowance tied to what the account
+  of room, or wrote an answer the server's checks refuse: malformed, too long, a link or contact
+  details, markup, an excluded allergen or diet violation, something that is not food, text
+  outside cooking, or a leak of its instructions) are refunded within an allowance tied to what the account
   has bought: **one refunded failure for every 10 credits purchased** over the account's life
   (at least one once anything was bought; credits the store refunded do not count). The
   allowance does not reset daily, and it moves with the credits on `mergeBalance`. Past it, such

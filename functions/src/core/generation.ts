@@ -6,11 +6,12 @@
  * committed reservation.
  */
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { HttpsError } from "firebase-functions/v2/https";
 import {
   fail,
   inputHashOf,
-  parseMenu,
-  parseRecipe,
+  isNameRejection,
+  isSuspiciousRejection,
   validateGenerateRequest,
   validateRequestId,
   type GenerateRequest,
@@ -22,6 +23,7 @@ import {
   CREDITS_PER_CONTENT_REFUND,
   CREDITS_PER_TIMEOUT_REFUND,
   GENERATION_TTL_MS,
+  JUDGE,
   MAX_OUTPUT_TOKENS,
   REVENUE_WINDOW_DAYS,
   THINKING_FACTOR,
@@ -29,7 +31,9 @@ import {
   type CostKey,
   type Costs,
 } from "../constants";
-import { inputTokenBound } from "../adapters/prompt";
+import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
+import { JUDGE_INSTRUCTION } from "../adapters/gemini";
+import { SUSPICIOUS_OUTPUT_RULES, checkOutput } from "./outputSafety";
 import {
   assertOpen,
   costKeyOf,
@@ -83,15 +87,27 @@ export interface Plan {
   inputHash: string;
 }
 
+/**
+ * The judge's worst case: its input is the validated answer, a subset of the generator's own
+ * visible output (at most maxOutputTokens tokens) re-serialised with a little structure, plus its
+ * fixed instruction; its output plus thinking is cut at JUDGE.tokenCeiling. Booked at the
+ * generator's prices (conservative when the judge model is cheaper).
+ */
+export function judgeWorstCaseMicroUsd(config: RuntimeConfig, maxOutputTokens: number): number {
+  const inputTokens = Buffer.byteLength(JUDGE_INSTRUCTION, "utf8") + Math.ceil(maxOutputTokens * 1.1) + 200;
+  return microUsd(config.prices, inputTokens, JUDGE.tokenCeiling);
+}
+
 export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
   const costKey = costKeyOf(req.kind, req.courses);
   const maxOutputTokens = MAX_OUTPUT_TOKENS[costKey];
   const hardTokenCeiling = THINKING_FACTOR * maxOutputTokens;
+  const judge = config.outputJudge === "off" ? 0 : judgeWorstCaseMicroUsd(config, maxOutputTokens);
   return {
     costKey,
     cost: config.costs[costKey],
     limits: { maxOutputTokens, hardTokenCeiling },
-    reservedMicroUsd: microUsd(config.prices, inputTokenBound(req), hardTokenCeiling),
+    reservedMicroUsd: microUsd(config.prices, inputTokenBound(req), hardTokenCeiling) + judge,
     inputHash: inputHashOf(req),
   };
 }
@@ -139,6 +155,11 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
     const mw = user.minuteWindow?.start === minute ? user.minuteWindow : { start: minute, count: 0 };
     const dw = user.dayWindow?.day === day ? user.dayWindow : { day, count: 0 };
     if (mw.count >= config.perUserPerMinute) fail("resource-exhausted", "RATE_LIMITED", "Too many recipes in a short time");
+    const rejections = user.promptRejections?.day === day ? user.promptRejections.count : 0;
+    if (rejections >= config.rejectedPromptsPerDay) {
+      deps.logger.warn("prompt_rejection_limit", { uidHash: uidHash(uid), rejectionsToday: rejections, limit: config.rejectedPromptsPerDay });
+      fail("resource-exhausted", "USER_DAILY_LIMIT", "Daily limit for this account reached");
+    }
     const infra = user.infraRefunds?.day === day ? user.infraRefunds.count : 0;
     if (infra >= config.infraRefundsPerDay) {
       fail("resource-exhausted", "INFRA_FAILURE_LIMIT", "Generation failed too often today; try again tomorrow");
@@ -207,6 +228,11 @@ export type Outcome =
        * out. Its cost stays booked at the worst case.
        */
       swept?: boolean;
+      /**
+       * A fixed code when the failure points at prompt injection (a suspicious output rule, a model
+       * safety block, a judge rejection): counted in the user's `promptRejections` at settle.
+       */
+      rejection?: string;
     };
 
 /**
@@ -223,6 +249,8 @@ export interface Settled {
   actualMicroUsd: number;
   generation: GenerationDoc;
   user: UserDoc | undefined;
+  /** The account's prompt rejections today after this settle, when it counted one. */
+  rejectionsToday?: number | null;
 }
 
 /**
@@ -269,6 +297,7 @@ export async function settle(
     let balance = user?.balance ?? 0;
     let finalDoc: GenerationDoc;
     let refunded = false;
+    let rejectionsToday: number | null = null;
 
     if (outcome.ok) {
       userUpdate.consumedCredits = FieldValue.increment(gen.cost);
@@ -309,6 +338,10 @@ export async function settle(
         balance += gen.cost;
       } else {
         userUpdate.consumedCredits = FieldValue.increment(gen.cost);
+      }
+      if (outcome.rejection) {
+        rejectionsToday = (user?.promptRejections?.day === today ? user.promptRejections.count : 0) + 1;
+        userUpdate.promptRejections = { day: today, count: rejectionsToday };
       }
       finalDoc = {
         ...gen,
@@ -352,32 +385,125 @@ export async function settle(
       actualMicroUsd: actual,
       generation: finalDoc,
       user,
+      rejectionsToday,
     };
   }, { maxAttempts: SETTLE_ATTEMPTS });
 }
 
-async function runGenerator(deps: Deps, req: GenerateRequest, limits: GenerationLimits): Promise<Outcome> {
+/** Sum of two calls' usage; unknown when either is unknown (then the worst case stays booked). */
+function addUsage(a: LlmUsage | undefined, b: LlmUsage | undefined): LlmUsage | undefined {
+  if (!a || !b) return undefined;
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    thinkingTokens: a.thinkingTokens + b.thinkingTokens,
+    model: a.model,
+    finishReason: a.finishReason,
+  };
+}
+
+async function runGenerator(deps: Deps, uid: string, req: GenerateRequest, limits: GenerationLimits, config: RuntimeConfig): Promise<Outcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMINGS[req.kind].llmAbortMs);
+  const canary = newCanary();
+  const prompt = buildPrompt(req, canary);
+  let checked: { recipe?: Recipe; menu?: Menu };
+  let usage: LlmUsage | undefined;
   try {
-    const { output, usage } = await deps.generator.generate(req, controller.signal, limits);
+    const result = await deps.generator.generate(req, prompt, controller.signal, limits);
+    usage = result.usage;
     // The answer arrived too late to use, but its usage is known and is what gets booked.
     if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
-    if (req.kind === "menu") {
-      const menu = parseMenu(output, req.today, req.courses!);
-      return menu ? { ok: true, menu, usage } : { ok: false, failureClass: "content", reason: "invalid menu output", usage };
+    const check = checkOutput(result.output, { req, canary, systemInstruction: prompt.systemInstruction });
+    if (!check.ok) {
+      return {
+        ok: false,
+        failureClass: "content",
+        reason: `output rule ${check.rule}`,
+        usage,
+        ...(SUSPICIOUS_OUTPUT_RULES.has(check.rule) ? { rejection: `OUTPUT_${check.rule}` } : {}),
+      };
     }
-    const recipe = parseRecipe(output);
-    return recipe ? { ok: true, recipe, usage } : { ok: false, failureClass: "content", reason: "invalid recipe output", usage };
+    checked = check.value;
   } catch (e) {
-    const usage = e instanceof GenerationError ? e.usage : undefined;
-    if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
-    if (e instanceof GenerationError) return { ok: false, failureClass: e.failureClass, reason: e.message, usage };
+    const u = e instanceof GenerationError ? e.usage : undefined;
+    if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage: u };
+    if (e instanceof GenerationError) {
+      return { ok: false, failureClass: e.failureClass, reason: e.message, usage: u, ...(e.safety ? { rejection: e.safety } : {}) };
+    }
     deps.logger.error("Generator threw unexpectedly", { error: String(e).slice(0, 200) });
     return { ok: false, failureClass: "infra", reason: "generator error" };
   } finally {
     clearTimeout(timer);
   }
+  if (config.outputJudge === "off") return { ok: true, ...checked, usage };
+  return runJudge(deps, uid, req, config, checked, usage);
+}
+
+/**
+ * The second check (config/runtime `outputJudge`). "enforce": a verdict other than ok is a content
+ * failure and a prompt rejection; a judge that fails is an infrastructure failure (the answer is
+ * never delivered unchecked). "shadow": the verdict is only logged and the answer is delivered.
+ */
+async function runJudge(
+  deps: Deps,
+  uid: string,
+  req: GenerateRequest,
+  config: RuntimeConfig,
+  checked: { recipe?: Recipe; menu?: Menu },
+  genUsage: LlmUsage | undefined,
+): Promise<Outcome> {
+  const enforce = config.outputJudge === "enforce";
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), JUDGE.abortMs[req.kind]);
+  try {
+    const { verdict, usage } = await deps.judge.judge(checked, controller.signal);
+    const total = addUsage(genUsage, usage);
+    deps.logger.info("prompt_judge_verdict", { uidHash: uidHash(uid), kind: req.kind, verdict, mode: config.outputJudge });
+    if (verdict !== "ok" && enforce) {
+      return { ok: false, failureClass: "content", reason: `judge ${verdict}`, usage: total, rejection: `JUDGE_${verdict.toUpperCase()}` };
+    }
+    return { ok: true, ...checked, usage: total };
+  } catch (e) {
+    const usage = addUsage(genUsage, e instanceof GenerationError ? e.usage : undefined);
+    const reason = controller.signal.aborted ? "judge timeout" : e instanceof GenerationError ? e.message : "judge error";
+    deps.logger.warn("prompt_judge_failed", { uidHash: uidHash(uid), kind: req.kind, reason: reason.slice(0, 60), mode: config.outputJudge });
+    if (!enforce) return { ok: true, ...checked, usage };
+    return { ok: false, failureClass: "infra", reason, usage };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * A request refused for a name: logged with the fixed rule code (never the name), and, for a
+ * suspicious rule, counted in the account's `promptRejections` for today. Only an existing, open
+ * account is updated: an account without a document has no credits and cannot generate anyway.
+ */
+async function recordInputRejection(deps: Deps, uid: string, details: { field: string; rule: string }, suspicious: boolean): Promise<void> {
+  let rejectionsToday: number | null = null;
+  if (suspicious) {
+    try {
+      rejectionsToday = await deps.db.runTransaction(async (tx) => {
+        const ref = userRef(deps.db, uid);
+        const user = (await tx.get(ref)).data();
+        if (!user || isClosed(user)) return null;
+        const day = utcDay(deps.now());
+        const count = (user.promptRejections?.day === day ? user.promptRejections.count : 0) + 1;
+        tx.update(ref, { promptRejections: { day, count } });
+        return count;
+      });
+    } catch {
+      // The refusal itself must still reach the caller; the log line below shows the count is missing.
+    }
+  }
+  deps.logger.warn("prompt_input_rejected", {
+    uidHash: uidHash(uid),
+    field: details.field.startsWith("allergens") ? "allergen" : "ingredient",
+    rule: details.rule,
+    suspicious,
+    rejectionsToday,
+  });
 }
 
 /** One structured line per LLM call. Never ingredient names, prompts or outputs; the uid is hashed. */
@@ -409,16 +535,33 @@ export function logLlmCall(
     reservedMicroUsd: gen.reservedMicroUsd ?? null,
     estimatedMicroUsd: settled.settledHere ? settled.actualMicroUsd : null,
   });
+  if (!outcome.ok && outcome.rejection) {
+    deps.logger.warn("prompt_output_rejected", {
+      uidHash: uidHash(uid),
+      kind: gen.kind,
+      code: outcome.rejection,
+      charged: settled.settledHere ? settled.response.charged : null,
+      rejectionsToday: settled.rejectionsToday ?? null,
+    });
+  }
 }
 
 export async function generateRecipe(deps: Deps, caller: Caller, data: unknown): Promise<GenerateResponse> {
-  const req = validateGenerateRequest(data, deps.now());
+  let req: GenerateRequest;
+  try {
+    req = validateGenerateRequest(data, deps.now());
+  } catch (e) {
+    if (e instanceof HttpsError && isNameRejection(e.details)) {
+      await recordInputRejection(deps, caller.uid, e.details, isSuspiciousRejection(e.details));
+    }
+    throw e;
+  }
   const config = await deps.config();
   const plan = planFor(req, config);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
   if (!reservation.reserved) return { ...reservation.response, ...(await blockFlag(deps.db, reservation.user, config)) };
   const started = deps.now();
-  const outcome = await runGenerator(deps, req, plan.limits);
+  const outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
   const durationMs = deps.now() - started;
   const settled = await settle(deps, caller.uid, req.requestId, outcome, config);
   logLlmCall(

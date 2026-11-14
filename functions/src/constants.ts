@@ -61,6 +61,18 @@ export const TIMINGS: Readonly<Record<GenerationKind, { llmAbortMs: number; rese
   recipe: { llmAbortMs: 40_000, reservationMs: 60_000 },
   menu: { llmAbortMs: 120_000, reservationMs: 180_000 },
 };
+/**
+ * The optional output judge (config/runtime `outputJudge`, README "Prompt injection defences"):
+ * its answer is one enum value, so 32 visible tokens; output plus thinking observed above
+ * `tokenCeiling` aborts it. It runs after the generator, within the same reservation:
+ * llmAbortMs + abortMs stays below reservationMs for both kinds.
+ */
+export const JUDGE = {
+  maxOutputTokens: 32,
+  tokenCeiling: 2048,
+  abortMs: { recipe: 12_000, menu: 25_000 } as Readonly<Record<GenerationKind, number>>,
+} as const;
+
 /** generateRecipe's function timeout; covers the menu path, the longest one. */
 export const GENERATE_TIMEOUT_SECONDS = 180;
 export const SWEEP_GRACE_MS = 60_000;

@@ -10,8 +10,8 @@ import {
   LANGUAGES,
   MAX_ALLERGENS,
   MAX_INGREDIENTS,
-  NAME_MAX_LENGTH,
 } from "./constants";
+import { SUSPICIOUS_INPUT_RULES, normalizeName, type InputRule } from "./core/inputSafety";
 
 export const DIFFICULTIES = ["easy", "medium", "ambitious"] as const;
 export const DETAILS = ["brief", "standard", "stepByStep"] as const;
@@ -168,8 +168,6 @@ function oneOf<T extends string | number>(values: readonly T[], v: unknown, fiel
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-/** Letters (any script, with combining marks), digits, space and hyphen. */
-const NAME = /^[\p{L}\p{M}\p{N} -]+$/u;
 
 export function isIsoDate(v: unknown): v is string {
   if (typeof v !== "string" || !DATE.test(v)) return false;
@@ -177,13 +175,33 @@ export function isIsoDate(v: unknown): v is string {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
 }
 
+/**
+ * HttpsError.details of a refused name: `field` (e.g. "ingredients[3].name", "allergens[0]") and
+ * `rule` (an InputRule). `suspicious` rules count against the daily prompt-rejection limit.
+ */
+export interface NameRejection {
+  reason: "INVALID_REQUEST";
+  field: string;
+  rule: InputRule;
+}
+
+export function isNameRejection(details: unknown): details is NameRejection {
+  return typeof details === "object" && details !== null && typeof (details as NameRejection).rule === "string"
+    && typeof (details as NameRejection).field === "string";
+}
+
+export function isSuspiciousRejection(details: unknown): boolean {
+  return isNameRejection(details) && SUSPICIOUS_INPUT_RULES.has(details.rule);
+}
+
+/** A name normalised and checked by core/inputSafety.ts (CONTRACT.md "Ingredient (request)"). */
 function validName(v: unknown, field: string): string {
-  if (typeof v !== "string") invalid(`${field} must be a string`);
-  const name = v.normalize("NFC").trim().replace(/ {2,}/g, " ");
-  if (name.length === 0 || name.length > NAME_MAX_LENGTH || !NAME.test(name)) {
-    invalid(`${field} must be 1-${NAME_MAX_LENGTH} letters, digits, spaces or hyphens`);
+  const r = normalizeName(v);
+  if (!r.ok) {
+    const details: NameRejection = { reason: "INVALID_REQUEST", field, rule: r.rule };
+    throw new HttpsError("invalid-argument", `${field} is not accepted as a food name (${r.rule})`, details);
   }
-  return name;
+  return r.name;
 }
 
 export function validateConfig(v: unknown): RecipeConfig {
@@ -300,52 +318,6 @@ export function validateVerifyRequest(v: unknown): VerifyRequest {
   invalid("store must be play or appstore");
 }
 
-// ---------------------------------------------------------------------------------------------
-// LLM output validation. Anything that fails here is an "invalid output" content failure.
-
-function str(v: unknown, max: number, min = 1): string | null {
-  if (typeof v !== "string") return null;
-  const s = v.trim();
-  return s.length >= min && s.length <= max ? s : null;
-}
-
-function int(v: unknown, min: number, max: number): number | null {
-  return typeof v === "number" && Number.isInteger(v) && v >= min && v <= max ? v : null;
-}
-
-export function parseRecipe(v: unknown): Recipe | null {
-  if (!isObject(v)) return null;
-  const title = str(v.title, 120);
-  const summary = str(v.summary, 600);
-  const minutes = int(v.minutes, 1, 24 * 60);
-  const servings = int(v.servings, 1, 24);
-  const difficulty = (DIFFICULTIES as readonly unknown[]).includes(v.difficulty) ? (v.difficulty as Difficulty) : null;
-  if (!title || !summary || minutes === null || servings === null || !difficulty) return null;
-  if (!Array.isArray(v.ingredients) || v.ingredients.length === 0 || v.ingredients.length > 40) return null;
-  const ingredients: RecipeIngredient[] = [];
-  for (const raw of v.ingredients) {
-    if (!isObject(raw)) return null;
-    const amount = str(raw.amount, 60, 0);
-    const name = str(raw.name, 80);
-    if (amount === null || !name || typeof raw.fromPantry !== "boolean") return null;
-    ingredients.push({ amount, name, fromPantry: raw.fromPantry });
-  }
-  if (!Array.isArray(v.steps) || v.steps.length === 0 || v.steps.length > 30) return null;
-  const steps: string[] = [];
-  for (const raw of v.steps) {
-    const step = str(raw, 800);
-    if (!step) return null;
-    steps.push(step);
-  }
-  let tip: string | undefined;
-  if (v.tip !== undefined && v.tip !== null && v.tip !== "") {
-    const t = str(v.tip, 600);
-    if (!t) return null;
-    tip = t;
-  }
-  return { title, summary, minutes, servings, difficulty, ingredients, steps, ...(tip ? { tip } : {}) };
-}
-
 export function coursesFor(courses: 2 | 3): Course[] {
   return courses === 2 ? ["starter", "main"] : ["starter", "main", "dessert"];
 }
@@ -353,33 +325,4 @@ export function coursesFor(courses: 2 | 3): Course[] {
 export function menuDates(today: string): string[] {
   const start = Date.parse(`${today}T00:00:00Z`);
   return [0, 1, 2].map((d) => new Date(start + d * 86_400_000).toISOString().slice(0, 10));
-}
-
-/** A menu must have exactly the 3 expected days, each with exactly the requested courses; else it is invalid. */
-export function parseMenu(v: unknown, today: string, courses: 2 | 3): Menu | null {
-  if (!isObject(v) || !Array.isArray(v.days) || v.days.length !== 3) return null;
-  const dates = menuDates(today);
-  const wanted = coursesFor(courses);
-  const days: MenuDay[] = [];
-  for (let i = 0; i < 3; i++) {
-    const raw = v.days[i];
-    if (!isObject(raw) || raw.date !== dates[i]) return null;
-    if (!Array.isArray(raw.uses) || raw.uses.length > MAX_INGREDIENTS) return null;
-    const uses: string[] = [];
-    for (const u of raw.uses) {
-      const s = str(u, 80);
-      if (!s) return null;
-      uses.push(s);
-    }
-    if (!Array.isArray(raw.courses) || raw.courses.length !== wanted.length) return null;
-    const byCourse = new Map<Course, Recipe>();
-    for (const c of raw.courses) {
-      if (!isObject(c) || !(wanted as unknown[]).includes(c.course) || byCourse.has(c.course as Course)) return null;
-      const recipe = parseRecipe(c.recipe);
-      if (!recipe) return null;
-      byCourse.set(c.course as Course, recipe);
-    }
-    days.push({ date: dates[i], uses, courses: wanted.map((course) => ({ course, recipe: byCourse.get(course)! })) });
-  }
-  return { days };
 }

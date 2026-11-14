@@ -290,13 +290,14 @@ describe("worst case", () => {
     const plan = planFor(validateGenerateRequest(request({ kind: "menu", courses: 3 }), Date.now()), c);
     expect(plan.limits).toEqual({ maxOutputTokens: 20_000, hardTokenCeiling: 40_000 });
     expect(plan.reservedMicroUsd).toBeGreaterThan(40_000 * 7.5);
-    // 30 ingredients and 20 allergens of 40 characters in a script that tokenises badly.
-    const name = (i: number) => `${"ꯀ".repeat(38)}${String(i).padStart(2, "0")}`;
+    // 30 ingredients and 20 allergens of 40 characters, 36 of them two-byte Cyrillic letters (the
+    // heaviest the name rules allow).
+    const name = (i: number) => `абвгдежзийкл мнопрстуфхцч шщъыьэюяабвг${String(i).padStart(2, "0")}`;
     const heavy = validateGenerateRequest(request({
       ingredients: Array.from({ length: 30 }, (_, i) => ({ name: name(i), expiresOn: null, quantity: 9999 })),
       allergens: Array.from({ length: 20 }, (_, i) => name(i)),
     }), Date.now());
     const p = planFor(heavy, c);
-    expect(p.reservedMicroUsd - 8192 * 7.5).toBeGreaterThan(50 * 38 * 3 * 1.5);
+    expect(p.reservedMicroUsd - 8192 * 7.5).toBeGreaterThan(50 * 36 * 2 * 1.5);
   });
 });

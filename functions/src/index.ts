@@ -20,11 +20,11 @@ import { defineInt, defineSecret, defineString } from "firebase-functions/params
 import { CONSUME_APP_CHECK_TOKENS, GENERATE_TIMEOUT_SECONDS, IOS_BUNDLE_ID, REGION } from "./constants";
 import { RuntimeConfigCache, loadRuntimeConfig, type RuntimeConfig } from "./model";
 import type { Caller, Deps } from "./ports";
-import { GeminiRecipeGenerator } from "./adapters/gemini";
+import { GeminiOutputJudge, GeminiRecipeGenerator } from "./adapters/gemini";
 import { GooglePlayVerifier } from "./adapters/play";
 import { AppleAppStoreVerifier } from "./adapters/appstore";
 import { AppleSignInRevoker } from "./adapters/appleRevoke";
-import { EmulatorAppStore, EmulatorGenerator, EmulatorPlay, emulatorFakesEnabled } from "./emulatorFakes";
+import { EmulatorAppStore, EmulatorGenerator, EmulatorJudge, EmulatorPlay, emulatorFakesEnabled } from "./emulatorFakes";
 import { generateRecipe as generateCore, getGeneration as getGenerationCore } from "./core/generation";
 import { verifyPurchase as verifyCore } from "./core/purchases";
 import {
@@ -55,6 +55,14 @@ const geminiThinking = defineString("GEMINI_THINKING_LEVEL", {
   description: "Gemini 3+ thinking level (MINIMAL where the model supports it, else LOW). Ignored for gemini-2.x.",
 });
 const vertexLocation = defineString("VERTEX_LOCATION", { default: "global" });
+const judgeModel = defineString("GEMINI_JUDGE_MODEL", {
+  default: "",
+  description: "Vertex AI model id of the output judge (config/runtime outputJudge); empty means GEMINI_MODEL.",
+});
+const jailbreakFilter = defineString("GEMINI_JAILBREAK_FILTER", {
+  default: "false",
+  description: "true adds HARM_CATEGORY_JAILBREAK (Vertex Preview; only for models that support it).",
+});
 const appleAppId = defineInt("APPLE_APP_ID", { description: "Numeric App Store app id (App Store Connect > App Information)" });
 const appStoreKeyId = defineString("APPSTORE_KEY_ID", { description: "App Store Server API (In-App Purchase) key id" });
 const appStoreIssuerId = defineString("APPSTORE_ISSUER_ID", { description: "App Store Connect API issuer id" });
@@ -95,6 +103,7 @@ function getDeps(): Deps {
       play: new EmulatorPlay(),
       appStore: new EmulatorAppStore(),
       generator: new EmulatorGenerator(),
+      judge: new EmulatorJudge(),
       appleRevoker: { revokeWithAuthorizationCode: async () => undefined },
       now: () => Date.now(),
       logger,
@@ -118,6 +127,14 @@ function getDeps(): Deps {
       location: vertexLocation.value(),
       model: geminiModel.value(),
       thinkingLevel: geminiThinking.value(),
+      jailbreakFilter: jailbreakFilter.value() === "true",
+    }),
+    judge: new GeminiOutputJudge({
+      project: process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? "",
+      location: vertexLocation.value(),
+      model: judgeModel.value() || geminiModel.value(),
+      thinkingLevel: geminiThinking.value(),
+      jailbreakFilter: jailbreakFilter.value() === "true",
     }),
     appleRevoker: {
       revokeWithAuthorizationCode: (code) =>
