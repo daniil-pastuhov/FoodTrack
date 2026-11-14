@@ -259,7 +259,7 @@ internal fun MenuDocument(menu: Menu, today: LocalDate, onOpenDish: (day: Int, c
                 SectionHeader(menuDayLabel(resources, day.date, today))
                 if (day.uses.isNotEmpty()) {
                     Text(
-                        text = stringResource(R.string.recipe_menu_uses, day.uses.joinToString(", ")),
+                        text = stringResource(R.string.recipe_menu_uses, isolatedList(day.uses)),
                         modifier = Modifier.padding(bottom = LarderSpace.s2),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

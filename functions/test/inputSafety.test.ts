@@ -1,5 +1,6 @@
 /**
- * The name rules (core/inputSafety.ts): real product names in the app's ten languages must pass;
+ * The name rules (core/inputSafety.ts): real product names in the app's ten languages must pass
+ * (names in every other script are in the shared fixture, nameFixture.test.ts);
  * instruction text, homoglyphs, invisible characters, encoded payloads and markup must not.
  * Pure: needs no emulator.
  */
@@ -91,11 +92,14 @@ describe("malformed names are refused", () => {
     ["& butter", "CHARACTERS"],
     ["Dr. Oetker", "ok"],
     ["🍞 Bread", "CHARACTERS"],
-    ["Φέτα", "SCRIPT"],
-    ["寿司", "SCRIPT"],
-    ["חלב", "SCRIPT"],
-    ["حليب", "SCRIPT"],
-    ["٣ eggs", "SCRIPT"],
+    ["Φέτα", "ok"],
+    ["寿司", "ok"],
+    ["חלב", "ok"],
+    ["حليب", "ok"],
+    ["٣ eggs", "ok"],
+    ["½ ٣", "ok"],
+    ["Ⅻ eggs", "ok"], // NFKC: XII
+    ["௰ eggs", "CHARACTERS"], // a number that is not a decimal digit
     ["one two six ten red big hot new old", "WORDS"],
     ["Rindfleischetikettierungsueberwachungs", "WORD_LENGTH"],
   ])("%j -> %s", (name, expected) => {
@@ -103,7 +107,7 @@ describe("malformed names are refused", () => {
   });
 
   test("none of the malformed-input rules count as suspicious", () => {
-    for (const r of ["TYPE", "EMPTY", "TOO_LONG", "CHARACTERS", "SCRIPT", "WORDS", "WORD_LENGTH"] as const) {
+    for (const r of ["TYPE", "EMPTY", "TOO_LONG", "CHARACTERS", "WORDS", "WORD_LENGTH"] as const) {
       expect(SUSPICIOUS_INPUT_RULES.has(r)).toBe(false);
     }
   });

@@ -85,6 +85,89 @@ describe("honest answers pass and are converted to the public shape", () => {
   });
 });
 
+describe("item names in any script", () => {
+  const items = [
+    { name: "Φέτα ΠΟΠ", expiresOn: today, quantity: 1 },
+    { name: "豆腐", expiresOn: null, quantity: 1 },
+    { name: "חלב 3%", expiresOn: null, quantity: 1 },
+    { name: "Tomatoes", expiresOn: null, quantity: 4 },
+  ];
+  const quoted: Ing[] = [
+    { amount: "200 g", name: "Φέτα ΠΟΠ (feta)", pantryId: "p1" },
+    { amount: "300 g", name: "豆腐 (tofu)", pantryId: "p2" },
+    { amount: "100 ml", name: "חלב 3% (milk)", pantryId: "p3" },
+    { amount: "4", name: "tomatoes", pantryId: "p4" },
+  ];
+  const steps = ["Crumble the Φέτα ΠΟΠ over the tomatoes.", "Fry the 豆腐 until golden.", "Stir in the חלב and serve."];
+
+  test("an English recipe may name Greek, Chinese and Hebrew items; fromPantry follows the ids", () => {
+    const r = req({ ingredients: items });
+    const res = checkRecipeOutput(answer({ steps }, quoted), { req: r, canary: CANARY, systemInstruction: buildPrompt(r, CANARY).systemInstruction });
+    expect(res).toMatchObject({ ok: true });
+    if (res.ok) expect(res.value.ingredients.map((i) => i.fromPantry)).toEqual([true, true, true, true]);
+  });
+
+  test("a Russian recipe may name them too", () => {
+    const r = req({ ingredients: items }, { language: "ru" });
+    const ru = answer(
+      { title: "Салат с фетой", summary: "Быстрый салат из того, что есть.", steps: ["Нарежьте Φέτα и помидоры.", "Обжарьте 豆腐.", "Полейте חלב и подавайте."] },
+      quoted.map((q, i) => ({ ...q, name: ["Φέτα ΠΟΠ", "豆腐", "חלב 3%", "помидоры"][i] })),
+    );
+    expect(check(r, ru)).toBe("ok");
+  });
+
+  test("a script no item or allergen is written in is still refused", () => {
+    const r = req({ ingredients: items });
+    expect(check(r, answer({ summary: "Ein schnelles Gericht, गरम परोसें." }, quoted))).toBe("SCRIPT");
+    expect(check(r, answer({ tip: "مع الخبز" }, quoted))).toBe("SCRIPT");
+  });
+
+  test("Japanese and Korean bring the scripts written alongside them", () => {
+    const ja = req({ ingredients: [{ name: "明治おいしい牛乳", expiresOn: null, quantity: 1 }, { name: "Rice", expiresOn: null, quantity: 1 }] });
+    expect(check(ja, answer({ tip: "Use おいしい牛乳 if you have it." }, [{ amount: "1 cup", name: "牛乳", pantryId: "p1" }, { amount: "200 g", name: "rice", pantryId: "p2" }]))).toBe("ok");
+    const ko = req({ ingredients: [{ name: "辛라면", expiresOn: null, quantity: 1 }, { name: "Rice", expiresOn: null, quantity: 1 }] });
+    expect(check(ko, answer({ tip: "辛 means spicy." }, [{ amount: "1 pack", name: "라면", pantryId: "p1" }, { amount: "200 g", name: "rice", pantryId: "p2" }]))).toBe("ok");
+  });
+
+  test("an answer written mostly in an item's script, not the requested language, is refused", () => {
+    const r = req({ ingredients: items });
+    const greek = answer(
+      { title: "Σαλάτα με φέτα", summary: "Μια γρήγορη σαλάτα με φέτα και ντομάτες.", steps: ["Κόψτε τις ντομάτες σε κύβους.", "Προσθέστε τη φέτα από πάνω.", "Σερβίρετε αμέσως με ψωμί."] },
+      quoted.map((q) => ({ ...q, name: "Φέτα ΠΟΠ" })),
+    );
+    expect(check(r, greek)).toBe("SCRIPT");
+  });
+
+  test("an item name in a script does not let the answer write anything else in it", () => {
+    const r = req({ ingredients: items });
+    // Well under the 60 % share, but free text in a language no word list reads.
+    const scam = "请下载我们的应用程序并输入您的银行卡号以获取免费食谱";
+    expect(check(r, answer({ tip: scam }, quoted))).toBe("SCRIPT");
+    expect(check(r, answer({ steps: [...steps.slice(0, 2), "Serve with 豆腐 and 豆腐乳."] }, quoted))).toBe("SCRIPT");
+    // Quoting part of a name, in any case, is fine.
+    expect(check(r, answer({ tip: "ΦΈΤΑ from Greece is best; 豆腐 should be firm." }, quoted))).toBe("ok");
+  });
+
+  test("right-to-left item names need nothing special: no direction controls are added or accepted", () => {
+    const r = req({ ingredients: items });
+    expect(check(r, answer({ steps: ["Stir in the \u202Bחלב\u202C and serve.", "Warm it.", "Eat."] }, quoted))).toBe("CHARACTERS");
+  });
+
+  test("an allergen in another script is matched literally, as a substring for Chinese, Japanese, Korean and Thai", () => {
+    const base = req({ ingredients: [{ name: "Rice", expiresOn: null, quantity: 1 }, { name: "Tomatoes", expiresOn: null, quantity: 2 }] });
+    const withAllergen = (allergens: string[]) => ({ ...base, allergens });
+    const rice: Ing[] = [{ amount: "200 g", name: "rice", pantryId: "p1" }, { amount: "2", name: "tomatoes", pantryId: "p2" }];
+    expect(check(withAllergen(["花生"]), answer({}, [...rice, { amount: "1 tbsp", name: "花生 (roasted peanuts)", pantryId: "none" }]))).toBe("ALLERGEN");
+    expect(check(withAllergen(["땅콩"]), answer({}, [...rice, { amount: "1 tbsp", name: "땅콩 butter", pantryId: "none" }]))).toBe("ALLERGEN");
+    // A compound that only contains the allergen is not a quote of a name, so it is refused anyway.
+    expect(check(withAllergen(["花生"]), answer({}, [...rice, { amount: "1 tbsp", name: "炒花生", pantryId: "none" }]))).toBe("SCRIPT");
+    expect(check(withAllergen(["γάλα"]), answer({}, [...rice, { amount: "100 ml", name: "Γάλα", pantryId: "none" }]))).toBe("ALLERGEN");
+    expect(check(withAllergen(["חלב"]), answer({}, [...rice, { amount: "100 ml", name: "חלב", pantryId: "none" }]))).toBe("ALLERGEN");
+    // Literal only: a translation is not caught unless the word list has it ("花生" is not "peanut").
+    expect(check(withAllergen(["花生"]), answer({}, [...rice, { amount: "1 tbsp", name: "sesame seeds", pantryId: "none" }]))).toBe("ok");
+  });
+});
+
 describe("hostile answers are refused", () => {
   test.each<[string, Record<string, unknown>, OutputRule]>([
     ["https URL", { tip: "More at https://example.com" }, "URL"],

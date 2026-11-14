@@ -47,6 +47,35 @@ class RecipePaidWordingTest {
 
     @Test
     @Config(sdk = [34], qualifiers = "en")
+    fun newEnglishPluralsAgreeWithTheirCount() {
+        val r = context.resources
+        assertEquals("1 recipe left", r.getQuantityString(R.plurals.recipe_balance_left, 1, 1))
+        assertEquals("3 recipes left", r.getQuantityString(R.plurals.recipe_balance_left, 3, 3))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 1, 1).contains("at most 1 allergen,"))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20).contains("at most 20 allergens,"))
+        assert(r.getQuantityString(R.plurals.recipe_refused_menu, 4, 4).startsWith("Couldn't make a menu"))
+        assert(r.getQuantityString(R.plurals.recipe_refused_menu, 1, 1).startsWith("Couldn't make a menu"))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun newRussianPluralsAgreeWithTheirCount() {
+        val r = context.resources
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20).contains("20 аллергенов"))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 3, 3).contains("3 аллергенов"))
+        assert(r.getQuantityString(R.plurals.recipe_allergens_too_many, 21, 21).contains("21 аллергена"))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "nb")
+    fun norwegianBusyAndRateLimitSayNothingWasTaken() {
+        val r = context.resources
+        assertEquals("En annen oppskrift skrives fortsatt. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", r.getString(R.string.recipe_failed_server_busy))
+        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", r.getString(R.string.recipe_failed_rate_limited))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
     fun aJoinSaysWhatMovedOrWhatWasOwed() {
         val resources = context.resources
         assertEquals("12 recipes moved from this phone to your account", recipeMergedMessage(resources, 12))
@@ -75,6 +104,43 @@ class RecipePaidWordingTest {
     fun theNorwegianBusyStateIsCalm() {
         assertEquals("Serveren vår er opptatt", context.getString(R.string.recipe_writing_busy_title))
         assertEquals("Denne telefonen skyldte 2 oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.", recipeMergedMessage(context.resources, -2))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun busyAndRateLimitedSayWhyAndThatNothingWasTaken() {
+        assertEquals(
+            "Another recipe is still being written. Try again in a minute. No recipes were taken.",
+            context.getString(R.string.recipe_failed_server_busy)
+        )
+        assertEquals(
+            "Too many recipes in a short time. Try again in a minute. No recipes were taken.",
+            context.getString(R.string.recipe_failed_rate_limited)
+        )
+        assertEquals(
+            "Nothing was written: a recipe can take at most 20 allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.",
+            context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun tooManyAllergensInRussian() {
+        assertEquals(
+            "Ничего не составлено: рецепт может учесть не больше 20 аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.",
+            context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
+        )
+        assertEquals("Другой рецепт ещё составляется. Попробуйте через минуту. Рецепты не списаны.", context.getString(R.string.recipe_failed_server_busy))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "nb")
+    fun tooManyAllergensInNorwegian() {
+        assertEquals(
+            "Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst 20 allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.",
+            context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
+        )
+        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", context.getString(R.string.recipe_failed_rate_limited))
     }
 
     @Test

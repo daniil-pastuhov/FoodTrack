@@ -30,6 +30,9 @@ enum RecipeCreditsNotice: Equatable {
     /// `BUSY` from `deleteAccount` or `mergeBalance`: a recipe is still being written on the
     /// account. Nothing changed; try again in a moment.
     case accountBusy
+    /// A join of this install into an account moved recipes (`moved` > 0) or, after a store
+    /// refund, a debt (`moved` < 0). As Android's `PaidEvent.Merged`.
+    case merged(moved: Int)
 }
 
 /// Keys the paid route keeps on this phone, outside `AppSettings` and backups. A store
@@ -166,6 +169,9 @@ final class RecipeCredits: ObservableObject {
     @Published var notice: RecipeCreditsNotice?
     /// "This purchase couldn't be added", a T6 dialog.
     @Published var rejectedPurchase = false
+    /// The same dialog for a purchase this build can't add (`STORE_MISMATCH`): it says why, and
+    /// that the purchase was not added. Once per purchase per launch.
+    @Published var rejectedByBuild = false
     /// "Add this phone's recipes to your account?"
     @Published var pendingMerge: RecipePendingMerge?
 
@@ -218,7 +224,11 @@ final class RecipeCredits: ObservableObject {
     }
 
     /// Paid for and not added yet, for this account: what the "being confirmed" callout counts.
-    var unconfirmedHere: [UnconfirmedPurchase] { unconfirmed.filter { !$0.boughtByOtherAccount } }
+    /// Not one this build can't add (`STORE_MISMATCH`): that one would never be confirmed, and
+    /// its dialog says so.
+    var unconfirmedHere: [UnconfirmedPurchase] {
+        unconfirmed.filter { !$0.boughtByOtherAccount && !storeMismatched.contains($0.id) }
+    }
 
     /// Purchases that belong to another account, which only signing in to it can add.
     var showsOtherAccountPurchases: Bool { unconfirmed.contains { $0.boughtByOtherAccount } }
@@ -485,9 +495,11 @@ final class RecipeCredits: ObservableObject {
         } catch RecipeServerError.storeMismatch {
             // A build or setup bug that resending can't fix: not finished (that would lose
             // the purchase), not retried this launch, and no more buying.
-            storeMismatched.insert(transaction.id)
+            // It will never be confirmed from this build, so it leaves the "being confirmed"
+            // callout (see `unconfirmedHere`) and a dialog says what happened instead.
+            if storeMismatched.insert(transaction.id).inserted { rejectedByBuild = true }
             storeMismatch = true
-            return .notAddedYet
+            return .rejected
         } catch {
             note(error)
             return notAddedYet()
@@ -595,7 +607,10 @@ final class RecipeCredits: ObservableObject {
             case .signedIn(let merged):
                 // An install with nothing to ask about was merged on the way (the debt of a
                 // negative balance follows the person); its answer has the account's balance.
-                if let merged { apply(merged) }
+                if let merged {
+                    apply(merged)
+                    if merged.moved != 0 { notice = .merged(moved: merged.moved) }
+                }
                 callSucceeded()
                 await refreshBalance()
                 return true
@@ -625,6 +640,7 @@ final class RecipeCredits: ObservableObject {
             let response = try await accountService.completeMerge(merge)
             account = accountService.state
             apply(response)
+            if response.moved != 0 { notice = .merged(moved: response.moved) }
             callSucceeded()
         } catch {
             await accountService.cancelMerge()

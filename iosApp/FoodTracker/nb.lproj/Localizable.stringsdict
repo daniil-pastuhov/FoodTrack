@@ -866,5 +866,53 @@
             <string>Klarte ikke å lage menyen nå. Prøv igjen senere. %d oppskrifter ble trukket.</string>
         </dict>
     </dict>
+    <key>recipe_allergens_too_many</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %d allergen, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+            <key>other</key>
+            <string>Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %d allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_moved</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d oppskrift flyttet fra denne telefonen til kontoen din</string>
+            <key>other</key>
+            <string>%d oppskrifter flyttet fra denne telefonen til kontoen din</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_debt</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Denne telefonen skyldte %d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</string>
+            <key>other</key>
+            <string>Denne telefonen skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

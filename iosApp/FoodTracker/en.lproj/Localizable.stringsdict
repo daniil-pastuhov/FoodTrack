@@ -866,5 +866,53 @@
             <string>Couldn't write the menu right now. Try again later. %d recipes were taken.</string>
         </dict>
     </dict>
+    <key>recipe_allergens_too_many</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Nothing was written: a recipe can take at most %d allergen, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</string>
+            <key>other</key>
+            <string>Nothing was written: a recipe can take at most %d allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_moved</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d recipe moved from this phone to your account</string>
+            <key>other</key>
+            <string>%d recipes moved from this phone to your account</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_debt</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>This phone owed %d recipe after a store refund. It was taken from your account.</string>
+            <key>other</key>
+            <string>This phone owed %d recipes after a store refund. They were taken from your account.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

@@ -59,9 +59,15 @@ enum RecipeFailure: Equatable {
     case earlierRefused(taken: Int)
     /// The server refused this ticked item's name; the request went on without it.
     case itemLeftOut(String)
+    /// The server refused this ticked item's name and it couldn't be left out (the only one, or
+    /// leaving one out was already tried). Nothing was written or taken.
+    case itemNotSent(String)
     /// An allergen that can't be sent: nothing was written, since a recipe without it could be
     /// unsafe.
     case allergenRefused(String)
+    /// More allergens are set than the server takes in one request (`limit`). Nothing was
+    /// written: none is ever left out.
+    case tooManyAllergens(limit: Int)
 }
 
 /// The screens pushed from the Recipe tab.
@@ -233,6 +239,11 @@ final class RecipeViewModel: ObservableObject {
         let kind: RecipeKind = mode == .menu ? .menu : .recipe
         let request = request(for: items)
         guard !request.items.isEmpty, phase == .idle else { return }
+        // More than the server takes: stopped and said so, never sent with some left out.
+        if Set(request.allergens.compactMap(RecipeWire.cleanName).map { $0.lowercased() }).count > RecipeWire.maxAllergens {
+            failure = .tooManyAllergens(limit: RecipeWire.maxAllergens)
+            return
+        }
         if let allergen = RecipeWire.unsendableAllergen(request.allergens) {
             failure = .allergenRefused(allergen)
             return
@@ -395,7 +406,7 @@ final class RecipeViewModel: ObservableObject {
         case .ingredient(let index, let name)?:
             refusedNames.insert(name.lowercased())
             guard !afterRefusal, let next = RecipeWire.dropping(ingredientAt: index, from: wire, newID: UUID()) else {
-                stopServerWrite(with: .itemLeftOut(name))
+                stopServerWrite(with: .itemNotSent(name))
                 return
             }
             failure = .itemLeftOut(name)

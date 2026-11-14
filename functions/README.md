@@ -386,10 +386,10 @@ Only a caller with credits reaches the model, and an answer goes back only to th
 
 | # | attacker's goal | before | now |
 |---|---|---|---|
-| 1 | Use the paid endpoint as a general LLM (off-topic text in recipe fields), or get harmful, sexual, hateful or dangerous content, including dangerous "recipes", shown under the app's name | Names letters/digits/space/hyphen in a JSON block; schema-shaped output; safety filters at MEDIUM | Names must look like food names (structural limits + a meta-word list); system/data split; safety filters LOW for hate, harassment, sexual; per-field length and step-count bounds; non-food, drug and solicitation word lists; script and language check; optional judge |
+| 1 | Use the paid endpoint as a general LLM (off-topic text in recipe fields), or get harmful, sexual, hateful or dangerous content, including dangerous "recipes", shown under the app's name | Names letters/digits/space/hyphen in a JSON block; schema-shaped output; safety filters at MEDIUM | Names must look like food names (structural limits + a meta-word list), in any script; system/data split; safety filters LOW for hate, harassment, sexual; per-field length and step-count bounds; non-food, drug and solicitation word lists; script and language check; optional judge |
 | 2 | Override the instructions: change language, ignore allergens or diet, ignore the format, reveal the prompt | One instruction block mixing settings with a "treat as data" sentence | Every instruction in the system instruction, the data block declared untrusted; allergens and diet checked in the answer (refused if violated); language checked by script; canary and verbatim-leak check |
 | 3 | Inflate cost (longest output or thinking), or fail on purpose to farm refunds | `maxOutputTokens`, token ceiling, refund allowances | Unchanged, plus schema `maxItems` on steps and ingredients and `maximum` on minutes, and the daily rejection lock; refused answers are content failures under the existing allowance |
-| 4 | Attack the client or the reader: URLs, contact details, markup, control or bidi characters, fake UI or calls to action, very long strings | Lengths 120/600/800 per field only | Refused: links, schemes, domains, e-mail, `@` handles, 8+ digit phone-like runs, HTML, entities, markdown, braces, backslashes, controls, format/bidi/zero-width, private-use, other scripts, passwords/payments/app stores/messengers wording, 10× repeated characters; tighter lengths. `uses` in a menu is now the user's own names, never model text |
+| 4 | Attack the client or the reader: URLs, contact details, markup, control or bidi characters, fake UI or calls to action, very long strings | Lengths 120/600/800 per field only | Refused: links, schemes, domains, e-mail, `@` handles, 8+ digit phone-like runs, HTML, entities, markdown, braces, backslashes, controls, format/bidi/zero-width, private-use, scripts none of the request's names use, passwords/payments/app stores/messengers wording, 10× repeated characters; tighter lengths. `uses` in a menu is now the user's own names, never model text |
 | 5 | Stored injection: a stored recipe fed into a later prompt | Not fed back (implicit) | **Not fed back, by construction**: `buildPrompt` takes only the validated request; no stored recipe, menu, failure reason or log is ever read into a prompt (tested in `test/injection.test.ts`) |
 
 ### Layers
@@ -401,17 +401,24 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    data, that each entry is only a food item (or a food to avoid), that anything else is ignored,
    and that settings, diet and allergens come only from the instruction. A per-request random
    marker (`LRD-` + 16 hex) ends the system instruction; it never appears in the user turn.
-2. **Input names** (`src/core/inputSafety.ts`): NFKC, look-alike folding, invisible and bidi
-   characters removed, whitespace collapsed; then 1–40 characters, ≤ 8 words, ≤ 28 characters per
-   word part; Latin and Cyrillic letters only (the scripts of the ten app languages: en, nb, de,
-   es, fr, it, pl, sv in Latin with diacritics, ru, uk in Cyrillic), ASCII digits, space, hyphen,
-   and `' % , . / &` only where product names use them. Suspicious patterns are refused: Latin and
-   Cyrillic mixed in one word (homoglyphs), encoded-looking words, repetition, spaced-out letters,
-   a short multilingual list of words about the model (`ignore`, `instructions`, `prompt`,
-   `system`, `assistant`, `forget`, `json`...) also when written with Cyrillic look-alikes or
-   digits. The full rule is in CONTRACT.md "Name rules"; the tests pass about 115 real product
-   names in the ten languages (`7-Up`, `Crème fraîche 15%`, `Сметана 20%`, `Kjøttdeig av
-   storfe`, `Ben & Jerry's`, `Lettmelk 0,5%`...).
+2. **Input names** (`src/core/inputSafety.ts`): NFKC, look-alike folding of apostrophes, dashes
+   and the Arabic percent and decimal signs, invisible and bidi control characters removed,
+   whitespace collapsed; then 1–40 code points, ≤ 8 words, ≤ 28 code points per word part (no part
+   limit in scripts written without spaces: Chinese, Japanese, Thai, Lao, Khmer, Burmese).
+   Letters, combining marks and decimal digits of **any script** are accepted: pantry names come
+   from Open Food Facts in the shop's language, which has nothing to do with the ten recipe
+   languages. Space, hyphen and `' % , . / &` only where product names use them; no other
+   punctuation, symbols or emoji. Combining marks: at most 4 per letter (1 on a Latin, Cyrillic or
+   Greek letter), no repeats, at most 60 % of the name. Suspicious patterns are refused: Latin,
+   Cyrillic and Greek mixed inside one word part (the look-alike scripts; other mixing, such as
+   kanji with kana or Chinese with a Latin brand, is normal), encoded-looking words, repetition,
+   spaced-out letters, a short list of words about the model (`ignore`, `instructions`, `prompt`,
+   `system`, `assistant`, `forget`, `json`...) in the ten app languages, also when written with
+   Cyrillic or Greek look-alikes or digits. The full rule is in CONTRACT.md "Name rules";
+   `test/fixtures/names.json` holds 180 real product names in 25 languages (`Crème fraîche
+   15%`, `Сметана 20%`, `Φέτα ΠΟΠ`, `חלב 3% תנובה`, `可口可乐 Zero`, `明治おいしい牛乳`,
+   `서울우유 1L`, `अमूल दूध`...) and 174 adversarial inputs, with what the server and both
+   apps make of each; all three are tested against it.
 3. **Model side** (`src/adapters/gemini.ts`). Safety settings are sent explicitly on every call
    (Vertex documents that from gemini-3.5-flash the default is OFF): harassment, hate speech and
    sexual content `BLOCK_LOW_AND_ABOVE`; dangerous content `BLOCK_MEDIUM_AND_ABOVE`, because
@@ -434,7 +441,7 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `CHARACTERS`, `MARKUP` | Controls, format/bidi/zero-width, private-use, unassigned; HTML tags, entities, markdown links/bold/code/headings/quotes, braces, backslash, pipes, percent-encoding | yes |
    | `URL`, `CONTACT`, `PHONE` | Schemes (`https://`, `javascript:`, `tel:`...), `www.`, domains with common TLDs, any `@`, 8+ digits in a phone-like run | yes |
    | `LEAK` | The canary; 8 consecutive words of the system instruction; the prompt's block names | yes |
-   | `SCRIPT`, `LANGUAGE` | A letter outside Latin/Cyrillic; less than 60 % of letters in the requested language's script | yes |
+   | `SCRIPT`, `LANGUAGE` | A letter in a script that is neither Latin, Cyrillic, nor one the request's item and allergen names use (Japanese names also allow Han, Hiragana and Katakana; Korean, Hangul and Han), or a run of such letters that is not part of one of those names (an item may be quoted in its own script, nothing else written in it); less than 60 % of all letters in the requested language's script | yes |
    | `REPETITION` | A character 10× in a row, a word 4× in a row, duplicate steps | yes |
    | `PANTRY_REF`, `NO_PANTRY` | A `pantryId` or `uses` entry that is not a sent item; a recipe or menu that uses no pantry item | yes |
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
@@ -516,7 +523,25 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   recipe) is not detected without the judge. Economically it is poor: at least USD 0.19 per
   answer, bounded per day, for text any free chatbot produces.
 - **The language check** is a script check: it catches English for Russian but not German for
-  Norwegian.
+  Norwegian. Because item names may be in any script, an answer may quote the request's own
+  names in their script; any other run of letters outside Latin and Cyrillic is refused, so an
+  item name cannot be used to unlock free text in a language the word lists do not read. The cost:
+  an honest answer that writes a compound around a quoted name ("炒花生" for an item "花生") is
+  refused and regenerated.
+- **The meta-word list covers the ten app languages only.** Since names are accepted in every
+  script, an instruction written in Chinese, Arabic, Hebrew, Hindi, Greek... ("忽略之前的指令")
+  passes the input rule as a plain name (the fixture records this). It is still only data in the
+  untrusted block, and what the model does with it is bounded by the output checks, exactly as
+  for a plain-language instruction in English. Extending the list to more languages was not done:
+  every entry has to be checked against real product names in that language.
+- **Allergens in other scripts are matched literally.** The allergen and diet word lists cover the
+  ten app languages. An allergen typed as `花生` or `γάλα` is matched only as written (folded, and
+  as a substring for Chinese, Japanese, Korean and Thai): an answer that writes "peanuts" or
+  "milk" instead is not caught. The prompt still tells the model to avoid it.
+- **Look-alike spoofing is only checked between Latin, Cyrillic and Greek.** Other confusables
+  (Armenian `օ`, Cherokee letters, mathematical letters NFKC does not fold) are not mixed-script
+  errors; NFKC folds fullwidth and mathematical alphanumerics, and the meta-word list is the only
+  thing that cares what a word looks like.
 - **Prompt disclosure** has little value (the prompt is public); the canary and n-gram checks stop
   verbatim restatement, not paraphrase or translation.
 - **The model can still be wrong honestly**, and a refused honest answer costs the user a credit

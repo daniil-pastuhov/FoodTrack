@@ -5,6 +5,15 @@ import Foundation
 extension L10n {
     private static func text(_ key: String) -> String { NSLocalizedString(key, comment: "") }
 
+    /// Text from the person or the model (an item name, an amount) set inside one of our lines,
+    /// wrapped in a first-strong isolate (U+2068 ... U+2069): a Hebrew or Arabic name keeps its
+    /// own direction without reordering the sentence or the amount around it. SwiftUI's `Text`
+    /// has no BidiFormatter, so this is the standard Unicode isolate, the same one Android's
+    /// recipe screens use (`isolated` in RecipeLabels.kt).
+    static func isolated(_ embedded: String) -> String { "\u{2068}\(embedded)\u{2069}" }
+    /// Names joined with ", ", each isolated.
+    static func isolatedList(_ names: [String]) -> String { names.map(isolated).joined(separator: ", ") }
+
     static var recipeTab: String { text("recipe_tab") }
     static var recipeLede: String { text("recipe_lede") }
     static var recipeSavedButton: String { text("recipe_saved_button") }
@@ -154,7 +163,7 @@ extension L10n {
     static var recipeSettingsAccount: String { text("recipe_settings_account") }
     static var recipeSettingsNoAccount: String { text("recipe_settings_no_account") }
     static func recipeAllergensNote(_ allergens: [String]) -> String {
-        String(format: text("recipe_allergens_note"), allergens.isEmpty ? text("recipe_allergens_none") : allergens.joined(separator: ", "))
+        String(format: text("recipe_allergens_note"), allergens.isEmpty ? text("recipe_allergens_none") : isolatedList(allergens))
     }
     static func recipeLanguageName(_ language: RecipeLanguage?) -> String {
         guard let language else {
@@ -261,8 +270,11 @@ extension L10n {
     static func recipeEarlierArrived(_ kind: RecipeKind) -> String {
         paid(kind == .menu ? "recipe_earlier_arrived_menu" : "recipe_earlier_arrived")
     }
-    static func recipeItemLeftOut(_ name: String) -> String { String(format: paid("recipe_item_left_out"), name) }
-    static func recipeAllergenRefused(_ name: String) -> String { String(format: paid("recipe_allergen_refused"), name) }
+    static func recipeItemLeftOut(_ name: String) -> String { String(format: paid("recipe_item_left_out"), isolated(name)) }
+    static func recipeItemNotSent(_ name: String) -> String { String(format: paid("recipe_item_not_sent"), isolated(name)) }
+    static func recipeAllergenRefused(_ name: String) -> String { String(format: paid("recipe_allergen_refused"), isolated(name)) }
+    /// More allergens set than one request takes (`limit`, the server's 20).
+    static func recipeAllergensTooMany(_ limit: Int) -> String { plural("recipe_allergens_too_many", limit) }
     /// Every server instance busy: sent again in a moment.
     static var recipeServerBusyRetrying: String { paid("recipe_server_busy_retrying") }
     static var recipeServerBusyRetryingTitle: String { paid("recipe_server_busy_retrying_title") }
@@ -307,6 +319,8 @@ extension L10n {
     }
     static var recipeRejectedTitle: String { paid("recipe_rejected_title") }
     static var recipeRejectedMessage: String { paid("recipe_rejected_message") }
+    /// `STORE_MISMATCH`: this build can't add App Store purchases.
+    static var recipeRejectedBuildMessage: String { paid("recipe_rejected_build_message") }
 
     // Account
     static var recipeYourRecipes: String { paid("recipe_your_recipes") }
@@ -343,6 +357,11 @@ extension L10n {
     static var recipeAccountDeleted: String { paid("recipe_account_deleted") }
     static var recipeAccountActionFailed: String { paid("recipe_account_action_failed") }
     static var recipeAccountBusy: String { paid("recipe_account_busy") }
+    /// What a join of this install into an account moved: recipes, or a debt after a store
+    /// refund (`moved` < 0). Android's `recipe_merged_moved` / `recipe_merged_debt`.
+    static func recipeMerged(moved: Int) -> String {
+        moved >= 0 ? plural("recipe_merged_moved", moved) : plural("recipe_merged_debt", -moved)
+    }
     static var recipePurchasesBlocked: String { paid("recipe_purchases_blocked") }
     static var recipeOtherAccountTitle: String { paid("recipe_other_account_title") }
     static func recipeOtherAccountMessage(_ credits: Int) -> String { plural("recipe_other_account_message", credits) }
@@ -355,7 +374,7 @@ extension L10n {
         String(format: paid("recipe_menu_summary"), courses >= 3 ? 3 : 2, servings)
     }
     static func recipeMenuToday(_ date: String) -> String { String(format: paid("recipe_menu_today"), date) }
-    static func recipeMenuUses(_ items: String) -> String { String(format: paid("recipe_menu_uses"), items) }
+    static func recipeMenuUses(_ items: [String]) -> String { String(format: paid("recipe_menu_uses"), isolatedList(items)) }
     static func recipeCourseName(_ course: RecipeCourse) -> String {
         switch course {
         case .starter: return paid("recipe_course_starter")

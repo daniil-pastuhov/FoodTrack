@@ -858,6 +858,11 @@
         <item quantity="one">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
         <item quantity="other">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
     </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">%1$d oppskrift igjen</item>
+        <item quantity="other">%1$d oppskrifter igjen</item>
+    </plurals>
+    <string name="recipe_menu_short_none">Du har ingen oppskrifter igjen.</string>
     <string name="recipe_writing_server_title">Skriver oppskriften din</string>
     <string name="recipe_writing_server_body">Noen sekunder. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.</string>
     <string name="recipe_writing_menu_title">Planlegger tre dager</string>
@@ -865,21 +870,33 @@
     <string name="recipe_offline_title">Ingen tilkobling</string>
     <string name="recipe_offline_body">Oppskrifter fra pakken trenger internett. De gratis valgene nedenfor virker fortsatt.</string>
     <string name="recipe_failed_server">Kunne ikke skrive oppskriften. Ingen oppskrift ble trukket.</string>
+    <string name="recipe_failed_server_menu">Klarte ikke å lage menyen. Ingen oppskrifter ble trukket.</string>
     <string name="recipe_failed_limit_today">Det er grensen for i dag. Prøv igjen i morgen. Ingen oppskrifter ble trukket.</string>
     <string name="recipe_failed_trouble_today">Vi har problemer med å skrive oppskrifter akkurat nå. Prøv igjen i morgen. Ingen oppskrifter ble trukket.</string>
     <string name="recipe_failed_server_later">Fikk ikke skrevet den nå. Prøv igjen senere. Ingen oppskrifter ble trukket.</string>
-    <string name="recipe_left_out">Skrevet uten «%1$s»: det navnet kunne ikke sendes.</string>
+    <string name="recipe_failed_server_busy">En annen oppskrift skrives fortsatt. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_failed_rate_limited">For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_left_out">«%1$s» ble utelatt: det navnet kunne ikke sendes.</string>
     <string name="recipe_ingredient_not_sent">«%1$s» kunne ikke sendes. Fjern haken eller gi varen et nytt navn, og prøv igjen. Ingen oppskrifter ble trukket.</string>
-    <string name="recipe_allergen_not_sent">Allergenet ditt «%1$s» kunne ikke sendes, så ingenting ble skrevet. Gi det et nytt navn under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+    <string name="recipe_allergen_not_sent">Allergenet ditt «%1$s» kunne ikke sendes, så ingenting ble skrevet: en oppskrift uten det er kanskje ikke trygg. Gi det et nytt navn under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %1$d allergen, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</item>
+        <item quantity="other">Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst %1$d allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.</item>
+    </plurals>
     <plurals name="recipe_refused">
         <item quantity="one">Kunne ikke lage en oppskrift av disse varene. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
         <item quantity="other">Kunne ikke lage en oppskrift av disse varene. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">Kunne ikke lage en meny av disse varene. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
+        <item quantity="other">Kunne ikke lage en meny av disse varene. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre. Prøv færre eller andre varer.</item>
     </plurals>
     <string name="recipe_paused_title">Oppskrifter fra pakker er satt på pause</string>
     <plurals name="recipe_paused_body">
         <item quantity="one">Den %1$d oppskriften din er trygg. De gratis valgene nedenfor virker fortsatt.</item>
         <item quantity="other">De %1$d oppskriftene dine er trygge. De gratis valgene nedenfor virker fortsatt.</item>
     </plurals>
+    <string name="recipe_paused_body_none">De gratis valgene nedenfor virker fortsatt.</string>
     <plurals name="recipe_added">
         <item quantity="one">%1$d oppskrift lagt til</item>
         <item quantity="other">%1$d oppskrifter lagt til</item>
@@ -929,8 +946,8 @@
         <item quantity="other">oppskrifter i kontoen din</item>
     </plurals>
     <string name="recipe_signed_in_with">Logget inn med %1$s</string>
-    <string name="recipe_signed_in_add_apple">Logg inn på samme måte på en annen telefon for å bruke dem der. For å bruke en iPhone også, legg til Apple.</string>
-    <string name="recipe_signed_in_add_google">Logg inn på samme måte på en annen telefon for å bruke dem der. For å logge inn med Google også, legg til Google.</string>
+    <string name="recipe_signed_in_add_apple">Logg inn på samme måte på en annen telefon for å bruke dem der. For å kunne logge inn med Apple også, legg det til her.</string>
+    <string name="recipe_signed_in_add_google">Logg inn på samme måte på en annen telefon for å bruke dem der. For å kunne logge inn med Google også, legg det til her.</string>
     <string name="recipe_signed_in_both">Logg inn med én av dem på en annen telefon, Android eller iPhone, for å bruke dem der.</string>
     <string name="recipe_add_sign_in">Legg til innlogging med %1$s</string>
     <string name="recipe_sign_out">Logg ut</string>
@@ -964,7 +981,7 @@
         <item quantity="one">%1$d oppskrift på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</item>
         <item quantity="other">%1$d oppskrifter på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</item>
     </plurals>
-    <string name="recipe_rejected_build_body">Denne kopien av appen kan ikke legge til kjøp fra butikken. Google Play refunderer vanligvis et kjøp som ikke er lagt til innen tre dager, så du trenger ikke gjøre noe. For å kjøpe oppskrifter, installer appen fra Google Play.</string>
+    <string name="recipe_rejected_build_body">Denne kopien av appen er satt opp for en annen butikk, så den kan ikke legge til kjøp fra Google Play. Kjøpet ble ikke lagt til oppskriftene dine. Google Play refunderer vanligvis et kjøp som ikke er lagt til innen tre dager. For å kjøpe oppskrifter, installer appen fra Google Play.</string>
     <plurals name="recipe_merged_moved">
         <item quantity="one">%1$d oppskrift flyttet fra denne telefonen til kontoen din</item>
         <item quantity="other">%1$d oppskrifter flyttet fra denne telefonen til kontoen din</item>

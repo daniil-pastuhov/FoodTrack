@@ -24,6 +24,14 @@ fun recipeLanguageEnglishName(code: String): String = when (code) {
     else -> "English"
 }
 
+/** At most [MAX_RECIPE_INGREDIENT_NAME] UTF-16 units, never splitting a character outside the
+ *  Basic Multilingual Plane (an emoji, a rare CJK ideograph) in half. Any script passes through. */
+private fun cutName(name: String): String {
+    if (name.length <= MAX_RECIPE_INGREDIENT_NAME) return name
+    val end = if (name[MAX_RECIPE_INGREDIENT_NAME - 1].isHighSurrogate()) MAX_RECIPE_INGREDIENT_NAME - 1 else MAX_RECIPE_INGREDIENT_NAME
+    return name.substring(0, end)
+}
+
 /** One item as a model sees it. */
 data class RecipePromptItem(val name: String, val daysRemaining: Int)
 
@@ -51,7 +59,7 @@ fun buildOnDeviceRecipePrompt(
     val lines = items
         .sortedBy { it.daysRemaining }
         .take(MAX_RECIPE_INGREDIENTS)
-        .joinToString("\n") { "- ${it.name.trim().take(MAX_RECIPE_INGREDIENT_NAME)} (${dayPhrase(it.daysRemaining)})" }
+        .joinToString("\n") { "- ${cutName(it.name.trim())} (${dayPhrase(it.daysRemaining)})" }
     val rules = buildList {
         add(
             "Difficulty: " + when (normalized.difficulty) {
@@ -81,7 +89,8 @@ fun buildOnDeviceRecipePrompt(
             RecipeDiet.GLUTEN_FREE -> add("Diet: gluten-free")
             RecipeDiet.DAIRY_FREE -> add("Diet: dairy-free")
         }
-        val clean = cleanAllergens(allergens).map { it.take(MAX_RECIPE_INGREDIENT_NAME) }
+        // Never cut: an allergen shortened to a different word would not protect anyone.
+        val clean = cleanAllergens(allergens)
         if (clean.isNotEmpty()) add("Never use anything containing: " + clean.joinToString(", "))
     }
     val language = recipeLanguageEnglishName(languageCode)

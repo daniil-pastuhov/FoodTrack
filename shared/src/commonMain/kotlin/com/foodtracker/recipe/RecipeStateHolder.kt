@@ -72,15 +72,28 @@ sealed interface RecipeEvent {
      *  without it could be unsafe, so it is never left out. */
     data class AllergenNotSent(val allergen: String) : RecipeEvent
 
+    /** More allergens are set than the server takes in one request ([limit]). Nothing was
+     *  written or taken: none is ever left out, since a recipe written without it could be
+     *  unsafe. */
+    data class TooManyAllergens(val count: Int, val limit: Int) : RecipeEvent
+
     /** The phone's model failed or returned something that isn't a recipe. */
     data object Failed : RecipeEvent
 
     /** The server couldn't write it, and nothing was taken. */
     data object ServerFailed : RecipeEvent
 
-    /** The server couldn't write it for a reason that asking again now won't fix (busy, a
-     *  limit, or a reason this app doesn't know yet). Nothing was taken. */
+    /** The server couldn't write it for a reason that asking again now won't fix (every
+     *  instance busy, or a reason this app doesn't know yet). Nothing was taken. */
     data object ServerFailedLater : RecipeEvent
+
+    /** Another recipe of this account was still being written (BUSY) for as long as the app
+     *  waited. Nothing was taken. */
+    data object ServerBusy : RecipeEvent
+
+    /** Too many requests in a short time (RATE_LIMITED, refused as it was sent). Nothing was
+     *  taken. */
+    data object ServerRateLimited : RecipeEvent
 
     /** A daily limit (this account's, or the whole service's) was reached. Nothing was taken;
      *  it works again tomorrow. */

@@ -27,7 +27,7 @@ struct RecipeMenuView: View {
                     SectionHeader(Self.dayTitle(day.date))
                         .padding(.top, LarderSpace.s2)
                     if !day.uses.isEmpty {
-                        Text(L10n.recipeMenuUses(day.uses.joined(separator: ", ")))
+                        Text(L10n.recipeMenuUses(day.uses))
                             .larderFont(.bodySm)
                             .foregroundStyle(LarderColor.onSurfaceVariant)
                             .fixedSize(horizontal: false, vertical: true)

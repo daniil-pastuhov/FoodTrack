@@ -340,69 +340,84 @@ enum RecipeWire {
 
     static let maxWordsPerName = 8
     static let maxCharsPerWordPart = 28
+    /// Combining marks kept on one letter; on a Latin, Cyrillic or Greek letter only one.
+    static let maxMarksPerLetter = 4
+    static let maxMarksPerCasedLetter = 1
+    /// Raw input past this many UTF-16 units is cut before any work is done on it.
+    static let rawInputLimit = 400
 
     /// A name cleaned to what the server's "Name rules" accept (CONTRACT.md; the server's own
-    /// check is `functions/src/core/inputSafety.ts`), or nil when nothing is left:
+    /// check is `functions/src/core/inputSafety.ts`), or nil when nothing is left. The same steps
+    /// as Android's `cleanWireName` (shared/.../RecipeWireName.kt); both are checked against
+    /// functions/test/fixtures/names.json. Lengths are code points (Unicode scalars), as on the
+    /// server.
     ///
     /// - normalised as the server does: NFKC, apostrophe and dash look-alikes folded to `'` and
-    ///   `-`, `⁄` to `/`, invisible and bidirectional characters removed, every other space or
-    ///   control character a space;
-    /// - letters only of the Latin and Cyrillic scripts, with at most one combining mark each;
-    ///   ASCII digits, space and hyphen; `' % , . / &` kept only where the server allows them;
-    ///   anything else (Greek, CJK, emoji, other digits, other punctuation) becomes a space;
-    /// - runs of spaces and of hyphens collapsed, at most 8 words, any hyphen part longer than 28
-    ///   characters dropped, and at most 40 UTF-16 units (cut between characters).
+    ///   `-`, `⁄` to `/`, the Arabic percent sign and decimal separator to `%` and `.`, invisible
+    ///   and bidirectional characters removed, every other space or control character a space;
+    /// - letters and decimal digits of every script, space and hyphen kept; combining marks kept
+    ///   on a letter, at most 4 (1 on a Latin, Cyrillic or Greek letter), never the same one twice
+    ///   in a row; anything else (emoji, symbols, other punctuation) becomes a space;
+    /// - `' % , . / &` kept only where the server allows them;
+    /// - a word part mixing Latin, Cyrillic and Greek letters folded to its main script when the
+    ///   others all have a look-alike there, or dropped;
+    /// - runs of spaces and of hyphens collapsed, any hyphen part longer than 28 code points
+    ///   dropped (except in a script written without spaces: Chinese, Japanese, Thai...), at most
+    ///   8 words, at most 40 code points (cut at a word end when there is one);
+    /// - nil when marks are more than 60% of the letters and marks, which the server refuses.
     ///
-    /// The server's "suspicious" checks (look-alike letters, encoded text, words about the model)
-    /// aren't copied: an honest name that trips one is refused by field, and left out then.
+    /// The server's "suspicious" checks (encoded text, repetition, words about the model) aren't
+    /// copied: an honest name that trips one is refused by field, and left out then.
     static func cleanName(_ raw: String) -> String? {
-        var normalised = String.UnicodeScalarView()
-        for scalar in raw.precomposedStringWithCompatibilityMapping.unicodeScalars {
-            if isInvisible(scalar) { continue }
-            if apostropheLookalikes.contains(scalar.value) {
-                normalised.append("'")
-            } else if isDashLookalike(scalar) {
-                normalised.append("-")
-            } else if scalar == "\u{2044}" {
-                normalised.append("/")
-            } else if isSpaceOrControl(scalar) {
-                normalised.append(" ")
-            } else {
-                normalised.append(scalar)
-            }
+        let limited = String(decoding: Array(raw.utf16.prefix(rawInputLimit)), as: UTF16.self)
+        var text = collapsed(keptAllowed(normalisedScalars(limited)))
+        // Each step can change what the others see (a cut can leave a "1," at the end); a few
+        // rounds reach a name none of them changes.
+        for _ in 0..<8 {
+            let next = cut(shapedWords(collapsed(fixedPunctuation(text))))
+            if next == text { break }
+            text = next
         }
-        // NFKC again: removing invisible characters can bring a letter and its mark together.
-        var scalars: [Unicode.Scalar] = []
-        for scalar in String(normalised).precomposedStringWithCompatibilityMapping.unicodeScalars {
-            if isLetter(scalar) {
-                scalars.append(isLatinOrCyrillic(scalar) ? scalar : " ")
-            } else if isMark(scalar) {
-                // One mark, straight after a kept letter; any other mark goes (a stack of marks
-                // is refused as suspicious).
-                if let last = scalars.last, isLetter(last) { scalars.append(scalar) }
-            } else if isASCIIDigit(scalar) || scalar == " " || scalar == "-" || namePunctuation.contains(scalar) {
-                scalars.append(scalar)
-            } else {
-                scalars.append(" ")
-            }
+        guard text.contains(where: { isLetter($0) || isDigit($0) }) else { return nil }
+        let letters = text.filter(isLetter).count
+        let marks = text.filter(isMark).count
+        if marks * 5 > (letters + marks) * 3 { return nil }
+        return String(String.UnicodeScalarView(text))
+    }
+
+    /// An allergen as sent, only when cleaning kept every letter and digit of it: nil when a word
+    /// or a part was dropped (a part over 28 characters, a look-alike word that can't be folded,
+    /// past 8 words or 40 characters, nothing left). Unlike a pantry item, an allergen must never
+    /// reach the server shortened, since a recipe written without part of it could be unsafe.
+    static func cleanAllergenName(_ raw: String) -> String? {
+        guard raw.utf16.count <= rawInputLimit, let cleaned = cleanName(raw) else { return nil }
+        func meaningful(_ text: String) -> Int { normalisedScalars(text).filter { isLetter($0) || isDigit($0) }.count }
+        return meaningful(raw) == meaningful(cleaned) ? cleaned : nil
+    }
+
+    /// The server's normalisation: NFKC, look-alikes folded, invisible characters removed, spaces.
+    private static func normalisedScalars(_ raw: String) -> [Unicode.Scalar] {
+        // Folded before NFKC too: NFKC turns `´` into a space and a combining accent.
+        let folded = String(String.UnicodeScalarView(raw.unicodeScalars.map(foldedLookAlike)))
+        var visible = String.UnicodeScalarView()
+        for scalar in folded.precomposedStringWithCompatibilityMapping.unicodeScalars {
+            let s: Unicode.Scalar = scalar == "\u{2044}" ? "/" : scalar
+            if isInvisible(s) { continue }
+            visible.append(isSpaceOrControl(s) ? " " : s)
         }
-        // Each pass only removes or shortens, so this settles; four passes are plenty.
-        var name = String(String.UnicodeScalarView(scalars))
-        for _ in 0..<4 {
-            let before = name
-            name = limitedWords(spacingRefusedPunctuation(tidied(name)))
-            name = tidied(prefix(name, utf16Units: nameMaxLength))
-            if name == before { break }
-        }
-        name = spacingRefusedPunctuation(tidied(name))
-        return name.isEmpty ? nil : name
+        // Again: removing an invisible character can bring a letter and its accent together.
+        return String(visible).precomposedStringWithCompatibilityMapping.unicodeScalars.map(foldedLookAlike)
     }
 
     private static let apostropheLookalikes: Set<UInt32> = [0x2018, 0x2019, 0x201B, 0x02BC, 0x02B9, 0x60, 0xB4, 0x2032]
     private static let namePunctuation: Set<Unicode.Scalar> = ["'", "%", ",", ".", "/", "&"]
 
-    private static func isDashLookalike(_ s: Unicode.Scalar) -> Bool {
-        (0x2010...0x2015).contains(s.value) || [0x2212, 0xFE58, 0xFE63, 0xFF0D].contains(s.value)
+    private static func foldedLookAlike(_ s: Unicode.Scalar) -> Unicode.Scalar {
+        if apostropheLookalikes.contains(s.value) { return "'" }
+        if (0x2010...0x2015).contains(s.value) || [0x2212, 0xFE58, 0xFE63, 0xFF0D].contains(s.value) { return "-" }
+        if s.value == 0x066A { return "%" } // Arabic percent sign
+        if s.value == 0x066B { return "." } // Arabic decimal separator
+        return s
     }
 
     private static func isInvisible(_ s: Unicode.Scalar) -> Bool {
@@ -433,86 +448,215 @@ enum RecipeWire {
         }
     }
 
-    private static func isASCIIDigit(_ s: Unicode.Scalar) -> Bool { (0x30...0x39).contains(s.value) }
+    /// Decimal digits of every script (Nd), as the server's `\p{Nd}`.
+    private static func isDigit(_ s: Unicode.Scalar) -> Bool { s.properties.generalCategory == .decimalNumber }
 
-    /// Letters of the Latin and Cyrillic scripts, by block. Narrower than the scripts (no
-    /// spacing modifier letters, no phonetic extensions): a letter left out here only becomes a
-    /// space, while one the server doesn't count as Latin or Cyrillic would fail the request.
-    private static func isLatinOrCyrillic(_ s: Unicode.Scalar) -> Bool {
-        let v = s.value
-        let latin = (0x41...0x5A).contains(v) || (0x61...0x7A).contains(v) || (0xC0...0x24F).contains(v)
-            || (0x250...0x2AF).contains(v) || (0x1E00...0x1EFF).contains(v) || (0x2C60...0x2C7F).contains(v)
-            || (0xA720...0xA7FF).contains(v) || (0xAB30...0xAB64).contains(v)
-        let cyrillic = (0x400...0x52F).contains(v) || (0x1C80...0x1C88).contains(v) || (0xA640...0xA69F).contains(v)
-        return latin || cyrillic
+    /// A letter or a combining mark (which only ever follows one): what `'` `&` `.` may follow.
+    private static func isWordy(_ s: Unicode.Scalar) -> Bool { isLetter(s) || isMark(s) }
+
+    /// The scripts the rule tells apart. Swift's `Unicode.Scalar.Properties` has no Script
+    /// property, so this asks ICU through `NSRegularExpression`'s `\p{Script=...}`, the same
+    /// Unicode data the server's `\p{Script=...}` and Android's `Character.UnicodeScript` use.
+    enum NameScript { case latin, cyrillic, greek, unspaced, other }
+
+    private static let scriptPatterns: [(NameScript, NSRegularExpression)] = {
+        let patterns: [(NameScript, String)] = [
+            (.latin, "\\p{Script=Latin}"), (.cyrillic, "\\p{Script=Cyrillic}"), (.greek, "\\p{Script=Greek}"),
+            (.unspaced, "[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}\\p{Script=Thai}\\p{Script=Lao}\\p{Script=Khmer}\\p{Script=Myanmar}]"),
+        ]
+        // Fixed patterns, checked by NameFixtureCheck: they always compile.
+        return patterns.map { ($0.0, try! NSRegularExpression(pattern: $0.1)) }
+    }()
+
+    static func script(of s: Unicode.Scalar) -> NameScript {
+        let text = String(s)
+        let range = NSRange(location: 0, length: text.utf16.count)
+        return scriptPatterns.first { $0.1.firstMatch(in: text, range: range) != nil }?.0 ?? .other
+    }
+
+    /// 0 Latin, 1 Cyrillic, 2 Greek for a letter of those scripts, else nil.
+    private static func confusable(_ s: Unicode.Scalar) -> Int? {
+        guard isLetter(s) else { return nil }
+        switch script(of: s) {
+        case .latin: return 0
+        case .cyrillic: return 1
+        case .greek: return 2
+        default: return nil
+        }
+    }
+
+    /// Every character the server could accept kept, every other one a space; combining marks
+    /// only on a letter, a few per letter, never the same one twice in a row.
+    private static func keptAllowed(_ text: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        var out: [Unicode.Scalar] = []
+        var base: Unicode.Scalar?
+        var run = 0
+        for s in text {
+            if isLetter(s) {
+                out.append(s)
+                base = s
+                run = 0
+            } else if isMark(s) {
+                // A stray mark, one past the limit, or a repeat ("Zalgo" text) is dropped.
+                guard let letter = base else { continue }
+                let max = confusable(letter) != nil ? maxMarksPerCasedLetter : maxMarksPerLetter
+                if run < max, out.last != s {
+                    out.append(s)
+                    run += 1
+                }
+            } else {
+                base = nil
+                run = 0
+                let kept = isDigit(s) || s == " " || s == "-" || namePunctuation.contains(s)
+                out.append(kept ? s : " ")
+            }
+        }
+        return out
     }
 
     /// Runs of spaces and of hyphens collapsed, spaces trimmed.
-    private static func tidied(_ text: String) -> String {
-        var out = String.UnicodeScalarView()
-        for s in text.unicodeScalars {
-            if (s == " " || s == "-"), out.last == s { continue }
+    private static func collapsed(_ text: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        var out: [Unicode.Scalar] = []
+        for s in text {
+            if s == " " || s == "-", out.last == s { continue }
             out.append(s)
         }
-        return String(out).trimmingCharacters(in: .whitespaces)
+        while out.last == " " { out.removeLast() }
+        guard let start = out.firstIndex(where: { $0 != " " }) else { return [] }
+        return Array(out[start...])
     }
 
-    /// `' % , . / &` where the server's position rules refuse them become spaces.
-    private static func spacingRefusedPunctuation(_ text: String) -> String {
-        var chars = Array(text.unicodeScalars)
-        var changed = true
-        while changed {
-            changed = false
-            for i in chars.indices where namePunctuation.contains(chars[i]) {
-                let prev: Unicode.Scalar? = i > 0 ? chars[i - 1] : nil
-                let next: Unicode.Scalar? = i + 1 < chars.count ? chars[i + 1] : nil
-                let beforePrev: Unicode.Scalar? = i > 1 ? chars[i - 2] : nil
-                if !punctuationAllowed(chars[i], prev: prev, next: next, beforePrev: beforePrev) {
-                    chars[i] = " "
-                    changed = true
-                }
-            }
+    /// The server's position rules for `' % , . / &`: one out of place becomes a space.
+    private static func fixedPunctuation(_ text: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        var out = text
+        for i in text.indices where namePunctuation.contains(text[i]) {
+            let prev: Unicode.Scalar? = i > 0 ? text[i - 1] : nil
+            let next: Unicode.Scalar? = i + 1 < text.count ? text[i + 1] : nil
+            let beforePrev: Unicode.Scalar? = i > 1 ? text[i - 2] : nil
+            if !punctuationAllowed(text[i], prev: prev, next: next, beforePrev: beforePrev) { out[i] = " " }
         }
-        return tidied(String(String.UnicodeScalarView(chars)))
+        return out
     }
 
     /// The server's rules, character by character (CONTRACT.md, "Name rules").
     static func punctuationAllowed(_ c: Unicode.Scalar, prev: Unicode.Scalar?, next: Unicode.Scalar?, beforePrev: Unicode.Scalar?) -> Bool {
         let letter: (Unicode.Scalar?) -> Bool = { $0.map(isLetter) ?? false }
-        let digit: (Unicode.Scalar?) -> Bool = { $0.map(isASCIIDigit) ?? false }
+        let wordy: (Unicode.Scalar?) -> Bool = { $0.map(isWordy) ?? false }
+        let digit: (Unicode.Scalar?) -> Bool = { $0.map(isDigit) ?? false }
         switch c {
-        case "'": return letter(prev) && letter(next)
-        case "&": return prev != nil && next != nil && (letter(prev) || prev == " ") && (letter(next) || next == " ")
-        case ".": return (letter(prev) && (next == " " || digit(next))) || (digit(prev) && digit(next))
+        case "'": return wordy(prev) && letter(next)
+        case "&": return prev != nil && next != nil && (wordy(prev) || prev == " ") && (letter(next) || next == " ")
+        case ".": return (wordy(prev) && (next == " " || digit(next))) || (digit(prev) && digit(next))
         case "%": return digit(prev) || (prev == " " && digit(beforePrev))
         case ",", "/": return digit(prev) && digit(next)
         default: return false
         }
     }
 
-    /// At most 8 words, each hyphen part at most 28 characters (longer parts are dropped).
-    private static func limitedWords(_ text: String) -> String {
-        let words = text.split(separator: " ").compactMap { word -> String? in
-            let parts = word.split(separator: "-").filter { $0.unicodeScalars.count <= maxCharsPerWordPart }
-            let joined = parts.joined(separator: "-")
-            return joined.isEmpty ? nil : joined
+    private static func split(_ text: [Unicode.Scalar], on separator: Unicode.Scalar) -> [[Unicode.Scalar]] {
+        var out: [[Unicode.Scalar]] = [[]]
+        for s in text {
+            if s == separator { out.append([]) } else { out[out.count - 1].append(s) }
         }
-        return words.prefix(maxWordsPerName).joined(separator: " ")
+        return out
     }
 
-    /// The longest run of whole characters from the start of `text` that is at most `limit`
-    /// UTF-16 units: the server counts a name's length as JavaScript does, so a letter with
-    /// combining marks, or one outside the BMP, counts for more than one.
-    static func prefix(_ text: String, utf16Units limit: Int) -> String {
-        var units = 0
-        var end = text.startIndex
-        for index in text.indices {
-            let size = text[index].utf16.count
-            guard units + size <= limit else { break }
-            units += size
-            end = text.index(after: index)
+    private static func joined(_ parts: [[Unicode.Scalar]], with separator: Unicode.Scalar) -> [Unicode.Scalar] {
+        var out: [Unicode.Scalar] = []
+        for (i, part) in parts.enumerated() {
+            if i > 0 { out.append(separator) }
+            out.append(contentsOf: part)
         }
-        return String(text[..<end])
+        return out
+    }
+
+    /// Mixed-script parts folded, long parts dropped (no limit for a part in a script written
+    /// without spaces), at most 8 words.
+    private static func shapedWords(_ text: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        let words = split(text, on: " ").compactMap { word -> [Unicode.Scalar]? in
+            let parts = split(word, on: "-").compactMap { part -> [Unicode.Scalar]? in
+                let unspaced = part.contains { isLetter($0) && script(of: $0) == .unspaced }
+                guard part.count <= maxCharsPerWordPart || unspaced else { return nil }
+                return singleScript(part)
+            }
+            let joinedParts = joined(parts, with: "-")
+            return joinedParts.contains(where: { $0 != "-" }) ? joinedParts : nil
+        }
+        return joined(Array(words.prefix(maxWordsPerName)), with: " ")
+    }
+
+    /// A part with letters of more than one of Latin, Cyrillic and Greek (the server refuses it as
+    /// MIXED_SCRIPT), folded to the script most of its letters are in (ties: Latin, Cyrillic,
+    /// Greek) when every other one has a look-alike there, else to the next script that works;
+    /// nil when none does.
+    private static func singleScript(_ part: [Unicode.Scalar]) -> [Unicode.Scalar]? {
+        var counts = [0, 0, 0]
+        for s in part { if let c = confusable(s) { counts[c] += 1 } }
+        guard counts.filter({ $0 > 0 }).count >= 2 else { return part }
+        // Most letters first; ties keep Latin, Cyrillic, Greek (an explicit tie-break: Swift's
+        // sort isn't guaranteed stable).
+        let order = [0, 1, 2].filter { counts[$0] > 0 }.sorted { counts[$0] != counts[$1] ? counts[$0] > counts[$1] : $0 < $1 }
+        for target in order {
+            var folded: [Unicode.Scalar] = []
+            var ok = true
+            for s in part {
+                guard let from = confusable(s), from != target else {
+                    folded.append(s)
+                    continue
+                }
+                guard let mapped = lookAlikes[from][target][s] else {
+                    ok = false
+                    break
+                }
+                folded.append(mapped)
+            }
+            if ok { return folded }
+        }
+        return nil
+    }
+
+    private static func table(_ pairs: [String]) -> [Unicode.Scalar: Unicode.Scalar] {
+        var out: [Unicode.Scalar: Unicode.Scalar] = [:]
+        for pair in pairs {
+            let s = Array(pair.unicodeScalars)
+            out[s[0]] = s[1]
+        }
+        return out
+    }
+
+    /// Look-alike letters, [from][to], both cases written out (no case mapping at run time, so
+    /// both apps fold the same way). The same table as Android's `LOOK_ALIKES`.
+    private static let lookAlikes: [[[Unicode.Scalar: Unicode.Scalar]]] = [
+        [
+            [:],
+            table(["aа", "bв", "eе", "kк", "mм", "hн", "oо", "pр", "cс", "tт", "yу", "xх", "iі",
+                   "AА", "BВ", "EЕ", "KК", "MМ", "HН", "OО", "PР", "CС", "TТ", "YУ", "XХ", "IІ"]),
+            table(["aα", "eε", "iι", "kκ", "vν", "oο", "pρ", "tτ", "uυ", "xχ",
+                   "AΑ", "BΒ", "EΕ", "ZΖ", "HΗ", "IΙ", "KΚ", "MΜ", "NΝ", "OΟ", "PΡ", "TΤ", "YΥ", "XΧ"]),
+        ],
+        [
+            table(["аa", "вb", "еe", "кk", "мm", "нh", "оo", "рp", "сc", "тt", "уy", "хx", "іi", "јj", "ѕs", "ԁd", "ӏl", "ԛq", "ԝw", "үy", "һh",
+                   "АA", "ВB", "ЕE", "КK", "МM", "НH", "ОO", "РP", "СC", "ТT", "УY", "ХX", "ІI", "ЈJ", "ЅS", "ԀD", "ӀI", "ԚQ", "ԜW", "ҮY", "ҺH"]),
+            [:],
+            table(["аα", "еε", "кκ", "оο", "рρ", "тτ", "хχ", "іι",
+                   "АΑ", "ВΒ", "ЕΕ", "НΗ", "ІΙ", "КΚ", "МΜ", "ОΟ", "РΡ", "ТΤ", "ХΧ"]),
+        ],
+        [
+            table(["αa", "εe", "ιi", "κk", "νv", "οo", "ρp", "τt", "υu", "χx",
+                   "ΑA", "ΒB", "ΕE", "ΖZ", "ΗH", "ΙI", "ΚK", "ΜM", "ΝN", "ΟO", "ΡP", "ΤT", "ΥY", "ΧX"]),
+            table(["αа", "εе", "κк", "οо", "ρр", "τт", "χх", "ιі",
+                   "ΑА", "ΒВ", "ΕЕ", "ΗН", "ΙІ", "ΚК", "ΜМ", "ΟО", "ΡР", "ΤТ", "ΧХ"]),
+            [:],
+        ],
+    ]
+
+    /// At most 40 code points, cut at a word end when the name has one.
+    private static func cut(_ text: [Unicode.Scalar]) -> [Unicode.Scalar] {
+        guard text.count > nameMaxLength else { return text }
+        let head = Array(text[..<nameMaxLength])
+        let atWordEnd = text[nameMaxLength] == " "
+        if !atWordEnd, let lastSpace = head.lastIndex(of: " ") { return collapsed(Array(head[..<lastSpace])) }
+        return collapsed(head)
     }
 
     /// `YYYY-MM-DD` in the phone's own calendar day, as the server's `today` and `expiresOn`.
@@ -540,7 +684,10 @@ enum RecipeWire {
                 quantity: item.quantity.map { min(max($0, 0), 9999) }
             )
         }
-        let allergens = Array(Set(request.allergens.compactMap(cleanName))).sorted().prefix(maxAllergens)
+        // One per name regardless of case, as on Android.
+        var seenAllergens = Set<String>()
+        let allergens = request.allergens.compactMap(cleanAllergenName).sorted()
+            .filter { seenAllergens.insert($0.lowercased()).inserted }.prefix(maxAllergens)
         return GenerateRequest(
             requestId: requestID.uuidString.lowercased(),
             kind: kind,
@@ -588,15 +735,15 @@ enum RecipeWire {
         return held
     }
 
-    /// The first allergen that can't be sent as the person wrote it: one with nothing left after
-    /// cleaning (written in a script the server doesn't take), or one past the 20 the server
-    /// accepts. An allergen is never left out silently: a recipe written without it could be
-    /// unsafe, so the request isn't sent and the person is told.
+    /// The first allergen that can't be sent as the person wrote it: one cleaning would drop or
+    /// shorten (`cleanAllergenName`), or one past the 20 the server accepts. An allergen is never
+    /// left out silently: a recipe written without it could be unsafe, so the request isn't sent
+    /// and the person is told.
     static func unsendableAllergen(_ allergens: [String]) -> String? {
         var seen = Set<String>()
         for raw in allergens.sorted() {
-            guard let name = cleanName(raw) else { return raw }
-            if seen.insert(name).inserted, seen.count > maxAllergens { return raw }
+            guard let name = cleanAllergenName(raw) else { return raw }
+            if seen.insert(name.lowercased()).inserted, seen.count > maxAllergens { return raw }
         }
         return nil
     }
