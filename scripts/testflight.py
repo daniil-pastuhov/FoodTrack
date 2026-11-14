@@ -71,8 +71,9 @@ ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
 # One folder per App Store Connect locale, holding promotional_text.txt among others.
 LISTING_DIR = pathlib.Path(__file__).resolve().parent.parent / "store-listing" / "app-store"
 # The other English localizations (en-US, en-AU, en-CA) take the en-GB release notes, as the notes
-# are written once per language, and the en-GB promotional text when they have no folder of their
-# own (en-US has one). Apple asks for What's New in every localization of an update.
+# are written once per language, and every en-GB listing text and image their folder doesn't have
+# (all of them without a folder; en-AU and en-CA hold only keywords.txt). Apple asks for What's
+# New in every localization of an update.
 FALLBACK_LOCALE = "en-GB"
 
 
@@ -498,8 +499,9 @@ def cmd_iaps(args):
 # Each locale folder's texts go to two resources: the version's localization (keywords,
 # description, promotional text) and the app info's (name, subtitle), which App Store Connect
 # only lets change while a version is in preparation. A field is written only when its file
-# exists and differs from what App Store Connect has, so the URLs and anything else the repo has
-# no file for are never touched.
+# exists (in the locale's folder, or for another English localization in en-GB's, which fills in
+# what a partial folder such as en-AU/ leaves out) and differs from what App Store Connect has,
+# so the URLs and anything else the repo has no file for are never touched.
 
 class ListingError(Exception):
     """The repo's listing can't be applied as it is (a limit, a missing resource)."""
@@ -557,27 +559,76 @@ SCREENSHOT_SUFFIXES = (".png", ".jpg", ".jpeg")
 SCREENSHOT_WAIT_SECONDS = 600
 
 
+# A locale folder's name: an App Store Connect locale code (en-GB, ru, no, zh-Hans), which
+# iap-review/ and in-app-event/ are not.
+LOCALE_FOLDER = re.compile(r"[a-z]{2,3}(-[A-Za-z]{2,4})?")
+
+
 def listing_locales(root=LISTING_DIR):
-    """The locale folders under root: those with a name.txt (iap-review/ has none)."""
-    return sorted(p.parent.name for p in pathlib.Path(root).glob("*/name.txt"))
+    """The locale folders under root: named like a locale code and holding at least one listing
+    text. A partial folder (en-AU and en-CA hold only keywords.txt) counts; listing_files
+    completes it from its fallback."""
+    return sorted(p.name for p in pathlib.Path(root).iterdir()
+                  if p.is_dir() and LOCALE_FOLDER.fullmatch(p.name)
+                  and any((p / name).is_file() for name in LISTING_FIELDS))
+
+
+def read_listing_files(root, sources):
+    """{"version": {attribute: text}, "info": {attribute: text}} from {file name: locale folder
+    the file is read from}."""
+    texts = {"version": {}, "info": {}}
+    for name, source in sources.items():
+        resource, attribute = LISTING_FIELDS[name]
+        texts[resource][attribute] = (pathlib.Path(root) / source / name).read_text(
+            encoding="utf-8").strip()
+    return texts
 
 
 def read_listing(folder):
     """{"version": {attribute: text}, "info": {attribute: text}} for the files folder has."""
-    texts = {"version": {}, "info": {}}
-    for name, (resource, attribute) in LISTING_FIELDS.items():
-        path = pathlib.Path(folder) / name
-        if path.exists():
-            texts[resource][attribute] = path.read_text(encoding="utf-8").strip()
-    return texts
+    folder = pathlib.Path(folder)
+    return read_listing_files(folder.parent, {name: folder.name for name in LISTING_FIELDS
+                                              if (folder / name).is_file()})
 
 
 def listing_source(locale, folders):
-    """The folder whose texts a localization takes: its own, or en-GB's for another English
-    localization without one (en-AU, en-CA). None when the repo has nothing for it."""
+    """The folder a localization is based on: its own, or en-GB's for another English
+    localization without one. None when the repo has nothing for it."""
     if locale in folders:
         return locale
     return fallback(locale) if fallback(locale) in folders else None
+
+
+def listing_files(root, locale, folders):
+    """{file name: locale folder} for each listing text a localization takes: its own folder's
+    file, else its fallback's (en-GB's, for another English localization). So a partial folder
+    (en-AU: keywords.txt) still gets a complete listing, and a localization created from it has
+    every field the primary language has. A language without a fallback takes only its own."""
+    sources = {}
+    for name in LISTING_FIELDS:
+        for source in (locale, fallback(locale)):
+            if source in folders and (pathlib.Path(root) / source / name).is_file():
+                sources[name] = source
+                break
+    return sources
+
+
+def describe_sources(locale, sources):
+    """The dry run's line on where a localization's texts come from; None when all are its own."""
+    own, inherited = [], {}
+    for name, source in sources.items():
+        attribute = LISTING_FIELDS[name][1]
+        if source == locale:
+            own.append(attribute)
+        else:
+            inherited.setdefault(source, []).append(attribute)
+    if not inherited:
+        return None
+    if not own:
+        return f"  {locale} takes the {', '.join(sorted(inherited))} texts (no folder of its own)"
+    return (f"  {locale}: {', '.join(own)} from its folder; "
+            + "; ".join(f"{', '.join(fields)} inherited from {source}"
+                        for source, fields in sorted(inherited.items())))
 
 
 def field_changes(current, wanted):
@@ -669,10 +720,11 @@ def sync_listing(asc, version_id, app_info_id, apply, root=LISTING_DIR):
           f"{', '.join(sorted(info_locs)) or 'no'} app info localizations")
     result, changed = {}, False
     for locale in locales:
-        source = listing_source(locale, folders)
-        texts = read_listing(pathlib.Path(root) / source)
-        if source != locale:
-            print(f"  {locale} takes the {source} texts (no folder of its own)")
+        sources = listing_files(root, locale, folders)
+        texts = read_listing_files(root, sources)
+        line = describe_sources(locale, sources)
+        if line:
+            print(line)
         loc_id, differs = sync_resource(
             asc, "version", locale, version_locs.get(locale), texts["version"],
             {"type": "appStoreVersions", "id": version_id}, version_locs.get(FALLBACK_LOCALE), apply)
@@ -1273,8 +1325,8 @@ def sync_screenshots(asc, localizations, apply, root=LISTING_DIR, app_id=None):
     """Syncs every locale folder's screenshot sets to its version localization ({locale: id}):
     the classic sets through appScreenshotSets; the iPhone Duo folders and the header and
     search-result art through the App Asset Library (which needs app_id). A localization without
-    screenshot folders of its own (en-US) shows the primary language's; the other English ones
-    get en-GB's header and search-result art placed."""
+    screenshot folders of its own (en-US, and the keywords-only en-AU and en-CA) shows the primary
+    language's; the other English ones get en-GB's header and search-result art placed."""
     changed = False
     library = None
     locales = sorted(set(listing_locales(root)) | {l for l in localizations if fallback(l)})

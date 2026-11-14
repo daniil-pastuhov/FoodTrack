@@ -1,1 +1,1 @@
-utløpsdato,holdbarhetsdato,best før,dato,skann,strekkode,handleliste,påminnelse,matskap,rester,KI,AI
+utløpsdato,holdbarhetsdato,best før,dato,skann,strekkode,handleliste,påminnelse,matskap,rester,meny

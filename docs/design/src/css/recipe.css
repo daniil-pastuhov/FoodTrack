@@ -196,7 +196,10 @@
 
 /* Ingredients not from the pantry, to the shopping list */
 .recipe .r-shop-act { display: flex; justify-content: flex-start; margin-top: var(--space-3); }
-.recipe .r-doc > .r-shop-act { margin-top: var(--space-6); }
+.recipe .r-shop-act > .btn { flex: 1; }
+.recipe .r-ings + .r-ings-note { margin: var(--space-2) var(--space-1) 0; }
+/* Quiet lines inside the form: the guide under Time, the menu's meal line */
+.recipe .r-ctl > .r-sub, .recipe .r-card > .r-sub { margin: 0; }
 .recipe .r-shop .list-item { align-items: center; padding-left: var(--space-2); }
 .recipe .r-shop .text > span { display: block; }
 .recipe .r-shop-row.is-disabled .text > :first-child { color: var(--color-on-surface-variant); }
