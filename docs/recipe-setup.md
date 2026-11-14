@@ -8,7 +8,8 @@ step (money rules, `config/runtime` fields, parameters, logs) is in
 
 Until the steps below are done, the free routes (shared prompt, the phone's own model) work as
 normal, and the paid route either stays hidden (Android release builds not installed from Play,
-iPhones without App Attest) or fails without charging anyone. No function is deployed yet.
+iPhones without App Attest) or fails without charging anyone. The functions are deployed
+(2026-11-14) with generation switched off in `config/runtime` (step 7).
 
 Items marked **Check** are ones the code can't confirm. Steps marked **(agent)** can be done by an
 agent through an API or CLI once the owner has handed over what the step needs; the rest need the
@@ -35,8 +36,8 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
   Datastore User, Vertex AI User, Firebase Authentication Admin, Secret Manager Secret Accessor,
   Logs Writer, Cloud Run Invoker, Eventarc Event Receiver and Firebase App Check Token Verifier
   (needed, because `CONSUME_APP_CHECK_TOKENS` is on). The deploying account
-  (`daniil.pastuhov@gmail.com`) has Service Account User on it. Secret Accessor is still granted
-  at project level because the secrets don't exist yet (see step 5).
+  (`daniil.pastuhov@gmail.com`) has Service Account User on it. Secret Accessor is granted on the
+  two secrets only (the project-level grant was removed on 2026-11-14, step 5).
 - Firebase Authentication (with Identity Platform): Anonymous, Google and Apple enabled. Apple has
   the bundle id `com.foodbest.ios` (enough for iOS's native sign-in) but no OAuth code-flow
   settings yet (step 2). Automatic clean-up of anonymous users is off (it would delete paying
@@ -55,8 +56,8 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
   route. App Check is still rate reduction, not the money guard.
 - Sign in with Apple capability on the App ID `com.foodbest.ios` (per records).
 - Firestore `(default)`: Native mode, `europe-west1`, delete protection on, and the deny-all
-  `firestore.rules` released (2026-11-13). No composite index or TTL policy yet: they come with
-  the first deploy (step 9).
+  `firestore.rules` released (2026-11-13). The three composite indexes are built (READY) and the
+  TTL policy on `generations.expiresAt` is ACTIVE (2026-11-14, step 6).
 - Play Console: `recipe-functions@` invited with "View financial data" and "Manage orders and
   subscriptions" (per records).
 - App Store Connect: app Apple ID `6818647200` (for `APPLE_APP_ID`); the three consumables
@@ -73,8 +74,10 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       App ID `com.foodbest.ios`, domain `bestbefore-f9ee1.firebaseapp.com` and return URL
       `https://bestbefore-f9ee1.firebaseapp.com/__/auth/handler` (**Check**: copy the exact URL the
       Firebase console shows on the Apple provider page).
-- [ ] **Sign in with Apple key** (Keys > +; no API): note its key id. The `.p8` is
+- [x] **Sign in with Apple key** (Keys > +; no API): note its key id. The `.p8` is
       `SIWA_PRIVATE_KEY` (step 5) and also goes into the Firebase Apple provider (step 2).
+      Done 2026-11-14: key id `A8C76L3W6R`. Keep the `.p8` in safe storage (Apple lets it be
+      downloaded only once); step 2 still needs it.
 - [ ] **App Attest** on the App ID: not a capability type in the App Store Connect API. Automatic
       signing adds it when Xcode next signs with `-allowProvisioningUpdates`; otherwise tick it on
       the App ID. The entitlement is already `production`.
@@ -90,8 +93,10 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 ### 3. App Store Connect
 
 - [ ] **Paid Apps agreement**, banking and tax forms (Business; owner only).
-- [ ] **In-App Purchase key** (Users and Access > Integrations > In-App Purchase; no API): note key
-      id and issuer id. The `.p8` is `APPSTORE_PRIVATE_KEY` (step 5).
+- [x] **In-App Purchase key** (Users and Access > Integrations > In-App Purchase; no API): note key
+      id and issuer id. The `.p8` is `APPSTORE_PRIVATE_KEY` (step 5). Done 2026-11-14: key id
+      `QU395A4DS3`, issuer `6a34ffeb-1221-45c4-964b-e017e0d01ced`; a production App Store Server API
+      lookup of a non-existent transaction id authenticated (answered "not found", no 401).
 - [ ] **Sandbox testers** (Users and Access > Sandbox; the API can't create them).
 - [ ] Upload the updated **review screenshot** from `store-listing/app-store/iap-review/` to each
       of the three in-app purchases. **(agent)**: App Store Connect API
@@ -124,7 +129,7 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 
 ### 5. Secrets and parameters
 
-- [ ] Secrets (Secret Manager, never in the repo), from `functions/`:
+- [x] Secrets (Secret Manager, never in the repo), from `functions/`:
       ```bash
       cd functions
       npx firebase functions:secrets:set APPSTORE_PRIVATE_KEY < AuthKey_XXXXXXXXXX.p8   # In-App Purchase key
@@ -132,27 +137,39 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       ```
       Then move Secret Manager Secret Accessor for `recipe-functions@` from the project onto these
       two secrets. **(agent)** for the move.
-- [ ] Parameters: `firebase deploy` asks for them the first time and saves them to
+      Done 2026-11-14: both secrets have one enabled version (1), set with `--data-file`. The deploy
+      granted `recipe-functions@` Secret Accessor on each; the project-level grant was then
+      removed. Rotating a key: `functions:secrets:set` again, then redeploy (the functions pin
+      version 1).
+- [x] Parameters: `firebase deploy` asks for them the first time and saves them to
       `functions/.env.bestbefore-f9ee1` (no secrets; may be committed). Required:
       `APPLE_APP_ID=6818647200`, `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID`, `APPLE_TEAM_ID=S8Q8KHX6G5`,
       `SIWA_KEY_ID`. Defaults: `FUNCTIONS_SERVICE_ACCOUNT`, `GEMINI_MODEL`, `GEMINI_THINKING_LEVEL`,
       `VERTEX_LOCATION`, `GEMINI_JUDGE_MODEL`, `GEMINI_JAILBREAK_FILTER`, `PLAY_RTDN_TOPIC`,
-      `BUDGET_ALERT_TOPIC`.
+      `BUDGET_ALERT_TOPIC`. Done 2026-11-14: all set in `functions/.env.bestbefore-f9ee1`
+      (`APPSTORE_KEY_ID=QU395A4DS3`, `SIWA_KEY_ID=A8C76L3W6R`).
 
 ### 6. First deploy **(agent)**
 
-- [ ] `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
+- [x] `cd functions && npm ci && npx firebase deploy --only functions,firestore --project bestbefore-f9ee1`
       (lint and build run first). This deploys the functions, the rules again,
       `firestore.indexes.json` (the sweeper's indexes) and the **TTL policy** on
       `generations.expiresAt`. Afterwards check that `gcloud firestore fields ttls list` shows
       `expiresAt` as active (TTL can take a while to become active), and the indexes are built.
-- [ ] Note the `appStoreNotifications` URL it prints.
+      Done 2026-11-14 from commit `323b298`: all eleven functions created in `europe-west1`,
+      indexes READY, TTL ACTIVE. The deploy also set a 1-day image clean-up policy on the
+      functions' Artifact Registry repository.
+- [x] Note the `appStoreNotifications` URL it prints:
+      `https://europe-west1-bestbefore-f9ee1.cloudfunctions.net/appStoreNotifications`.
 
 ### 7. `config/runtime` **(agent)**
 
-- [ ] Create `config/runtime` in Firestore. Every field is optional and the defaults are the
+- [x] Create `config/runtime` in Firestore. Every field is optional and the defaults are the
       intended production values (functions/README.md, "`config/runtime`"), so an empty document
       is fine; leave `outputJudge` at `off`. Set `allowSandbox: true` only for steps 9 and 10.
+      Done 2026-11-14 with `generationEnabled: false` and `allowSandbox: false`, so nothing can
+      be generated yet. Set `generationEnabled` to `true` (or delete the field) only when the
+      steps before the smoke test are done.
 
 ### 8. App Store Server Notifications **(agent)**
 
