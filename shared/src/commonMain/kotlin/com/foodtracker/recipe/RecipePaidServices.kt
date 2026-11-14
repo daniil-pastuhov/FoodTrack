@@ -210,7 +210,9 @@ enum class ServerError {
 
 sealed interface ServerResult<out T> {
     data class Ok<T>(val value: T) : ServerResult<T>
-    data class Err(val error: ServerError) : ServerResult<Nothing>
+    /** [refusedName]: for INVALID_REQUEST, the ingredient or allergen the server refused, when
+     *  its `details.field` names one. */
+    data class Err(val error: ServerError, val refusedName: RefusedName? = null) : ServerResult<Nothing>
 }
 
 // --- Platform interfaces ----------------------------------------------------------------------
@@ -459,25 +461,4 @@ const val MAX_REQUEST_INGREDIENTS = 30
 const val MAX_REQUEST_ALLERGENS = 20
 const val MAX_WIRE_NAME_LENGTH = 40
 
-/**
- * A pantry name as the server accepts it: letters of any script, digits, spaces and hyphens,
- * 1 to 40 characters. Anything else becomes a space ("Ben & Jerry's" → "Ben Jerry s"); null when
- * nothing is left.
- */
-fun cleanWireName(name: String): String? {
-    val cleaned = buildString {
-        for (char in name) append(if (char.isWireNameChar()) char else ' ')
-    }.split(' ').filter { it.isNotEmpty() }.joinToString(" ")
-    return cleaned.take(MAX_WIRE_NAME_LENGTH).trim().takeIf { it.isNotEmpty() }
-}
-
-/** The server's `[\p{L}\p{M}\p{N} -]`: letters, combining marks (Devanagari vowel signs and
- *  the like) and numbers of any script, space and hyphen. */
-private fun Char.isWireNameChar(): Boolean = this == ' ' || this == '-' || category in WIRE_NAME_CATEGORIES
-
-private val WIRE_NAME_CATEGORIES = setOf(
-    CharCategory.UPPERCASE_LETTER, CharCategory.LOWERCASE_LETTER, CharCategory.TITLECASE_LETTER,
-    CharCategory.MODIFIER_LETTER, CharCategory.OTHER_LETTER,
-    CharCategory.NON_SPACING_MARK, CharCategory.COMBINING_SPACING_MARK, CharCategory.ENCLOSING_MARK,
-    CharCategory.DECIMAL_DIGIT_NUMBER, CharCategory.LETTER_NUMBER, CharCategory.OTHER_NUMBER
-)
+// Names are cleaned by cleanWireName (RecipeWireName.kt).

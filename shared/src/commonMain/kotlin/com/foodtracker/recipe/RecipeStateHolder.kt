@@ -57,7 +57,20 @@ enum class OnDeviceRoute {
 sealed interface RecipeEvent {
     /** A recipe or a menu was written and saved; open it. [recipesLeft] is the pack's new count
      *  when the server wrote it. */
-    data class Written(val savedId: String, val recipesLeft: Int? = null) : RecipeEvent
+    data class Written(
+        val savedId: String,
+        val recipesLeft: Int? = null,
+        /** Items written without, because the server refused their names (as sent). */
+        val leftOut: List<String> = emptyList()
+    ) : RecipeEvent
+
+    /** The server refused this item's name and it couldn't be left out (it was the only one, or
+     *  leaving one out was already tried). Nothing was taken. */
+    data class IngredientNotSent(val ingredient: String) : RecipeEvent
+
+    /** The server refused this allergen's name. Nothing was written or taken: a recipe written
+     *  without it could be unsafe, so it is never left out. */
+    data class AllergenNotSent(val allergen: String) : RecipeEvent
 
     /** The phone's model failed or returned something that isn't a recipe. */
     data object Failed : RecipeEvent
