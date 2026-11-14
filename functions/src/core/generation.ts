@@ -34,7 +34,7 @@ import {
 } from "../constants";
 import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
-import { SUSPICIOUS_OUTPUT_RULES, checkOutput } from "./outputSafety";
+import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkOutput, hasEnoughItems } from "./outputSafety";
 import {
   assertOpen,
   costKeyOf,
@@ -311,7 +311,12 @@ export async function settle(
         ...(outcome.menu ? { menu: outcome.menu } : {}),
       };
     } else {
-      if (outcome.failureClass === "content") {
+      if (outcome.failureClass === "quality") {
+        // The quality gate refused a clean answer: the service did not deliver what was paid
+        // for. Always refunded, like an infrastructure failure with known usage, and counted in
+        // infraRefunds below, so it cannot be repeated more than infraRefundsPerDay times a day.
+        refunded = true;
+      } else if (outcome.failureClass === "content") {
         // Refunded within an allowance tied to what the account has paid for, never per day.
         const used = user?.contentRefundsUsed ?? 0;
         refunded = !!user && used < paidAllowance(user, CREDITS_PER_CONTENT_REFUND);
@@ -330,7 +335,7 @@ export async function settle(
         refunded = !!user && used < paidAllowance(user, CREDITS_PER_TIMEOUT_REFUND);
         if (refunded) userUpdate.timeoutRefundsUsed = used + 1;
       }
-      if (refunded && outcome.failureClass === "infra" && !outcome.swept) {
+      if (refunded && outcome.failureClass !== "content" && !outcome.swept) {
         const count = user?.infraRefunds?.day === today ? user.infraRefunds.count : 0;
         userUpdate.infraRefunds = { day: today, count: count + 1 };
       }
@@ -367,8 +372,7 @@ export async function settle(
       reservedMicroUsd: FieldValue.increment(-reserved),
       spentMicroUsd: FieldValue.increment(actual),
       llmCalls: FieldValue.increment(1),
-      [outcome.ok ? "succeeded" : outcome.failureClass === "content" ? "contentFailures" : "infraFailures"]:
-        FieldValue.increment(1),
+      [outcome.ok ? "succeeded" : `${outcome.failureClass}Failures`]: FieldValue.increment(1),
     };
     if (refunded) statsUpdate.refundedCredits = FieldValue.increment(gen.cost);
     if (usage) {
@@ -416,6 +420,14 @@ async function runGenerator(deps: Deps, uid: string, req: GenerateRequest, limit
     // The answer arrived too late to use, but its usage is known and is what gets booked.
     if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
     const check = checkOutput(result.output, { req, canary, systemInstruction: prompt.systemInstruction });
+    if (!check.ok && QUALITY_OUTPUT_RULES.has(check.rule) && check.value) {
+      const quality: Outcome = { ok: false, failureClass: "quality", reason: `output rule ${check.rule}`, usage };
+      if (config.outputJudge === "off") return quality;
+      // The judge still sees the answer: one it refuses stays a charged content failure and a
+      // prompt rejection, so skipping the pantry cannot turn a hostile answer into a refund.
+      const judged = await runJudge(deps, uid, req, config, check.value, usage);
+      return judged.ok ? { ...quality, usage: judged.usage } : judged.failureClass === "content" ? judged : { ...quality, usage: judged.usage };
+    }
     if (!check.ok) {
       return {
         ok: false,
@@ -556,6 +568,12 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
       await recordInputRejection(deps, caller.uid, e.details, isSuspiciousRejection(e.details));
     }
     throw e;
+  }
+  // A request the quality gate would refuse whatever the model wrote (no item it may use, or a
+  // menu day with no item it may be planned on) is refused here, before anything is reserved.
+  if (!hasEnoughItems(req)) {
+    deps.logger.info("generation_not_enough_items", { uidHash: uidHash(caller.uid), kind: req.kind, courses: req.courses ?? null, items: req.ingredients.length });
+    fail("failed-precondition", "NOT_ENOUGH_ITEMS", "The ticked items cannot make this request");
   }
   const config = await deps.config();
   const plan = planFor(req, config);

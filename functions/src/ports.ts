@@ -165,9 +165,11 @@ export interface SecretSealer {
 /**
  * Failure classes. `infra` (timeout, 5xx, quota, token-ceiling abort) is always refunded, up to a
  * per-user daily ceiling after which generation is refused; `content` (safety block, MAX_TOKENS,
- * unusable output) is refunded within an allowance tied to the credits the user has paid for.
+ * unusable output) is refunded within an allowance tied to the credits the user has paid for;
+ * `quality` (a clean answer the quality gate refuses: no pantry item used, a staples-only dish, a
+ * repeated dish) is always refunded and counts towards the same daily ceiling as `infra`.
  */
-export type FailureClass = "infra" | "content";
+export type FailureClass = "infra" | "content" | "quality";
 
 /** Token counts of one LLM call, from the response's usageMetadata. */
 export interface LlmUsage {

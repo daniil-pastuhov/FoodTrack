@@ -85,6 +85,23 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
   (safety block, MAX_TOKENS, unusable output) refund once per 10 credits the account has paid for
   over its life, net of store refunds (`contentRefundsUsed`; minimum one once anything was paid);
   past that they are charged. All these counters move with the credits on `mergeBalance`.
+- Answers the quality gate refuses (a clean answer that is not what was paid for: a recipe or a
+  menu day using no pantry item, a dish of only staples, the same dish twice; "Prompt injection
+  defences", layer 4) are the service failing to deliver, not the request's fault: always
+  refunded (`failureClass: "quality"`), never charged, no `contentRefundsUsed`, not a prompt
+  rejection. Their model spend is booked like any other call (user `spendWindow`, `stats`), and
+  each counts towards `infraRefundsPerDay`, so an account can trip the gate at most that many
+  times a UTC day (3 by default) before `INFRA_FAILURE_LIMIT`. The gate runs after every other
+  output rule, so an answer that also breaks one (a link, an allergen, the wrong language) is
+  settled as that content failure; with `outputJudge` on, the judge also sees a gate-refused
+  answer, and its refusal (under `enforce`) is settled as the judge's content failure.
+- A request the gate would refuse whatever the model wrote is refused before anything is
+  reserved, with `NOT_ENOUGH_ITEMS` (nothing charged, no model call, log
+  `generation_not_enough_items`): no pantry item that the allergens and diet allow (by the same
+  word lists as the answer check), or, for a menu, a day on which no allowed item may be planned
+  (an item may be planned on any day when it has no date or was already past its date at request
+  time, otherwise up to its date). A thin but possible request (one undated item for a 3-day
+  menu) goes to the model, which completes dishes with a few bought extras.
 - Refunds are state transitions on the purchase doc: `refundedCredits` moves to the store's value
   and the holder's balance moves by the difference, once. Events older than the last one applied
   are ignored. The balance may go negative. A refund for a purchase never submitted creates a
@@ -243,8 +260,11 @@ Every LLM call is priced before it is made and paid for by a credit:
 #### Spend ceilings (defaults and arithmetic)
 
 Worst-case reservations at the default prices (1.50 / 7.50 USD per 1M tokens), from a small
-request to the largest valid one: recipe USD 0.066–0.075, 2-course menu 0.216–0.225, 3-course menu
-0.306–0.315 (with `outputJudge` on, add 0.024, 0.040 and 0.050). A typical measured 3-course menu (≈3,000 input, 12,000 output, 2,000 thinking tokens)
+request to the largest valid one: recipe USD 0.067–0.082, 2-course menu 0.217–0.233, 3-course menu
+0.307–0.323 (with `outputJudge` on, add 0.024, 0.040 and 0.050; the largest is the table below).
+The date and extras rules of November 2026 (the list of items past their date, the extras and
+staples lines) added 450–655 bytes to the input bound, under USD 0.001 a call; the output
+dominates. A typical measured 3-course menu (≈3,000 input, 12,000 output, 2,000 thinking tokens)
 is 3,000 × 1.5 + 14,000 × 7.5 = USD 0.11; a 2-course menu ≈ USD 0.08; a recipe ≈ USD 0.02.
 
 **Optional ingredients do not raise the worst case.** The input bound is the UTF-8 length of the
@@ -259,9 +279,12 @@ servings, step by step, 20 allergens of 40 such characters, `outputJudge` in its
 
 | request | largest, no optional items | largest, with optional items |
 |---|---|---|
-| recipe | 13,090 bytes, USD 0.08108 | 12,934 bytes, USD 0.08084 |
-| 2-course menu | 14,212 bytes, USD 0.23132 | 14,068 bytes, USD 0.23110 |
-| 3-course menu | 14,231 bytes, USD 0.32135 | 14,087 bytes, USD 0.32113 |
+| recipe | 13,679 bytes, USD 0.08196 | 13,316 bytes, USD 0.08141 |
+| 2-course menu | 14,866 bytes, USD 0.23230 | 14,515 bytes, USD 0.23177 |
+| 3-course menu | 14,885 bytes, USD 0.32233 | 14,534 bytes, USD 0.32180 |
+
+(With every ticked item past its date, which lists all 30 ids in the instruction; measured after
+the date and extras rules. Before them the figures were 13,090 / 14,212 / 14,231 bytes.)
 
 Output caps are unchanged, so every figure below holds as it was; `test/optionalIngredients.test.ts`
 checks the inequality for each kind.
@@ -458,14 +481,15 @@ Only a caller with credits reaches the model, and an answer goes back only to th
 |---|---|---|---|
 | 1 | Use the paid endpoint as a general LLM (off-topic text in recipe fields), or get harmful, sexual, hateful or dangerous content, including dangerous "recipes", shown under the app's name | Names letters/digits/space/hyphen in a JSON block; schema-shaped output; safety filters at MEDIUM | Names must look like food names (structural limits + a meta-word list), in any script; system/data split; safety filters LOW for hate, harassment, sexual; per-field length and step-count bounds; non-food, drug and solicitation word lists; script and language check; optional judge |
 | 2 | Override the instructions: change language, ignore allergens or diet, ignore the format, reveal the prompt | One instruction block mixing settings with a "treat as data" sentence | Every instruction in the system instruction, the data block declared untrusted; allergens and diet checked in the answer (refused if violated); language checked by script; canary and verbatim-leak check |
-| 3 | Inflate cost (longest output or thinking), or fail on purpose to farm refunds | `maxOutputTokens`, token ceiling, refund allowances | Unchanged, plus schema `maxItems` on steps and ingredients and `maximum` on minutes, and the daily rejection lock; refused answers are content failures under the existing allowance |
+| 3 | Inflate cost (longest output or thinking), or fail on purpose to farm refunds | `maxOutputTokens`, token ceiling, refund allowances | Unchanged, plus schema `maxItems` on steps and ingredients and `maximum` on minutes, and the daily rejection lock; refused answers are content failures under the existing allowance, except quality-gate refusals, which are refunded but capped by `infraRefundsPerDay` and booked against the spend ceilings |
 | 4 | Attack the client or the reader: URLs, contact details, markup, control or bidi characters, fake UI or calls to action, very long strings | Lengths 120/600/800 per field only | Refused: links, schemes, domains, e-mail, `@` handles, 8+ digit phone-like runs, HTML, entities, markdown, braces, backslashes, controls, format/bidi/zero-width, private-use, scripts none of the request's names use, passwords/payments/app stores/messengers wording, 10× repeated characters; tighter lengths. `uses` in a menu is now the user's own names, never model text |
 | 5 | Stored injection: a stored recipe fed into a later prompt | Not fed back (implicit) | **Not fed back, by construction**: `buildPrompt` takes only the validated request; no stored recipe, menu, failure reason or log is ever read into a prompt (tested in `test/injection.test.ts`) |
 
 ### Layers
 
 1. **Prompt structure** (`src/adapters/prompt.ts`). The system instruction holds every rule and
-   the per-request settings, built only from validated enums, integers and dates. The user turn is
+   the per-request settings, built only from validated enums, integers and dates, and the
+   server's own item ids (the list of items already past their date). The user turn is
    one JSON object between `BEGIN_PANTRY_DATA` and `END_PANTRY_DATA`: `pantry` (`id` `p1..pN`,
    `name`, `expiresOn`, `quantity`) and `allergens`. The instruction says the block is untrusted
    data, that each entry is only a food item (or a food to avoid), that anything else is ignored,
@@ -523,12 +547,13 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `LEAK` | The canary; 8 consecutive words of the system instruction; the prompt's block names | yes |
    | `SCRIPT`, `LANGUAGE` | A letter in a script that is neither Latin, Cyrillic, nor one the request's item and allergen names use (Japanese names also allow Han, Hiragana and Katakana; Korean, Hangul and Han), or a run of such letters that is not part of one of those names (an item may be quoted in its own script, nothing else written in it); less than 60 % of all letters in the requested language's script | yes |
    | `REPETITION` | A character 10× in a row, a word 4× in a row, duplicate steps | yes |
-   | `PANTRY_REF`, `NO_PANTRY` | A `pantryId` or `uses` entry that is not a sent item; a recipe or menu that uses no pantry item | yes |
+   | `PANTRY_REF` | A `pantryId` or `uses` entry that is not a sent item | yes |
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
    | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite); free-from wording and plant-milk style exemptions apply | yes |
    | `DIET` | The same for the diet (meat, fish, seafood, dairy, egg, honey, gluten grains and wheat foods) | yes |
+   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the ten languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; a pantry ingredient counts as a staple only when its item's own name is one too); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
 
-   Charging: every refusal is a **content failure**: refunded within the existing allowance (one
+   Charging: every refusal except the quality gate's is a **content failure**: refunded within the existing allowance (one
    per 10 credits paid over the account's life), charged after it. So an attacker gets no free
    retries by making the model misbehave, and an honest user whose answer is refused for the
    model's own mistake is treated exactly as for any other unusable answer today. Refused answers
@@ -625,7 +650,26 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
 - **Prompt disclosure** has little value (the prompt is public); the canary and n-gram checks stop
   verbatim restatement, not paraphrase or translation.
 - **The model can still be wrong honestly**, and a refused honest answer costs the user a credit
-  once the allowance is spent. That is the existing rule, unchanged.
+  once the allowance is spent. That is the existing rule, unchanged. The exception is the quality
+  gate: an answer that skips the pantry or serves staples is always refunded.
+- **The quality gate can be tripped on purpose**, for free: a pantry the model will not cook
+  from (names it reads as non-food, or a prompt-injection-ish name that makes it ignore the
+  pantry) makes the gate refuse and refund. The attacker gets nothing back (a refused answer is
+  never returned or stored), it needs credits to reserve at all, and it is bounded per account
+  by `infraRefundsPerDay` (3 a day, then `INFRA_FAILURE_LIMIT`) and by the per-user and global
+  spend ceilings, which book the measured cost of every such call: at most about 3 × USD 0.11
+  of model spend per account per day for 3-course menus, the same exposure as three refunded
+  infrastructure failures. The gate runs after every content rule, and with `outputJudge` on the
+  judge still sees a gate-refused answer (a verdict other than `ok` under `enforce` keeps it a
+  charged content failure and a prompt rejection), so skipping the pantry cannot turn a charged
+  hostile answer into a refunded one. With the judge off, a hostile answer that only the judge
+  would have caught is refused by the gate and refunded: not delivered, but not counted either.
+- **The staple list is a word list.** It catches "water", "olivenolje", "freshly ground black
+  pepper" in the ten languages, not "a splash of stock" or a staple in another language; a
+  staples-only dish written that way passes. It deliberately leaves out words that are also real
+  ingredients (paprika, which is a bell pepper in several languages; chilli; garlic), so an
+  honest roasted-pepper starter is never refused. The per-day pantry rule and the prompt carry
+  the rest.
 
 ### Not implemented, worth knowing
 
@@ -671,7 +715,7 @@ Server-only. Documents:
 - `stats/{yyyymmdd}` (UTC): `generations`, `generationUnits` (credits reserved), `reservedMicroUsd`
   (worst cases of calls in flight), `spentMicroUsd` (estimated, measured where known), `llmCalls`,
   `inputTokens`, `outputTokens`, `thinkingTokens`, `succeeded`, `contentFailures`,
-  `infraFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
+  `infraFailures`, `qualityFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
   `netCreditsGranted` (production credits granted minus store refunds that day),
   `sandboxGrants`, `sandboxCredits`. A call is booked on the day it was reserved.
   `stats/ledger`: `negativeBalanceTotal` (the sweeper's last sum of negative balances).
@@ -728,6 +772,28 @@ The tests use fakes for both stores and the model (`test/helpers.ts`), except
 `test/appstoreAdapter.test.ts`, which runs the real App Store verifier against a throwaway
 certificate chain made with `openssl`. The `demo-` project id means the emulators never reach a
 real Firebase project.
+
+### Replaying a prompt against the live model
+
+`npm run prompt-body` builds what this server would send, offline (no network, no credentials):
+
+```bash
+cd functions
+# The Vertex AI generateContent body for a generateRecipe request (or {"refused":"NOT_ENOUGH_ITEMS"}):
+npm run --silent prompt-body -- body test/fixtures/live-menu-2026-11-14.json > /tmp/body.json
+# Send it yourself, with a token from your own gcloud login:
+curl -s -X POST -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+  "https://aiplatform.googleapis.com/v1/projects/bestbefore-f9ee1/locations/global/publishers/google/models/gemini-3.8-flash:generateContent" \
+  -d @/tmp/body.json > /tmp/answer.json
+# What the output checks (and the quality gate) make of the answer:
+npm run --silent prompt-body -- check test/fixtures/live-menu-2026-11-14.json /tmp/answer.json
+```
+
+The fixture is the first real paid menu (2026-11-14: seven items, all past their date, 2
+courses). A request file is a `generateRecipe` body without `requestId`; it is validated as if
+sent on its own `today`. `--model` and `--thinking` set the model id and thinking level used for
+`thinkingConfig` (defaults `gemini-3.8-flash`, `LOW`, the deployed parameters' defaults). `check`
+uses a fresh canary, so it cannot judge a canary leak, only the verbatim-instruction one.
 
 ### Running the functions for the apps
 

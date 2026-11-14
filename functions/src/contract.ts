@@ -42,6 +42,8 @@ export interface IngredientInput {
   expiresOn: string | null;
   /** Item count in the pantry, or null when unknown. */
   quantity: number | null;
+  /** Kept optional items only: the entry's index in `optionalIngredients` as the client sent it. */
+  sentIndex?: number;
 }
 
 export interface GenerateRequest {
@@ -65,6 +67,16 @@ export interface RecipeIngredient {
   amount: string;
   name: string;
   fromPantry: boolean;
+  /**
+   * Present exactly when this is one of the request's `ingredients`: its 0-based index there, so
+   * a client can find that item and its date. Absent in answers saved before it.
+   */
+  pantryIndex?: number;
+  /**
+   * Present exactly when this is one of the request's `optionalIngredients`: its 0-based index in
+   * that list as sent (entries the server left out still count), so a client can find its date.
+   */
+  optionalIndex?: number;
 }
 
 export interface Recipe {
@@ -166,7 +178,8 @@ export type ErrorReason =
   | "ALLERGEN_CONSENT_REQUIRED"
   | "APPLE_NOT_LINKED"
   | "APPLE_CODE_REJECTED"
-  | "APPLE_UNAVAILABLE";
+  | "APPLE_UNAVAILABLE"
+  | "NOT_ENOUGH_ITEMS";
 
 export function fail(
   code: ConstructorParameters<typeof HttpsError>[0],
@@ -341,7 +354,7 @@ export function validateOptionalIngredients(v: unknown, ingredients: readonly In
     seen.add(key);
     names++;
     chars += length;
-    kept.push({ name: checked.name, ...shape });
+    kept.push({ name: checked.name, ...shape, sentIndex: i });
   });
   return kept;
 }
