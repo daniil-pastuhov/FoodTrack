@@ -1028,6 +1028,11 @@ class IapTests(unittest.TestCase):
         self.assertFalse(iaps["recipes_50"]["screenshot"])
         self.assertIsNone(iaps["recipes_100"]["version"])
 
+    def test_the_newest_draft_wins_whatever_the_number_type(self):
+        versions = [iap_version("a", "9", "PREPARE_FOR_SUBMISSION"), iap_version("b", "10", "READY_FOR_REVIEW"),
+                    iap_version("c", None, "PREPARE_FOR_SUBMISSION")]
+        self.assertEqual(max(versions, key=testflight.version_number)["id"], "b")
+
     def test_version_first_then_the_iaps_then_submitted(self):
         asc = self.fake()
         result, out = self.submit(asc)

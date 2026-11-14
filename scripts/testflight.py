@@ -270,6 +270,14 @@ IAP_DRAFT_VERSION_STATES = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}
 OPEN_SUBMISSION_STATES = "READY_FOR_REVIEW,UNRESOLVED_ISSUES"
 
 
+def version_number(version):
+    """An In-App Purchase version's number (an integer in Apple's examples), for sorting."""
+    try:
+        return int((version.get("attributes") or {}).get("version") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
 def app_iaps(asc, app_id):
     """The app's in-app purchases with what review needs: the draft version (newest one in
     PREPARE_FOR_SUBMISSION or READY_FOR_REVIEW), its locales and whether a review screenshot is
@@ -281,7 +289,7 @@ def app_iaps(asc, app_id):
         versions, _ = get_all(asc, f"/v2/inAppPurchases/{iap['id']}/versions", {"limit": 200})
         drafts = sorted((v for v in versions
                          if (v.get("attributes") or {}).get("state") in IAP_DRAFT_VERSION_STATES),
-                        key=lambda v: (v.get("attributes") or {}).get("version") or 0, reverse=True)
+                        key=version_number, reverse=True)
         draft = drafts[0] if drafts else None
         locales = []
         if draft:
@@ -445,7 +453,11 @@ def submit_for_review(asc, app_id, version, release_type, iaps_attached=False):
     when = "once Apple approves it" if release_type == "AFTER_APPROVAL" else \
         "when you release it in App Store Connect after approval"
     print(f"Submitted for App Review; it goes live {when}")
-    left = [iap["product"] for iap in app_iaps(asc, app_id) if iap["state"] == "READY_TO_SUBMIT"]
+    try:
+        left = [iap["product"] for iap in app_iaps(asc, app_id) if iap["state"] == "READY_TO_SUBMIT"]
+    except AscError as error:  # the submission is sent; a failed check mustn't fail the job
+        print(f"::warning::Could not read the in-app purchases back after submitting: {error}")
+        left = []
     if left:
         print(f"::warning::Still READY_TO_SUBMIT after the submission: {', '.join(left)}. Check in "
               "App Store Connect that they are in review with the version.")
