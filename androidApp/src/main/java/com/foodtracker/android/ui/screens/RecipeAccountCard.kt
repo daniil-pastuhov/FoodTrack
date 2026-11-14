@@ -41,15 +41,20 @@ internal class AccountActions(
 
 /**
  * Where bought recipes are kept, in Recipe settings: nothing yet; on this phone, with the way into
- * an account; or in an account, with sign-out and deletion. The consequence of "on this phone"
- * is repeated here, where the recipes are shown, with the way out of it.
+ * an account and deletion of what our server holds for it; or in an account, with sign-out and
+ * deletion. The consequence of "on this phone" is repeated here, where the recipes are shown,
+ * with the way out of it. Nothing to delete is offered without a user: someone who never started
+ * a purchase has nothing on our server.
  */
 @Composable
 internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
     val account = paid.account
     var confirmingSignOut by rememberSaveable { mutableStateOf(false) }
     var confirmingDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmingDeviceDelete by rememberSaveable { mutableStateOf(false) }
     val balance = paid.balance ?: 0
+    // Below zero after a store refund of recipes already used: none of them is lost.
+    val unused = balance.coerceAtLeast(0)
 
     when (account.kind) {
         AccountKind.NONE -> RecipeFormCard(title = stringResource(R.string.recipe_account), icon = LarderIcons.UserRound) {
@@ -77,6 +82,14 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
                     leadingIcon = LarderIcons.Ticket
                 )
             }
+            DeleteWaitsNote(paid)
+            LarderButton(
+                text = stringResource(R.string.recipe_delete_device_data),
+                onClick = { confirmingDeviceDelete = true },
+                style = LarderButtonStyle.DangerText,
+                enabled = !paid.accountBusy && !paid.deletionWaitsForPurchase,
+                loading = paid.accountBusy
+            )
         }
         AccountKind.SIGNED_IN -> RecipeFormCard(title = stringResource(R.string.recipe_your_recipes), icon = LarderIcons.Ticket) {
             BalanceLine(balance, pluralStringResource(R.plurals.recipe_in_account_label, balance))
@@ -118,10 +131,11 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
                     text = stringResource(R.string.recipe_delete_account),
                     onClick = { confirmingDelete = true },
                     style = LarderButtonStyle.DangerText,
-                    enabled = !paid.accountBusy,
+                    enabled = !paid.accountBusy && !paid.deletionWaitsForPurchase,
                     loading = paid.accountBusy
                 )
             }
+            DeleteWaitsNote(paid)
         }
     }
 
@@ -156,6 +170,31 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
             destructive = true
         )
     }
+    if (confirmingDeviceDelete) {
+        LarderDialog(
+            title = stringResource(R.string.recipe_delete_device_title),
+            text = if (unused > 0) {
+                pluralStringResource(R.plurals.recipe_delete_device_body, unused, unused)
+            } else {
+                stringResource(R.string.recipe_delete_device_body_none)
+            },
+            confirmLabel = stringResource(R.string.recipe_delete_device_confirm),
+            onConfirm = {
+                confirmingDeviceDelete = false
+                actions.onDelete()
+            },
+            onDismissRequest = { confirmingDeviceDelete = false },
+            dismissLabel = stringResource(R.string.recipe_cancel),
+            destructive = true
+        )
+    }
+}
+
+/** Why deletion is off for now: a purchase of this account is paid for (or being paid) and
+ *  not added yet. */
+@Composable
+private fun DeleteWaitsNote(paid: PaidUiState) {
+    if (paid.deletionWaitsForPurchase) AccountText(stringResource(R.string.recipe_delete_waits_for_purchase))
 }
 
 /** "Google, Apple": the account's sign-ins by name, Google first. */

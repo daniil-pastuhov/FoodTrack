@@ -108,7 +108,8 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 ### 4. Google Play
 
 - [ ] Payments profile and merchant account (Monetisation setup), if not there already.
-- [ ] **Real-time developer notifications** (Monetisation setup > Real-time developer
+- [x] (Done by the owner 2026-11-14; Play's test notification reached `playNotifications` and was
+      logged as `Play RTDN` / `test`.) **Real-time developer notifications** (Monetisation setup > Real-time developer
       notifications; no API): topic `projects/bestbefore-f9ee1/topics/play-rtdn`, with one-time
       product (voided purchase) notifications on. "Send test notification".
 - [ ] **Play Integrity**: link the Cloud project (Test and release > App integrity > Play
@@ -277,7 +278,9 @@ binding exist on the live project (created and read back 2026-11-14).
       `store-listing/app-store/README.md`, section 5. App Privacy has no API; Play's Data safety
       can be uploaded as CSV through the Play Developer API **(agent)**. Play Console > App
       content: in-app purchases, and account deletion (Recipe tab > Recipe settings > Account >
-      Delete account). **Check** whether Play also wants a web page for deletion requests.
+      Delete account; for recipes bought without an account, Recipe settings > Your recipes >
+      Delete my data from our server, which deletes the anonymous account). **Check** whether
+      Play also wants a web page for deletion requests.
 - [x] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for

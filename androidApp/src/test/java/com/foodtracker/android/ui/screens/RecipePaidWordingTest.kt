@@ -212,6 +212,27 @@ class RecipePaidWordingTest {
     }
 
     @Test
+    fun deletingThisDevicesDataSaysWhatIsLostAndKeptInEveryLanguage() {
+        // Each: the count, that the purchases' record stays, and that the pantry stays.
+        val expected = mapOf(
+            "en" to listOf("Your 5 unused recipes will be lost", "a record of the purchases stays", "your pantry stay on this device"),
+            "ru" to listOf("Ваши 5 неиспользованных рецептов пропадут", "запись о покупках останется", "запасы останутся на устройстве"),
+            "nb" to listOf("De 5 ubrukte oppskriftene dine går tapt", "en oversikt over kjøpene blir liggende", "matlageret blir på denne enheten")
+        )
+        for ((language, parts) in expected) {
+            val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            val resources = context.createConfigurationContext(configuration).resources
+            val body = resources.getQuantityString(R.plurals.recipe_delete_device_body, 5, 5)
+            for (part in parts) org.junit.Assert.assertTrue("$language: $body", part in body)
+            val none = resources.getString(R.string.recipe_delete_device_body_none)
+            org.junit.Assert.assertTrue("$language: $none", parts.last() in none)
+            for (text in listOf(body, none, resources.getString(R.string.recipe_delete_device_data), resources.getString(R.string.recipe_delete_waits_for_purchase))) {
+                org.junit.Assert.assertFalse("$language: no credits or tokens: $text", Regex("(?i)credit|token|кредит|токен|kreditt").containsMatchIn(text))
+            }
+        }
+    }
+
+    @Test
     @Config(sdk = [34], qualifiers = "en")
     fun aSavedMenuShowsItsDishesAndTheAppsTitle() {
         val recipe = Recipe(title = "Soup", minutes = 20, steps = listOf("Cook."))

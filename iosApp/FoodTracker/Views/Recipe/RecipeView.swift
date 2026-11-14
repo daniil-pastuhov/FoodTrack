@@ -426,6 +426,8 @@ struct RecipeView: View {
         case .signInFailed: showSnackbar(L10n.recipeSignInFailed)
         case .providerInUse: showSnackbar(L10n.recipeProviderInUse)
         case .accountDeleted: showSnackbar(L10n.recipeAccountDeleted)
+        case .deviceDataDeleted: showSnackbar(L10n.recipeDeviceDataDeleted)
+        case .deletionWaitsForPurchase: showSnackbar(L10n.recipeDeleteWaitsForPurchase)
         case .accountActionFailed: showSnackbar(L10n.recipeAccountActionFailed)
         case .accountBusy: showSnackbar(L10n.recipeAccountBusy)
         case .merged(let moved): showSnackbar(L10n.recipeMerged(moved: moved))

@@ -67,7 +67,15 @@ sealed interface PaidEvent {
     /** Adding a sign-in that belongs to another account. */
     data object SignInInUse : PaidEvent
     data object AccountDeleted : PaidEvent
+
+    /** The recipes kept on this device (an anonymous account) and what our server held for them
+     *  were deleted; the device is back to never having bought. */
+    data object DeviceDataDeleted : PaidEvent
     data object AccountActionFailed : PaidEvent
+
+    /** Deleting waits for a purchase that is paid, or whose payment is under way, and not added
+     *  yet: the server ties it to this account, so deleting now would leave it with nobody. */
+    data object DeletionWaitsForPurchase : PaidEvent
 
     /** Deleting waits for a recipe that is still being written. */
     data object AccountBusy : PaidEvent
@@ -126,7 +134,9 @@ data class PaidUiState(
     /** The answer to sending allergens to our server, as recorded on this phone. */
     val allergenConsent: AllergenConsentRecord? = null,
     /** The consent step on screen, and where it was opened from; null when not shown. */
-    val consentPrompt: ConsentPrompt? = null
+    val consentPrompt: ConsentPrompt? = null,
+    /** A deletion was asked for in this run, whatever came of it: no rating request follows. */
+    val deletionTried: Boolean = false
 ) {
     /** Buying is offered: only once the store has shown it has packs, so there is never a Buy
      *  that leads nowhere; hidden while the server is paused, and while a payment is waiting or
@@ -136,6 +146,10 @@ data class PaidUiState(
             unconfirmedRecipes == 0 && !paymentPending
 
     val purchaseRejected: Boolean get() = rejection != null
+
+    /** Deleting is held back while a purchase of this account is unconfirmed or its payment is
+     *  still under way (not one refused as another account's, which isn't this account's). */
+    val deletionWaitsForPurchase: Boolean get() = unconfirmedRecipes > 0 || paymentPending
 }
 
 /** How long a "paused" answer stands before the tab offers the server again. */
@@ -789,11 +803,23 @@ internal class RecipePaid(
         }
     }
 
+    /** Deletes the account from our server: a signed-in one, or the anonymous one that keeps
+     *  this device's recipes (no fresh sign-in needed). Only when there is one: someone who never
+     *  started a purchase has nothing on the server, and no user is made to delete. */
     fun deleteAccount() {
-        if (state.value.paid.accountBusy) return
+        val kind = account.state.value.kind
+        if (state.value.paid.accountBusy || kind == AccountKind.NONE) return
+        updatePaid { it.copy(deletionTried = true) }
+        // A purchase paid for but not added yet is tied to this account on the server
+        // (PURCHASE_ACCOUNT_MISMATCH for anyone else): deleting now would strand it.
+        if (state.value.paid.deletionWaitsForPurchase) {
+            updatePaid { it.copy(event = PaidEvent.DeletionWaitsForPurchase) }
+            return
+        }
         updatePaid { it.copy(accountBusy = true) }
         scope.launch {
-            val signedIn = account.state.value.kind == AccountKind.SIGNED_IN
+            val signedIn = kind == AccountKind.SIGNED_IN
+            val deleted = if (signedIn) PaidEvent.AccountDeleted else PaidEvent.DeviceDataDeleted
             var reauthenticated = false
             if (signedIn && account.needsFreshSignIn()) {
                 if (!account.reauthenticateForDeletion()) {
@@ -820,12 +846,12 @@ internal class RecipePaid(
                     // Only when the server says Apple's link stayed is the person told how to
                     // remove it themselves.
                     val appleLeft = appleLinkLeftBehind(result.value)
-                    updatePaid { it.copy(accountBusy = false, issue = null, event = PaidEvent.AccountDeleted, appleLinkLeft = appleLeft) }
+                    updatePaid { it.copy(accountBusy = false, issue = null, event = deleted, appleLinkLeft = appleLeft) }
                 }
                 is ServerResult.Err -> {
                     if (result.error == ServerError.ACCOUNT_CLOSED) {
                         handleCommonError(result.error)
-                        updatePaid { it.copy(accountBusy = false, event = PaidEvent.AccountDeleted) }
+                        updatePaid { it.copy(accountBusy = false, event = deleted) }
                     } else {
                         if (result.error == ServerError.OFFLINE) handleCommonError(result.error)
                         val event = if (result.error == ServerError.BUSY) PaidEvent.AccountBusy else PaidEvent.AccountActionFailed

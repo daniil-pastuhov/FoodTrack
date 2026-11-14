@@ -802,6 +802,22 @@
             <string>Your %d unused recipes will be lost and can't be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
         </dict>
     </dict>
+    <key>recipe_delete_device_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Your %d unused recipe will be lost and can't be refunded or restored. The anonymous sign-in this {device} uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
+            <key>other</key>
+            <string>Your %d unused recipes will be lost and can't be refunded or restored. The anonymous sign-in this {device} uses is deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this {device}.</string>
+        </dict>
+    </dict>
     <key>recipe_server_refused</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

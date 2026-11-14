@@ -215,6 +215,12 @@ class ReviewPrompterTest {
         assertTrue(ReviewPrompter.isProblem(PaidUiState(storeRefused = true)))
         assertTrue(ReviewPrompter.isProblem(PaidUiState(sheet = BuySheet.StoreUnavailable)))
         assertFalse(ReviewPrompter.isProblem(PaidUiState(sheet = BuySheet.Loading)))
+        // A deletion, whatever came of it, never leads to a rating request.
+        assertTrue(ReviewPrompter.isProblem(PaidEvent.AccountDeleted))
+        assertTrue(ReviewPrompter.isProblem(PaidEvent.DeviceDataDeleted))
+        assertTrue(ReviewPrompter.isProblem(PaidEvent.AccountBusy))
+        assertTrue(ReviewPrompter.isProblem(PaidEvent.DeletionWaitsForPurchase))
+        assertTrue(ReviewPrompter.isProblem(PaidUiState(deletionTried = true)))
 
         val prompter = eligiblePrompter()
         prompter.onPaidState(PaidUiState())

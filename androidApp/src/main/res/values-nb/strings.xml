@@ -973,6 +973,16 @@
         <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
         <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
     </plurals>
+    <string name="recipe_delete_device_data">Slett dataene mine fra serveren vår</string>
+    <string name="recipe_delete_device_title">Slette dataene dine fra serveren vår?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Den %1$d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne enheten bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+        <item quantity="other">De %1$d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Den anonyme påloggingen denne enheten bruker, slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">Den anonyme påloggingen denne enheten bruker, slettes fra serveren vår; en oversikt over eventuelle kjøp blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne enheten.</string>
+    <string name="recipe_delete_device_confirm">Slett dataene</string>
+    <string name="recipe_device_data_deleted">Dataene dine er slettet fra serveren vår</string>
+    <string name="recipe_delete_waits_for_purchase">Et kjøp er ikke fullført ennå. Du kan slette når det er fullført.</string>
     <string name="recipe_merge_title">Legge oppskriftene på denne enheten til kontoen din?</string>
     <string name="recipe_merge_body">Kontoen din har allerede %1$d oppskrifter. De %2$d på denne enheten legges til, så det blir %3$d. Dette kan ikke angres.</string>
     <string name="recipe_merge_body_unknown">De %1$d oppskriftene på denne enheten legges til kontoen din. Dette kan ikke angres.</string>

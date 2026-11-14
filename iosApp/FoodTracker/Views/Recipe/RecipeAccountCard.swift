@@ -1,12 +1,15 @@
 import SwiftUI
 
 /// Recipe settings' account card: no account, recipes on this phone, or an account signed in
-/// with Apple or Google, with signing in, adding the other sign-in, signing out and deleting.
+/// with Apple or Google, with signing in, adding the other sign-in, signing out and deleting
+/// (the account, or what our server holds for this phone's recipes). Nothing to delete is
+/// offered without a user: someone who never started a purchase has nothing on our server.
 struct RecipeAccountCard: View {
     @ObservedObject var model: RecipeViewModel
 
     @State private var confirmingSignOut = false
     @State private var confirmingDelete = false
+    @State private var confirmingDeviceDelete = false
 
     private var credits: RecipeCredits { model.credits }
 
@@ -34,6 +37,15 @@ struct RecipeAccountCard: View {
             actions: [
                 .cancel(L10n.cancelButton),
                 .destructive(L10n.recipeDeleteAccount) { Task { await credits.deleteAccount() } },
+            ]
+        )
+        .larderDialog(
+            L10n.recipeDeleteDeviceTitle,
+            isPresented: $confirmingDeviceDelete,
+            message: L10n.recipeDeleteDeviceMessage(credits.balance ?? 0),
+            actions: [
+                .cancel(L10n.cancelButton),
+                .destructive(L10n.recipeDeleteDeviceConfirm) { Task { await credits.deleteAccount() } },
             ]
         )
         // Only when the server answered `appleLinkRemoved: false` after deleting.
@@ -112,6 +124,16 @@ struct RecipeAccountCard: View {
         } else if credits.showsPurchasesBlocked {
             note(L10n.recipePurchasesBlocked)
         }
+        deleteWaitsNote
+        LarderButton(L10n.recipeDeleteDeviceData, variant: .dangerText, fullWidth: true) { confirmingDeviceDelete = true }
+            .disabled(credits.isSigningIn || credits.deletionWaitsForPurchase)
+    }
+
+    /// Why deletion is off for now: a purchase of this account is paid for (or being paid) and
+    /// not added yet.
+    @ViewBuilder
+    private var deleteWaitsNote: some View {
+        if credits.deletionWaitsForPurchase { note(L10n.recipeDeleteWaitsForPurchase) }
     }
 
     @ViewBuilder
@@ -146,8 +168,10 @@ struct RecipeAccountCard: View {
         HStack(spacing: LarderSpace.s2) {
             LarderButton(L10n.recipeSignOut, variant: .outline, fullWidth: true) { confirmingSignOut = true }
             LarderButton(L10n.recipeDeleteAccount, variant: .dangerText, fullWidth: true) { confirmingDelete = true }
+                .disabled(credits.deletionWaitsForPurchase)
         }
         .disabled(credits.isSigningIn)
+        deleteWaitsNote
     }
 
     /// The sign-in worth adding: Google on an iPhone signed in with Apple (so an Android phone
