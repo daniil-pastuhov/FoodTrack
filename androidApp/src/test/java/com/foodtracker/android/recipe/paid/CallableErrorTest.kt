@@ -1,6 +1,7 @@
 package com.foodtracker.android.recipe.paid
 
 import com.foodtracker.recipe.BalanceReply
+import com.foodtracker.recipe.MergeReply
 import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
@@ -142,6 +143,7 @@ class CallableErrorTest {
         assertEquals(ServerError.UNKNOWN_REQUEST, error(Code.NOT_FOUND, "UNKNOWN_REQUEST"))
         assertEquals(ServerError.CALLABLE_MISSING, error(Code.NOT_FOUND), "an older server without getGeneration")
         assertEquals(ServerError.CALLABLE_MISSING, error(Code.UNIMPLEMENTED))
+        assertEquals(ServerError.CALLABLE_MISSING, error(Code.NOT_FOUND, ""), "an empty reason is no reason")
         assertEquals(ServerError.UNKNOWN, error(Code.NOT_FOUND, "CALLABLE_MISSING"), "the client's own name isn't a reason")
     }
 
@@ -151,6 +153,8 @@ class CallableErrorTest {
         // Python: uuid.uuid5(uuid.UUID("6f2b3c1e-8d4a-4b7e-9c35-2a1f0e7d5b48"), "test-uid")
         assertEquals("8e3ec052-71cd-54df-a198-9e3f69fbc9d9", purchaseAccountId("test-uid"), "matches RFC 4122 UUIDv5")
         assertEquals("1e7c2566-647e-5044-9bbb-85fedc8b3c81", purchaseAccountId("abc123"), "a second uid")
+        // functions/CONTRACT.md's worked example, asserted in functions/test/hardening.test.ts.
+        assertEquals("e0612f8d-d882-5109-b5f4-6e979f3b69ce", purchaseAccountId("test-uid-123"), "the contract's example")
         assertEquals(purchaseAccountId("abc123"), purchaseAccountId("abc123"), "deterministic")
         assertEquals(false, purchaseAccountId("abc124") == purchaseAccountId("abc123"), "per user")
     }
@@ -179,6 +183,50 @@ class CallableErrorTest {
             ServerResult.Err(ServerError.UNAUTHENTICATED)
         }
         assertEquals(1, calls, "other refusals aren't asked again")
+    }
+
+    @Test
+    fun resourceExhaustedWithoutAReasonIsABusyServerNotABug() {
+        assertEquals(ServerError.OVERLOADED, error(Code.RESOURCE_EXHAUSTED))
+        assertEquals(ServerError.RATE_LIMITED, error(Code.RESOURCE_EXHAUSTED, "RATE_LIMITED"))
+        assertEquals(ServerError.UNKNOWN, error(Code.RESOURCE_EXHAUSTED, "OVERLOADED"), "the client's own name isn't a reason")
+    }
+
+    @Test
+    fun thePurchaseRefusalsAreRead() {
+        assertEquals(ServerError.STORE_MISMATCH, error(Code.PERMISSION_DENIED, "STORE_MISMATCH"))
+        assertEquals(ServerError.PURCHASE_ACCOUNT_MISMATCH, error(Code.FAILED_PRECONDITION, "PURCHASE_ACCOUNT_MISMATCH"))
+    }
+
+    @Test
+    fun exactlyTheConsumingCallablesUseLimitedUseTokens() {
+        for (name in listOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount")) {
+            assertEquals(true, usesLimitedUseToken(name), name)
+        }
+        for (name in listOf("getGeneration", "getBalance")) {
+            assertEquals(false, usesLimitedUseToken(name), name)
+        }
+    }
+
+    @Test
+    fun mergeRepliesCarryWhatMovedTheCostsAndTheBlock() {
+        val debt = JsonObject(
+            mapOf(
+                "balance" to JsonPrimitive(35),
+                "moved" to JsonPrimitive(-3),
+                "costs" to JsonObject(mapOf("recipe" to JsonPrimitive(1), "menu2" to JsonPrimitive(3), "menu3" to JsonPrimitive(4))),
+                "purchasesBlocked" to JsonPrimitive(true)
+            )
+        )
+        assertEquals(MergeReply(35, -3, RecipeCosts(1, 3, 4), true), mergeReplyOf(debt), "a debt")
+        assertEquals(MergeReply(12, 0, null, false), mergeReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(12)))), "nothing else")
+        assertEquals(null, mergeReplyOf(JsonObject(mapOf("moved" to JsonPrimitive(3)))), "no balance")
+        assertEquals(null, mergeReplyOf(JsonObject(mapOf("balance" to JsonPrimitive("12")))), "a balance as text isn't the contract's")
+        assertEquals(
+            MergeReply(12, 0, null, false),
+            mergeReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(12), "moved" to JsonPrimitive("3")))),
+            "a moved as text is read as nothing moved"
+        )
     }
 
     @Test

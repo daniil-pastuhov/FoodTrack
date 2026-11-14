@@ -129,6 +129,10 @@ data class VerifyReply(
 /** `getBalance`'s answer. */
 data class BalanceReply(val balance: Int, val costs: RecipeCosts? = null, val purchasesBlocked: Boolean = false)
 
+/** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
+ *  store refund had left it below zero: the debt moves too), the costs, and the block. */
+data class MergeReply(val balance: Int, val moved: Int = 0, val costs: RecipeCosts? = null, val purchasesBlocked: Boolean = false)
+
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
  *  (absent, false, a string, a number) doesn't. */
 fun purchasesBlockedOf(json: JsonElement?): Boolean =
@@ -169,6 +173,18 @@ enum class ServerError {
     RECENT_SIGN_IN_REQUIRED,
     MERGE_NOT_ALLOWED,
 
+    /** `verifyPurchase`: this build may not redeem purchases from this store (the App Check app
+     *  id isn't the Android app's). A build bug; nothing was recorded. */
+    STORE_MISMATCH,
+
+    /** `verifyPurchase`: the purchase was made by another account. Nothing was recorded; it stays
+     *  in the store for the account that bought it. */
+    PURCHASE_ACCOUNT_MISMATCH,
+
+    /** `resource-exhausted` without a reason (HTTP 429): every server instance is busy. Nothing
+     *  was charged; ask again, same request id, after a few seconds. */
+    OVERLOADED,
+
     /** `internal`: a server bug or outage. Safe to retry with the same request id. */
     INTERNAL,
 
@@ -181,7 +197,7 @@ enum class ServerError {
 
     companion object {
         /** What the client works out itself; never a server's `details.reason`. */
-        private val CLIENT_ONLY = setOf(UNKNOWN, OFFLINE, UNAUTHENTICATED, CALLABLE_MISSING)
+        private val CLIENT_ONLY = setOf(UNKNOWN, OFFLINE, UNAUTHENTICATED, CALLABLE_MISSING, OVERLOADED)
 
         /** The error for a callable failure's `details.reason`, [fallback] when it has none, and
          *  [UNKNOWN] for a reason this app doesn't know. */
@@ -302,7 +318,11 @@ data class AccountState(
     val kind: AccountKind = AccountKind.NONE,
     val providers: Set<SignInProvider> = emptySet(),
     /** As the provider gave it: Apple's relay address is shown as it is. */
-    val email: String? = null
+    val email: String? = null,
+    /** The purchase account token of this user (functions/CONTRACT.md, "Purchase account
+     *  token"), not the uid itself: tells apart whom a purchase was refused for. Null without a
+     *  user. */
+    val purchaseKey: String? = null
 )
 
 /** A sign-in whose credential already has its own account while this install holds an
@@ -342,9 +362,10 @@ interface RecipeAccount {
      */
     suspend fun signIn(provider: SignInProvider): SignInResult
 
-    /** Moves this install's recipes into the account and switches to it. Returns the joined
-     *  balance. */
-    suspend fun completeMerge(merge: PendingMerge): ServerResult<Int>
+    /** Moves this install's recipes (or its debt) into the account with `mergeBalance` and, on
+     *  success, switches to it. A failure changes nothing and leaves [merge] open, so it can be
+     *  asked again; [cancelMerge] closes it. */
+    suspend fun completeMerge(merge: PendingMerge): ServerResult<MergeReply>
     suspend fun cancelMerge(merge: PendingMerge)
 
     /** Whether deletion has to sign in again first: the last sign-in is too old for
@@ -359,7 +380,13 @@ interface RecipeAccount {
 
 /** What the paid route keeps on this phone between launches. */
 @Serializable
-data class UnverifiedPurchase(val token: String, val recipes: Int)
+data class UnverifiedPurchase(
+    val token: String,
+    val recipes: Int,
+    /** The [AccountState.purchaseKey] the server said this purchase doesn't belong to
+     *  (PURCHASE_ACCOUNT_MISMATCH): not sent again until another account is signed in. */
+    val refusedFor: String? = null
+)
 
 @Serializable
 data class RecipePaidSnapshot(
@@ -410,7 +437,7 @@ object NoRecipeAccount : RecipeAccount {
     override val providers: Set<SignInProvider> = emptySet()
     override suspend fun ensureUser(): Boolean = false
     override suspend fun signIn(provider: SignInProvider): SignInResult = SignInResult.Failed
-    override suspend fun completeMerge(merge: PendingMerge): ServerResult<Int> = ServerResult.Err(ServerError.UNAUTHENTICATED)
+    override suspend fun completeMerge(merge: PendingMerge): ServerResult<MergeReply> = ServerResult.Err(ServerError.UNAUTHENTICATED)
     override suspend fun cancelMerge(merge: PendingMerge) = Unit
     override fun needsFreshSignIn(): Boolean = false
     override suspend fun reauthenticateForDeletion(): Boolean = false
@@ -439,7 +466,18 @@ const val MAX_WIRE_NAME_LENGTH = 40
  */
 fun cleanWireName(name: String): String? {
     val cleaned = buildString {
-        for (char in name) append(if (char.isLetterOrDigit() || char == '-' || char == ' ') char else ' ')
+        for (char in name) append(if (char.isWireNameChar()) char else ' ')
     }.split(' ').filter { it.isNotEmpty() }.joinToString(" ")
     return cleaned.take(MAX_WIRE_NAME_LENGTH).trim().takeIf { it.isNotEmpty() }
 }
+
+/** The server's `[\p{L}\p{M}\p{N} -]`: letters, combining marks (Devanagari vowel signs and
+ *  the like) and numbers of any script, space and hyphen. */
+private fun Char.isWireNameChar(): Boolean = this == ' ' || this == '-' || category in WIRE_NAME_CATEGORIES
+
+private val WIRE_NAME_CATEGORIES = setOf(
+    CharCategory.UPPERCASE_LETTER, CharCategory.LOWERCASE_LETTER, CharCategory.TITLECASE_LETTER,
+    CharCategory.MODIFIER_LETTER, CharCategory.OTHER_LETTER,
+    CharCategory.NON_SPACING_MARK, CharCategory.COMBINING_SPACING_MARK, CharCategory.ENCLOSING_MARK,
+    CharCategory.DECIMAL_DIGIT_NUMBER, CharCategory.LETTER_NUMBER, CharCategory.OTHER_NUMBER
+)

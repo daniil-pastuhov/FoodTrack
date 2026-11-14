@@ -179,8 +179,9 @@ class RecipeStateHolder(
     private val newId: () -> String = { "recipe_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt().toUInt()}" },
     newRequestId: () -> String = { Uuid.random().toString() },
     today: () -> LocalDate = { Clock.System.todayIn(TimeZone.currentSystemDefault()) },
-    /** How long to wait before asking again about a generation the server is still writing. */
-    pollDelay: suspend () -> Unit = { delay(3_000) }
+    /** Waits the given milliseconds before asking the server again: polls of a generation it is
+     *  still writing, and the backoff while it is busy. */
+    pollDelay: suspend (Long) -> Unit = { delay(it) }
 ) {
     private val _uiState = MutableStateFlow(
         configRepository.get().normalized().let { config ->

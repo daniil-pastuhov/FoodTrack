@@ -9,6 +9,7 @@ import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.foodtracker.recipe.AccountKind
 import com.foodtracker.recipe.AccountState
+import com.foodtracker.recipe.MergeReply
 import com.foodtracker.recipe.PendingMerge
 import com.foodtracker.recipe.RecipeAccount
 import com.foodtracker.recipe.ServerError
@@ -33,7 +34,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.longOrNull
 import java.util.Locale
 
 private const val GOOGLE_PROVIDER = "google.com"
@@ -86,8 +86,9 @@ class FirebaseRecipeAccount(
 
     private fun stateOf(user: FirebaseUser?): AccountState = when {
         user == null -> AccountState()
-        user.isAnonymous -> AccountState(AccountKind.ANONYMOUS)
+        user.isAnonymous -> AccountState(AccountKind.ANONYMOUS, purchaseKey = purchaseAccountId(user.uid))
         else -> AccountState(
+            purchaseKey = purchaseAccountId(user.uid),
             kind = AccountKind.SIGNED_IN,
             providers = user.providerData.mapNotNullTo(mutableSetOf()) {
                 when (it.providerId) {
@@ -191,7 +192,12 @@ class FirebaseRecipeAccount(
         }
     }
 
-    private class FirebaseMerge(val sourceIdToken: String, val mergeAuth: FirebaseAuth, override val accountBalance: Int?) : PendingMerge
+    private class FirebaseMerge(
+        val source: FirebaseUser,
+        val sourceIdToken: String,
+        val mergeAuth: FirebaseAuth,
+        override val accountBalance: Int?
+    ) : PendingMerge
 
     /** Signs in to the existing account on the second app and reads its count; this install's
      *  anonymous user stays signed in until the person agrees. */
@@ -203,40 +209,51 @@ class FirebaseRecipeAccount(
         mergeAuth.signInWithCredential(credential).awaitResult()
         dropNameAndPhoto(mergeAuth.currentUser)
         val balance = (callBalance(firebase.functions(mergeApp)) as? ServerResult.Ok)?.value?.balance
-        return SignInResult.NeedsMerge(FirebaseMerge(sourceToken, mergeAuth, balance))
+        return SignInResult.NeedsMerge(FirebaseMerge(anonymous, sourceToken, mergeAuth, balance))
     }
 
-    override suspend fun completeMerge(merge: PendingMerge): ServerResult<Int> {
+    override suspend fun completeMerge(merge: PendingMerge): ServerResult<MergeReply> {
         val pending = merge as? FirebaseMerge ?: return ServerResult.Err(ServerError.MERGE_NOT_ALLOWED)
         val accountUser = pending.mergeAuth.currentUser ?: return ServerResult.Err(ServerError.MERGE_NOT_ALLOWED)
+        // The anonymous user's ID token lasts an hour, and the question may have stood a while,
+        // or this be a retry: a current one, as long as that user is still this install's.
+        val sourceToken = if (auth.currentUser?.uid == pending.source.uid) {
+            runCatching { pending.source.getIdToken(false).awaitResult().token }.getOrNull() ?: pending.sourceIdToken
+        } else {
+            pending.sourceIdToken
+        }
         val result = callRaw(
             firebase.functions(firebase.merge),
             "mergeBalance",
-            JsonObject(mapOf("sourceIdToken" to JsonPrimitive(pending.sourceIdToken))),
+            JsonObject(mapOf("sourceIdToken" to JsonPrimitive(sourceToken))),
             60L
         )
         return when (result) {
             is ServerResult.Ok -> {
-                val balance = ((result.value as? JsonObject)?.get("balance") as? JsonPrimitive)?.longOrNull?.toInt()
-                try {
-                    // The anonymous user is deleted on the server; this install now belongs to
-                    // the account.
-                    auth.updateCurrentUser(accountUser).awaitResult()
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (e: Exception) {
-                    // The recipes have moved; signing in again reaches them.
-                    auth.signOut()
-                }
-                pending.mergeAuth.signOut()
-                publish()
-                ServerResult.Ok(balance ?: 0)
+                // Merged: the anonymous user is deleted on the server, so the install switches
+                // to the account whatever the answer says.
+                switchTo(accountUser, pending)
+                // A reply without a readable count is a server bug; the count is asked for then.
+                val reply = mergeReplyOf(result.value)
+                    ?: MergeReply(balance = (callBalance(firebase.functions()) as? ServerResult.Ok)?.value?.balance ?: 0)
+                ServerResult.Ok(reply)
             }
-            is ServerResult.Err -> {
-                pending.mergeAuth.signOut()
-                result
-            }
+            // Nothing changed; the merge stays open to be asked again or cancelled.
+            is ServerResult.Err -> result
         }
+    }
+
+    private suspend fun switchTo(accountUser: FirebaseUser, pending: FirebaseMerge) {
+        try {
+            auth.updateCurrentUser(accountUser).awaitResult()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // The recipes have moved; signing in again reaches them.
+            auth.signOut()
+        }
+        pending.mergeAuth.signOut()
+        publish()
     }
 
     override suspend fun cancelMerge(merge: PendingMerge) {

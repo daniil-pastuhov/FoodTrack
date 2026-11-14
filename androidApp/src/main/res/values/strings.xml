@@ -840,6 +840,7 @@
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
     <string name="recipe_balance_description">Recipes left: %1$d. Buy more</string>
+    <string name="recipe_balance_only_description">Recipes left: %1$d</string>
     <string name="recipe_mode_label">What to make</string>
     <string name="recipe_mode_recipe">Recipe</string>
     <string name="recipe_mode_menu">Menu for 3 days</string>
@@ -862,7 +863,7 @@
         <item quantity="other">You have %1$d left. A single recipe still works.</item>
     </plurals>
     <string name="recipe_writing_server_title">Writing your recipe</string>
-    <string name="recipe_writing_server_body">A few seconds. A recipe is taken only when it arrives.</string>
+    <string name="recipe_writing_server_body">A few seconds. You can leave this screen; the recipe will be in Saved recipes.</string>
     <string name="recipe_writing_menu_title">Planning three days</string>
     <string name="recipe_writing_menu_body">This can take up to two minutes. You can leave this screen; the menu will be in Saved recipes.</string>
     <string name="recipe_offline_title">No connection</string>
@@ -955,6 +956,30 @@
     <string name="recipe_purchases_blocked">Buying recipes isn\'t available for this account because earlier purchases were refunded after the recipes were used.</string>
     <string name="recipe_account_busy">A recipe is still being written. Try again in a moment.</string>
     <string name="recipe_account_action_failed">Couldn\'t reach our server. Nothing was changed.</string>
+    <string name="recipe_writing_busy_title">Our server is busy</string>
+    <string name="recipe_writing_busy_body">Trying again in a moment. You can leave this screen; what arrives will be in Saved recipes.</string>
+    <string name="recipe_busy_title">Our server is busy</string>
+    <string name="recipe_busy_body">Your request is kept and may still be written. Try again in a minute to fetch it. The free routes below still work.</string>
+    <string name="recipe_elsewhere_title">A purchase belongs to another account</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d recipe on this phone was bought with another account. Sign in to the account you bought it with to add it.</item>
+        <item quantity="other">%1$d recipes on this phone were bought with another account. Sign in to the account you bought them with to add them.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">This copy of the app can\'t add store purchases. Google Play normally refunds a purchase that isn\'t added within three days, so you don\'t need to do anything. To buy recipes, install the app from Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d recipe moved from this phone to your account</item>
+        <item quantity="other">%1$d recipes moved from this phone to your account</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">This phone owed %1$d recipe after a store refund. It was taken from your account.</item>
+        <item quantity="other">This phone owed %1$d recipes after a store refund. They were taken from your account.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">A recipe you asked for earlier is ready. It\'s in Saved recipes.</string>
+    <string name="recipe_earlier_menu_saved">A menu you asked for earlier is ready. It\'s in Saved recipes.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">A recipe you asked for earlier couldn\'t be made. It used %1$d recipe, because the attempt still cost us to run.</item>
+        <item quantity="other">A recipe you asked for earlier couldn\'t be made. It used %1$d recipes, because the attempt still cost us to run.</item>
+    </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
     <string name="recipe_menu_title">Menu for three days</string>
     <string name="recipe_menu_summary">%1$d courses a day for %2$d, using what expires first.</string>

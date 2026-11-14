@@ -836,6 +836,7 @@
 
     <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
     <string name="recipe_balance_description">Oppskrifter igjen: %1$d. Kjøp flere</string>
+    <string name="recipe_balance_only_description">Oppskrifter igjen: %1$d</string>
     <string name="recipe_mode_label">Hva skal lages</string>
     <string name="recipe_mode_recipe">Oppskrift</string>
     <string name="recipe_mode_menu">Meny for 3 dager</string>
@@ -858,7 +859,7 @@
         <item quantity="other">Du har %1$d igjen. Én oppskrift går fortsatt.</item>
     </plurals>
     <string name="recipe_writing_server_title">Skriver oppskriften din</string>
-    <string name="recipe_writing_server_body">Noen sekunder. En oppskrift trekkes først når den er klar.</string>
+    <string name="recipe_writing_server_body">Noen sekunder. Du kan gå fra denne skjermen; oppskriften havner i Lagrede oppskrifter.</string>
     <string name="recipe_writing_menu_title">Planlegger tre dager</string>
     <string name="recipe_writing_menu_body">Dette kan ta opptil to minutter. Du kan gå fra denne skjermen; menyen havner i Lagrede oppskrifter.</string>
     <string name="recipe_offline_title">Ingen tilkobling</string>
@@ -951,6 +952,30 @@
     <string name="recipe_purchases_blocked">Kjøp av oppskrifter er ikke tilgjengelig for denne kontoen fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.</string>
     <string name="recipe_account_busy">En oppskrift skrives fortsatt. Prøv igjen om et øyeblikk.</string>
     <string name="recipe_account_action_failed">Fikk ikke kontakt med serveren vår. Ingenting ble endret.</string>
+    <string name="recipe_writing_busy_title">Serveren vår er opptatt</string>
+    <string name="recipe_writing_busy_body">Vi prøver igjen om et øyeblikk. Du kan gå fra denne skjermen; det som kommer, havner i Lagrede oppskrifter.</string>
+    <string name="recipe_busy_title">Serveren vår er opptatt</string>
+    <string name="recipe_busy_body">Forespørselen er tatt vare på og kan fortsatt bli skrevet. Prøv igjen om et minutt for å hente den. De gratis valgene nedenfor virker fortsatt.</string>
+    <string name="recipe_elsewhere_title">Et kjøp hører til en annen konto</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d oppskrift på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</item>
+        <item quantity="other">%1$d oppskrifter på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Denne kopien av appen kan ikke legge til kjøp fra butikken. Google Play refunderer vanligvis et kjøp som ikke er lagt til innen tre dager, så du trenger ikke gjøre noe. For å kjøpe oppskrifter, installer appen fra Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d oppskrift flyttet fra denne telefonen til kontoen din</item>
+        <item quantity="other">%1$d oppskrifter flyttet fra denne telefonen til kontoen din</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">Denne telefonen skyldte %1$d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</item>
+        <item quantity="other">Denne telefonen skyldte %1$d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">En oppskrift du ba om tidligere, er klar. Den ligger i Lagrede oppskrifter.</string>
+    <string name="recipe_earlier_menu_saved">En meny du ba om tidligere, er klar. Den ligger i Lagrede oppskrifter.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %1$d oppskrift, fordi forsøket likevel kostet oss å kjøre.</item>
+        <item quantity="other">En oppskrift du ba om tidligere, kunne ikke lages. Det brukte %1$d oppskrifter, fordi forsøket likevel kostet oss å kjøre.</item>
+    </plurals>
     <string name="recipe_menu_bar_title">Meny</string>
     <string name="recipe_menu_title">Meny for tre dager</string>
     <string name="recipe_menu_summary">%1$d retter per dag for %2$d, med det som går ut først.</string>

@@ -284,12 +284,18 @@ internal fun RecipeTabContent(
                     bottom = bottomOverlayClearance,
                     onStop = actions.onStop
                 )
+                // Every server instance busy: the app asks again by itself. Calm, not an error.
+                paid.writing != null && paid.serverBusy -> Writing(
+                    title = stringResource(R.string.recipe_writing_busy_title),
+                    body = stringResource(R.string.recipe_writing_busy_body),
+                    bottom = bottomOverlayClearance
+                )
                 paid.writing == RecipeMode.MENU -> Writing(
                     title = stringResource(R.string.recipe_writing_menu_title),
                     body = stringResource(R.string.recipe_writing_menu_body),
                     bottom = bottomOverlayClearance
                 )
-                // No Stop for the server: a recipe is taken only when it arrives.
+                // No Stop for the server: the server goes on with a request once it has it.
                 paid.writing == RecipeMode.RECIPE -> Writing(
                     title = stringResource(R.string.recipe_writing_server_title),
                     body = stringResource(R.string.recipe_writing_server_body),
@@ -431,12 +437,28 @@ private fun RecipeCallouts(state: RecipeUiState, actions: RecipeTabActions) {
                 message = stringResource(R.string.recipe_pending_body)
             )
         }
+        if (paid.elsewhereRecipes > 0) {
+            LarderCallout(
+                kind = LarderCalloutKind.Info,
+                icon = LarderIcons.UserRound,
+                title = stringResource(R.string.recipe_elsewhere_title),
+                message = pluralStringResource(R.plurals.recipe_elsewhere_body, paid.elsewhereRecipes, paid.elsewhereRecipes)
+            )
+        }
         when (paid.issue) {
             ServerIssue.OFFLINE -> LarderCallout(
                 kind = LarderCalloutKind.Warning,
                 icon = LarderIcons.WifiOff,
                 title = stringResource(R.string.recipe_offline_title),
                 message = stringResource(R.string.recipe_offline_body),
+                actionLabel = stringResource(R.string.recipe_try_again),
+                onAction = actions.onRetryServer
+            )
+            ServerIssue.BUSY -> LarderCallout(
+                kind = LarderCalloutKind.Info,
+                icon = LarderIcons.Clock,
+                title = stringResource(R.string.recipe_busy_title),
+                message = stringResource(R.string.recipe_busy_body),
                 actionLabel = stringResource(R.string.recipe_try_again),
                 onAction = actions.onRetryServer
             )
