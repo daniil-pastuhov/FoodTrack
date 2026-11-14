@@ -1,7 +1,8 @@
 # App Store submission kit
 
-Everything App Store Connect asks for, ready to paste. One folder per listing language:
-`en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
+Everything App Store Connect asks for. The release flow applies the listing texts and most
+screenshots ("Changing the listing texts" below); the rest is ready to paste. One folder per
+listing language: `en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
 `no/` (Norwegian). Each folder has `name.txt`, `subtitle.txt`, `promotional_text.txt`,
 `keywords.txt` and `description.txt`; `scripts/check_store_listing.py` checks them (and the
 Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
@@ -11,8 +12,8 @@ already has), promotional text 170, description 4000. Run it after every edit.
 `en-US/` has texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
 primary language's screenshots in a localization that has none, so nothing needs uploading
 there, and the screenshot scripts only make the en-GB, ru and no sets. The en-GB, ru and no
-folders have these screenshot sets, four each, in App Store Connect's media sections of the same
-name:
+folders have these screenshot sets (up to 10 images each), in App Store Connect's media sections
+of the same name:
 
 | Folder | Size | App Store Connect display |
 |---|---|---|
@@ -59,33 +60,49 @@ symbol, other platforms or Apple awards.
 
 ## Changing the listing texts
 
-Nothing here is uploaded automatically except the promotional text and What's New (below). Paste
-the rest in App Store Connect by hand:
+Edit the files here; the release PR's merge applies them. `scripts/testflight.py appstore`
+(run by CI's `release-app-store` job, with `--screenshots`) writes them to the new version
+before it submits it for review, and only what differs from App Store Connect:
 
-- **Name, subtitle, keywords, description**: these change only with a new app version. Edit
-  them on the version page in "Prepare for Submission" (keywords and description) and under App
-  Information (name, subtitle, which App Store Connect also locks until a version is in
-  preparation), and they go live when that version is approved.
-- **Promotional text**: can change at any time, without a new version. `scripts/testflight.py
-  appstore` (the release PR's merge) sets it on the new version from each folder's
-  `promotional_text.txt`; between releases, paste it on the live version page.
+- **Name, subtitle** (`name.txt`, `subtitle.txt`) on the app info in preparation, and
+  **keywords, description, promotional text** on the version. App Store Connect lets the name,
+  subtitle, keywords and description change only with a new version, so they go live when that
+  version is approved. A localization the repo has and App Store Connect lacks is added (en-US
+  was added this way), with the support, marketing and privacy policy URLs copied from en-GB;
+  those URLs are otherwise never touched.
+- **Screenshots**: `screenshots/`, `medium-screenshots/` and `ipad-screenshots/` replace each
+  localization's set of that display type, in file-number order. Unchanged images (same MD5)
+  stay, changed or new ones are uploaded, and images no longer in the folder are deleted. At
+  most 10 per folder. A localization without these folders (en-US) shows en-GB's.
+- If any of it fails (a text over a limit, a refused upload), the version is not submitted; fix
+  it and re-run the job, which skips what is already applied.
+- **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by the same
+  command; every English localization gets the en-GB notes.
+
+Still by hand, as the API has no way to set them:
+
 - **Header and search-result images** (iOS 27): upload `header.png` and `search-result.png`
-  by hand in each language, on the version page. For en-US, upload en-GB's two files.
-- **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by
-  `scripts/testflight.py appstore`; every English localization gets the en-GB notes.
+  in each language, on the version page. For en-US, upload en-GB's two files.
+- **iPhone Duo screenshots** (`duo-outer-screenshots/`, `duo-inner-screenshots/`): the
+  `screenshotDisplayType` values of the App Store Connect API have no iPhone Duo type, so the
+  sync leaves them out and warns. Apple's newer App Asset Library API has an `IPHONE_DUO`
+  display class; moving the sync to it would cover them.
+- **Promotional text between releases**: it can change without a new version, but the sync only
+  writes to a version in preparation; paste it on the live version page.
 
-### Adding the en-US localization (once)
+To see the difference without writing anything (with the `ASC_*` variables of section 2):
 
-On the app's page in App Store Connect, open the language menu next to the version, add
-**English (U.S.)**, and paste `en-US/name.txt`, `subtitle.txt`, `keywords.txt`,
-`promotional_text.txt` and `description.txt` (the name and subtitle under App Information).
-Add it while a version is in preparation, as the name and subtitle can't be set otherwise. The
-U.S. storefront then shows this listing instead of the primary en-GB one, and searches there
-match the en-US keywords.
+```sh
+python3 scripts/testflight.py listing        # texts; --apply writes
+python3 scripts/testflight.py screenshots    # screenshot sets; --apply writes
+```
 
-English (Australia) and English (Canada) need no folder of their own: add them the same way
-and paste the en-GB texts. `scripts/testflight.py` gives every English localization without a
-folder the en-GB promotional text and What's New. Apple's storefront tables say the Australian
+Both compare with the version in preparation. While none is (after a release is submitted and
+before the next merge), they say so and compare with the newest version, which is what the next
+version starts from.
+
+English (Australia) and English (Canada) need no folder of their own: add them in App Store
+Connect and the sync gives them the en-GB texts and What's New. Apple's storefront tables say the Australian
 App Store also searches the en-GB keywords, so en-AU keywords could add words en-GB has no room
 for; check Apple's current list ("Localizations by storefront" in App Store Connect Help) before
 counting on it. Without these localizations, both countries see the en-GB listing.
@@ -268,6 +285,6 @@ The camera is used for barcode scanning, reading printed expiry dates (Vision, o
 
 - What's New (first version): leave empty, or use `First release.`
 - Pick the build uploaded in step 2.
-- Screenshots, for each language: drag `screenshots/1.png` to `4.png` into "iPhone 6.9" Display",
-  and `ipad-screenshots/1.png` to `4.png` into "iPad 13" Display". English (U.S.) has none of
-  its own and shows en-GB's.
+- Screenshots: set by the release flow (`scripts/testflight.py appstore --screenshots`; see
+  "Changing the listing texts"), except the iPhone Duo sets and the header and search-result
+  images, which are uploaded here by hand. English (U.S.) has none of its own and shows en-GB's.
