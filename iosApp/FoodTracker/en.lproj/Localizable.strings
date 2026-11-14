@@ -745,6 +745,12 @@
 "recipe_allergen_consent_setting_off" = "Needed for recipes from our server while allergens are set. Used only for the request, not stored.";
 "recipe_account_action_failed" = "Couldn't reach our server. Nothing was changed.";
 "recipe_account_busy" = "A recipe is still being written. Try again in a moment.";
+"recipe_delete_device_data" = "Delete my data from our server";
+"recipe_delete_device_title" = "Delete your data from our server?";
+"recipe_delete_device_message_none" = "The anonymous sign-in this {device} uses is deleted from our server; a record of any purchases stays, no longer linked to you. Saved recipes and your pantry stay on this {device}.";
+"recipe_delete_device_confirm" = "Delete data";
+"recipe_device_data_deleted" = "Your data is deleted from our server";
+"recipe_delete_waits_for_purchase" = "A purchase is still being completed. You can delete once it has finished.";
 "recipe_purchases_blocked" = "Buying recipes isn't available for this account because earlier purchases were refunded after the recipes were used.";
 "recipe_consumption_note" = "If you ask Apple for a refund, we tell Apple how many of these recipes you have used.";
 "recipe_menu_result_title" = "Menu";

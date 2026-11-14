@@ -359,6 +359,16 @@ extension L10n {
     static func recipeSignOutMessage(_ balance: Int) -> String { plural("recipe_sign_out_message", balance) }
     static var recipeDeleteTitle: String { paid("recipe_delete_title") }
     static func recipeDeleteMessage(_ balance: Int) -> String { plural("recipe_delete_message", balance) }
+    // Deleting what our server holds for recipes kept on this phone (an anonymous account)
+    static var recipeDeleteDeviceData: String { paid("recipe_delete_device_data") }
+    static var recipeDeleteDeviceTitle: String { paid("recipe_delete_device_title") }
+    /// Below zero after a store refund of recipes already used: none of them is lost.
+    static func recipeDeleteDeviceMessage(_ balance: Int) -> String {
+        balance > 0 ? plural("recipe_delete_device_message", balance) : paid("recipe_delete_device_message_none")
+    }
+    static var recipeDeleteDeviceConfirm: String { paid("recipe_delete_device_confirm") }
+    static var recipeDeviceDataDeleted: String { paid("recipe_device_data_deleted") }
+    static var recipeDeleteWaitsForPurchase: String { paid("recipe_delete_waits_for_purchase") }
     static var recipeMergeTitle: String { paid("recipe_merge_title") }
     static func recipeMergeMessage(account: Int, install: Int) -> String {
         String(format: paid("recipe_merge_message"), account, install, account + install)

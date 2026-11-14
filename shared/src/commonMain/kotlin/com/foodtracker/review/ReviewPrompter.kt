@@ -128,13 +128,15 @@ class ReviewPrompter(
     }
 
     companion object {
+        /** A deletion, done or not, counts too: nobody is asked for a rating after leaving. */
         fun isProblem(event: PaidEvent): Boolean = when (event) {
-            PaidEvent.SignInFailed, PaidEvent.SignInInUse, PaidEvent.AccountActionFailed, is PaidEvent.EarlierRefused -> true
-            is PaidEvent.RecipesAdded, PaidEvent.AccountDeleted, PaidEvent.AccountBusy, is PaidEvent.Merged,
-            is PaidEvent.EarlierSaved -> false
+            PaidEvent.SignInFailed, PaidEvent.SignInInUse, PaidEvent.AccountActionFailed, is PaidEvent.EarlierRefused,
+            PaidEvent.AccountDeleted, PaidEvent.DeviceDataDeleted, PaidEvent.AccountBusy, PaidEvent.DeletionWaitsForPurchase -> true
+            is PaidEvent.RecipesAdded, is PaidEvent.Merged, is PaidEvent.EarlierSaved -> false
         }
 
         fun isProblem(state: PaidUiState): Boolean =
-            state.rejection != null || state.issue != null || state.storeRefused || state.sheet == BuySheet.StoreUnavailable
+            state.rejection != null || state.issue != null || state.storeRefused || state.sheet == BuySheet.StoreUnavailable ||
+                state.deletionTried
     }
 }

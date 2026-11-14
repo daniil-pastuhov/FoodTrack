@@ -130,6 +130,8 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
             PaidEvent.SignInFailed -> resources.getString(R.string.recipe_sign_in_failed)
             PaidEvent.SignInInUse -> resources.getString(R.string.recipe_sign_in_in_use)
             PaidEvent.AccountDeleted -> resources.getString(R.string.recipe_account_deleted)
+            PaidEvent.DeviceDataDeleted -> resources.getString(R.string.recipe_device_data_deleted)
+            PaidEvent.DeletionWaitsForPurchase -> resources.getString(R.string.recipe_delete_waits_for_purchase)
             PaidEvent.AccountActionFailed -> resources.getString(R.string.recipe_account_action_failed)
             PaidEvent.AccountBusy -> resources.getString(R.string.recipe_account_busy)
             is PaidEvent.Merged -> recipeMergedMessage(resources, event.moved)

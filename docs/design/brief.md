@@ -35,7 +35,7 @@ Artifacts: options https://claude.ai/artifact/TeLu92BMaS1QDhDVj98fPw · design h
 | Recipe | Recipe and menu | Cook it | Saved automatically; menu is 3 days of 2 or 3 full recipes |
 | Recipe | Saved recipes | Find it again | On this phone only; delete with Undo |
 | Recipe | Buying recipes | Buy a pack, know where it is kept | Packs of 10, 50, 100; first purchase chooses no account or sign-in; store and server failures |
-| Recipe | Recipe settings | Set how recipes are written | Difficulty, detail, servings, time, meal, diet, language; account, sign out, delete account (destructive) |
+| Recipe | Recipe settings | Set how recipes are written | Difficulty, detail, servings, time, meal, diet, language; account, sign out, delete account (destructive); recipes on this phone: delete my data from our server (destructive) |
 | Shopping | Shopping list | What do I need to buy? | Sections, did-you-mean, share text/QR, import, move to section |
 | Settings | Settings | Change a preference | Notifications, threshold, locations, categories, allergens, appearance, stores, backup, clear data (destructive) |
 | Settings | Categories | Organise categories | Reorder, rename, hide, shelf life |
@@ -58,7 +58,7 @@ Pantry data is local, so list screens have no loading, refresh or network error 
 | Recipe and menu | Recipe from a pack · Just arrived (T3) · Written on the phone · Menu · Dish from a menu · Long recipe |
 | Saved recipes | Loaded · Empty · Deleted, Undo (T3) |
 | Buying recipes | Packs · Account or not · Adding · Added (T3) · Paid, not added yet (T4) · Payment pending (T4) · Store unavailable (T4) · Not accepted (T6) |
-| Recipe settings | No account · Recipes on this phone · Signed in · Language · Sign out (T6) · Delete account (T6) · Sign-in already has recipes (T6) · Sign-in failed (T3) |
+| Recipe settings | No account · Recipes on this phone · Signed in · Language · Sign out (T6) · Delete account (T6) · Delete this phone's data from our server (T6), Deleted (T3) · Deleting waits for a purchase being confirmed (inline, button off) · Sign-in already has recipes (T6) · Sign-in failed (T3) |
 | Shopping | Loaded with sections · Empty · Add with did-you-mean · Item ticked · Section menu, rename, delete section (T6) · Move to section · Share · QR code · List too long for QR (T4) · Import · Import results (T3) · Long list |
 | Settings | Default · Notifications blocked (T4) · Reminder styles · Locations editing · Allergens · Shops: permission disclosure (T6), location failed (T3) · Backup: export success or failure (T3), restore choice (T6), bad file (T3) · Clear all data (T6) |
 | Categories | Loaded · Empty · Rename · Shelf life dialog, out of range (T1) · Reordering |

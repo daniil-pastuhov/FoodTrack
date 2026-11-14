@@ -2,7 +2,7 @@
 The Calendar tab is replaced by a Recipe tab. It adds the app's first in-app purchases (three consumable recipe packs, submitted with this version) and an optional sign-in. Everything else works as before, with no account.
 
 2. PURPOSE AND AUDIENCE
-BestBefore helps households waste less food. It keeps a list of the food at home with each item's expiry date, reminds the user a few days before something expires, and suggests a recipe for what needs using first. Items that are used up go onto a shopping list. Audience: anyone who buys groceries, typically adults managing a household. The app is free, with no ads or tracking; the pantry stays on the device.
+BestBefore helps households waste less food. It keeps a list of the food at home with each item's expiry date, reminds the user a few days before something expires, and suggests a recipe for what needs using first. Items that are used up go onto a shopping list. Audience: adults managing a household. The app is free, with no ads or tracking; the pantry stays on the device.
 
 3. SETUP AND MAIN FEATURES
 No login, demo account or sample files are needed.
@@ -18,7 +18,7 @@ TO TEST THE PURCHASE (sandbox purchases are accepted during this review, within 
 3. Choose "On this phone, no account", or sign in with Apple or Google to keep the recipes in an account.
 4. Buy the 10-recipe pack. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
 5. Tap "Generate recipe". If allergens are set in Settings, the app first asks for consent to send them. The recipe appears after a few seconds and the balance drops to 9.
-Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
+Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), or Your recipes > "Delete my data from our server" (bought without an account).
 
 4. EXTERNAL SERVICES
 - Open Food Facts (https://world.openfoodfacts.org): on a barcode scan the app requests that product's name, picture and nutrition data. Only the barcode number is sent.

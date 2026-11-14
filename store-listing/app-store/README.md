@@ -269,10 +269,12 @@ privacy policy (URL above) has to say the same; it is updated in
     set, and only after the consent step), **App functionality**; processed ephemerally ("Is
     this data processed ephemerally?": **Yes**: it is used for the one request and not stored).
   - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings >
-    Account > Delete account). The Auth user (email, name), the server's recipes, the usage
-    counters and the stored Sign in with Apple token (revoked at Apple first) are deleted;
-    purchase records (with the old user ID, not linked to a name or email), a closed account
-    record with totals, and any refund-after-use record stay. Give the policy URL.
+    Account > Delete account), and someone who bought without signing in deletes the anonymous
+    account the same way (Recipe settings > Your recipes > Delete my data from our server). The
+    Auth user (email, name; or the anonymous user), the server's recipes, the usage counters and
+    the stored Sign in with Apple token (revoked at Apple first) are deleted; purchase records
+    (with the old user ID, not linked to a name or email), a closed account record with totals,
+    and any refund-after-use record stay. Give the policy URL.
   - Account creation: "Users can create an account" with Google sign-in (OAuth), and the app
     works without one. The Android app has no Sign in with Apple (only the iPhone app offers it);
     an account made with Apple on an iPhone is used on Android through Google added to it, and

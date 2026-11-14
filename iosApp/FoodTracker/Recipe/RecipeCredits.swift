@@ -26,7 +26,13 @@ enum RecipeCreditsNotice: Equatable {
     case signInFailed
     case providerInUse
     case accountDeleted
+    /// The recipes kept on this phone (an anonymous account) and what our server held for them
+    /// were deleted; the phone is back to never having bought. Android's `DeviceDataDeleted`.
+    case deviceDataDeleted
     case accountActionFailed
+    /// Deleting waits for a purchase that is paid, or whose payment is under way, and not added
+    /// yet: the server ties it to this account, so deleting now would leave it with nobody.
+    case deletionWaitsForPurchase
     /// `BUSY` from `deleteAccount` or `mergeBalance`: a recipe is still being written on the
     /// account. Nothing changed; try again in a moment.
     case accountBusy
@@ -34,12 +40,14 @@ enum RecipeCreditsNotice: Equatable {
     /// refund, a debt (`moved` < 0). As Android's `PaidEvent.Merged`.
     case merged(moved: Int)
 
-    /// The failures rule the rating prompt out for the session, as Android's
-    /// `ReviewPrompter.isProblem(PaidEvent)`.
+    /// The failures, and a deletion whatever came of it, rule the rating prompt out for the
+    /// session, as Android's `ReviewPrompter.isProblem(PaidEvent)`.
     var blocksReviewPrompt: Bool {
         switch self {
-        case .signInFailed, .providerInUse, .accountActionFailed: return true
-        case .added, .accountDeleted, .accountBusy, .merged: return false
+        case .signInFailed, .providerInUse, .accountActionFailed, .accountDeleted, .deviceDataDeleted, .accountBusy,
+             .deletionWaitsForPurchase:
+            return true
+        case .added, .merged: return false
         }
     }
 }
@@ -268,6 +276,10 @@ final class RecipeCredits: ObservableObject {
     }
 
     var unconfirmedCredits: Int { unconfirmedHere.reduce(0) { $0 + $1.credits } }
+
+    /// Deleting is held back while a purchase of this account is unconfirmed or its payment is
+    /// still under way (not one bought by another account, which isn't this account's).
+    var deletionWaitsForPurchase: Bool { !unconfirmedHere.isEmpty || paymentPending }
 
     var showsOffline: Bool { isPaidRouteAvailable && balance != nil && (connectionLost || !isOnline) }
 
@@ -712,11 +724,26 @@ final class RecipeCredits: ObservableObject {
     private(set) var demoMode = false
     #endif
 
-    /// A fresh sign-in with the account's own provider, then the deletion on the server.
+    /// Deletes the account from our server: a signed-in one after a fresh sign-in with its own
+    /// provider, or the anonymous one that keeps this phone's recipes (no sign-in needed). Only
+    /// when there is one: someone who never started a purchase has nothing on the server, and no
+    /// user is made to delete.
     func deleteAccount() async {
-        guard account.isSignedIn else { return }
+        guard account.uid != nil, !isSigningIn else { return }
+        // Whatever comes of it, no rating request follows in this run.
+        Self.noteReviewProblem()
+        // A purchase paid for but not added yet is tied to this account on the server
+        // (PURCHASE_ACCOUNT_MISMATCH for anyone else): deleting now would strand it.
+        if deletionWaitsForPurchase {
+            notice = .deletionWaitsForPurchase
+            return
+        }
         isSigningIn = true
         defer { isSigningIn = false }
+        if case .anonymous = account {
+            await deleteDeviceData()
+            return
+        }
         do {
             let credential: RecipeSignInCredential
             if account.providers.contains(.apple) {
@@ -737,6 +764,28 @@ final class RecipeCredits: ObservableObject {
             note(error)
             notice = Self.accountNotice(for: error, otherwise: .accountActionFailed)
         }
+    }
+
+    /// The anonymous account's deletion. As `mergeBalance`'s source, it needs no recent sign-in.
+    /// Afterwards the phone is as if it had never bought: no user, no count, no held generation
+    /// (its record went with the account), and the next purchase asks again where to keep them.
+    private func deleteDeviceData() async {
+        do {
+            _ = try await backend.deleteAccount(appleAuthorizationCode: nil)
+        } catch {
+            note(error)
+            // Deleted already (from here, with the answer lost): `note` signed out.
+            if (error as? RecipeServerError) != .accountClosed {
+                notice = Self.accountNotice(for: error, otherwise: .accountActionFailed)
+                return
+            }
+        }
+        accountService.signOut()
+        account = .none
+        balance = nil
+        storage.pendingGeneration = nil
+        storage.purchaseChoiceMade = false
+        notice = .deviceDataDeleted
     }
 
     /// Hands an Apple sign-in's code to the server in the background, so Apple's link can be
