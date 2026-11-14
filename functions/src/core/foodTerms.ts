@@ -264,42 +264,41 @@ export const STAPLE_FILLERS: readonly string[] = [
   // en
   "of", "to", "taste", "for", "a", "an", "the", "pinch", "dash", "some", "and", "or", "as", "needed", "optional",
   "black", "white", "ground", "freshly", "fresh", "sea", "kosher", "coarse", "fine", "flaky", "table", "cold",
-  "warm", "hot", "boiling", "lukewarm", "iced", "extra", "virgin", "light", "neutral", "cooking", "frying",
+  "warm", "boiling", "lukewarm", "iced", "extra", "virgin", "light", "neutral", "cooking", "frying",
   "olive", "vegetable", "sunflower", "rapeseed", "canola", "granulated", "caster", "brown", "icing", "powdered",
-  "dried", "crushed", "flakes", "smoked", "sweet", "mixed", "whole", "leaf", "leaves", "powder", "seeds", "pods",
+  "dried", "crushed", "flakes", "smoked", "mixed", "whole", "leaf", "leaves", "powder", "seeds", "pods",
   "sticks", "baking", "spray", "splash", "little", "cubes", "cube", "filtered", "cup", "cups", "tsp", "tbsp",
   "teaspoon", "teaspoons", "tablespoon", "tablespoons", "ml", "dl", "l", "g", "litre", "liter", "ss", "ts",
   // nb, sv
   "av", "til", "etter", "smak", "litt", "en", "et", "og", "eller", "sort", "svart", "hvit", "malt", "nykvernet",
   "kvernet", "grovt", "fint", "kaldt", "varmt", "kokende", "lunkent", "nøytral", "tørket", "knust", "røkt",
-  "søt", "hel", "blad", "pulver", "frø", "till", "efter", "lite", "ett", "och", "vit", "mald", "nymald", "kallt",
+  "hel", "blad", "pulver", "frø", "till", "efter", "lite", "ett", "och", "vit", "mald", "nymald", "kallt",
   "kokande", "ljummet", "torkad", "torkade", "krossad", "rökt", "frön", "flingsalt",
   // de
   "von", "zum", "nach", "geschmack", "etwas", "ein", "eine", "und", "oder", "schwarzer", "schwarz", "weißer",
-  "weiß", "gemahlen", "gemahlener", "frisch", "grob", "fein", "kaltes", "kalt", "warmes", "heißes", "heiß",
-  "kochendes", "neutrales", "getrocknet", "getrocknete", "geräuchert", "süß", "edelsüß", "ganz", "blätter",
-  "blatt", "samen", "prise",
+  "weiß", "gemahlen", "gemahlener", "frisch", "grob", "fein", "kaltes", "kalt", "warmes",
+  "kochendes", "neutrales", "getrocknet", "getrocknete", "geräuchert", "ganz", "blätter", "blatt", "samen", "prise",
   // es, fr, it
   "de", "al", "gusto", "para", "un", "una", "y", "o", "negra", "blanca", "molida", "recién", "grueso", "gruesa",
   "fina", "fría", "caliente", "tibia", "hirviendo", "oliva", "virgen", "girasol", "vegetal", "seco", "seca",
-  "secas", "ahumado", "dulce", "entera", "hojas", "hoja", "en", "polvo", "semillas", "pizca", "moreno", "glas",
+  "secas", "ahumado", "entera", "hojas", "hoja", "en", "polvo", "semillas", "pizca", "moreno", "glas",
   "nuez", "du", "des", "à", "au", "goût", "pour", "et", "ou", "noir", "blanc", "moulu", "frais", "gros", "fin",
   "fleur", "froide", "froid", "chaude", "chaud", "bouillante", "tiède", "neutre", "tournesol", "colza", "séché",
-  "séchées", "fumé", "doux", "entier", "feuilles", "feuille", "poudre", "graines", "pincée", "noix", "clou",
+  "séchées", "fumé", "entier", "feuilles", "feuille", "poudre", "graines", "pincée", "noix", "clou",
   "clous", "di", "d", "q", "b", "qb", "per", "e", "nero", "bianco", "macinato", "fresco", "grosso", "fino",
   "fredda", "calda", "bollente", "tiepida", "extravergine", "vergine", "semi", "girasole", "secco", "secche",
   "affumicata", "intero", "foglie", "foglia", "in", "polvere", "pizzico", "noce", "chiodi", "garofano",
   // pl
   "do", "smaku", "dla", "i", "lub", "czarny", "biały", "mielony", "świeżo", "gruba", "drobna", "zimna",
   "ciepła", "gorąca", "wrząca", "z", "oliwek", "rzepakowy", "roślinny", "słonecznikowy", "suszony", "suszone",
-  "wędzona", "słodka", "cała", "liście", "liść", "w", "proszku", "nasiona", "szczypta", "morska", "gałka",
+  "wędzona", "cała", "liście", "liść", "w", "proszku", "nasiona", "szczypta", "morska", "gałka",
   // ru, uk
   "по", "вкусу", "для", "и", "или", "черный", "чёрный", "черного", "молотый", "молотого", "молотая",
   "свежемолотый", "белый", "крупная", "мелкая", "морская", "холодная", "горячая", "теплая", "тёплая",
-  "растительное", "оливковое", "подсолнечное", "сушеный", "сушёный", "копченая", "сладкая", "целый", "лист",
+  "растительное", "оливковое", "подсолнечное", "сушеный", "сушёный", "копченая", "целый", "лист",
   "листья", "порошок", "щепотка", "семена", "за", "смаком", "і", "й", "або", "чорний", "чорного", "мелений",
   "свіжомелений", "білий", "крупна", "дрібна", "морська", "холодна", "гаряча", "тепла", "рослинна", "оливкова",
-  "соняшникова", "сушений", "копчена", "солодка", "цілий", "листя", "дрібка", "насіння",
+  "соняшникова", "сушений", "копчена", "цілий", "листя", "дрібка", "насіння",
 ];
 
 export interface CompiledTerm {

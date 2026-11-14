@@ -210,7 +210,7 @@ describe("staple names", () => {
   });
 
   test.each([
-    "red bell pepper", "paprika", "rød paprika", "Kräuterbutter", "Gewürzgurken", "vaniljesaus", "sugar snap peas",
+    "red bell pepper", "sweet pepper", "hot pepper", "paprika", "rød paprika", "Kräuterbutter", "Gewürzgurken", "vaniljesaus", "sugar snap peas",
     "ice cream", "Eis", "glace à la vanille", "olives", "garlic", "garlic cloves", "fresh chillies", "butter", "flour",
     "eggs", "cream cheese", "tomato paste", "seaweed", "miso paste", "сливочное масло", "болгарский перец", "Muskatkürbis",
     "baking powder", "oil-packed tuna", "salted butter", "",
@@ -349,6 +349,23 @@ describe("a quality-gate rejection is refunded in full, outside the content allo
     const res = await generateRecipe(deps, caller, live());
     expect(res).toMatchObject({ status: "DONE", charged: true, balance: 6 });
     expect(res.menu?.days[1].courses[1].recipe.ingredients[0]).toEqual({ amount: "150 g", name: "cream cheese", fromPantry: true, pantryIndex: 4 });
+  });
+
+  test("with the judge enforcing, a gate-refused answer the judge refuses stays a content failure and a rejection", async () => {
+    await seed(10, { contentRefundsUsed: 1 });
+    await setConfig({ outputJudge: "enforce" });
+    deps.judge.verdict = "off_topic";
+    deps.generator.next.push(async (r) => liveAnswer(r));
+    expect(await generateRecipe(deps, caller, live())).toMatchObject({ status: "FAILED", charged: true, balance: 6 });
+    expect(deps.judge.calls).toBe(1);
+    expect((await generations())[0]).toMatchObject({ failureClass: "content", failureReason: "judge off_topic" });
+    expect((await user()).promptRejections).toMatchObject({ count: 1 });
+
+    deps.judge.verdict = "ok";
+    deps.generator.next.push(async (r) => liveAnswer(r));
+    expect(await generateRecipe(deps, caller, live())).toMatchObject({ status: "FAILED", charged: false, balance: 6 });
+    expect(deps.judge.calls).toBe(2);
+    expect((await generations()).map((g) => g.failureClass).sort()).toEqual(["content", "quality"]);
   });
 
   test("a single recipe with no pantry item is refunded the same way", async () => {

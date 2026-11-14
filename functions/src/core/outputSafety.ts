@@ -78,7 +78,11 @@ export const QUALITY_OUTPUT_RULES: ReadonlySet<OutputRule> = new Set<OutputRule>
   "NO_PANTRY", "DAY_NO_PANTRY", "STAPLES_ONLY", "DUPLICATE_DISH",
 ]);
 
-export type OutputCheck<T> = { ok: true; value: T } | { ok: false; rule: OutputRule };
+/**
+ * A refusal by the quality gate (QUALITY_OUTPUT_RULES) carries the otherwise valid answer as
+ * `value`, so the output judge can still look at it (generation.ts); no other refusal does.
+ */
+export type OutputCheck<T> = { ok: true; value: T } | { ok: false; rule: OutputRule; value?: T };
 
 export interface OutputContext {
   req: GenerateRequest;
@@ -481,36 +485,36 @@ function checkLanguage(ch: Checker): void {
  * The quality gate, after every other rule (the language check included), so an answer that also
  * breaks a content rule is always settled as that content failure, never as a refunded quality one.
  */
-function gate(ch: Checker): void {
-  if (ch.pantryUses === 0) bad("NO_PANTRY");
-  if (ch.emptyDay) bad("DAY_NO_PANTRY");
-  if (ch.staplesOnly) bad("STAPLES_ONLY");
-  if (new Set(ch.titles).size < ch.titles.length) bad("DUPLICATE_DISH");
+function gate(ch: Checker): OutputRule | null {
+  if (ch.pantryUses === 0) return "NO_PANTRY";
+  if (ch.emptyDay) return "DAY_NO_PANTRY";
+  if (ch.staplesOnly) return "STAPLES_ONLY";
+  if (new Set(ch.titles).size < ch.titles.length) return "DUPLICATE_DISH";
+  return null;
 }
 
-function run<T>(f: () => T): OutputCheck<T> {
+/** Runs every content rule, then the quality gate on an answer that passed them all. */
+function run<T>(ctx: OutputContext, f: (ch: Checker) => T): OutputCheck<T> {
+  const ch = checker(ctx);
+  let value: T;
   try {
-    return { ok: true, value: f() };
+    value = f(ch);
+    checkLanguage(ch);
   } catch (e) {
     if (e instanceof Invalid) return { ok: false, rule: e.rule };
     throw e;
   }
+  const rule = gate(ch);
+  return rule ? { ok: false, rule, value } : { ok: true, value };
 }
 
 export function checkRecipeOutput(raw: unknown, ctx: OutputContext): OutputCheck<Recipe> {
-  return run(() => {
-    const ch = checker(ctx);
-    const r = recipe(ch, raw);
-    checkLanguage(ch);
-    gate(ch);
-    return r;
-  });
+  return run(ctx, (ch) => recipe(ch, raw));
 }
 
 /** A menu must have exactly the 3 expected days, each with exactly the requested courses, in order. */
 export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<Menu> {
-  return run(() => {
-    const ch = checker(ctx);
+  return run(ctx, (ch) => {
     const req = ctx.req;
     if (!isObject(raw) || !Array.isArray(raw.days) || raw.days.length !== 3) bad("SHAPE");
     const dates = menuDates(req.today);
@@ -539,8 +543,6 @@ export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<M
       if (ch.pantryUses === usesBefore) ch.emptyDay = true;
       days.push({ date: dates[i], uses, courses: wanted.map((course) => ({ course, recipe: byCourse.get(course)! })) });
     }
-    checkLanguage(ch);
-    gate(ch);
     return { days };
   });
 }
@@ -568,8 +570,10 @@ export function hasEnoughItems(req: GenerateRequest): boolean {
 export function checkOutput(raw: unknown, ctx: OutputContext): OutputCheck<{ recipe?: Recipe; menu?: Menu }> {
   if (ctx.req.kind === "menu") {
     const m = checkMenuOutput(raw, ctx);
-    return m.ok ? { ok: true, value: { menu: m.value } } : m;
+    if (m.ok) return { ok: true, value: { menu: m.value } };
+    return m.value ? { ok: false, rule: m.rule, value: { menu: m.value } } : { ok: false, rule: m.rule };
   }
   const r = checkRecipeOutput(raw, ctx);
-  return r.ok ? { ok: true, value: { recipe: r.value } } : r;
+  if (r.ok) return { ok: true, value: { recipe: r.value } };
+  return r.value ? { ok: false, rule: r.rule, value: { recipe: r.value } } : { ok: false, rule: r.rule };
 }

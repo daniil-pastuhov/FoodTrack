@@ -419,8 +419,13 @@ async function runGenerator(deps: Deps, uid: string, req: GenerateRequest, limit
     // The answer arrived too late to use, but its usage is known and is what gets booked.
     if (controller.signal.aborted) return { ok: false, failureClass: "infra", reason: "timeout", usage };
     const check = checkOutput(result.output, { req, canary, systemInstruction: prompt.systemInstruction });
-    if (!check.ok && QUALITY_OUTPUT_RULES.has(check.rule)) {
-      return { ok: false, failureClass: "quality", reason: `output rule ${check.rule}`, usage };
+    if (!check.ok && QUALITY_OUTPUT_RULES.has(check.rule) && check.value) {
+      const quality: Outcome = { ok: false, failureClass: "quality", reason: `output rule ${check.rule}`, usage };
+      if (config.outputJudge === "off") return quality;
+      // The judge still sees the answer: one it refuses stays a charged content failure and a
+      // prompt rejection, so skipping the pantry cannot turn a hostile answer into a refund.
+      const judged = await runJudge(deps, uid, req, config, check.value, usage);
+      return judged.ok ? { ...quality, usage: judged.usage } : judged.failureClass === "content" ? judged : { ...quality, usage: judged.usage };
     }
     if (!check.ok) {
       return {

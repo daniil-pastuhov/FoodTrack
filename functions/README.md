@@ -93,7 +93,8 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
   each counts towards `infraRefundsPerDay`, so an account can trip the gate at most that many
   times a UTC day (3 by default) before `INFRA_FAILURE_LIMIT`. The gate runs after every other
   output rule, so an answer that also breaks one (a link, an allergen, the wrong language) is
-  settled as that content failure.
+  settled as that content failure; with `outputJudge` on, the judge also sees a gate-refused
+  answer, and its refusal (under `enforce`) is settled as the judge's content failure.
 - A request the gate would refuse whatever the model wrote is refused before anything is
   reserved, with `NOT_ENOUGH_ITEMS` (nothing charged, no model call, log
   `generation_not_enough_items`): no pantry item that the allergens and diet allow (by the same
@@ -624,8 +625,11 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   by `infraRefundsPerDay` (3 a day, then `INFRA_FAILURE_LIMIT`) and by the per-user and global
   spend ceilings, which book the measured cost of every such call: at most about 3 × USD 0.11
   of model spend per account per day for 3-course menus, the same exposure as three refunded
-  infrastructure failures. The gate runs after every content rule, so it cannot turn a charged
-  hostile answer into a refunded one.
+  infrastructure failures. The gate runs after every content rule, and with `outputJudge` on the
+  judge still sees a gate-refused answer (a verdict other than `ok` under `enforce` keeps it a
+  charged content failure and a prompt rejection), so skipping the pantry cannot turn a charged
+  hostile answer into a refunded one. With the judge off, a hostile answer that only the judge
+  would have caught is refused by the gate and refunded: not delivered, but not counted either.
 - **The staple list is a word list.** It catches "water", "olivenolje", "freshly ground black
   pepper" in the ten languages, not "a splash of stock" or a staple in another language; a
   staples-only dish written that way passes. It deliberately leaves out words that are also real
