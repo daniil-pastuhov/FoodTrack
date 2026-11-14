@@ -111,6 +111,8 @@ public final class StoreGeofenceManager: NSObject, ObservableObject, CLLocationM
             // with no sign anything went wrong.
             locationManager.requestLocation()
         default:
+            // Refused: no rating prompt this session.
+            ReviewPrompter.shared.problemShown()
             completion(nil)
         }
     }
@@ -127,6 +129,7 @@ public final class StoreGeofenceManager: NSObject, ObservableObject, CLLocationM
                 break // Still waiting on the user; the dialog is up.
             default:
                 pendingLocationResult = nil
+                ReviewPrompter.shared.problemShown()
                 pending(nil)
             }
         }

@@ -1,3 +1,4 @@
+import StoreKit
 import SwiftUI
 import UIKit
 
@@ -16,6 +17,7 @@ struct RecipeView: View {
     @Environment(\.showSnackbar) private var showSnackbar
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.shellClearance) private var shellClearance
+    @Environment(\.requestReview) private var requestReview
 
     @State private var pinnedHeight: CGFloat = 0
     @State private var sharedPrompt: SharedText?
@@ -77,6 +79,17 @@ struct RecipeView: View {
             await credits.refreshBalance()
         }
         .onChange(of: pantry.items) { _, items in model.syncSelection(with: items) }
+        // Leaving a recipe that was just written (for anything but its own dishes) is one of the
+        // rating prompt's moments: asked then, never over the recipe as it appears.
+        .onChange(of: model.path) { _, path in
+            let showsRecipe = path.contains { destination in
+                switch destination {
+                case .result, .dish: return true
+                case .saved, .settings: return false
+                }
+            }
+            if !showsRecipe { ReviewPrompter.shared.recipeLeft { requestReview() } }
+        }
         // The model can finish downloading, or Apple Intelligence be switched on, meanwhile; a
         // purchase waiting for the server is tried again.
         .onChange(of: scenePhase) { _, phase in

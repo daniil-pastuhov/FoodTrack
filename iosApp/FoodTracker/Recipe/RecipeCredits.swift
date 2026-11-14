@@ -33,6 +33,15 @@ enum RecipeCreditsNotice: Equatable {
     /// A join of this install into an account moved recipes (`moved` > 0) or, after a store
     /// refund, a debt (`moved` < 0). As Android's `PaidEvent.Merged`.
     case merged(moved: Int)
+
+    /// The failures rule the rating prompt out for the session, as Android's
+    /// `ReviewPrompter.isProblem(PaidEvent)`.
+    var blocksReviewPrompt: Bool {
+        switch self {
+        case .signInFailed, .providerInUse, .accountActionFailed: return true
+        case .added, .accountDeleted, .accountBusy, .merged: return false
+        }
+    }
 }
 
 /// Keys the paid route keeps on this phone, outside `AppSettings` and backups. A store
@@ -153,33 +162,37 @@ struct RecipeCreditsStorage {
 /// so no transaction waits for the tab to be opened.
 @MainActor
 final class RecipeCredits: ObservableObject {
+    /// A purchase, account or server problem shown on screen rules the rating prompt out for
+    /// the session (`ReviewPrompter`).
+    private static func noteReviewProblem() { ReviewPrompter.shared.problemShown() }
+
     /// Nil while there is no user, which is the state of anyone who never bought.
     @Published private(set) var balance: Int?
     /// What a recipe and a menu take, as the server last said; 1, 4 and 5 until it has.
     @Published private(set) var costs: RecipeCosts
     @Published private(set) var account: RecipeAccountState = .none
-    @Published private(set) var packs: RecipePacksState = .idle
+    @Published private(set) var packs: RecipePacksState = .idle { didSet { if packs == .unreachable { Self.noteReviewProblem() } } }
     @Published private(set) var unconfirmed: [UnconfirmedPurchase] = []
     @Published private(set) var paymentPending = false
-    @Published private(set) var serverPaused = false
+    @Published private(set) var serverPaused = false { didSet { if serverPaused { Self.noteReviewProblem() } } }
     /// Earlier purchases were refunded after the recipes were used: no way to buy shows, and a
     /// line says why. What is in the balance still works.
     @Published private(set) var purchasesBlocked = false
     /// The server takes no App Store purchases from this build (`STORE_MISMATCH`), for this
     /// launch: buying is hidden, and the purchase stays unfinished rather than being lost.
-    @Published private(set) var storeMismatch = false
+    @Published private(set) var storeMismatch = false { didSet { if storeMismatch { Self.noteReviewProblem() } } }
     @Published private(set) var attestationFailed = false
     /// A server call failed for want of a connection, or the phone has none.
-    @Published private(set) var connectionLost = false
+    @Published private(set) var connectionLost = false { didSet { if connectionLost { Self.noteReviewProblem() } } }
     @Published private(set) var isOnline = true
     @Published private(set) var isConfirming = false
     @Published private(set) var isSigningIn = false
-    @Published var notice: RecipeCreditsNotice?
+    @Published var notice: RecipeCreditsNotice? { didSet { if notice?.blocksReviewPrompt == true { Self.noteReviewProblem() } } }
     /// "This purchase couldn't be added", a T6 dialog.
-    @Published var rejectedPurchase = false
+    @Published var rejectedPurchase = false { didSet { if rejectedPurchase { Self.noteReviewProblem() } } }
     /// The same dialog for a purchase this build can't add (`STORE_MISMATCH`): it says why, and
     /// that the purchase was not added. Once per purchase per launch.
-    @Published var rejectedByBuild = false
+    @Published var rejectedByBuild = false { didSet { if rejectedByBuild { Self.noteReviewProblem() } } }
     /// "Add this phone's recipes to your account?"
     @Published var pendingMerge: RecipePendingMerge?
     /// The account was deleted but the server said Apple's link stayed (`appleLinkRemoved:

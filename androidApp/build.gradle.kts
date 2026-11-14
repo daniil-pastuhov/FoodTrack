@@ -199,6 +199,8 @@ dependencies {
     implementation(libs.firebase.appcheck.playintegrity)
     debugImplementation(libs.firebase.appcheck.debug)
     implementation(libs.play.billing.ktx)
+    // The OS rating prompt (In-App Review). Release builds installed from Play only; see ReviewPrompter.
+    implementation(libs.play.review)
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)

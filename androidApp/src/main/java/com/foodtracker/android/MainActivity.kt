@@ -24,8 +24,12 @@ import com.foodtracker.repository.PantryRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
+import com.foodtracker.api.ProductLookupResult
 import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.review.ReviewPrompter
 import com.foodtracker.viewmodel.PantryStateHolder
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import org.koin.android.ext.android.inject
@@ -35,6 +39,7 @@ class MainActivity : ComponentActivity() {
     private val stateHolder: PantryStateHolder by inject()
     private val recipeStateHolder: RecipeStateHolder by inject()
     private val pantryRepository: PantryRepository by inject()
+    private val reviewPrompter: ReviewPrompter by inject()
 
     // Hoisted out of the composable (rather than `remember`ed) so the Shopping List widget's
     // tap intent can navigate there via onNewIntent even when MainActivity is already running,
@@ -52,6 +57,7 @@ class MainActivity : ComponentActivity() {
             if (granted.values.any { it }) {
                 requestCurrentLocation(callback)
             } else {
+                reviewPrompter.onProblemShown()
                 callback(null, null)
             }
         }
@@ -88,10 +94,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        observeForReviewPrompt()
+
         setContent {
             FoodTrackerRoot(
                 stateHolder = stateHolder,
                 recipeStateHolder = recipeStateHolder,
+                reviewPrompter = reviewPrompter,
                 currentScreenState = currentScreenState,
                 onAddCurrentLocationAsStore = ::resolveCurrentLocation,
                 backgroundLocationDisclosureState = backgroundLocationDisclosureState,
@@ -110,6 +119,8 @@ class MainActivity : ComponentActivity() {
      * also marks onboarding done, so onboarding is skipped from the next launch on.
      */
     private fun loadDemoFromIntent(intent: Intent) {
+        // A rating prompt must never appear in a store screenshot.
+        if (intent.hasExtra(EXTRA_DEMO_BACKUP) || intent.hasExtra(EXTRA_DEMO_TAB)) reviewPrompter.suppressForSession()
         intent.getStringExtra(EXTRA_DEMO_BACKUP)?.let { path ->
             val raw = runCatching { java.io.File(path).readText() }.getOrNull()
             if (raw == null) {
@@ -134,6 +145,33 @@ class MainActivity : ComponentActivity() {
 
     private fun isDebuggable(): Boolean =
         (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0
+
+    /**
+     * Feeds the rating prompt the lasting states it goes by: the pantry's size, a lookup that
+     * couldn't be made, and the paid route's problems (a dropped purchase, the server offline,
+     * busy or paused). On the main thread, where ReviewPrompter is used. One-off events are
+     * reported where they are shown (RecipeScreen, RecipePaidOverlays).
+     */
+    private fun observeForReviewPrompt() {
+        lifecycleScope.launch {
+            stateHolder.uiState
+                .map { state -> if (state.isLoading) null else state.items.size }
+                .distinctUntilChanged()
+                .collect { size -> if (size != null) reviewPrompter.onPantrySize(size) }
+        }
+        lifecycleScope.launch {
+            stateHolder.uiState
+                .map { it.lookupResult == ProductLookupResult.Offline }
+                .distinctUntilChanged()
+                .collect { offline -> if (offline) reviewPrompter.onProblemShown() }
+        }
+        lifecycleScope.launch {
+            recipeStateHolder.uiState
+                .map { it.paid }
+                .distinctUntilChanged()
+                .collect(reviewPrompter::onPaidState)
+        }
+    }
 
     /** Re-derives the pantry when the date may have moved under it. See
      *  [PantryStateHolder.refreshToday] for why its own midnight timer isn't enough. */

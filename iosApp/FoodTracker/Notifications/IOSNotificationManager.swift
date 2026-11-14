@@ -92,7 +92,12 @@ public class IOSNotificationManager: NSObject, UNUserNotificationCenterDelegate 
     /// For the "reminders are off" notes, when the prompt is still unanswered because of Not now
     /// in onboarding. Anything saved since was refused by the system, so it is scheduled again.
     public func requestAuthorization(thenSchedule items: [PantryItem]) async {
-        guard await requestAuthorization() == true else { return }
+        let answer = await requestAuthorization()
+        guard answer == true else {
+            // A refusal rules the rating prompt out for this session.
+            if answer == false { ReviewPrompter.shared.problemShown() }
+            return
+        }
         rescheduleAll(items: items)
         scheduleDigestNotification(items: items)
     }
