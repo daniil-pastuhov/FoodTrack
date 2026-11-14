@@ -717,6 +717,28 @@ enum RecipeWire {
         return String(format: "%04d-%02d-%02d", parts.year ?? 1970, parts.month ?? 1, parts.day ?? 1)
     }
 
+    /// The `items` (as sent, `expiresOn` `YYYY-MM-DD`) past their date on `today` (likewise), in
+    /// the order given. An item without a date, or one that can't be read, is not. Android:
+    /// `pastDateOf`.
+    static func pastDate(of items: [WireIngredient], today: String) -> [PastDateItem] {
+        guard let day = dayNumber(today) else { return [] }
+        return items.compactMap { item in
+            guard let expires = item.expiresOn.flatMap(dayNumber) else { return nil }
+            let over = day - expires
+            return over > 0 ? PastDateItem(name: item.name, daysOver: over) : nil
+        }
+    }
+
+    /// Days since 1970-01-01 of a `YYYY-MM-DD` date, in the proleptic Gregorian calendar.
+    private static func dayNumber(_ iso: String) -> Int? {
+        let parts = iso.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        guard let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else { return nil }
+        return Int((date.timeIntervalSince1970 / 86_400).rounded())
+    }
+
     /// Names in one request with optional items, ticked and optional together, and their code
     /// points (CONTRACT.md "Optional ingredients"). As Android's `MAX_REQUEST_TOTAL_NAMES` and
     /// `MAX_REQUEST_OPTIONAL_NAME_CHARS`.

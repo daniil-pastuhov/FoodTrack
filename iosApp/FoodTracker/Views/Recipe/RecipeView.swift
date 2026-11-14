@@ -454,10 +454,16 @@ struct RecipeView: View {
 
     private var ingredients: some View {
         let items = pantry.items
-        let shown = RecipeViewModel.shownItems(items, selected: model.selectedIDs, expiringSoonDays: expiringSoonDays)
-        let others = RecipeViewModel.otherItems(items, selected: model.selectedIDs, expiringSoonDays: expiringSoonDays)
+        let shown = RecipeViewModel.shownItems(items, selected: model.selectedIDs)
+        let others = RecipeViewModel.otherItems(items, selected: model.selectedIDs)
         return VStack(alignment: .leading, spacing: 0) {
             SectionHeader(L10n.recipeCookWith)
+            // Ticked items past their date: said at the top of the list, from the items' own
+            // dates, gone as soon as none is ticked. It never stops a recipe being written.
+            if let warning = L10n.recipePastDateFormWarning(model.pastDateTicked(from: items)) {
+                LarderCallout(.error, icon: .triangleAlert, message: warning)
+                    .padding(.bottom, LarderSpace.s3)
+            }
             LarderGroup {
                 ForEach(shown) { item in
                     ingredientRow(item)

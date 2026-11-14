@@ -798,3 +798,10 @@
 "recipe_not_available_debug" = "Feilsøkingsbygg: App Check avviste dette bygget. Registrer feilsøkingstokenet for App Check som Xcode-konsollen skriver ut (docs/recipe-setup.md, «Debug builds against the real project»).";
 "recipe_prompt_other_items_intro" = "Jeg har også disse andre varene hjemme, i tilfelle noen av dem også er nyttige:";
 "recipe_prompt_other_items_omitted" = "(+%d flere varer vises ikke)";
+
+/* Recipe tab: items past their date, ticked or used by a written recipe. */
+"recipe_past_date_form_single" = "En avkrysset vare gikk ut på dato for %1$@ siden. Sjekk at den fortsatt er trygg å spise, eller fjern krysset.";
+"recipe_past_date_result_one" = "Gått ut på dato: %1$@. Sjekk at den fortsatt er trygg å spise før du lager mat.";
+"recipe_past_date_result_many" = "Gått ut på dato: %1$@. Sjekk at de fortsatt er trygge å spise før du lager mat.";
+"recipe_past_date_item" = "%1$@ (%2$@)";
+"recipe_prompt_past_date" = "Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$@.";

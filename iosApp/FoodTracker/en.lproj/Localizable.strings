@@ -798,3 +798,10 @@
 "recipe_not_available_debug" = "Debug build: App Check refused this build. Register the App Check debug token that the Xcode console prints (docs/recipe-setup.md, “Debug builds against the real project”).";
 "recipe_prompt_other_items_intro" = "I also have these other items at home, in case any of them are useful too:";
 "recipe_prompt_other_items_omitted" = "(+%d more items not shown)";
+
+/* Recipe tab: items past their date, ticked or used by a written recipe. */
+"recipe_past_date_form_single" = "A ticked item is past its date, by %1$@. Check it is still safe to eat, or untick it.";
+"recipe_past_date_result_one" = "Past its date: %1$@. Check it is still safe to eat before you cook.";
+"recipe_past_date_result_many" = "Past their date: %1$@. Check they are still safe to eat before you cook.";
+"recipe_past_date_item" = "%1$@ (%2$@)";
+"recipe_prompt_past_date" = "These items are past their date, and I have chosen to use them anyway: %1$@.";

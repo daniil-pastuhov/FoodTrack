@@ -174,6 +174,11 @@ public struct Recipe: Codable, Equatable, Sendable {
     public var steps: [String]
     public var tip: String?
     public var source: RecipeSource
+    /// The items this dish was written from that were past their date when it was written, and
+    /// by how many days: the red warning above the ingredients and in its shared text. Local to
+    /// the apps, worked out from the request (`RecipeWire.pastDate`), never from the model's text;
+    /// a payload saved before it existed reads as none. Android: `Recipe.pastDate`.
+    public var pastDate: [PastDateItem] = []
 
     public init(
         title: String,
@@ -198,7 +203,7 @@ public struct Recipe: Codable, Equatable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case title, summary, minutes, servings, difficulty, ingredients, steps, tip, source
+        case title, summary, minutes, servings, difficulty, ingredients, steps, tip, source, pastDate
     }
 
     public init(from decoder: Decoder) throws {
@@ -213,6 +218,18 @@ public struct Recipe: Codable, Equatable, Sendable {
         tip = try c.decodeIfPresent(String.self, forKey: .tip)
         // A server payload has no source of its own.
         source = (try? c.decodeIfPresent(RecipeSource.self, forKey: .source)).flatMap { $0 } ?? .server
+        pastDate = (try? c.decodeIfPresent([PastDateItem].self, forKey: .pastDate)).flatMap { $0 } ?? []
+    }
+}
+
+/// An item past its date, as it was when a recipe was written: `daysOver` days after its date.
+public struct PastDateItem: Codable, Equatable, Hashable, Sendable {
+    public var name: String
+    public var daysOver: Int
+
+    public init(name: String, daysOver: Int) {
+        self.name = name
+        self.daysOver = daysOver
     }
 }
 
@@ -236,6 +253,43 @@ public struct RecipeMenuDay: Codable, Equatable, Sendable {
 /// Three days of two or three courses, written by the server only.
 public struct RecipeMenu: Codable, Equatable, Sendable {
     public var days: [RecipeMenuDay]
+    /// Every item past its date the menu was written from (see `Recipe.pastDate`): the warning
+    /// under the menu's title. Each course's own recipe carries its day's share.
+    public var pastDate: [PastDateItem] = []
+}
+
+extension RecipeMenu {
+    private enum CodingKeys: String, CodingKey { case days, pastDate }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        days = try c.decode([RecipeMenuDay].self, forKey: .days)
+        pastDate = (try? c.decodeIfPresent([PastDateItem].self, forKey: .pastDate)).flatMap { $0 } ?? []
+    }
+
+    /// With its past-date warnings: each day's courses get the past-date items among that day's
+    /// `uses` (the server's reading of which items the day uses, by the names sent), and the menu
+    /// all of `ticked` plus the `optional` ones a day uses. Android: `Menu.withPastDate`.
+    func withPastDate(ticked: [PastDateItem], optional: [PastDateItem]) -> RecipeMenu {
+        var seen = Set<String>()
+        let all = (ticked + optional).filter { seen.insert($0.name.lowercased()).inserted }
+        var menu = self
+        menu.days = days.map { day in
+            let used = Set(day.uses.map { $0.lowercased() })
+            let items = all.filter { used.contains($0.name.lowercased()) }
+            var day = day
+            day.courses = day.courses.map { course in
+                var course = course
+                course.recipe.pastDate = items
+                return course
+            }
+            return day
+        }
+        var names = Set<String>()
+        menu.pastDate = (ticked + menu.days.flatMap { $0.courses.flatMap(\.recipe.pastDate) })
+            .filter { names.insert($0.name.lowercased()).inserted }
+        return menu
+    }
 }
 
 public enum SavedRecipeKind: String, Codable, Sendable {

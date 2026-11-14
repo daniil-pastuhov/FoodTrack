@@ -565,6 +565,16 @@ private fun RecipeCallouts(state: RecipeUiState, actions: RecipeTabActions) {
 @Composable
 private fun CookWith(state: RecipeUiState, onToggle: (String) -> Unit, onAddOthers: () -> Unit) {
     SectionHeader(text = stringResource(R.string.recipe_cook_with), first = true)
+    // Ticked items past their date: said at the top of the list, from the items' own dates, and
+    // gone as soon as none is ticked. It never stops a recipe being written.
+    pastDateFormWarning(LocalContext.current.resources, state.pastDateTicked)?.let { warning ->
+        LarderCallout(
+            kind = LarderCalloutKind.Error,
+            icon = LarderIcons.TriangleAlert,
+            message = warning,
+            modifier = Modifier.padding(bottom = LarderSpace.s3)
+        )
+    }
     LarderGroup {
         state.shownRows.forEachIndexed { index, row ->
             if (index > 0) LarderDivider()

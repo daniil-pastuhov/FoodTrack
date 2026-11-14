@@ -14,7 +14,10 @@ enum RecipePromptBuilder {
         let preferences = sharePreferences(request)
             .map { "- " + $0 }
             .joined(separator: "\n")
-        return L10n.recipePromptIntro + "\n\n" + items + otherItemsSection(request.otherItems)
+        // The cook chose to use these despite their date: said so, so the other AI doesn't drop them.
+        let past = request.items.filter { $0.daysRemaining < 0 }.map(\.name)
+        let pastLine = past.isEmpty ? "" : "\n\n" + L10n.recipePromptPastDate(past.joined(separator: ", "))
+        return L10n.recipePromptIntro + "\n\n" + items + pastLine + otherItemsSection(request.otherItems)
             + "\n\n" + L10n.recipePromptPreferencesIntro + "\n" + preferences
     }
 
@@ -83,9 +86,14 @@ enum RecipePromptBuilder {
         exactly. Never include an ingredient that is or contains a listed allergen. Mark an \
         ingredient as from the pantry only when it is one of the listed pantry items, and then \
         copy that item's name exactly as listed into pantryItem, untranslated. Write every other \
-        text field in \(request.config.resolvedLanguage.englishName).\(request.otherItems.isEmpty ? "" : " " + onDeviceOtherItemsRule)
+        text field in \(request.config.resolvedLanguage.englishName).\(request.otherItems.isEmpty ? "" : " " + onDeviceOtherItemsRule)\
+        \(request.items.contains { $0.daysRemaining < 0 } ? " " + onDevicePastDateRule : "")
         """
     }
+
+    /// The owner's rule: an item past its date is the cook's choice and is used, never dropped
+    /// for its age; the app warns about it itself. As Android's on-device prompt.
+    static let onDevicePastDateRule = "Items past their date are ones the cook has checked and chosen to use: do not leave them out for their date."
 
     /// With "Send all products": what the second list is for.
     static let onDeviceOtherItemsRule = """
@@ -181,6 +189,7 @@ enum RecipePromptBuilder {
     /// A recipe as plain text, for the result screen's Share.
     static func plainText(_ recipe: Recipe) -> String {
         var parts = [recipe.title]
+        if let warning = L10n.recipePastDateWarning(recipe.pastDate) { parts.append("⚠ " + warning) }
         if !recipe.summary.isEmpty { parts.append(recipe.summary) }
         let ingredients = recipe.ingredients.map { ingredient in
             "- " + (ingredient.amount.isEmpty ? ingredient.name : "\(ingredient.amount) \(ingredient.name)")
@@ -197,6 +206,7 @@ enum RecipePromptBuilder {
     /// A menu as plain text: each day's heading, then each course and its full recipe.
     static func plainText(_ menu: RecipeMenu) -> String {
         var parts = [L10n.recipeMenuHeading]
+        if let warning = L10n.recipePastDateWarning(menu.pastDate) { parts.append("⚠ " + warning) }
         for day in menu.days {
             let heading = RecipeMenuView.dayTitle(day.date)
             let courses = day.courses.map { course in

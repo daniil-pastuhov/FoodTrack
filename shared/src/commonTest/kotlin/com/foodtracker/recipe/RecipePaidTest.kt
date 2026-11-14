@@ -1279,6 +1279,16 @@ class RecipePaidTest {
     }
 
     @Test
+    fun aServerRecipeIsSavedWithTheTickedItemsPastTheirDateOnTheDayAsked() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        // Bread was a day past its date on the day it was asked for; the model's text plays no part.
+        assertEquals(listOf(PastDateItem("Bread", 1)), saved.rows.value.single().recipe?.pastDate)
+    }
+
+    @Test
     fun theCheapestPackPriceIsKnownOnceTheStoreHasBeenAsked() = runUnconfined {
         val unreachable = store.packs
         store.packs = null

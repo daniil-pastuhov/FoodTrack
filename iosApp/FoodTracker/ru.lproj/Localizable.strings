@@ -798,3 +798,10 @@
 "recipe_not_available_debug" = "Отладочная сборка: App Check отклонил эту сборку. Зарегистрируйте отладочный токен App Check, который выводится в консоли Xcode (docs/recipe-setup.md, «Debug builds against the real project»).";
 "recipe_prompt_other_items_intro" = "У меня также есть эти продукты дома — возможно, какие-то из них тоже пригодятся:";
 "recipe_prompt_other_items_omitted" = "(+ещё %d продуктов не показано)";
+
+/* Recipe tab: items past their date, ticked or used by a written recipe. */
+"recipe_past_date_form_single" = "Отмеченный продукт просрочен на %1$@. Проверьте, что его ещё можно есть, или снимите отметку.";
+"recipe_past_date_result_one" = "Срок годности истёк: %1$@. Перед готовкой проверьте, что продукт ещё можно есть.";
+"recipe_past_date_result_many" = "Срок годности истёк: %1$@. Перед готовкой проверьте, что эти продукты ещё можно есть.";
+"recipe_past_date_item" = "%1$@ (%2$@)";
+"recipe_prompt_past_date" = "У этих продуктов истёк срок годности, но я всё равно хочу их использовать: %1$@.";

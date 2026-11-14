@@ -1062,4 +1062,19 @@
         <item quantity="one">The other item in your pantry may be used too</item>
         <item quantity="other">The other %1$d items in your pantry may be used too</item>
     </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">A ticked item is past its date, by %1$s. Check it is still safe to eat, or untick it.</string>
+    <string name="recipe_past_date_result_one">Past its date: %1$s. Check it is still safe to eat before you cook.</string>
+    <string name="recipe_past_date_result_many">Past their date: %1$s. Check they are still safe to eat before you cook.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">These items are past their date, and I have chosen to use them anyway: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
+        <item quantity="other">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d day</item>
+        <item quantity="other">%d days</item>
+    </plurals>
 </resources>

@@ -55,7 +55,8 @@ fun recipePromptStrings(context: Context): RecipePromptStrings {
         mealType = { context.getString(R.string.recipe_prompt_meal, recipeMealLabel(resources, it)) },
         diet = { context.getString(R.string.recipe_prompt_diet, recipeDietLabel(resources, it)) },
         allergens = { context.getString(R.string.recipe_prompt_allergens, it) },
-        language = { code -> context.getString(R.string.recipe_prompt_language, languageDisplayName(code)) }
+        language = { code -> context.getString(R.string.recipe_prompt_language, languageDisplayName(code)) },
+        pastDateNote = { names -> context.getString(R.string.recipe_prompt_past_date, names) }
     )
 }
 

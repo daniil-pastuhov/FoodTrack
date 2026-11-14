@@ -1407,18 +1407,24 @@ internal class RecipePaid(
 
     private fun savedFrom(request: GenerateRequest, reply: GenerateReply): SavedRecipe? {
         val created = nowMillis()
+        // The past-date warning comes from what was sent and its dates on the day it was asked
+        // for, never from the model's text.
+        val asked = runCatching { LocalDate.parse(request.today) }.getOrElse { today() }
+        val tickedPast = pastDateOf(request.ingredients, asked)
         return when (request.kind) {
             // `fromPantry` is the server's (it checks the model's claim against what was sent); the
             // phone's own matching is only for recipes the phone wrote (parseRecipeReply).
+            // A recipe's warning names every ticked item past its date: the reply doesn't say
+            // which pantry item an ingredient is (follow-up: a per-ingredient pantry index).
             WireKind.RECIPE -> reply.recipe?.let { recipe ->
-                SavedRecipe.of(newSavedId(), recipe.copy(source = RecipeSource.SERVER), created)
+                SavedRecipe.of(newSavedId(), recipe.copy(source = RecipeSource.SERVER, pastDate = tickedPast), created)
             }
             WireKind.MENU -> reply.menu?.takeIf { it.days.isNotEmpty() }?.let { menu ->
                 val serverMenu = Menu(
                     menu.days.map { day ->
                         day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.copy(source = RecipeSource.SERVER)) })
                     }
-                )
+                ).withPastDate(tickedPast, pastDateOf(request.optionalIngredients.orEmpty(), asked))
                 SavedRecipe.of(newSavedId(), MENU_SAVED_TITLE, serverMenu, created)
             }
         }

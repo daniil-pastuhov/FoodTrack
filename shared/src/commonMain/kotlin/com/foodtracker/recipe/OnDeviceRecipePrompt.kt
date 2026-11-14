@@ -101,7 +101,13 @@ fun buildOnDeviceRecipePrompt(
     val language = recipeLanguageEnglishName(languageCode)
     return buildString {
         append("Write one home-cooking recipe that uses these items from my kitchen, ")
-        append("the ones closest to their date first. Leave out anything that would be unsafe to eat.\n")
+        append("the ones closest to their date first.")
+        if (main.any { it.daysRemaining < 0 }) {
+            // The owner's rule: an item past its date is the cook's choice and is used, never
+            // dropped for its age; the app warns about it itself.
+            append(" Items past their date are ones I have checked and chosen to use: do not leave them out for their date.")
+        }
+        append("\n")
         append(lines)
         if (extra.isNotEmpty()) {
             append("\n\nI also have these at home. Use any of them only where it helps the dish; none is needed:\n")

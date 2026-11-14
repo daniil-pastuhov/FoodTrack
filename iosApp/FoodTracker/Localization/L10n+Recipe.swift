@@ -337,6 +337,35 @@ extension L10n {
         String(format: paid("recipe_prompt_other_items_omitted"), count)
     }
 
+    // Past their date
+    /// "Hamburgare (145 days over)": each item with the status chip's own wording, its first
+    /// letter lowered where the wording starts a sentence ("Просрочено…", "Utløpt…").
+    static func recipePastDateList(_ items: [PastDateItem]) -> String {
+        let english = Locale.current.language.languageCode?.identifier == "en"
+        return items.map { item in
+            let over = String.localizedStringWithFormat(NSLocalizedString("status_days_over_format", comment: ""), item.daysOver)
+            let lowered = english ? over : over.prefix(1).lowercased() + over.dropFirst()
+            return String(format: paid("recipe_past_date_item"), isolated(item.name), lowered)
+        }.joined(separator: ", ")
+    }
+
+    /// The red line above a written recipe's ingredients and in its shared text; nil with none.
+    static func recipePastDateWarning(_ items: [PastDateItem]) -> String? {
+        guard !items.isEmpty else { return nil }
+        return String(format: paid(items.count == 1 ? "recipe_past_date_result_one" : "recipe_past_date_result_many"), recipePastDateList(items))
+    }
+
+    /// The form's red callout over "Cook with": how many ticked items are past their date and
+    /// the oldest; nil when none is.
+    static func recipePastDateFormWarning(_ items: [PastDateItem]) -> String? {
+        guard let oldest = items.map(\.daysOver).max() else { return nil }
+        let days = plural("recipe_past_days", oldest)
+        if items.count == 1 { return String(format: paid("recipe_past_date_form_single"), days) }
+        return withDevice(String.localizedStringWithFormat(NSLocalizedString("recipe_past_date_form", comment: ""), items.count, days))
+    }
+
+    static func recipePromptPastDate(_ names: String) -> String { String(format: paid("recipe_prompt_past_date"), names) }
+
     // How recipes work
     static var recipeIntroTitle: String { paid("recipe_intro_title") }
     static var recipeIntroMessage: String { paid("recipe_intro_message") }

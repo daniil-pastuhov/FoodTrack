@@ -1056,4 +1056,19 @@
         <item quantity="one">Den andre varen i matskapet kan også brukes</item>
         <item quantity="other">De %1$d andre varene i matskapet kan også brukes</item>
     </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">En avkrysset vare gikk ut på dato for %1$s siden. Sjekk at den fortsatt er trygg å spise, eller fjern krysset.</string>
+    <string name="recipe_past_date_result_one">Gått ut på dato: %1$s. Sjekk at den fortsatt er trygg å spise før du lager mat.</string>
+    <string name="recipe_past_date_result_many">Gått ut på dato: %1$s. Sjekk at de fortsatt er trygge å spise før du lager mat.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
+        <item quantity="other">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dager</item>
+    </plurals>
 </resources>

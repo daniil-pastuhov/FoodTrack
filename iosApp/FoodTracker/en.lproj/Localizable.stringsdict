@@ -946,5 +946,37 @@
             <string>The other %d items in your pantry may be used too</string>
         </dict>
     </dict>
+    <key>recipe_past_date_form</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%1$d ticked items are past their date, one by %2$@. Check they are still safe to eat, or untick them.</string>
+            <key>other</key>
+            <string>%1$d ticked items are past their date, one by %2$@. Check they are still safe to eat, or untick them.</string>
+        </dict>
+    </dict>
+    <key>recipe_past_days</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d day</string>
+            <key>other</key>
+            <string>%d days</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

@@ -183,10 +183,13 @@ final class RecipeViewModel: ObservableObject {
     private var creditsChanges: AnyCancellable?
     private var allergenChanges: AnyCancellable?
 
-    /// How many of the soonest items are ticked for the person.
+    /// How many of the soonest items are ticked for the person (whatever their date, past it
+    /// included). Android: `RECIPE_DEFAULT_TICKED`. The one place to change it on iOS.
     static let defaultTickCount = 3
-    /// The tab always lists at least this many items, more when more are near their date.
-    static let minimumShownCount = 5
+    /// How many of the soonest items the tab lists before "Add other items"; ticked items are
+    /// listed as well, wherever they fall. Android: `RECIPE_SHOWN_ITEMS`. The one place to
+    /// change it on iOS.
+    static let shownCount = 5
 
     init(
         configStore: RecipeConfigStore = UserDefaultsRecipeConfigStore(),
@@ -310,10 +313,15 @@ final class RecipeViewModel: ObservableObject {
         updateOptions { $0.introSeen = true }
     }
 
-    /// "See recipe packs": closed, then the pack sheet.
+    /// "See recipe packs": closed, then the pack sheet, once the closing sheet has gone (SwiftUI
+    /// won't present a second sheet from the same view while the first is still dismissing).
     func introToPacks() {
         dismissIntro()
-        if credits.canBuy { showsBuySheet = true }
+        guard credits.canBuy else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            self?.showsBuySheet = true
+        }
     }
 
     /// `-demoRecipeIntro YES`: shown as on a first open, to look at it.
@@ -327,6 +335,18 @@ final class RecipeViewModel: ObservableObject {
     func reloadSaved() {
         let current = savedStore.all()
         if current.map(\.id) != saved.map(\.id) { saved = current }
+    }
+
+    /// `items` past their date, soonest first, by how many days: the form's red warning, the
+    /// shared prompt's line and what a recipe written on the phone carries. Android:
+    /// `RecipeUiState.pastDateTicked`.
+    static func pastDate(of items: [PantryItem]) -> [PastDateItem] {
+        soonestFirst(items).filter { $0.daysRemaining < 0 }.map { PastDateItem(name: $0.name, daysOver: -$0.daysRemaining) }
+    }
+
+    /// The ticked items past their date, from `items` (the pantry).
+    func pastDateTicked(from items: [PantryItem]) -> [PastDateItem] {
+        Self.pastDate(of: selectedItems(from: items))
     }
 
     /// The form's actions now; see `RecipeActions`.
@@ -711,9 +731,17 @@ final class RecipeViewModel: ObservableObject {
         let kind = wire.kind
         switch response.status {
         case .done:
+            // The past-date warning comes from what was sent and its dates on the day it was
+            // asked for, never from the model's text. A recipe names every ticked item past its
+            // date: the reply doesn't say which pantry item an ingredient is (follow-up: a
+            // per-ingredient pantry index).
+            let tickedPast = RecipeWire.pastDate(of: wire.ingredients, today: wire.today)
             switch kind {
             case .recipe:
-                if let recipe = response.recipe { return .saved(.recipe(RecipeWire.markedServer(recipe))) }
+                if var recipe = response.recipe.map(RecipeWire.markedServer) {
+                    recipe.pastDate = tickedPast
+                    return .saved(.recipe(recipe))
+                }
             case .menu:
                 if var menu = response.menu, !menu.days.isEmpty {
                     for day in menu.days.indices {
@@ -721,7 +749,8 @@ final class RecipeViewModel: ObservableObject {
                             menu.days[day].courses[course].recipe.source = .server
                         }
                     }
-                    return .saved(.menu(menu))
+                    let optionalPast = RecipeWire.pastDate(of: wire.optionalIngredients ?? [], today: wire.today)
+                    return .saved(.menu(menu.withPastDate(ticked: tickedPast, optional: optionalPast)))
                 }
             }
             return .failure(.serverFailed(kind, sameRequest: true))
@@ -743,9 +772,12 @@ final class RecipeViewModel: ObservableObject {
         guard !request.items.isEmpty, phase == .idle else { return }
         phase = .writingOnDevice
         let model = onDeviceModel
+        // From the ticked items' own dates, never from the model's text.
+        let pastDate = Self.pastDate(of: selectedItems(from: items))
         writeTask = Task { [weak self] in
             do {
-                let recipe = try await model.write(request)
+                var recipe = try await model.write(request)
+                recipe.pastDate = pastDate
                 self?.finishWriting(with: recipe)
             } catch is CancellationError {
                 self?.phase = .idle
@@ -889,7 +921,8 @@ final class RecipeViewModel: ObservableObject {
         items.sorted {
             $0.expiryDate != $1.expiryDate
                 ? $0.expiryDate < $1.expiryDate
-                : $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
+                // Lower-cased names, as Android's `sortName`, so both tick the same three.
+                : $0.name.lowercased() < $1.name.lowercased()
         }
     }
 
@@ -898,19 +931,18 @@ final class RecipeViewModel: ObservableObject {
         soonestFirst(items).prefix(defaultTickCount).map(\.id)
     }
 
-    /// The rows on the tab: everything past its date or due within the "soon" window, at least
-    /// five items, and anything else that is ticked, soonest first.
-    static func shownItems(_ items: [PantryItem], selected: Set<String>, expiringSoonDays: Int) -> [PantryItem] {
+    /// The rows on the tab: the five soonest, and anything else that is ticked, soonest first.
+    /// As Android's `RecipeUiState.shownRows`: a large pantry, or one with many items long past
+    /// their date, keeps the form short; the rest is behind "Add other items".
+    static func shownItems(_ items: [PantryItem], selected: Set<String>) -> [PantryItem] {
         soonestFirst(items).enumerated()
-            .filter { index, item in
-                index < minimumShownCount || item.daysRemaining <= expiringSoonDays || selected.contains(item.id)
-            }
+            .filter { index, item in index < shownCount || selected.contains(item.id) }
             .map(\.element)
     }
 
     /// "Add other items" lists what the tab doesn't.
-    static func otherItems(_ items: [PantryItem], selected: Set<String>, expiringSoonDays: Int) -> [PantryItem] {
-        let shown = Set(shownItems(items, selected: selected, expiringSoonDays: expiringSoonDays).map(\.id))
+    static func otherItems(_ items: [PantryItem], selected: Set<String>) -> [PantryItem] {
+        let shown = Set(shownItems(items, selected: selected).map(\.id))
         return soonestFirst(items.filter { !shown.contains($0.id) })
     }
 }

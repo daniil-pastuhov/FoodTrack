@@ -95,6 +95,19 @@ class RecipePromptBuilderTest {
     }
 
     @Test
+    fun saysWhichTickedItemsArePastTheirDateRightAfterTheList() {
+        val prompt = buildRecipePrompt(
+            strings = strings.copy(pastDateNote = { "PAST: $it" }),
+            today = today,
+            items = listOf(item("Milk", -2), item("Bread", 3), item("Cheese", -30)),
+            otherItems = listOf(item("Old rice", -9))
+        )
+        assertTrue(prompt.startsWith("INTRO\n\n- Cheese (-30d)\n- Milk (-2d)\n- Bread (3d)\n\nPAST: Cheese, Milk\n\nALSO:"), prompt)
+        val fresh = buildRecipePrompt(strings = strings.copy(pastDateNote = { "PAST: $it" }), today = today, items = listOf(item("Bread", 3)))
+        assertFalse(fresh.contains("PAST"), fresh)
+    }
+
+    @Test
     fun otherItemsComeBeforeThePreferences() {
         val prompt = buildRecipePrompt(
             strings = strings,

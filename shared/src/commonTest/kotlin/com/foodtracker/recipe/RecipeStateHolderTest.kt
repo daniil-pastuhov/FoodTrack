@@ -429,6 +429,28 @@ class RecipeStateHolderTest {
         assertEquals(RecipeActions(null, emptyList()), formState(balance = 2, onDevice = true, mode = RecipeMode.MENU).actions)
     }
 
+    // --- Past their date -------------------------------------------------------------------
+
+    @Test
+    fun theFormsPastDateWarningFollowsTheTicks() = runUnconfined {
+        val holder = holder()
+        // Bread (1 day over) is among the three soonest, ticked by default.
+        assertEquals(listOf(PastDateItem("Bread", 1)), holder.uiState.value.pastDateTicked)
+        holder.toggleItem("bread")
+        assertTrue(holder.uiState.value.pastDateTicked.isEmpty(), "gone once no ticked item is past its date")
+        holder.toggleItem("bread")
+        assertEquals(1, holder.uiState.value.pastDateTicked.size)
+    }
+
+    @Test
+    fun aRecipeWrittenOnThePhoneKeepsItsPastDateItems() = runUnconfined {
+        model.replies += { GOOD_REPLY }
+        val holder = holder()
+        holder.generateOnDevice()
+        assertEquals(listOf(PastDateItem("Bread", 1)), saved.rows.value.single().recipe?.pastDate)
+        assertTrue(model.prompts.single().contains("Items past their date are ones I have checked and chosen to use"))
+    }
+
     // --- Send all products -----------------------------------------------------------------
 
     @Test

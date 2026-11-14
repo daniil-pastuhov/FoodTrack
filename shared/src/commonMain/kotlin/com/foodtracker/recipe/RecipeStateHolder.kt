@@ -27,7 +27,8 @@ import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-/** How many of the soonest items the tab ticks by itself. */
+/** How many of the soonest items the tab ticks by itself, whatever their date (past it included).
+ *  iOS: `RecipeViewModel.defaultTickCount`. The one place to change it on Android. */
 const val RECIPE_DEFAULT_TICKED = 3
 
 /** How many of the soonest items the tab lists before "Add other items". Ticked items are listed
@@ -207,6 +208,10 @@ data class RecipeUiState(
 
     /** Everything not ticked, soonest first: what "Send all products" offers the recipe as well. */
     val otherRows: List<PantryRow> = rows.filter { it.id !in selectedIds }
+
+    /** The ticked items past their date, soonest first: the form's red warning, the line in the
+     *  shared prompt, and what a recipe written on the phone carries ([Recipe.pastDate]). */
+    val pastDateTicked: List<PastDateItem> = selectedRows.filter { it.daysRemaining < 0 }.map { PastDateItem(it.item.name, -it.daysRemaining) }
 
     /** How many items "Send all products" adds to this recipe; 0 with it off. */
     val optionalCount: Int get() = if (options.sendAllItems) otherRows.size else 0
@@ -493,7 +498,8 @@ class RecipeStateHolder(
                     report(RecipeEvent.Failed)
                     return@launch
                 }
-                val saved = SavedRecipe.of(newId(), recipe, nowMillis())
+                // The warning comes from the ticked items' own dates, never from the model's text.
+                val saved = SavedRecipe.of(newId(), recipe.copy(pastDate = state.pastDateTicked), nowMillis())
                 savedRecipeRepository.save(saved)
                 report(RecipeEvent.Written(saved.id), saved)
             } catch (e: CancellationException) {

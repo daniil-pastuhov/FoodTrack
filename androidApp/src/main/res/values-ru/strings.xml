@@ -1174,4 +1174,23 @@
         <item quantity="many">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
         <item quantity="other">Можно использовать и остальные продукты из запасов: ещё %1$d</item>
     </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">Отмеченный продукт просрочен на %1$s. Проверьте, что его ещё можно есть, или снимите отметку.</string>
+    <string name="recipe_past_date_result_one">Срок годности истёк: %1$s. Перед готовкой проверьте, что продукт ещё можно есть.</string>
+    <string name="recipe_past_date_result_many">Срок годности истёк: %1$s. Перед готовкой проверьте, что эти продукты ещё можно есть.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date">У этих продуктов истёк срок годности, но я всё равно хочу их использовать: %1$s.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d отмеченный продукт просрочен, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="few">%1$d отмеченных продукта просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="many">%1$d отмеченных продуктов просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+        <item quantity="other">%1$d отмеченных продукта просрочены, самый старый — на %2$s. Проверьте, что их ещё можно есть, или снимите отметку.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d день</item>
+        <item quantity="few">%d дня</item>
+        <item quantity="many">%d дней</item>
+        <item quantity="other">%d дня</item>
+    </plurals>
 </resources>

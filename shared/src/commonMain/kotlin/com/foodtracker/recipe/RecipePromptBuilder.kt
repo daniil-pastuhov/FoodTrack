@@ -47,7 +47,10 @@ data class RecipePromptStrings(
     /** "Nothing that contains: %1$s", given the allergens already joined. */
     val allergens: (String) -> String,
     /** "Write the recipes in %1$s", given a code from [RECIPE_LANGUAGES]. */
-    val language: (String) -> String
+    val language: (String) -> String,
+    /** "These are past their date and I have chosen to use them: %1$s", given the ticked items
+     *  past their date already joined. Null leaves the line out. */
+    val pastDateNote: ((String) -> String)? = null
 )
 
 /**
@@ -80,6 +83,12 @@ fun buildRecipePrompt(
     val prompt = StringBuilder(strings.intro)
         .append("\n\n")
         .append(lines)
+
+    // The cook chose to use these despite their date: said so, so the other AI doesn't drop them.
+    val pastDate = items.filter { it.daysRemaining(today) < 0 }.sortedBy { it.daysRemaining(today) }
+    if (pastDate.isNotEmpty() && strings.pastDateNote != null) {
+        prompt.append("\n\n").append(strings.pastDateNote.invoke(pastDate.joinToString(", ") { it.name }))
+    }
 
     if (otherItems.isNotEmpty()) {
         val section = StringBuilder()
