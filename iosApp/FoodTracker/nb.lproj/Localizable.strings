@@ -429,7 +429,7 @@
 "detail_nova_2" = "Matlagingsingredienser";
 "detail_nova_3" = "Bearbeidet";
 "detail_nova_4" = "Ultrabearbeidet";
-"detail_credit" = "Produktdata fra Open Food Facts";
+"detail_credit" = "Produktdata og bilder fra Open Food Facts (openfoodfacts.org), under Open Database License og CC BY-SA";
 "detail_allergen_note" = "Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.";
 "detail_choose_item" = "Velg en vare for å se detaljene.";
 "lede_number_1" = "Én";

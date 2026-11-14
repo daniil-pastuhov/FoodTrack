@@ -429,7 +429,7 @@
 "detail_nova_2" = "Кулинарные ингредиенты";
 "detail_nova_3" = "Обработанный";
 "detail_nova_4" = "Ультраобработанный";
-"detail_credit" = "Данные о продукте из Open Food Facts";
+"detail_credit" = "Данные и фото продуктов из Open Food Facts (openfoodfacts.org) по лицензиям Open Database License и CC BY-SA";
 "detail_allergen_note" = "Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.";
 "detail_choose_item" = "Выберите продукт, чтобы увидеть подробности.";
 "lede_number_1" = "Один";

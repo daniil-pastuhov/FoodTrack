@@ -559,7 +559,7 @@
     <string name="detail_nova_2">Culinary ingredients</string>
     <string name="detail_nova_3">Processed</string>
     <string name="detail_nova_4">Ultra-processed</string>
-    <string name="detail_credit">Product data from Open Food Facts</string>
+    <string name="detail_credit">Product data and pictures from Open Food Facts (openfoodfacts.org), under the Open Database License and CC BY-SA</string>
     <string name="detail_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
     <string name="detail_choose_item">Choose an item to see its details.</string>
     <plurals name="lede_use_by_tomorrow">
