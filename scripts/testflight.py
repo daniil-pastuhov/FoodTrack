@@ -25,6 +25,10 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     python3 scripts/testflight.py listing [--apply]
     python3 scripts/testflight.py screenshots [--apply]
 
+    # Read-only: the raw screenshot sets and App Asset Library images and placements of that
+    # version, to check the folders' mapping against the account (GET requests only).
+    python3 scripts/testflight.py screenshots --inspect [--dump FILE]
+
 Reads ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the .p8 file), the same as ios_release.sh.
 Needs the `cryptography` package for the ES256 token signature.
 """
@@ -313,9 +317,17 @@ SCREENSHOT_SETS = {
     "medium-screenshots": "APP_IPHONE_61",
     "ipad-screenshots": "APP_IPAD_PRO_3GEN_129",
 }
-# The set-based API has no iPhone Duo display type (only the newer App Asset Library has an
-# IPHONE_DUO display class), so these folders are left for App Store Connect's website.
-UNSYNCED_SCREENSHOT_FOLDERS = ("duo-outer-screenshots", "duo-inner-screenshots")
+# iPhone Duo folder -> which display it shows, in the order the sync puts them in the version's
+# one Duo group (inner first, as App Store Connect's website does). ScreenshotDisplayType has no
+# Duo value, so these go through the App Asset Library (`sync_duo` below), whose IPHONE_DUO
+# display class has a single placement group holding both displays' screenshots, at most 10 in
+# all. The two are told apart by size, from the group's specs in the reference data.
+DUO_FOLDERS = {"duo-inner-screenshots": "inner", "duo-outer-screenshots": "outer"}
+DUO_SIZES = {"inner": {(2853, 2007), (2007, 2853)}, "outer": {(1398, 2034), (2034, 1398)}}
+DUO_DISPLAY_CLASS = "IPHONE_DUO"
+DUO_PLATFORM = "IPHONE_APP_STORE"
+# The classic API shows the same group as a set of this type; the classic sync leaves it alone.
+CLASSIC_DUO_TYPE = "APP_IPHONE_DUO"
 SCREENSHOT_LIMIT = 10  # per display type and localization
 SCREENSHOT_SUFFIXES = (".png", ".jpg", ".jpeg")
 SCREENSHOT_WAIT_SECONDS = 600
@@ -524,6 +536,17 @@ def plan_screenshots(local, remote):
             "reorder": after != list(range(len(local)))}
 
 
+def send_parts(asc, reserved, shot):
+    """Uploads a reserved file's bytes as its uploadOperations say."""
+    data = pathlib.Path(shot["path"]).read_bytes()
+    operations = (reserved.get("attributes") or {}).get("uploadOperations") or []
+    if not operations:
+        raise ListingError(f"App Store Connect gave no upload operations for {shot['path']}")
+    for operation in operations:
+        offset, length = int(operation.get("offset") or 0), int(operation["length"])
+        asc.upload_part(operation, data[offset:offset + length])
+
+
 def upload_screenshot(asc, set_id, shot):
     """Reserves, uploads and commits one screenshot (developer.apple.com/documentation/
     appstoreconnectapi/uploading-assets-to-app-store-connect). Returns its id."""
@@ -532,13 +555,7 @@ def upload_screenshot(asc, set_id, shot):
         "attributes": {"fileName": shot["name"], "fileSize": shot["size"]},
         "relationships": {"appScreenshotSet": {"data": {"type": "appScreenshotSets",
                                                         "id": set_id}}}}})["data"]
-    data = pathlib.Path(shot["path"]).read_bytes()
-    operations = (reserved.get("attributes") or {}).get("uploadOperations") or []
-    if not operations:
-        raise ListingError(f"App Store Connect gave no upload operations for {shot['path']}")
-    for operation in operations:
-        offset, length = int(operation.get("offset") or 0), int(operation["length"])
-        asc.upload_part(operation, data[offset:offset + length])
+    send_parts(asc, reserved, shot)
     asc.call("PATCH", f"/appScreenshots/{reserved['id']}", body={"data": {
         "type": "appScreenshots", "id": reserved["id"],
         "attributes": {"uploaded": True, "sourceFileChecksum": shot["md5"]}}})
@@ -625,20 +642,292 @@ def sync_screenshot_set(asc, localization_id, sets, display_type, folder, apply)
     return True
 
 
-def sync_screenshots(asc, localizations, apply, root=LISTING_DIR):
-    """Syncs every locale folder's screenshot sets to its version localization ({locale: id}).
-    A localization without folders of its own (en-US) shows the primary language's."""
+# --- iPhone Duo screenshots, through the App Asset Library ---------------------------------------
+#
+# developer.apple.com/documentation/appstoreconnectapi/understanding-the-app-asset-library: an
+# image is uploaded once into the app's library, and a placement puts it on a version
+# localization, in a placement group (the display). The library and the set-based API are two
+# views of the same screenshots (the classic APP_IPHONE_DUO set lists the IPHONE_DUO_PROFILE
+# group's images under the same ids), so the classic sync leaving that set alone and this one
+# touching only that group don't get in each other's way. The library keeps no checksum, so each
+# image uploaded here carries the file's MD5 in its reference name; a placement whose image has
+# none (one uploaded on the website) is replaced. Images are never deleted from the library, as an
+# older version's placements may still use them; only placements are.
+
+DUO_READY_STATES = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW",
+                    "ACCEPTED", "APPROVED"}
+# States in which an image can still be placed, or will be once processed.
+DUO_REUSABLE_STATES = DUO_READY_STATES | {"UPLOAD_COMPLETE"}
+MD5_TAG = re.compile(r"\bmd5:([0-9a-f]{32})\b")
+
+
+def size_text(dimensions):
+    return f"{dimensions[0]}×{dimensions[1]}" if dimensions else "?×?"
+
+
+def duo_kind(dimensions):
+    """"inner" or "outer" for an iPhone Duo screenshot's size, else None."""
+    return next((kind for kind, sizes in DUO_SIZES.items() if tuple(dimensions or ()) in sizes), None)
+
+
+def reference_md5(reference_name):
+    match = MD5_TAG.search(reference_name or "")
+    return match.group(1) if match else ""
+
+
+class DuoLibrary:
+    """What the Duo sync needs from the App Asset Library, read once per run: the library id,
+    the IPHONE_DUO placement group with its specs and limit, and the images that carry an MD5."""
+
+    def __init__(self, asc, app_id):
+        library = asc.call("GET", f"/apps/{app_id}/assetLibrary").get("data") or {}
+        if not library.get("id"):
+            raise ListingError("App Store Connect returned no asset library for the app")
+        self.id = library["id"]
+        data, _ = get_all(asc, "/appAssetLibraryRefData")
+        attrs = (data[0] if data else {}).get("attributes") or {}
+        groups = [g.get("placementProfileGroupId") for g in attrs.get("placementProfileGroups") or []
+                  if g.get("displayClassId") == DUO_DISPLAY_CLASS and g.get("platform") == DUO_PLATFORM]
+        if len(groups) != 1:
+            raise ListingError(f"The asset library's reference data has {len(groups)} placement "
+                               f"groups for {DUO_DISPLAY_CLASS} on {DUO_PLATFORM}, not one: {groups}")
+        self.group = groups[0]
+        spec_ids = set()
+        for placement_type in attrs.get("placementTypes") or []:
+            if placement_type.get("placementTypeId") == "APP_SCREENSHOT":
+                for mapping in placement_type.get("specMappings") or []:
+                    if mapping.get("placementGroupId") == self.group:
+                        spec_ids |= set(mapping.get("specs") or [])
+        self.specs = {}  # specId -> (shortName, (width, height))
+        for spec in attrs.get("imageSpecs") or []:
+            size = spec.get("dimensions") or {}
+            if spec.get("specId") in spec_ids and size.get("minWidth") == size.get("maxWidth"):
+                self.specs[spec["specId"]] = (spec.get("shortName"),
+                                              (size.get("minWidth"), size.get("minHeight")))
+        if not self.specs:
+            raise ListingError(f"The asset library's reference data has no screenshot specs for "
+                               f"{self.group}")
+        self.limit = SCREENSHOT_LIMIT
+        for feature in attrs.get("features") or []:
+            if feature.get("featureId") != "APP_STORE_VERSIONS":
+                continue
+            for policy in feature.get("placementPolicies") or []:
+                if policy.get("placementType") == "APP_SCREENSHOT":
+                    for limit in policy.get("groupLimits") or []:
+                        if self.group in (limit.get("groupIds") or []) and limit.get("maxCount"):
+                            self.limit = int(limit["maxCount"])
+        images, _ = get_all(asc, f"/appAssetLibraries/{self.id}/images", {"limit": 50})
+        self.by_md5 = {}
+        for image in images:
+            image_attrs = image.get("attributes") or {}
+            md5 = reference_md5(image_attrs.get("referenceName"))
+            if md5 and image_attrs.get("state") in DUO_REUSABLE_STATES:
+                self.by_md5.setdefault(md5, image)
+
+    def sizes(self):
+        return {size for _, size in self.specs.values()}
+
+    def describe(self):
+        return (f"group {self.group}, at most {self.limit}, specs "
+                + ", ".join(f"{name} {size_text(size)}" for name, size in sorted(self.specs.values())))
+
+
+def local_duo(folder):
+    """The locale folder's Duo screenshots, inner then outer, each in file-number order, with
+    its display ("kind"). Sizes that don't fit their folder's display stop the sync."""
+    shots = []
+    for name, kind in DUO_FOLDERS.items():
+        if not (folder / name).is_dir():
+            continue
+        for shot in local_screenshots(folder / name):
+            if duo_kind(shot["dimensions"]) != kind:
+                raise ListingError(
+                    f"{folder.name}/{name}/{shot['name']} is {size_text(shot['dimensions'])}; the "
+                    f"iPhone Duo {kind} display takes "
+                    + " or ".join(size_text(s) for s in sorted(DUO_SIZES[kind])))
+            shots.append({**shot, "kind": kind, "folder": name})
+    return shots
+
+
+def remote_duo(asc, localization_id, group):
+    """The localization's placements in the Duo group, in display order, shaped like
+    remote_screenshot's entries for plan_screenshots: "md5" from the image's reference name
+    (empty when it has none), "state" None for a usable placement."""
+    placements, included = get_all(
+        asc, f"/appStoreVersionLocalizations/{localization_id}/placements",
+        {"filter[placementType]": "APP_SCREENSHOT", "filter[placementGroup]": group,
+         "sort": "placementGroupPosition", "include": "image", "limit": 200})
+    images = {i.get("id"): i.get("attributes") or {} for i in included}
+    remote = []
+    for placement in placements:
+        attrs = placement.get("attributes") or {}
+        image_id = (((placement.get("relationships") or {}).get("image") or {}).get("data") or {}).get("id")
+        image = images.get(image_id) or {}
+        asset = image.get("imageAsset") or {}
+        dimensions = (asset.get("width"), asset.get("height")) if asset.get("width") else None
+        usable = attrs.get("state") != "FAILED" and image.get("state") in DUO_REUSABLE_STATES
+        remote.append({
+            "id": placement["id"], "image": image_id, "name": image.get("fileName") or "",
+            "md5": reference_md5(image.get("referenceName")) if usable else "",
+            "state": None if usable else f"{attrs.get('state')}/{image.get('state')}",
+            "placement_state": attrs.get("state"), "image_state": image.get("state"),
+            "reference": image.get("referenceName"), "spec": image.get("specId"),
+            "dimensions": dimensions, "kind": duo_kind(dimensions)})
+    return remote
+
+
+def upload_library_image(asc, library_id, shot, reference_name):
+    """Reserves, uploads and commits one image in the asset library (developer.apple.com/
+    documentation/appstoreconnectapi/uploading-and-managing-image-assets). Returns its id."""
+    reserved = asc.call("POST", "/appAssetLibraryImages", body={"data": {
+        "type": "appAssetLibraryImages",
+        "attributes": {"fileName": shot["name"], "fileSize": shot["size"],
+                       "category": "APP_SCREENSHOTS_AND_PREVIEWS", "referenceName": reference_name},
+        "relationships": {"assetLibrary": {"data": {"type": "appAssetLibraries",
+                                                    "id": library_id}}}}})["data"]
+    send_parts(asc, reserved, shot)
+    asc.call("PATCH", f"/appAssetLibraryImages/{reserved['id']}", body={"data": {
+        "type": "appAssetLibraryImages", "id": reserved["id"], "attributes": {"uploaded": True}}})
+    return reserved["id"]
+
+
+def wait_for_library_images(asc, pending, specs, timeout=SCREENSHOT_WAIT_SECONDS, interval=5):
+    """Waits until every image ({id: shot}) is processed, and checks that App Store Connect
+    matched it to a spec of the Duo group with the file's size."""
+    deadline = time.time() + timeout
+    pending = dict(pending)
+    while pending:
+        for image_id, shot in list(pending.items()):
+            attrs = asc.call("GET", f"/appAssetLibraryImages/{image_id}")["data"].get("attributes") or {}
+            if attrs.get("state") == "FAILED":
+                raise ListingError(f"App Store Connect could not process {shot['path']}: "
+                                   f"{json.dumps(attrs.get('stateDetails') or [])}")
+            if attrs.get("state") in DUO_READY_STATES:
+                spec = specs.get(attrs.get("specId"))
+                if not spec or spec[1] != tuple(shot["dimensions"]):
+                    raise ListingError(
+                        f"App Store Connect matched {shot['path']} to spec {attrs.get('specId')}, "
+                        f"not to the {size_text(shot['dimensions'])} spec of the iPhone Duo group")
+                del pending[image_id]
+        if not pending:
+            return
+        if time.time() > deadline:
+            raise ListingError("Images still processing after "
+                               f"{timeout // 60} min: "
+                               + ", ".join(str(s["path"]) for s in pending.values()))
+        time.sleep(interval)
+
+
+def sync_duo(asc, library, locale, localization_id, folder, apply):
+    """Makes the localization's iPhone Duo group hold folder's duo-inner-screenshots/ and
+    duo-outer-screenshots/, inner first, each in file-number order. Returns whether anything
+    differed."""
+    local = local_duo(folder)
+    where = f"{locale}/duo-*-screenshots ({library.group})"
+    if not local:
+        print(f"::warning::{where}: no images; the group is left as it is")
+        return False
+    if len(local) > library.limit:
+        raise ListingError(f"{where}: {len(local)} images; the iPhone Duo group takes at most "
+                           f"{library.limit} for both displays together")
+    unknown = sorted({size_text(s["dimensions"]) for s in local} - set(map(size_text, library.sizes())))
+    if unknown:
+        raise ListingError(f"{where}: the group's specs ({library.describe()}) have no "
+                           f"{', '.join(unknown)}")
+    remote = remote_duo(asc, localization_id, library.group)
+    plan = plan_screenshots(local, remote)
+    spec_names = {spec_id: name for spec_id, (name, _) in library.specs.items()}
+    print(f"  {where}: {len(local)} in the repo, {len(remote)} placements in App Store Connect; "
+          f"{library.describe()}")
+    for shot in local:
+        print(f"    repo {shot['kind']}: {shot['folder']}/{shot['name']} "
+              f"{size_text(shot['dimensions'])} md5 {shot['md5']}")
+    for r in remote:
+        print(f"    App Store Connect {r['kind'] or 'unknown display'}: {r['name'] or '?'} "
+              f"{size_text(r['dimensions'])} spec {spec_names.get(r['spec'], r['spec'])}, "
+              f"reference {r['reference']!r} (md5 {r['md5'] or 'none'}), placement "
+              f"{r['placement_state']}, image {r['image_state']}")
+    if not (plan["upload"] or plan["delete"] or plan["reorder"]):
+        print("    up to date")
+        return False
+
+    def verb(doing, would):
+        return doing if apply else would
+
+    if plan["delete"]:
+        print(f"    {verb('removing', 'would remove')} the placements of: " + ", ".join(
+            f"{r['kind'] or '?'} {r['name'] or r['id']} {size_text(r['dimensions'])} "
+            f"(md5 {r['md5'] or 'not recorded'})" for r in plan["delete"])
+            + " (their images stay in the library)")
+    if plan["upload"]:
+        print(f"    {verb('placing', 'would place')}: " + ", ".join(
+            f"{local[i]['kind']} {local[i]['name']} ("
+            + (f"library image {library.by_md5[local[i]['md5']]['id']} has it"
+               if local[i]["md5"] in library.by_md5 else "new upload") + ")"
+            for i in plan["upload"]))
+    if plan["keep"]:
+        print("    unchanged: " + ", ".join(f"{local[i]['kind']} {local[i]['name']}"
+                                           for i in sorted(plan["keep"])))
+    if plan["reorder"] or plan["upload"]:
+        print(f"    {verb('ordering', 'would order')} as " + ", ".join(
+            f"{s['kind']} {s['name']}" for s in local))
+    if not apply:
+        return True
+    # Placements first, as the group holds at most ten; their images stay in the library.
+    for r in plan["delete"]:
+        asc.call("DELETE", f"/appAssetLibraryPlacements/{r['id']}")
+    images, uploaded = {}, {}
+    for index in plan["upload"]:
+        shot = local[index]
+        existing = library.by_md5.get(shot["md5"])
+        if existing:
+            images[index] = existing["id"]
+            if (existing.get("attributes") or {}).get("state") not in DUO_READY_STATES:
+                uploaded[existing["id"]] = shot
+        else:
+            reference = f"{locale}/{shot['folder']}/{shot['name']} md5:{shot['md5']}"
+            images[index] = upload_library_image(asc, library.id, shot, reference)
+            uploaded[images[index]] = shot
+            library.by_md5[shot["md5"]] = {"id": images[index],
+                                           "attributes": {"state": "UPLOAD_COMPLETE"}}
+    wait_for_library_images(asc, uploaded, library.specs)
+    for image_id, shot in uploaded.items():
+        library.by_md5[shot["md5"]] = {"id": image_id,
+                                       "attributes": {"state": "PREPARE_FOR_SUBMISSION"}}
+    ids = {i: r["id"] for i, r in plan["keep"].items()}
+    for index in plan["upload"]:
+        ids[index] = asc.call("POST", "/appAssetLibraryPlacements", body={"data": {
+            "type": "appAssetLibraryPlacements",
+            "attributes": {"placementType": "APP_SCREENSHOT", "placementGroup": library.group},
+            "relationships": {
+                "image": {"data": {"type": "appAssetLibraryImages", "id": images[index]}},
+                "appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations",
+                                                         "id": localization_id}}}}})["data"]["id"]
+    if plan["reorder"] or plan["upload"]:
+        asc.call("POST", "/appAssetLibraryPlacementOrderingRequests", body={"data": {
+            "type": "appAssetLibraryPlacementOrderingRequests",
+            "attributes": {"placementGroup": library.group},
+            "relationships": {
+                "orderedPlacements": {"data": [{"type": "appAssetLibraryPlacements", "id": ids[i]}
+                                               for i in range(len(local))]},
+                "appStoreVersionLocalization": {"data": {"type": "appStoreVersionLocalizations",
+                                                         "id": localization_id}}}}})
+    print("    done")
+    return True
+
+
+def sync_screenshots(asc, localizations, apply, root=LISTING_DIR, app_id=None):
+    """Syncs every locale folder's screenshot sets to its version localization ({locale: id}):
+    the classic sets through appScreenshotSets, the iPhone Duo folders through the App Asset
+    Library (which needs app_id). A localization without folders of its own (en-US) shows the
+    primary language's."""
     changed = False
-    unsynced = [f"{locale}/{name}" for locale in listing_locales(root)
-                for name in UNSYNCED_SCREENSHOT_FOLDERS if (pathlib.Path(root) / locale / name).is_dir()]
-    if unsynced:
-        print(f"::warning::Not synced: {', '.join(unsynced)}. The App Store Connect API's "
-              "screenshotDisplayType has no iPhone Duo value; upload these in App Store Connect "
-              "by hand")
+    library = None
     for locale in listing_locales(root):
         folder = pathlib.Path(root) / locale
         present = {name: folder / name for name in SCREENSHOT_SETS if (folder / name).is_dir()}
-        if not present:
+        duo = [name for name in DUO_FOLDERS if (folder / name).is_dir()]
+        if not present and not duo:
             print(f"  {locale}: no screenshot folders; App Store Connect shows the "
                   f"{FALLBACK_LOCALE} ones")
             continue
@@ -650,20 +939,208 @@ def sync_screenshots(asc, localizations, apply, root=LISTING_DIR):
                   "every screenshot would be uploaded")
             for name, path in present.items():
                 print(f"    {name}: {len(local_screenshots(path))} images")
+            for name in duo:
+                print(f"    {name}: {len(local_screenshots(folder / name))} images")
             changed = True
             continue
         sets = {}
         for item in asc.call("GET", f"/appStoreVersionLocalizations/{localizations[locale]}"
                                     "/appScreenshotSets", {"limit": 50}).get("data", []):
             sets[(item.get("attributes") or {}).get("screenshotDisplayType")] = item
-        managed = {SCREENSHOT_SETS[name] for name in present}
+        managed = {SCREENSHOT_SETS[name] for name in present} | ({CLASSIC_DUO_TYPE} if duo else set())
         others = sorted(t for t in sets if t not in managed)
         if others:
             print(f"  {locale}: also has {', '.join(map(str, others))} sets; left as they are")
         for name, path in present.items():
             changed |= sync_screenshot_set(asc, localizations[locale], sets, SCREENSHOT_SETS[name],
                                            path, apply)
+        if duo:
+            if library is None:
+                if app_id is None:
+                    raise ListingError("The iPhone Duo screenshots need the app id")
+                library = DuoLibrary(asc, app_id)
+            changed |= sync_duo(asc, library, locale, localizations[locale], folder, apply)
     return changed
+
+
+# --- Inspecting what App Store Connect holds (read-only) -----------------------------------------
+
+class ReadOnlyAsc:
+    """Wraps an Asc so that anything but a GET raises: `screenshots --inspect` can't write."""
+
+    def __init__(self, asc):
+        self._asc = asc
+
+    def call(self, method, path, params=None, body=None):
+        if method != "GET":
+            raise AssertionError(f"read-only: refused {method} {path}")
+        return self._asc.call(method, path, params)
+
+    app_id = Asc.app_id
+
+
+def get_all(asc, path, params=None, pages=20):
+    """Every item of a list endpoint, following links.next. Returns (data, included)."""
+    data, included = [], []
+    for _ in range(pages):
+        response = asc.call("GET", path, params)
+        data += response.get("data") or []
+        included += response.get("included") or []
+        following = (response.get("links") or {}).get("next")
+        if not following or not following.startswith(API):
+            break
+        parsed = urllib.parse.urlsplit(following[len(API):])
+        path, params = parsed.path, dict(urllib.parse.parse_qsl(parsed.query))
+    return data, included
+
+
+# The App Asset Library display classes of the folders in store-listing/app-store/
+# (developer.apple.com/documentation/appstoreconnectapi/appassetlibrarydisplayclass).
+INSPECT_DISPLAY_CLASSES = ("IPHONE_DUO", "IPHONE_DYNAMIC_ISLAND_LARGE_DISPLAY",
+                           "IPHONE_DYNAMIC_ISLAND_MEDIUM_DISPLAY", "IPAD_13_DISPLAY")
+
+
+def strings_in(value):
+    """Every string anywhere inside a JSON value."""
+    if isinstance(value, str):
+        return {value}
+    if isinstance(value, dict):
+        return set().union(*map(strings_in, value.values())) if value else set()
+    if isinstance(value, list):
+        return set().union(*map(strings_in, value)) if value else set()
+    return set()
+
+
+def dump(label, value, indent="    "):
+    print(f"{indent}{label}: {json.dumps(value, ensure_ascii=False, sort_keys=True)}")
+
+
+def inspect_ref_data(asc, record):
+    """Prints the parts of the asset library's reference data that concern the folders here:
+    their placement groups, display classes, APP_SCREENSHOT spec mappings, the specs those name,
+    and the App Store version feature's limits."""
+    data, _ = get_all(asc, "/appAssetLibraryRefData")
+    record["appAssetLibraryRefData"] = data
+    for datum in data:
+        attrs = datum.get("attributes") or {}
+        groups = attrs.get("placementProfileGroups") or []
+        print(f"  ref data {datum.get('id')}: {len(groups)} placement groups, "
+              f"{len(attrs.get('displayClasses') or [])} display classes, "
+              f"{len(attrs.get('imageSpecs') or [])} image specs, "
+              f"{len(attrs.get('placementTypes') or [])} placement types")
+        relevant = [g for g in groups if g.get("displayClassId") in INSPECT_DISPLAY_CLASSES
+                    or "DUO" in json.dumps(g)]
+        relevant_ids = {g.get("placementProfileGroupId") for g in relevant} - {None}
+        for group in relevant:
+            dump("placement group", group)
+        print("    every placement group id: " + ", ".join(
+            sorted(str(g.get("placementProfileGroupId")) for g in groups)))
+        for display in attrs.get("displayClasses") or []:
+            if display.get("displayClassId") in INSPECT_DISPLAY_CLASSES or "DUO" in json.dumps(display):
+                dump("display class", display)
+        spec_ids = set()
+        for placement_type in attrs.get("placementTypes") or []:
+            if placement_type.get("placementTypeId") != "APP_SCREENSHOT":
+                continue
+            dump("APP_SCREENSHOT accepts", placement_type.get("acceptsAssetCategories"))
+            for mapping in placement_type.get("specMappings") or []:
+                found = strings_in(mapping)
+                if found & relevant_ids or "DUO" in json.dumps(mapping):
+                    dump("APP_SCREENSHOT spec mapping", mapping)
+                    spec_ids |= found
+        for spec in attrs.get("imageSpecs") or []:
+            if spec.get("specId") in spec_ids:
+                dump("image spec", spec)
+        for feature in attrs.get("features") or []:
+            if "APP_STORE_VERSION" in json.dumps(feature):
+                dump("feature", feature)
+
+
+def inspect_asset_library(asc, app_id, localizations, record):
+    """Prints the app's asset library: its id, its images and each localization's placements."""
+    library = asc.call("GET", f"/apps/{app_id}/assetLibrary").get("data") or {}
+    record["assetLibrary"] = library
+    print(f"Asset library: {json.dumps(library, ensure_ascii=False, sort_keys=True)}")
+    inspect_ref_data(asc, record)
+    if library.get("id"):
+        images, _ = get_all(asc, f"/appAssetLibraries/{library['id']}/images", {"limit": 50})
+        record["images"] = images
+        print(f"  {len(images)} images in the library")
+        for image in images:
+            dump(f"image {image.get('id')}", {k: v for k, v in (image.get("attributes") or {}).items()
+                                              if k != "uploadOperations"})
+    record["placements"] = {}
+    for locale, loc_id in sorted(localizations.items()):
+        placements, included = get_all(
+            asc, f"/appStoreVersionLocalizations/{loc_id}/placements",
+            {"limit": 200, "sort": "placementGroupPosition", "include": "image"})
+        record["placements"][locale] = {"data": placements, "included": included}
+        images = {i.get("id"): i for i in included}
+        print(f"  {locale}: {len(placements)} placements (in placementGroupPosition order)")
+        for placement in placements:
+            attrs = placement.get("attributes") or {}
+            image_ref = ((placement.get("relationships") or {}).get("image") or {}).get("data") or {}
+            image = (images.get(image_ref.get("id")) or {}).get("attributes") or {}
+            print(f"    {attrs.get('placementType')} / {attrs.get('placementGroup')} "
+                  f"[{attrs.get('state')}] placement {placement.get('id')} -> image "
+                  f"{image_ref.get('id')}: {image.get('fileName')!r} "
+                  f"{(image.get('imageAsset') or {}).get('width')}×"
+                  f"{(image.get('imageAsset') or {}).get('height')} spec {image.get('specId')} "
+                  f"ref {image.get('referenceName')!r} [{image.get('state')}]")
+
+
+def inspect_screenshot_sets(asc, localizations, record):
+    """Prints every screenshot set of every localization with its screenshots' raw attributes
+    (upload operations left out) and their relationships and links."""
+    record["screenshotSets"] = {}
+    for locale, loc_id in sorted(localizations.items()):
+        sets, _ = get_all(asc, f"/appStoreVersionLocalizations/{loc_id}/appScreenshotSets",
+                          {"limit": 50})
+        record["screenshotSets"][locale] = []
+        print(f"  {locale} (localization {loc_id}): {len(sets)} screenshot sets")
+        for item in sets:
+            shots, _ = get_all(asc, f"/appScreenshotSets/{item['id']}/appScreenshots", {"limit": 50})
+            record["screenshotSets"][locale].append({"set": item, "screenshots": shots})
+            print(f"    set {item['id']}: "
+                  f"{json.dumps(item.get('attributes'), ensure_ascii=False, sort_keys=True)}")
+            dump("set relationships", item.get("relationships"), "      ")
+            for shot in shots:
+                attrs = {k: v for k, v in (shot.get("attributes") or {}).items()
+                         if k != "uploadOperations"}
+                dump(f"screenshot {shot.get('id')}", attrs, "      ")
+                if shot.get("relationships"):
+                    dump("relationships", shot["relationships"], "        ")
+
+
+def inspect_screenshots(asc, app_id, version, dump_path=None):
+    """Read-only: what the version's screenshot sets and the app's asset library hold, raw, so
+    the mapping of the repo's folders can be checked against the live account. Only GETs."""
+    asc = ReadOnlyAsc(asc)
+    record = {"version": version}
+    print("In the repo:")
+    for locale in listing_locales():
+        for name in (*SCREENSHOT_SETS, *DUO_FOLDERS):
+            folder = LISTING_DIR / locale / name
+            if folder.is_dir():
+                print(f"  {locale}/{name}: " + ", ".join(
+                    f"{s['name']} {s['dimensions'][0]}×{s['dimensions'][1]} md5 {s['md5']}"
+                    if s["dimensions"] else f"{s['name']} md5 {s['md5']}"
+                    for s in local_screenshots(folder)))
+    localizations = {locale: loc["id"] for locale, loc in localizations_by_locale(
+        asc, f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations").items()}
+    print(f"Localizations: {', '.join(f'{k} {v}' for k, v in sorted(localizations.items()))}")
+    print("Screenshot sets (appScreenshotSets):")
+    inspect_screenshot_sets(asc, localizations, record)
+    try:
+        inspect_asset_library(asc, app_id, localizations, record)
+    except AscError as error:
+        print(f"Asset library: could not be read: {error}")
+        record["assetLibraryError"] = str(error)
+    if dump_path:
+        pathlib.Path(dump_path).write_text(
+            json.dumps(record, ensure_ascii=False, indent=1, sort_keys=True), encoding="utf-8")
+        print(f"Wrote every response to {dump_path}")
+    return 0
 
 
 # --- Finding what can be edited --------------------------------------------------------------
@@ -755,19 +1232,24 @@ def cmd_listing(args):
 
 
 def cmd_screenshots(args):
-    asc = Asc()
+    inspect = getattr(args, "inspect", False)
+    if inspect and args.apply:
+        sys.exit("--inspect only reads; leave out --apply")
+    asc = ReadOnlyAsc(Asc()) if inspect else Asc()
     app_id = asc.app_id()
     version, _, _, summary = listing_target(asc, app_id, args.version)
     print(summary)
     if version is None:
         return 1 if args.apply else 0
+    if inspect:
+        return inspect_screenshots(asc, app_id, version, args.dump)
     # Screenshots belong to the version alone; the app info's state doesn't matter here.
     editable = version_state(version) in EDITABLE_STATES
     apply = args.apply and editable
     print("APPLY" if apply else "DRY RUN (pass --apply to write)" if editable else "READ ONLY")
     localizations = {locale: loc["id"] for locale, loc in localizations_by_locale(
         asc, f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations").items()}
-    changed = sync_screenshots(asc, localizations, apply)
+    changed = sync_screenshots(asc, localizations, apply, app_id=app_id)
     print(outcome(changed, apply, editable, "screenshots"))
     return 1 if args.apply and not editable else 0
 
@@ -787,7 +1269,7 @@ def apply_store_listing(asc, app_id, version, screenshots):
         localizations, _ = sync_listing(asc, version["id"], app_info["id"], apply=True)
         if screenshots:
             print("Applying the screenshots")
-            sync_screenshots(asc, localizations, apply=True)
+            sync_screenshots(asc, localizations, apply=True, app_id=app_id)
     except (ListingError, AscError) as error:
         sys.exit("::error::The store listing was not fully applied, so the version was not "
                  "submitted for review. Fix the cause and re-run the job; what is already "
@@ -916,6 +1398,12 @@ def main() -> int:
         command.add_argument("--version", help="the version to compare with (default: the one "
                                                "in preparation, else the newest)")
         command.set_defaults(func=func)
+        if name == "screenshots":
+            command.add_argument("--inspect", action="store_true",
+                                 help="read-only: print the raw screenshot sets, asset library "
+                                      "images and placements of the version (GET requests only)")
+            command.add_argument("--dump", metavar="FILE",
+                                 help="with --inspect, also write every response to FILE as JSON")
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
     revoke.set_defaults(func=cmd_revoke_ci_certs)
