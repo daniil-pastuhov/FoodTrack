@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.design.GoogleSignInButton
 import com.foodtracker.android.ui.design.LarderButton
 import com.foodtracker.android.ui.design.LarderButtonStyle
 import com.foodtracker.android.ui.design.LarderCallout
@@ -334,30 +335,45 @@ private fun StorageChoice(sheet: BuySheet.Choice, providers: Set<SignInProvider>
     }
 }
 
-/** Sign in with Apple and with Google, Apple first as the design has it. */
+/**
+ * Sign in with Apple and with Google, Apple first as the design has it. Google's is the branded
+ * [GoogleSignInButton]. Apple's is still the app's outline button: Apple's guidelines allow a
+ * custom Sign in with Apple button on other platforms only with the Apple logo artwork from Apple
+ * Design Resources, which is not in the repository yet (see docs/recipe-setup.md).
+ */
 @Composable
 internal fun SignInButtons(
     providers: Set<SignInProvider>,
     signingIn: SignInProvider?,
     enabled: Boolean,
     onSignIn: (SignInProvider) -> Unit,
-    exclude: Set<SignInProvider> = emptySet()
+    exclude: Set<SignInProvider> = emptySet(),
+    accessibilityLabel: ((SignInProvider) -> String)? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
         listOf(SignInProvider.APPLE, SignInProvider.GOOGLE)
             .filter { it in providers && it !in exclude }
             .forEach { provider ->
-                LarderButton(
-                    text = stringResource(
-                        if (provider == SignInProvider.APPLE) R.string.recipe_sign_in_apple else R.string.recipe_sign_in_google
-                    ),
-                    onClick = { onSignIn(provider) },
-                    modifier = Modifier.fillMaxWidth(),
-                    style = LarderButtonStyle.Outline,
-                    enabled = enabled,
-                    loading = signingIn == provider,
-                    leadingIcon = if (provider == SignInProvider.APPLE) LarderIcons.Apple else LarderIcons.CircleUserRound
-                )
+                when (provider) {
+                    SignInProvider.APPLE -> LarderButton(
+                        text = stringResource(R.string.recipe_sign_in_apple),
+                        onClick = { onSignIn(provider) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(accessibilityLabel?.let { label -> Modifier.semantics { contentDescription = label(provider) } } ?: Modifier),
+                        style = LarderButtonStyle.Outline,
+                        enabled = enabled,
+                        loading = signingIn == provider,
+                        leadingIcon = LarderIcons.Apple
+                    )
+                    SignInProvider.GOOGLE -> GoogleSignInButton(
+                        onClick = { onSignIn(provider) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = enabled,
+                        loading = signingIn == provider,
+                        accessibilityLabel = accessibilityLabel?.invoke(provider)
+                    )
+                }
             }
     }
 }

@@ -50,6 +50,22 @@
 			</array>
 		</dict>
 		<dict>
+			<!-- The Google account's name, only with Sign in with Google: Google passes it to
+			     Firebase Authentication, which keeps it in the account's Google provider entry until
+			     the account is deleted (the server clears the top-level name and photo, but cannot
+			     clear that copy). Never asked of Apple (the request scopes are email only). -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
 			<!-- The ticked items' names, dates and quantities, the recipe preferences and the
 			     allergen list, sent to write a recipe or menu, and the recipe written back. -->
 			<key>NSPrivacyCollectedDataType</key>

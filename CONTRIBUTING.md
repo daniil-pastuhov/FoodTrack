@@ -75,7 +75,11 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
   and both clients together.
 - **Name rules live in three places.** The server's `functions/src/core/inputSafety.ts`, the
   shared `RecipeWireName.kt` and iOS `RecipeWire.swift` must accept and clean pantry and allergen
-  names the same way (CONTRACT.md, "Name rules"); change and test all three.
+  names the same way (CONTRACT.md, "Name rules"). Names are accepted in any script, not only the
+  app's languages. All three are checked against one table, `functions/test/fixtures/names.json`:
+  `npm test` in `functions/`, `./gradlew :shared:testAndroidHostTest`, and
+  `iosApp/NameFixtureCheck/check.sh` (Xcode toolchain only; CI doesn't run it). A rule change
+  updates all three and the table together.
 - **Costs come from the server.** What a recipe or a menu takes is in every response with a
   balance; never hard-code it in an app.
 - **Strings come in three languages**: English, Norwegian Bokmål and Russian, on both platforms.

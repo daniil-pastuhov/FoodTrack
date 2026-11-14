@@ -96,16 +96,16 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
                 )
             )
             // Apple on an iPhone and Google on an Android phone are two accounts unless joined here.
-            missing.sortedBy { it.ordinal }.forEach { provider ->
-                LarderButton(
-                    text = stringResource(R.string.recipe_add_sign_in, signInProviderName(provider)),
-                    onClick = { actions.onSignIn(provider) },
-                    modifier = Modifier.fillMaxWidth(),
-                    style = LarderButtonStyle.Outline,
-                    enabled = !paid.accountBusy,
-                    leadingIcon = if (provider == SignInProvider.APPLE) LarderIcons.Apple else LarderIcons.CircleUserRound
-                )
-            }
+            // The providers' own sign-in buttons (Google's branding allows no "Add ..." title); the
+            // hint above says what adding does, and the spoken label says it too.
+            val addLabels = missing.associateWith { stringResource(R.string.recipe_add_sign_in, signInProviderName(it)) }
+            SignInButtons(
+                providers = missing,
+                signingIn = null,
+                enabled = !paid.accountBusy,
+                onSignIn = actions.onSignIn,
+                accessibilityLabel = { addLabels.getValue(it) }
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2), verticalAlignment = Alignment.CenterVertically) {
                 LarderButton(
                     text = stringResource(R.string.recipe_sign_out),
