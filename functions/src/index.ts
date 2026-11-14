@@ -3,8 +3,8 @@
  * secrets. Production adapters are built lazily on first use, when secrets are available.
  *
  * Every function sets its own maxInstances and concurrency; with the global 1/6 vCPU
- * ("gcf_gen1" at 256 MiB) concurrency must be 1. README "Function limits" has the worst-case bill
- * these limits allow.
+ * ("gcf_gen1" at 256 MiB) concurrency must be 1, so parallel work means more instances. README
+ * "Function limits" has the worst-case bill these limits allow.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -191,10 +191,13 @@ const callable = { enforceAppCheck: true, invoker: "public", cors: false } as co
 
 /**
  * Per function: Cloud Run limits and the per-instance throttle ceiling (calls let through to
- * Firestore per minute per instance). See README "Function limits" for the bill they bound.
+ * Firestore per minute per instance), and for generateRecipe a per-instance per-uid limit. The
+ * throttles are per instance, so service-wide they are maxInstances x the number: generateRecipe's
+ * 5 x 24 = 120 calls/min and 5 x 12 = 60 per uid are what 2 x 60 and 2 x 30 were at 2 instances.
+ * See README "Function limits" for the bill they bound.
  */
 const LIMITS = {
-  generateRecipe: { maxInstances: 2, perMinute: 60 },
+  generateRecipe: { maxInstances: 5, perMinute: 24, perUidPerMinute: 12 },
   getGeneration: { maxInstances: 1, perMinute: 120 },
   getBalance: { maxInstances: 1, perMinute: 120 },
   verifyPurchase: { maxInstances: 1, perMinute: 30 },
@@ -203,7 +206,7 @@ const LIMITS = {
 } as const;
 
 const throttles = {
-  generateRecipe: new CallThrottle(LIMITS.generateRecipe.perMinute),
+  generateRecipe: new CallThrottle(LIMITS.generateRecipe.perMinute, LIMITS.generateRecipe.perUidPerMinute),
   getGeneration: new CallThrottle(LIMITS.getGeneration.perMinute),
   getBalance: new CallThrottle(LIMITS.getBalance.perMinute),
   verifyPurchase: new CallThrottle(LIMITS.verifyPurchase.perMinute),
@@ -227,7 +230,9 @@ export const verifyPurchase = onCall(
       withCaller(callerOf(request, throttles.verifyPurchase, CONSUME_APP_CHECK_TOKENS), (d, c) => verifyCore(d, c, request.data))),
 );
 
-// One generation per instance at a time: maxInstances is the most generations in flight service-wide.
+// One generation per instance at a time: maxInstances is the most generations in flight
+// service-wide. Five instances at 1/6 vCPU, not one at 1 vCPU with concurrency 5: the work is
+// waiting on the model, and 5 x USD 0.40 a day busy is below 1 x USD 2.13 (README "Function limits").
 export const generateRecipe = onCall(
   {
     ...callable,

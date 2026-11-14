@@ -88,14 +88,17 @@ export const PER_IP_PER_MINUTE = 120;
  * The per-instance throttle of one function: per uid, per client address (IPv6 by /64), and a
  * ceiling on all calls the instance lets through to Firestore per minute. The ceiling is what bounds
  * the function's worst-case Firestore bill (maxInstances x ceiling); see README "Function limits".
+ * Every limit here is per instance, so service-wide it is maxInstances x the limit: a function with
+ * more instances passes a smaller per-uid limit so one account still gets the same share in total.
  */
 export class CallThrottle {
-  private readonly uid = new WindowLimiter(PER_UID_PER_MINUTE, 60_000);
+  private readonly uid: WindowLimiter;
   private readonly ip = new WindowLimiter(PER_IP_PER_MINUTE, 60_000);
   private readonly all: WindowLimiter;
 
-  constructor(perInstancePerMinute = Number.MAX_SAFE_INTEGER) {
+  constructor(perInstancePerMinute = Number.MAX_SAFE_INTEGER, perUidPerMinute = PER_UID_PER_MINUTE) {
     this.all = new WindowLimiter(perInstancePerMinute, 60_000, 1);
+    this.uid = new WindowLimiter(perUidPerMinute, 60_000);
   }
 
   admit(uid: string, ip: string, nowMs: number): void {
