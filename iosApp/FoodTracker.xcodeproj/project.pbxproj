@@ -143,6 +143,8 @@
 		142919905578DED0C4BDAEFE /* SavedRecipeRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18CE8BC8F5AC452974CB6B22 /* SavedRecipeRecord.swift */; };
 		05633CA53372ED53E68EDDF8 /* SavedRecipeRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18CE8BC8F5AC452974CB6B22 /* SavedRecipeRecord.swift */; };
 		E0ADA1FEEF7C5C2FB105D506 /* RecipeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98D074AD24EB2A5B68524D22 /* RecipeViewModel.swift */; };
+		A7C3E1F05B2D4E6F8A9B0C1D /* ReviewPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D4F2A16C3E5F7091AB2C3E /* ReviewPrompt.swift */; };
+		C9E5A3B27D4F6081A2BC3D4F /* ReviewPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D4F2A16C3E5F7091AB2C3E /* ReviewPrompt.swift */; };
 		BD12A52284B9BCA7D0419BE4 /* L10n+Recipe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 562D1A65FA0A4A4A73587C43 /* L10n+Recipe.swift */; };
 		F71984F126AD6F2EEF915F7E /* RecipePromptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89E5667346DF5704A78470CC /* RecipePromptBuilder.swift */; };
 		6E05072F6A440A5A6C1EE0B7 /* RecipeServices.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153867F7F6B19EB37E09E812 /* RecipeServices.swift */; };
@@ -205,6 +207,7 @@
 		3887357415BF56C699A811E6 /* FoodTracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FoodTracker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E7B9F1C2A4D68507F8B9C1E /* ShoppingListMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListMatcher.swift; sourceTree = "<group>"; };
 		40E45BE273A6FA2BBD64D895 /* SettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsStore.swift; sourceTree = "<group>"; };
+		B8D4F2A16C3E5F7091AB2C3E /* ReviewPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewPrompt.swift; sourceTree = "<group>"; };
 		4BEE1DD74E5B2B66C9F038A7 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		4CEB3B67E60D5B4D82277249 /* LocalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModels.swift; sourceTree = "<group>"; };
 		4F7119136C074AAB8D3B3F03 /* ShoppingListEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShoppingListEntry.swift; sourceTree = "<group>"; };
@@ -329,6 +332,7 @@
 			isa = PBXGroup;
 			children = (
 				40E45BE273A6FA2BBD64D895 /* SettingsStore.swift */,
+				B8D4F2A16C3E5F7091AB2C3E /* ReviewPrompt.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -805,6 +809,7 @@
 				B891C71BA351EFCEACE292E7 /* NativePantryViewModel.swift in Sources */,
 				C29AD56868FF3B1CD197DE74 /* IOSNotificationManager.swift in Sources */,
 				F8166323E71143B366864C13 /* SettingsStore.swift in Sources */,
+				C9E5A3B27D4F6081A2BC3D4F /* ReviewPrompt.swift in Sources */,
 				4F7EFE3632E9624B6262E10E /* L10n.swift in Sources */,
 				57D1249A3606CB7BD61EF480 /* ProductNameRecord.swift in Sources */,
 				F9BB924557089CE74594CF7C /* LocalProductRecord.swift in Sources */,
@@ -843,6 +848,7 @@
 				F71984F126AD6F2EEF915F7E /* RecipePromptBuilder.swift in Sources */,
 				BD12A52284B9BCA7D0419BE4 /* L10n+Recipe.swift in Sources */,
 				E0ADA1FEEF7C5C2FB105D506 /* RecipeViewModel.swift in Sources */,
+				A7C3E1F05B2D4E6F8A9B0C1D /* ReviewPrompt.swift in Sources */,
 				142919905578DED0C4BDAEFE /* SavedRecipeRecord.swift in Sources */,
 				0A5A585E436779C0D463B988 /* RecipeModels.swift in Sources */,
 				A1B0DE010000000000000001 /* OnboardingFlow.swift in Sources */,

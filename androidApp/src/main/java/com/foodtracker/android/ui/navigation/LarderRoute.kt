@@ -4,6 +4,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.foodtracker.android.camera.CameraScanMode
 import com.foodtracker.android.ui.design.LarderTab
 import com.foodtracker.model.ShelfLifeSuggestion
+import com.foodtracker.review.ReviewPrompter
 import kotlinx.datetime.LocalDate
 
 /** Everywhere the app can go. The same list as iOS; see docs/design/IMPLEMENTATION.md. */
@@ -80,3 +81,7 @@ fun interface LarderSnackbars {
 val LocalLarderSnackbars = staticCompositionLocalOf { LarderSnackbars { _, _, _ -> } }
 
 val LocalLarderNavigator = staticCompositionLocalOf { LarderNavigator { } }
+
+/** The rating prompt's hooks for screens that report a moment or a problem (see
+ *  `ReviewPrompter`). Null outside the root, where nothing is reported. */
+val LocalReviewPrompter = staticCompositionLocalOf<ReviewPrompter?> { null }

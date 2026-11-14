@@ -11,7 +11,11 @@ import com.foodtracker.android.data.local.RoomShoppingListRepository
 import com.foodtracker.android.data.local.RoomSavedRecipeRepository
 import com.foodtracker.android.data.local.RoomShoppingSectionRepository
 import com.foodtracker.android.recipe.GeminiNanoRecipeModel
+import com.foodtracker.android.BuildConfig
+import com.foodtracker.android.review.installedAtMillis
+import com.foodtracker.android.review.storeReviewRequester
 import com.foodtracker.android.settings.AndroidRecipeConfigRepository
+import com.foodtracker.android.settings.AndroidReviewPromptStore
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
@@ -40,6 +44,9 @@ import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.ShoppingSectionRepository
 import com.foodtracker.repository.SettingsRepository
+import com.foodtracker.review.ReviewPromptStore
+import com.foodtracker.review.ReviewPrompter
+import com.foodtracker.review.StoreReviewRequester
 import com.foodtracker.viewmodel.PantryStateHolder
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
@@ -117,6 +124,18 @@ val appModule = module {
     }
     single<RecipeAccount> {
         if (recipePaidRouteBuildAllowed(androidContext())) FirebaseRecipeAccount(androidContext(), get()) else NoRecipeAccount
+    }
+    // The OS rating prompt (ReviewPromptRule). Play's flow only in release builds installed from
+    // Play; debug builds log instead, other builds never ask.
+    single<ReviewPromptStore> { AndroidReviewPromptStore(androidContext()) }
+    single<StoreReviewRequester> { storeReviewRequester(androidContext()) }
+    single {
+        ReviewPrompter(
+            store = get(),
+            requester = get(),
+            appVersion = BuildConfig.VERSION_NAME,
+            installedAtMillis = installedAtMillis(androidContext())
+        )
     }
     single {
         RecipeStateHolder(

@@ -66,6 +66,7 @@ import com.foodtracker.android.ui.design.isExpanded
 import com.foodtracker.android.ui.navigation.LarderRoute
 import com.foodtracker.android.ui.navigation.LocalLarderNavigator
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
+import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.buildRecipePrompt
@@ -130,8 +131,12 @@ fun RecipeScreen(
         onPauseOrDispose { }
     }
 
+    val reviewPrompter = LocalReviewPrompter.current
     val event = state.event
     LaunchedEffect(event) {
+        // A recipe that just arrived arms the rating prompt for when it is left; anything that
+        // went wrong rules it out for the session.
+        reviewPrompter?.onRecipeEvent(event)
         when (event) {
             is RecipeEvent.Written -> {
                 stateHolder.consumeEvent()

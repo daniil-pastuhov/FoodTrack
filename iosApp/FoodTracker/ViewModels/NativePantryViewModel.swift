@@ -58,14 +58,20 @@ public struct DeletedItems: Equatable {
 
 @MainActor
 public class NativePantryViewModel: ObservableObject {
-    @Published public var items: [PantryItem] = []
+    @Published public var items: [PantryItem] = [] {
+        // How many items the pantry has held at most, for the rating prompt's "two items" rule.
+        didSet { ReviewPrompter.shared.pantrySize(items.count) }
+    }
     @Published public var searchQuery: String = ""
     @Published public var selectedLocation: String? = nil
     @Published public var selectedCategory: String? = nil
     @Published public var selectedFilter: NativeStatusFilter = .all
     @Published public var isLookingUpBarcode: Bool = false
     /// How the last barcode lookup ended, or nil before one ends. New screens switch on this.
-    @Published public var lookupResult: LookupResult? = nil
+    @Published public var lookupResult: LookupResult? = nil {
+        // A lookup that couldn't be made is an error on screen: no rating prompt this session.
+        didSet { if case .offline = lookupResult { ReviewPrompter.shared.problemShown() } }
+    }
     /// The product `lookupResult` found.
     public var scannedProduct: ProductInfo? {
         if case .found(let product) = lookupResult { return product }
