@@ -1,17 +1,34 @@
-BestBefore needs no account; the pantry stays on the device. Apart from barcode lookups on Open Food Facts and crash reports to Firebase Crashlytics, the app only contacts our server for recipe packs, and only after a purchase is started.
+1. NEW IN THIS VERSION
+The Calendar tab is replaced by a Recipe tab. It adds the app's first in-app purchases (three consumable recipe packs, submitted with this version) and an optional sign-in. Everything else works as before, with no account.
 
-To try it quickly: tap the scan button and scan any food barcode (or use "+" to add an item by hand), then open the Recipe and Shopping List tabs.
+2. PURPOSE AND AUDIENCE
+BestBefore helps households waste less food. It keeps a list of the food at home with each item's expiry date, reminds the user a few days before something expires, and suggests a recipe for what needs using first. Items that are used up go onto a shopping list. Audience: anyone who buys groceries, typically adults managing a household. The app is free, with no ads or tracking; the pantry stays on the device.
 
-RECIPE TAB AND IN-APP PURCHASES
-The Recipe tab writes a recipe from the items closest to their date. Free routes: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks, and on devices with Apple Intelligence (iOS 26 or later) "Generate on this phone" uses Apple's on-device Foundation Models. Paid route: recipe packs, consumable in-app purchases of 10, 50 or 100 recipes; one recipe is one dish written by our server (Google Gemini through Firebase Cloud Functions). "Menu for 3 days" is server-only and takes several recipes from the pack (currently 4 with two courses a day, 5 with three; the app shows the number before you generate).
-Sandbox purchases are accepted for this review, within a daily limit shared by all sandbox testers. To test the purchase with a sandbox account:
-1. Add an item or two (scan, or "+").
+3. SETUP AND MAIN FEATURES
+No login, demo account or sample files are needed.
+- Add food: tap the scan button and scan any food barcode (name and picture come from Open Food Facts), then point the camera at the printed date, or pick a date. "+" adds an item by hand.
+- Home: everything at home, sorted by expiry.
+- Shopping List: essentials move here when used up.
+- Settings: reminders, and optional "Remind me near a shop" (with "Always" location access the app shows the shopping list on arrival at a saved shop; iOS region monitoring; the location is never sent anywhere).
+- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks; on devices with Apple Intelligence (iOS 26 or later) the recipe is written on the device with Apple's Foundation Models. Paid: recipe packs of 10, 50 or 100 recipes; one recipe is one dish written by our server. "Menu for 3 days" is server-only and takes several recipes from the pack (the app shows the number first).
+
+TO TEST THE PURCHASE (sandbox purchases are accepted during this review, within a daily limit shared by all sandbox testers):
+1. Add an item or two.
 2. Open the Recipe tab and tap "Buy recipes".
-3. Choose "On this phone, no account", or sign in with Apple to keep the recipes in an account.
-4. Buy the 10-recipe pack with the sandbox account. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
-5. Tap "Generate recipe". The recipe appears after a few seconds and the balance drops to 9. A recipe is taken only when it arrives; a failed attempt normally takes nothing.
+3. Choose "On this phone, no account", or sign in with Apple or Google to keep the recipes in an account.
+4. Buy the 10-recipe pack. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
+5. Tap "Generate recipe". If allergens are set in Settings, the app first asks for consent to send them. The recipe appears after a few seconds and the balance drops to 9.
 Account deletion: Recipe tab > Recipe settings > Account > Delete account (shown when signed in).
 
-Location is optional and only used for "Shop reminders": Settings → Shopping reminders → turn on "Remind me near a shop", name a shop and tap the location button to save your current position. With "Always" location access, the app shows the shopping list when you arrive at that shop (iOS region monitoring); with "While Using" it only works while the app is open. The app never sends the location anywhere.
+4. EXTERNAL SERVICES
+- Open Food Facts (https://world.openfoodfacts.org): on a barcode scan the app requests that product's name, picture and nutrition data. Only the barcode number is sent.
+- Our server (Firebase Cloud Functions, Firebase Authentication, App Check), reached only once a purchase is started: it verifies the purchase with Apple and, for a paid recipe, sends the ticked item names, the recipe settings and the allergen list to Google Gemini (Vertex AI) and returns the recipe. Allergens are sent only after explicit consent.
+- Sign in with Apple and Google Sign-In, both optional. Payments are Apple in-app purchases only.
+- Firebase Crashlytics for crash reports. No analytics, no ads.
+- On the device: AVFoundation, Vision, Core Location region monitoring, UserNotifications, WidgetKit, SwiftData, StoreKit, Foundation Models.
 
-The camera is used for barcode scanning, reading printed expiry dates (Vision, on device) and product photos, which stay on the device.
+5. REGIONAL DIFFERENCES
+The app works the same in all regions, in English, Russian and Norwegian. Open Food Facts covers some countries' products better than others; when a barcode isn't found, the user types the name.
+
+6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
+Not a regulated industry. Recipes are cooking suggestions, not medical or dietary advice; the app tells users to check labels for allergens. Third-party material: product data and pictures from Open Food Facts (database under the Open Database License, pictures under Creative Commons Attribution-ShareAlike; https://world.openfoodfacts.org/terms-of-use).
