@@ -149,6 +149,29 @@ class RecipeWireNameTest {
     }
 
     @Test
+    fun boundariesSitWhereTheServersDo() {
+        assertEquals("abcdefghijklmnopqrstuvwxyzab", cleanWireName("abcdefghijklmnopqrstuvwxyzab"), "a part of exactly 28 characters is kept")
+        assertEquals(
+            "Vollkornbrot Kartoffelpuffer Mascarpones",
+            cleanWireName("Vollkornbrot Kartoffelpuffer Mascarpones more"),
+            "a word ending exactly at character 40 is kept"
+        )
+        assertEquals("Ma", cleanWireName("M\u0430"), "a tie between the scripts folds to Latin")
+        assertEquals("Milk", cleanWireName("Mi\u034Flk"), "the combining grapheme joiner is invisible, as on the server")
+    }
+
+    @Test
+    fun aCutThatLeavesStrayPunctuationIsCleanedAgain() {
+        // The cut ends on "Dr." with nothing after it, which the server refuses.
+        assertEquals("Vollkornbrot Kartoffelpuffer Mehl Dr", cleanWireName("Vollkornbrot Kartoffelpuffer Mehl Dr. Oetker"))
+    }
+
+    @Test
+    fun anAllergenPastTheRawLimitIsNotSentShortened() {
+        assertNull(cleanAllergenName("milk" + " ".repeat(400) + "peanut"))
+    }
+
+    @Test
     fun cleaningIsStable() {
         for (name in REAL_PRODUCT_NAMES + ADVERSARIAL_NAMES.map { it.first }) {
             val once = cleanWireName(name) ?: continue

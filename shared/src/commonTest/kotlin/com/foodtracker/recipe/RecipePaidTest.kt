@@ -1698,6 +1698,65 @@ class RecipePaidTest {
 
         assertEquals(1, backend.generated.size)
         assertEquals(RecipeEvent.IngredientNotSent("Bread"), holder.uiState.value.event)
+
+        holder.consumeEvent()
+        holder.generateOnServer()
+        assertEquals(1, backend.generated.size, "known refused: nothing left to send")
+        assertEquals(RecipeEvent.IngredientNotSent("Bread"), holder.uiState.value.event)
+    }
+
+    @Test
+    fun theRetryIsKeptAsPendingWhileItIsOut() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(1)
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+
+        val pending = paidRepository.get().pendingGeneration
+        assertEquals("req1", pending?.requestId)
+        assertEquals(listOf("Bread", "Greek yoghurt 2%"), pending?.ingredients?.map { it.name })
+    }
+
+    /** An earlier request still waiting for its answer, different from what the form asks now. */
+    private fun heldBread() = GenerateRequest(
+        requestId = "held",
+        kind = WireKind.RECIPE,
+        config = RecipeConfig().copy(language = "en"),
+        ingredients = listOf(WireIngredient("Bread", "2026-11-03", 2), WireIngredient("Milk", "2026-11-06", 1)),
+        allergens = listOf("peanuts"),
+        today = "2026-11-04"
+    )
+
+    @Test
+    fun aRefusalWhileNobodyWaitsIsNotRetried() = runUnconfined {
+        withBalance(5)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 5, pendingGeneration = heldBread(), pendingSinceMillis = now))
+        // The recovery on opening the tab finds the server never got it, and sends it.
+        backend.polls = ArrayDeque(listOf(ServerResult.Err(ServerError.UNKNOWN_REQUEST)))
+        backend.generateReplies += refusedIngredient(0)
+        holder()
+
+        assertEquals(listOf("held"), backend.generated.map { it.requestId }, "no new generation started in the background")
+        assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun aNameRefusedWhileSettlingAnEarlierRequestIsLeftOutOfTheNewOne() = runUnconfined {
+        withBalance(5)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 5, pendingGeneration = heldBread(), pendingSinceMillis = now))
+        // The recovery on opening the tab can't reach the server; Generate then settles the
+        // earlier request first, and that is where Bread is refused.
+        backend.polls = ArrayDeque(listOf(ServerResult.Err(ServerError.OFFLINE), ServerResult.Err(ServerError.UNKNOWN_REQUEST)))
+        backend.generateReplies += refusedIngredient(0)
+        backend.generateReplies += done(4)
+        val holder = holder()
+        assertTrue(backend.generated.isEmpty())
+        holder.generateOnServer()
+
+        assertEquals(2, backend.generated.size)
+        assertEquals(listOf("Spinach", "Greek yoghurt 2%"), backend.generated[1].ingredients.map { it.name })
+        assertEquals(listOf("Bread"), assertIs<RecipeEvent.Written>(holder.uiState.value.event).leftOut)
     }
 
     @Test
