@@ -10,27 +10,40 @@
  * or the NOT_ENOUGH_ITEMS refusal. `check` runs the server's output checks on a model answer
  * (the JSON text of the candidate, or a whole generateContent response) and prints the verdict.
  * The request is a generateRecipe body; it is validated as if sent on its own `today`.
+ *
+ * The functions below are also the red-team runner's (admin/redteam), so both send the same body.
  */
 import { readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
-import { buildPrompt, newCanary } from "../adapters/prompt";
-import { safetySettingsFor, thinkingConfigFor } from "../adapters/gemini";
+import { buildPrompt, newCanary, type Prompt } from "../adapters/prompt";
+import { generationParamsFor } from "../adapters/gemini";
 import { MAX_OUTPUT_TOKENS } from "../constants";
 import { validateGenerateRequest, type GenerateRequest } from "../contract";
 import { checkOutput, hasEnoughItems } from "../core/outputSafety";
 import { costKeyOf } from "../model";
+import { restBodyOf } from "./vertexRest";
+
+/** A request as the server reads it, validated as if sent at noon UTC on its own `today`. */
+export function requestFrom(raw: Record<string, unknown>): GenerateRequest {
+  const body = { requestId: "00000000-0000-4000-8000-000000000000", ...raw };
+  return validateGenerateRequest(body, Date.parse(`${String(raw.today)}T12:00:00Z`));
+}
 
 function readRequest(path: string): GenerateRequest {
-  const raw = JSON.parse(readFileSync(path, "utf8")) as { today?: string; requestId?: string };
-  const body = { requestId: "00000000-0000-4000-8000-000000000000", ...raw };
-  return validateGenerateRequest(body, Date.parse(`${raw.today}T12:00:00Z`));
+  return requestFrom(JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>);
 }
 
 /** The candidate's JSON: either the answer itself or the text part of a generateContent response. */
-function readAnswer(path: string): unknown {
-  const parsed = JSON.parse(readFileSync(path, "utf8")) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-  const text = parsed.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("");
+export function answerOf(parsed: unknown): unknown {
+  const text = (parsed as { candidates?: { content?: { parts?: { text?: string }[] } }[] })
+    .candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("");
   return text === undefined ? parsed : JSON.parse(text);
+}
+
+/** The Vertex AI REST body the generator sends for this request and prompt. */
+export function vertexBody(req: GenerateRequest, prompt: Prompt, model: string, thinkingLevel: string, jailbreakFilter = false): Record<string, unknown> {
+  const maxOutputTokens = MAX_OUTPUT_TOKENS[costKeyOf(req.kind, req.courses)];
+  return restBodyOf(generationParamsFor(prompt, maxOutputTokens, { model, thinkingLevel, jailbreakFilter }));
 }
 
 function main(): void {
@@ -51,24 +64,12 @@ function main(): void {
   const canary = newCanary();
   const prompt = buildPrompt(req, canary);
   if (command === "check") {
-    const verdict = checkOutput(readAnswer(answerPath), { req, canary, systemInstruction: prompt.systemInstruction });
+    const answer = answerOf(JSON.parse(readFileSync(answerPath, "utf8")));
+    const verdict = checkOutput(answer, { req, canary, systemInstruction: prompt.systemInstruction });
     process.stdout.write(`${JSON.stringify(verdict.ok ? { ok: true } : verdict, null, 2)}\n`);
     return;
   }
-  const body = {
-    contents: [{ role: "user", parts: [{ text: prompt.userText }] }],
-    systemInstruction: { parts: [{ text: prompt.systemInstruction }] },
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseJsonSchema: prompt.schema,
-      maxOutputTokens: MAX_OUTPUT_TOKENS[costKeyOf(req.kind, req.courses)],
-      temperature: 0.8,
-      candidateCount: 1,
-      thinkingConfig: thinkingConfigFor(values.model!, values.thinking!),
-    },
-    safetySettings: safetySettingsFor(false),
-  };
-  process.stdout.write(`${JSON.stringify(body, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(vertexBody(req, prompt, values.model!, values.thinking!), null, 2)}\n`);
 }
 
-main();
+if (require.main === module) main();

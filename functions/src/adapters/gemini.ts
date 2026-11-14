@@ -101,6 +101,32 @@ export function thinkingConfigFor(model: string, level: string): ThinkingConfig 
 }
 
 /**
+ * The generator's whole call for a prompt: the user turn and everything else it sends. The one
+ * definition, shared with the offline tools (admin/promptBody.ts prints it as a REST body,
+ * admin/redteam sends it), so what they show or send is what the function sends.
+ */
+export function generationParamsFor(
+  prompt: Prompt,
+  maxOutputTokens: number,
+  options: Pick<GeminiOptions, "model" | "thinkingLevel" | "jailbreakFilter">,
+): GenerateContentParameters & { config: GenerateContentConfig } {
+  return {
+    model: options.model,
+    contents: [{ role: "user", parts: [{ text: prompt.userText }] }],
+    config: {
+      systemInstruction: prompt.systemInstruction,
+      responseMimeType: "application/json",
+      responseJsonSchema: prompt.schema,
+      maxOutputTokens,
+      temperature: 0.8,
+      candidateCount: 1,
+      thinkingConfig: thinkingConfigFor(options.model, options.thinkingLevel),
+      safetySettings: safetySettingsFor(options.jailbreakFilter),
+    },
+  };
+}
+
+/**
  * Usage from the last usageMetadata the stream carried. undefined when it carried none: the call is
  * then booked at the reserved worst case, never as free.
  */
@@ -126,17 +152,8 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
   async generate(_request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
     const local = new AbortController();
     const abortSignal = AbortSignal.any([signal, local.signal]);
-    const config: GenerateContentConfig = {
-      systemInstruction: prompt.systemInstruction,
-      responseMimeType: "application/json",
-      responseJsonSchema: prompt.schema,
-      maxOutputTokens: limits.maxOutputTokens,
-      temperature: 0.8,
-      candidateCount: 1,
-      thinkingConfig: thinkingConfigFor(this.options.model, this.options.thinkingLevel),
-      safetySettings: safetySettingsFor(this.options.jailbreakFilter),
-      abortSignal,
-    };
+    const params = generationParamsFor(prompt, limits.maxOutputTokens, this.options);
+    const config: GenerateContentConfig = { ...params.config, abortSignal };
     let model = this.options.model;
     let meta: GenerateContentResponseUsageMetadata | undefined;
     let finish: string | null = null;
@@ -151,11 +168,7 @@ export class GeminiRecipeGenerator implements RecipeGenerator {
         : { inputTokens: meta?.promptTokenCount ?? 0, outputTokens: 0, thinkingTokens: 0, model, finishReason: finish };
 
     try {
-      const stream = await this.models.generateContentStream({
-        model: this.options.model,
-        contents: [{ role: "user", parts: [{ text: prompt.userText }] }],
-        config,
-      });
+      const stream = await this.models.generateContentStream({ ...params, config });
       for await (const chunk of stream) {
         started = true;
         if (chunk.usageMetadata) meta = chunk.usageMetadata;
