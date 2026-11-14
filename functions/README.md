@@ -23,6 +23,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
+| `src/admin/` | The owner's command for deletion requests by email (`npm run admin`); not deployed as a function (see "Deletion requests by email") |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
 | `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption) and the prompt |
@@ -418,6 +419,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `apple_token_registered` / `apple_token_removed_unlinked` | info | A Sign in with Apple refresh token was stored (`replaced`), or removed after Apple was unlinked. `uidHash` only. |
 | `apple_code_exchange_failed` / `apple_code_revoke_failed` / `apple_token_revoke_failed` | warning | Apple refused or could not be reached (`kind`: `rejected` / `retryable`; `error`: endpoint, HTTP status and Apple's `error` code, never a code or token; `why` for the last). Many `retryable` ones mean the SIWA key or Apple is down; deletions then answer `appleLinkRemoved: false`. |
 | `apple_token_seal_failed` | error | Cloud KMS refused to wrap a token (key missing, IAM, API off: docs/recipe-setup.md step 5a). Nothing was stored. |
+| `admin_account_deleted` | info | The owner's admin command deleted an account for a request by email (log `admin`, resource `global`, written with the operator's credentials; also printed on the command's stderr). `uidHash`, `kind` (`email`, `play-order`, `apple-order`, `apple-transaction`, `uid`), `state` before (`live` / `deleted` / `merged`), `purchasesDetached`, and `appleLinkRemoved` for an account that carried Apple. Never the email, order id or uid. |
 | `sweep_item_failed` | error | One item of the sweeper's queues threw (the rest still ran). |
 | `callable_failed` | error | Unexpected error in a callable (sampled, 5 a minute per instance). |
 | `appstore_notification_rejected` | warning | Sampled: rejected bodies on the public endpoint (fixed `outcome` code + suppressed count). |
@@ -620,7 +622,8 @@ Server-only. Documents:
   `buyerKeys`, `profileScrubbedAt`, `debtMovedTo` + `debtMovedAt`, `appleToken` (`{sealed,
   storedAt}`: the encrypted Sign in with Apple refresh token, see "Stored Sign in with Apple
   tokens"), and tombstones `deletedAt` + `forfeitedBalance` or `mergedInto` + `mergedAt` (a
-  tombstone never has `appleToken`).
+  tombstone never has `appleToken`), and on an account the owner deleted for a request by email
+  `adminDeletionAt` + `adminDeletionKind` (see "Deletion requests by email").
 - `users/{uid}/generations/{requestId}`: `state` (pending | done | failed), `kind`, `courses`,
   `cost`, `inputHash`, `reservedMicroUsd`, `statsDay`, `createdAt`, `deadlineAt`, `charged`,
   `failureClass`, `failureReason`, `usage`, `actualMicroUsd`, `recipe` / `menu`, `expiresAt`
@@ -728,6 +731,130 @@ In the emulator App Check tokens are decoded but not verified, so any well-forme
 a missing one is still rejected. Point the clients at the emulators
 (`useEmulator("10.0.2.2", 5001)` on the Android emulator, `127.0.0.1` on the iOS simulator, plus
 the Auth emulator on 9099) and use the App Check debug provider.
+
+## Deletion requests by email
+
+The privacy page promises that a person can have their server account deleted by asking by
+email, without the app (GDPR Art. 17; Google Play requires a way to request deletion that doesn't
+need the app). `src/admin/` is the owner's command for that. It deletes through `eraseAccount`
+in `src/core/account.ts`, the same core as the `deleteAccount` callable, minus the callable's
+caller checks (App Check, recent sign-in), which the email verification below stands in for.
+It is run by hand and never deployed as a function.
+
+### What a request can be looked up by
+
+| the person gives | `--` option | how it is found |
+|---|---|---|
+| Sign-in provider and the account's email (for Hide My Email: the `…@privaterelay.appleid.com` address) | `--email` | Firebase Auth by the account's email; if no account has it, every account's provider entries (`providerData[].email`). |
+| Google Play order number `GPA.…` (bought without signing in) | `--play-order` | `purchases/` docs store the `orderId` Play reports (`purchases.productsv2` at verification, or the refund notification for a purchase refunded first). The doc id is `play_<sha256(purchaseToken)>`, so the order id is the only Play field a person can quote back. A doc without an order id (Play reported none) is found through the Play Developer API's `orders.get`, which returns the order's purchase token. |
+| Apple Order ID from the emailed receipt (not the transaction id) | `--apple-order` | App Store Server API "Look Up Order ID" (<https://developer.apple.com/documentation/appstoreserverapi/look-up-order-id>) returns the order's signed transactions; each is verified against Apple's root like any other, and matched to `purchases/appstore_production_<transactionId>`. Production only: sandbox purchases have no receipt. |
+| An Apple transaction id (Apple support or Report a Problem shows it) | `--apple-transaction` | `purchases/appstore_<env>_<id>`, both environments. |
+| A uid (from an earlier `find`) | `--uid` | Directly. With `delete`, `--kind <kind>` records what the request was. |
+
+A purchase doc names its account in `uid`, or in `formerUid` after a deletion. A doc with
+neither was refunded before it was ever redeemed, and no account holds anything for it.
+
+### Running it
+
+```bash
+cd functions
+npm ci
+# Emulators (default; project demo-foodtracker on 127.0.0.1:8080 / :9099, e.g. from `npm run serve`):
+npm run admin -- find --play-order GPA.3312-1234-5678-12345
+# Live project: only when --project says so, with credentials you provide now (below).
+npm run admin -- find   --email someone@example.com             --project bestbefore-f9ee1
+npm run admin -- find   --apple-order MK5TQ0ABCD                 --project bestbefore-f9ee1
+npm run admin -- delete --email someone@example.com             --project bestbefore-f9ee1   # dry run
+npm run admin -- delete --email someone@example.com             --project bestbefore-f9ee1 --apply --confirm <uid>
+npm run admin -- delete --uid <uid> --kind play-order            --project bestbefore-f9ee1 --apply --confirm <uid>
+```
+
+- `find` prints, per account: uid and `uidHash`, how it was found, state (`live`, `deleted`,
+  `merged`, `no record`), whether there is an Auth user and whether it is anonymous, the linked
+  providers, creation date, balance, purchases (count and up to 20 with store, product, date
+  granted and state, to check against the person's receipt), generations in flight, whether an
+  Apple token is stored, and for a merged account the chain of `mergedInto` to the account that
+  holds the credits now. Never the email, and never a token.
+- `delete` is a **dry run** unless `--apply` is given, and `--apply` needs `--confirm` set to the
+  uid the lookup found, so a typo in the lookup can't delete another account. It refuses when
+  the lookup matches more than one account (delete each with `--uid`), when nothing is on the
+  server, and while a generation is in flight (`BUSY`). A generation left pending past its
+  deadline (the sweeper's grace included) is settled first, as the sweeper would settle it
+  (infrastructure failure), then the account is deleted.
+- `--apply` does what `deleteAccount` does: tombstones `users/{uid}` (`deletedAt`; the balance
+  goes to `forfeitedBalance`), detaches its purchases (`uid: null`, `formerUid` kept), deletes its
+  generations, revokes the stored Sign in with Apple token at Apple and removes it, and deletes
+  the Firebase Auth user (with its email and provider entries). It then marks the tombstone with
+  `adminDeletionAt` and `adminDeletionKind`, and logs `admin_account_deleted` ("Logs to alert
+  on"). A merged-away account keeps its tombstone and its purchases' `uid` (refunds follow
+  `mergedInto`); only its Auth user and any stored token go.
+- When it prints "Apple's link was NOT removed" (Apple linked but no stored token, or Apple
+  unreachable), tell the person to turn off Sign in with Apple for the app in their Apple Account
+  settings, as the apps do on `appleLinkRemoved: false`.
+
+**Credentials.** The command never reads a key file. On the live project it uses Application
+Default Credentials, and fetches the App Store and Sign in with Apple keys from Secret Manager
+(`APPSTORE_PRIVATE_KEY`, `SIWA_PRIVATE_KEY`, as the functions do); the key ids, team id and app
+id come from the committed `functions/.env.bestbefore-f9ee1`. The simplest credentials are the
+functions' own service account, which already has exactly the roles needed (Datastore, Firebase
+Auth, the two secrets, the KMS key, Logs Writer, the Play Console's orders):
+
+```bash
+# Once: allow yourself to impersonate it (remove the binding again when you are done, if you like).
+gcloud iam service-accounts add-iam-policy-binding recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com \
+  --member=user:<your Google account> --role=roles/iam.serviceAccountTokenCreator --project bestbefore-f9ee1
+gcloud auth application-default login --impersonate-service-account=recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com
+# ... run the commands ...
+gcloud auth application-default revoke
+```
+
+The command refuses a live `--project` while `FIRESTORE_EMULATOR_HOST` or
+`FIREBASE_AUTH_EMULATOR_HOST` is set. Play's `orders.get` (needed only for a purchase doc
+without an order id) needs the account to have the Play Console permission to view financial
+data for the app; without it the command says the lookup was refused. `--play-order` and `--apple-order` reach Google Play and
+Apple only on the live project; on the emulators, `--play-order` searches the stored order ids.
+
+### The procedure (owner)
+
+1. **Note the request** and its date. The answer is due within one month (GDPR Art. 12(3);
+   extendable by two months for a complex case, which you must tell the person within the first
+   month). Don't reply with any account data before step 2.
+2. **Verify the requester.**
+   - Signed-in account: write to the account's email address yourself (not only to the address
+     the request came from) asking them to confirm the deletion, and wait for the confirmation
+     from that address. A Hide My Email address (`…@privaterelay.appleid.com`) accepts mail only
+     from sources registered with Apple: in Certificates, Identifiers & Profiles > Services >
+     Sign in with Apple for Email Communication > Configure, add your sending address or domain
+     under Email Sources (it must pass SPF, or DKIM for a domain that sends through a provider).
+     Apple's steps: <https://developer.apple.com/help/account/capabilities/configure-private-email-relay-service>.
+     Do this once, before the first such request.
+   - Bought without signing in: the order number is on the store's emailed receipt only. Run
+     `find` and check that its purchase list matches what the person says they bought (pack and
+     date), then confirm by replying to the address the request came from.
+3. **`find`** with what they gave. If the account is `merged` into a signed-in account, the
+   credits live in that one: say so, and delete the signed-in account only after verifying it as
+   a signed-in request (its email). `deleted` means it was already done; `no record`, that the
+   server holds nothing for them (say so).
+4. **`delete` dry run**, read what it would change, then the same command with
+   `--apply --confirm <uid>`. On `BUSY`, run it again a few minutes later.
+5. **Reply** that the account is deleted (adding the Apple Account instruction if the command
+   printed it) and what is kept (below). Keep the email thread only as long as you need it as a
+   record of the request.
+
+**What is kept, and why** (none of it holds a name, email or the pantry):
+
+- `purchases/{id}`: store, product, quantity, credits, dates, state, the order id (Play) or
+  transaction id (Apple) and `formerUid`. It is the only guard against redeeming one store
+  purchase twice, and a store refund after the deletion is still matched to it (refund after use,
+  Apple's consumption requests).
+- `buyers/{key}`: refund-after-use records under an Apple `appTransactionId`, a uid or a hash of a
+  provider's user id; they keep `purchasesBlocked` working for a buyer who returns.
+- The `users/{uid}` tombstone: `deletedAt`, `forfeitedBalance`, the credit counters and
+  `buyerKeys` (every transaction checks it, and refunds follow it), plus `adminDeletionAt` /
+  `adminDeletionKind`.
+- Log lines with `uidHash` only, for Cloud Logging's retention (30 days by default).
+- Google and Apple keep their own records of the purchase and the receipt; the person deals with
+  them directly.
 
 ## Parameters and secrets
 

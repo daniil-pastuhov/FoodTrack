@@ -488,6 +488,10 @@ token's linked providers, a stored Apple token, or a code sent).
   extra.
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
 - `BUSY` while a generation is in flight on the account: wait for it to finish, then retry.
+- The same deletion can also be made by the owner, without the app, for a request by email
+  (README "Deletion requests by email"). Nothing new on the wire: the app then finds its account closed
+  as after a merge (`ACCOUNT_CLOSED` from the mutating callables, `balance: 0` from
+  `getBalance`, and the Auth SDK's token refresh fails once its ID token expires, within an hour).
 
 ### `registerAppleSignIn`
 
