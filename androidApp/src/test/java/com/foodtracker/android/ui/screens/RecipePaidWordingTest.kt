@@ -78,6 +78,43 @@ class RecipePaidWordingTest {
     }
 
     @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun busyAndRateLimitedSayWhyAndThatNothingWasTaken() {
+        assertEquals(
+            "Another recipe is still being written. Try again in a minute. No recipes were taken.",
+            context.getString(R.string.recipe_failed_server_busy)
+        )
+        assertEquals(
+            "Too many recipes in a short time. Try again in a minute. No recipes were taken.",
+            context.getString(R.string.recipe_failed_rate_limited)
+        )
+        assertEquals(
+            "Nothing was written: a recipe can take at most 20 allergens, and more are set. Remove some under Allergen warnings in Settings, then try again. No recipes were taken.",
+            context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun tooManyAllergensInRussian() {
+        assertEquals(
+            "Ничего не составлено: рецепт может учесть не больше 20 аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.",
+            context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
+        )
+        assertEquals("Другой рецепт ещё составляется. Попробуйте через минуту. Рецепты не списаны.", context.getString(R.string.recipe_failed_server_busy))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "nb")
+    fun tooManyAllergensInNorwegian() {
+        assertEquals(
+            "Ingenting ble skrevet: en oppskrift kan ta hensyn til høyst 20 allergener, og flere er lagt inn. Fjern noen under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.",
+            context.resources.getQuantityString(R.plurals.recipe_allergens_too_many, 20, 20)
+        )
+        assertEquals("For mange oppskrifter på kort tid. Prøv igjen om et minutt. Ingen oppskrifter ble trukket.", context.getString(R.string.recipe_failed_rate_limited))
+    }
+
+    @Test
     @Config(sdk = [34], qualifiers = "ru")
     fun russianCountsUseTheirOwnPlurals() {
         val resources = context.resources

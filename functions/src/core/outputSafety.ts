@@ -7,6 +7,9 @@
  * Menu (CONTRACT.md), so `fromPantry` and `uses` are always the server's reading of the ids and
  * `uses` holds the user's own item names, never model text.
  *
+ * Text direction plays no part: every check works on code points in logical order, and the answer
+ * is stored and returned as JSON strings, so right-to-left item names need nothing special.
+ *
  * Repairs (not failures): Unicode NFC, tabs and line breaks to spaces, runs of spaces collapsed,
  * emoji removed, leading "1." / "-" bullets removed from steps, `servings` and `difficulty` set to
  * what was requested. Everything else that is wrong makes the whole answer invalid (an
@@ -26,7 +29,7 @@ import {
   type DietKey,
   type FoldedText,
 } from "./foodTerms";
-import { fold } from "./inputSafety";
+import { fold, scriptOf } from "./inputSafety";
 
 export type OutputRule =
   | "SHAPE"
@@ -143,8 +146,40 @@ interface Scanner {
   ctx: OutputContext;
   leakNgrams: Set<string>;
   canary: string;
-  latin: number;
-  cyrillic: number;
+  /** Scripts a letter of the answer may be in (see allowedScripts). */
+  allowed: ReadonlySet<string>;
+  /** The requested language's script. */
+  wanted: string;
+  /** Letters in the wanted script, and letters in any script (Common and Inherited not counted). */
+  wantedLetters: number;
+  letters: number;
+}
+
+/** Scripts that are written together, so an item name in one may be quoted in another. */
+const SCRIPT_FAMILIES: ReadonlyArray<readonly string[]> = [
+  ["Han", "Hiragana", "Katakana"],
+  ["Hangul", "Han"],
+];
+
+/**
+ * The scripts an answer may use: Latin and Cyrillic (the scripts of the ten recipe languages; a
+ * Norwegian user can own "Сметана", a Russian recipe can say "°C"), plus every script a letter of
+ * the request's own item and allergen names is in, so a Greek or Chinese item name can be quoted
+ * in an English recipe. Japanese and Korean bring the scripts written alongside them. An answer in
+ * a script none of those uses is refused (SCRIPT); one mostly in another allowed script fails the
+ * language share (LANGUAGE).
+ */
+export function allowedScripts(req: GenerateRequest): Set<string> {
+  const out = new Set<string>(["Latin", "Cyrillic"]);
+  for (const name of [...req.ingredients.map((i) => i.name), ...req.allergens]) {
+    for (const ch of name) {
+      if (!/\p{L}/u.test(ch)) continue;
+      const s = scriptOf(ch);
+      out.add(s);
+      for (const family of SCRIPT_FAMILIES) if (family.includes(s)) family.forEach((f) => out.add(f));
+    }
+  }
+  return out;
 }
 
 function scan(sc: Scanner, s: string): void {
@@ -169,9 +204,11 @@ function scan(sc: Scanner, s: string): void {
   if (matchesAny(folded, SOLICITATION_TERMS)) bad("SOLICITATION");
   for (const ch of s) {
     if (!/\p{L}/u.test(ch)) continue;
-    if (/\p{Script=Latin}/u.test(ch)) sc.latin++;
-    else if (/\p{Script=Cyrillic}/u.test(ch)) sc.cyrillic++;
-    else bad("SCRIPT");
+    const script = scriptOf(ch);
+    if (script === "Common" || script === "Inherited") continue;
+    if (!sc.allowed.has(script)) bad("SCRIPT");
+    sc.letters++;
+    if (script === sc.wanted) sc.wantedLetters++;
   }
 }
 
@@ -243,17 +280,27 @@ const DIET_GUARDS = Object.fromEntries(
   Object.entries(DIET_RULES).map(([k, groups]) => [k, groups.map((g) => guardOf(g.terms, g.exempt, g.freeStems))]),
 ) as Record<DietKey, Guard[]>;
 
+/** A word in a script whose words are a character or two (Chinese, Japanese, Korean, Thai...). */
+const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}\p{Script=Yi}]/u;
+
 /**
  * The guards for a user's allergen list: each name itself (every word of 3+ letters, as a word
  * start, and the whole name), plus every group of the table whose terms or aliases the name
- * matches, so "nøtter" also catches "walnuts" and "milk" also catches "smør".
+ * matches, so "nøtter" also catches "walnuts" and "milk" also catches "smør". The table covers
+ * the ten recipe languages only: an allergen in another script ("花生", "γάλα") is matched
+ * literally, on the folded text (a word of a script written without spaces, or of Hangul, as a
+ * substring of any length, since such a word is one or two characters and sits inside compounds).
  */
 export function allergenGuards(allergens: readonly string[]): Guard[] {
   const guards: Guard[] = [];
   for (const a of allergens) {
     const t = foldText(a);
     const groups = Object.keys(GROUP_TERMS).filter((k) => matchesAny(t, GROUP_TERMS[k].terms) || matchesAny(t, ALIAS_TERMS[k] ?? []));
-    const literal = [...t.words.filter((w) => Array.from(w).length >= 3), ...(t.words.length > 1 ? [`*${t.words.join(" ")}`] : [])];
+    const literal = [
+      ...t.words.filter((w) => DENSE.test(w)).map((w) => `*${w}`),
+      ...t.words.filter((w) => !DENSE.test(w) && Array.from(w).length >= 3),
+      ...(t.words.length > 1 ? [`*${t.words.join(" ")}`] : []),
+    ];
     const exempt = groups.flatMap((k) => GROUP_TERMS[k].exempt);
     if (literal.length) guards.push({ terms: compileTerms(literal), exempt });
     for (const k of groups) guards.push(GROUP_TERMS[k]);
@@ -335,8 +382,10 @@ function checker(ctx: OutputContext): Checker {
       ctx,
       leakNgrams: ngrams(foldText(ctx.systemInstruction).words, LEAK_NGRAM),
       canary: ctx.canary.toUpperCase(),
-      latin: 0,
-      cyrillic: 0,
+      allowed: allowedScripts(ctx.req),
+      wanted: ctx.req.config.language === "ru" || ctx.req.config.language === "uk" ? "Cyrillic" : "Latin",
+      wantedLetters: 0,
+      letters: 0,
     },
     req: ctx.req,
     idToName: new Map(ids.map((id, i) => [id, ctx.req.ingredients[i].name])),
@@ -347,16 +396,14 @@ function checker(ctx: OutputContext): Checker {
 }
 
 /**
- * The answer must be mostly in the requested language's script. Pantry names in the other
- * script may be quoted (a Norwegian user can own "Сметана"), hence a majority, not all.
+ * The answer must be mostly in the requested language's script. Pantry names in other scripts
+ * may be quoted (a Norwegian user can own "Сметана", an English one "Φέτα" or "豆腐"), hence a
+ * majority of all letters, not all.
  */
 function checkLanguage(ch: Checker): void {
-  const { latin, cyrillic } = ch.sc;
-  const total = latin + cyrillic;
-  if (total === 0) bad("LANGUAGE");
-  const wantCyrillic = ch.req.config.language === "ru" || ch.req.config.language === "uk";
-  const share = (wantCyrillic ? cyrillic : latin) / total;
-  if (share < 0.6) bad("LANGUAGE");
+  const { wantedLetters, letters } = ch.sc;
+  if (letters === 0) bad("LANGUAGE");
+  if (wantedLetters / letters < 0.6) bad("LANGUAGE");
 }
 
 function run<T>(f: () => T): OutputCheck<T> {

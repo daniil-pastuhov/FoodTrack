@@ -140,7 +140,7 @@ fun RecipeScreen(
                 if (event.leftOut.isNotEmpty()) {
                     // What it was written without matters more than the count, which the
                     // account card shows anyway.
-                    snackbars.show(resources.getString(R.string.recipe_left_out, event.leftOut.joinToString(", ")), null, null)
+                    snackbars.show(resources.getString(R.string.recipe_left_out, isolatedList(event.leftOut)), null, null)
                 } else {
                     // T3, and the moment the count drops.
                     event.recipesLeft?.let { left ->
@@ -150,14 +150,21 @@ fun RecipeScreen(
             }
             is RecipeEvent.IngredientNotSent -> {
                 stateHolder.consumeEvent()
-                snackbars.show(resources.getString(R.string.recipe_ingredient_not_sent, event.ingredient), null, null)
+                snackbars.show(resources.getString(R.string.recipe_ingredient_not_sent, isolated(event.ingredient)), null, null)
             }
             is RecipeEvent.AllergenNotSent -> {
                 stateHolder.consumeEvent()
                 // Long, with the way to the allergen list: nothing is written until it is fixed.
-                snackbars.show(resources.getString(R.string.recipe_allergen_not_sent, event.allergen), resources.getString(R.string.settings_title)) {
+                snackbars.show(resources.getString(R.string.recipe_allergen_not_sent, isolated(event.allergen)), resources.getString(R.string.settings_title)) {
                     navigator.navigate(LarderRoute.Settings)
                 }
+            }
+            is RecipeEvent.TooManyAllergens -> {
+                stateHolder.consumeEvent()
+                snackbars.show(
+                    resources.getQuantityString(R.plurals.recipe_allergens_too_many, event.limit, event.limit),
+                    resources.getString(R.string.settings_title)
+                ) { navigator.navigate(LarderRoute.Settings) }
             }
             RecipeEvent.Failed -> {
                 stateHolder.consumeEvent()
@@ -165,11 +172,20 @@ fun RecipeScreen(
             }
             RecipeEvent.ServerFailed -> {
                 stateHolder.consumeEvent()
-                snackbars.show(resources.getString(R.string.recipe_failed_server), tryAgain) { stateHolder.generateOnServer() }
+                val failed = if (state.mode == RecipeMode.MENU) R.string.recipe_failed_server_menu else R.string.recipe_failed_server
+                snackbars.show(resources.getString(failed), tryAgain) { stateHolder.generateOnServer() }
             }
             RecipeEvent.ServerFailedLater -> {
                 stateHolder.consumeEvent()
                 snackbars.show(resources.getString(R.string.recipe_failed_server_later), null, null)
+            }
+            RecipeEvent.ServerBusy -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_server_busy), null, null)
+            }
+            RecipeEvent.ServerRateLimited -> {
+                stateHolder.consumeEvent()
+                snackbars.show(resources.getString(R.string.recipe_failed_rate_limited), null, null)
             }
             RecipeEvent.ServerLimitToday -> {
                 stateHolder.consumeEvent()
@@ -181,7 +197,8 @@ fun RecipeScreen(
             }
             is RecipeEvent.ServerRefused -> {
                 stateHolder.consumeEvent()
-                snackbars.show(resources.getQuantityString(R.plurals.recipe_refused, event.taken, event.taken), null, null)
+                val refused = if (state.mode == RecipeMode.MENU) R.plurals.recipe_refused_menu else R.plurals.recipe_refused
+                snackbars.show(resources.getQuantityString(refused, event.taken, event.taken), null, null)
             }
             null -> Unit
         }
@@ -487,7 +504,11 @@ private fun RecipeCallouts(state: RecipeUiState, actions: RecipeTabActions) {
                     kind = LarderCalloutKind.Warning,
                     icon = LarderIcons.TriangleAlert,
                     title = stringResource(R.string.recipe_paused_title),
-                    message = pluralStringResource(R.plurals.recipe_paused_body, count, count)
+                    message = if (count > 0) {
+                        pluralStringResource(R.plurals.recipe_paused_body, count, count)
+                    } else {
+                        stringResource(R.string.recipe_paused_body_none)
+                    }
                 )
             }
             null -> Unit
@@ -637,7 +658,12 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions) {
             LarderCallout(
                 kind = LarderCalloutKind.Info,
                 title = stringResource(R.string.recipe_menu_short_title, cost),
-                message = pluralStringResource(R.plurals.recipe_menu_short_body, balance, balance)
+                // Whether a single recipe still fits in what is left, as iOS says it.
+                message = when {
+                    balance <= 0 -> stringResource(R.string.recipe_menu_short_none)
+                    balance >= paid.costs.recipe -> pluralStringResource(R.plurals.recipe_menu_short_body, balance, balance)
+                    else -> pluralStringResource(R.plurals.recipe_balance_left, balance, balance)
+                }
             )
             BuyOrBlocked(paid, actions, LarderButtonStyle.Primary)
         }

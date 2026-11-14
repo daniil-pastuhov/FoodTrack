@@ -41,6 +41,23 @@ class OnDeviceRecipePromptTest {
     }
 
     @Test
+    fun namesInAnyScriptPassThroughAndAllergensAreNeverCut() {
+        val longAllergen = "Schalenfrüchte und Erdnüsse sowie Sesamsamen"
+        val emojiAtTheCut = "x".repeat(MAX_RECIPE_INGREDIENT_NAME - 1) + "🍎"
+        val prompt = buildOnDeviceRecipePrompt(
+            items = listOf(RecipePromptItem("Γιαούρτι στραγγιστό", 1), RecipePromptItem("חלב 3%", 2), RecipePromptItem("牛奶 1L", 3), RecipePromptItem(emojiAtTheCut, 4)),
+            config = config,
+            languageCode = "en",
+            allergens = listOf("φιστίκια", longAllergen)
+        )
+
+        for (name in listOf("Γιαούρτι στραγγιστό", "חלב 3%", "牛奶 1L")) assertTrue(prompt.contains("- $name ("), name)
+        assertTrue(prompt.contains("- " + "x".repeat(MAX_RECIPE_INGREDIENT_NAME - 1) + " ("), "an emoji isn't split in half")
+        assertTrue(prompt.contains(longAllergen), "an allergen is never shortened")
+        assertTrue(prompt.contains("φιστίκια"))
+    }
+
+    @Test
     fun anyTimeAndNoDietAddNoRule() {
         val prompt = buildOnDeviceRecipePrompt(
             listOf(RecipePromptItem("Milk", 1)),

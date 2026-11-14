@@ -40,6 +40,17 @@ import com.foodtracker.recipe.recipeLanguageEndonym
  * Wording and form controls shared by the Recipe tab, its result and Recipe settings.
  */
 
+/**
+ * Text from the person or the model (an item or allergen name) set inside one of our lines,
+ * wrapped in a first-strong isolate (U+2068 ... U+2069): a Hebrew or Arabic name keeps its own
+ * direction without reordering the sentence around it. iOS uses the same isolate
+ * (`L10n.isolated`), since SwiftUI has no BidiFormatter.
+ */
+internal fun isolated(embedded: String): String = "⁨$embedded⁩"
+
+/** Names joined with ", ", each isolated. */
+internal fun isolatedList(names: List<String>): String = names.joinToString(", ") { isolated(it) }
+
 fun recipeDifficultyLabel(resources: Resources, difficulty: RecipeDifficulty): String = resources.getString(
     when (difficulty) {
         RecipeDifficulty.EASY -> R.string.recipe_difficulty_easy

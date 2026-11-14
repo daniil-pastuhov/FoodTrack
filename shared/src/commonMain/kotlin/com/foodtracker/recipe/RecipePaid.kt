@@ -859,11 +859,15 @@ internal class RecipePaid(
         if (ingredients.isEmpty()) {
             return Built.Blocked(leftOut.firstOrNull()?.let { RecipeEvent.IngredientNotSent(it) } ?: RecipeEvent.ServerFailed)
         }
-        // Never sent without an allergen the person set, or with part of one cut away (another
-        // script, a word too long): a recipe written without it could be unsafe.
+        // Never sent without an allergen the person set, or with part of one cut away: a recipe
+        // written without it could be unsafe. More than the server takes stops the request too,
+        // rather than leaving some out.
         val allergens = current.allergens.filter { it.isNotBlank() }.map { raw ->
             cleanAllergenName(raw) ?: return Built.Blocked(RecipeEvent.AllergenNotSent(raw.trim()))
-        }.distinctBy { it.lowercase() }.take(MAX_REQUEST_ALLERGENS)
+        }.distinctBy { it.lowercase() }
+        if (allergens.size > MAX_REQUEST_ALLERGENS) {
+            return Built.Blocked(RecipeEvent.TooManyAllergens(allergens.size, MAX_REQUEST_ALLERGENS))
+        }
         allergens.firstOrNull { it.lowercase() in refusedAllergens }?.let { return Built.Blocked(RecipeEvent.AllergenNotSent(it)) }
         val menu = current.mode == RecipeMode.MENU
         val request = GenerateRequest(
@@ -1018,6 +1022,9 @@ internal class RecipePaid(
         val menu = request.kind == WireKind.MENU
         var starting = start
         var failures = 0
+        // Whether the last busy answer was this account's other generation (BUSY) rather than
+        // every server instance (OVERLOADED): told apart when the wait runs out.
+        var accountBusy = false
         fun busy(on: Boolean) {
             if (interactive && state.value.paid.serverBusy != on) updatePaid { it.copy(serverBusy = on) }
         }
@@ -1088,12 +1095,13 @@ internal class RecipePaid(
                 // state rather than an error.
                 is ServerResult.Err if result.error == ServerError.OVERLOADED || (fresh && result.error == ServerError.BUSY) -> {
                     busy(true)
+                    accountBusy = result.error == ServerError.BUSY
                     if (nowMillis() >= deadline) {
                         if (fresh) {
                             // Refused as it was started: the server holds nothing for this id.
                             // Dropped, so it is never started later without the person asking.
                             persist { it.copy(pendingGeneration = null, pendingSinceMillis = null) }
-                            finish(interactive, RecipeEvent.ServerFailedLater)
+                            finish(interactive, if (accountBusy) RecipeEvent.ServerBusy else RecipeEvent.ServerFailedLater)
                             return Sent.DROPPED_BUSY
                         }
                         // Asking about one the server holds: kept, as it may still be written.
@@ -1210,7 +1218,8 @@ internal class RecipePaid(
                         // On a first send: the per-minute limit, a reason this app doesn't know
                         // yet. Refused before anything was held; asking again at once won't help.
                         persist { it.copy(pendingGeneration = null) }
-                        finish(interactive, RecipeEvent.ServerFailedLater)
+                        val event = if (result.error == ServerError.RATE_LIMITED) RecipeEvent.ServerRateLimited else RecipeEvent.ServerFailedLater
+                        finish(interactive, event)
                         return Sent.SETTLED
                     }
                 }

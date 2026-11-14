@@ -83,8 +83,8 @@ describe("a refused input never reaches the model and costs nothing", () => {
 
   test("a malformed but harmless name is refused without counting", async () => {
     await seed(5);
-    const e = await errorOf(generateRecipe(deps, caller, request({ ingredients: [{ name: "Φέτα", expiresOn: null, quantity: 1 }] })));
-    expect(e.details).toMatchObject({ reason: "INVALID_REQUEST", rule: "SCRIPT" });
+    const e = await errorOf(generateRecipe(deps, caller, request({ ingredients: [{ name: "Pasta (fresh)", expiresOn: null, quantity: 1 }] })));
+    expect(e.details).toMatchObject({ reason: "INVALID_REQUEST", rule: "CHARACTERS" });
     expect((await user()).promptRejections).toBeUndefined();
     expect(logsNamed(deps, "prompt_input_rejected")[0].data).toMatchObject({ suspicious: false, rejectionsToday: null });
   });
@@ -100,6 +100,42 @@ describe("a refused input never reaches the model and costs nothing", () => {
     const res = await generateRecipe(deps, caller, request({ ingredients: names.map((name) => ({ name, expiresOn: null, quantity: 1 })) }));
     expect(res.status).toBe("DONE");
     expect(deps.generator.prompts[0].userText).toContain('"name":"Сметана 20%"');
+  });
+
+  test("names in any script reach the model, and an answer naming them is delivered", async () => {
+    await seed(5);
+    const names = ["Φέτα ΠΟΠ", "豆腐", "חלב 3%", "حليب طازج", "明治おいしい牛乳", "Tomatoes"];
+    deps.generator.returns({
+      title: "Feta and tofu bake",
+      summary: "A quick bake with Φέτα ΠΟΠ, 豆腐 and tomatoes, finished with a splash of חלב.",
+      minutes: 30,
+      ingredients: [
+        { amount: "200 g", name: "Φέτα ΠΟΠ", pantryId: "p1" },
+        { amount: "300 g", name: "豆腐", pantryId: "p2" },
+        { amount: "100 ml", name: "חלב 3%", pantryId: "p3" },
+        { amount: "4", name: "tomatoes", pantryId: "p6" },
+      ],
+      steps: ["Heat the oven to 200 °C.", "Layer the 豆腐, the tomatoes and the Φέτα in a dish.", "Pour over the חלב and bake for 20 minutes."],
+    });
+    const res = await generateRecipe(deps, caller, request({
+      ingredients: names.map((name) => ({ name, expiresOn: null, quantity: 1 })),
+      allergens: ["花生", "φιστίκια"],
+    }));
+    expect(res.status).toBe("DONE");
+    const userText = deps.generator.prompts[0].userText;
+    for (const n of [...names, "花生", "φιστίκια"]) expect(userText).toContain(JSON.stringify(n));
+    expect(res.recipe?.ingredients.map((i) => [i.name, i.fromPantry])).toEqual([
+      ["Φέτα ΠΟΠ", true], ["豆腐", true], ["חלב 3%", true], ["tomatoes", true],
+    ]);
+  });
+
+  test("an answer in a script none of the names uses is still refused", async () => {
+    await seed(5);
+    deps.generator.returns({ ...sampleRecipe(), summary: "पास्ता जल्दी बनता है।" });
+    const res = await generateRecipe(deps, caller, request({
+      ingredients: [{ name: "Pasta", expiresOn: null, quantity: 1 }, { name: "豆腐", expiresOn: null, quantity: 1 }],
+    }));
+    expect(res).toMatchObject({ status: "FAILED" });
   });
 });
 

@@ -1082,5 +1082,65 @@
             <string>Сейчас не удалось составить меню. Попробуйте позже. Списано %d рецепта.</string>
         </dict>
     </dict>
+    <key>recipe_allergens_too_many</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергена, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+            <key>few</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+            <key>many</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+            <key>other</key>
+            <string>Ничего не составлено: рецепт может учесть не больше %d аллергенов, а задано больше. Уберите лишние в настройках, в разделе «Предупреждения об аллергенах», и попробуйте снова. Рецепты не списаны.</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_moved</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d рецепт перенесён с этого телефона в ваш аккаунт</string>
+            <key>few</key>
+            <string>%d рецепта перенесены с этого телефона в ваш аккаунт</string>
+            <key>many</key>
+            <string>%d рецептов перенесены с этого телефона в ваш аккаунт</string>
+            <key>other</key>
+            <string>%d рецепта перенесены с этого телефона в ваш аккаунт</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_debt</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>После возврата денег в магазине этот телефон был должен %d рецепт. Он списан с вашего аккаунта.</string>
+            <key>few</key>
+            <string>После возврата денег в магазине этот телефон был должен %d рецепта. Они списаны с вашего аккаунта.</string>
+            <key>many</key>
+            <string>После возврата денег в магазине этот телефон был должен %d рецептов. Они списаны с вашего аккаунта.</string>
+            <key>other</key>
+            <string>После возврата денег в магазине этот телефон был должен %d рецепта. Они списаны с вашего аккаунта.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

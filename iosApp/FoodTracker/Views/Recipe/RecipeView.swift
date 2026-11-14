@@ -102,6 +102,12 @@ struct RecipeView: View {
             message: L10n.recipeRejectedMessage,
             actions: [.init(L10n.recipeOK)]
         )
+        .larderDialog(
+            L10n.recipeRejectedTitle,
+            isPresented: Binding(get: { credits.rejectedByBuild }, set: { credits.rejectedByBuild = $0 }),
+            message: L10n.recipeRejectedBuildMessage,
+            actions: [.init(L10n.recipeOK)]
+        )
         .sheet(item: $sharedPrompt) { prompt in
             ActivityView(activityItems: [prompt.text])
         }
@@ -368,8 +374,12 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeEarlierRefused(taken: taken))
         case .itemLeftOut(let name):
             showSnackbar(L10n.recipeItemLeftOut(name))
+        case .itemNotSent(let name):
+            showSnackbar(L10n.recipeItemNotSent(name))
         case .allergenRefused(let name):
             showSnackbar(L10n.recipeAllergenRefused(name))
+        case .tooManyAllergens(let limit):
+            showSnackbar(L10n.recipeAllergensTooMany(limit))
         }
     }
 
@@ -381,6 +391,7 @@ struct RecipeView: View {
         case .accountDeleted: showSnackbar(L10n.recipeAccountDeleted)
         case .accountActionFailed: showSnackbar(L10n.recipeAccountActionFailed)
         case .accountBusy: showSnackbar(L10n.recipeAccountBusy)
+        case .merged(let moved): showSnackbar(L10n.recipeMerged(moved: moved))
         }
     }
 

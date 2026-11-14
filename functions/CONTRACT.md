@@ -125,51 +125,77 @@ that still go through are credited normally.
 
 #### Name rules
 
-The server normalises every name and then checks it (`src/core/inputSafety.ts`). Normalisation,
-which clients need not copy: Unicode NFKC (fullwidth letters and digits become plain ones, `½`
-becomes `1/2`, ligatures split); `’ ‘ ʼ ´` and the backtick become `'`; dashes and minus signs become `-`;
-invisible characters (zero-width spaces and joiners, bidirectional controls, soft hyphen, BOM,
-variation selectors) are removed; tabs, line breaks and every other space become one space; runs
-of spaces and of hyphens collapse to one; leading and trailing spaces are trimmed. Then the name
-must be:
+Names are accepted in **any script**: products scanned from Open Food Facts come back with their
+local names (Greek, Hebrew, Arabic, Chinese, Japanese, Korean, Thai, Georgian, Devanagari...).
+The ten recipe languages are only the language the answer is written in.
 
-- 1 to 40 characters, at most **8 words** (split on spaces), and every hyphen-separated part of a
-  word at most **28 characters**;
-- made only of: letters of the **Latin or Cyrillic** script (with their diacritics; at most one
-  combining mark per letter), ASCII digits `0-9`, space, `-`, and these in these positions only:
-  `'` between two letters (`Jerry's`), `%` after a digit or a digit and a space (`15%`, `18 %`),
-  `,` `.` `/` between two digits (`0,5`, `1.5`, `1/2`), `.` after a letter when a space or digit
+The server normalises every name and then checks it (`src/core/inputSafety.ts`). Normalisation:
+Unicode NFKC (fullwidth letters and digits become plain ones, `½` becomes `1/2`, ligatures split;
+note that NFKC also splits a few letters such as Thai `ำ` into two code points that render the
+same); `’ ‘ ʼ ´` and the backtick become `'`; dashes and minus signs become `-`; the Arabic percent
+sign `٪` and decimal separator `٫` become `%` and `.`; invisible characters (zero-width spaces and
+joiners, bidirectional controls such as RLO and isolates, soft hyphen, BOM, tag characters,
+variation selectors) are removed; tabs, line breaks and every other space become one space; runs
+of spaces and of hyphens collapse to one; leading and trailing spaces are trimmed. Right-to-left
+letters are ordinary letters: only the direction *controls* are removed. Then the name must be:
+
+- 1 to 40 **code points** (Unicode scalars, not UTF-16 units: `𠮷` counts once), at most **8
+  words** (split on spaces), and every hyphen-separated part of a word at most **28 code points**,
+  except a part containing a letter of a script written without spaces (Han, Hiragana, Katakana,
+  Thai, Lao, Khmer, Myanmar), which is limited only by the 40;
+- made only of: letters (`\p{L}`) and combining marks (`\p{M}`) of any script, decimal digits
+  (`\p{Nd}`) of any script (`٣`, `५`, `১২` stay as they are; mixed digit scripts are allowed),
+  space, `-`, and these in these positions only: `'` after a letter or mark and before a letter
+  (`Jerry's`, `צ'יפס`), `%` after a digit or a digit and a space (`15%`, `18 %`), `,` `.` `/`
+  between two digits (`0,5`, `1.5`, `1/2`), `.` after a letter or mark when a space or digit
   follows (`Dr. Oetker`, `n.5`), `&` between letters or spaces, never first or last (`M&S`,
-  `Ben & Jerry's`). Nothing else: no other scripts (Greek, CJK, Arabic, Hebrew...), no emoji, no
-  quotes, brackets, braces, `:`, `#`, `<`, `>`, backslash.
-- not "suspicious": no word mixing Latin and Cyrillic letters (`Pаsta` with a Cyrillic `а`); no
-  encoded-looking word (a hex run of 12+, three or more capitals inside a mixed-case word, many
-  letter/digit switches); no word repeated three times, no character five times in a row, no four
-  single letters in a row (`i g n o r e`); none of a short list of words about the model rather
-  than food (`ignore`, `instructions`, `prompt`, `system`, `assistant`, `json`, `forget`... in the
-  ten app languages, also when spelled with look-alike letters or digits).
+  `Ben & Jerry's`). Nothing else: no emoji or symbols, no other numbers (`௰`), no quotes,
+  brackets, braces, `:`, `#`, `<`, `>`, backslash, middle dots (`・`, `·`) or other punctuation.
+- combining marks only on a letter: at most **4** on one letter (Indic, Thai, Hebrew with niqqud
+  and Arabic with harakat stack them), at most **1** on a Latin, Cyrillic or Greek letter (NFKC
+  composes what those languages write), never the same mark twice in a row, and marks at most
+  **60 %** of the letters and marks together; anything else is "Zalgo" text (`MARKS`).
+- not "suspicious": no hyphen part with letters of more than one of the look-alike scripts
+  **Latin, Cyrillic and Greek** (`Pаsta` with a Cyrillic `а`, `Mιlk` with a Greek iota); other
+  mixing is fine (`可口可乐Zero`, `牛奶 1L`, Japanese kanji with kana, Korean with Hanja, Hebrew or
+  Arabic next to Latin units); no encoded-looking word (a hex run of 12+, three or more capitals
+  inside a mixed-case word, many letter/digit switches); no word repeated three times, no
+  character five times in a row, no four single letters in a row (`i g n o r e`; a single
+  Chinese, Japanese, Korean or Thai character is a word, not a letter, and does not count); none
+  of a short list of words about the model rather than food (`ignore`, `instructions`, `prompt`,
+  `system`, `assistant`, `json`, `forget`... in the ten app languages only, also when spelled with
+  Cyrillic or Greek look-alike letters or digits).
 
 A refused name fails the whole request with `INVALID_REQUEST`, `details.field` and `details.rule`
-(`TYPE`, `EMPTY`, `TOO_LONG`, `CHARACTERS`, `SCRIPT`, `WORDS`, `WORD_LENGTH`, or a suspicious rule:
-`MARKS`, `MIXED_SCRIPT`, `ENCODED`, `REPEATED`, `SPACED_LETTERS`, `INSTRUCTION`). Nothing is
-charged. Suspicious refusals, and answers the server refuses as suspicious (see "Failures and
-refunds"), count per account per UTC day; at `config/runtime.rejectedPromptsPerDay` (default 5)
-further generation fails with `USER_DAILY_LIMIT` until the next UTC day.
+(`TYPE`, `EMPTY`, `TOO_LONG`, `CHARACTERS`, `WORDS`, `WORD_LENGTH`, or a suspicious rule: `MARKS`,
+`MIXED_SCRIPT`, `ENCODED`, `REPEATED`, `SPACED_LETTERS`, `INSTRUCTION`; `SCRIPT` is no longer
+produced). Nothing is charged. Suspicious refusals, and answers the server refuses as suspicious
+(see "Failures and refunds"), count per account per UTC day; at
+`config/runtime.rejectedPromptsPerDay` (default 5) further generation fails with
+`USER_DAILY_LIMIT` until the next UTC day.
 
-**Client cleaning (unchanged rule still valid, two additions needed).** The existing cleaning
-(every character other than a letter, digit, space or hyphen becomes a space; runs of spaces
-collapse; cut to 40 characters) still produces names the server accepts for Latin and Cyrillic
-text, so clients that keep it keep working. They must also:
+**Client cleaning.** Both apps clean names to these rules before sending, so an honest name is
+never refused for its characters or shape (Android `shared/.../RecipeWireName.kt`, iOS
+`RecipeWire.cleanName`): normalise as above; keep letters, marks (within the limits above),
+digits, space and hyphen, and the punctuation where it is allowed; every other character becomes a
+space; a part mixing Latin, Cyrillic and Greek is folded to the script most of its letters are in
+when every other letter has a look-alike there (`Мilk` → `Milk`), otherwise dropped; drop a part
+over 28 code points (outside the unspaced scripts), keep the first 8 words, cut to 40 code points
+at a word end when there is one; send nothing when nothing is left. The table
+`test/fixtures/names.json` (real product names in 25 languages and adversarial inputs, with the
+cleaned output and the server's verdicts) is what the server, Android and iOS are all tested
+against; a change to the rule changes all three and the table together.
 
-1. Treat letters outside the Latin and Cyrillic scripts (and digits other than ASCII `0-9`) like
-   other refused characters (a space), and drop a name with nothing left.
-2. Keep at most the first 8 words, and drop a word (hyphen part) longer than 28 characters.
+Cleaning does not rewrite names the server refuses as suspicious for meta words, encoding or
+repetition. If the server still refuses an ingredient (`details.field` names it) the client leaves
+that item out and retries with a **new** `requestId`, telling the user. An allergen is never
+shortened or dropped: if cleaning would remove any letter or digit of it, or the server refuses
+it, the request is not sent and the user is told.
 
-Optionally they may keep `'`, `%`, `,`, `.`, `/`, `&` where the rules above allow them, so
-`Crème fraîche 15%` reaches the model as written. If the server still refuses an ingredient
-(`details.field` names it) the client should leave that item out and retry with a **new**
-`requestId`, telling the user; a refused allergen must be shown to the user, never silently
-dropped.
+Allergen enforcement in the answer (see "Failures and refunds") matches the ten app languages'
+word lists; an allergen written in another script can only be matched **literally** (on the
+folded, normalised text; as a substring for Chinese, Japanese, Korean and Thai), so a translation
+of it in the answer is not caught unless the word lists have it.
 
 ### Recipe (response)
 
@@ -279,7 +305,9 @@ Two kinds of failure, decided by the server; `charged` tells the client which wa
 - **Failures caused by the request** (the model refused the ingredients on safety grounds, ran out
   of room, or wrote an answer the server's checks refuse: malformed, too long, a link or contact
   details, markup, an excluded allergen or diet violation, something that is not food, text
-  outside cooking, or a leak of its instructions) are refunded within an allowance tied to what the account
+  outside cooking, letters of a script that is neither Latin, Cyrillic nor one the request's own
+  names use, less than 60 % of the letters in the requested language's script, or a leak of its
+  instructions) are refunded within an allowance tied to what the account
   has bought: **one refunded failure for every 10 credits purchased** over the account's life
   (at least one once anything was bought; credits the store refunded do not count). The
   allowance does not reset daily, and it moves with the credits on `mergeBalance`. Past it, such

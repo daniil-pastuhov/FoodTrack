@@ -4,7 +4,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/** Real product names that must reach the server as written (functions/test/inputSafety.test.ts). */
+/**
+ * Real product names that must reach the server as written (functions/test/inputSafety.test.ts).
+ * The full table, in every script, is functions/test/fixtures/names.json (ServerNameRuleTest).
+ */
 internal val REAL_PRODUCT_NAMES: List<String> = listOf(
     // English
     "7-Up", "Coca-Cola Zero Sugar 1,5 l", "Ben & Jerry's Cookie Dough", "Heinz Baked Beans", "Kellogg's Corn Flakes",
@@ -40,7 +43,10 @@ internal val REAL_PRODUCT_NAMES: List<String> = listOf(
     "Сир кисломолочний", "Ряжанка 4%", "Ковбаса Лікарська", "Хліб житній", "Олія соняшникова", "Вареники з картоплею",
     "Сало українське", "Борошно пшеничне",
     // Mixed scripts across words, numbers, fractions
-    "Сметана Prostokvashino 15%", "Omega-3 egg", "Vitamin C", "H2O mineral water", "4x100 g"
+    "Сметана Prostokvashino 15%", "Omega-3 egg", "Vitamin C", "H2O mineral water", "4x100 g",
+    // Other scripts
+    "Φέτα ΠΟΠ", "חלב 3% תנובה", "حليب طازج كامل الدسم", "अमूल दूध", "可口可乐 Zero", "明治おいしい牛乳", "서울우유 1L",
+    "ხაჭაპური", "Մածուն 3,2%", "Nước mắm Phú Quốc", "Süt İçim 1 L", "𠮷野家 牛丼"
 )
 
 /**
@@ -65,14 +71,18 @@ internal val ADVERSARIAL_NAMES: List<Pair<String, String?>> = listOf(
     "Brea\u00ADd" to "Bread",
     "\uFEFFEggs" to "Eggs",
     "cre\u200Dme\u0300" to "crem\u00E8", // the accent comes back to its letter
-    // Other scripts and digits become spaces.
-    "Φέτα" to null,
-    "Feta Φέτα" to "Feta",
-    "寿司 rice" to "rice",
-    "حليب" to null,
-    "חלב milk" to "milk",
-    "٣ eggs" to "eggs",
-    "eggs ३" to "eggs",
+    // Every script and its digits are kept; emoji and symbols become spaces.
+    "Φέτα" to "Φέτα",
+    "Feta Φέτα" to "Feta Φέτα",
+    "寿司 rice" to "寿司 rice",
+    "حليب" to "حليب",
+    "חלב milk" to "חלב milk",
+    "٣ eggs" to "٣ eggs",
+    "eggs ३" to "eggs ३",
+    "حليب كامل الدسم ٣٪" to "حليب كامل الدسم ٣%",
+    "\u202Eחלב\u202C" to "חלב",
+    "牛奶🥛" to "牛奶",
+    "コカ・コーラ" to "コカ コーラ",
     "🍞 Bread" to "Bread",
     "Bread 🇳🇴" to "Bread",
     "Ser \uD835\uDC00" to "Ser A", // mathematical bold A, folded by NFKC
@@ -81,9 +91,15 @@ internal val ADVERSARIAL_NAMES: List<Pair<String, String?>> = listOf(
     "Pаsta" to "Pasta",
     "Мoлоко" to "Молоко",
     "Пasta" to null, // П has no Latin look-alike, s no Cyrillic one: the word is dropped
-    // Zalgo: one mark per letter.
+    "Mιlk" to "Milk", // Greek iota
+    "Γaλα" to "Γαλα", // Latin a in a Greek word
+    "Mοлоко" to "Молоко", // all three scripts
+    // Zalgo: one mark per Latin, Cyrillic or Greek letter, up to four on others, no repeats.
     "pas\u0301\u0301\u0301ta" to "pa\u015B\u0301ta", // NFKC composes one, one more is allowed
     "\u0301Bread" to "Bread",
+    "น้้้้ำ" to "น้\u0E4D\u0E32", // NFKC splits SARA AM, as on the server
+    "ب\u064E\u0650\u064F\u0651" to null, // marks are 80% of the name
+    "חָלָב" to "חָלָב",
     // Punctuation only where the server allows it.
     "Pasta, rice" to "Pasta rice",
     "Pasta." to "Pasta",
@@ -141,11 +157,12 @@ class RecipeWireNameTest {
         assertEquals("Ben & Jerry's", cleanAllergenName("Ben & Jerry's"))
         assertEquals("tree nuts", cleanAllergenName("tree nuts!"), "punctuation may go")
         assertEquals("Milk", cleanAllergenName("Мilk"), "a look-alike folded keeps every letter")
-        assertNull(cleanAllergenName("φιστίκια"))
-        assertNull(cleanAllergenName("peanut 花生"), "a word dropped")
+        assertEquals("φιστίκια", cleanAllergenName("φιστίκια"), "any script")
+        assertEquals("peanut 花生", cleanAllergenName("peanut 花生"))
+        assertNull(cleanAllergenName("peanut Жq"), "a word dropped")
         assertNull(cleanAllergenName("Schalenfruchtunverträglichkeit"), "a part over 28 characters")
         assertNull(cleanAllergenName("one two three four five six seven eight nine"), "past 8 words")
-        assertNull(cleanAllergenName("٣ eggs"), "a non-ASCII digit")
+        assertEquals("٣ eggs", cleanAllergenName("٣ eggs"), "a digit of another script")
     }
 
     @Test
@@ -158,6 +175,9 @@ class RecipeWireNameTest {
         )
         assertEquals("Ma", cleanWireName("M\u0430"), "a tie between the scripts folds to Latin")
         assertEquals("Milk", cleanWireName("Mi\u034Flk"), "the combining grapheme joiner is invisible, as on the server")
+        val han = "老干妈风味豆豉油制辣椒".repeat(4)
+        assertEquals(han.take(40), cleanWireName(han), "an unbroken Chinese run has no part limit, only the 40")
+        assertEquals("𠮷野".repeat(15), cleanWireName("𠮷野".repeat(15)), "40 code points, not UTF-16 units: 30 code points are 45 units")
     }
 
     @Test

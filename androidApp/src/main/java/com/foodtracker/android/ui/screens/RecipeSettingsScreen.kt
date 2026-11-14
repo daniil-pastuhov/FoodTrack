@@ -164,7 +164,7 @@ private fun SettingsDescription(text: String) {
 /** The allergens from app Settings, which every recipe and prompt leaves out. */
 @Composable
 private fun AllergenNote(allergens: List<String>) {
-    val list = allergens.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: stringResource(R.string.recipe_allergens_none)
+    val list = allergens.takeIf { it.isNotEmpty() }?.let(::isolatedList) ?: stringResource(R.string.recipe_allergens_none)
     Row(
         modifier = Modifier
             .fillMaxWidth()

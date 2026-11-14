@@ -871,13 +871,28 @@ class RecipePaidTest {
     }
 
     @Test
-    fun aLimitTheServerSetsSaysTryLater() = runUnconfined {
+    fun thePerMinuteLimitSaysTooManyInAShortTime() = runUnconfined {
         withBalance(5)
         val holder = holder()
         backend.generateReplies += ServerResult.Err(ServerError.RATE_LIMITED)
         holder.generateOnServer()
-        assertEquals(RecipeEvent.ServerFailedLater, holder.uiState.value.event)
+        assertEquals(RecipeEvent.ServerRateLimited, holder.uiState.value.event)
+        assertEquals(5, holder.uiState.value.paid.balance, "nothing taken")
         assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun anotherRecipeStillBeingWrittenForTheWholeWaitSaysSo() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        repeat(100) { backend.generateReplies += ServerResult.Err(ServerError.BUSY) }
+        holder.generateOnServer()
+
+        val state = holder.uiState.value
+        assertEquals(RecipeEvent.ServerBusy, state.event)
+        assertEquals(5, state.paid.balance, "nothing taken")
+        assertNull(state.paid.writing)
+        assertNull(paidRepository.get().pendingGeneration, "refused as it was started: not kept")
     }
 
     @Test
@@ -1617,10 +1632,25 @@ class RecipePaidTest {
     }
 
     @Test
-    fun wireNamesDropOtherScriptsAndFoldFractions() {
-        assertNull(cleanWireName("किवी"), "Devanagari isn't one of the server's scripts")
+    fun wireNamesKeepEveryScriptAndFoldFractions() {
+        assertEquals("किवी", cleanWireName("किवी"), "every script is sent as written")
         assertEquals("1/2 lemon", cleanWireName("½ lemon"))
         assertNull(cleanWireName("🍋"))
+    }
+
+    @Test
+    fun itemsAndAllergensInOtherScriptsAreSentAsWritten() = runUnconfined {
+        withBalance(5)
+        pantry.value = pantry.value.copy(
+            allRows = listOf(row("feta", -1, "Φέτα ΠΟΠ"), row("tofu", 0, "豆腐"), row("milk", 1, "חלב 3%")),
+            settings = AppSettings(allergens = setOf("φιστίκια", "花生"))
+        )
+        val holder = holder()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+
+        assertEquals(listOf("Φέτα ΠΟΠ", "豆腐", "חלב 3%"), backend.generated.single().ingredients.map { it.name })
+        assertEquals(setOf("φιστίκια", "花生"), backend.generated.single().allergens.toSet())
     }
 
     // --- Refused names -------------------------------------------------------------------------
@@ -1779,9 +1809,36 @@ class RecipePaidTest {
     }
 
     @Test
+    fun moreAllergensThanTheServerTakesStopTheRequestRatherThanDropAny() = runUnconfined {
+        withBalance(5)
+        val many = (1..MAX_REQUEST_ALLERGENS + 1).map { "allergen $it" }.toSet()
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = many))
+        val holder = holder()
+        holder.generateOnServer()
+
+        assertTrue(backend.generated.isEmpty(), "never sent with one left out")
+        assertEquals(RecipeEvent.TooManyAllergens(MAX_REQUEST_ALLERGENS + 1, MAX_REQUEST_ALLERGENS), holder.uiState.value.event)
+        assertNull(holder.uiState.value.paid.writing)
+        assertEquals(5, holder.uiState.value.paid.balance)
+        assertNull(paidRepository.get().pendingGeneration)
+    }
+
+    @Test
+    fun exactlyAsManyAllergensAsTheServerTakesAreAllSent() = runUnconfined {
+        withBalance(5)
+        val many = (1..MAX_REQUEST_ALLERGENS).map { "allergen $it" }.toSet()
+        pantry.value = pantry.value.copy(settings = AppSettings(allergens = many))
+        val holder = holder()
+        holder.generateOnServer()
+
+        assertEquals(1, backend.generated.size)
+        assertEquals(many, backend.generated[0].allergens.toSet())
+    }
+
+    @Test
     fun anAllergenCleaningWouldDropOrShortenIsNeverSentWithout() = runUnconfined {
         withBalance(5)
-        for (allergen in listOf("φιστίκια", "Schalenfruchtunverträglichkeit", "peanut 花生")) {
+        for (allergen in listOf("Schalenfruchtunverträglichkeit", "Жq", "one two three four five six seven eight nine")) {
             pantry.value = pantry.value.copy(settings = AppSettings(allergens = setOf("milk", allergen)))
             val holder = holder()
             holder.generateOnServer()

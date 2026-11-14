@@ -244,7 +244,9 @@ export interface FoldedText {
 }
 
 export function foldText(s: string): FoldedText {
-  const flat = fold(s).replace(/[\u2019\u02BC\u2018`]/g, "'").replace(/[^\p{L}\p{N}']+/gu, " ").trim();
+  // Marks stay part of a word: fold() drops the non-spacing ones, but Indic vowel signs are
+  // spacing marks, and splitting a word at them would break matching in those scripts.
+  const flat = fold(s).replace(/[\u2019\u02BC\u2018`]/g, "'").replace(/[^\p{L}\p{M}\p{N}']+/gu, " ").trim();
   return { words: flat.length ? flat.split(" ") : [], flat: ` ${flat} ` };
 }
 
