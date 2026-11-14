@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.res.Resources
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +30,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
@@ -518,15 +516,16 @@ private fun FilterButton(active: Boolean, onClick: () -> Unit) {
     }
 }
 
-/** Chips with nothing to show hide, except All and whichever is on, so a filter can be turned off. */
+/**
+ * Chips with nothing to show hide, except All and whichever is on, so a filter can be turned off.
+ * There are four at most, so where they don't fit on one line (narrow windows, large text) they
+ * wrap rather than scroll, as on iOS, where a scrolling row was cut off hard at the content edge.
+ */
 @Composable
 private fun StatusChips(state: PantryUiState, onSelect: (StatusFilter) -> Unit) {
     val selected = state.selectedStatusFilter
-    Row(
-        modifier = Modifier
-            .fullBleed(LarderSpace.s4)
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = LarderSpace.s4),
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2)
     ) {
         StatusChip(stringResource(R.string.tab_all), state.items.size, selected == StatusFilter.ALL) {

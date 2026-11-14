@@ -565,6 +565,11 @@
 "reminders_not_asked_message" = "Slå dem på, så minner vi deg på det dagen før en dato.";
 
 /* Recipe tab */
+/* What this device is called where a recipe string says {device}, and {the_device} in its definite form ("denne iPaden"). */
+"recipe_device_iphone" = "iPhone";
+"recipe_device_ipad" = "iPad";
+"recipe_the_device_iphone" = "iPhonen";
+"recipe_the_device_ipad" = "iPaden";
 "recipe_tab" = "Oppskrift";
 "recipe_lede" = "Hva skal vi lage";
 "recipe_saved_button" = "Lagrede oppskrifter";
@@ -588,19 +593,19 @@
 "recipe_detail_summary_step_by_step" = "Steg for steg";
 "recipe_meal_summary_any" = "Alle måltider";
 "recipe_diet_summary_none" = "Ingen diett";
-"recipe_generate_on_phone" = "Lag på denne telefonen";
+"recipe_generate_on_phone" = "Lag på denne {the_device}";
 "recipe_cost_free" = "Gratis";
 "recipe_share_prompt" = "Del ledeteksten";
 "recipe_copy_prompt" = "Kopier ledeteksten";
 "recipe_prompt_only_hint" = "Gratis: send ledeteksten til en KI-app du allerede bruker.";
 "recipe_none_selected_hint" = "Kryss av minst én vare å lage mat med.";
 "recipe_prompt_copied" = "Ledeteksten er kopiert";
-"recipe_writing_on_phone_title" = "Skriver på denne telefonen";
+"recipe_writing_on_phone_title" = "Skriver på denne {the_device}";
 "recipe_writing_on_phone_message" = "Ingenting sendes noe sted. Dette kan ta et minutt.";
 "recipe_stop" = "Stopp";
-"recipe_preparing_title" = "Telefonen gjør seg klar";
+"recipe_preparing_title" = "{the_device} gjør seg klar";
 "recipe_preparing_message" = "Den egne modellen lastes fortsatt ned. Til da kan du dele ledeteksten.";
-"recipe_failed_on_device" = "Klarte ikke å lage oppskriften på denne telefonen.";
+"recipe_failed_on_device" = "Klarte ikke å lage oppskriften på denne {the_device}.";
 "recipe_refused_on_device" = "Kunne ikke lage en oppskrift av disse varene.";
 "recipe_empty_title" = "Ingenting å lage mat med ennå";
 "recipe_empty_message" = "Legg til det du har hjemme, så velges varene som er nærmest datoen for deg.";
@@ -610,14 +615,14 @@
 "recipe_tip_title" = "Tips";
 "recipe_in_your_pantry" = "I matskapet";
 "recipe_share_recipe" = "Del oppskriften";
-"recipe_source_device" = "Laget på denne telefonen · Ingenting ble sendt";
-"recipe_source_server" = "Laget av serveren vår · Lagret på denne telefonen";
+"recipe_source_device" = "Laget på denne {the_device} · Ingenting ble sendt";
+"recipe_source_server" = "Laget av serveren vår · Lagret på denne {the_device}";
 "recipe_saved_empty_title" = "Ingen oppskrifter ennå";
 "recipe_saved_empty_message" = "Oppskrifter og menyer laget i appen lagres her.";
 "recipe_saved_deleted" = "Oppskriften er slettet";
 "recipe_saved_today" = "I dag";
 "recipe_saved_yesterday" = "I går";
-"recipe_saved_from_phone" = "Laget på denne telefonen";
+"recipe_saved_from_phone" = "Laget på denne {the_device}";
 "recipe_saved_from_pack" = "Fra pakken din";
 "recipe_settings_cooking" = "Matlaging";
 "recipe_settings_cooking_desc" = "Brukes for hver oppskrift, ledetekst og meny til du endrer dem.";
@@ -700,8 +705,8 @@
 "recipe_store_error_message" = "Sjekk tilkoblingen og prøv igjen. Ingenting ble belastet.";
 "recipe_choice_title" = "Hvor skal oppskriftene dine ligge?";
 "recipe_choice_message" = "Du velger én gang. Du kan logge inn senere fra Oppskriftsinnstillinger.";
-"recipe_choice_phone_title" = "På denne telefonen, uten konto";
-"recipe_choice_phone_message" = "Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter telefon, går de du ikke har brukt tapt.";
+"recipe_choice_phone_title" = "På denne {the_device}, uten konto";
+"recipe_choice_phone_message" = "Ingenting å logge inn på. Oppskriftene hører til denne installasjonen av appen: sletter du appen eller bytter {device}, går de du ikke har brukt tapt.";
 "recipe_choice_account_title" = "I en konto";
 "recipe_choice_account_message" = "Logg inn med Apple eller Google. Oppskriftene følger deg til en ny telefon. På en Android-telefon virker bare innlogging med Google, så velg Google, eller legg det til senere, for å bruke dem der også. Vi lagrer konto-ID-en og e-postadressen din.";
 "recipe_choice_account_message_apple" = "Logg inn med Apple. Oppskriftene følger deg til en ny iPhone. Vi lagrer konto-ID-en og e-postadressen din.";
@@ -709,7 +714,7 @@
 "recipe_rejected_message" = "Butikken melder at det er refundert eller allerede brukt. Hvis du ble belastet og ikke har fått oppskrifter, kontakt butikken for refusjon.";
 "recipe_rejected_build_message" = "Denne kopien av appen er satt opp for en annen butikk, så den kan ikke legge til kjøp fra App Store. Kjøpet ble ikke lagt til oppskriftene dine. Du kan be Apple om refusjon på reportaproblem.apple.com. For å kjøpe oppskrifter, installer appen fra App Store.";
 "recipe_your_recipes" = "Oppskriftene dine";
-"recipe_on_phone_message" = "De hører til denne installasjonen av appen. Sletter du appen eller bytter telefon, går de du ikke har brukt tapt. Logg inn for å ha dem i en konto i stedet; de flyttes over med en gang.";
+"recipe_on_phone_message" = "De hører til denne installasjonen av appen. Sletter du appen eller bytter {device}, går de du ikke har brukt tapt. Logg inn for å ha dem i en konto i stedet; de flyttes over med en gang.";
 "recipe_have_account_hint" = "Har du allerede oppskrifter i en konto? Logg inn for å bruke dem her.";
 "recipe_signed_in_apple" = "Logget inn med Apple";
 "recipe_signed_in_google" = "Logget inn med Google";
@@ -722,8 +727,8 @@
 "recipe_delete_account" = "Slett konto";
 "recipe_sign_out_title" = "Logge ut?";
 "recipe_delete_title" = "Slette kontoen din?";
-"recipe_merge_title" = "Legge oppskriftene på denne telefonen til kontoen din?";
-"recipe_merge_message" = "Kontoen din har allerede %1$d oppskrifter. De %2$d på denne telefonen legges til, så det blir %3$d. Dette kan ikke angres.";
+"recipe_merge_title" = "Legge oppskriftene på denne {the_device} til kontoen din?";
+"recipe_merge_message" = "Kontoen din har allerede %1$d oppskrifter. De %2$d på denne {the_device} legges til, så det blir %3$d. Dette kan ikke angres.";
 "recipe_merge_confirm" = "Legg til og logg inn";
 "recipe_sign_in_failed" = "Kunne ikke logge inn. Oppskriftene dine er uendret.";
 "recipe_provider_in_use" = "Den innloggingen hører allerede til en annen konto. Oppskriftene dine er uendret.";

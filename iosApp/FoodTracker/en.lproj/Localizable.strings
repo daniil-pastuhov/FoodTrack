@@ -565,6 +565,11 @@
 "reminders_not_asked_message" = "Turn them on and we'll remind you the day before a date.";
 
 /* Recipe tab */
+/* What this device is called where a recipe string says {device}, and {the_device} in its definite form (only nb inflects it). */
+"recipe_device_iphone" = "iPhone";
+"recipe_device_ipad" = "iPad";
+"recipe_the_device_iphone" = "iPhone";
+"recipe_the_device_ipad" = "iPad";
 "recipe_tab" = "Recipe";
 "recipe_lede" = "What to cook";
 "recipe_saved_button" = "Saved recipes";
@@ -588,19 +593,19 @@
 "recipe_detail_summary_step_by_step" = "Step by step";
 "recipe_meal_summary_any" = "Any meal";
 "recipe_diet_summary_none" = "No diet";
-"recipe_generate_on_phone" = "Generate on this phone";
+"recipe_generate_on_phone" = "Generate on this {device}";
 "recipe_cost_free" = "Free";
 "recipe_share_prompt" = "Share prompt";
 "recipe_copy_prompt" = "Copy prompt";
 "recipe_prompt_only_hint" = "Free: send the prompt to an AI app you already use.";
 "recipe_none_selected_hint" = "Tick at least one item to cook with.";
 "recipe_prompt_copied" = "Prompt copied";
-"recipe_writing_on_phone_title" = "Writing on this phone";
+"recipe_writing_on_phone_title" = "Writing on this {device}";
 "recipe_writing_on_phone_message" = "Nothing is sent anywhere. This can take a minute.";
 "recipe_stop" = "Stop";
-"recipe_preparing_title" = "Your phone is getting ready";
+"recipe_preparing_title" = "Your {device} is getting ready";
 "recipe_preparing_message" = "Its own model is still downloading. Until then, share the prompt.";
-"recipe_failed_on_device" = "Couldn't write the recipe on this phone.";
+"recipe_failed_on_device" = "Couldn't write the recipe on this {device}.";
 "recipe_refused_on_device" = "Couldn't make a recipe from these items.";
 "recipe_empty_title" = "Nothing to cook with yet";
 "recipe_empty_message" = "Add what you have at home and the items closest to their date will be picked for you.";
@@ -610,14 +615,14 @@
 "recipe_tip_title" = "Tip";
 "recipe_in_your_pantry" = "In your pantry";
 "recipe_share_recipe" = "Share recipe";
-"recipe_source_device" = "Written on this phone · Nothing was sent anywhere";
-"recipe_source_server" = "Written by our server · Saved on this phone";
+"recipe_source_device" = "Written on this {device} · Nothing was sent anywhere";
+"recipe_source_server" = "Written by our server · Saved on this {device}";
 "recipe_saved_empty_title" = "No recipes yet";
 "recipe_saved_empty_message" = "Recipes and menus written in the app are kept here.";
 "recipe_saved_deleted" = "Recipe deleted";
 "recipe_saved_today" = "Today";
 "recipe_saved_yesterday" = "Yesterday";
-"recipe_saved_from_phone" = "Written on this phone";
+"recipe_saved_from_phone" = "Written on this {device}";
 "recipe_saved_from_pack" = "From your pack";
 "recipe_settings_cooking" = "Cooking";
 "recipe_settings_cooking_desc" = "Used for every recipe, prompt and menu until you change them.";
@@ -700,8 +705,8 @@
 "recipe_store_error_message" = "Check your connection and try again. Nothing was charged.";
 "recipe_choice_title" = "Where should your recipes live?";
 "recipe_choice_message" = "Choose once. You can sign in later from Recipe settings.";
-"recipe_choice_phone_title" = "On this phone, no account";
-"recipe_choice_phone_message" = "Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change phone, the ones you haven't used are lost.";
+"recipe_choice_phone_title" = "On this {device}, no account";
+"recipe_choice_phone_message" = "Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or move to a new {device}, the ones you haven't used are lost.";
 "recipe_choice_account_title" = "In an account";
 "recipe_choice_account_message" = "Sign in with Apple or Google. Your recipes follow you to a new phone. On an Android phone only Google sign-in works, so choose Google, or add it later, to use them there too. We keep your account ID and email address.";
 "recipe_choice_account_message_apple" = "Sign in with Apple. Your recipes follow you to a new iPhone. We keep your account ID and email address.";
@@ -709,7 +714,7 @@
 "recipe_rejected_message" = "The store reports it as refunded or already used. If you were charged and have no recipes, contact the store for a refund.";
 "recipe_rejected_build_message" = "This copy of the app is set up for a different store, so it can't add App Store purchases. The purchase was not added to your recipes. You can ask Apple for a refund at reportaproblem.apple.com. To buy recipes, install the app from the App Store.";
 "recipe_your_recipes" = "Your recipes";
-"recipe_on_phone_message" = "They stay with this install of the app. If you delete the app or change phone, the ones you haven't used are lost. Sign in to keep them in an account instead; they move over at once.";
+"recipe_on_phone_message" = "They stay with this install of the app. If you delete the app or move to a new {device}, the ones you haven't used are lost. Sign in to keep them in an account instead; they move over at once.";
 "recipe_have_account_hint" = "Already have recipes in an account? Sign in to use them here.";
 "recipe_signed_in_apple" = "Signed in with Apple";
 "recipe_signed_in_google" = "Signed in with Google";
@@ -722,8 +727,8 @@
 "recipe_delete_account" = "Delete account";
 "recipe_sign_out_title" = "Sign out?";
 "recipe_delete_title" = "Delete your account?";
-"recipe_merge_title" = "Add this phone's recipes to your account?";
-"recipe_merge_message" = "Your account already has %1$d recipes. The %2$d on this phone will be added to it, making %3$d. This can't be undone.";
+"recipe_merge_title" = "Add this {device}'s recipes to your account?";
+"recipe_merge_message" = "Your account already has %1$d recipes. The %2$d on this {device} will be added to it, making %3$d. This can't be undone.";
 "recipe_merge_confirm" = "Add and sign in";
 "recipe_sign_in_failed" = "Couldn't sign in. Your recipes are unchanged.";
 "recipe_provider_in_use" = "That sign-in already belongs to another account. Your recipes are unchanged.";

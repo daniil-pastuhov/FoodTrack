@@ -653,9 +653,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</string>
+            <string>%d oppskrift på denne {the_device} ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge den til.</string>
             <key>other</key>
-            <string>%d oppskrifter på denne telefonen ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</string>
+            <string>%d oppskrifter på denne {the_device} ble kjøpt med en annen konto. Logg inn på kontoen du kjøpte med for å legge dem til.</string>
         </dict>
     </dict>
     <key>recipe_menu_short_message</key>
@@ -749,9 +749,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>oppskrift på denne telefonen</string>
+            <string>oppskrift på denne {the_device}</string>
             <key>other</key>
-            <string>oppskrifter på denne telefonen</string>
+            <string>oppskrifter på denne {the_device}</string>
         </dict>
     </dict>
     <key>recipe_in_account_label</key>
@@ -781,9 +781,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne telefonen.</string>
+            <string>Den %d oppskriften din blir liggende i kontoen. Logg inn igjen for å bruke den. Lagrede oppskrifter blir på denne {the_device}.</string>
             <key>other</key>
-            <string>De %d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne telefonen.</string>
+            <string>De %d oppskriftene dine blir liggende i kontoen. Logg inn igjen for å bruke dem. Lagrede oppskrifter blir på denne {the_device}.</string>
         </dict>
     </dict>
     <key>recipe_delete_message</key>
@@ -797,9 +797,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</string>
+            <string>Den %d ubrukte oppskriften din går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
             <key>other</key>
-            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne telefonen.</string>
+            <string>De %d ubrukte oppskriftene dine går tapt og kan ikke refunderes eller gjenopprettes. Påloggingen og e-postadressen din slettes fra serveren vår; en oversikt over kjøpene blir liggende, uten kobling til deg. Lagrede oppskrifter og matlageret blir på denne {the_device}.</string>
         </dict>
     </dict>
     <key>recipe_server_refused</key>
@@ -893,9 +893,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>%d oppskrift flyttet fra denne telefonen til kontoen din</string>
+            <string>%d oppskrift flyttet fra denne {the_device} til kontoen din</string>
             <key>other</key>
-            <string>%d oppskrifter flyttet fra denne telefonen til kontoen din</string>
+            <string>%d oppskrifter flyttet fra denne {the_device} til kontoen din</string>
         </dict>
     </dict>
     <key>recipe_merged_debt</key>
@@ -909,9 +909,9 @@
             <key>NSStringFormatValueTypeKey</key>
             <string>d</string>
             <key>one</key>
-            <string>Denne telefonen skyldte %d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</string>
+            <string>Denne {the_device} skyldte %d oppskrift etter en refusjon i butikken. Den ble trukket fra kontoen din.</string>
             <key>other</key>
-            <string>Denne telefonen skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
+            <string>Denne {the_device} skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
         </dict>
     </dict>
 </dict>

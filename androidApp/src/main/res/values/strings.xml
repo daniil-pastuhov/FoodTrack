@@ -756,16 +756,16 @@
     <string name="recipe_copy_prompt">Copy prompt</string>
     <string name="recipe_prompt_copied">Prompt copied</string>
     <string name="recipe_prompt_clip_label">Recipe prompt</string>
-    <string name="recipe_generate_on_phone">Generate on this phone</string>
+    <string name="recipe_generate_on_phone">Generate on this device</string>
     <string name="recipe_cost_free">Free</string>
     <string name="recipe_prompt_hint">Free: send the prompt to an AI app you already use.</string>
     <string name="recipe_tick_hint">Tick at least one item to cook with.</string>
-    <string name="recipe_writing_phone_title">Writing on this phone</string>
+    <string name="recipe_writing_phone_title">Writing on this device</string>
     <string name="recipe_writing_phone_body">Nothing is sent anywhere. This can take a minute.</string>
     <string name="recipe_stop">Stop</string>
-    <string name="recipe_failed_phone">Couldn\'t write the recipe on this phone.</string>
+    <string name="recipe_failed_phone">Couldn\'t write the recipe on this device.</string>
     <string name="recipe_try_again">Try again</string>
-    <string name="recipe_preparing_title">Your phone is getting ready</string>
+    <string name="recipe_preparing_title">Your device is getting ready</string>
     <string name="recipe_preparing_body">Its own model is still downloading. Until then, share the prompt.</string>
     <string name="recipe_empty_title">Nothing to cook with yet</string>
     <string name="recipe_empty_body">Add what you have at home and the items closest to their date will be picked for you.</string>
@@ -778,12 +778,12 @@
     <string name="recipe_method">Method</string>
     <string name="recipe_in_pantry">In your pantry</string>
     <string name="recipe_tip">Tip</string>
-    <string name="recipe_source_phone">Written on this phone · Nothing was sent anywhere</string>
-    <string name="recipe_source_server">Written by our server · Saved on this phone</string>
+    <string name="recipe_source_phone">Written on this device · Nothing was sent anywhere</string>
+    <string name="recipe_source_server">Written by our server · Saved on this device</string>
     <string name="recipe_not_found">This recipe is no longer saved.</string>
     <string name="recipe_saved_today">Today</string>
     <string name="recipe_saved_yesterday">Yesterday</string>
-    <string name="recipe_saved_from_phone">Written on this phone</string>
+    <string name="recipe_saved_from_phone">Written on this device</string>
     <string name="recipe_saved_from_pack">From your pack</string>
     <string name="recipe_saved_empty_title">No recipes yet</string>
     <string name="recipe_saved_empty_body">Recipes and menus written in the app are kept here.</string>
@@ -929,12 +929,12 @@
     <string name="recipe_ok">OK</string>
     <string name="recipe_choice_title">Where should your recipes live?</string>
     <string name="recipe_choice_body">Choose once. You can sign in later from Recipe settings.</string>
-    <string name="recipe_choice_phone_title">On this phone, no account</string>
-    <string name="recipe_choice_phone_body">Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change phone, the ones you haven\'t used are lost.</string>
+    <string name="recipe_choice_phone_title">On this device, no account</string>
+    <string name="recipe_choice_phone_body">Nothing to sign in to. The recipes stay with this install of the app: if you delete the app or change device, the ones you haven\'t used are lost.</string>
     <string name="recipe_choice_account_title">In an account</string>
     <string name="recipe_choice_account_body">Sign in with Google. Your recipes follow you to a new phone, Android or iPhone, wherever you sign in with Google. We keep your account ID and email address.</string>
     <string name="recipe_sign_in_google">Sign in with Google</string>
-    <string name="recipe_apple_on_iphone_hint">Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this phone.</string>
+    <string name="recipe_apple_on_iphone_hint">Signed in with Apple on an iPhone? Add Google sign-in there, in Recipe settings, to use your recipes on this device.</string>
     <string name="recipe_have_account_hint">Already have recipes in an account? Sign in to use them here.</string>
     <string name="recipe_store_error_title">Can\'t reach the store</string>
     <string name="recipe_store_error_body">Check your connection and try again. Nothing was charged.</string>
@@ -942,10 +942,10 @@
     <string name="recipe_rejected_body">The store reports it as refunded or already used. If you were charged and have no recipes, contact the store for a refund.</string>
     <string name="recipe_your_recipes">Your recipes</string>
     <plurals name="recipe_on_phone_label">
-        <item quantity="one">recipe on this phone</item>
-        <item quantity="other">recipes on this phone</item>
+        <item quantity="one">recipe on this device</item>
+        <item quantity="other">recipes on this device</item>
     </plurals>
-    <string name="recipe_on_phone_body">They stay with this install of the app. If you delete the app or change phone, the ones you haven\'t used are lost. Sign in to keep them in an account instead; they move over at once.</string>
+    <string name="recipe_on_phone_body">They stay with this install of the app. If you delete the app or change device, the ones you haven\'t used are lost. Sign in to keep them in an account instead; they move over at once.</string>
     <plurals name="recipe_in_account_label">
         <item quantity="one">recipe in your account</item>
         <item quantity="other">recipes in your account</item>
@@ -959,18 +959,18 @@
     <string name="recipe_delete_account">Delete account</string>
     <string name="recipe_sign_out_title">Sign out?</string>
     <plurals name="recipe_sign_out_body">
-        <item quantity="one">Your %1$d recipe stays in your account. Sign in again to use it. Saved recipes stay on this phone.</item>
-        <item quantity="other">Your %1$d recipes stay in your account. Sign in again to use them. Saved recipes stay on this phone.</item>
+        <item quantity="one">Your %1$d recipe stays in your account. Sign in again to use it. Saved recipes stay on this device.</item>
+        <item quantity="other">Your %1$d recipes stay in your account. Sign in again to use them. Saved recipes stay on this device.</item>
     </plurals>
     <string name="recipe_delete_title">Delete your account?</string>
     <string name="recipe_delete_apple_note">This account is also linked to your Apple Account. Deleting it here removes the account and its recipes, but not that link. To remove the link too, delete the account in the iPhone app instead, or turn off Sign in with Apple for this app in your Apple Account settings.</string>
     <plurals name="recipe_delete_body">
-        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</item>
-        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this phone.</item>
+        <item quantity="one">Your %1$d unused recipe will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
+        <item quantity="other">Your %1$d unused recipes will be lost and can\'t be refunded or restored. Your sign-in and email address are deleted from our server; a record of the purchases stays, no longer linked to you. Saved recipes and your pantry stay on this device.</item>
     </plurals>
-    <string name="recipe_merge_title">Add this phone\'s recipes to your account?</string>
-    <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this phone will be added to it, making %3$d. This can\'t be undone.</string>
-    <string name="recipe_merge_body_unknown">The %1$d recipes on this phone will be added to your account. This can\'t be undone.</string>
+    <string name="recipe_merge_title">Add this device\'s recipes to your account?</string>
+    <string name="recipe_merge_body">Your account already has %1$d recipes. The %2$d on this device will be added to it, making %3$d. This can\'t be undone.</string>
+    <string name="recipe_merge_body_unknown">The %1$d recipes on this device will be added to your account. This can\'t be undone.</string>
     <string name="recipe_merge_confirm">Add and sign in</string>
     <string name="recipe_sign_in_failed">Couldn\'t sign in. Your recipes are unchanged.</string>
     <string name="recipe_sign_in_in_use">That sign-in already belongs to another account. Your recipes are unchanged.</string>
@@ -984,17 +984,17 @@
     <string name="recipe_busy_body">Your request is kept and may still be written. Try again in a minute to fetch it. The free routes below still work.</string>
     <string name="recipe_elsewhere_title">A purchase belongs to another account</string>
     <plurals name="recipe_elsewhere_body">
-        <item quantity="one">%1$d recipe on this phone was bought with another account. Sign in to the account you bought it with to add it.</item>
-        <item quantity="other">%1$d recipes on this phone were bought with another account. Sign in to the account you bought them with to add them.</item>
+        <item quantity="one">%1$d recipe on this device was bought with another account. Sign in to the account you bought it with to add it.</item>
+        <item quantity="other">%1$d recipes on this device were bought with another account. Sign in to the account you bought them with to add them.</item>
     </plurals>
     <string name="recipe_rejected_build_body">This copy of the app is set up for a different store, so it can\'t add Google Play purchases. The purchase was not added to your recipes. Google Play normally refunds a purchase that isn\'t added within three days. To buy recipes, install the app from Google Play.</string>
     <plurals name="recipe_merged_moved">
-        <item quantity="one">%1$d recipe moved from this phone to your account</item>
-        <item quantity="other">%1$d recipes moved from this phone to your account</item>
+        <item quantity="one">%1$d recipe moved from this device to your account</item>
+        <item quantity="other">%1$d recipes moved from this device to your account</item>
     </plurals>
     <plurals name="recipe_merged_debt">
-        <item quantity="one">This phone owed %1$d recipe after a store refund. It was taken from your account.</item>
-        <item quantity="other">This phone owed %1$d recipes after a store refund. They were taken from your account.</item>
+        <item quantity="one">This device owed %1$d recipe after a store refund. It was taken from your account.</item>
+        <item quantity="other">This device owed %1$d recipes after a store refund. They were taken from your account.</item>
     </plurals>
     <string name="recipe_earlier_recipe_saved">A recipe you asked for earlier is ready. It\'s in Saved recipes.</string>
     <string name="recipe_earlier_menu_saved">A menu you asked for earlier is ready. It\'s in Saved recipes.</string>
