@@ -3,7 +3,7 @@
 Everything App Store Connect asks for, ready to paste. One folder per listing language:
 `en-GB/` (English, U.K.), `ru/` (Russian), `no/` (Norwegian). Each folder has `name.txt`,
 `subtitle.txt`, `promotional_text.txt`, `keywords.txt`, `description.txt` and these
-screenshot sets, four each, in App Store Connect's media sections of the same name:
+screenshot sets, six each, in App Store Connect's media sections of the same name:
 
 | Folder | Size | App Store Connect display |
 |---|---|---|
@@ -16,12 +16,18 @@ screenshot sets, four each, in App Store Connect's media sections of the same na
 iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product page, and from
 April 2027 they are required for apps built with the iOS 27.1 SDK.
 
-Retake them after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
-(`scripts/demo_backup.py`) in every language, then `scripts/frame_screenshots.py <raw-dir>
+Every set tells the same story, Google Play's too: 1 Home, 2 a scan that has read a product and
+its printed date, 3 a written recipe, 4 a three-day menu, 5 the shopping list, 6 Settings with the
+reminders. Retake them after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo
+pantry (`scripts/demo_backup.py`) in every language, then `scripts/frame_screenshots.py <raw-dir>
 <folder>` adds the captions and device frame in Larder's colours (the captions live in that
 script). The Google Play set is made the same way: `ANDROID_SERIAL=<emulator>
 scripts/android_screenshots.sh <raw-dir>`, then `scripts/frame_screenshots.py <raw-dir>
-phone-screenshots`. On a slow machine, `SETTLE=<seconds>` waits longer before each capture. Pick the simulator with `DEVICE_NAME`:
+phone-screenshots`. The scan shows a picture `scripts/demo_scan_image.py` draws (a made-up carton,
+no real product, brand or photograph) in place of the camera, and the recipe and the menu come
+from `scripts/demo_recipes.py`; the debug-only demo routes that show them are described in those
+scripts. On a slow machine, `SETTLE=<seconds>` waits longer before each capture. Pick the
+simulator with `DEVICE_NAME`:
 
 - `screenshots/`: the default, iPhone 17 Pro Max.
 - `medium-screenshots/`: `DEVICE_NAME="iPhone 17 Pro"`. Not an iOS 27.0 simulator: there the app
@@ -38,8 +44,8 @@ search results show the screenshots.
 
 | File | Size | Placement |
 |---|---|---|
-| `header.png` | 3840×1646 (21:9) | Product page header: three phones, no text |
-| `search-result.png` | 3840×2560 (3:2) | Search results: a headline and the home screen |
+| `header.png` | 3840×1646 (21:9) | Product page header: three phones (scan, Home, recipe), no text |
+| `search-result.png` | 3840×2560 (3:2) | Search results: a headline (not screenshot 1's caption) and the home screen |
 
 `scripts/store_art.py <raw-dir>` makes them from the same raw captures as the iPhone sets (the
 headlines live in that script); `scripts/store_art.py <raw-dir> <android-raw-dir>` also makes
@@ -226,5 +232,6 @@ The camera is used for barcode scanning, reading printed expiry dates (Vision, o
 
 - What's New (first version): leave empty, or use `First release.`
 - Pick the build uploaded in step 2.
-- Screenshots, for each language: drag `screenshots/1.png` to `4.png` into "iPhone 6.9" Display",
-  and `ipad-screenshots/1.png` to `4.png` into "iPad 13" Display".
+- Screenshots, for each language: drag `screenshots/1.png` to `6.png` into "iPhone 6.9" Display",
+  and `ipad-screenshots/1.png` to `6.png` into "iPad 13" Display" (and the other sets into their
+  sections, as in the table above).

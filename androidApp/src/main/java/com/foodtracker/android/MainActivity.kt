@@ -24,7 +24,16 @@ import com.foodtracker.repository.PantryRepository
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
+import com.foodtracker.android.ui.screens.ScanDemo
+import com.foodtracker.android.ui.screens.ScanDemoFeed
+import com.foodtracker.recipe.MENU_SAVED_TITLE
+import com.foodtracker.recipe.Menu
+import com.foodtracker.recipe.Recipe
+import com.foodtracker.recipe.RecipeJson
 import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.recipe.SavedRecipe
+import kotlinx.coroutines.flow.first
+import kotlinx.datetime.LocalDate
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
@@ -108,6 +117,11 @@ class MainActivity : ComponentActivity() {
      * <home|recipe|shopping|settings>` opens that tab, or `edit:<item id>` that item's Edit
      * screen. The counterpart of iOS's `-demoBackup` and `-demoTab` launch arguments. A restore
      * also marks onboarding done, so onboarding is skipped from the next launch on.
+     *
+     * `--es demoRoute recipeResult|recipeMenu --es demoRecipe <file>` saves the recipe or menu in
+     * that file (scripts/demo_recipes.py) and opens it, and `--es demoRoute scan` with
+     * `demoScanImage <png>`, `demoScanBarcode <code>` and `demoScanDate <yyyy-mm-dd>` opens the
+     * scanner on that picture instead of the camera (see [ScanDemo]), like iOS's `-demoRoute`.
      */
     private fun loadDemoFromIntent(intent: Intent) {
         intent.getStringExtra(EXTRA_DEMO_BACKUP)?.let { path ->
@@ -129,6 +143,33 @@ class MainActivity : ComponentActivity() {
             tab == "recipe" -> currentScreenState.value = LarderRoute.Recipe
             tab == "shopping" -> currentScreenState.value = LarderRoute.Shopping
             tab == "settings" -> currentScreenState.value = LarderRoute.Settings
+        }
+        when (val route = intent.getStringExtra(EXTRA_DEMO_ROUTE)) {
+            "recipeResult", "recipeMenu" -> {
+                val raw = intent.getStringExtra(EXTRA_DEMO_RECIPE)?.let { runCatching { java.io.File(it).readText() }.getOrNull() }
+                    ?: return
+                val id = "demo-$route"
+                val now = System.currentTimeMillis()
+                val saved = if (route == "recipeMenu") {
+                    SavedRecipe.of(id, MENU_SAVED_TITLE, RecipeJson.decodeFromString(Menu.serializer(), raw), now)
+                } else {
+                    SavedRecipe.of(id, RecipeJson.decodeFromString(Recipe.serializer(), raw), now)
+                }
+                recipeStateHolder.restoreSaved(saved)
+                // Opened once it is in the saved list the result screen reads.
+                lifecycleScope.launch {
+                    recipeStateHolder.uiState.first { state -> state.saved.any { it.id == id } }
+                    currentScreenState.value = LarderRoute.RecipeResult(id)
+                }
+            }
+            "scan" -> {
+                val picture = intent.getStringExtra(EXTRA_DEMO_SCAN_IMAGE) ?: return
+                val barcode = intent.getStringExtra(EXTRA_DEMO_SCAN_BARCODE) ?: return
+                val date = intent.getStringExtra(EXTRA_DEMO_SCAN_DATE)?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                    ?: return
+                ScanDemo.feed = ScanDemoFeed(picture, barcode, date)
+                currentScreenState.value = LarderRoute.Scanner()
+            }
         }
     }
 
@@ -290,6 +331,11 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_DEMO_BACKUP = "demoBackup"
         private const val EXTRA_DEMO_TAB = "demoTab"
+        private const val EXTRA_DEMO_ROUTE = "demoRoute"
+        private const val EXTRA_DEMO_RECIPE = "demoRecipe"
+        private const val EXTRA_DEMO_SCAN_IMAGE = "demoScanImage"
+        private const val EXTRA_DEMO_SCAN_BARCODE = "demoScanBarcode"
+        private const val EXTRA_DEMO_SCAN_DATE = "demoScanDate"
 
         const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
 

@@ -690,9 +690,10 @@ final class RecipeViewModel: ObservableObject {
 
     /// `-demoRoute recipeResult`: a recipe as the phone's model would write one, saved so the
     /// result and Saved recipes screens can be seen where the model can't run, as in the
-    /// simulator. Returns its id.
-    func saveDemoRecipe() -> String {
-        let recipe = Recipe(
+    /// simulator. `given` is the screenshots' own recipe (`-demoRecipe <file>`), in the pantry's
+    /// language. Returns its id.
+    func saveDemoRecipe(_ given: Recipe? = nil) -> String {
+        let recipe = given ?? Recipe(
             title: "Spinach yoghurt toast",
             summary: "Uses the bread, spinach and yoghurt.",
             minutes: 10,
@@ -718,8 +719,9 @@ final class RecipeViewModel: ObservableObject {
         return entry.id
     }
 
-    /// `-demoRoute recipeMenu`: a three-day menu as the server would write one, saved.
-    func saveDemoMenu() -> String {
+    /// `-demoRoute recipeMenu`: a three-day menu as the server would write one, saved; `given` as
+    /// for `saveDemoRecipe`.
+    func saveDemoMenu(_ given: RecipeMenu? = nil) -> String {
         func dish(_ title: String, _ minutes: Int) -> Recipe {
             Recipe(
                 title: title,
@@ -745,7 +747,7 @@ final class RecipeViewModel: ObservableObject {
                 ]
             )
         }
-        let entry = SavedRecipe(content: .menu(RecipeMenu(days: days)))
+        let entry = SavedRecipe(content: .menu(given ?? RecipeMenu(days: days)))
         savedStore.save(entry)
         saved = savedStore.all()
         return entry.id
