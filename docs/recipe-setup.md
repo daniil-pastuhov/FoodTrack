@@ -108,7 +108,8 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 ### 4. Google Play
 
 - [ ] Payments profile and merchant account (Monetisation setup), if not there already.
-- [ ] **Real-time developer notifications** (Monetisation setup > Real-time developer
+- [x] (Done by the owner 2026-11-14; Play's test notification reached `playNotifications` and was
+      logged as `Play RTDN` / `test`.) **Real-time developer notifications** (Monetisation setup > Real-time developer
       notifications; no API): topic `projects/bestbefore-f9ee1/topics/play-rtdn`, with one-time
       product (voided purchase) notifications on. "Send test notification".
 - [ ] **Play Integrity**: link the Cloud project (Test and release > App integrity > Play
