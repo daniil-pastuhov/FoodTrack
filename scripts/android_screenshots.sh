@@ -2,7 +2,7 @@
 # Takes the raw Google Play screenshots: installs the debug app on a running emulator, loads the
 # demo pantry in each of the app's languages and captures, as scripts/ios_screenshots.sh does for
 # the App Store, Home, a scan that has read a product and its printed date, a written recipe, a
-# three-day menu, the shopping list and Settings.
+# four-day menu set, the shopping list and Settings.
 #
 #   ANDROID_SERIAL=<phone emulator> scripts/android_screenshots.sh [output-dir]   # default: build/android-screenshots
 #   scripts/frame_screenshots.py build/android-screenshots phone-screenshots

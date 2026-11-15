@@ -39,8 +39,10 @@ iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product pa
 April 2027 they are required for apps built with the iOS 27.1 SDK.
 
 Every set tells the same story, Google Play's too: 1 Home, 2 a scan that has read a product and
-its printed date, 3 a written recipe, 4 a three-day menu, 5 the shopping list, 6 Settings with the
-reminders. The two iPhone Duo sets share one group of at most 10 images per language in App
+its printed date, 3 a written recipe, 4 a menu set of four days (captioned "Plan up to four days
+around what you have": four is the most the Recipe form's Menu set offers, so keep the demo menu
+in `scripts/demo_recipes.py` at four days while the caption says so), 5 the shopping list, 6
+Settings with the reminders. The two iPhone Duo sets share one group of at most 10 images per language in App
 Store Connect, so they stop at 5 (`SHOT_LIMITS` in `scripts/frame_screenshots.py`). Retake them
 after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
 (`scripts/demo_backup.py`) in every language on one simulator (`LANGS="en de"` for some of
@@ -82,6 +84,15 @@ Google Play's feature graphic (1024×500) from the Android captures. The layouts
 templates, and the search headline stays readable when the image is scaled to 384 px wide, about
 the width search shows it at on an iPhone. Neither image may show prices, URLs, a copyright
 symbol, other platforms or Apple awards.
+
+Two more images come from the same captures but have no script of their own. `docs/images/`
+(the README's top) is the en-GB `screenshots/` 1, 2, 3 and 5 scaled to 460×1000 JPEG.
+`iap-review/buy-recipes-sheet.png`, the in-app purchases' review screenshot, is the Buy recipes
+sheet at US prices on the 6.9" simulator: it needs real StoreKit products, which only an Xcode
+run or test gets, so it is taken by a throwaway UI test (not committed) that launches the Debug
+app with `-demoBackup <file> -demoRecipeCredits 0 -demoRoute buyRecipes` under a scheme whose
+test action uses `Recipes.storekit` switched to the USA storefront. Retake it when the sheet or
+a price changes, and upload it to each pack by hand (`docs/recipe-setup.md`).
 
 ## App preview video
 

@@ -6,7 +6,7 @@ store art:
     scripts/in_app_event_art.py
 
 reads store-listing/app-store/<listing folder>/screenshots/{2,3,4}.png (the scan, a written
-recipe and the three-day menu, as scripts/frame_screenshots.py made them), cuts the phone out of
+recipe and the menu set, as scripts/frame_screenshots.py made them), cuts the phone out of
 each (without its caption) and writes store-listing/app-store/in-app-event/<listing folder>/:
 
 - event-card.png, 3840x2160 (16:9): the three phones side by side, the recipe in the middle.

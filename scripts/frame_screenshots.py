@@ -37,32 +37,34 @@ PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO", "es": "es-ES", "de"
 PLAY_SET = "phone-screenshots"
 PLAY_SIZE = (1080, 1920)
 
-# One caption per screenshot, in order: Home, the scan, a recipe, the three-day menu, the shopping
-# list and Settings. Both stores get the same six. The recipe and the menu are what the routes
+# One caption per screenshot, in order: Home, the scan, a recipe, a four-day menu set (four days
+# is the most the form's Menu set offers, so "up to four days" is what the shot shows: keep
+# scripts/demo_recipes.py's menu at four days), the shopping list and Settings. Both stores get
+# the same six. The recipe and the menu are what the routes
 # write, so their captions say what they do, not what they cost. "\n" is where a caption breaks
 # on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
 CAPTIONS = {
     "en": ["Know what's\nabout to expire", "Scan the pack,\nthe date is read", "Cook what needs\nusing first",
-           "A three-day menu\naround what you have", "Used it up?\nIt's on your list",
+           "Plan up to four days\naround what you have", "Used it up?\nIt's on your list",
            "Reminders\nwhen it suits you"],
     "ru": ["Видно, что скоро\nиспортится", "Наведите камеру —\nсрок распознан", "Готовьте из того,\nчто пора съесть",
-           "Меню на три дня\nпод ваши продукты", "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
+           "Меню до четырёх дней\nпод ваши продукты", "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
     "nb": ["Se hva som\nsnart går ut", "Skann pakken,\ndatoen leses av", "Lag mat av det\nsom må brukes først",
-           "Meny for tre dager\nrundt det du har", "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
+           "Planlegg opptil fire\ndager rundt det du har", "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
     "es": ["Mira qué está\na punto de caducar", "Escanea el envase,\nla fecha se lee sola",
-           "Cocina primero\nlo que toca usar", "Un menú de tres días\ncon lo que tienes",
+           "Cocina primero\nlo que toca usar", "Planifica hasta cuatro\ndías con lo que tienes",
            "¿Se acabó?\nYa está en tu lista", "Avisos cuando\nmejor te venga"],
     "de": ["Sieh, was\nbald abläuft", "Packung scannen,\nDatum wird erkannt", "Koch zuerst,\nwas weg muss",
-           "Ein Menü für drei Tage\naus dem, was da ist", "Aufgebraucht?\nSteht auf der Liste",
+           "Plane bis zu vier Tage\naus dem, was da ist", "Aufgebraucht?\nSteht auf der Liste",
            "Erinnerungen,\nwann es dir passt"],
     "fr": ["Voyez ce qui\narrive à date", "Scannez l'emballage,\nla date est lue",
-           "Cuisinez d'abord\nce qui presse", "Un menu de trois jours\navec ce que vous avez",
+           "Cuisinez d'abord\nce qui presse", "Planifiez jusqu'à quatre\njours avec vos produits",
            "Tout utilisé\u00a0?\nC'est sur votre liste", "Des rappels quand\nça vous arrange"],
     "sv": ["Se vad som\nsnart går ut", "Skanna förpackningen,\ndatumet läses av",
-           "Laga mat av det\nsom ska ätas först", "En meny för tre dagar\nkring det du har",
+           "Laga mat av det\nsom ska ätas först", "Planera upp till fyra\ndagar kring det du har",
            "Slut? Den står\npå listan", "Påminnelser när\ndet passar dig"],
     "da": ["Se, hvad der\nsnart udløber", "Scan pakken,\ndatoen aflæses", "Lav mad af det,\nder skal bruges først",
-           "En menu for tre dage\nud fra det, du har", "Brugt op? Den\nstår på listen",
+           "Planlæg op til fire\ndage ud fra det, du har", "Brugt op? Den\nstår på listen",
            "Påmindelser, når\ndet passer dig"],
 }
 # App Store Connect keeps the two iPhone Duo sets in one group of at most 10 images per language,

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Writes the recipe and the three-day menu the store screenshots show, in the JSON both apps keep
+"""Writes the recipe and the four-day menu set the store screenshots show, in the JSON both apps keep
 a saved recipe in (shared/.../recipe/Recipe.kt, iOS Models/RecipeModels.swift):
 
     scripts/demo_recipes.py <en|ru|nb|es|de|fr|sv|da> <recipe.json> <menu.json>
@@ -132,6 +132,8 @@ MENUS = {
         (["Salmon fillet", "Strawberries"],
          [("Salmon rillettes on toast", 15), ("Pan-fried salmon with greens", 20),
           ("Strawberries with yoghurt cream", 10)]),
+        (["Free-range eggs", "Orange juice"],
+         [("Devilled eggs", 15), ("Spaghetti carbonara", 20), ("Chocolate and orange mousse", 20)]),
     ],
     "ru": [
         (["Бородинский хлеб", "Шпинат", "Кефир"],
@@ -141,6 +143,9 @@ MENUS = {
         (["Филе лосося", "Клубника"],
          [("Тартар из лосося на хлебе", 15), ("Лосось со шпинатом на сковороде", 20),
           ("Клубника со сметанным кремом", 10)]),
+        (["Яйца", "Апельсиновый сок"],
+         [("Фаршированные яйца", 15), ("Гречка с яйцом и зелёным горошком", 20),
+          ("Шоколадный мусс с апельсином", 20)]),
     ],
     "nb": [
         (["Grovbrød", "Babyspinat", "Gresk yoghurt"],
@@ -150,6 +155,8 @@ MENUS = {
          [("Agurksalat med yoghurt", 10), ("Makaroni med gulost", 25), ("Vaniljepudding", 20)]),
         (["Laksefilet", "Jordbær"],
          [("Lakserillettes på grovbrød", 15), ("Stekt laks med spinat", 20), ("Jordbær med vaniljekrem", 10)]),
+        (["Egg", "Appelsinjuice"],
+         [("Fylte egg", 15), ("Spagetti carbonara", 20), ("Sjokolademousse med appelsin", 20)]),
     ],
     "es": [
         (["Pan de masa madre", "Espinacas baby", "Yogur griego"],
@@ -160,6 +167,8 @@ MENUS = {
         (["Lomo de salmón", "Fresas"],
          [("Rillettes de salmón sobre tostada", 15), ("Salmón a la plancha con verduras", 20),
           ("Fresas con crema de yogur", 10)]),
+        (["Huevos camperos", "Zumo de naranja"],
+         [("Huevos rellenos", 15), ("Espaguetis a la carbonara", 20), ("Mousse de chocolate y naranja", 20)]),
     ],
     "de": [
         (["Sauerteigbrot", "Babyspinat", "Griechischer Joghurt"],
@@ -170,6 +179,8 @@ MENUS = {
         (["Lachsfilet", "Erdbeeren"],
          [("Lachsrillettes auf Toast", 15), ("Gebratener Lachs mit Blattspinat", 20),
           ("Erdbeeren mit Joghurtcreme", 10)]),
+        (["Freilandeier", "Orangensaft"],
+         [("Gefüllte Eier", 15), ("Spaghetti Carbonara", 20), ("Schokoladenmousse mit Orange", 20)]),
     ],
     "fr": [
         (["Pain au levain", "Pousses d'épinard", "Yaourt à la grecque"],
@@ -180,6 +191,8 @@ MENUS = {
         (["Pavé de saumon", "Fraises"],
          [("Rillettes de saumon sur toast", 15), ("Saumon poêlé aux épinards", 20),
           ("Fraises à la crème de yaourt", 10)]),
+        (["Œufs plein air", "Jus d'orange"],
+         [("Œufs mimosa", 15), ("Spaghetti à la carbonara", 20), ("Mousse au chocolat et à l'orange", 20)]),
     ],
     "sv": [
         (["Surdegsbröd", "Babyspenat", "Grekisk yoghurt"],
@@ -189,6 +202,8 @@ MENUS = {
          [("Gurksallad med yoghurt", 10), ("Makaroner med ost", 25), ("Vaniljpudding", 20)]),
         (["Laxfilé", "Jordgubbar"],
          [("Laxrillette på rostat bröd", 15), ("Stekt lax med spenat", 20), ("Jordgubbar med yoghurtkräm", 10)]),
+        (["Ägg", "Apelsinjuice"],
+         [("Fyllda ägg", 15), ("Spagetti carbonara", 20), ("Chokladmousse med apelsin", 20)]),
     ],
     "da": [
         (["Rugbrød", "Babyspinat", "Græsk yoghurt"],
@@ -198,6 +213,8 @@ MENUS = {
          [("Agurkesalat med yoghurt", 10), ("Makaroni med ost", 25), ("Vaniljebudding", 20)]),
         (["Laksefilet", "Jordbær"],
          [("Lakserillettes på rugbrød", 15), ("Stegt laks med spinat", 20), ("Jordbær med vaniljecreme", 10)]),
+        (["Frilandsæg", "Appelsinjuice"],
+         [("Fyldte æg", 15), ("Spaghetti carbonara", 20), ("Chokolademousse med appelsin", 20)]),
     ],
 }
 # A dish's one line of method in the menu; the menu screen shows titles and times, a dish's own

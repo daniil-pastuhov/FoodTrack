@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Takes the raw App Store screenshots: builds the debug app, loads a demo pantry in each of the
 # app's languages and captures, in this order, Home, a scan that has read a product and its
-# printed date, a written recipe, a three-day menu, the shopping list and Settings on a 6.9"
+# printed date, a written recipe, a four-day menu set, the shopping list and Settings on a 6.9"
 # iPhone simulator (1320x2868, the size App Store Connect requires). scripts/android_screenshots.sh
 # takes the same six for Google Play.
 #
