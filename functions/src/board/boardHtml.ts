@@ -1,7 +1,8 @@
 /**
  * Renders a Board (boardData.ts) as one self-contained HTML file (inline CSS, inline SVG, a few
- * lines of inline script for the hover readout; no external request of any kind) and as a short
- * text summary. Pure: no I/O. Everything a person reads says "recipes", never "credits".
+ * lines of inline script for the hover readout and, on the hosted board, the stale warning; no
+ * external request of any kind), as a short text summary and as the small JSON of those same
+ * aggregates. Pure: no I/O. Everything a person reads says "recipes", never "credits".
  */
 import { PACKS, STORES, type Board, type BoardDay, type Pack, type Store, type Totals } from "./boardData";
 
@@ -278,6 +279,8 @@ section{background:var(--surface);border:1px solid var(--border);border-radius:1
 .s-icon.good{background:var(--good)}.s-icon.warn{background:var(--warn);color:#0b0b0b}.s-icon.crit{background:var(--crit)}
 .meter{height:8px;border-radius:4px;background:var(--track);overflow:hidden;margin:0 0 6px}
 .m-fill{height:100%;border-radius:4px}.m-fill.ok{background:var(--s1)}.m-fill.warn{background:var(--warn)}.m-fill.crit{background:var(--crit)}
+.alert{border-left:4px solid var(--crit);background:var(--surface);padding:8px 12px;margin:0 0 16px;font-weight:600}
+.alert.warn{border-color:var(--warn)}
 .note{border-left:3px solid var(--axis);padding:4px 0 4px 12px;color:var(--ink-2);font-size:14px;margin:12px 0 0}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0 0}
 .st-value{font-size:19px;font-weight:600}.st-label{color:var(--ink-2);font-size:13px}
@@ -344,7 +347,34 @@ document.addEventListener("focusout",function(){tip.hidden=true;});
 document.addEventListener("pointerleave",function(){tip.hidden=true;});})();
 `;
 
-export function renderBoardHtml(b: Board): string {
+/** The hosted board (scheduled `redrawBoard`, README "The board", "Always on"). */
+export interface HostedOptions {
+  /** How often the function redraws, in hours, for the "redrawn every …" line. */
+  everyHours: number;
+  /** Past this age the page's own script shows the stale warning. */
+  staleAfterHours: number;
+}
+
+/**
+ * The stale warning: reads the generation time from the page and, once the page is older than
+ * the threshold, shows the banner. Text goes in with textContent only; no request is made.
+ */
+export const STALE_SCRIPT = `
+(function(){var el=document.getElementById("stale");if(!el)return;
+var at=Number(el.getAttribute("data-generated")),limit=Number(el.getAttribute("data-stale-hours"));
+function check(){var h=(Date.now()-at)/3600000;if(h>limit){el.textContent="This board is "+Math.floor(h)+" hours old: the hourly redraw has stopped. Look for board_redraw_failed or board_bucket_public in the function's logs.";el.hidden=false;}}
+check();setInterval(check,60000);})();
+`;
+
+function cappedAlert(b: Board): string {
+  const c = b.purchasesCapped;
+  if (!c) return "";
+  return `<p class="alert warn" role="status">This period has ${esc(int(c.total))} purchases, more than the board reads in one run: ` +
+    `only the newest ${esc(int(c.read))} were counted, back to ${esc(utcTime(c.oldestReadMs))}. Purchase figures before that are missing; ` +
+    `spend, generations and the ceiling are complete.</p>`;
+}
+
+export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
   const t = b.todayRow;
   const dayList = b.days.map((d) => d.day);
   const packsShown = PACKS.filter((p) => p !== "other" || b.sales.byPack.other.purchases > 0);
@@ -427,7 +457,10 @@ export function renderBoardHtml(b: Board): string {
 <body><main>
 <h1>Recipe packs board</h1>
 <p class="sub">${esc(b.project)} · ${esc(b.firstDay)} to ${esc(b.today)} (${b.days.length} UTC days) · generated ${esc(utcTime(b.generatedAtMs))}</p>
-
+${hosted ? `<p class="sub" id="updated">Updated ${esc(utcTime(b.generatedAtMs))}, redrawn ${hosted.everyHours === 1 ? "hourly" : `every ${esc(int(hosted.everyHours))} hours`}. ` +
+  `If that is more than ${esc(int(hosted.staleAfterHours))} hours ago, the redraw has stopped.</p>
+<p class="alert" id="stale" role="alert" data-generated="${b.generatedAtMs}" data-stale-hours="${hosted.staleAfterHours}" hidden></p>
+` : ""}${cappedAlert(b)}
 <section aria-labelledby="h-today"><h2 id="h-today">Today at a glance (${esc(b.today)}, UTC)</h2><div class="tiles">${glance}</div></section>
 
 <section aria-labelledby="h-spend"><h2 id="h-spend">Model spend</h2>
@@ -479,9 +512,11 @@ Quality refusals are always refunded; failures are refunded or charged by the se
 
 <footer>
 <p>Period ${esc(b.firstDay)} to ${esc(b.today)} (UTC) · project ${esc(b.project)} · generated ${esc(utcTime(b.generatedAtMs))} · ${esc(int(b.reads))} Firestore reads.</p>
-<p>Read-only: built from <code>stats/</code>, <code>config/runtime</code>, the period's <code>purchases/</code> and one aggregate over account balances. Aggregates only; nothing on this page identifies a person or a purchase, and it was written to a local file, not uploaded.</p>
+<p>Read-only: built from <code>stats/</code>, <code>config/runtime</code>, the period's <code>purchases/</code> and one aggregate over account balances. Aggregates only; nothing on this page identifies a person or a purchase, and ${hosted
+  ? "it is redrawn by the scheduled function <code>redrawBoard</code> into a private Cloud Storage bucket that only the owner can read"
+  : "it was written to a local file, not uploaded"}.</p>
 </footer>
-</main><div id="tip" role="tooltip" hidden></div><script>${SCRIPT}</script></body></html>
+</main><div id="tip" role="tooltip" hidden></div><script>${SCRIPT}${hosted ? STALE_SCRIPT : ""}</script></body></html>
 `;
 }
 
@@ -503,6 +538,64 @@ export function boardSummary(b: Board): string[] {
       `App Store ${int(s.byStore.appstore.purchases)}, Google Play ${int(s.byStore.play.purchases)}. Sandbox: ${int(s.sandbox.purchases)} purchases, ${int(s.sandbox.credits)} recipes.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
+    ...(b.purchasesCapped
+      ? [`PURCHASES CAPPED: ${int(b.purchasesCapped.total)} in the period, only the newest ${int(b.purchasesCapped.read)} counted (back to ${utcTime(b.purchasesCapped.oldestReadMs)}).`]
+      : []),
     `Firestore reads: ${int(b.reads)}.`,
   ];
+}
+
+/**
+ * The same aggregates as the summary, as JSON (`board.json` beside the hosted board). Amounts are
+ * micro-USD integers, as in `stats`; counts are recipes or packs. Nothing identifies a person.
+ */
+export function boardJson(b: Board): Record<string, unknown> {
+  const t = b.todayRow;
+  const s = b.sales;
+  const p = b.period;
+  const totals = (x: Totals) => ({ packs: x.purchases, recipes: x.credits, refunded: x.refunded, net: x.net });
+  return {
+    project: b.project,
+    generatedAt: new Date(b.generatedAtMs).toISOString(),
+    period: { firstDay: b.firstDay, lastDay: b.today, days: b.days.length },
+    generationEnabled: b.generationEnabled,
+    allowSandbox: b.allowSandbox,
+    today: {
+      day: b.today,
+      estimatedSpendMicroUsd: b.todayBookedMicroUsd,
+      ceilingMicroUsd: t.ceilingMicroUsd,
+      recipesUsed: t.generationUnits,
+      dailyCap: b.dailyCap,
+      written: t.succeeded,
+      packsSold: t.salesCount,
+      recipesSold: t.salesCredits,
+      sandboxPurchases: t.sandboxPurchases,
+    },
+    unspentRecipes: { recipes: b.holders.recipes, accounts: b.holders.accounts },
+    negativeBalanceTotal: b.ledger.negativeBalanceTotal,
+    spend: {
+      periodMicroUsd: p.spentMicroUsd + p.reservedMicroUsd,
+      month: b.month.label,
+      monthToDateMicroUsd: b.month.toDateMicroUsd,
+      monthWorstCaseMicroUsd: b.month.worstCaseMicroUsd,
+    },
+    sales: {
+      ...totals(s.total),
+      estimatedNetRevenueMicroUsd: s.estimatedNetMicroUsd,
+      byStore: { appstore: totals(s.byStore.appstore), play: totals(s.byStore.play) },
+      byPack: Object.fromEntries(PACKS.map((k) => [k, totals(s.byPack[k])])),
+      sandbox: { purchases: s.sandbox.purchases, recipes: s.sandbox.credits },
+      capped: b.purchasesCapped ? { total: b.purchasesCapped.total, read: b.purchasesCapped.read } : null,
+    },
+    generations: {
+      written: p.succeeded,
+      contentFailures: p.contentFailures,
+      infraFailures: p.infraFailures,
+      qualityRefusals: p.qualityFailures,
+      recipesUsed: p.generationUnits,
+      recipesRefunded: p.refundedCredits,
+      unknownUsageCalls: p.unknownUsageCalls,
+    },
+    firestoreReads: b.reads,
+  };
 }

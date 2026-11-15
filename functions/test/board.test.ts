@@ -1,7 +1,8 @@
 /**
  * The owner's board (src/admin/board*.ts, README "The board"): aggregation over stats and
  * purchases, the ceiling per day from the server's own function, the rendered page (no
- * identifiers, escaping) and the command end to end against the emulators.
+ * identifiers, escaping), the command end to end against the emulators, and the scheduled
+ * redraw (src/board/hosted.ts) against an in-memory bucket (no Storage emulator).
  */
 import { copyFileSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,8 +18,21 @@ import {
   purchaseRow,
   type BoardInput,
   type PurchaseRow,
-} from "../src/admin/boardData";
-import { boardSummary, esc, niceScale, renderBoardHtml, usd } from "../src/admin/boardHtml";
+} from "../src/board/boardData";
+import { runInNewContext } from "node:vm";
+import { STALE_SCRIPT, boardJson, boardSummary, esc, niceScale, renderBoardHtml, usd } from "../src/board/boardHtml";
+import { readBoardInput } from "../src/board/boardReader";
+import {
+  BOARD_HTML_OBJECT,
+  BOARD_JSON_OBJECT,
+  HOSTED_BOARD,
+  judgeBucket,
+  redrawBoard,
+  type BoardBucket,
+  type BoardObject,
+  type BucketFacts,
+} from "../src/board/hosted";
+import type { Logger } from "../src/ports";
 import { DEFAULT_RUNTIME_CONFIG, dailySpendCeiling, type RuntimeConfig } from "../src/model";
 import { db, resetEmulators } from "./helpers";
 import { seedBoardData } from "./boardSeed";
@@ -261,5 +275,206 @@ describe("the command against the emulators", () => {
     expect(lines.at(-1)).toBe(`Board written to ${out}`);
     expect(html).toContain("Recipe packs board");
     if (process.env.BOARD_DEMO_OUT) copyFileSync(out, process.env.BOARD_DEMO_OUT);
+  });
+});
+
+// --- Always on: the scheduled redraw ------------------------------------------------------------
+
+const PRIVATE_FACTS: BucketFacts = {
+  publicAccessPrevention: "enforced",
+  uniformBucketLevelAccess: true,
+  bindings: [
+    { role: "roles/storage.legacyBucketOwner", members: ["projectOwner:demo-foodtracker", "projectEditor:demo-foodtracker"] },
+    { role: "roles/storage.objectViewer", members: ["user:owner@example.com"] },
+    { role: "projects/demo-foodtracker/roles/ownerBoardWriter", members: ["serviceAccount:recipe-functions@demo-foodtracker.iam.gserviceaccount.com"] },
+  ],
+};
+
+class FakeBucket implements BoardBucket {
+  readonly objects = new Map<string, BoardObject>();
+  factsCalls = 0;
+  constructor(
+    readonly name = "demo-foodtracker-owner-board",
+    /** Facts per call (the last one repeats); null is a missing bucket. */
+    private readonly sequence: (BucketFacts | null)[] = [PRIVATE_FACTS],
+    private readonly failWrite = false,
+  ) {}
+  async facts() {
+    const f = this.sequence[Math.min(this.factsCalls, this.sequence.length - 1)];
+    this.factsCalls++;
+    return f;
+  }
+  async write(object: string, content: BoardObject) {
+    if (this.failWrite) throw Object.assign(new Error("storage.objects.create denied"), { code: 403 });
+    this.objects.set(object, content);
+  }
+}
+
+function captureLogger() {
+  const lines: { level: string; message: string; data?: Record<string, unknown> }[] = [];
+  const logger: Logger = {
+    info: (message, data) => lines.push({ level: "info", message, data }),
+    warn: (message, data) => lines.push({ level: "warn", message, data }),
+    error: (message, data) => lines.push({ level: "error", message, data }),
+  };
+  return { lines, logger };
+}
+
+describe("judgeBucket", () => {
+  test("private only: enforced prevention, uniform access, no broad member", () => {
+    expect(judgeBucket(PRIVATE_FACTS)).toEqual({ ok: true });
+    expect(judgeBucket(null)).toEqual({ ok: false, reason: "missing" });
+    expect(judgeBucket({ ...PRIVATE_FACTS, publicAccessPrevention: "inherited" })).toMatchObject({ reason: "public_access_prevention_not_enforced" });
+    expect(judgeBucket({ ...PRIVATE_FACTS, publicAccessPrevention: null })).toMatchObject({ reason: "public_access_prevention_not_enforced" });
+    expect(judgeBucket({ ...PRIVATE_FACTS, uniformBucketLevelAccess: false })).toMatchObject({ reason: "uniform_access_off" });
+    for (const m of ["allUsers", "allAuthenticatedUsers", "domain:example.com"]) {
+      expect(judgeBucket({ ...PRIVATE_FACTS, bindings: [...PRIVATE_FACTS.bindings, { role: "roles/storage.objectViewer", members: [m] }] }))
+        .toEqual({ ok: false, reason: "public_binding", role: "roles/storage.objectViewer" });
+    }
+  });
+});
+
+describe("the scheduled redraw against the emulators", () => {
+  beforeEach(resetEmulators);
+
+  test("writes board.html and board.json with the right metadata, no identifier, nothing to Firestore", async () => {
+    const now = Date.now();
+    const seeded = await seedBoardData(db, now);
+    const bucket = new FakeBucket();
+    const { lines, logger } = captureLogger();
+    const out = await redrawBoard({ db, bucket, project: "demo-foodtracker", now: () => now, logger });
+    expect([...bucket.objects.keys()].sort()).toEqual([BOARD_HTML_OBJECT, BOARD_JSON_OBJECT]);
+    const html = bucket.objects.get(BOARD_HTML_OBJECT)!;
+    const json = bucket.objects.get(BOARD_JSON_OBJECT)!;
+    expect(html).toMatchObject({ contentType: "text/html; charset=utf-8", cacheControl: "no-store, private", contentDisposition: "inline" });
+    expect(json).toMatchObject({ contentType: "application/json; charset=utf-8", cacheControl: "no-store, private", contentDisposition: "inline" });
+    // Checked before the read and again just before writing.
+    expect(bucket.factsCalls).toBe(2);
+    for (const id of seeded.identifiers) {
+      expect(html.body).not.toContain(id);
+      expect(json.body).not.toContain(id);
+    }
+    expect(html.body).toContain(`Updated ${new Date(now).toISOString().slice(0, 16).replace("T", " ")} UTC, redrawn hourly.`);
+    expect(html.body).toContain(`data-generated="${now}" data-stale-hours="3" hidden`);
+    expect(html.body).toContain(STALE_SCRIPT);
+    expect(html.body.match(/<script>/g)).toHaveLength(1);
+    expect(html.body).toContain("private Cloud Storage bucket");
+    expect(html.body).not.toContain("not uploaded");
+    expect(html.body).not.toMatch(/credit/i);
+    const parsed = JSON.parse(json.body);
+    expect(parsed.sales.packs).toBe(seeded.productionPurchases);
+    expect(parsed.sales.sandbox.purchases).toBe(seeded.sandboxPurchases);
+    expect(parsed.negativeBalanceTotal).toBe(-7);
+    expect(parsed.sales.capped).toBeNull();
+    expect(parsed.firestoreReads).toBe(out.reads);
+    expect(json.body).not.toMatch(/credit|uid|token|order|transaction/i);
+    expect(lines.find((l) => l.message === "board_redrawn")).toMatchObject({ level: "info", data: { bucket: bucket.name, capped: false } });
+    expect(lines.some((l) => l.level === "error")).toBe(false);
+  });
+
+  test.each([
+    ["public access prevention not enforced", { ...PRIVATE_FACTS, publicAccessPrevention: "inherited" }, "public_access_prevention_not_enforced"],
+    ["uniform access off", { ...PRIVATE_FACTS, uniformBucketLevelAccess: false }, "uniform_access_off"],
+    ["an allUsers binding", { ...PRIVATE_FACTS, bindings: [{ role: "roles/storage.objectViewer", members: ["allUsers", "user:owner@example.com"] }] }, "public_binding"],
+    ["missing", null, "missing"],
+  ] as [string, BucketFacts | null, string][])("refuses a bucket with %s: writes nothing, logs board_bucket_public", async (_, facts, reason) => {
+    const bucket = new FakeBucket("demo-foodtracker-owner-board", [facts]);
+    const { lines, logger } = captureLogger();
+    await expect(redrawBoard({ db, bucket, project: "demo-foodtracker", now: () => Date.now(), logger })).rejects.toThrow(reason);
+    expect(bucket.objects.size).toBe(0);
+    const err = lines.filter((l) => l.level === "error");
+    expect(err).toHaveLength(1);
+    expect(err[0]).toMatchObject({ message: "board_bucket_public", data: { bucket: bucket.name, reason } });
+    // Never a member: it may be an email address.
+    expect(JSON.stringify(lines)).not.toContain("owner@example.com");
+  });
+
+  test("a bucket that turns public during the read still gets nothing", async () => {
+    const bucket = new FakeBucket("demo-foodtracker-owner-board", [PRIVATE_FACTS, { ...PRIVATE_FACTS, publicAccessPrevention: "inherited" }]);
+    const { lines, logger } = captureLogger();
+    await expect(redrawBoard({ db, bucket, project: "demo-foodtracker", now: () => Date.now(), logger })).rejects.toThrow();
+    expect(bucket.objects.size).toBe(0);
+    expect(lines.find((l) => l.message === "board_bucket_public")).toBeTruthy();
+  });
+
+  test("never the default Firebase Storage bucket, whatever its settings", async () => {
+    for (const name of ["demo-foodtracker.appspot.com", "demo-foodtracker.firebasestorage.app"]) {
+      const bucket = new FakeBucket(name);
+      const { lines, logger } = captureLogger();
+      await expect(redrawBoard({ db, bucket, project: "demo-foodtracker", now: () => Date.now(), logger })).rejects.toThrow("default_firebase_bucket");
+      expect(bucket.objects.size).toBe(0);
+      expect(bucket.factsCalls).toBe(0);
+      expect(lines[0]).toMatchObject({ message: "board_bucket_public", data: { reason: "default_firebase_bucket" } });
+    }
+  });
+
+  test("a failed write logs board_redraw_failed and throws", async () => {
+    const bucket = new FakeBucket("demo-foodtracker-owner-board", [PRIVATE_FACTS], true);
+    const { lines, logger } = captureLogger();
+    await expect(redrawBoard({ db, bucket, project: "demo-foodtracker", now: () => Date.now(), logger })).rejects.toThrow("denied");
+    expect(lines.find((l) => l.message === "board_redraw_failed")).toMatchObject({ level: "error", data: { code: 403 } });
+  });
+
+  test("the purchases cap: newest first, counted, said on the board and in the JSON", async () => {
+    const now = Date.now();
+    const seeded = await seedBoardData(db, now);
+    const total = seeded.productionPurchases + seeded.sandboxPurchases;
+    expect(total).toBeGreaterThan(10);
+    const { lines, logger } = captureLogger();
+    const capped = await readBoardInput(db, { project: "demo-foodtracker", days: 30, nowMs: now, logger, purchasesCap: 10 });
+    expect(capped.purchases).toHaveLength(10);
+    expect(capped.purchasesCapped).toMatchObject({ total, read: 10 });
+    // The newest ten: none older than the oldest one read.
+    const all = await readBoardInput(db, { project: "demo-foodtracker", days: 30, nowMs: now });
+    expect(all.purchasesCapped).toBeNull();
+    const newest = all.purchases.map((p) => p.grantedAtMs).sort((a, b) => b - a).slice(0, 10);
+    expect(capped.purchases.map((p) => p.grantedAtMs).sort((a, b) => b - a)).toEqual(newest);
+    expect(capped.purchasesCapped!.oldestReadMs).toBe(newest[9]);
+    // config + 36 stats + ledger + the 11 purchase reads + the balance aggregation + the count.
+    expect(capped.reads).toBe(1 + 36 + 1 + 11 + 1 + 1);
+    expect(lines.find((l) => l.message === "board_purchases_capped")).toMatchObject({ data: { total, read: 10 } });
+
+    const bucket = new FakeBucket();
+    await redrawBoard({ db, bucket, project: "demo-foodtracker", now: () => now, logger, purchasesCap: 10 });
+    const html = bucket.objects.get(BOARD_HTML_OBJECT)!.body;
+    expect(html).toContain(`This period has ${total} purchases`);
+    expect(html).toContain("only the newest 10 were counted");
+    expect(JSON.parse(bucket.objects.get(BOARD_JSON_OBJECT)!.body).sales.capped).toEqual({ total, read: 10 });
+    const b = buildBoard(capped);
+    expect(boardSummary(b).join("\n")).toContain("PURCHASES CAPPED");
+    expect(boardJson(b).sales).toMatchObject({ capped: { total, read: 10 } });
+  });
+});
+
+describe("the stale warning", () => {
+  function runStale(generatedAtMs: number, nowMs: number) {
+    const el = {
+      attrs: { "data-generated": String(generatedAtMs), "data-stale-hours": String(HOSTED_BOARD.staleAfterHours) } as Record<string, string>,
+      hidden: true,
+      textContent: "",
+      getAttribute(n: string) {
+        return this.attrs[n] ?? null;
+      },
+    };
+    const document = { getElementById: (id: string) => (id === "stale" ? el : null) };
+    const FakeDate = { now: () => nowMs };
+    runInNewContext(STALE_SCRIPT, { document, Date: FakeDate, Number, Math, setInterval: () => 0 });
+    return el;
+  }
+
+  test("hidden on a fresh page, shown with the age past 3 hours", () => {
+    const at = Date.parse("2026-11-15T10:17:00Z");
+    expect(runStale(at, at + 2.9 * 3_600_000).hidden).toBe(true);
+    const old = runStale(at, at + 5.5 * 3_600_000);
+    expect(old.hidden).toBe(false);
+    expect(old.textContent).toContain("This board is 5 hours old");
+    expect(old.textContent).toContain("board_redraw_failed");
+  });
+
+  test("the local board has neither the updated line nor the warning", () => {
+    const html = renderBoardHtml(buildBoard(input()));
+    expect(html).not.toContain('id="stale"');
+    expect(html).not.toContain("redrawn hourly");
+    expect(html).toContain("written to a local file, not uploaded");
   });
 });

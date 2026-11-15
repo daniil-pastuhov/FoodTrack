@@ -11,6 +11,8 @@ import { join } from "node:path";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
+// Loads @google-cloud/storage only when getStorage() is first called (redrawBoard), not at cold start.
+import { getStorage } from "firebase-admin/storage";
 import { setGlobalOptions } from "firebase-functions/v2";
 import { HttpsError, onCall, onRequest, type CallableRequest } from "firebase-functions/v2/https";
 import { onMessagePublished } from "firebase-functions/v2/pubsub";
@@ -59,6 +61,8 @@ import {
   handlePlayNotification,
   pollVoidedPurchases,
 } from "./core/notifications";
+import { redrawBoard as redrawBoardCore } from "./board/hosted";
+import { CloudStorageBoardBucket } from "./adapters/boardBucket";
 
 // --- Params and secrets (see README "Parameters") ---------------------------------------------
 
@@ -89,6 +93,10 @@ const siwaKeyId = defineString("SIWA_KEY_ID", { description: "Sign in with Apple
 const siwaPrivateKey = defineSecret("SIWA_PRIVATE_KEY");
 const playRtdnTopic = defineString("PLAY_RTDN_TOPIC", { default: "play-rtdn" });
 const budgetTopic = defineString("BUDGET_ALERT_TOPIC", { default: "budget-alerts" });
+const boardBucket = defineString("BOARD_BUCKET", {
+  default: "",
+  description: "Private Cloud Storage bucket redrawBoard writes the owner's board to; empty means <project id>-owner-board (README \"The board\").",
+});
 
 // 1/6 vCPU and 256 MiB per instance unless a function says otherwise; one request at a time
 // (fractional CPU requires concurrency 1).
@@ -380,6 +388,23 @@ export const pollPlayVoidedPurchases = onSchedule(
   async () => {
     const result = await pollVoidedPurchases(getDeps());
     logger.info("Voided purchases poll", { ...result });
+  },
+);
+
+// The owner's board, redrawn hourly into a private bucket (README "The board", "Always on").
+// Never the default Firebase Storage bucket; refuses to write unless the bucket is private.
+export const redrawBoard = onSchedule(
+  { schedule: "17 * * * *", timeZone: "Etc/UTC", timeoutSeconds: 120, retryCount: 0, maxInstances: 1, concurrency: 1 },
+  async () => {
+    const project = process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? "";
+    const name = boardBucket.value() || `${project}-owner-board`;
+    await redrawBoardCore({
+      db: getFirestore(),
+      bucket: new CloudStorageBoardBucket(getStorage().bucket(name)),
+      project,
+      now: () => Date.now(),
+      logger,
+    });
   },
 );
 

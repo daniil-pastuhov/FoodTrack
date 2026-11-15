@@ -9,4 +9,4 @@ coverage/
 test/redteam/results/
 test/redteam/cases.local.json
 # The owner's board (npm run admin -- board): local HTML files, never committed.
-board/
+/board/

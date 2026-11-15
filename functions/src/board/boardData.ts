@@ -64,6 +64,11 @@ export interface BoardInput {
   holders: { accounts: number; recipes: number };
   /** Firestore reads the run cost (documents + aggregation), for the footer and the summary. */
   reads: number;
+  /**
+   * Set when the period held more purchases than the reader's cap: only the newest `read` were
+   * read (back to `oldestReadMs`), out of `total`. Purchase figures before that are missing.
+   */
+  purchasesCapped?: { total: number; read: number; oldestReadMs: number } | null;
 }
 
 export interface Totals {
@@ -127,9 +132,15 @@ export interface Board {
   holders: BoardInput["holders"];
   ledger: BoardInput["ledger"];
   reads: number;
+  purchasesCapped: { total: number; read: number; oldestReadMs: number } | null;
 }
 
 export const BOARD_MAX_DAYS = 90;
+/**
+ * At most this many purchases are read per run (newest first), so a busy period cannot make the
+ * hourly redraw expensive: 2,001 reads at most for them, about USD 0.0012 a run.
+ */
+export const BOARD_PURCHASES_CAP = 2000;
 
 const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : 0);
 
@@ -302,5 +313,6 @@ export function buildBoard(input: BoardInput): Board {
     holders: input.holders,
     ledger: input.ledger,
     reads: input.reads,
+    purchasesCapped: input.purchasesCapped ?? null,
   };
 }

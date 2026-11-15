@@ -32,9 +32,9 @@ import {
   type Lookup,
   type RequestKind,
 } from "./accountRequests";
-import { BOARD_MAX_DAYS, buildBoard } from "./boardData";
-import { boardSummary, renderBoardHtml } from "./boardHtml";
-import { readBoardInput } from "./boardReader";
+import { BOARD_MAX_DAYS, buildBoard } from "../board/boardData";
+import { boardSummary, renderBoardHtml } from "../board/boardHtml";
+import { readBoardInput } from "../board/boardReader";
 import { LiveStoreLookups, accessSecret, cloudLogger, emulatorStoreLookups } from "./stores";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
