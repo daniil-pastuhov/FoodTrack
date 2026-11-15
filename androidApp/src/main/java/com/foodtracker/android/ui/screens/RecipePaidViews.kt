@@ -19,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -41,6 +43,7 @@ import com.foodtracker.android.ui.design.LarderDialog
 import com.foodtracker.android.ui.design.LarderIcon
 import com.foodtracker.android.ui.design.LarderIcons
 import com.foodtracker.android.ui.design.LarderSheet
+import com.foodtracker.android.ui.design.LarderTabularNumbers
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.theme.LarderRadius
@@ -57,6 +60,8 @@ import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.RecipeUiState
 import com.foodtracker.recipe.SignInProvider
 import com.foodtracker.recipe.StorePack
+import com.foodtracker.recipe.recipePackSavingBadge
+import com.foodtracker.recipe.recipePackSavingPercents
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -307,11 +312,13 @@ private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Bo
         modifier = Modifier.selectableGroup(),
         verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)
     ) {
+        val savings = remember(packs) { packs?.let(::recipePackSavingPercents).orEmpty() }
         packs?.forEach { pack ->
             PackRow(
                 name = pluralStringResource(R.plurals.recipe_pack_name, pack.recipes, pack.recipes),
                 each = recipePackEachPrice(resources, pack),
                 price = pack.price,
+                saving = savings[pack.productId],
                 selected = pack.productId == selected,
                 enabled = !purchasing,
                 onClick = { actions.onSelect(pack.productId) }
@@ -330,7 +337,7 @@ private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Bo
 }
 
 @Composable
-private fun PackRow(name: String, each: String?, price: String, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
+private fun PackRow(name: String, each: String?, price: String, saving: Int?, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(LarderRadius.md)
     Row(
@@ -350,8 +357,31 @@ private fun PackRow(name: String, each: String?, price: String, selected: Boolea
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = if (selected) scheme.onPrimaryContainer else scheme.onSurfaceVariant)
             }
         }
-        Text(text = price, style = MaterialTheme.typography.titleMedium, color = if (selected) scheme.onPrimaryContainer else scheme.onSurface)
+        // The saving sits under the price, so a long pack name keeps the row's width.
+        Column(modifier = Modifier.padding(start = LarderSpace.s3), horizontalAlignment = Alignment.End) {
+            Text(text = price, style = MaterialTheme.typography.titleMedium, color = if (selected) scheme.onPrimaryContainer else scheme.onSurface)
+            saving?.let { PackSavingBadge(it, selected) }
+        }
     }
+}
+
+/** "−26%": a small outlined pill, quiet beside the price; read aloud as "26% less per recipe". */
+@Composable
+private fun PackSavingBadge(percent: Int, selected: Boolean) {
+    val color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
+    val description = stringResource(R.string.recipe_pack_saving_a11y, percent)
+    Text(
+        text = recipePackSavingBadge(percent),
+        modifier = Modifier
+            .padding(top = 2.dp)
+            .border(1.dp, color, RoundedCornerShape(LarderRadius.xl))
+            .padding(horizontal = LarderSpace.s2, vertical = 1.dp)
+            .clearAndSetSemantics { contentDescription = description },
+        style = MaterialTheme.typography.labelSmall.merge(LarderTabularNumbers),
+        color = color,
+        maxLines = 1,
+        softWrap = false
+    )
 }
 
 /** Where recipes should live, asked once, before any money moves: both outcomes spelled out. */
@@ -468,7 +498,7 @@ private fun SheetActions(content: @Composable () -> Unit) {
 // --- Previews ---------------------------------------------------------------------------------
 
 private val previewPacks = listOf(
-    StorePack("recipes_10", 10, "$3.99", 3_990_000, "USD"),
+    StorePack("recipes_10", 10, "$2.99", 2_990_000, "USD"),
     StorePack("recipes_50", 50, "$10.99", 10_990_000, "USD"),
     StorePack("recipes_100", 100, "$18.99", 18_990_000, "USD")
 )
