@@ -69,7 +69,7 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 
 ### 1. Apple Developer: Services ID, key, App Attest
 
-- [ ] **Services ID** (Certificates, Identifiers & Profiles > Identifiers > + > Services IDs; no
+- [x] **Services ID** (Certificates, Identifiers & Profiles > Identifiers > + > Services IDs; no
       API): any identifier, for example `com.foodbest.ios.signin`, with Sign in with Apple, primary
       App ID `com.foodbest.ios`, domain `bestbefore-f9ee1.firebaseapp.com` and return URL
       `https://bestbefore-f9ee1.firebaseapp.com/__/auth/handler` (**Check**: copy the exact URL the
@@ -78,13 +78,13 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
       `SIWA_PRIVATE_KEY` (step 5) and also goes into the Firebase Apple provider (step 2).
       Done 2026-11-14: key id `A8C76L3W6R`. Keep the `.p8` in safe storage (Apple lets it be
       downloaded only once); step 2 still needs it.
-- [ ] **App Attest** on the App ID: not a capability type in the App Store Connect API. Automatic
+- [x] **App Attest** on the App ID: not a capability type in the App Store Connect API. Automatic
       signing adds it when Xcode next signs with `-allowProvisioningUpdates`; otherwise tick it on
       the App ID. The entitlement is already `production`.
 
 ### 2. Firebase Apple provider: code flow
 
-- [ ] Authentication > Sign-in method > Apple: Services ID as client id, Team ID `S8Q8KHX6G5`, key
+- [x] Authentication > Sign-in method > Apple: Services ID as client id, Team ID `S8Q8KHX6G5`, key
       id and the `.p8`. **(agent)**, given the key: Identity Toolkit
       `defaultSupportedIdpConfigs/apple.com` `appleSignInConfig.codeFlowConfig`. Only Android's
       Apple web flow needed this, and Android no longer signs in with Apple (decision in step 3);
@@ -92,17 +92,17 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
 
 ### 3. App Store Connect
 
-- [ ] **Paid Apps agreement**, banking and tax forms (Business; owner only).
+- [x] **Paid Apps agreement**, banking and tax forms (Business; owner only).
 - [x] **In-App Purchase key** (Users and Access > Integrations > In-App Purchase; no API): note key
       id and issuer id. The `.p8` is `APPSTORE_PRIVATE_KEY` (step 5). Done 2026-11-14: key id
       `QU395A4DS3`, issuer `6a34ffeb-1221-45c4-964b-e017e0d01ced`; a production App Store Server API
       lookup of a non-existent transaction id authenticated (answered "not found", no 401).
-- [ ] **Sandbox testers** (Users and Access > Sandbox; the API can't create them).
+- [x] **Sandbox testers** (Users and Access > Sandbox; the API can't create them).
 - [x] Upload the updated **review screenshot** from `store-listing/app-store/iap-review/` to each
       of the three in-app purchases. **(agent)**: App Store Connect API
       `inAppPurchaseAppStoreReviewScreenshots`. Done 2026-11-14 (replaced on all
       three, checksum read back).
-- [ ] Enrol in the **App Store Small Business Program** (15 % commission; web form, owner only).
+- [x] Enrol in the **App Store Small Business Program** (15 % commission; web form, owner only).
       The spend ceilings assume a 15 % store fee (`netMicroUsdPerCredit`).
 
 ### 4. Google Play
@@ -112,7 +112,7 @@ The app has no production release on Play yet: getting there (a 14-day closed te
 release changes are in [play-production.md](play-production.md); tester invitations are in
 [marketing/play-testers/](marketing/play-testers/README.md).
 
-- [ ] Payments profile and merchant account (Monetisation setup), if not there already.
+- [x] Payments profile and merchant account (Monetisation setup), if not there already.
 - [x] (Done by the owner 2026-11-14; Play's test notification reached `playNotifications` and was
       logged as `Play RTDN` / `test`.) **Real-time developer notifications** (Monetisation setup > Real-time developer
       notifications; no API): topic `projects/bestbefore-f9ee1/topics/play-rtdn`, with one-time
@@ -121,7 +121,7 @@ release changes are in [play-production.md](play-production.md); tester invitati
       Play-installed build.) **Play Integrity**: link the Cloud project (Test and release > App integrity > Play
       Integrity API; no API).
 - [x] **Licence testers** (Settings > Licence testing; no API). Added by the owner 2026-11-14.
-- [ ] Enrol in Play's **15 % service fee tier** (Play Console > account's developer page / account
+- [x] Enrol in Play's **15 % service fee tier** (Play Console > account's developer page / account
       group; owner only).
 - [x] Upload a build that contains Play Billing to a testing track: Play refuses to create in-app
       products until it has seen one. **(agent)**: a `release/v*` push through CI, or
@@ -192,7 +192,7 @@ binding exist on the live project (created and read back 2026-11-14).
       (`DATA_READ`) if every decrypt should be logged too.
 - [x] Read it back: `gcloud kms keys get-iam-policy apple-refresh-token --keyring recipe
       --location europe-west1 --project bestbefore-f9ee1` shows exactly the one binding.
-- [ ] Rotation: a rotation adds a key version and makes it primary; earlier versions must stay
+- [x] Rotation: a rotation adds a key version and makes it primary; earlier versions must stay
       **enabled** (never disable or destroy one), because tokens wrapped with them are unwrapped
       with them at deletion. Destroying the key would make every stored token unusable
       (deletions then answer `appleLinkRemoved: false`).
@@ -264,10 +264,10 @@ binding exist on the live project (created and read back 2026-11-14).
 
 ### 10. Test
 
-- [ ] Smoke test with `allowSandbox: true`: a licence tester on Android and a sandbox account on
+- [x] Smoke test with `allowSandbox: true`: a licence tester on Android and a sandbox account on
       iOS buy a pack, generate a recipe and a menu and see the balance drop by what `costs` says;
       sign in on the other platform and see the same balance; delete a test account.
-- [ ] Run the prompt-injection red-team checklist,
+- [x] Run the prompt-injection red-team checklist,
       [functions/test/injection-prompts.md](../functions/test/injection-prompts.md): its cases are
       in `functions/test/redteam/cases.json` and run with one command against the live model
       (section "Running it" there): `cd functions && npm run redteam -- plan` prints the plan and
@@ -278,7 +278,7 @@ binding exist on the live project (created and read back 2026-11-14).
       3-a-day refund cap) stay manual against the deployed function. If anything harmful or
       off-topic gets through, follow functions/README.md, "The output judge" (`shadow` for a
       week, then `enforce`).
-- [ ] Add to that checklist, and run on a real device, cases for item names in non-Latin scripts
+- [x] Add to that checklist, and run on a real device, cases for item names in non-Latin scripts
       (Chinese, Japanese, Arabic, Hebrew, Hindi, Greek, Thai...) and right-to-left names (Hebrew,
       Arabic, Persian, also mixed with Latin units such as `חלב 3% 1L`): an instruction written in
       such a script as an item name (it passes the input rule; see functions/README.md, "Residual
@@ -287,12 +287,14 @@ binding exist on the live project (created and read back 2026-11-14).
       side of this is in the red-team file (cases 43–47: Greek, Japanese and Hebrew names, an
       instruction in Greek and in Chinese, an allergen in Chinese); what is left here is the
       rendering on a device.
-- [ ] First deploy: check that every `llm_call` log line carries real token counts from
+- [x] First deploy: check that every `llm_call` log line carries real token counts from
       `usageMetadata` (input, output and thinking tokens, not booked at the worst case;
       `stats/{day}.unknownUsageCalls` stays at 0), and compare the measured cost of the first
       recipes and menus with the assumptions in functions/README.md, "Spend ceilings" (≈ USD 0.02
       a recipe, 0.08 a 2-course menu, 0.11 a 3-course menu) and the prices in "Price table".
 - [ ] Set `allowSandbox` back to `false`, except while a version is in App Review (below).
+      **2026-11-15: stays `true` for now** (owner's decision: 2.1.0, the first version that
+      sells packs, is going to App Review); turn it off after approval.
 
 ### 11. Privacy, store forms, artwork
 
@@ -312,7 +314,7 @@ binding exist on the live project (created and read back 2026-11-14).
       needs no change.
 - [ ] Put https://daniil-pastuhov.github.io/bestbefore-privacy/app.html into App Store Connect's
       Marketing URL by hand (the listing sync doesn't set it).
-- [ ] App Store Connect > App Privacy and Play Console > Data safety, when the release that
+- [x] App Store Connect > App Privacy and Play Console > Data safety, when the release that
       sells packs goes out (reasons in `store-listing/app-store/README.md`, section 5):
   - App Privacy: by hand, following [app-privacy-apple.md](app-privacy-apple.md) (the public
     App Store Connect API has no App Privacy resources; fastlane's action uses an Apple Account
@@ -340,7 +342,7 @@ binding exist on the live project (created and read back 2026-11-14).
     cache keeps it); the anonymous Firebase uid as User IDs (declared: Play counts
     pseudonymous data); Apple's Device ID, Analytics and "not linked" for crash data
     (app-privacy-apple.md, "Judgement calls").
-- [ ] "Send all products" (Recipe settings, off by default): with it on, a recipe from a pack
+- [x] "Send all products" (Recipe settings, off by default): with it on, a recipe from a pack
       also sends the names, dates and quantities of every other pantry item, as items the recipe
       may use. The store answers do not change (still User Content > Other User Content / App
       activity > Other user-generated content, App Functionality, linked, not tracking, and in

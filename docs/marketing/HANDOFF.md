@@ -73,8 +73,8 @@ Nothing here has been posted, submitted or uploaded to a store.
   fr-CA, sv-SE, da-DK. **No native reader has checked any of the five**: the app strings, store
   texts, captions, demo content and release notes were all machine-written. Have a native
   speaker read at least the store texts and the onboarding before relying on them. Danish
-  recipes from packs need the server deployed with `acceptsDanish` (functions/CONTRACT.md);
-  until then the apps say so instead of sending the request.
+  recipes from packs need a server that says `acceptsDanish` (functions/CONTRACT.md); the
+  backend was deployed from `feat/languages` on 2026-11-15, so the live server does.
 
 ## Open, in the order it matters
 
@@ -94,7 +94,13 @@ Nothing here has been posted, submitted or uploaded to a store.
    `https://github.com/openfoodfacts/openfoodfacts-web/issues/new?template=new-reuse.yml`.
 6. **Set the Marketing URL.** The landing page pull request (`bestbefore-privacy#3`) was merged on
    2026-11-15: the About page and the eight policy pages load. Put the `app.html` URL into App
-   Store Connect's Marketing URL by hand (the listing sync doesn't set that field).
+   Store Connect's Marketing URL by hand (the listing sync doesn't set that field). The field is
+   on the version page, per language, and can only be edited while the version is in "Prepare for
+   Submission". The release job creates the version and submits it in one go, so do it **before
+   merging the release PR**: Apps > BestBefore > "+" beside iOS App > version number of the
+   release (the job takes over a version made by hand) > for each language in the language menu:
+   Marketing URL = https://daniil-pastuhov.github.io/bestbefore-privacy/app.html > Save. The
+   same window is the only one for dragging in the preview videos (point 8).
 7. **Product Hunt, community posts, press**: after the Recipe version is live; Android-focused
    posts after Play is public. Read each community's self-promotion rules first.
 8. **Preview video**: recorded again on 2026-11-15 in all eight languages, with the "Needs a

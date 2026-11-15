@@ -265,39 +265,39 @@ Recipe build reaches `alpha` (the closed track is reviewed: Data safety applies 
 closed, open, or production testing tracks", answer/10787469; only "Apps that are active on
 internal testing tracks are exempt").
 
-- [ ] **Data safety**: the answers are in `store-listing/app-store/README.md`, section 5 (the
+- [x] **Data safety**: the answers are in `store-listing/app-store/README.md`, section 5 (the
       "Google Play's Data safety form needs the matching answers" list), referenced from
       [recipe-setup.md](recipe-setup.md) step 11; not repeated here. The whole form is
       `store-listing/google-play/data-safety.csv`, sent with `scripts/play_data_safety.py --apply`
       (store-listing/google-play/README.md, "Data safety").
-- [ ] **Data deletion** (inside Data safety): account creation is possible (Google sign-in), so
+- [x] **Data deletion** (inside Data safety): account creation is possible (Google sign-in), so
       Google requires "a web link resource where users can request app account deletion"
       (<https://support.google.com/googleplay/android-developer/answer/13327111>); it "must be
       functional ..., relevant in scope ... and reference the app or developer name (that is, as
       it appears on your store listing in Google Play)" and must not require reinstalling the
       app. Use https://daniil-pastuhov.github.io/bestbefore-privacy/delete.html. **Check** it
       names "BestBefore" as on the listing.
-- [ ] **Privacy policy**: https://daniil-pastuhov.github.io/bestbefore-privacy/ (must cover the
+- [x] **Privacy policy**: https://daniil-pastuhov.github.io/bestbefore-privacy/ (must cover the
       recipe pack data; see [privacy-policy-changes.md](privacy-policy-changes.md)).
-- [ ] **Ads**: No (the app has no ads; in-app purchase offers are not ads: the label "isn't meant
+- [x] **Ads**: No (the app has no ads; in-app purchase offers are not ads: the label "isn't meant
       to cover ... offers to make in-app purchases").
-- [ ] **App access** (Sign-in details): all functionality is available without special access;
+- [x] **App access** (Sign-in details): all functionality is available without special access;
       add a note that recipe packs are in-app purchases and need no login.
-- [ ] **Target audience and content**: adults (18+ or 16+; not children, so the Families policy
+- [x] **Target audience and content**: adults (18+ or 16+; not children, so the Families policy
       doesn't apply). Unchanged by Recipe unless you change it.
-- [ ] **Content rating**: re-take the questionnaire if it asks about digital purchases
+- [x] **Content rating**: re-take the questionnaire if it asks about digital purchases
       **(unverified)**; Play's ratings show "In-app purchases" as an interactive element.
-- [ ] **Health apps** declaration, if App content lists it **(unverified)**: the allergen list is
+- [x] **Health apps** declaration, if App content lists it **(unverified)**: the allergen list is
       health data; answer as the app is (food tracking with an allergen filter, no medical
       features).
-- [ ] **Monetisation** (Manage account > Play apps settings > Monetization settings > Payments
+- [x] **Monetisation** (Manage account > Play apps settings > Monetization settings > Payments
       profile, <https://support.google.com/googleplay/android-developer/answer/7161426>): the
       payments profile exists if the one-time products could be created (2026-11-14), but
       **check** that the merchant tax information and bank account are complete and verified,
       otherwise payouts stop. Recipe-setup step 4's "Payments profile and merchant account" box
       and the 15 % service fee tier are still open.
 - [x] **Licence testers** (Settings > Licence testing): done 2026-11-14 (recipe-setup step 4).
-- [ ] **Store listing**: applied by the release (`play-listing` job); no console step.
+- [x] **Store listing**: applied by the release (`play-listing` job); no console step.
 
 ## Pre-registration, experiments, custom listings
 
