@@ -37,37 +37,67 @@ PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO", "es": "es-ES", "de"
 PLAY_SET = "phone-screenshots"
 PLAY_SIZE = (1080, 1920)
 
-# One caption per screenshot, in order: Home, the scan, a recipe, the three-day menu, the shopping
-# list and Settings. Both stores get the same six. The recipe and the menu are what the routes
-# write, so their captions say what they do, not what they cost. "\n" is where a caption breaks
+# One caption per screenshot, in order: Home, the scan, a recipe, the Recipe form in Menu set mode
+# (Days and Courses), the four-day menu set it writes (four days is the most the form offers, so
+# "up to four days" is what the shot shows: keep scripts/demo_recipes.py's menu at four days) and
+# the shopping list. Both stores get the same six; the first three are what search results show.
+# The recipe and the menu are what the routes write, so their captions say what they do, not
+# what they cost. "\n" is where a caption breaks
 # on a narrow (iPhone-shaped) screenshot; wider ones put it on one line if it fits.
 CAPTIONS = {
-    "en": ["Know what's\nabout to expire", "Scan the pack,\nthe date is read", "Cook what needs\nusing first",
-           "A three-day menu\naround what you have", "Used it up?\nIt's on your list",
-           "Reminders\nwhen it suits you"],
-    "ru": ["Видно, что скоро\nиспортится", "Наведите камеру —\nсрок распознан", "Готовьте из того,\nчто пора съесть",
-           "Меню на три дня\nпод ваши продукты", "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
-    "nb": ["Se hva som\nsnart går ut", "Skann pakken,\ndatoen leses av", "Lag mat av det\nsom må brukes først",
-           "Meny for tre dager\nrundt det du har", "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
-    "es": ["Mira qué está\na punto de caducar", "Escanea el envase,\nla fecha se lee sola",
-           "Cocina primero\nlo que toca usar", "Un menú de tres días\ncon lo que tienes",
-           "¿Se acabó?\nYa está en tu lista", "Avisos cuando\nmejor te venga"],
-    "de": ["Sieh, was\nbald abläuft", "Packung scannen,\nDatum wird erkannt", "Koch zuerst,\nwas weg muss",
-           "Ein Menü für drei Tage\naus dem, was da ist", "Aufgebraucht?\nSteht auf der Liste",
-           "Erinnerungen,\nwann es dir passt"],
-    "fr": ["Voyez ce qui\narrive à date", "Scannez l'emballage,\nla date est lue",
-           "Cuisinez d'abord\nce qui presse", "Un menu de trois jours\navec ce que vous avez",
-           "Tout utilisé\u00a0?\nC'est sur votre liste", "Des rappels quand\nça vous arrange"],
-    "sv": ["Se vad som\nsnart går ut", "Skanna förpackningen,\ndatumet läses av",
-           "Laga mat av det\nsom ska ätas först", "En meny för tre dagar\nkring det du har",
-           "Slut? Den står\npå listan", "Påminnelser när\ndet passar dig"],
-    "da": ["Se, hvad der\nsnart udløber", "Scan pakken,\ndatoen aflæses", "Lav mad af det,\nder skal bruges først",
-           "En menu for tre dage\nud fra det, du har", "Brugt op? Den\nstår på listen",
-           "Påmindelser, når\ndet passer dig"],
+    "en": ["Know what's\nabout to expire",
+           "Scan the pack,\nthe date is read",
+           "Cook what needs\nusing first",
+           "Choose the days\nand the courses",
+           "Plan up to four days\naround what you have",
+           "Used it up?\nIt's on your list"],
+    "ru": ["Видно, что скоро\nиспортится",
+           "Наведите камеру —\nсрок распознан",
+           "Готовьте из того,\nчто пора съесть",
+           "Выберите дни\nи число блюд",
+           "Меню до четырёх дней\nпод ваши продукты",
+           "Закончилось —\nуже в списке"],
+    "nb": ["Se hva som\nsnart går ut",
+           "Skann pakken,\ndatoen leses av",
+           "Lag mat av det\nsom må brukes først",
+           "Velg dager og\nantall retter",
+           "Planlegg opptil fire\ndager rundt det du har",
+           "Brukt opp? Den\nstår på listen"],
+    "es": ["Mira qué está\na punto de caducar",
+           "Escanea el envase,\nla fecha se lee sola",
+           "Cocina primero\nlo que toca usar",
+           "Elige los días\ny los platos",
+           "Planifica hasta cuatro\ndías con lo que tienes",
+           "¿Se acabó?\nYa está en tu lista"],
+    "de": ["Sieh, was\nbald abläuft",
+           "Packung scannen,\nDatum wird erkannt",
+           "Koch zuerst,\nwas weg muss",
+           "Wähl die Tage\nund die Gänge",
+           "Plane bis zu vier Tage\naus dem, was da ist",
+           "Aufgebraucht?\nSteht auf der Liste"],
+    "fr": ["Voyez ce qui\narrive à date",
+           "Scannez l'emballage,\nla date est lue",
+           "Cuisinez d'abord\nce qui presse",
+           "Choisissez les jours\net les plats",
+           "Planifiez jusqu'à quatre\njours avec vos produits",
+           "Tout utilisé\u00a0?\nC'est sur votre liste"],
+    "sv": ["Se vad som\nsnart går ut",
+           "Skanna förpackningen,\ndatumet läses av",
+           "Laga mat av det\nsom ska ätas först",
+           "Välj dagar och\nantal rätter",
+           "Planera upp till fyra\ndagar kring det du har",
+           "Slut? Den står\npå listan"],
+    "da": ["Se, hvad der\nsnart udløber",
+           "Scan pakken,\ndatoen aflæses",
+           "Lav mad af det,\nder skal bruges først",
+           "Vælg dage og\nantal retter",
+           "Planlæg op til fire\ndage ud fra det, du har",
+           "Brugt op? Den\nstår på listen"],
 }
 # App Store Connect keeps the two iPhone Duo sets in one group of at most 10 images per language,
-# so each has five: the shots above without the last, Settings.
-SHOT_LIMITS = {"duo-inner-screenshots": 5, "duo-outer-screenshots": 5}
+# so each has five: the shots above without the Menu set form (the outer display is too short to
+# show Days, Courses and Generate menu together), numbered 1 to 5. Indices into CAPTIONS.
+SHOT_PICKS = {"duo-inner-screenshots": [0, 1, 2, 4, 5], "duo-outer-screenshots": [0, 1, 2, 4, 5]}
 
 # The background runs from the top-left corner towards the bottom, through Larder's greens
 # (green.600, 700, 800 and 900 in tokens.json).
@@ -177,8 +207,8 @@ def main():
         raws = sorted((raw_dir / lang).glob("[0-9]-*.png"))
         if len(raws) != len(captions):
             sys.exit(f"expected {len(captions)} screenshots in {raw_dir / lang}, found {len(raws)}")
-        limit = SHOT_LIMITS.get(set_name, len(captions))
-        captions, raws = captions[:limit], raws[:limit]
+        picks = SHOT_PICKS.get(set_name, range(len(captions)))
+        captions, raws = [captions[i] for i in picks], [raws[i] for i in picks]
         store = "google-play" if play else "app-store"
         # Last run's shots past the new count would otherwise stay behind in the set.
         for stale in (ROOT / "store-listing" / store / folder / set_name).glob("[0-9].png"):

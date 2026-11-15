@@ -7,8 +7,9 @@
 # simctl has no hinge control (`simctl io screenConfig power` only blanks a display and can leave
 # SpringBoard stopped), so this clicks the pose buttons ("Closed", "Partially Open", "Open") that
 # Xcode's Device Hub shows beside the device, through System Events. It needs Device Hub running
-# with the simulator's window open (it is selected in the sidebar first, by the name simctl
-# gives it), and Accessibility access for the app running this script (System Settings >
+# with the simulator's window open: either its own window ("iPhone Duo – iOS 27.1", Device Hub
+# with one window per device, tried first) or the main window, where it is selected in the
+# sidebar by the name simctl gives it. It also needs Accessibility access for the app running this script (System Settings >
 # Privacy & Security > Accessibility). It then waits until the chosen display draws something.
 # A reboot (the screenshot script's region change; use KEEP_REGION=1) brings the device back
 # folded.
@@ -28,13 +29,39 @@ for devices in json.load(sys.stdin)["devices"].values():
     for d in devices:
         if d["udid"] == sys.argv[1]:
             print(d["name"]); sys.exit()' "$UDID")
+# "iOS 27.1", as Device Hub titles a device's window ("iPhone Duo – iOS 27.1").
+RUNTIME=$(xcrun simctl list devices -j | python3 -c '
+import json, sys
+for runtime, devices in json.load(sys.stdin)["devices"].items():
+    for d in devices:
+        if d["udid"] == sys.argv[1]:
+            v = runtime.rsplit(".", 1)[-1].split("-")
+            print(v[0] + " " + ".".join(v[1:3])); sys.exit()' "$UDID")
 
 open -a DeviceHub
-osascript - "$NAME" "$POSE" <<'EOF'
-on run {deviceName, pose}
+osascript - "$NAME" "$POSE" "$RUNTIME" <<'EOF'
+on run {deviceName, pose, runtimeName}
   tell application "System Events" to tell process "DeviceHub"
     set frontmost to true
     delay 1
+    -- A Device Hub with one window per device (no sidebar): the window titled
+    -- "<name> – <runtime>" carries the pose buttons in its first group. A shut-down device's
+    -- window of the same title has none, so the first window that has the button is the one.
+    repeat with w in windows
+      try
+        if name of w is (deviceName & " – " & runtimeName) then
+          repeat with b in (buttons of group 1 of w)
+            try
+              if help of b is pose then
+                click b
+                return
+              end if
+            end try
+          end repeat
+        end if
+      end try
+    end repeat
+    -- Otherwise the main window with its device sidebar.
     set o to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of splitter group 1 of group 1 of window 1
     -- Running devices are listed first, so the first row with the name is the booted one.
     repeat with r in rows of o
