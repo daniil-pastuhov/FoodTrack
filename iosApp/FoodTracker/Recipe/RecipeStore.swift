@@ -9,6 +9,11 @@ struct RecipePack: Identifiable, Equatable {
     var id: String { product.id }
     var displayPrice: String { product.displayPrice }
 
+    /// The store's price and currency, for the saving badge (`PackSavings`).
+    var offer: PackOffer {
+        PackOffer(recipes: credits, price: product.price, currencyCode: product.priceFormatStyle.currencyCode)
+    }
+
     /// "£0.20": worked out from the store's price, never written down anywhere.
     var pricePerRecipe: String {
         RecipePack.pricePerRecipe(price: product.price, credits: credits, format: product.priceFormatStyle)
