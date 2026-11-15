@@ -146,12 +146,8 @@
 .recipe .r-saved .text > span { display: block; }
 .recipe .r-go .btn[disabled] { background: var(--color-surface-container-high); color: var(--color-on-surface-variant); opacity: 1; }
 
-/* 2026-11-14: the lone Share prompt is a pill as wide as its label at the trailing edge, like Scan on Home */
-.recipe .r-go.is-compact { left: auto; right: var(--space-4); width: auto; max-width: calc(100% - var(--space-8)); }
-.recipe .r-go.is-compact .btn > span:first-of-type { flex: 0 1 auto; }
-@container (min-width: 700px) {
-  .recipe .r-go.is-compact { right: var(--space-6); bottom: var(--space-3); width: auto; } /* fits level with the pill */
-}
+/* 2026-11-15: the lone Share prompt is the Scan button's component (.fab), placed where Scan sits on Home */
+.recipe .fab.r-share { z-index: 6; max-width: calc(100% - var(--space-8)); }
 
 /* Past-date warning (danger tier) and the Send all products line */
 .recipe .r-past { margin-bottom: var(--space-3); }
