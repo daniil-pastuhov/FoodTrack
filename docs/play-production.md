@@ -259,8 +259,9 @@ internal testing tracks are exempt").
 
 - [ ] **Data safety**: the answers are in `store-listing/app-store/README.md`, section 5 (the
       "Google Play's Data safety form needs the matching answers" list), referenced from
-      [recipe-setup.md](recipe-setup.md) step 11; not repeated here. The form can be exported
-      and imported as CSV (Data safety page > Export to CSV / Import from CSV).
+      [recipe-setup.md](recipe-setup.md) step 11; not repeated here. The whole form is
+      `store-listing/google-play/data-safety.csv`, sent with `scripts/play_data_safety.py --apply`
+      (store-listing/google-play/README.md, "Data safety").
 - [ ] **Data deletion** (inside Data safety): account creation is possible (Google sign-in), so
       Google requires "a web link resource where users can request app account deletion"
       (<https://support.google.com/googleplay/android-developer/answer/13327111>); it "must be
