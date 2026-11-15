@@ -3,3 +3,4 @@
 • Set time, meal type and diets, and save the recipes you like.
 • Add a recipe's missing ingredients to your shopping list in one tap.
 • Clear warnings for items past their date, plus fixes for large text.
+• Now also in Spanish, German, French, Swedish and Danish.

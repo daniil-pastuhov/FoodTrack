@@ -1,0 +1,6 @@
+• L'onglet Recette remplace Calendrier : des recettes avec ce qu'il faut utiliser d'abord.
+• Partagez un prompt, écrivez une recette gratuitement sur l'appareil (si compatible) ou achetez un pack de recettes (menu sur 3 jours inclus).
+• Choisissez durée, repas et régimes, et enregistrez vos recettes préférées.
+• Ajoutez les ingrédients manquants à la liste de courses en un geste.
+• Alertes claires pour les produits périmés, corrections pour les grands caractères.
+• Maintenant en français.
