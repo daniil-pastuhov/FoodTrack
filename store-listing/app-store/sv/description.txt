@@ -21,8 +21,9 @@ HANDLA SMARTARE
 LAGA MAT AV DET SOM SNART GÅR UT
 • Fliken Recept kryssar i varorna som är närmast sitt datum; ändra urvalet, antal portioner, tid, kost med mera
 • Gratis: kopiera eller dela en färdig prompt till AI-appen du redan använder
-• Gratis på iPhone med Apple Intelligence (iOS 26 eller senare): receptet skrivs på själva telefonen
-• Receptpaket (köp i appen): recept som skrivs av vår server och sparas i appen, och en måltidsplan för 3 dagar (”Meny för 3 dagar”) som använder det som går ut först
+• Gratis på iPhone med Apple Intelligence (iOS 26 eller senare, på svenska från iOS 26.1): receptet skrivs på själva telefonen
+• Receptpaket (köp i appen): recept som skrivs av vår server och sparas i appen, och menyset för 1 till 4 dagar, med upp till tre rätter om dagen, som använder det som går ut först
+• Lägg det som fattas i ett recept på inköpslistan med ett tryck
 
 DINA DATA
 • Ingen reklam, ingen spårning

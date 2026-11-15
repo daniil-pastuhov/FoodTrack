@@ -21,8 +21,9 @@ BestBefore håller koll på datumen för maten i kylskåpet, frysen och skafferi
 <b>Laga mat av det som snart går ut</b>
 • Fliken Recept kryssar i varorna som är närmast sitt datum; ändra urvalet, antal portioner, tid, kost med mera
 • Gratis: kopiera eller dela en färdig prompt till AI-appen du redan använder
-• Gratis på Android-telefoner som stöder det: receptet skrivs på själva telefonen, av telefonens egen modell
-• Receptpaket (köp i appen): recept som skrivs av vår server och sparas i appen, och en måltidsplan för 3 dagar (”Meny för 3 dagar”) som använder det som går ut först
+• Gratis på Android-telefoner som stöder det: receptet skrivs på själva telefonen, av telefonens egen modell (än så länge bara på engelska)
+• Receptpaket (köp i appen): recept som skrivs av vår server och sparas i appen, och menyset för 1 till 4 dagar, med upp till tre rätter om dagen, som använder det som går ut först
+• Lägg det som fattas i ett recept på inköpslistan med ett tryck
 
 <b>Dina data</b>
 • Ingen reklam, ingen spårning

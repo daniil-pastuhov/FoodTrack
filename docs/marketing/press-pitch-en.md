@@ -19,7 +19,9 @@ prefers English. The list of Norwegian outlets and their contact pages is in `pr
 > phone reads the printed date, whether it is a best-before or a use-by date, and reminds you
 > before something expires. In the new version, the Recipe tab writes a recipe from whatever
 > expires first: free by sharing a ready-made prompt to an AI app you already use, free on the
-> phone itself where it supports it, or from optional recipe packs with no subscription.
+> phone itself where it supports it, or from optional recipe packs with no subscription, which
+> can also plan a menu set of one to four days. Packs start at USD 2.99 for 10 recipes, converted
+> by the stores.
 >
 > It needs no account, has no ads and no tracking, and the pantry is stored only on the phone. The
 > source code is open.
@@ -51,8 +53,11 @@ A free app for keeping track of the dates on the food at home.
 - **Who:** Daniil Pastuhov, independent developer based in Norway.
 - **Platforms:** iPhone and iPad (App Store, live). Android: Google Play, in closed testing, not
   public yet.
-- **Languages:** English, Russian, Norwegian.
-- **Price:** free, no ads, no subscription. Optional recipe packs as one-off in-app purchases.
+- **Languages:** English, Russian, Norwegian, Spanish, German, French, Swedish and Danish (app);
+  recipes can be written in eleven languages.
+- **Price:** free, no ads, no subscription. Optional recipe packs as one-off in-app purchases:
+  10, 50 or 100 recipes, from USD 2.99 for 10 (other currencies as converted by the App Store
+  and Google Play).
 - **Privacy:** no account; the pantry is stored only on the phone; no tracking (the app sends crash
   reports, and barcodes are looked up on Open Food Facts). A recipe from a pack sends the items
   ticked, the recipe settings and the allergens (only after consent) to the server. The free ways
@@ -73,9 +78,12 @@ A free app for keeping track of the dates on the food at home.
 - Ticks the items that expire first and writes a recipe from them.
 - Free: share a ready-made prompt to an AI app you already use.
 - Free on the phone itself where supported: Apple Intelligence on recent iPhones (iOS 26 or later),
-  Gemini Nano on some Android phones.
-- Optional: recipe packs written by the app's server, one-off purchases. The 3-day menu comes from
-  a pack.
+  Gemini Nano on some Android phones (English recipes for now).
+- Optional: recipe packs written by the app's server, one-off purchases. Menu sets come from a
+  pack: 1 to 4 days, one to three courses a day; a recipe takes one from the pack, a menu set
+  takes more by its size (the app shows how many first).
+- A recipe's missing ingredients go onto the shopping list in one tap; a recipe that uses an item
+  past its date warns about it.
 
 **Background (sources)**
 

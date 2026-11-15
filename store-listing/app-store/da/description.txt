@@ -21,8 +21,9 @@ HANDL SMARTERE
 LAV MAD AF DET, DER SNART UDLØBER
 • Fanen Opskrift vælger de varer, der er tættest på deres dato; ret udvalget, antal portioner, tid, kost og meget mere
 • Gratis: kopiér en færdig prompt, eller del den med den AI-app, du allerede bruger
-• Gratis på iPhone med Apple Intelligence (iOS 26 eller nyere): opskriften skrives på selve telefonen
-• Opskriftspakker (køb i appen): opskrifter skrevet af vores server og gemt i appen, og en madplan for 3 dage (»Menu for 3 dage«), der bruger det, der udløber først
+• Gratis på iPhone med Apple Intelligence (iOS 26 eller nyere, på dansk fra iOS 26.1): opskriften skrives på selve telefonen
+• Opskriftspakker (køb i appen): opskrifter skrevet af vores server og gemt i appen, og menusæt for 1 til 4 dage med op til tre retter om dagen, der bruger det, der udløber først
+• Det, en opskrift mangler, kommer på indkøbslisten med ét tryk
 
 DINE DATA
 • Ingen reklamer, ingen sporing

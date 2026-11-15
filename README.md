@@ -18,7 +18,7 @@ Scan your groceries, see what to use first, get a reminder before food goes off,
 - Lists what expires first in the fridge, freezer and pantry, and reminds you a few days before, at a time you choose.
 - Shopping list: essentials you use up go onto it; share it as text or a QR code.
 - Home screen widgets for expiring items, the shopping list and an overview.
-- Recipe tab: picks the items closest to their date and writes a recipe in one of three ways: a prompt to copy into an AI app you already use (free), the phone's own model where it has one (free), or the server, with optional one-off recipe packs (in-app purchase) that also make a 3-day menu.
+- Recipe tab: picks the items closest to their date and writes a recipe in one of three ways: a prompt to copy into an AI app you already use (free), the phone's own model where it has one (free), or the server, with optional one-off recipe packs (in-app purchase) that also plan menu sets: 1 to 4 days, up to three courses a day. A written recipe's missing ingredients go onto the shopping list in one tap.
 - The pantry stays on your device, and you don't need an account. Only a recipe from a pack sends anything to the project's server.
 - English, Russian, Norwegian, Spanish, German, French, Swedish and Danish. Open source under the Apache License 2.0.
 
@@ -44,7 +44,7 @@ The project is called FoodTracker in the code; the app is published as BestBefor
 - 🍳 **Recipes from what's expiring**: the Recipe tab picks the items closest to their date and writes a recipe in one of three ways:
   - **Shared prompt** (free): the prompt is copied or shared to an AI app the user already has. Nothing comes back to the app.
   - **On this phone** (free): Gemini Nano through ML Kit's Prompt API on supported Android phones, Apple Foundation Models on iOS 26 and later. Nothing is sent.
-  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A 3-day menu (2 or 3 courses a day) is server-only and takes several recipes (by default 4 or 5, by the number of courses). What each takes is set by the server, not the app.
+  - **From a pack** (paid): packs of 10, 50 or 100 recipes are in-app purchases. The project's Cloud Functions write the recipe with Gemini on Vertex AI. A menu set (1 to 4 days, 1 to 3 courses a day, the main course first) is server-only and takes several recipes (by default days + courses − 1, so 1 to 6). What each takes is set by the server, not the app.
 
 ## Project Structure
 

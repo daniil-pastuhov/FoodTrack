@@ -5,7 +5,12 @@ before the app can go public ([../../play-production.md](../../play-production.m
 has what to send them:
 
 - [en.md](en.md), [ru.md](ru.md), [no.md](no.md): three invitations each (friends and family, a
-  tech community, a food-waste / zero-waste community) and a one-page "how to join".
+  tech community, a food-waste / zero-waste community) and a one-page "how to join". The app is
+  also in Spanish, German, French, Swedish and Danish, but there are no invitations in those
+  languages; use the English one in those communities (the app follows the phone's language).
+
+Since 2026-11-15 the closed track holds 2.1.0, the Recipe release (recipe packs, menu sets of 1
+to 4 days, eight languages), so testers try what will go to production.
 
 Fill in the placeholders before sending:
 
@@ -40,6 +45,8 @@ get wrong:
   testing (account-wide, email lists or Google Groups). Google: "authorized users can also
   purchase one-time products and subscriptions without charging their accounts". The Play
   purchase sheet marks it as a test purchase.
+- **`allowSandbox` is on now**, for the App Store review of 2.1.0, so a licence tester's test
+  purchase grants recipes until it is turned off after approval (`../launch-plan.md`).
 - On this app's server, licence-test purchases grant recipes **only while `allowSandbox` is on**
   in `config/runtime` (functions/README.md, "`config/runtime`"; capped by `sandboxDailyCap` and
   `sandboxDailyCredits`). With it off, a licence tester's test purchase gives no recipes. Turn it

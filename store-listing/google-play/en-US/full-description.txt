@@ -22,7 +22,8 @@ BestBefore is an expiration date tracker and food inventory for your fridge, fre
 • The Recipe tab picks the items closest to their date; change the selection, servings, time, diet and more
 • Free: copy or share a ready-made prompt to the AI app you already use
 • Free on supported Android phones: the recipe is written on the phone itself, by its own model
-• Recipe packs (in-app purchase): recipes written by our server and saved in the app, and a 3-day meal plan ("Menu for 3 days") that uses what expires first
+• Recipe packs (in-app purchase): recipes written by our server and saved in the app, plus menu sets that plan 1 to 4 days, up to three courses a day, around what expires first
+• Add what a recipe still needs to your shopping list in one tap
 
 <b>Your data</b>
 • No ads, no tracking

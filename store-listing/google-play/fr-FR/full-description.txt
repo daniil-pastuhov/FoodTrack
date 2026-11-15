@@ -21,8 +21,9 @@ BestBefore suit les dates de péremption et l'inventaire de votre frigo, de votr
 <b>Cuisinez ce qui arrive à sa date</b>
 • L'onglet Recette choisit les produits dont la date est la plus proche ; changez la sélection, les portions, le temps, le régime et plus encore
 • Gratuit : copiez ou partagez un prompt prêt à l'emploi vers l'appli d'IA que vous utilisez déjà
-• Gratuit sur les téléphones Android compatibles : la recette est rédigée sur le téléphone lui-même, par son propre modèle
-• Packs de recettes (achat intégré) : des recettes rédigées par notre serveur et enregistrées dans l'appli, et un planning de repas sur 3 jours (« Menu sur 3 jours ») qui utilise d'abord ce qui arrive à sa date
+• Gratuit sur les téléphones Android compatibles : la recette est rédigée sur le téléphone lui-même, par son propre modèle (pour l'instant en anglais uniquement)
+• Packs de recettes (achat intégré) : des recettes rédigées par notre serveur et enregistrées dans l'appli, et des sets de menus de 1 à 4 jours, jusqu'à trois plats par jour, qui utilisent d'abord ce qui arrive à sa date
+• Ajoutez en un geste à votre liste de courses ce qui manque à une recette
 
 <b>Vos données</b>
 • Pas de pub, pas de pistage
