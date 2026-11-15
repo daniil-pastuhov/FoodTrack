@@ -3,13 +3,16 @@
 Everything App Store Connect asks for. The release flow applies the listing texts, the
 screenshots and the header art ("Changing the listing texts" below); the rest is ready to paste. One folder per
 listing language: `en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
-`no/` (Norwegian). Each folder has `name.txt`, `subtitle.txt`, `promotional_text.txt`,
-`keywords.txt` and `description.txt`; `scripts/check_store_listing.py` checks them (and the
-Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
+`no/` (Norwegian), and `en-AU/` (English, Australia) and `en-CA/` (English, Canada) with
+`keywords.txt` alone ("Australia and Canada" below). Each full folder has `name.txt`,
+`subtitle.txt`, `promotional_text.txt`, `keywords.txt` and `description.txt`; another English
+folder may leave any of them out and takes en-GB's. `scripts/check_store_listing.py` checks them
+(and the Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
 (comma-separated, no spaces after commas, no word that the same language's name or subtitle
-already has), promotional text 170, description 4000. Run it after every edit.
+already has, inherited ones included; en-AU also none of en-GB's keywords), promotional text 170,
+description 4000. Run it after every edit.
 
-`en-US/` has texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
+`en-US/`, `en-AU/` and `en-CA/` have texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
 primary language's screenshots in a localization that has none, so nothing needs uploading
 there (the sync places en-GB's header art on it, see below), and the screenshot scripts only
 make the en-GB, ru and no sets. The en-GB, ru and no
@@ -130,7 +133,9 @@ before it submits it for review, and only what differs from App Store Connect:
   subtitle, keywords and description change only with a new version, so they go live when that
   version is approved. A localization the repo has and App Store Connect lacks is added (en-US
   was added this way), with the support, marketing and privacy policy URLs copied from en-GB;
-  those URLs are otherwise never touched.
+  those URLs are otherwise never touched. An English folder without some of the files (en-AU,
+  en-CA) takes en-GB's for them, so a localization added from it has every field; the dry run
+  says per localization which fields come from its folder and which are inherited from en-GB.
 - **Screenshots**: `screenshots/`, `medium-screenshots/` and `ipad-screenshots/` replace each
   localization's set of that display type, in file-number order. Unchanged images (same MD5)
   stay, changed or new ones are uploaded, and images no longer in the folder are deleted. At
@@ -191,11 +196,25 @@ Both compare with the version in preparation. While none is (after a release is 
 before the next merge), they say so and compare with the newest version, which is what the next
 version starts from.
 
-English (Australia) and English (Canada) need no folder of their own: add them in App Store
-Connect and the sync gives them the en-GB texts and What's New. Apple's storefront tables say the Australian
-App Store also searches the en-GB keywords, so en-AU keywords could add words en-GB has no room
-for; check Apple's current list ("Localizations by storefront" in App Store Connect Help) before
-counting on it. Without these localizations, both countries see the en-GB listing.
+### Australia and Canada
+
+Apple's [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations)
+table gives Australia the default language English (Australia), with English (U.K.) as an
+additional one, and Canada English (Canada), with French (Canada). Without an en-AU or en-CA
+localization both showed en-GB, the primary language. Apple says only that the language shown
+"could be impacted by" the storefront's language, the device's settings, the languages added and
+the primary language; which localizations' keywords a storefront searches is not documented. The
+folders follow the usual assumption that a storefront searches the localizations in its row:
+
+- `en-AU/keywords.txt` adds words en-GB has no room for (Australia is assumed to search en-GB's
+  too), so the checker refuses any word of en-GB's keywords, name or subtitle there.
+- `en-CA/keywords.txt` stands on its own (en-GB is not in Canada's row), so it carries the core
+  words again, with "expiration" beside the name's "expiry" and "best before", the Canadian
+  date label.
+
+Everything else (name, subtitle, description, promotional text, What's New, screenshots, header
+and search-result art) is en-GB's, so they need no upkeep beyond their keywords. To give one its
+own text, add that file to its folder. French (Canada) has no listing.
 
 ## 1. One-time setup
 
@@ -366,3 +385,72 @@ privacy policy (URL above) has to say the same; it is updated in
 - Screenshots and the header and search-result images: set by the release flow
   (`scripts/testflight.py appstore --screenshots`; see "Changing the listing texts"). English
   (U.S.) has no screenshots of its own and shows en-GB's; it gets en-GB's header art.
+
+## 8. Launch promotion: in-app event and featuring nomination
+
+For the release that brings the Recipe tab: an in-app event (badge Major Update) and a featuring
+nomination. The release flow starts neither; both begin by hand, in the order of the timeline
+below.
+
+**The in-app event** lives in `in-app-event/`: `event.json` (reference name, badge, purpose,
+priority, "no in-app purchase required", deep link, primary language, territories, schedule), one
+folder per language with `name.txt`, `short_description.txt` and `long_description.txt`, and the
+images `event-card.png` (3840×2160) and `event-details.png` (2160×3840) in en-GB, ru and no (en-US
+has texts only and takes en-GB's images). Apple's limits, which `scripts/check_store_listing.py`
+checks: reference name 64 characters, event name 30, short description 50, long description 120,
+no prices; an event lasts at most 31 days and is published at most 14 days before it starts; the
+card is 16:9 from 1920×1080 to 3840×2160, the details page 9:16 from 1080×1920 to 2160×3840 (App
+Store Connect Help, [Offer In-App Events](https://developer.apple.com/help/app-store-connect/offer-in-app-events/offer-in-app-events)
+and [media specifications](https://developer.apple.com/help/app-store-connect/reference/in-app-event-media-and-audio-specifications);
+[In-App Events](https://developer.apple.com/app-store/in-app-events/)). `scripts/in_app_event_art.py`
+redraws the images from the framed screenshots (`screenshots/` 2, 3 and 4: the scan, a recipe,
+the menu) after those change. Apple wants no text or logos in event media, so the only words are
+the app's own screens; it sets the event name and description over the bottom, which the layouts
+leave to the phones' lower halves and plain green.
+
+- **Schedule**: the event starts on `releaseDay` (null until you set it, as `YYYY-MM-DD`) at
+  `startTimeUtc`, runs `durationDays` (30) and is published `publishDaysBefore` (0) days before
+  it starts: on release day, because before the version is live the event's Open button would
+  lead to a version without the Recipe tab. `"territories": "app"` means every territory the app
+  is in; a list of 3-letter codes narrows it.
+- **Deep link** `foodtracker://recipe`. The app already handles `foodtracker://` (the widgets use
+  it), but `AppRoute(externalName:)` in `iosApp/FoodTracker/AppRouter.swift` has no `recipe` name
+  yet, so until it has, the link only opens the app on the tab it was on. The smallest addition,
+  to ship in the same version: `case "recipe": self = .tab(.recipe)`. A fresh install shows
+  onboarding first and drops the route (`RootTabView` applies routes only after onboarding),
+  which is acceptable: the person lands in the app either way.
+- **The command**: `python3 scripts/testflight.py event` (with the `ASC_*` variables of section
+  2) compares the folder with App Store Connect and prints what differs; `--apply` creates the
+  event or updates it, uploads the images to the App Asset Library and places them on each event
+  localization (images are reused by MD5, as for the screenshots). It writes only while the event
+  is a draft or rejected, and a rerun changes nothing. It never submits the event. `--apply
+  --add-to-review` puts it into a draft review submission (the one holding the version in
+  preparation, else an open draft, else a new one) without sending it; the release job's
+  `testflight.py appstore` then adds the version to that same draft and submits both, so the
+  event is reviewed with the version that has the Recipe tab. Without `--add-to-review`, do it on
+  the website: In-App Events > the event > Add for Review, into the draft that holds the version.
+- **By hand**: preview the card and the details page in App Store Connect (Apple publishes no
+  safe areas and recommends checking the preview).
+
+**The featuring nomination** is `featuring-nomination.md`: the answers for App Store Connect >
+Featuring > Nominations, ready to paste, with two placeholders (the release window, the event's
+ID). [Getting featured](https://developer.apple.com/app-store/getting-featured/) asks for at least
+two weeks' notice, App Store Connect Help for at least three; plan on three or more. It is pasted
+by hand; nothing here automates it.
+
+**Timeline**, counted from release day R, the day the version goes live. With the default
+`APP_STORE_RELEASE_TYPE` (AFTER_APPROVAL), R is whenever Apple approves; set that repository
+variable to `MANUAL` for this release to choose R, and release by hand on R.
+
+| When | What | Who |
+|---|---|---|
+| R − 6 to R − 3 weeks | Submit the featuring nomination (App Enhancements, publish window around R) | You |
+| By R − 3 weeks | Merge the deep-link line; set `releaseDay`; `testflight.py event`, then `event --apply` | You |
+| Same day | Preview the event media in App Store Connect; attach the event's ID to the nomination | You |
+| Before the release PR merges | `testflight.py event --apply --add-to-review` | You |
+| Release PR merge (about R − 3 days) | `appstore` submits the version, the in-app purchases and the event together | CI |
+| R | Release the version (with MANUAL); the event is published and starts at `startTimeUtc` | You, Apple |
+| R + 30 days | The event ends | Apple |
+
+If approval is late, the event's start can pass before it is approved: move `releaseDay` and
+rerun `event --apply` while the event can still be edited, as Apple wants a start in the future.

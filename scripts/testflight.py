@@ -22,6 +22,12 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     # submission (--iaps-attached: submit without adding them, after adding them by hand).
     python3 scripts/testflight.py iaps
 
+    # The in-app event in store-listing/app-store/in-app-event/ (texts, settings, schedule, card
+    # and details images): dry run by default, --apply creates or updates it. It is never
+    # submitted; --add-to-review puts it into a draft review submission (the version's, if one
+    # is in preparation) for the release job's `appstore` to send with the version.
+    python3 scripts/testflight.py event [--apply [--add-to-review]]
+
     # Read-only overview of the app's builds and groups.
     python3 scripts/testflight.py status
 
@@ -65,8 +71,9 @@ ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
 # One folder per App Store Connect locale, holding promotional_text.txt among others.
 LISTING_DIR = pathlib.Path(__file__).resolve().parent.parent / "store-listing" / "app-store"
 # The other English localizations (en-US, en-AU, en-CA) take the en-GB release notes, as the notes
-# are written once per language, and the en-GB promotional text when they have no folder of their
-# own (en-US has one). Apple asks for What's New in every localization of an update.
+# are written once per language, and every en-GB listing text and image their folder doesn't have
+# (all of them without a folder; en-AU and en-CA hold only keywords.txt). Apple asks for What's
+# New in every localization of an update.
 FALLBACK_LOCALE = "en-GB"
 
 
@@ -492,8 +499,9 @@ def cmd_iaps(args):
 # Each locale folder's texts go to two resources: the version's localization (keywords,
 # description, promotional text) and the app info's (name, subtitle), which App Store Connect
 # only lets change while a version is in preparation. A field is written only when its file
-# exists and differs from what App Store Connect has, so the URLs and anything else the repo has
-# no file for are never touched.
+# exists (in the locale's folder, or for another English localization in en-GB's, which fills in
+# what a partial folder such as en-AU/ leaves out) and differs from what App Store Connect has,
+# so the URLs and anything else the repo has no file for are never touched.
 
 class ListingError(Exception):
     """The repo's listing can't be applied as it is (a limit, a missing resource)."""
@@ -551,27 +559,76 @@ SCREENSHOT_SUFFIXES = (".png", ".jpg", ".jpeg")
 SCREENSHOT_WAIT_SECONDS = 600
 
 
+# A locale folder's name: an App Store Connect locale code (en-GB, ru, no, zh-Hans), which
+# iap-review/ and in-app-event/ are not.
+LOCALE_FOLDER = re.compile(r"[a-z]{2,3}(-[A-Za-z]{2,4})?")
+
+
 def listing_locales(root=LISTING_DIR):
-    """The locale folders under root: those with a name.txt (iap-review/ has none)."""
-    return sorted(p.parent.name for p in pathlib.Path(root).glob("*/name.txt"))
+    """The locale folders under root: named like a locale code and holding at least one listing
+    text. A partial folder (en-AU and en-CA hold only keywords.txt) counts; listing_files
+    completes it from its fallback."""
+    return sorted(p.name for p in pathlib.Path(root).iterdir()
+                  if p.is_dir() and LOCALE_FOLDER.fullmatch(p.name)
+                  and any((p / name).is_file() for name in LISTING_FIELDS))
+
+
+def read_listing_files(root, sources):
+    """{"version": {attribute: text}, "info": {attribute: text}} from {file name: locale folder
+    the file is read from}."""
+    texts = {"version": {}, "info": {}}
+    for name, source in sources.items():
+        resource, attribute = LISTING_FIELDS[name]
+        texts[resource][attribute] = (pathlib.Path(root) / source / name).read_text(
+            encoding="utf-8").strip()
+    return texts
 
 
 def read_listing(folder):
     """{"version": {attribute: text}, "info": {attribute: text}} for the files folder has."""
-    texts = {"version": {}, "info": {}}
-    for name, (resource, attribute) in LISTING_FIELDS.items():
-        path = pathlib.Path(folder) / name
-        if path.exists():
-            texts[resource][attribute] = path.read_text(encoding="utf-8").strip()
-    return texts
+    folder = pathlib.Path(folder)
+    return read_listing_files(folder.parent, {name: folder.name for name in LISTING_FIELDS
+                                              if (folder / name).is_file()})
 
 
 def listing_source(locale, folders):
-    """The folder whose texts a localization takes: its own, or en-GB's for another English
-    localization without one (en-AU, en-CA). None when the repo has nothing for it."""
+    """The folder a localization is based on: its own, or en-GB's for another English
+    localization without one. None when the repo has nothing for it."""
     if locale in folders:
         return locale
     return fallback(locale) if fallback(locale) in folders else None
+
+
+def listing_files(root, locale, folders):
+    """{file name: locale folder} for each listing text a localization takes: its own folder's
+    file, else its fallback's (en-GB's, for another English localization). So a partial folder
+    (en-AU: keywords.txt) still gets a complete listing, and a localization created from it has
+    every field the primary language has. A language without a fallback takes only its own."""
+    sources = {}
+    for name in LISTING_FIELDS:
+        for source in (locale, fallback(locale)):
+            if source in folders and (pathlib.Path(root) / source / name).is_file():
+                sources[name] = source
+                break
+    return sources
+
+
+def describe_sources(locale, sources):
+    """The dry run's line on where a localization's texts come from; None when all are its own."""
+    own, inherited = [], {}
+    for name, source in sources.items():
+        attribute = LISTING_FIELDS[name][1]
+        if source == locale:
+            own.append(attribute)
+        else:
+            inherited.setdefault(source, []).append(attribute)
+    if not inherited:
+        return None
+    if not own:
+        return f"  {locale} takes the {', '.join(sorted(inherited))} texts (no folder of its own)"
+    return (f"  {locale}: {', '.join(own)} from its folder; "
+            + "; ".join(f"{', '.join(fields)} inherited from {source}"
+                        for source, fields in sorted(inherited.items())))
 
 
 def field_changes(current, wanted):
@@ -663,10 +720,11 @@ def sync_listing(asc, version_id, app_info_id, apply, root=LISTING_DIR):
           f"{', '.join(sorted(info_locs)) or 'no'} app info localizations")
     result, changed = {}, False
     for locale in locales:
-        source = listing_source(locale, folders)
-        texts = read_listing(pathlib.Path(root) / source)
-        if source != locale:
-            print(f"  {locale} takes the {source} texts (no folder of its own)")
+        sources = listing_files(root, locale, folders)
+        texts = read_listing_files(root, sources)
+        line = describe_sources(locale, sources)
+        if line:
+            print(line)
         loc_id, differs = sync_resource(
             asc, "version", locale, version_locs.get(locale), texts["version"],
             {"type": "appStoreVersions", "id": version_id}, version_locs.get(FALLBACK_LOCALE), apply)
@@ -1267,8 +1325,8 @@ def sync_screenshots(asc, localizations, apply, root=LISTING_DIR, app_id=None):
     """Syncs every locale folder's screenshot sets to its version localization ({locale: id}):
     the classic sets through appScreenshotSets; the iPhone Duo folders and the header and
     search-result art through the App Asset Library (which needs app_id). A localization without
-    screenshot folders of its own (en-US) shows the primary language's; the other English ones
-    get en-GB's header and search-result art placed."""
+    screenshot folders of its own (en-US, and the keywords-only en-AU and en-CA) shows the primary
+    language's; the other English ones get en-GB's header and search-result art placed."""
     changed = False
     library = None
     locales = sorted(set(listing_locales(root)) | {l for l in localizations if fallback(l)})
@@ -1748,6 +1806,496 @@ def cmd_revoke_ci_certs(_args):
     return 0
 
 
+# --- In-app event: store-listing/app-store/in-app-event/ onto App Store Connect -----------------
+#
+# `testflight.py event` creates the in-app event the folder describes, or brings the existing one
+# (found by its reference name, unique per app) in line with it: the event's settings and
+# schedule (event.json), one localization per locale folder (name.txt, short_description.txt,
+# long_description.txt) and each localization's event card and event details page images.
+# Dry run unless --apply; only what differs is written, so a rerun changes nothing.
+#
+# The API (developer.apple.com/documentation/appstoreconnectapi/app-events-and-metadata):
+# appEvents and appEventLocalizations hold the texts; the media go through the App Asset Library,
+# as appEventScreenshots and appEventVideoClips are deprecated in its favour
+# (developer.apple.com/documentation/appstoreconnectapi/migrating-to-the-app-asset-library): an
+# image is uploaded once into the library (category CREATIVE_ASSETS) and placed on an event
+# localization with the placement type EVENT_CARD_ASSET or EVENT_DETAILS_PAGE_ASSET, one asset per
+# type ("In-app event localizations aren't orderable ... each in-app event placement type allows
+# a single asset per group", placing-assets-on-your-app-store-surfaces). The placement group,
+# specs, category and limit are read from the library's reference data (feature IN_APP_EVENTS),
+# not hard-coded. Images carry their MD5 in the reference name, as the screenshot sync does.
+#
+# The event is never submitted for review here. --add-to-review puts it into a draft review
+# submission without sending it: the one that holds the app version in preparation if there is
+# one, else an open draft, else a new one. The release job's `appstore` then sends the version
+# into that same submission (it uses an open draft when none holds the version), so the event is
+# reviewed with the version that has the Recipe tab. Without the flag, the owner does it on the
+# website (In-App Events > the event > Add for Review).
+
+EVENT_DIR = LISTING_DIR / "in-app-event"
+EVENT_CONFIG_FILE = "event.json"
+EVENT_TEXT_FIELDS = {"name.txt": "name", "short_description.txt": "shortDescription",
+                     "long_description.txt": "longDescription"}
+EVENT_MEDIA_TYPES = {"event-card.png": "EVENT_CARD_ASSET",
+                     "event-details.png": "EVENT_DETAILS_PAGE_ASSET"}
+EVENT_MEDIA_LABELS = {"EVENT_CARD_ASSET": "event card", "EVENT_DETAILS_PAGE_ASSET": "event details page"}
+EVENT_FEATURE = "IN_APP_EVENTS"
+# event.json keys sent to the API as they are.
+EVENT_SETTINGS = ("badge", "purpose", "priority", "purchaseRequirement", "deepLink", "primaryLocale")
+# States in which the event and its localizations are written; in any other (in review, approved,
+# published...) the command only compares. A rejected event is fixed and submitted again.
+EVENT_EDITABLE_STATES = {"DRAFT", "REJECTED"}
+
+
+def read_event(root=EVENT_DIR):
+    """The repo's event: its settings, {locale: {attribute: text}} and {locale: {placement type:
+    local image}} (another English locale without images takes en-GB's, as the listing does)."""
+    root = pathlib.Path(root)
+    config = json.loads((root / EVENT_CONFIG_FILE).read_text(encoding="utf-8"))
+    locales = sorted(p.parent.name for p in root.glob("*/name.txt"))
+    texts, media = {}, {}
+    for locale in locales:
+        texts[locale] = {attribute: (root / locale / name).read_text(encoding="utf-8").strip()
+                         for name, attribute in EVENT_TEXT_FIELDS.items()
+                         if (root / locale / name).is_file()}
+        media[locale] = {}
+        for name, placement_type in EVENT_MEDIA_TYPES.items():
+            for source in (locale, fallback(locale)):
+                path = root / source / name if source else None
+                if path and path.is_file():
+                    media[locale][placement_type] = {
+                        **local_image(path), "kind": EVENT_MEDIA_LABELS[placement_type],
+                        "label": f"in-app-event/{source}/{name}"}
+                    break
+    return {"config": config, "texts": texts, "media": media}
+
+
+def check_event_files(root=EVENT_DIR):
+    """scripts/check_store_listing.py's event checks as a gate, like check_listing_texts."""
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+    import check_store_listing
+    with contextlib.redirect_stdout(io.StringIO()):
+        problems = check_store_listing.check_in_app_event(root)
+    if problems:
+        raise ListingError("scripts/check_store_listing.py found problems in the in-app event:\n"
+                           + "\n".join(f"- {p}" for p in problems))
+
+
+def event_time(text):
+    """A date-time from the API or the repo as an aware UTC datetime (the API writes them as
+    2026-12-01T08:00:00.000+0000 or with Z), or None."""
+    if not text:
+        return None
+    text = re.sub(r"\.\d+", "", str(text)).replace("Z", "+00:00")
+    text = re.sub(r"([+-]\d{2})(\d{2})$", r"\1:\2", text)
+    value = datetime.datetime.fromisoformat(text)
+    return (value if value.tzinfo else value.replace(tzinfo=datetime.timezone.utc)).astimezone(
+        datetime.timezone.utc)
+
+
+def api_time(value):
+    return value.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def event_schedule(config):
+    """(publishStart, eventStart, eventEnd) from event.json: the event starts on releaseDay at
+    startTimeUtc, lasts durationDays and is published publishDaysBefore days before it starts.
+    None while releaseDay is null."""
+    if not config.get("releaseDay"):
+        return None
+    hours, minutes = map(int, config["startTimeUtc"].split(":"))
+    start = datetime.datetime.strptime(config["releaseDay"], "%Y-%m-%d").replace(
+        hour=hours, minute=minutes, tzinfo=datetime.timezone.utc)
+    return (start - datetime.timedelta(days=config["publishDaysBefore"]), start,
+            start + datetime.timedelta(days=config["durationDays"]))
+
+
+def app_territories(asc, app_id):
+    """The territories the app is available in, as 3-letter codes."""
+    availability = asc.call("GET", f"/apps/{app_id}/appAvailabilityV2").get("data") or {}
+    if not availability.get("id"):
+        raise ListingError("App Store Connect returned no availability for the app")
+    items, _ = get_all(asc, f"/v2/appAvailabilities/{availability['id']}/territoryAvailabilities",
+                       {"include": "territory", "limit": 200})
+    territories = set()
+    for item in items:
+        if (item.get("attributes") or {}).get("available"):
+            territory = (((item.get("relationships") or {}).get("territory") or {}).get("data") or {})
+            if territory.get("id"):
+                territories.add(territory["id"])
+    if not territories:
+        raise ListingError("The app is available in no territory, so the event can't be scheduled")
+    return sorted(territories)
+
+
+def schedule_key(schedules):
+    """Territory schedules in a comparable form: sorted (territories, publish, start, end)."""
+    return sorted((tuple(sorted(s.get("territories") or [])), event_time(s.get("publishStart")),
+                   event_time(s.get("eventStart")), event_time(s.get("eventEnd")))
+                  for s in schedules or [])
+
+
+def describe_schedules(schedules):
+    if not schedules:
+        return "none"
+    return "; ".join(f"{len(territories)} territories, published {publish:%Y-%m-%d %H:%M}, "
+                     f"{start:%Y-%m-%d %H:%M} to {end:%Y-%m-%d %H:%M} UTC"
+                     if publish and start and end else f"{len(territories)} territories, incomplete"
+                     for territories, publish, start, end in schedule_key(schedules))
+
+
+def wanted_event_attributes(asc, app_id, config):
+    """The appEvents attributes the repo asks for. The schedule is left out while releaseDay is
+    null, so App Store Connect keeps whatever it has."""
+    attributes = {key: config[key] for key in EVENT_SETTINGS}
+    attributes["referenceName"] = config["referenceName"]
+    schedule = event_schedule(config)
+    if schedule:
+        territories = (app_territories(asc, app_id) if config["territories"] == "app"
+                       else sorted(config["territories"]))
+        publish, start, end = schedule
+        attributes["territorySchedules"] = [{
+            "territories": territories, "publishStart": api_time(publish),
+            "eventStart": api_time(start), "eventEnd": api_time(end)}]
+    return attributes
+
+
+def event_attribute_changes(current, wanted):
+    """{attribute: (now, wanted)} for each wanted attribute App Store Connect has otherwise."""
+    current = current or {}
+    changes = {}
+    for key, value in wanted.items():
+        if key == "territorySchedules":
+            if schedule_key(current.get(key)) != schedule_key(value):
+                changes[key] = (current.get(key) or [], value)
+        elif (current.get(key) or "") != value:
+            changes[key] = (current.get(key) or "", value)
+    return changes
+
+
+def describe_event_change(attribute, old, new):
+    if attribute == "territorySchedules":
+        return [f"    schedule: {describe_schedules(old)} -> {describe_schedules(new)}"]
+    return describe_change(attribute, old, new)
+
+
+def find_event(asc, app_id, reference_name):
+    events, _ = get_all(asc, f"/apps/{app_id}/appEvents", {"limit": 200})
+    matches = [e for e in events if (e.get("attributes") or {}).get("referenceName") == reference_name]
+    if len(matches) > 1:
+        raise ListingError(f"App Store Connect has {len(matches)} events named {reference_name!r}")
+    return matches[0] if matches else None
+
+
+def sync_event(asc, app_id, config, apply):
+    """Creates the event or updates its settings and schedule. Returns (event or None for one a
+    dry run would create, editable, whether anything differs)."""
+    wanted = wanted_event_attributes(asc, app_id, config)
+    if not event_schedule(config):
+        print("  schedule: releaseDay is null in event.json, so none is sent; set it before the "
+              "event goes for review")
+    event = find_event(asc, app_id, config["referenceName"])
+    if event is None:
+        print(f"  event {config['referenceName']!r}: {'creating' if apply else 'would create'}")
+        for attribute, value in wanted.items():
+            print(*describe_event_change(attribute, "" if attribute != "territorySchedules" else [],
+                                         value), sep="\n")
+        if not apply:
+            return None, True, True
+        created = asc.call("POST", "/appEvents", body={"data": {
+            "type": "appEvents", "attributes": wanted,
+            "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
+        return created, True, True
+    state = (event.get("attributes") or {}).get("eventState")
+    editable = state in EVENT_EDITABLE_STATES
+    changes = event_attribute_changes(event.get("attributes"), wanted)
+    label = f"  event {config['referenceName']!r} ({event['id']}, {state})"
+    if not changes:
+        print(f"{label}: up to date")
+        return event, editable, False
+    print(f"{label}: {'updating' if apply and editable else 'would update' if editable else 'differs'}")
+    for attribute, (old, new) in changes.items():
+        print(*describe_event_change(attribute, old, new), sep="\n")
+    if apply and editable:
+        asc.call("PATCH", f"/appEvents/{event['id']}", body={"data": {
+            "type": "appEvents", "id": event["id"],
+            "attributes": {k: new for k, (_, new) in changes.items()}}})
+    return event, editable, True
+
+
+def sync_event_localizations(asc, event_id, texts, apply):
+    """Creates or updates one localization per locale folder. Returns ({locale: id} as App Store
+    Connect has them afterwards, whether anything differs). Localizations the repo has no folder
+    for are left as they are."""
+    existing = {}
+    if event_id:
+        items, _ = get_all(asc, f"/appEvents/{event_id}/localizations", {"limit": 50})
+        existing = {(i.get("attributes") or {}).get("locale"): i for i in items}
+    result, changed = {}, False
+    for locale, wanted in sorted(texts.items()):
+        current = existing.get(locale)
+        if current is None:
+            print(f"  localization {locale}: {'creating' if apply else 'would create'}")
+            for attribute, text in wanted.items():
+                print(*describe_change(attribute, "", text), sep="\n")
+            changed = True
+            if apply:
+                result[locale] = asc.call("POST", "/appEventLocalizations", body={"data": {
+                    "type": "appEventLocalizations", "attributes": {"locale": locale, **wanted},
+                    "relationships": {"appEvent": {"data": {"type": "appEvents",
+                                                            "id": event_id}}}}})["data"]["id"]
+            continue
+        result[locale] = current["id"]
+        changes = field_changes(current.get("attributes"), wanted)
+        if not changes:
+            print(f"  localization {locale}: up to date")
+            continue
+        changed = True
+        print(f"  localization {locale}: {'updating' if apply else 'would update'}")
+        for attribute, (old, new) in changes.items():
+            print(*describe_change(attribute, old, new), sep="\n")
+        if apply:
+            asc.call("PATCH", f"/appEventLocalizations/{current['id']}", body={"data": {
+                "type": "appEventLocalizations", "id": current["id"],
+                "attributes": {k: new for k, (_, new) in changes.items()}}})
+    for locale in sorted(set(existing) - set(texts)):
+        print(f"  localization {locale}: no folder in the repo; left as it is")
+    return result, changed
+
+
+def event_media_target(library, placement_type):
+    """Where an event image goes, from the reference data: the one placement group that both
+    maps specs for the placement type and has an IN_APP_EVENTS limit for it, with those specs,
+    the limit and the asset category the type takes."""
+    entry = next((t for t in library.ref.get("placementTypes") or []
+                  if t.get("placementTypeId") == placement_type), None)
+    if not entry:
+        raise ListingError(f"The asset library's reference data has no {placement_type}")
+    categories = entry.get("acceptsAssetCategories") or []
+    if len(categories) != 1:
+        raise ListingError(f"{placement_type} takes the asset categories {categories}, not one")
+    mapped = {}
+    for mapping in entry.get("specMappings") or []:
+        mapped.setdefault(mapping.get("placementGroupId"), set()).update(mapping.get("specs") or [])
+    limits = {}
+    for feature in library.ref.get("features") or []:
+        if feature.get("featureId") != EVENT_FEATURE:
+            continue
+        for policy in feature.get("placementPolicies") or []:
+            if policy.get("placementType") == placement_type:
+                for group_limit in policy.get("groupLimits") or []:
+                    for group in group_limit.get("groupIds") or []:
+                        if group_limit.get("maxCount"):
+                            limits[group] = int(group_limit["maxCount"])
+    groups = sorted(g for g in mapped if g in limits)
+    if len(groups) != 1:
+        raise ListingError(f"The asset library's reference data has {len(groups)} placement groups "
+                           f"for {placement_type} on in-app events, not one: {groups}")
+    group = groups[0]
+    specs = {s["specId"]: s for s in library.ref.get("imageSpecs") or [] if s.get("specId") in mapped[group]}
+    if not specs:
+        raise ListingError(f"The asset library's reference data has no image specs for "
+                           f"{placement_type} in {group}")
+    return {"placement_type": placement_type, "group": group, "specs": specs,
+            "limit": limits[group], "category": categories[0]}
+
+
+def event_placements(asc, localization_id, target):
+    """The event localization's placements of the target's type, shaped for plan_screenshots."""
+    placements, included = get_all(
+        asc, f"/appEventLocalizations/{localization_id}/placements",
+        {"filter[placementType]": target["placement_type"], "filter[placementGroup]": target["group"],
+         "include": "image", "limit": 50})
+    images = {i.get("id"): i.get("attributes") or {} for i in included}
+    remote = []
+    for placement in placements:
+        attrs = placement.get("attributes") or {}
+        image_id = (((placement.get("relationships") or {}).get("image") or {}).get("data") or {}).get("id")
+        image = images.get(image_id) or {}
+        asset = image.get("imageAsset") or {}
+        usable = attrs.get("state") != "FAILED" and image.get("state") in LIBRARY_REUSABLE_STATES
+        remote.append({
+            "id": placement["id"], "image": image_id, "name": image.get("fileName") or "",
+            "md5": reference_md5(image.get("referenceName")) if usable else "",
+            "state": None if usable else f"{attrs.get('state')}/{image.get('state')}",
+            "dimensions": (asset.get("width"), asset.get("height")) if asset.get("width") else None})
+    return remote
+
+
+def sync_event_image(asc, library, locale, localization_id, shot, target, apply):
+    """Makes the localization's one placement of the target's type show shot. Returns whether
+    anything differs."""
+    where = f"  {locale} {EVENT_MEDIA_LABELS[target['placement_type']]}"
+    if not any(spec_fits(s, shot["dimensions"], pathlib.Path(shot["path"]).suffix)
+               for s in target["specs"].values()):
+        raise ListingError(f"{shot['label']} is {size_text(shot['dimensions'])}; "
+                           f"{describe_target(target)} has no spec for it")
+    category = target["category"]
+    in_library = (shot["md5"], category) in library.by_md5
+    source = "already in the library" if in_library else "new upload"
+    if localization_id is None:
+        print(f"{where}: {'placing' if apply else 'would place'} {shot['label']} "
+              f"{size_text(shot['dimensions'])} ({source})")
+        return True
+    remote = event_placements(asc, localization_id, target)
+    plan = plan_screenshots([shot], remote)
+    if not (plan["upload"] or plan["delete"]):
+        print(f"{where}: up to date ({shot['label']})")
+        return False
+    verb = "placing" if apply else "would place"
+    replaced = ", ".join(f"{r['name'] or r['id']} (md5 {r['md5'] or 'not recorded'})" for r in plan["delete"])
+    print(f"{where}: {verb} {shot['label']} {size_text(shot['dimensions'])} ({source})"
+          + (f", replacing {replaced}" if replaced else ""))
+    if not apply:
+        return True
+    for r in plan["delete"]:
+        asc.call("DELETE", f"/appAssetLibraryPlacements/{r['id']}")
+    existing = library.by_md5.get((shot["md5"], category))
+    if existing:
+        image_id = existing["id"]
+        if (existing.get("attributes") or {}).get("state") not in LIBRARY_READY_STATES:
+            wait_for_library_images(asc, {image_id: shot}, target["specs"])
+    else:
+        image_id = upload_library_image(asc, library.id, shot, category,
+                                        f"{shot['label']} md5:{shot['md5']}")
+        wait_for_library_images(asc, {image_id: shot}, target["specs"])
+    library.by_md5[(shot["md5"], category)] = {"id": image_id,
+                                               "attributes": {"state": "PREPARE_FOR_SUBMISSION"}}
+    asc.call("POST", "/appAssetLibraryPlacements", body={"data": {
+        "type": "appAssetLibraryPlacements",
+        "attributes": {"placementType": target["placement_type"], "placementGroup": target["group"]},
+        "relationships": {
+            "image": {"data": {"type": "appAssetLibraryImages", "id": image_id}},
+            "appEventLocalization": {"data": {"type": "appEventLocalizations",
+                                              "id": localization_id}}}}})
+    return True
+
+
+def sync_event_media(asc, app_id, media, localizations, apply):
+    """Places each locale's event card and details page image. Returns whether anything
+    differs."""
+    library = AssetLibrary(asc, app_id)
+    targets = {t: event_media_target(library, t) for t in EVENT_MEDIA_TYPES.values()}
+    for target in targets.values():
+        print(f"  media: {describe_target(target)}")
+    changed = False
+    for locale, shots in sorted(media.items()):
+        for placement_type, shot in shots.items():
+            changed |= sync_event_image(asc, library, locale, localizations.get(locale), shot,
+                                        targets[placement_type], apply)
+    return changed
+
+
+def event_submissions(asc, app_id, event_id):
+    """The app's open review submissions, with the app versions and events each holds."""
+    submissions = asc.call("GET", "/reviewSubmissions", {
+        "filter[app]": app_id, "filter[platform]": "IOS",
+        "filter[state]": OPEN_SUBMISSION_STATES}).get("data") or []
+    result = []
+    for submission in submissions:
+        items, _ = get_all(asc, f"/reviewSubmissions/{submission['id']}/items",
+                           {"include": "appStoreVersion,appEvent", "limit": 200})
+        held = {"appStoreVersion": set(), "appEvent": set()}
+        for item in items:
+            for kind in held:
+                linked = ((item.get("relationships") or {}).get(kind) or {}).get("data") or {}
+                if linked.get("id"):
+                    held[kind].add(linked["id"])
+        result.append({"submission": submission, "versions": held["appStoreVersion"],
+                       "events": held["appEvent"]})
+    return result
+
+
+EVENT_REVIEW_BY_HAND = (
+    "The event is not submitted for review by this command. Either let the release job send it: "
+    "re-run with --add-to-review before the release PR merges, and `testflight.py appstore` puts "
+    "the version into the same draft submission and submits both; or, on the website: Apps > "
+    "BestBefore > In-App Events > the event > Add for Review, choosing the draft submission that "
+    "holds the version, then Submit for Review (with the version) once everything is ready.")
+
+
+def add_event_to_review(asc, app_id, event_id, apply):
+    """Puts the event into a draft review submission without sending it: the one holding the app
+    version in preparation, else the first open one, else a new one."""
+    submissions = event_submissions(asc, app_id, event_id)
+    holding = [s for s in submissions if event_id in s["events"]]
+    if holding:
+        print(f"  review: already in draft submission {holding[0]['submission']['id']}; not sent")
+        return False
+    versions = app_store_versions(asc, app_id)
+    preparing = {v["id"] for v in versions if version_state(v) in EDITABLE_STATES}
+    chosen = next((s for s in submissions if s["versions"] & preparing), None)
+    chosen = chosen or (submissions[0] if submissions else None)
+    where = (f"draft submission {chosen['submission']['id']}" if chosen
+             else "a new draft submission")
+    print(f"  review: {'adding' if apply else 'would add'} the event to {where}; it is not sent")
+    if not apply:
+        return True
+    submission = chosen["submission"] if chosen else asc.call("POST", "/reviewSubmissions", body={
+        "data": {"type": "reviewSubmissions", "attributes": {"platform": "IOS"},
+                 "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
+    asc.call("POST", "/reviewSubmissionItems", body={"data": {
+        "type": "reviewSubmissionItems", "relationships": {
+            "reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+            "appEvent": {"data": {"type": "appEvents", "id": event_id}}}}})
+    return True
+
+
+def run_event(asc, app_id, apply, add_to_review=False, root=EVENT_DIR):
+    """The `event` command against an App Store Connect client (Asc, or a fake in the tests).
+    Returns the exit code."""
+    check_event_files(root)
+    event_files = read_event(root)
+    config = event_files["config"]
+    requested = apply
+    print(f"In-app event from {pathlib.Path(root).name}/: {', '.join(sorted(event_files['texts']))}")
+    print("APPLY" if apply else "DRY RUN (pass --apply to write)")
+    event, editable, changed = sync_event(asc, app_id, config, apply)
+    if event is not None and not editable:
+        state = (event.get("attributes") or {}).get("eventState")
+        print(f"  The event is {state}, which App Store Connect doesn't let change; only compared")
+        apply = False
+    event_id = event["id"] if event else None
+    localizations, differs = sync_event_localizations(asc, event_id, event_files["texts"], apply)
+    changed |= differs
+    changed |= sync_event_media(asc, app_id, event_files["media"], localizations, apply)
+    state = (event.get("attributes") or {}).get("eventState") if event else "DRAFT"
+    if add_to_review and state in EVENT_EDITABLE_STATES:
+        if event_id is None:
+            print("  review: would add the new event to a draft submission once it is created")
+        else:
+            changed |= add_event_to_review(asc, app_id, event_id, apply)
+    if not changed:
+        print("The in-app event is up to date")
+    elif apply:
+        print("Applied the differences above")
+    elif event is not None and not editable:
+        print("The differences above can't be written while the event is in this state")
+    else:
+        print("Pass --apply to write the differences above")
+    if not add_to_review:
+        print(EVENT_REVIEW_BY_HAND)
+    return 1 if requested and changed and event is not None and not editable else 0
+
+
+def cmd_event(args):
+    if args.add_to_review and not args.apply:
+        print("--add-to-review without --apply: showing what it would do")
+    asc = Asc()
+    return run_event(asc, asc.app_id(), args.apply, args.add_to_review)
+
+
+def add_event_command(commands):
+    event = commands.add_parser(
+        "event", help="compare the in-app event in store-listing/app-store/in-app-event/ with App "
+                      "Store Connect (dry run unless --apply); never submits it")
+    event.add_argument("--apply", action="store_true", help="create or update the event")
+    event.add_argument("--add-to-review", action="store_true",
+                       help="also put the event into a draft review submission (with the version "
+                            "in preparation if there is one) without sending it")
+    event.set_defaults(func=cmd_event)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     commands = parser.add_subparsers(dest="command", required=True)
@@ -1793,6 +2341,7 @@ def main() -> int:
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
     revoke.set_defaults(func=cmd_revoke_ci_certs)
+    add_event_command(commands)
     args = parser.parse_args()
     try:
         return args.func(args)

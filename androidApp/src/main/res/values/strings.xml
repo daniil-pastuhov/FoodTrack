@@ -559,7 +559,7 @@
     <string name="detail_nova_2">Culinary ingredients</string>
     <string name="detail_nova_3">Processed</string>
     <string name="detail_nova_4">Ultra-processed</string>
-    <string name="detail_credit">Product data from Open Food Facts</string>
+    <string name="detail_credit">Product data and pictures from Open Food Facts (openfoodfacts.org), under the Open Database License and CC BY-SA</string>
     <string name="detail_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
     <string name="detail_choose_item">Choose an item to see its details.</string>
     <plurals name="lede_use_by_tomorrow">
@@ -616,6 +616,8 @@
     <string name="scan_allergen_note">This matches your allergen list. Matching is loose, so check the label.</string>
     <string name="scan_offline_title">You\'re offline</string>
     <string name="scan_offline_message">Couldn\'t look this product up. You can carry on by hand, and the barcode stays with the item.</string>
+    <string name="scan_busy_title">Open Food Facts is busy</string>
+    <string name="scan_busy_message">Couldn\'t look this product up right now. Try again in a minute, or carry on by hand, and the barcode stays with the item.</string>
     <string name="scan_try_again">Try again</string>
     <string name="scan_continue_by_hand">Continue by hand</string>
     <string name="scan_best_before_format">Best before %1$s</string>
@@ -1105,7 +1107,8 @@
     <string name="recipe_past_date_result_one">Past its date: %1$s. Check it is still safe to eat before you cook.</string>
     <string name="recipe_past_date_result_many">Past their date: %1$s. Check they are still safe to eat before you cook.</string>
     <string name="recipe_past_date_item">%1$s (%2$s)</string>
-    <string name="recipe_prompt_past_date">These items are past their date, and I have chosen to use them anyway: %1$s.</string>
+    <string name="recipe_prompt_past_date_one">One of these is past its date. I have chosen to use it anyway, so please don\'t leave it out.</string>
+    <string name="recipe_prompt_past_date_many">Some of these are past their date. I have chosen to use them anyway, so please don\'t leave them out.</string>
     <plurals name="recipe_past_date_form">
         <item quantity="one">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>
         <item quantity="other">%1$d ticked items are past their date, one by %2$s. Check they are still safe to eat, or untick them.</item>

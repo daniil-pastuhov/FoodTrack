@@ -19,6 +19,7 @@ import com.foodtracker.android.settings.AndroidReviewPromptStore
 import com.foodtracker.android.settings.AndroidSettingsRepository
 import com.foodtracker.android.widget.WidgetUpdater
 import com.foodtracker.api.OpenFoodFactsApi
+import com.foodtracker.api.openFoodFactsUserAgent
 import com.foodtracker.android.recipe.paid.FirebaseRecipeAccount
 import com.foodtracker.android.recipe.paid.FirebaseRecipeBackend
 import com.foodtracker.android.recipe.paid.PlayRecipeStore
@@ -91,7 +92,7 @@ val appModule = module {
     single<SavedRecipeRepository> { RoomSavedRecipeRepository(get()) }
     single<RecipeConfigRepository> { AndroidRecipeConfigRepository(androidContext()) }
     single<OnDeviceRecipeModel> { GeminiNanoRecipeModel() }
-    single { OpenFoodFactsApi() }
+    single { OpenFoodFactsApi(userAgent = OFF_USER_AGENT) }
     // Depends on PantryStateHolder rather than the repositories: see WidgetUpdater for why.
     single { WidgetUpdater(androidContext(), get()) }
     single {
@@ -147,7 +148,13 @@ val appModule = module {
             store = get(),
             account = get(),
             paidRepository = get(),
-            appLanguage = { Locale.getDefault().toLanguageTag() }
+            appLanguage = { Locale.getDefault().toLanguageTag() },
+            // Android 10's share sheet added its own Copy; below it the form keeps a Copy button.
+            shareSheetCopies = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
         )
     }
 }
+
+/** How the app introduces itself to Open Food Facts (the lookups, and Coil's picture requests to
+ *  its hosts: FoodTrackerApp.newImageLoader). */
+val OFF_USER_AGENT: String = openFoodFactsUserAgent("Android", com.foodtracker.android.BuildConfig.VERSION_NAME)

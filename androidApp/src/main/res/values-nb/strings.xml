@@ -555,7 +555,7 @@
     <string name="detail_nova_2">Matlagingsingredienser</string>
     <string name="detail_nova_3">Bearbeidet</string>
     <string name="detail_nova_4">Ultrabearbeidet</string>
-    <string name="detail_credit">Produktdata fra Open Food Facts</string>
+    <string name="detail_credit">Produktdata og bilder fra Open Food Facts (openfoodfacts.org), under Open Database License og CC BY-SA</string>
     <string name="detail_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
     <string name="detail_choose_item">Velg en vare for å se detaljene.</string>
     <plurals name="lede_use_by_tomorrow">
@@ -612,6 +612,8 @@
     <string name="scan_allergen_note">Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.</string>
     <string name="scan_offline_title">Du er frakoblet</string>
     <string name="scan_offline_message">Kunne ikke slå opp denne varen. Du kan fortsette for hånd, og strekkoden blir med varen.</string>
+    <string name="scan_busy_title">Open Food Facts har mye å gjøre</string>
+    <string name="scan_busy_message">Kunne ikke slå opp denne varen akkurat nå. Prøv igjen om et minutt, eller fortsett for hånd, og strekkoden blir med varen.</string>
     <string name="scan_try_again">Prøv igjen</string>
     <string name="scan_continue_by_hand">Fortsett for hånd</string>
     <string name="scan_best_before_format">Best før %1$s</string>
@@ -1099,7 +1101,8 @@
     <string name="recipe_past_date_result_one">Gått ut på dato: %1$s. Sjekk at den fortsatt er trygg å spise før du lager mat.</string>
     <string name="recipe_past_date_result_many">Gått ut på dato: %1$s. Sjekk at de fortsatt er trygge å spise før du lager mat.</string>
     <string name="recipe_past_date_item">%1$s (%2$s)</string>
-    <string name="recipe_prompt_past_date">Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$s.</string>
+    <string name="recipe_prompt_past_date_one">Én av disse er gått ut på dato. Jeg har valgt å bruke den likevel, så ikke utelat den.</string>
+    <string name="recipe_prompt_past_date_many">Noen av disse er gått ut på dato. Jeg har valgt å bruke dem likevel, så ikke utelat dem.</string>
     <plurals name="recipe_past_date_form">
         <item quantity="one">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>
         <item quantity="other">%1$d avkryssede varer er gått ut på dato, én for %2$s siden. Sjekk at de fortsatt er trygge å spise, eller fjern krysset.</item>

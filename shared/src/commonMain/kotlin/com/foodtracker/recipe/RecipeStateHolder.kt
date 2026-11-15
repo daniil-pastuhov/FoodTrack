@@ -134,7 +134,8 @@ enum class RecipeAction {
     /** The prompt to the share sheet, free. */
     SHARE,
 
-    /** The prompt to the clipboard, free. */
+    /** The prompt to the clipboard, free. Only where the share sheet can't copy
+     *  ([RecipeUiState.shareSheetCopies] false: Android below 10); iOS never has it. */
     COPY,
 
     /** The pack sheet. */
@@ -191,7 +192,10 @@ data class RecipeUiState(
     /** The tab's settings outside the config: "Send all products", the introduction seen. */
     val options: RecipeOptions = RecipeOptions(),
     /** The introduction on screen, and where from; null when it isn't. */
-    val intro: RecipeIntro? = null
+    val intro: RecipeIntro? = null,
+    /** The system share sheet has a Copy action of its own (Android 10 and up), so the form
+     *  offers no Copy button. A platform fact, given to [RecipeStateHolder] by the app. */
+    val shareSheetCopies: Boolean = true
 ) {
     /** The language recipes are written in. */
     val language: String = config.language ?: appLanguage
@@ -264,7 +268,7 @@ data class RecipeUiState(
             val secondary = buildList {
                 if (onDevice && primary != RecipeAction.ON_DEVICE) add(RecipeAction.ON_DEVICE)
                 if (primary != RecipeAction.SHARE) add(RecipeAction.SHARE)
-                add(RecipeAction.COPY)
+                if (!shareSheetCopies) add(RecipeAction.COPY)
                 if (paid.canBuy && primary != RecipeAction.SERVER) add(RecipeAction.BUY)
             }
             return RecipeActions(primary, secondary)
@@ -299,11 +303,13 @@ class RecipeStateHolder(
     today: () -> LocalDate = { Clock.System.todayIn(TimeZone.currentSystemDefault()) },
     /** Waits the given milliseconds before asking the server again: polls of a generation it is
      *  still writing, and the backoff while it is busy. */
-    pollDelay: suspend (Long) -> Unit = { delay(it) }
+    pollDelay: suspend (Long) -> Unit = { delay(it) },
+    /** See [RecipeUiState.shareSheetCopies]: false only on Android below 10 (API 29). */
+    shareSheetCopies: Boolean = true
 ) {
     private val _uiState = MutableStateFlow(
         configRepository.get().normalized().let { config ->
-            RecipeUiState(config = config, appLanguage = appRecipeLanguage(appLanguage()), options = configRepository.getOptions())
+            RecipeUiState(config = config, appLanguage = appRecipeLanguage(appLanguage()), options = configRepository.getOptions(), shareSheetCopies = shareSheetCopies)
                 .withLanguageSupport()
         }
     )

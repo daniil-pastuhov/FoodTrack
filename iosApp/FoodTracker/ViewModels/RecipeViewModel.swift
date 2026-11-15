@@ -91,9 +91,10 @@ extension RecipeFailure {
 }
 
 /// A way to get a recipe from the form, each its own button: a tap on one never falls back to
-/// another, so a free route never spends a recipe. Android: `RecipeAction`.
+/// another, so a free route never spends a recipe. Android: `RecipeAction`, which also has a
+/// Copy for Android below 10, whose share sheet can't copy; iOS's always can, so it has none.
 enum RecipeAction: Equatable {
-    case server, onDevice, share, copy, buy
+    case server, onDevice, share, buy
 }
 
 /// What the form offers: `primary` is pinned above the pill (nil: nothing pinned), `secondary`
@@ -110,7 +111,6 @@ struct RecipeActions: Equatable {
         var secondary: [RecipeAction] = []
         if onDevice && primary != .onDevice { secondary.append(.onDevice) }
         if primary != .share { secondary.append(.share) }
-        secondary.append(.copy)
         if canBuy && primary != .server { secondary.append(.buy) }
         return RecipeActions(primary: primary, secondary: secondary)
     }

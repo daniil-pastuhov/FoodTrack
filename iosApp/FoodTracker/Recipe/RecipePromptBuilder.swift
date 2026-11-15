@@ -14,9 +14,10 @@ enum RecipePromptBuilder {
         let preferences = sharePreferences(request)
             .map { "- " + $0 }
             .joined(separator: "\n")
-        // The cook chose to use these despite their date: said so, so the other AI doesn't drop them.
-        let past = request.items.filter { $0.daysRemaining < 0 }.map(\.name)
-        let pastLine = past.isEmpty ? "" : "\n\n" + L10n.recipePromptPastDate(past.joined(separator: ", "))
+        // The cook chose to use these despite their date: said once, without the names, which
+        // each item's line already marks, so the other AI doesn't drop them.
+        let past = request.items.filter { $0.daysRemaining < 0 }.count
+        let pastLine = past == 0 ? "" : "\n\n" + L10n.recipePromptPastDate(count: past)
         return L10n.recipePromptIntro + "\n\n" + items + pastLine + otherItemsSection(request.otherItems)
             + "\n\n" + L10n.recipePromptPreferencesIntro + "\n" + preferences
     }
@@ -69,11 +70,12 @@ enum RecipePromptBuilder {
         for diet in RecipeChoices.promptDiets(config.diets) {
             lines.append(L10n.recipePromptDiet(diet))
         }
-        if !request.allergens.isEmpty {
-            lines.append(L10n.recipePromptAllergens(request.allergens.joined(separator: ", ")))
-        }
         if let language = config.language {
             lines.append(L10n.recipePromptLanguage(language.endonym))
+        }
+        // Allergens last, as on Android (`preferenceLines`).
+        if !request.allergens.isEmpty {
+            lines.append(L10n.recipePromptAllergens(request.allergens.joined(separator: ", ")))
         }
         return lines
     }

@@ -23,7 +23,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
-| `src/admin/` | The owner's command for deletion requests by email (`npm run admin`); not deployed as a function (see "Deletion requests by email") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
 | `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption) and the prompt |
@@ -568,7 +568,7 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
    | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite); free-from wording and plant-milk style exemptions apply | yes |
    | `DIET` | The same for the diet (meat, fish, seafood, dairy, egg, honey, gluten grains and wheat foods) | yes |
-   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the ten languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; a pantry ingredient counts as a staple only when its item's own name is one too); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
+   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the ten languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; an ingredient written as nothing but staple words, such as "water", counts as the ticked item its `pantryId` names only when that item's own name has a staple word too (the user's "Olive oil" or "Filippo Berio Olive Oil 500ml", `hasStapleWord`); otherwise it is delivered as a staple and does not count as using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish past `NO_PANTRY` / `STAPLES_ONLY`. Only the written words are judged, the names are never compared, so "макароны" written for "Pasta" counts); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
 
    Charging: every refusal except the quality gate's is a **content failure**: refunded within the existing allowance (one
    per 10 credits paid over the account's life), charged after it. So an attacker gets no free
@@ -593,7 +593,7 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    plus LOW safety filters already cover the high-severity cases (links, contact details, markup,
    allergens, diet, non-food). What it would add is semantic: off-topic prose made of ordinary
    words, in-language slurs below the filter threshold, subtly unsafe food handling.
-   **Recommendation:** run the red-team checklist (`test/injection-prompts.md`) after deploy; if
+   **Recommendation:** run the red-team checklist (`test/injection-prompts.md`, `npm run redteam`) after deploy; if
    anything harmful or off-topic gets through, set `outputJudge: "shadow"` for a week to measure
    verdicts, then `"enforce"`, and raise `perUserDailySpendMicroUsd` to `500000` (or set
    `GEMINI_JUDGE_MODEL` to a cheaper model and `prices` accordingly) to keep two 3-course menus.
@@ -819,6 +819,19 @@ or dinner, vegetarian and gluten-free, two optional items, one of them wheat flo
 dairy-free, with a chicken fillet and a yoghurt the diets rule out) and
 `config-menu3-2026-11-14.json` (3 courses in Russian, at least 40 minutes, dinner, vegan +
 vegetarian + gluten-free, with a soured cream the diets rule out).
+
+### The red-team run
+
+The red-team checklist (`test/injection-prompts.md`) is also a case file,
+`test/redteam/cases.json`, run by `npm run redteam` on the same code path as `prompt-body`
+(`src/admin/redteam/`): `plan` (the default, offline) validates every case through the server's
+input rules, builds the body above for each and prints the cost estimate, priced with
+`DEFAULT_PRICES`, `planFor`'s reservation bound and the usage the live project logged; `run --yes`
+sends the cases to Vertex AI with a bearer token from `VERTEX_TOKEN` and puts every answer through
+`runGenerator` (the adapter, the output checks, the quality gate, the judge), then writes a JSON
+result and a Markdown report to the git-ignored `test/redteam/results/`. It calls the model, not
+the function: its spend counts toward the billing budget but not the app's spend ceilings or any
+balance. Commands and flags: `test/injection-prompts.md`, "Running it".
 
 ### Running the functions for the apps
 

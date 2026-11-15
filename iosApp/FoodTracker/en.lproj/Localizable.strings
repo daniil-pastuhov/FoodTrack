@@ -429,7 +429,7 @@
 "detail_nova_2" = "Culinary ingredients";
 "detail_nova_3" = "Processed";
 "detail_nova_4" = "Ultra-processed";
-"detail_credit" = "Product data from Open Food Facts";
+"detail_credit" = "Product data and pictures from Open Food Facts (openfoodfacts.org), under the Open Database License and CC BY-SA";
 "detail_allergen_note" = "This matches your allergen list. Matching is loose, so check the label.";
 "detail_choose_item" = "Choose an item to see its details.";
 "lede_number_1" = "One";
@@ -463,6 +463,8 @@
 "scan_allergen_note" = "This matches your allergen list. Matching is loose, so check the label.";
 "scan_offline_title" = "You're offline";
 "scan_offline_message" = "Couldn't look this product up. You can carry on by hand, and the barcode stays with the item.";
+"scan_busy_title" = "Open Food Facts is busy";
+"scan_busy_message" = "Couldn't look this product up right now. Try again in a minute, or carry on by hand, and the barcode stays with the item.";
 "scan_try_again" = "Try again";
 "scan_continue_by_hand" = "Continue by hand";
 "scan_best_before_format" = "Best before %@";
@@ -596,10 +598,8 @@
 "recipe_generate_on_phone" = "Generate on this {device}";
 "recipe_cost_free" = "Free";
 "recipe_share_prompt" = "Share prompt";
-"recipe_copy_prompt" = "Copy prompt";
 "recipe_prompt_only_hint" = "Free: send the prompt to an AI app you already use.";
 "recipe_none_selected_hint" = "Tick at least one item to cook with.";
-"recipe_prompt_copied" = "Prompt copied";
 "recipe_writing_on_phone_title" = "Writing on this {device}";
 "recipe_writing_on_phone_message" = "Nothing is sent anywhere. This can take a minute.";
 "recipe_stop" = "Stop";
@@ -804,7 +804,8 @@
 "recipe_past_date_result_one" = "Past its date: %1$@. Check it is still safe to eat before you cook.";
 "recipe_past_date_result_many" = "Past their date: %1$@. Check they are still safe to eat before you cook.";
 "recipe_past_date_item" = "%1$@ (%2$@)";
-"recipe_prompt_past_date" = "These items are past their date, and I have chosen to use them anyway: %1$@.";
+"recipe_prompt_past_date_one" = "One of these is past its date. I have chosen to use it anyway, so please don't leave it out.";
+"recipe_prompt_past_date_many" = "Some of these are past their date. I have chosen to use them anyway, so please don't leave them out.";
 
 /* Recipe: time range, multi-choice meal and diet, NOT_ENOUGH_ITEMS, shopping list */
 "recipe_time_range" = "%1$d–%2$d min";

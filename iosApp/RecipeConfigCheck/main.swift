@@ -72,8 +72,48 @@ let dish = Recipe(title: "Dish", summary: "", minutes: 10, servings: 2, difficul
 expect(RecipeWire.pastDate(of: dish, ticked: ticked, optional: optional, today: "2026-11-14").map(\.name), ["Cream", "Yoghurt"], "exact past date")
 
 // Shopping list
-expect(RecipeShopping.tidyName("  red   onion, thinly sliced "), "Red onion", "tidy")
-expect(RecipeShopping.tidyName(" , chopped"), nil, "nothing left")
+// The same table as Android's RecipeConfigChoicesTest.namesAreTidiedForAList.
+let tidyCases: [(String, [String])] = [
+    ("  red   onion, thinly sliced ", ["Red onion"]),
+    ("garlic, minced.", ["Garlic"]),
+    ("сметана", ["Сметана"]),
+    ("crème fraîche;", ["Crème fraîche"]),
+    (" , chopped", []),
+    ("Salt, pepper, chilli flakes", ["Salt", "Pepper", "Chilli flakes"]),
+    ("Salt, pepper, olive oil", ["Salt", "Pepper", "Olive oil"]),
+    ("Tomatoes, peeled and diced small", ["Tomatoes"]),
+    ("Salt, pepper or chilli flakes", ["Salt", "Pepper or chilli flakes"]),
+    ("Butter or olive oil", ["Butter or olive oil"]),
+    ("Salt, to taste", ["Salt"]),
+    ("Salt and pepper to taste", ["Salt and pepper"]),
+    ("Garlic, 2 cloves, minced", ["Garlic"]),
+    ("Chicken thighs, boneless and skinless", ["Chicken thighs"]),
+    ("Cheese, such as cheddar", ["Cheese"]),
+    ("Parsley (optional)", ["Parsley"]),
+    ("Lemon, zest and juice", ["Lemon"]),
+    ("Соль, перец по вкусу", ["Соль", "Перец"]),
+    ("Лук, мелко нарезанный", ["Лук"]),
+    ("Морковь, натёртая на тёрке", ["Морковь"]),
+    ("Укроп, петрушка, зелёный лук", ["Укроп", "Петрушка", "Зелёный лук"]),
+    ("Чеснок, 2 зубчика", ["Чеснок"]),
+    ("Løk, finhakket", ["Løk"]),
+    ("Salt, pepper, olivenolje", ["Salt", "Pepper", "Olivenolje"]),
+    ("Hvitløk, presset", ["Hvitløk"]),
+    ("Gulrøtter, skrelt og i terninger", ["Gulrøtter"]),
+    ("Salt og pepper etter smak", ["Salt og pepper"]),
+    ("Rømme eller crème fraîche", ["Rømme eller crème fraîche"]),
+]
+for (raw, wanted) in tidyCases { expect(RecipeShopping.tidyNames(raw), wanted, "tidy \(raw)") }
+let listDish = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [
+    RecipeIngredient(amount: "", name: "Salt, pepper, olive oil", fromPantry: false, staple: true),
+    RecipeIngredient(amount: "", name: "salt", fromPantry: false),
+], steps: ["Cook."], source: .server)
+let listRows = RecipeShopping.candidates([listDish], listedNames: ["Pepper"])
+expect(listRows.map(\.name), ["Salt", "Pepper", "Olive oil"], "a list in one ingredient is separate rows")
+expect(listRows.map(\.alreadyListed), [false, true, false], "each row matched on its own")
+expect(RecipeShopping.hasSomethingToAdd(listRows), true, "something to add")
+expect(RecipeShopping.hasSomethingToAdd(RecipeShopping.candidates([listDish], listedNames: ["salt", "PEPPER", " olive oil"])), false, "everything listed: no button")
+expect(RecipeShopping.hasSomethingToAdd([]), false, "nothing to buy: no button")
 let shoppingDish = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [
     RecipeIngredient(amount: "200 g", name: "pasta", fromPantry: true, pantryIndex: 0),
     RecipeIngredient(amount: "2 tbsp", name: "olive oil", fromPantry: false, staple: true),

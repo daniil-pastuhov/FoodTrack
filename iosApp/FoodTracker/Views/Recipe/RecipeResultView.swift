@@ -244,7 +244,8 @@ extension EnvironmentValues {
 }
 
 /// "Add to shopping list" under a recipe's ingredients, or under a menu's title for every day of
-/// it: shown only when `recipes` has an ingredient the cook doesn't have. Opens the sheet; nothing
+/// it: shown only when `recipes` has an ingredient the cook doesn't have that isn't on the list
+/// already. Opens the sheet; nothing
 /// opens by itself.
 struct RecipeShoppingButton: View {
     let recipes: [Recipe]
@@ -254,7 +255,9 @@ struct RecipeShoppingButton: View {
     @State private var candidates: [ShoppingCandidate]?
 
     var body: some View {
-        if shopping.add != nil, !RecipeShopping.candidates(recipes, listedNames: shopping.listedNames).isEmpty {
+        // Hidden when nothing can be added (nothing to buy, or every row on the list already);
+        // `listedNames` is the live list, so it comes back when the list changes.
+        if shopping.add != nil, RecipeShopping.hasSomethingToAdd(RecipeShopping.candidates(recipes, listedNames: shopping.listedNames)) {
             LarderButton(L10n.recipeShoppingAdd, icon: .listPlus, variant: .outline, fullWidth: true) {
                 candidates = RecipeShopping.candidates(recipes, listedNames: shopping.listedNames)
             }

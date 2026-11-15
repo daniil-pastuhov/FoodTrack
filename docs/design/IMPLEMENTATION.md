@@ -18,7 +18,7 @@ Widths: `isExpanded` is true at 700dp/pt and up, read from window width. Two-pan
 Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), savedRecipes, recipeSettings, buyRecipes (sheet), productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, onboarding.
 
 ## State additions (Wave 0)
-- Lookup result: Found(product), NotFound, Offline.
+- Lookup result: Found(product), NotFound, Offline, and (2026-11-15) Busy for Open Food Facts' HTTP 429, drawn as the offline panel with a clock icon and its own title and message (scanner/barcode/busy).
 - `onboardingCompleted` in settings. Treated as done for people upgrading with items in the pantry.
 - `deleteItems(ids)` returns what's needed for one Undo, `restoreItems(...)` undoes it.
 - Home confirmation events: Saved(name, location), BatchAdded(count), OneMoreAdded(name, quantity).
@@ -36,6 +36,9 @@ Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), saved
 
 ## Verify before reporting
 `./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug` (JDK 17) and the `xcodebuild` simulator build in CLAUDE.md, as far as your platform is affected. In a fresh Gradle home set `GRADLE_RO_DEP_CACHE=$HOME/.gradle/caches`. Report real results and anything not verified.
+
+## Recipe tab action rule (2026-11-15)
+One rule, `RecipeUiState.actions` (iOS `RecipeViewModel.actions`), picks the pinned action and the buttons under the form; the full table is at the end of the Recipe page. Copy prompt exists only where the system share sheet has no Copy: Android 9 and older (`shareSheetCopies` false, from the API level), never on iOS. With Share prompt pinned alone, the form ends with the free line and then Buy recipes as an outline button; on Android 7–9 Copy prompt (outline) comes first and Buy drops to a text button (recipe/cook/copy-old-android). With Generate pinned, Share prompt is a text button under the form, with Copy prompt beside it on Android 7–9 only. Share prompt pinned alone is drawn to Scan's metrics (`PinnedAction(compact = true)` on Android, `RecipeGoButton(compact: true)` on iOS): 56 high, a 24 icon, 8 to the label, Scan's side padding and label style.
 
 ## Approved defaults
 `found` hides "In your pantry" at zero. Quantity limit 99 on both platforms. iOS Add item stays a modal with Cancel. Add item title is "Add item". Per-item notification channel gets a new id at default importance. Widget tick stays a ring with a check; in-app tick keeps its empty-ring off state. Blank Save and Import in Shopping stay disabled. A duplicate shopping name shows a T3 message. Scan is on Home only; on Recipe the primary action (`RecipeUiState.actions`) takes its place above the pill: full width when it has a cost, a content-width pill at the trailing edge when Share prompt is pinned alone (level with the pill on wide windows where it fits). Later, not now: fixing Check date from the queue, validating restore files on pick, the T4 after declining location, shop-arrival actions.

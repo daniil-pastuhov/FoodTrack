@@ -1,13 +1,32 @@
-# FoodTracker 🥫📅
+# BestBefore (FoodTracker)
 
-A Kotlin Multiplatform (KMP) grocery and expiration date tracking app for **Android (Jetpack Compose)** and **iOS (Native SwiftUI)**.
-
-Published as **BestBefore**:
+Scan your groceries, see what to use first, get a reminder before food goes off, and turn what's about to expire into a recipe. Free and open source, for iPhone, iPad and Android.
 
 - **iPhone and iPad**: [BestBefore on the App Store](https://apps.apple.com/app/id6818647200)
 - **Google Play**: in closed testing, not public yet
 
-## Features
+<p>
+  <img src="docs/images/screenshot-pantry.jpg" width="200" alt="Pantry list with the items to use first">
+  <img src="docs/images/screenshot-scan.jpg" width="200" alt="Scanning a barcode, with the best-before date read from the pack">
+  <img src="docs/images/screenshot-recipe.jpg" width="200" alt="A recipe written from items that expire soon">
+  <img src="docs/images/screenshot-shopping.jpg" width="200" alt="Shopping list">
+</p>
+
+**What it does**
+
+- Scan a barcode and the product name and picture are filled in from [Open Food Facts](https://world.openfoodfacts.org/); point the camera at the printed date and it reads the expiry date.
+- Lists what expires first in the fridge, freezer and pantry, and reminds you a few days before, at a time you choose.
+- Shopping list: essentials you use up go onto it; share it as text or a QR code.
+- Home screen widgets for expiring items, the shopping list and an overview.
+- Recipe tab: picks the items closest to their date and writes a recipe in one of three ways: a prompt to copy into an AI app you already use (free), the phone's own model where it has one (free), or the server, with optional one-off recipe packs (in-app purchase) that also make a 3-day menu.
+- The pantry stays on your device, and you don't need an account. Only a recipe from a pack sends anything to the project's server.
+- English, Russian and Norwegian. Open source under the Apache License 2.0.
+
+**Built with** Kotlin Multiplatform and Jetpack Compose (Android), SwiftUI (iOS, a separate native app), and product data and pictures from [Open Food Facts](https://world.openfoodfacts.org/) (Open Database License; pictures CC BY-SA).
+
+The project is called FoodTracker in the code; the app is published as BestBefore.
+
+## Features in detail
 
 - 📷 **Barcode Scanning**: Scan 1D and 2D barcodes (EAN-13, UPC, Code 128, DataBar, QR).
 - 🏷️ **Automatic Product Lookup**: Queries the open [Open Food Facts API](https://world.openfoodfacts.org/) to fetch product names, brands, images, and categories.
@@ -84,6 +103,14 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
    texts"). It goes live as soon as Apple approves it (set the repository variable
    `APP_STORE_RELEASE_TYPE` to `MANUAL` to release it from App Store Connect yourself). Then it
    tags `vX.Y.Z` and creates a GitHub release.
+
+**Google Play production**: the Android app has no production release yet. A new personal
+developer account needs a closed test with at least 12 testers opted in for 14 days in a row
+before it can apply for production access; the steps, dates and declarations are in
+[docs/play-production.md](docs/play-production.md), and the tester invitations in
+[docs/marketing/play-testers/](docs/marketing/play-testers/README.md).
+`PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_status.py` prints, read-only,
+each track's releases, countries and tester groups.
 
 **Store listings**: edit the files in `store-listing/` on the release branch (or before it), and
 the merge puts them in both stores; only what differs is written, the iPhone Duo screenshots

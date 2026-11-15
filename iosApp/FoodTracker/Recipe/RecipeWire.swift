@@ -1105,7 +1105,7 @@ struct ShoppingCandidate: Equatable, Hashable, Sendable {
 /// and merged for the sheet. Android: `RecipeShopping.kt`, ported by hand.
 enum RecipeShopping {
     /// The non-pantry ingredients of `recipes`, in order of first appearance with staples last,
-    /// tidied and listed once (ignoring case), marked when `listedNames` has them already. Plain
+    /// tidied into one or more entries (`tidyNames`) and listed once (ignoring case), marked when `listedNames` has them already. Plain
     /// water is left out when the server marked it a staple; without that mark every non-pantry
     /// ingredient is listed.
     static func candidates(_ recipes: [Recipe], listedNames: [String]) -> [ShoppingCandidate] {
@@ -1113,19 +1113,26 @@ enum RecipeShopping {
         var order: [String] = []
         var rows: [String: ShoppingCandidate] = [:]
         for ingredient in recipes.flatMap(\.ingredients) where !ingredient.fromPantry {
-            guard let name = tidyName(ingredient.name) else { continue }
-            if ingredient.staple && isPlainWater(name) { continue }
-            let key = name.lowercased()
-            if let known = rows[key] {
-                // A staple elsewhere in the menu stays one only if every mention is one.
-                if known.staple && !ingredient.staple { rows[key]?.staple = false }
-            } else {
-                order.append(key)
-                rows[key] = ShoppingCandidate(name: name, key: key, alreadyListed: listed.contains(key), staple: ingredient.staple)
+            for name in tidyNames(ingredient.name) {
+                if ingredient.staple && isPlainWater(name) { continue }
+                let key = name.lowercased()
+                if let known = rows[key] {
+                    // A staple elsewhere in the menu stays one only if every mention is one.
+                    if known.staple && !ingredient.staple { rows[key]?.staple = false }
+                } else {
+                    order.append(key)
+                    rows[key] = ShoppingCandidate(name: name, key: key, alreadyListed: listed.contains(key), staple: ingredient.staple)
+                }
             }
         }
         let all = order.compactMap { rows[$0] }
         return all.filter { !$0.staple } + all.filter(\.staple)
+    }
+
+    /// Whether "Add to shopping list" has anything to offer: a row not on the list already. With
+    /// none (nothing to buy, or every row listed) the button is hidden. Android: `hasShoppingToAdd`.
+    static func hasSomethingToAdd(_ candidates: [ShoppingCandidate]) -> Bool {
+        candidates.contains { !$0.alreadyListed }
     }
 
     /// What the sheet ticks first: everything not on the list already (the owner's rule).
@@ -1133,19 +1140,88 @@ enum RecipeShopping {
         Set(candidates.filter { !$0.alreadyListed }.map(\.key))
     }
 
-    /// An ingredient's name as a list entry: what follows the first comma dropped, whitespace
-    /// collapsed, trailing punctuation trimmed, the first letter capitalised. Nil when empty.
-    static func tidyName(_ raw: String) -> String? {
-        let cut = raw.split(separator: ",", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? raw
-        let beforeWide = cut.split(separator: "，", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) ?? cut
-        var text = beforeWide.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        let trailing: Set<Character> = [".", ";", ":", "-", "–", "—", " "]
-        let leading: Set<Character> = ["-", "–", "—", "•", "*", " "]
-        while let last = text.last, trailing.contains(last) { text.removeLast() }
-        while let first = text.first, leading.contains(first) { text.removeFirst() }
-        guard let first = text.first else { return nil }
-        return first.isLowercase ? first.uppercased() + text.dropFirst() : text
+    /// An ingredient's name as shopping-list entries. The name is cut at its commas: the first
+    /// part is always an entry; each later part is one too while it is a short item
+    /// (`isShortItem`: "Salt, pepper, chilli flakes" is three entries), and the first part that is
+    /// a preparation note (", thinly sliced", ", peeled and diced small", ", 2 cloves") ends the
+    /// list. A trailing "to taste" / "по вкусу" / "etter smak" is dropped from every part. "X or Y"
+    /// stays one entry. Each entry has its whitespace collapsed, edge punctuation trimmed and its
+    /// first letter capitalised. Android: `tidyShoppingNames`, the same rules and word lists.
+    static func tidyNames(_ raw: String) -> [String] {
+        var out: [String] = []
+        let parts = raw.split(omittingEmptySubsequences: false) { $0 == "," || $0 == "，" }
+        for (i, part) in parts.enumerated() {
+            var words = part.split(whereSeparator: \.isWhitespace).map(String.init)
+            let tail = tasteTails.first { t in words.count >= t.count && words.suffix(t.count).map(noteWord) == t }
+            if let tail { words.removeLast(tail.count) }
+            if i > 0 && !isShortItem(words) {
+                if tail != nil && words.isEmpty { continue }
+                break
+            }
+            var text = words.joined(separator: " ")
+            let trailing: Set<Character> = [".", ";", ":", "-", "–", "—", " "]
+            let leading: Set<Character> = ["-", "–", "—", "•", "*", " "]
+            while let last = text.last, trailing.contains(last) { text.removeLast() }
+            while let first = text.first, leading.contains(first) { text.removeFirst() }
+            guard let first = text.first else { continue }
+            out.append(first.isLowercase ? first.uppercased() + text.dropFirst() : text)
+        }
+        return out
     }
+
+    /// Whether a comma part after the first is an item of its own: one to three words besides an
+    /// "or", no digit, no preparation or description word.
+    private static func isShortItem(_ words: [String]) -> Bool {
+        let counted = words.filter { !orWords.contains(noteWord($0)) }.count
+        guard (1...3).contains(counted) else { return false }
+        return !words.contains { w in
+            // A decimal digit of any script (Kotlin's isDigit) or a vulgar fraction.
+            if w.unicodeScalars.contains(where: { CharacterSet.decimalDigits.contains($0) || "½¼¾⅓⅔".unicodeScalars.contains($0) }) { return true }
+            let n = noteWord(w)
+            return noteWords.contains(n) || notePrefixes.contains { n.hasPrefix($0) }
+        }
+    }
+
+    /// A word as the note lists hold it: lower case, edge punctuation off.
+    private static func noteWord(_ w: String) -> String {
+        let edge: Set<Character> = [".", ";", ":", "(", ")", "!", "?", "\"", "«", "»"]
+        var s = Substring(w.lowercased())
+        while let c = s.first, edge.contains(c) { s.removeFirst() }
+        while let c = s.last, edge.contains(c) { s.removeLast() }
+        return String(s)
+    }
+
+    private static let orWords: Set<String> = ["or", "или", "eller"]
+
+    /// Endings dropped from a part: the cook adds these to taste.
+    private static let tasteTails: [[String]] = [
+        ["to", "taste"], ["as", "needed"], ["if", "needed"], ["optional"],
+        ["по", "вкусу"], ["по", "желанию"], ["etter", "smak"], ["etter", "behov"], ["valgfritt"],
+    ]
+
+    /// Words that make a comma part a preparation or description note, in en, ru and nb.
+    private static let noteWords: Set<String> = [
+        // en
+        "sliced", "chopped", "minced", "diced", "peeled", "grated", "crushed", "cubed", "halved", "quartered",
+        "drained", "rinsed", "washed", "trimmed", "beaten", "melted", "softened", "shredded", "julienned",
+        "divided", "zest", "deseeded", "seeded", "pitted", "cored", "stemmed", "torn", "zested", "juiced", "squeezed",
+        "thinly", "finely", "roughly", "coarsely", "cut", "into", "taste", "optional", "needed", "such", "like",
+        "for", "to", "about", "plus", "at", "room", "temperature", "serving", "garnish", "preferably",
+        "boneless", "skinless", "ripe", "large", "small", "medium", "thick", "thin", "whole", "cooked", "uncooked",
+        // ru
+        "по", "для", "без", "очень", "кубиками", "ломтиками", "кольцами", "соломкой", "полосками", "дольками",
+        // nb
+        "i", "til", "etter", "uten", "hakket", "finhakket", "grovhakket", "skivet", "skiver", "revet", "finrevet",
+        "skrelt", "presset", "knust", "smeltet", "delt", "terninger", "strimler", "båter", "smak", "fint", "grovt",
+        "tynt", "tynne", "store", "stor", "små", "liten", "moden", "modne", "romtemperert", "servering", "pynt",
+    ]
+
+    /// Stems of Russian and Norwegian preparation words, which have many endings.
+    private static let notePrefixes: [String] = [
+        "нарез", "мелк", "крупн", "тонк", "очищ", "натер", "натёр", "тёрт", "терт", "измельч", "рублен", "порублен",
+        "нашинк", "размят", "растоп", "размягч", "охлажд", "комнатн", "вкус", "желани", "спел", "отвар",
+        "finhakk", "grovhakk", "valgfri",
+    ]
 
     /// Water in the ten recipe languages (the server's staple words' first group).
     private static let waterWords: Set<String> = [
