@@ -463,6 +463,8 @@
 "scan_allergen_note" = "Совпадает с вашим списком аллергенов. Сравнение приблизительное, поэтому проверьте этикетку.";
 "scan_offline_title" = "Нет подключения к сети";
 "scan_offline_message" = "Не удалось найти этот товар. Можно продолжить вручную, штрихкод останется у товара.";
+"scan_busy_title" = "Open Food Facts перегружен";
+"scan_busy_message" = "Сейчас не удалось найти этот товар. Попробуйте через минуту или продолжите вручную, штрихкод останется у товара.";
 "scan_try_again" = "Повторить";
 "scan_continue_by_hand" = "Продолжить вручную";
 "scan_best_before_format" = "Годен до %@";
@@ -596,10 +598,8 @@
 "recipe_generate_on_phone" = "Составить на этом {device}";
 "recipe_cost_free" = "Бесплатно";
 "recipe_share_prompt" = "Поделиться запросом";
-"recipe_copy_prompt" = "Скопировать запрос";
 "recipe_prompt_only_hint" = "Бесплатно: отправьте запрос в ИИ-приложение, которым вы уже пользуетесь.";
 "recipe_none_selected_hint" = "Отметьте хотя бы один продукт.";
-"recipe_prompt_copied" = "Запрос скопирован";
 "recipe_writing_on_phone_title" = "Составляем на этом {device}";
 "recipe_writing_on_phone_message" = "Ничего никуда не отправляется. Это может занять минуту.";
 "recipe_stop" = "Остановить";
@@ -804,7 +804,8 @@
 "recipe_past_date_result_one" = "Срок годности истёк: %1$@. Перед готовкой проверьте, что продукт ещё можно есть.";
 "recipe_past_date_result_many" = "Срок годности истёк: %1$@. Перед готовкой проверьте, что эти продукты ещё можно есть.";
 "recipe_past_date_item" = "%1$@ (%2$@)";
-"recipe_prompt_past_date" = "У этих продуктов истёк срок годности, но я всё равно хочу их использовать: %1$@.";
+"recipe_prompt_past_date_one" = "У одного из этих продуктов истёк срок годности. Я всё равно хочу его использовать, так что не исключай его.";
+"recipe_prompt_past_date_many" = "У некоторых из этих продуктов истёк срок годности. Я всё равно хочу их использовать, так что не исключай их.";
 
 /* Recipe: time range, multi-choice meal and diet, NOT_ENOUGH_ITEMS, shopping list */
 "recipe_time_range" = "%1$d–%2$d мин";

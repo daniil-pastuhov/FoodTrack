@@ -152,11 +152,55 @@ class RecipeConfigChoicesTest {
 
     @Test
     fun namesAreTidiedForAList() {
-        assertEquals("Red onion", tidyShoppingName("  red   onion, thinly sliced "))
-        assertEquals("Garlic", tidyShoppingName("garlic, minced."))
-        assertEquals("Сметана", tidyShoppingName("сметана"))
-        assertEquals("Crème fraîche", tidyShoppingName("crème fraîche;"))
-        assertNull(tidyShoppingName(" , chopped"))
+        // The same table as iosApp/RecipeConfigCheck/main.swift ("tidy names").
+        val cases = listOf(
+            "  red   onion, thinly sliced " to listOf("Red onion"),
+            "garlic, minced." to listOf("Garlic"),
+            "сметана" to listOf("Сметана"),
+            "crème fraîche;" to listOf("Crème fraîche"),
+            " , chopped" to emptyList(),
+            "Salt, pepper, chilli flakes" to listOf("Salt", "Pepper", "Chilli flakes"),
+            "Salt, pepper, olive oil" to listOf("Salt", "Pepper", "Olive oil"),
+            "Tomatoes, peeled and diced small" to listOf("Tomatoes"),
+            "Salt, pepper or chilli flakes" to listOf("Salt", "Pepper or chilli flakes"),
+            "Butter or olive oil" to listOf("Butter or olive oil"),
+            "Salt, to taste" to listOf("Salt"),
+            "Salt and pepper to taste" to listOf("Salt and pepper"),
+            "Garlic, 2 cloves, minced" to listOf("Garlic"),
+            "Chicken thighs, boneless and skinless" to listOf("Chicken thighs"),
+            "Cheese, such as cheddar" to listOf("Cheese"),
+            "Parsley (optional)" to listOf("Parsley"),
+            "Lemon, zest and juice" to listOf("Lemon"),
+            "Соль, перец по вкусу" to listOf("Соль", "Перец"),
+            "Лук, мелко нарезанный" to listOf("Лук"),
+            "Морковь, натёртая на тёрке" to listOf("Морковь"),
+            "Укроп, петрушка, зелёный лук" to listOf("Укроп", "Петрушка", "Зелёный лук"),
+            "Чеснок, 2 зубчика" to listOf("Чеснок"),
+            "Løk, finhakket" to listOf("Løk"),
+            "Salt, pepper, olivenolje" to listOf("Salt", "Pepper", "Olivenolje"),
+            "Hvitløk, presset" to listOf("Hvitløk"),
+            "Gulrøtter, skrelt og i terninger" to listOf("Gulrøtter"),
+            "Salt og pepper etter smak" to listOf("Salt og pepper"),
+            "Rømme eller crème fraîche" to listOf("Rømme eller crème fraîche")
+        )
+        for ((raw, expected) in cases) assertEquals(expected, tidyShoppingNames(raw), raw)
+    }
+
+    @Test
+    fun aListOfItemsInOneIngredientBecomesSeparateRows() {
+        val rows = shoppingCandidates(listOf(dish(RecipeIngredient("", "Salt, pepper, olive oil", staple = true), RecipeIngredient("", "salt"))), listOf("Pepper"))
+        assertEquals(listOf("Salt", "Pepper", "Olive oil"), rows.map { it.name })
+        assertEquals(listOf(false, true, false), rows.map { it.alreadyListed })
+    }
+
+    @Test
+    fun theButtonIsOfferedOnlyWhileSomethingCanBeAdded() {
+        val recipe = listOf(dish(RecipeIngredient("200 g", "pasta", true, pantryIndex = 0), RecipeIngredient("1", "Lemon"), RecipeIngredient("", "salt", staple = true)))
+        assertTrue(hasShoppingToAdd(shoppingCandidates(recipe, emptyList())))
+        assertTrue(hasShoppingToAdd(shoppingCandidates(recipe, listOf("lemon"))))
+        assertEquals(false, hasShoppingToAdd(shoppingCandidates(recipe, listOf("Lemon ", "SALT"))), "everything is on the list")
+        assertEquals(false, hasShoppingToAdd(shoppingCandidates(listOf(dish(RecipeIngredient("1", "pasta", true, pantryIndex = 0))), emptyList())), "nothing to buy")
+        assertEquals(false, hasShoppingToAdd(shoppingCandidates(listOf(dish(RecipeIngredient("1 l", "water", staple = true))), emptyList())), "only water")
     }
 
     @Test

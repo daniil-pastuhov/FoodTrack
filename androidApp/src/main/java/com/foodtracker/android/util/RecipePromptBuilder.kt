@@ -60,7 +60,9 @@ fun recipePromptStrings(context: Context): RecipePromptStrings {
         diet = { context.getString(R.string.recipe_prompt_diet, recipeDietLabel(resources, it)) },
         allergens = { context.getString(R.string.recipe_prompt_allergens, it) },
         language = { code -> context.getString(R.string.recipe_prompt_language, languageDisplayName(code)) },
-        pastDateNote = { names -> context.getString(R.string.recipe_prompt_past_date, names) }
+        pastDateNote = { count ->
+            context.getString(if (count == 1) R.string.recipe_prompt_past_date_one else R.string.recipe_prompt_past_date_many)
+        }
     )
 }
 

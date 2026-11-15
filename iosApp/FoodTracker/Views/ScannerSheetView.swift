@@ -146,7 +146,10 @@ public struct ScannerSheetView: View {
         if viewModel.scannedProduct != nil { return .product }
         if viewModel.productNotFoundBarcode != nil {
             if mode == .photo { return .none }
-            if case .offline = viewModel.lookupResult { return .offline }
+            switch viewModel.lookupResult {
+            case .offline, .busy: return .offline
+            default: break
+            }
             return .notFound
         }
         return viewModel.detectedDate != nil ? .date : .none
@@ -810,7 +813,12 @@ public struct ScannerSheetView: View {
     private func offlinePanel(expanded: Bool) -> some View {
         let barcode = viewModel.productNotFoundBarcode ?? ""
         return ScanResultPanel(expanded: expanded) {
-            LarderCallout(.warning, icon: .wifiOff, title: L10n.scanOfflineTitle, message: L10n.scanOfflineMessage)
+            // A rate limit (429) offers the same, without saying there is no connection.
+            if case .busy = viewModel.lookupResult {
+                LarderCallout(.warning, icon: .clock, title: L10n.scanBusyTitle, message: L10n.scanBusyMessage)
+            } else {
+                LarderCallout(.warning, icon: .wifiOff, title: L10n.scanOfflineTitle, message: L10n.scanOfflineMessage)
+            }
             ScanCode(text: L10n.barcodeFormat(barcode))
             ScanActionRow {
                 LarderButton(L10n.scanTryAgain, variant: .outline, fullWidth: true) {

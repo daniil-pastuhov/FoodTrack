@@ -178,9 +178,32 @@ function ngrams(words: string[], n: number): Set<string> {
   return out;
 }
 
+/** What the leak check compares a text with: the request's canary and its system instruction's word runs. */
+export interface LeakSource {
+  canary: string;
+  leakNgrams: ReadonlySet<string>;
+}
+
+export function leakSourceOf(systemInstruction: string, canary: string): LeakSource {
+  return { canary: canary.toUpperCase(), leakNgrams: ngrams(foldText(systemInstruction).words, LEAK_NGRAM) };
+}
+
+/**
+ * The leak rule (LEAK): what of the prompt a text gives away, or null. The canary, a name of the
+ * prompt's own parts (the data markers, "system instruction", "response schema"), or a run of
+ * LEAK_NGRAM words of the system instruction. The red-team runner calls it on the raw answer.
+ */
+export function promptLeak(s: string, src: LeakSource): string | null {
+  if (src.canary && s.toUpperCase().includes(src.canary)) return "the canary";
+  const folded = foldText(s);
+  if (matchesAny(folded, PROMPT_WORDS) || s.toLowerCase().includes("pantry_data")) return "a name of the prompt's parts";
+  for (const g of ngrams(folded.words, LEAK_NGRAM)) if (src.leakNgrams.has(g)) return `"${g}" from the system instruction`;
+  return null;
+}
+
 interface Scanner {
   ctx: OutputContext;
-  leakNgrams: Set<string>;
+  leakNgrams: ReadonlySet<string>;
   canary: string;
   /** Scripts a letter of the answer may be in (see allowedScripts). */
   allowed: ReadonlySet<string>;
@@ -231,9 +254,8 @@ function scan(sc: Scanner, s: string): void {
     if ((m[0].match(/\d/g) ?? []).length >= 8) bad("PHONE");
   }
   if (REPEATED_CHAR.test(s)) bad("REPETITION");
+  if (promptLeak(s, sc)) bad("LEAK");
   const folded = foldText(s);
-  if (matchesAny(folded, PROMPT_WORDS) || s.toLowerCase().includes("pantry_data")) bad("LEAK");
-  for (const g of ngrams(folded.words, LEAK_NGRAM)) if (sc.leakNgrams.has(g)) bad("LEAK");
   let run = 1;
   for (let i = 1; i < folded.words.length; i++) {
     run = folded.words[i] === folded.words[i - 1] ? run + 1 : 1;
@@ -391,6 +413,15 @@ export function isStapleName(name: string): boolean {
   return staple;
 }
 
+/**
+ * Whether a name has a staple word anywhere ("Filippo Berio Olive Oil", "Maldon Sea Salt 250g"):
+ * a ticked item that may honestly be written as just that staple.
+ */
+export function hasStapleWord(name: string): boolean {
+  return foldText(name).words.flatMap((x) => x.split("'")).filter(Boolean)
+    .some((w) => matchesAny({ words: [w], flat: ` ${w} ` }, STAPLE_TERMS));
+}
+
 // --- Recipe and menu ---------------------------------------------------------------------------
 
 interface Checker {
@@ -416,31 +447,27 @@ function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
   const id = r.pantryId;
   if (typeof id !== "string") bad("SHAPE");
   if (id !== "none" && !ch.idToName.has(id as string)) bad("PANTRY_REF");
-  const fromPantry = id !== "none";
-  const names = [foldText(name)];
-  if (fromPantry) {
-    if ((id as string).startsWith("p")) ch.pantryUses++;
-    names.push(foldText(ch.idToName.get(id as string)!));
-  }
+  const itemName = id === "none" ? undefined : ch.idToName.get(id as string)!;
+  const names = [foldText(name), ...(itemName === undefined ? [] : [foldText(itemName)])];
   if (names.some((n) => violates(n, ch.allergen))) bad("ALLERGEN");
   if (names.some((n) => violates(n, ch.diet))) bad("DIET");
+  // An ingredient written as nothing but a staple ("water", "salt and pepper") is not the ticked
+  // item it is labelled with unless that item's name has a staple word too (the user's own "Olive
+  // oil", "Filippo Berio Olive Oil 500ml"): it is delivered as a staple and does not count as
+  // using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish
+  // past the quality gate. Judged from the words only, never by comparing names, so "макароны"
+  // written for "Pasta" still counts.
+  const staple = isStapleName(name);
+  const fromPantry = itemName !== undefined && !(staple && !hasStapleWord(itemName));
   // A staple (water, oil, salt, pepper, sugar, spices) is marked, so a client can order its shopping
   // list and leave plain water out of it (CONTRACT.md "Recipe").
-  if (!fromPantry) return { amount, name, fromPantry, ...(isStapleName(name) ? { staple: true as const } : {}) };
+  if (!fromPantry) return { amount, name, fromPantry, ...(staple ? { staple: true as const } : {}) };
   const n = Number((id as string).slice(1)) - 1;
-  if ((id as string).startsWith("p")) return { amount, name, fromPantry, pantryIndex: n };
-  return { amount, name, fromPantry, optionalIndex: ch.req.optionalIngredients[n].sentIndex ?? n };
-}
-
-/** An ingredient is a staple when its name is one and, for a pantry or optional item, the item's own name too. */
-function isStaple(ch: Checker, ing: RecipeIngredient): boolean {
-  if (!isStapleName(ing.name)) return false;
-  if (ing.pantryIndex !== undefined) return isStapleName(ch.req.ingredients[ing.pantryIndex].name);
-  if (ing.optionalIndex !== undefined) {
-    const item = ch.req.optionalIngredients.find((i, n) => (i.sentIndex ?? n) === ing.optionalIndex);
-    return item === undefined || isStapleName(item.name);
+  if ((id as string).startsWith("p")) {
+    ch.pantryUses++;
+    return { amount, name, fromPantry, pantryIndex: n };
   }
-  return true;
+  return { amount, name, fromPantry, optionalIndex: ch.req.optionalIngredients[n].sentIndex ?? n };
 }
 
 function recipe(ch: Checker, raw: unknown): Recipe {
@@ -453,7 +480,8 @@ function recipe(ch: Checker, raw: unknown): Recipe {
   if (!Array.isArray(r.ingredients) || r.ingredients.length === 0) bad("SHAPE");
   if ((r.ingredients as unknown[]).length > LIMITS.ingredients) bad("LENGTH");
   const ingredients = (r.ingredients as unknown[]).map((i) => ingredient(ch, i));
-  if (ingredients.every((ing) => isStaple(ch, ing))) ch.staplesOnly = true;
+  // A pantry or optional ingredient with a staple-only name is one of the user's own staples (see ingredient).
+  if (ingredients.every((ing) => isStapleName(ing.name))) ch.staplesOnly = true;
   const bounds = STEP_BOUNDS[ch.req.config.detail];
   if (!Array.isArray(r.steps)) bad("SHAPE");
   const rawSteps = r.steps as unknown[];

@@ -20,6 +20,9 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import com.foodtracker.model.ProductNutrition
 
 /**
  * The lookup's one promise: [ProductLookupResult.NotFound] only ever means Open Food Facts said
@@ -113,12 +116,45 @@ class OpenFoodFactsLookupTest {
     }
 
     @Test
-    fun serverErrorsAndRateLimitsAreOffline() = runTest {
+    fun aRateLimitIsBusyNotOffline() = runTest {
+        assertEquals(ProductLookupResult.Busy, apiAnswering(HttpStatusCode.TooManyRequests, """{"status":0}""").lookupProduct("123"))
+        assertEquals(null, ProductLookupResult.Busy.productOrNull)
+    }
+
+    @Test
+    fun theLookupSaysWhoIsAsking() = runTest {
+        var agent: String? = null
+        val client = HttpClient(MockEngine { request ->
+            agent = request.headers[HttpHeaders.UserAgent]
+            respond("""{"status":0}""", HttpStatusCode.OK, jsonHeaders)
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) } }
+        OpenFoodFactsApi(client, openFoodFactsUserAgent("Android", "2.0.1")).lookupProduct("123")
+        assertEquals("BestBefore-Android/2.0.1 (https://github.com/daniil-pastuhov/FoodTrack)", agent)
+    }
+
+    @Test
+    fun openFoodFactsHostsPagesAndSources() {
+        assertTrue(isOpenFoodFactsHost("images.openfoodfacts.org"))
+        assertTrue(isOpenFoodFactsHost("World.OpenFoodFacts.org"))
+        assertTrue(isOpenFoodFactsHost("static.openfoodfacts.net"))
+        assertFalse(isOpenFoodFactsHost("openfoodfacts.org.evil.example"))
+        assertFalse(isOpenFoodFactsHost("notopenfoodfacts.org"))
+        assertEquals("https://world.openfoodfacts.org/product/5012345678900", openFoodFactsPageUrl(" 5012345678900 "))
+        assertEquals("https://world.openfoodfacts.org", openFoodFactsPageUrl(null))
+        assertEquals("https://world.openfoodfacts.org", openFoodFactsPageUrl("abc/../x"))
+        assertTrue(isFromOpenFoodFacts("https://images.openfoodfacts.org/images/products/501/front.jpg", null))
+        assertTrue(isFromOpenFoodFacts(null, ProductNutrition(nutriScore = "a")))
+        assertFalse(isFromOpenFoodFacts("file:///data/photos/1.jpg", ProductNutrition()))
+        assertFalse(isFromOpenFoodFacts("https://example.com/openfoodfacts.org.jpg", null))
+        assertFalse(isFromOpenFoodFacts(null, null))
+    }
+
+    @Test
+    fun serverErrorsAreOffline() = runTest {
         listOf(
             HttpStatusCode.InternalServerError,
             HttpStatusCode.BadGateway,
-            HttpStatusCode.ServiceUnavailable,
-            HttpStatusCode.TooManyRequests
+            HttpStatusCode.ServiceUnavailable
         ).forEach { status ->
             assertEquals(
                 ProductLookupResult.Offline,

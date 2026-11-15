@@ -501,6 +501,8 @@ public enum L10n {
     public static var scanAllergenNote: String { NSLocalizedString("scan_allergen_note", comment: "") }
     public static var scanOfflineTitle: String { NSLocalizedString("scan_offline_title", comment: "") }
     public static var scanOfflineMessage: String { NSLocalizedString("scan_offline_message", comment: "") }
+    public static var scanBusyTitle: String { NSLocalizedString("scan_busy_title", comment: "") }
+    public static var scanBusyMessage: String { NSLocalizedString("scan_busy_message", comment: "") }
     public static var scanTryAgain: String { NSLocalizedString("scan_try_again", comment: "") }
     public static var scanContinueByHand: String { NSLocalizedString("scan_continue_by_hand", comment: "") }
     public static func scanBestBefore(_ date: String) -> String {

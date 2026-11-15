@@ -591,16 +591,17 @@ struct RecipeView: View {
                     }
                     .accessibilityLabel("\(L10n.recipeGenerateOnPhone), \(L10n.recipeCostFree)")
                 }
-                shareAndCopy
+                shareButton
             }
         } else if model.actions.primary == .onDevice {
             VStack(spacing: LarderSpace.s2) {
                 buyOrBlocked
-                shareAndCopy
+                shareButton
             }
         } else {
+            // Share is pinned and the share sheet copies too: the line says what it does, Buy
+            // (where offered) follows.
             VStack(spacing: LarderSpace.s2) {
-                LarderButton(L10n.recipeCopyPrompt, icon: .copy, variant: .outline, fullWidth: true, action: copyPrompt)
                 hint(L10n.recipePromptOnlyHint)
                 buyOrBlocked
             }
@@ -623,20 +624,10 @@ struct RecipeView: View {
         }
     }
 
-    private var shareAndCopy: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: LarderSpace.s2) { shareButton; copyButton }
-            VStack(spacing: 0) { shareButton; copyButton }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
+    /// The share sheet has Copy too, so there is no button of its own for it.
     private var shareButton: some View {
         LarderButton(L10n.recipeSharePrompt, icon: .share2, variant: .text, action: sharePrompt)
-    }
-
-    private var copyButton: some View {
-        LarderButton(L10n.recipeCopyPrompt, icon: .copy, variant: .text, action: copyPrompt)
+            .frame(maxWidth: .infinity)
     }
 
     private func hint(_ text: String) -> some View {
@@ -698,11 +689,6 @@ struct RecipeView: View {
 
     private func sharePrompt() {
         sharedPrompt = SharedText(text: model.sharePrompt(for: pantry.items))
-    }
-
-    private func copyPrompt() {
-        UIPasteboard.general.string = model.sharePrompt(for: pantry.items)
-        showSnackbar(L10n.recipePromptCopied)
     }
 }
 

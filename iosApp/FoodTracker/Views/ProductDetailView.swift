@@ -34,10 +34,17 @@ struct PantryProductDetail: View {
                     if let notes = item.notes, !notes.isEmpty {
                         DetailSection(L10n.homeNotesLabel) { DetailBody(notes) }
                     }
-                    if !nutrition.isEmpty {
-                        Text(L10n.detailCredit)
-                            .larderFont(.caption)
-                            .foregroundStyle(LarderColor.onSurfaceVariant)
+                    if OpenFoodFacts.isSource(imageUrl: item.imageUrl, nutrition: nutrition) {
+                        // Open Food Facts' terms: credit it and name the licences, here as a
+                        // link to the product's page there (the site without a barcode).
+                        Link(destination: OpenFoodFacts.pageURL(barcode: item.barcode)) {
+                            Text(L10n.detailCredit)
+                                .larderFont(.caption)
+                                .underline()
+                                .foregroundStyle(LarderColor.onSurfaceVariant)
+                                .multilineTextAlignment(.leading)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        }
                     }
                 }
                 .padding(LarderSpace.s4)

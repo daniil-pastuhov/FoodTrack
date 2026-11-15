@@ -28,10 +28,12 @@ class RecordingGenerator implements RecipeGenerator {
   raw?: unknown;
   usage?: LlmUsage;
   error?: string;
+  systemInstruction?: string;
   called = false;
   constructor(private readonly inner: RecipeGenerator) {}
   async generate(request: GenerateRequest, prompt: Prompt, signal: AbortSignal, limits: GenerationLimits): Promise<GenerationResult> {
     this.called = true;
+    this.systemInstruction = prompt.systemInstruction;
     try {
       const r = await this.inner.generate(request, prompt, signal, limits);
       this.raw = r.output;
@@ -133,7 +135,7 @@ export async function runAttempt(p: PlannedCase, attempt: number, deps: ExecDeps
   const verdict = verdictOf(outcome, judge.verdict);
   const violations: Violation[] = [];
   for (const a of p.c.expect.assertions ?? []) {
-    const r = evaluate(a, { raw: generator.raw, req, usage: generator.usage, actualMicroUsd: genCost, upperMicroUsd: genBound });
+    const r = evaluate(a, { raw: generator.raw, req, usage: generator.usage, actualMicroUsd: genCost, upperMicroUsd: genBound, systemInstruction: generator.systemInstruction });
     if (r && r !== "n/a") violations.push(r);
   }
   const cls = classify(p.c, verdict, violations);

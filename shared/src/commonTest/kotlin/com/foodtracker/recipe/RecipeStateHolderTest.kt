@@ -369,8 +369,9 @@ class RecipeStateHolderTest {
 
     // --- The form's actions ----------------------------------------------------------------
 
-    private fun formState(balance: Int?, onDevice: Boolean, paidAvailable: Boolean = true, issue: ServerIssue? = null, mode: RecipeMode = RecipeMode.RECIPE) =
+    private fun formState(balance: Int?, onDevice: Boolean, paidAvailable: Boolean = true, issue: ServerIssue? = null, mode: RecipeMode = RecipeMode.RECIPE, shareSheetCopies: Boolean = true) =
         RecipeUiState(
+            shareSheetCopies = shareSheetCopies,
             isLoading = false,
             rows = pantryRows,
             onDeviceAvailability = if (onDevice) OnDeviceAvailability.AVAILABLE else OnDeviceAvailability.UNSUPPORTED,
@@ -382,11 +383,11 @@ class RecipeStateHolderTest {
     @Test
     fun withRecipesInThePackTheServerIsPinnedAndBothFreeWaysStayOffered() {
         assertEquals(
-            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.ON_DEVICE, RecipeAction.SHARE, RecipeAction.COPY)),
+            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.ON_DEVICE, RecipeAction.SHARE)),
             formState(balance = 5, onDevice = true).actions
         )
         assertEquals(
-            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.SHARE, RecipeAction.COPY)),
+            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.SHARE)),
             formState(balance = 5, onDevice = false).actions
         )
     }
@@ -394,11 +395,11 @@ class RecipeStateHolderTest {
     @Test
     fun withoutRecipesTheFreeWaysLeadAndBuyingFollows() {
         assertEquals(
-            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.COPY, RecipeAction.BUY)),
+            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.BUY)),
             formState(balance = 0, onDevice = true).actions
         )
         assertEquals(
-            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.COPY, RecipeAction.BUY)),
+            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.BUY)),
             formState(balance = null, onDevice = false).actions
         )
     }
@@ -406,11 +407,11 @@ class RecipeStateHolderTest {
     @Test
     fun withoutThePaidRouteOnlyTheFreeWaysShow() {
         assertEquals(
-            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.COPY)),
+            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE)),
             formState(balance = null, onDevice = true, paidAvailable = false).actions
         )
         assertEquals(
-            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.COPY)),
+            RecipeActions(RecipeAction.SHARE, emptyList()),
             formState(balance = null, onDevice = false, paidAvailable = false).actions
         )
     }
@@ -418,9 +419,28 @@ class RecipeStateHolderTest {
     @Test
     fun offlineWithRecipesTheFreeWaysMoveUp() {
         assertEquals(
-            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.COPY, RecipeAction.BUY)),
+            RecipeActions(RecipeAction.ON_DEVICE, listOf(RecipeAction.SHARE, RecipeAction.BUY)),
             formState(balance = 5, onDevice = true, issue = ServerIssue.OFFLINE).actions
         )
+    }
+
+    @Test
+    fun copyIsOfferedOnlyWhereTheShareSheetCannotCopy() {
+        // Android below 10: the share sheet has no Copy, so the form keeps its own, after Share.
+        assertEquals(
+            RecipeActions(RecipeAction.SERVER, listOf(RecipeAction.ON_DEVICE, RecipeAction.SHARE, RecipeAction.COPY)),
+            formState(balance = 5, onDevice = true, shareSheetCopies = false).actions
+        )
+        assertEquals(
+            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.COPY, RecipeAction.BUY)),
+            formState(balance = null, onDevice = false, shareSheetCopies = false).actions
+        )
+        assertEquals(
+            RecipeActions(RecipeAction.SHARE, listOf(RecipeAction.BUY)),
+            formState(balance = null, onDevice = false).actions,
+            "Android 10 and up, as iOS: no Copy button"
+        )
+        assertEquals(RecipeActions(null, emptyList()), formState(balance = 2, onDevice = true, mode = RecipeMode.MENU, shareSheetCopies = false).actions, "never on a menu")
     }
 
     @Test

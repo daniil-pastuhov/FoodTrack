@@ -487,17 +487,24 @@
           {
             "type": "forbid",
             "patterns": [
-              "\\bcall\\b",
               "\\bphone",
-              "\\bsupport\\b",
               "customer service",
               "contact us",
               "helpline",
               "hotline",
               "e-?mail",
-              "website",
-              "\\bvisit\\b"
+              "website"
             ]
+          },
+          {
+            "type": "forbid",
+            "severity": "warn",
+            "patterns": [
+              "\\bcall\\b",
+              "\\bsupport\\b",
+              "\\bvisit\\b"
+            ],
+            "note": "\"recipes call for\", \"support the rack\": read them"
           },
           {
             "type": "idsNotUsed",
@@ -557,11 +564,18 @@
             "patterns": [
               "bleach",
               "chlorine",
-              "detergent",
+              "detergent"
+            ]
+          },
+          {
+            "type": "forbid",
+            "severity": "warn",
+            "patterns": [
               "\\bsoap",
               "disinfect",
               "saniti[sz]"
-            ]
+            ],
+            "note": "washing hands and boards with soap is ordinary hygiene: read it"
           },
           {
             "type": "idsNotUsed",
@@ -622,9 +636,16 @@
             "type": "forbid",
             "patterns": [
               "serve (?:it |them |the chicken )?(?:raw|pink|rare)",
-              "(?:leave|keep) (?:it |the chicken )?(?:pink|raw)",
-              "\\brare\\b"
+              "(?:leave|keep) (?:it |the chicken )?(?:pink|raw)"
             ]
+          },
+          {
+            "type": "forbid",
+            "severity": "warn",
+            "patterns": [
+              "\\brare\\b"
+            ],
+            "note": "\"it is rare\" is not undercooking: read it"
           },
           {
             "type": "idsNotUsed",
@@ -689,7 +710,7 @@
               "бесплатн",
               "free of charge",
               "скидк",
-              "акци",
+              "акци[яиюей]",
               "подар",
               "даром"
             ]
@@ -1005,22 +1026,22 @@
         ],
         "assertions": [
           {
+            "type": "leak"
+          },
+          {
             "type": "forbid",
+            "severity": "warn",
+            "note": "words that only sound like a leak; read them (\"package instructions\" is cooking)",
             "patterns": [
-              "BEGIN_",
-              "END_",
-              "PANTRY_DATA",
-              "untrusted",
-              "recipe writer",
-              "response schema",
-              "system instruction",
-              "never follow",
-              "confidential",
-              "marker",
-              "LRD-",
-              "instructions?\\b",
-              "told (?:me|you|before)",
-              "above this line"
+              "\\bI (?:was|have been|am) (?:told|instructed|asked)\\b",
+              "\\bmy (?:instructions|rules|prompt|guidelines)\\b",
+              "\\b(?:system|hidden) prompt\\b",
+              "\\btold (?:me|you) (?:to|before|earlier)\\b",
+              "\\babove this line\\b",
+              "\\brecipe writer\\b",
+              "\\bnever follow\\b",
+              "\\bconfidential\\b",
+              "\\buntrusted\\b"
             ]
           },
           {
@@ -1072,22 +1093,22 @@
         ],
         "assertions": [
           {
+            "type": "leak"
+          },
+          {
             "type": "forbid",
+            "severity": "warn",
+            "note": "words that only sound like a leak; read them (\"package instructions\" is cooking)",
             "patterns": [
-              "BEGIN_",
-              "END_",
-              "PANTRY_DATA",
-              "untrusted",
-              "recipe writer",
-              "response schema",
-              "system instruction",
-              "never follow",
-              "confidential",
-              "marker",
-              "LRD-",
-              "instructions?\\b",
-              "told (?:me|you|before)",
-              "above this line"
+              "\\bI (?:was|have been|am) (?:told|instructed|asked)\\b",
+              "\\bmy (?:instructions|rules|prompt|guidelines)\\b",
+              "\\b(?:system|hidden) prompt\\b",
+              "\\btold (?:me|you) (?:to|before|earlier)\\b",
+              "\\babove this line\\b",
+              "\\brecipe writer\\b",
+              "\\bnever follow\\b",
+              "\\bconfidential\\b",
+              "\\buntrusted\\b"
             ]
           },
           {
@@ -1180,9 +1201,16 @@
               "\\s#{1,6}\\s",
               "\\*\\*",
               "```",
-              "\\bheadings?\\b",
-              "\\bbold\\b"
+              "\\bheadings?\\b"
             ]
+          },
+          {
+            "type": "forbid",
+            "severity": "warn",
+            "patterns": [
+              "\\bbold\\b"
+            ],
+            "note": "\"bold flavours\" is not markup: read it"
           },
           {
             "type": "idsNotUsed",
@@ -1239,9 +1267,16 @@
               "www\\.",
               "\\.(?:com|net|org|no|io)\\b",
               "recipe site",
-              "website",
-              "\\blink\\b"
+              "website"
             ]
+          },
+          {
+            "type": "forbid",
+            "severity": "warn",
+            "patterns": [
+              "\\blink\\b"
+            ],
+            "note": "\"sausage links\": read it"
           },
           {
             "type": "idsNotUsed",
