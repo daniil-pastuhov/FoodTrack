@@ -2,7 +2,7 @@
 # Checks the iOS ports of the multi-choice recipe config (toggling, normalising, reading old
 # stored configs), its legacy wire mapping, the exact past-date warnings, the shopping-list rows
 # the phone-model language rule, menu sets (prices from costs.menuSets, what is offered and the
-# days/courses request shape) and the unread saved-recipe set:
+# days/courses request shape), the unread saved-recipe set and the Buy sheet's pack savings:
 #   iosApp/RecipeConfigCheck/check.sh
 # Compiles RecipeModels.swift and RecipeWire.swift (with a stub of the pantry item)
 # outside the Xcode project and runs main.swift, the same cases as Android's

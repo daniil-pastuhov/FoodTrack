@@ -699,6 +699,7 @@
 "recipe_payment_pending_title" = "Väntar på betalning";
 "recipe_payment_pending_message" = "Dina recept läggs till när butiken bekräftar betalningen. Det kan ta en stund.";
 "recipe_pack_each" = "%@ per recept";
+"recipe_pack_saving_a11y" = "%d %% billigare per recept";
 "recipe_continue" = "Fortsätt";
 "recipe_close" = "Stäng";
 "recipe_ok" = "OK";

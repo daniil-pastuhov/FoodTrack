@@ -172,6 +172,60 @@ struct MenuSet: Equatable, Sendable {
     }
 }
 
+/// One pack as the store offers it, for the Buy sheet's saving badge: its recipes, the store's
+/// own price and currency (nil when the store gave none).
+struct PackOffer: Equatable, Sendable {
+    let recipes: Int
+    let price: Decimal?
+    let currencyCode: String?
+}
+
+/// How much cheaper per recipe a larger pack is than the smallest one, worked out from the
+/// store's prices only. The same rule as Android's `recipePackSavingPercents` in `shared/.../recipe/RecipePackSavings.kt`.
+enum PackSavings {
+    /// The smallest saving worth a badge.
+    static let minimumPercent = 5
+
+    /// Each pack's saving in whole percent (floored, exactly), in the order given; nil for no
+    /// badge. The base is the pack with the fewest recipes among those with a positive price;
+    /// a pack gets a saving only with more recipes than the base, the same currency and a
+    /// positive price, and only when it is at least `minimumPercent`.
+    static func percents(_ packs: [PackOffer]) -> [Int?] {
+        let priced = packs.filter { ($0.price ?? 0) > 0 && $0.recipes > 0 }
+        guard let base = priced.min(by: { $0.recipes < $1.recipes }),
+              let basePrice = base.price, let baseCurrency = base.currencyCode,
+              !baseCurrency.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return packs.map { _ in nil }
+        }
+        return packs.map { pack in
+            guard pack.recipes > base.recipes, let price = pack.price, price > 0,
+                  pack.currencyCode == baseCurrency else { return nil }
+            // saving = 1 − (price / recipes) / (basePrice / baseRecipes)
+            //        = (recipes·basePrice − price·baseRecipes) / (recipes·basePrice)
+            let denominator = Decimal(pack.recipes) * basePrice
+            let numerator = (denominator - price * Decimal(base.recipes)) * 100
+            guard numerator > 0 else { return nil }
+            let percent = floorQuotient(numerator, denominator)
+            return percent >= minimumPercent ? percent : nil
+        }
+    }
+
+    /// The badge: U+2212 minus, the number and `%`, the same in every language.
+    static func badgeText(_ percent: Int) -> String { "\u{2212}\(percent)%" }
+
+    /// ⌊n / d⌋ for positive `n` and `d`, exact: Decimal's division rounds at 38 digits, so the
+    /// floored quotient is corrected against the exact products.
+    private static func floorQuotient(_ n: Decimal, _ d: Decimal) -> Int {
+        var quotient = n / d
+        var floored = Decimal()
+        NSDecimalRound(&floored, &quotient, 0, .down)
+        var result = NSDecimalNumber(decimal: floored).intValue
+        while Decimal(result) * d > n { result -= 1 }
+        while Decimal(result + 1) * d <= n { result += 1 }
+        return result
+    }
+}
+
 /// Saved recipes and menus the person hasn't seen yet: written or recovered while the writing
 /// screen wasn't on screen. Kept as ids beside the recipe options (`RecipeOptions.unreadSaved`);
 /// the header's badge counts those still saved. Android: `RecipeUiState.unreadCount` / `isUnread`.

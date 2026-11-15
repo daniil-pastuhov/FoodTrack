@@ -373,6 +373,8 @@ extension L10n {
         return String(format: paid("recipe_buy_message"), recipeCost(costs.menu2), recipeCost(costs.menu3))
     }
     static func recipePackEach(_ price: String) -> String { String(format: paid("recipe_pack_each"), price) }
+    /// The pack row's spoken saving; the badge itself (`PackSavings.badgeText`) isn't localized.
+    static func recipePackSavingA11y(_ percent: Int) -> String { String(format: paid("recipe_pack_saving_a11y"), percent) }
     static var recipeContinue: String { paid("recipe_continue") }
     static var recipeClose: String { paid("recipe_close") }
     static var recipeOK: String { paid("recipe_ok") }

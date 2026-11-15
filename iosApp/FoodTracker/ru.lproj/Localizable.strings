@@ -699,6 +699,7 @@
 "recipe_payment_pending_title" = "Ожидаем оплату";
 "recipe_payment_pending_message" = "Рецепты добавятся, когда магазин подтвердит оплату. Это может занять время.";
 "recipe_pack_each" = "%@ за рецепт";
+"recipe_pack_saving_a11y" = "на %d%% дешевле за рецепт";
 "recipe_continue" = "Продолжить";
 "recipe_close" = "Закрыть";
 "recipe_ok" = "ОК";

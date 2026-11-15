@@ -62,7 +62,8 @@ Read back with read-only `gcloud` and REST calls on 2026-11-14 unless marked "pe
   subscriptions" (per records).
 - App Store Connect: app Apple ID `6818647200` (for `APPLE_APP_ID`); the three consumables
   `recipes_10`, `recipes_50`, `recipes_100` created and priced (USD 3.99 / 10.99 / 18.99 base,
-  other storefronts converted), with names, descriptions and a review screenshot (per records). An
+  other storefronts converted; `recipes_10` lowered to USD 2.99 on 2026-11-15 with
+  `scripts/testflight.py iap-prices --apply`, README.md "Changing a pack's price"), with names, descriptions and a review screenshot (per records). An
   updated screenshot is in `store-listing/app-store/iap-review/buy-recipes-sheet.png` (step 3).
 
 ## Left to do, in order
@@ -129,7 +130,9 @@ release changes are in [play-production.md](play-production.md); tester invitati
       track, built from `feat/recipe` and uploaded by hand.
 - [x] Then create the products `recipes_10`, `recipes_50`, `recipes_100` (consumable; created and
       read back 2026-11-14, purchase option `buy` active;
-      USD 3.99 / 10.99 / 18.99, other regions converted by Play, multi-quantity off, listings in
+      USD 3.99 / 10.99 / 18.99, other regions converted by Play (`recipes_10` lowered to USD
+      2.99 on 2026-11-15: `scripts/play_products.py --reprice --apply`, README.md "Changing a pack's
+      price"), multi-quantity off, listings in
       en-GB, nb and ru). **(agent)**: `scripts/play_products.py` (dry run by default; `--apply`
       writes). For each product it asks Play to convert the base price into every region's price
       (`convertRegionPrices`), creates the one-time product through

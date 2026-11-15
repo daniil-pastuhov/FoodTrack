@@ -69,7 +69,7 @@ private class EmulatorRecipeStore : RecipeStore {
     // The store's sample prices for 10 / 50 / 100 recipes.
     override suspend fun packs(): List<StorePack> = RECIPE_PACKS.map { (id, recipes) ->
         val micros = when (recipes) {
-            10 -> 3_990_000L
+            10 -> 2_990_000L
             50 -> 10_990_000L
             else -> 18_990_000L
         }
