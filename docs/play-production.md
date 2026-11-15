@@ -78,10 +78,18 @@ Source: "App testing requirements for new personal developer accounts",
   running your closed test. Reasons for required continued testing include having fewer than 12
   opted-in testers or insufficient tester engagement during the testing period."
 - **What resets the clock**: Google names only opting out ("the 14 days must be consecutive").
-  Nothing in the article says a new build, a paused track or a rejected application resets it.
-  **(unverified)** Third-party guides disagree on whether publishing a new closed-testing release
-  restarts anything; Google's wording ties the count to each tester's opt-in, not to releases,
-  so **(inferred)** promoting a new build to `alpha` during the 14 days does not reset it, as long
+  Checked again 2026-11-15 in this article and in "Set up an open, closed, or internal test"
+  (<https://support.google.com/googleplay/android-developer/answer/9845334>): **Google is silent**
+  on whether a new closed-testing release, a paused track or a rejected application resets it.
+  What Google does say points the other way: under "Are there additional testing best
+  practices?" the article says "Continue running closed tests while resolving user-reported
+  issues and bugs. Updating your app in closed testing before releasing to production helps
+  minimize low ratings and negative reviews.", and the application asks you to "Describe any
+  changes made to your app or game based on what you learned from your closed test." So updates
+  during the test are expected, and testers on the track get them automatically ("their app
+  automatically updates to the test version", answer 9845334). The third-party guides that say a
+  new build resets the count cite no Google source. It remains **(inferred, not stated by
+  Google)** that promoting a new build to `alpha` during the 14 days does not reset it, as long
   as nobody is removed from the tester list. Pausing the track ("Pause track", which ends a test)
   is the one action to avoid: Google describes it as how you "remove users from your app's test
   and end a testing track". Removing the Google Group or email list from the track would also
@@ -257,39 +265,39 @@ Recipe build reaches `alpha` (the closed track is reviewed: Data safety applies 
 closed, open, or production testing tracks", answer/10787469; only "Apps that are active on
 internal testing tracks are exempt").
 
-- [ ] **Data safety**: the answers are in `store-listing/app-store/README.md`, section 5 (the
+- [x] **Data safety**: the answers are in `store-listing/app-store/README.md`, section 5 (the
       "Google Play's Data safety form needs the matching answers" list), referenced from
       [recipe-setup.md](recipe-setup.md) step 11; not repeated here. The whole form is
       `store-listing/google-play/data-safety.csv`, sent with `scripts/play_data_safety.py --apply`
       (store-listing/google-play/README.md, "Data safety").
-- [ ] **Data deletion** (inside Data safety): account creation is possible (Google sign-in), so
+- [x] **Data deletion** (inside Data safety): account creation is possible (Google sign-in), so
       Google requires "a web link resource where users can request app account deletion"
       (<https://support.google.com/googleplay/android-developer/answer/13327111>); it "must be
       functional ..., relevant in scope ... and reference the app or developer name (that is, as
       it appears on your store listing in Google Play)" and must not require reinstalling the
       app. Use https://daniil-pastuhov.github.io/bestbefore-privacy/delete.html. **Check** it
       names "BestBefore" as on the listing.
-- [ ] **Privacy policy**: https://daniil-pastuhov.github.io/bestbefore-privacy/ (must cover the
+- [x] **Privacy policy**: https://daniil-pastuhov.github.io/bestbefore-privacy/ (must cover the
       recipe pack data; see [privacy-policy-changes.md](privacy-policy-changes.md)).
-- [ ] **Ads**: No (the app has no ads; in-app purchase offers are not ads: the label "isn't meant
+- [x] **Ads**: No (the app has no ads; in-app purchase offers are not ads: the label "isn't meant
       to cover ... offers to make in-app purchases").
-- [ ] **App access** (Sign-in details): all functionality is available without special access;
+- [x] **App access** (Sign-in details): all functionality is available without special access;
       add a note that recipe packs are in-app purchases and need no login.
-- [ ] **Target audience and content**: adults (18+ or 16+; not children, so the Families policy
+- [x] **Target audience and content**: adults (18+ or 16+; not children, so the Families policy
       doesn't apply). Unchanged by Recipe unless you change it.
-- [ ] **Content rating**: re-take the questionnaire if it asks about digital purchases
+- [x] **Content rating**: re-take the questionnaire if it asks about digital purchases
       **(unverified)**; Play's ratings show "In-app purchases" as an interactive element.
-- [ ] **Health apps** declaration, if App content lists it **(unverified)**: the allergen list is
+- [x] **Health apps** declaration, if App content lists it **(unverified)**: the allergen list is
       health data; answer as the app is (food tracking with an allergen filter, no medical
       features).
-- [ ] **Monetisation** (Manage account > Play apps settings > Monetization settings > Payments
+- [x] **Monetisation** (Manage account > Play apps settings > Monetization settings > Payments
       profile, <https://support.google.com/googleplay/android-developer/answer/7161426>): the
       payments profile exists if the one-time products could be created (2026-11-14), but
       **check** that the merchant tax information and bank account are complete and verified,
       otherwise payouts stop. Recipe-setup step 4's "Payments profile and merchant account" box
       and the 15 % service fee tier are still open.
-- [ ] **Licence testers** (Settings > Licence testing): done 2026-11-14 (recipe-setup step 4).
-- [ ] **Store listing**: applied by the release (`play-listing` job); no console step.
+- [x] **Licence testers** (Settings > Licence testing): done 2026-11-14 (recipe-setup step 4).
+- [x] **Store listing**: applied by the release (`play-listing` job); no console step.
 
 ## Pre-registration, experiments, custom listings
 

@@ -32,7 +32,12 @@ from pathlib import Path
 APP_DESCRIPTION = ("BestBefore, an app that tracks groceries and their expiry dates, on Android "
                    "and iOS")
 # Play locale code -> language name for the prompt. The order is the order shown to you.
-LOCALES = {"en-GB": "English (UK)", "ru-RU": "Russian", "no-NO": "Norwegian Bokmål"}
+# es-419 and fr-CA are written for Latin America and Canada; the App Store's es-MX and fr-CA take
+# them (scripts/testflight.py, ASC_LOCALES).
+LOCALES = {"en-GB": "English (UK)", "ru-RU": "Russian", "no-NO": "Norwegian Bokmål",
+           "es-ES": "Spanish (Spain)", "es-419": "Spanish (Latin America)", "de-DE": "German",
+           "fr-FR": "French (France)", "fr-CA": "French (Canada)", "sv-SE": "Swedish",
+           "da-DK": "Danish"}
 # (file, regex with the version as group 2, how many matches the file must have)
 VERSION_FILES = [
     # The one version of both apps: Gradle reads it for versionName, Xcode for MARKETING_VERSION.

@@ -1,0 +1,35 @@
+BestBefore behält das Mindesthaltbarkeitsdatum (MHD) und den Vorrat in Kühlschrank, Gefrierschrank und Vorratsschrank für dich im Blick: Lebensmittel scannen, sehen, was zuerst weg muss, rechtzeitig erinnert werden und aus dem, was bald abläuft, ein Rezept machen.
+
+<b>Lebensmittel in Sekunden erfassen</b>
+• Barcode scannen, und Produktname und Bild werden für dich ausgefüllt (über Open Food Facts)
+• Kamera auf das aufgedruckte Datum richten, und BestBefore liest das Ablaufdatum für dich
+• Obst oder Gemüse fotografieren, und die App schlägt vor, was es ist
+• Serienmodus: den ganzen Einkauf in einem Rutsch scannen
+• Kassenbon lesen und mehrere Artikel auf einmal hinzufügen
+
+<b>Kein Datum mehr verpassen</b>
+• Für Mindesthaltbarkeits- und Verbrauchsdatum
+• Erinnerungen ein paar Tage vor Ablauf, zur Uhrzeit deiner Wahl
+• Listen „Läuft bald ab“ und „Abgelaufen“ auf einen Blick
+• Widgets für den Startbildschirm: bald Ablaufendes, deine Einkaufsliste und eine schnelle Übersicht
+
+<b>Cleverer einkaufen</b>
+• Basisartikel, die du aufbrauchst, landen direkt auf der Einkaufsliste
+• Liste als Text oder QR-Code teilen
+• Optional: deine Einkaufsliste bekommen, sobald du bei einem gespeicherten Geschäft ankommst
+
+<b>Kochen, was bald abläuft</b>
+• Der Rezept-Tab wählt die Artikel mit dem nächsten Datum aus; Auswahl, Portionen, Zeit, Ernährung und mehr kannst du ändern
+• Kostenlos: einen fertigen Prompt kopieren oder mit der KI-App teilen, die du schon nutzt
+• Kostenlos auf unterstützten Android-Handys: Das Rezept entsteht direkt auf dem Handy, mit dessen eigenem Modell
+• Rezeptpakete (In-App-Kauf): Rezepte von unserem Server, in der App gespeichert, und ein Essensplan für 3 Tage („Menü für 3 Tage“), der zuerst verwendet, was bald abläuft
+
+<b>Deine Daten</b>
+• Keine Werbung, kein Tracking
+• Kein Abo: Die App ist kostenlos, Rezeptpakete sind optionale Einmalkäufe
+• Dein Vorrat wird auf deinem Handy gespeichert; Sicherungen exportierst du, wann du willst
+• Kein Konto nötig, nicht einmal zum Kauf eines Pakets. Melde dich nur mit Google an, wenn du deine Rezepte auf anderen Handys nutzen möchtest
+• Ein Rezept aus einem Paket sendet die ausgewählten Artikel, deine Rezepteinstellungen und deine Allergene an unseren Server. Die kostenlosen Wege senden nichts an uns
+• Verfügbar auf Deutsch, Englisch, Russisch, Norwegisch, Spanisch, Französisch, Schwedisch und Dänisch
+
+Weniger wegwerfen, Geld sparen und immer wissen, was du zu Hause hast.

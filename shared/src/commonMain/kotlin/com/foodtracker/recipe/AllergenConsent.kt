@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 // need no consent. iOS has the same rules in `AllergenConsent`
 // (iosApp/FoodTracker/Recipe/RecipeWire.swift).
 
-/** The version of the consent wording (en/ru/nb `recipe_allergen_consent_*`). Raising it asks
+/** The version of the consent wording (`recipe_allergen_consent_*` in all eight languages). Raising it asks
  *  everyone again, whatever they answered before. */
 const val ALLERGEN_CONSENT_VERSION = 3
 

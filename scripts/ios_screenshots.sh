@@ -7,6 +7,20 @@
 #
 #   scripts/ios_screenshots.sh [output-dir]      # default: build/ios-screenshots
 #
+# One simulator per run, every language on it before the next simulator: run the script once per
+# device (DEVICE_NAME, below), each into its own output dir, and frame each dir into its folder:
+#
+#   scripts/ios_screenshots.sh build/raw-69                                  # screenshots/
+#   SKIP_BUILD=1 DEVICE_NAME="iPhone 17 Pro" scripts/ios_screenshots.sh build/raw-63   # medium-
+#   SKIP_BUILD=1 DEVICE_NAME="iPhone Duo" SCREEN=3 scripts/ios_screenshots.sh build/raw-duo-inner
+#   SKIP_BUILD=1 DEVICE_NAME="iPhone Duo" SCREEN=1 scripts/ios_screenshots.sh build/raw-duo-outer
+#   SKIP_BUILD=1 DEVICE_NAME="iPad Pro 13-inch (M5)" scripts/ios_screenshots.sh build/raw-ipad
+#   scripts/frame_screenshots.py build/raw-69 screenshots    # and so on for each dir and set
+#
+# Writes <output-dir>/<lang>/<n>-<shot>.png for each language: en ru nb es de fr sv da, or only
+# those in LANGS (LANGS="es de"). SKIP_BUILD=1 installs the app the last run built instead of
+# building again (one Debug build serves every simulator).
+#
 # The demo data is loaded through the debug-only -demoBackup / -demoTab / -demoRoute launch
 # arguments (see RootTabView.applyScreenshotLaunchArguments), so release builds are unaffected.
 # Dates in the demo pantry (scripts/demo_backup.py) are relative to today, so the "expires today /
@@ -21,14 +35,15 @@ ROOT=${0:A:h:h}
 OUT=${1:-$ROOT/build/ios-screenshots}
 DEVICE_NAME=${DEVICE_NAME:-"iPhone 17 Pro Max"}   # e.g. DEVICE_NAME="iPad Pro 13-inch (M5)"
 # Which of the simulator's displays to capture. iPhone Duo has two: the default is whichever is
-# on, so open the simulator for the inner display; folded, its outer display is SCREEN=1.
+# on. Unfolded (scripts/duo_pose.sh Open), its inner display is SCREEN=3; folded (duo_pose.sh
+# Closed, and how it boots), its outer display is SCREEN=1.
 SCREEN=${SCREEN:-}
 BUNDLE_ID=com.foodbest.ios
 DERIVED=$ROOT/build/ios-screenshots-derived-data
 
 # UDID=<udid> picks one simulator when several share a name (it wins over DEVICE_NAME).
 # KEEP_REGION=1 skips the region change below and its reboot: an unfolded iPhone Duo can come back
-# folded after a reboot, and only Xcode's Device Hub can unfold it again. The status bar then
+# folded after a reboot, and only Xcode's Device Hub (scripts/duo_pose.sh) can unfold it again. The status bar then
 # keeps the simulator's own clock style ("09:41" in a 24-hour region).
 UDID=${UDID:-$(xcrun simctl list devices available -j | python3 -c '
 import json, sys
@@ -61,9 +76,12 @@ xcrun simctl ui "$UDID" appearance light
 xcrun simctl status_bar "$UDID" override --time 9:41 --dataNetwork wifi --wifiMode active \
   --wifiBars 3 --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100
 
-xcodebuild -quiet -project "$ROOT/iosApp/FoodTracker.xcodeproj" -scheme FoodTracker \
-  -configuration Debug -destination "id=$UDID" -derivedDataPath "$DERIVED" build
-xcrun simctl install "$UDID" "$DERIVED/Build/Products/Debug-iphonesimulator/FoodTracker.app"
+APP="$DERIVED/Build/Products/Debug-iphonesimulator/FoodTracker.app"
+if [[ -z ${SKIP_BUILD:-} || ! -d $APP ]]; then
+  xcodebuild -quiet -project "$ROOT/iosApp/FoodTracker.xcodeproj" -scheme FoodTracker \
+    -configuration Debug -destination "id=$UDID" -derivedDataPath "$DERIVED" build
+fi
+xcrun simctl install "$UDID" "$APP"
 DATA=$(xcrun simctl get_app_container "$UDID" "$BUNDLE_ID" data)
 # The scan demo shows a picture rather than the camera, but the scanner asks for the camera first.
 xcrun simctl privacy "$UDID" grant camera "$BUNDLE_ID"
@@ -83,12 +101,16 @@ sys.exit(im.getpixel((8, im.height // 3)) == (255, 255, 255))' "$DATA/tmp/warmup
 done
 
 # Each language with its listing's region, so dates read "22 Nov" and times "09:00" as in the
-# U.K., Russia and Norway, like the Google Play set.
-typeset -A REGIONS=(en en_GB ru ru_RU nb nb_NO)
+# U.K., Russia, Norway, Spain, Germany, France, Sweden and Denmark, like the Google Play set.
+typeset -A REGIONS=(en en_GB ru ru_RU nb nb_NO es es_ES de de_DE fr fr_FR sv sv_SE da da_DK)
+LANGS=(${=LANGS:-en ru nb es de fr sv da})
+for LANG_CODE in $LANGS; do
+  [[ -n ${REGIONS[$LANG_CODE]:-} ]] || { echo "unknown language $LANG_CODE (one of ${(k)REGIONS})"; exit 1; }
+done
 # The date printed on the scanned pack, and so the one the scan reads.
 SCAN_DATE=$(python3 -c 'import datetime; print(datetime.date.today() + datetime.timedelta(days=12))')
 SCAN_BARCODE=$(cd "$ROOT/scripts" && python3 -c 'from demo_scan_image import BARCODE; print(BARCODE)')
-for LANG_CODE in en ru nb; do
+for LANG_CODE in $LANGS; do
   mkdir -p "$OUT/$LANG_CODE"
   rm -f "$OUT/$LANG_CODE"/*.png(N)
   python3 "$ROOT/scripts/demo_scan_image.py" "$LANG_CODE" "$SCAN_DATE" "$DATA/tmp/scan.png" "$DATA/tmp/scan-thumb.png"

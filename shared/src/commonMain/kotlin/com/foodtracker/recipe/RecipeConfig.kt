@@ -111,10 +111,11 @@ fun promptDiets(diets: Set<RecipeDiet>): List<RecipeDiet> = RECIPE_DIET_CHOICES.
 fun orderedMeals(meals: Set<RecipeMealType>): List<RecipeMealType> = RECIPE_MEAL_CHOICES.filter { it in meals }
 
 /**
- * The languages a recipe can be written in, as language codes. The app itself is in the first
- * three; the rest are offered because a recipe can be in a language the app isn't.
+ * The languages a recipe can be written in, as language codes. The app itself is in en, nb, ru,
+ * de, es, fr, sv and da; the rest are offered because a recipe can be in a language the app isn't.
+ * Danish goes to the server only once it says `acceptsDanish` (functions/CONTRACT.md).
  */
-val RECIPE_LANGUAGES: List<String> = listOf("en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk")
+val RECIPE_LANGUAGES: List<String> = listOf("en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk", "da")
 
 /** Each language's name in itself, as the picker shows it whatever the app's language. */
 fun recipeLanguageEndonym(code: String): String = when (code) {
@@ -128,6 +129,7 @@ fun recipeLanguageEndonym(code: String): String = when (code) {
     "pl" -> "Polski"
     "sv" -> "Svenska"
     "uk" -> "Українська"
+    "da" -> "Dansk"
     else -> code
 }
 

@@ -192,6 +192,7 @@ extension L10n {
     static var recipeSettingsMealDiet: String { text("recipe_settings_meal_diet") }
     static var recipeSettingsLanguage: String { text("recipe_settings_language") }
     static var recipeWriteIn: String { text("recipe_write_in") }
+    static var recipeOnDeviceLanguageNote: String { text("recipe_on_device_language_note") }
     static var recipeSettingsAccount: String { text("recipe_settings_account") }
     static var recipeSettingsNoAccount: String { text("recipe_settings_no_account") }
     static func recipeAllergensNote(_ allergens: [String]) -> String {
@@ -294,6 +295,7 @@ extension L10n {
         paid(kind == .menu ? "recipe_not_enough_items_menu" : "recipe_not_enough_items")
     }
     static var recipeDietsNeedUpdate: String { paid("recipe_diets_need_update") }
+    static var recipeLanguageNeedsUpdate: String { paid("recipe_language_needs_update") }
     static var recipeNotFromPantryHint: String { paid("recipe_not_from_pantry_hint") }
     static var recipeShoppingAdd: String { paid("recipe_shopping_add") }
     static func recipeShoppingTitle(_ count: Int) -> String { String(format: paid("recipe_shopping_title"), count) }

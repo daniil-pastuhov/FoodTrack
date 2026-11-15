@@ -1,0 +1,1120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BestBefore</string>
+    <string name="app_subtitle">Skafferi- och datumkoll</string>
+
+    <string name="scan_item">Skanna vara</string>
+    <string name="scan_content_description">Skanna</string>
+
+    <string name="nav_label_home">Hem</string>
+    <string name="nav_label_recipe">Recept</string>
+    <string name="nav_label_shopping_list">Inköpslista</string>
+    <string name="nav_label_settings">Inställningar</string>
+
+    <string name="metric_expired">Över datum</string>
+    <string name="metric_soon">Snart</string>
+    <string name="metric_fresh">Färska</string>
+
+    <string name="search_placeholder">Sök produkter eller märken</string>
+    <string name="clear_content_description">Rensa</string>
+
+    <string name="filter_all_locations">Alla platser</string>
+    <string name="filter_all_categories">Alla kategorier</string>
+    <string name="filter_content_description">Filter</string>
+    <string name="filters_sheet_title">Filter</string>
+
+    <string name="tab_all">Alla</string>
+    <string name="tab_expiring_soon">Går ut snart</string>
+    <string name="tab_expired">Utgångna</string>
+
+    <string name="sort_content_description">Sortera</string>
+    <string name="sort_sheet_title">Sortera efter</string>
+    <string name="sort_option_expiry_date">Utgångsdatum</string>
+    <string name="sort_option_name">Namn</string>
+    <string name="sort_option_date_added">Datum tillagt</string>
+    <string name="sort_option_storage_location">Förvaringsplats</string>
+
+
+    <string name="back_content_description">Tillbaka</string>
+
+    <string name="edit_item_title">Redigera vara</string>
+    <string name="add_item_title">Lägg till vara</string>
+    <string name="barcode_format">Streckkod: %1$s</string>
+    <string name="new_item_placeholder">Ny vara</string>
+    <string name="photo_suggestions_title">Ser ut som…</string>
+    <string name="photo_suggestions_analyzing">Identifierar…</string>
+    <string name="food_label_apple">Äpple</string>
+    <string name="food_label_banana">Banan</string>
+    <string name="food_label_orange">Apelsin</string>
+    <string name="food_label_lemon">Citron</string>
+    <string name="food_label_strawberry">Jordgubbe</string>
+    <string name="food_label_grape">Vindruvor</string>
+    <string name="food_label_watermelon">Vattenmelon</string>
+    <string name="food_label_pineapple">Ananas</string>
+    <string name="food_label_peach">Persika</string>
+    <string name="food_label_pear">Päron</string>
+    <string name="food_label_cherry">Körsbär</string>
+    <string name="food_label_avocado">Avokado</string>
+    <string name="food_label_berry">Bär</string>
+    <string name="food_label_fruit">Frukt</string>
+    <string name="food_label_tomato">Tomat</string>
+    <string name="food_label_potato">Potatis</string>
+    <string name="food_label_carrot">Morot</string>
+    <string name="food_label_broccoli">Broccoli</string>
+    <string name="food_label_cucumber">Gurka</string>
+    <string name="food_label_onion">Lök</string>
+    <string name="food_label_pumpkin">Pumpa</string>
+    <string name="food_label_mushroom">Svamp</string>
+    <string name="food_label_lettuce">Sallad</string>
+    <string name="food_label_cabbage">Kål</string>
+    <string name="food_label_salad">Sallad</string>
+    <string name="food_label_vegetable">Grönsaker</string>
+    <string name="food_label_bread">Bröd</string>
+    <string name="food_label_bun">Fralla</string>
+    <string name="food_label_croissant">Croissant</string>
+    <string name="food_label_cake">Tårta</string>
+    <string name="food_label_cookie">Kakor</string>
+    <string name="food_label_pastry">Bakelse</string>
+    <string name="food_label_doughnut">Munk</string>
+    <string name="food_label_pie">Paj</string>
+    <string name="food_label_waffle">Våfflor</string>
+    <string name="food_label_pancake">Pannkakor</string>
+    <string name="food_label_cheese">Ost</string>
+    <string name="food_label_milk">Mjölk</string>
+    <string name="food_label_yogurt">Yoghurt</string>
+    <string name="food_label_butter">Smör</string>
+    <string name="food_label_egg">Ägg</string>
+    <string name="food_label_meat">Kött</string>
+    <string name="food_label_steak">Biff</string>
+    <string name="food_label_chicken">Kyckling</string>
+    <string name="food_label_sausage">Korv</string>
+    <string name="food_label_bacon">Bacon</string>
+    <string name="food_label_fish">Fisk</string>
+    <string name="food_label_seafood">Skaldjur</string>
+    <string name="food_label_shrimp">Räkor</string>
+    <string name="food_label_juice">Juice</string>
+    <string name="food_label_coffee">Kaffe</string>
+    <string name="food_label_tea">Te</string>
+    <string name="food_label_beer">Öl</string>
+    <string name="food_label_wine">Vin</string>
+    <string name="food_label_drink">Dryck</string>
+    <string name="food_label_chocolate">Choklad</string>
+    <string name="food_label_candy">Godis</string>
+    <string name="food_label_ice_cream">Glass</string>
+    <string name="food_label_dessert">Efterrätt</string>
+    <string name="food_label_honey">Honung</string>
+    <string name="food_label_rice">Ris</string>
+    <string name="food_label_pasta">Pasta</string>
+    <string name="food_label_bean">Bönor</string>
+    <string name="food_label_corn">Majs</string>
+    <string name="food_label_nut">Nötter</string>
+    <string name="food_label_soup">Soppa</string>
+    <string name="food_label_pizza">Pizza</string>
+    <string name="food_label_sandwich">Smörgås</string>
+    <string name="food_label_food">Mat</string>
+    <string name="product_name_label">Produktnamn *</string>
+    <string name="brand_label">Märke</string>
+    <string name="expiry_section_title">Bäst före</string>
+    <string name="expiry_suggestion_remembered">Samma som förra gången · %1$s</string>
+    <string name="expiry_suggestion_category">Standard för %1$s · %2$s</string>
+    <plurals name="expiry_suggestion_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <string name="expiry_date_implausible_warning">Datumet ligger mer än %1$d år fram i tiden. Kontrollera året.</string>
+    <string name="quick_date_3_days">+3 dagar</string>
+    <string name="quick_date_1_week">+1 vecka</string>
+    <string name="quick_date_2_weeks">+2 veckor</string>
+    <string name="quick_date_1_month">+1 månad</string>
+    <string name="storage_location_title">Förvaringsplats</string>
+    <string name="category_label">Kategori (valfritt)</string>
+    <string name="quantity_label">Antal</string>
+    <string name="quantity_decrease_content_description">Minska antal</string>
+    <string name="quantity_increase_content_description">Öka antal</string>
+    <string name="update_item_button">Uppdatera vara</string>
+    <!-- %1$s is the selected storage location, e.g. "Fridge" -->
+    <string name="save_item_button">Spara i %1$s</string>
+    <string name="date_picker_ok">OK</string>
+    <string name="date_picker_cancel">Avbryt</string>
+
+    <string name="manual_entry_button">Skriv in</string>
+    <string name="camera_off_title">Kameran är avstängd</string>
+    <string name="camera_off_body">BestBefore behöver kameran för att skanna. Du kan fortfarande lägga till mat för hand.</string>
+    <string name="camera_off_open_settings">Öppna inställningar</string>
+    <string name="camera_off_allow">Tillåt kameran</string>
+    <string name="camera_off_add_by_hand">Skriv in</string>
+    <string name="scan_mode_batch">Flera</string>
+    <string name="reticle_hint_batch">Fortsätt skanna. Allt hamnar i listan</string>
+    <string name="scan_mode_receipt">Kvitto</string>
+    <string name="reticle_hint_receipt">Få med hela kvittot i bilden och tryck för att läsa det</string>
+    <string name="scan_receipt_button">Läs kvitto</string>
+    <string name="receipt_nothing_found">Inga produkter hittades på kvittot. Försök igen med hela kvittot i bild</string>
+    <plurals name="receipt_lines_added">
+        <item quantity="one">La till %1$d vara från kvittot. Kontrollera den nedan</item>
+        <item quantity="other">La till %1$d varor från kvittot. Kontrollera dem nedan</item>
+    </plurals>
+    <string name="batch_queue_empty">Skanna en produkt för att starta listan</string>
+    <string name="batch_queue_remove_content_description">Ta bort från listan: %1$s</string>
+    <string name="batch_queue_needs_date">Kolla datum</string>
+    <string name="batch_commit_button">Lägg till alla</string>
+    <string name="batch_clear_button">Rensa</string>
+    <plurals name="batch_queue_count">
+        <item quantity="one">%1$d vara i kö</item>
+        <item quantity="other">%1$d varor i kö</item>
+    </plurals>
+    <plurals name="batch_added_snackbar">
+        <item quantity="one">%1$d vara tillagd</item>
+        <item quantity="other">%1$d varor tillagda</item>
+    </plurals>
+    <string name="duplicate_dialog_title">Finns redan i ditt skafferi</string>
+    <string name="duplicate_dialog_message">Du har redan %1$s. Vill du lägga till en till, eller ha den här separat?</string>
+    <string name="duplicate_dialog_add_one">Lägg till en till</string>
+    <string name="duplicate_dialog_separate">Ha separat</string>
+    <string name="duplicate_added_snackbar">%1$s: nu %2$d</string>
+    <string name="in_pantry_count">I ditt skafferi: %1$d</string>
+    <string name="scan_mode_barcode">Streckkod</string>
+    <string name="scan_mode_date_ocr">Datum</string>
+    <string name="scan_mode_photo">Foto</string>
+    <string name="reticle_hint_barcode">Placera streckkoden inom ramen</string>
+    <string name="reticle_hint_date_ocr">Rikta mot det tryckta datumet, t.ex. EXP 24.11.2026</string>
+    <string name="reticle_hint_photo">Placera produkten i mitten och ta bilden</string>
+    <string name="torch_toggle_content_description">Ficklampa</string>
+    <string name="expiry_date_found_format">Utgångsdatum hittat: %1$s</string>
+    <string name="looking_up_product">Söker efter produkten…</string>
+    <string name="scan_date_button">Skanna datum</string>
+    <string name="continue_button">Fortsätt</string>
+
+    <string name="product_not_found_title">Produkten hittades inte</string>
+    <string name="switch_to_photo_button">Fotoläge</string>
+
+    <string name="take_photo_button">Ta foto</string>
+    <string name="photo_captured_title">Fotot är taget</string>
+    <string name="photo_captured_message">Använd fotot för varan, eller ta om det.</string>
+    <string name="retake_photo_button">Ta om</string>
+
+    <string name="delete">Radera</string>
+    <string name="use_one_content_description">Använd en</string>
+    <string name="quantity_format">×%1$d</string>
+
+    <string name="item_removed_snackbar">%1$s togs bort</string>
+    <string name="item_added_to_shopping_list_snackbar">%1$s lades till i inköpslistan</string>
+    <string name="undo_action">Ångra</string>
+
+    <string name="essential_item_label">Basvara</string>
+    <string name="essential_item_description">Läggs automatiskt till i inköpslistan när den tas bort från skafferiet</string>
+    <string name="item_notifications_label">Påminn mig innan den går ut</string>
+    <string name="item_notifications_description">Stäng av för att aldrig få aviseringar om den här varan</string>
+
+    <string name="shopping_list_title">Inköpslista</string>
+    <string name="shopping_list_content_description">Inköpslista</string>
+    <string name="shopping_list_add_placeholder">Lägg till en vara…</string>
+    <string name="shopping_list_add_button">Lägg till</string>
+    <string name="shopping_list_scan_content_description">Skanna produkt</string>    <string name="shopping_list_share_content_description">Dela eller importera lista</string>
+    <string name="shopping_list_share_dialog_title">Dela lista</string>
+    <string name="shopping_list_share_dialog_message">Skicka din lista till någon annan, eller ta in en. Importerade varor läggs till i din lista, inget ersätts.</string>
+    <string name="shopping_list_share_as_text">Dela som text</string>
+    <string name="shopping_list_share_as_qr">Visa QR-kod</string>
+    <string name="shopping_list_share_qr_content_description">QR-kod med inköpslistan</string>
+    <string name="shopping_list_share_qr_hint">Skanna den här från inköpslistan på den andra telefonen.</string>
+    <string name="shopping_list_share_qr_too_large">Listan är för lång för att rymmas i en QR-kod. Dela den som text i stället.</string>
+    <string name="shopping_list_import">Importera en lista</string>
+    <string name="shopping_list_import_message">Klistra in en lista som någon har skickat till dig, eller skanna deras QR-kod med skannern.</string>
+    <string name="shopping_list_import_placeholder">Mjölk\nBröd (2)</string>
+    <string name="shopping_list_import_confirm">Importera</string>
+    <plurals name="shopping_list_import_added">
+        <item quantity="one">%1$d vara tillagd</item>
+        <item quantity="other">%1$d varor tillagda</item>
+    </plurals>
+    <string name="shopping_list_import_all_present">Allt på listan finns redan här</string>
+    <string name="shopping_list_import_nothing">Inget att importera från det</string>
+    <string name="shopping_list_empty_title">Din inköpslista är tom</string>
+    <string name="shopping_list_empty_subtitle">Basvaror som du tar bort från skafferiet visas här.</string>
+    <string name="shopping_list_uncategorized">Övrigt</string>
+    <string name="shopping_section_default">Inköpslista</string>
+    <string name="shopping_section_new">Ny sektion</string>
+    <string name="shopping_section_rename">Byt namn på sektion</string>
+    <string name="shopping_section_delete">Radera</string>
+    <string name="shopping_section_delete_title">Radera ”%1$s”?</string>
+    <string name="shopping_section_save">Spara</string>
+    <string name="shopping_section_name_placeholder">t.ex. Mejeri</string>
+    <string name="shopping_section_move_to">Flytta till sektion</string>
+    <string name="shopping_section_options">Alternativ för %1$s</string>
+    <string name="shopping_section_drag_handle_content_description">Dra för att flytta sektionen</string>
+    <string name="shopping_section_collapsed">Hopfälld</string>
+    <string name="shopping_section_expanded">Expanderad</string>
+    <string name="widget_shopping_list_more">+%1$d till</string>
+    <string name="shopping_list_quantity_decrease_content_description">Minska antal</string>
+    <string name="shopping_list_quantity_increase_content_description">Öka antal</string>
+    <string name="shopping_list_did_you_mean_title">Menade du någon av dessa?</string>
+    <string name="shopping_list_did_you_mean_none_of_these">Ingen av dessa, lägg till ny vara</string>
+    <string name="shopping_list_did_you_mean_cancel">Avbryt</string>
+    <string name="shopping_list_drag_handle_content_description">Dra för att ändra ordning</string>
+
+    <string name="selection_count_format">%1$d markerade</string>
+    <string name="exit_selection_content_description">Avsluta markering</string>
+    <string name="action_get_recipe_ideas">Få receptidéer</string>
+    <string name="recipe_prompt_intro">Jag har de här matvarorna hemma och vill inte att de blir matsvinn. Föreslå ett recept som jag kan laga, och använd i första hand de som är närmast sitt datum:</string>
+    <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+    <string name="recipe_prompt_other_items_intro">Jag har också de här andra varorna hemma, om någon av dem kan komma till nytta:</string>
+    <string name="recipe_prompt_other_items_omitted">(+%1$d varor till visas inte)</string>
+    <string name="share_recipe_cancel_button">Avbryt</string>
+
+    <string name="expires_today">Går ut i dag</string>
+    <string name="expires_tomorrow">Går ut i morgon</string>
+
+    <plurals name="expires_in_days">
+        <item quantity="one">Om %d dag</item>
+        <item quantity="other">Om %d dagar</item>
+    </plurals>
+    <plurals name="expires_in_months">
+        <item quantity="one">Om %d månad</item>
+        <item quantity="other">Om %d månader</item>
+    </plurals>
+    <plurals name="expires_in_years">
+        <item quantity="one">Om %d år</item>
+        <item quantity="other">Om %d år</item>
+    </plurals>
+    <plurals name="expired_days_ago">
+        <item quantity="one">Gick ut för %d dag sedan</item>
+        <item quantity="other">Gick ut för %d dagar sedan</item>
+    </plurals>
+    <plurals name="expired_months_ago">
+        <item quantity="one">Gick ut för %d månad sedan</item>
+        <item quantity="other">Gick ut för %d månader sedan</item>
+    </plurals>
+    <plurals name="expired_years_ago">
+        <item quantity="one">Gick ut för %d år sedan</item>
+        <item quantity="other">Gick ut för %d år sedan</item>
+    </plurals>
+
+    <string name="notification_channel_name">Påminnelser för varje vara</string>
+    <string name="notification_channel_desc">En avisering per produkt, strax innan den går ut</string>
+    <string name="notification_digest_channel_name">Sammanfattning av datum</string>
+    <string name="notification_digest_channel_desc">En avisering med det som går ut den kommande veckan</string>
+    <string name="notif_title_today">Bäst att använda i dag</string>
+    <string name="notif_title_soon">Bäst att använda snart</string>
+    <string name="notif_title_past">Värt en titt</string>
+    <string name="notif_body_today_format">Datumet för %1$s är i dag.</string>
+    <string name="notif_body_tomorrow_format">Datumet för %1$s är i morgon.</string>
+    <plurals name="notif_body_soon_format">
+        <item quantity="one">Datumet för %1$s är om %2$d dag.</item>
+        <item quantity="other">Datumet för %1$s är om %2$d dagar.</item>
+    </plurals>
+    <plurals name="notif_body_past_format">
+        <item quantity="one">%1$s är %2$d dag över datum.</item>
+        <item quantity="other">%1$s är %2$d dagar över datum.</item>
+    </plurals>
+    <string name="notif_fallback_title">Påminnelse från ditt skafferi</string>
+    <string name="notif_fallback_body">Något i ditt skafferi närmar sig sitt datum.</string>
+    <string name="notif_action_used">Använd</string>
+    <string name="notif_action_snooze">I morgon</string>
+    <string name="shortcut_scan_barcode_short">Skanna</string>
+    <string name="shortcut_scan_barcode_long">Skanna en streckkod</string>
+    <string name="shortcut_add_item_short">Lägg till</string>
+    <string name="shortcut_add_item_long">Lägg till en vara för hand</string>
+    <string name="shortcut_shopping_list_short">Inköpslista</string>
+    <string name="shortcut_shopping_list_long">Öppna inköpslistan</string>
+    <string name="notif_action_remove">Ta bort</string>
+    <plurals name="notif_digest_title_format">
+        <item quantity="one">%1$d vara går ut den här veckan</item>
+        <item quantity="other">%1$d varor går ut den här veckan</item>
+    </plurals>
+    <string name="notif_digest_item_format">%1$s – %2$s</string>
+    <plurals name="notif_digest_more_format">
+        <item quantity="one">+%1$d till</item>
+        <item quantity="other">+%1$d till</item>
+    </plurals>
+    <string name="notif_action_recipe_ideas">Receptidéer</string>
+
+    <string name="settings_content_description">Inställningar</string>
+    <string name="settings_title">Inställningar</string>
+
+
+    <string name="settings_section_notifications">Aviseringar</string>
+    <string name="settings_notifications_enabled">Påminn mig innan maten går ut</string>
+    <string name="settings_lead_days_label">Påminn mig</string>
+    <string name="settings_time_label">Tid</string>
+    <string name="settings_digest_frequency_label">Hur ofta</string>
+    <string name="settings_digest_daily">Dagligen</string>
+    <string name="settings_digest_weekly">Varje vecka</string>
+    <string name="settings_digest_weekday_label">Veckodag</string>
+    <string name="settings_reminder_style_label">Hur</string>
+    <string name="settings_reminder_style_each_item">Varje vara</string>
+    <string name="settings_reminder_style_summary">Sammanfattning</string>
+    <string name="settings_reminder_style_both">Båda</string>
+    <plurals name="settings_lead_days_phrase">
+            <item quantity="one">%1$d dag innan</item>
+            <item quantity="other">%1$d dagar innan</item>
+    </plurals>
+    <string name="settings_reminder_preview_each_item">En avisering för varje vara %1$s den går ut, kl. %2$s.</string>
+    <string name="settings_reminder_preview_summary_daily">Varje dag kl. %1$s, en lista över allt som går ut de närmaste 7 dagarna.</string>
+    <string name="settings_reminder_preview_summary_weekly">Varje %1$s kl. %2$s, en lista över allt som går ut de närmaste 7 dagarna.</string>
+    <plurals name="settings_digest_every_days_chip">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <plurals name="settings_digest_every_days_phrase">
+        <item quantity="one">Med %1$d dags mellanrum</item>
+        <item quantity="other">Med %1$d dagars mellanrum</item>
+    </plurals>
+    <string name="settings_reminder_preview_summary_every">%1$s kl. %2$s, en lista över allt som går ut de närmaste 7 dagarna.</string>
+    <string name="settings_reminder_preview_none">Välj hur du vill bli påmind. Just nu skickas inga påminnelser.</string>
+    <string name="settings_notifications_blocked">Aviseringar är avstängda för appen i telefonens inställningar, så inga påminnelser kommer fram.</string>
+    <string name="settings_notifications_open_settings">Öppna inställningar</string>
+
+    <string name="settings_section_expiring_soon">Gräns för ”Går ut snart”</string>
+    <string name="settings_expiring_soon_desc">Varor som går ut inom så här många dagar markeras som ”Går ut snart”</string>
+
+    <string name="settings_section_locations">Förvaringsplatser</string>
+    <string name="settings_locations_desc">Tryck på stjärnan för att välja standard för nya varor</string>
+    <string name="settings_remember_last_location">Kom ihåg senaste förvaringsplats</string>
+    <string name="settings_remember_last_location_desc">Produkter som du inte har lagt till förut hamnar på förvaringsplatsen du valde senast</string>
+    <string name="settings_confirm_rename">Bekräfta nytt namn</string>
+    <string name="settings_set_default_location">Ange som standard</string>
+    <!-- Names for the built-in storage locations and categories, which are stored under fixed
+         English keys (DefaultStorageLocations, FoodLabels.CATEGORY_*) and shown translated. -->
+    <string name="storage_location_fridge">Kylskåp</string>
+    <string name="storage_location_freezer">Frys</string>
+    <string name="storage_location_pantry">Skafferi</string>
+    <string name="category_builtin_fruit">Frukt</string>
+    <string name="category_builtin_vegetables">Grönsaker</string>
+    <string name="category_builtin_bakery">Bröd</string>
+    <string name="category_builtin_dairy">Mejeri</string>
+    <string name="category_builtin_meat_fish">Kött &amp; fisk</string>
+    <string name="category_builtin_drinks">Drycker</string>
+    <string name="category_builtin_sweets">Sötsaker</string>
+    <string name="category_builtin_pantry">Skafferi</string>
+    <string name="settings_rename_location">Byt namn</string>
+    <string name="settings_delete_location">Radera</string>
+    <string name="settings_add_location_placeholder">Namn på ny plats</string>
+    <string name="settings_add_location">Lägg till plats</string>
+
+    <string name="settings_section_categories">Kategorier</string>
+    <string name="settings_categories_desc">Byt namn på, ändra ordning på eller dölj kategorierna som hittats i dina produkter</string>
+    <string name="settings_manage_categories_button">Hantera kategorier</string>
+
+    <string name="category_settings_title">Kategorier</string>
+    <string name="category_settings_description">Dra för att ändra ordning. Tryck på pennan för att byta namn på en kategori, eller stäng av den för att dölja den överallt.</string>
+    <string name="category_settings_toggle_all">Visa alla kategorier</string>
+    <string name="category_settings_empty">Kategorier visas här när en skannad eller tillagd produkt har en</string>
+    <string name="category_settings_rename_title">Byt namn på kategori</string>
+    <string name="category_settings_original_name_format">Ursprungligen ”%1$s”</string>
+    <string name="category_settings_drag_handle_content_description">Dra för att ändra ordning</string>
+    <string name="category_settings_shelf_life_none">Ange hållbarhet</string>
+    <string name="category_settings_shelf_life_content_description">Ange standardhållbarhet</string>
+    <string name="category_settings_shelf_life_dialog_title">Standardhållbarhet</string>
+    <string name="category_settings_shelf_life_dialog_message">Nya varor i den här kategorin får så här många dagar tills de går ut, om inte streckkoden redan har en ihågkommen hållbarhet eller ett datum lästes av från förpackningen.</string>
+    <string name="category_settings_shelf_life_field_label">Dagar</string>
+    <string name="category_settings_shelf_life_clear">Rensa</string>
+    <plurals name="category_settings_shelf_life_days_format">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <string name="category_settings_rename_content_description">Byt namn på kategori</string>
+
+    <string name="product_detail_nutriscore">Nutri-Score</string>
+    <string name="product_detail_nova">NOVA</string>
+    <string name="product_detail_allergens">Allergener</string>
+    <string name="product_detail_ingredients">Ingredienser</string>
+    <string name="product_detail_content_description">Näringsvärde och allergener</string>
+    <string name="allergen_warning_format">Innehåller: %1$s</string>
+    <string name="settings_section_allergens">Allergenvarningar</string>
+    <string name="settings_allergens_desc">Varna mig när en skannad produkt innehåller något av dessa. Matchningen är ungefärlig, så den kan även flagga nästan-träffar.</string>
+    <string name="settings_add_allergen_placeholder">t.ex. mjölk, gluten, nötter</string>
+    <string name="settings_add_allergen">Lägg till</string>
+    <string name="settings_remove_allergen_content_description">Ta bort allergen</string>
+    <string name="settings_section_appearance">Utseende</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Ljust</string>
+    <string name="settings_theme_dark">Mörkt</string>
+
+    <string name="settings_section_data">Data</string>
+    <string name="widget_expiry_label">Varor som går ut</string>
+    <string name="widget_expiry_description">Visar vad i ditt skafferi som har gått ut eller snart går ut</string>
+    <string name="widget_expiry_title">Går ut</string>
+    <string name="widget_expiry_empty">Inget går ut snart</string>
+
+    <string name="widget_shopping_list_label">Inköpslista</string>
+    <string name="widget_shopping_list_description">Visar din aktuella inköpslista</string>
+    <string name="widget_shopping_list_title">Inköpslista</string>
+    <string name="widget_shopping_list_empty">Din inköpslista är tom</string>
+    <string name="widget_action_used">Använde en</string>
+    <string name="widget_action_used_item">Använde en: %1$s</string>
+    <string name="widget_action_mark_bought">Markera %1$s som köpt</string>
+
+    <string name="widget_overview_label">Skafferiöversikt</string>
+    <string name="widget_overview_description">Visar vad som har gått ut eller snart går ut, följt av din inköpslista</string>
+
+    <string name="settings_backup_desc">Ditt skafferi finns bara på den här enheten. Exportera en säkerhetskopia för att ha den i tryggt förvar, eller för att flytta den till en annan telefon.</string>
+    <string name="settings_export_backup_button">Exportera säkerhetskopia</string>
+    <string name="settings_import_backup_button">Importera säkerhetskopia</string>
+    <string name="restore_mode_message">Foton som du har tagit finns inte i filen, så om du återställer på en annan enhet visas de varorna utan bild.</string>
+    <string name="restore_mode_merge_title">Lägg till det som saknas</string>
+    <string name="restore_mode_merge_subtitle">Behåller allt som redan finns här. Dina inställningar förblir som de är.</string>
+    <string name="restore_mode_replace_title">Ersätt allt</string>
+    <string name="restore_mode_replace_subtitle">Raderar först det som finns på den här enheten, inklusive inställningarna.</string>
+    <string name="backup_export_success">Säkerhetskopian sparades</string>
+    <string name="backup_export_failed">Kunde inte spara säkerhetskopian</string>
+    <string name="backup_import_malformed">Filen är ingen säkerhetskopia från BestBefore. Inget ändrades.</string>
+    <string name="backup_import_unsupported">Säkerhetskopian gjordes med en nyare version av appen</string>
+    <string name="backup_import_empty">Säkerhetskopian innehåller inget att återställa</string>
+    <plurals name="backup_import_success">
+        <item quantity="one">Återställde %1$d vara</item>
+        <item quantity="other">Återställde %1$d varor</item>
+    </plurals>
+    <string name="settings_clear_data_button">Rensa all skafferidata</string>
+    <string name="clear_data_dialog_title">Rensa all skafferidata?</string>
+    <string name="clear_data_dialog_message">Det här tar bort alla varor från ditt skafferi och avbryter alla väntande påminnelser. Det går inte att ångra.</string>
+    <string name="clear_data_confirm">Rensa all data</string>
+    <string name="settings_section_stores">Inköpspåminnelser</string>
+    <string name="settings_store_reminders_enabled">Påminn mig nära en butik</string>
+    <string name="settings_store_reminders_desc">Visar din inköpslista när du stannar vid en av dina sparade butiker. Använder din plats i bakgrunden; BestBefore skickar den inte till oss och delar den inte med någon.</string>
+    <string name="settings_add_store_placeholder">Namnge butiken</string>
+    <string name="settings_add_store">Spara min nuvarande plats</string>
+    <string name="settings_remove_store_content_description">Ta bort butik</string>
+    <string name="settings_store_location_failed">Kunde inte hämta din plats. Kontrollera platsbehörigheten och försök igen utomhus.</string>
+    <string name="background_location_disclosure_title">Använda din plats i bakgrunden?</string>
+    <string name="background_location_disclosure_message">BestBefore använder din plats för att visa din inköpslista när du kommer till en butik som du har sparat, även när appen är stängd eller inte används.\n\nDin plats används bara på den här telefonen: BestBefore skickar den inte till oss och delar den inte med någon.\n\nVälj ”Tillåt alltid” på nästa skärm.</string>
+    <string name="background_location_disclosure_continue">Fortsätt</string>
+    <string name="background_location_disclosure_not_now">Inte nu</string>
+    <string name="store_reminder_channel_name">Inköpspåminnelser</string>
+    <string name="store_reminder_channel_desc">Din inköpslista, när du är i en butik som du har sparat</string>
+    <string name="store_reminder_title_named_format">Du är på %1$s</string>
+    <plurals name="store_reminder_title_format">
+        <item quantity="one">%1$d sak att köpa</item>
+        <item quantity="other">%1$d saker att köpa</item>
+    </plurals>
+    <plurals name="store_reminder_more_format">
+        <item quantity="one">+%1$d till</item>
+        <item quantity="other">+%1$d till</item>
+    </plurals>
+
+    <string name="date_captured_title">Utgångsdatum avläst</string>
+    <string name="scan_again_button">Skanna igen</string>
+    <string name="shopping_list_scan_unsupported">Öppna skannern från ditt skafferi för att importera en delad lista</string>
+    <string name="batch_discard_title">Kasta skannade varor?</string>
+    <plurals name="batch_discard_message">
+        <item quantity="one">%1$d vara står i kö och har inte lagts till än.</item>
+        <item quantity="other">%1$d varor står i kö och har inte lagts till än.</item>
+    </plurals>
+    <string name="batch_discard_confirm">Kasta</string>
+    <string name="batch_discard_keep">Fortsätt skanna</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Laddar</string>
+    <string name="status_today">I dag</string>
+    <string name="status_tomorrow">I morgon</string>
+    <plurals name="status_days_over">
+        <item quantity="one">%d dag över datum</item>
+        <item quantity="other">%d dagar över datum</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d vara</item>
+        <item quantity="other">%1$d varor</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s sparades i %2$s</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">%d vara raderad</item>
+        <item quantity="other">%d varor raderade</item>
+    </plurals>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Näst på tur: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">Inget behöver användas den här veckan</string>
+    <string name="home_section_use_first">Använd först</string>
+    <string name="home_section_later_this_week">Senare i veckan</string>
+    <string name="home_section_later">Senare</string>
+    <string name="home_clear_filters">Rensa filter</string>
+    <string name="home_search_description">Sök</string>
+    <string name="home_filters_on_description">Filter, på</string>
+    <string name="home_empty_title">Dina hyllor är tomma</string>
+    <string name="home_empty_message">Skanna din första produkt så visas den här, med närmaste datum först.</string>
+    <string name="home_empty_scan">Skanna en produkt</string>
+    <string name="home_empty_add_by_hand">Lägg till för hand</string>
+    <string name="home_no_results_title">Inget matchar ”%1$s”</string>
+    <string name="home_no_results_message">Kontrollera stavningen, eller prova märkets namn.</string>
+    <string name="home_clear_search">Rensa sökning</string>
+    <string name="home_no_filter_results_title">Inget matchar filtren</string>
+    <string name="home_no_filter_results_message">Prova en annan plats eller kategori.</string>
+    <string name="home_reminders_off_title">Påminnelser är avstängda</string>
+    <string name="home_reminders_off_message">Aviseringar är avstängda för BestBefore i telefonens inställningar.</string>
+    <string name="home_dismiss">Stäng</string>
+    <string name="home_swipe_to_list">Till listan</string>
+    <string name="home_use_one_item">Använd en: %1$s</string>
+    <string name="home_used_one_snackbar">Använde en %1$s. %2$d kvar.</string>
+    <string name="home_location_label">Plats</string>
+    <string name="home_category_label">Kategori</string>
+    <string name="home_best_before_label">Bäst före</string>
+    <string name="home_notes_label">Anteckningar</string>
+    <string name="home_done">Klar</string>
+    <string name="detail_close">Stäng</string>
+    <string name="detail_edit">Redigera</string>
+    <string name="detail_to_shopping_list">Till inköpslistan</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Obearbetad</string>
+    <string name="detail_nova_2">Matlagningsingredienser</string>
+    <string name="detail_nova_3">Bearbetad</string>
+    <string name="detail_nova_4">Ultraprocessad</string>
+    <string name="detail_credit">Produktdata och bilder från Open Food Facts (openfoodfacts.org), under Open Database License och CC BY-SA</string>
+    <string name="detail_allergen_note">Det här matchar din allergenlista. Matchningen är ungefärlig, så läs etiketten.</string>
+    <string name="detail_choose_item">Välj en vara för att se detaljerna.</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s sak att använda senast i morgon</item>
+        <item quantity="other">%1$s saker att använda senast i morgon</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s sak har passerat datumet</item>
+        <item quantity="other">%1$s saker har passerat datumet</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d träff</item>
+        <item quantity="other">%d träffar</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d av %2$d vara</item>
+        <item quantity="other">%1$d av %2$d varor</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Visa %d vara</item>
+        <item quantity="other">Visa %d varor</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>En</item>
+        <item>Två</item>
+        <item>Tre</item>
+        <item>Fyra</item>
+        <item>Fem</item>
+        <item>Sex</item>
+        <item>Sju</item>
+        <item>Åtta</item>
+        <item>Nio</item>
+        <item>Tio</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>på måndag</item>
+        <item>på tisdag</item>
+        <item>på onsdag</item>
+        <item>på torsdag</item>
+        <item>på fredag</item>
+        <item>på lördag</item>
+        <item>på söndag</item>
+    </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Stäng skannern</string>
+    <string name="scan_torch_on">På</string>
+    <string name="scan_torch_off">Av</string>
+    <string name="scan_idle_results_title">Resultaten visas här</string>
+    <string name="scan_idle_results_message">Skanna en streckkod så visas produkten på den här sidan.</string>
+    <string name="scan_idle_date_title">Datumet visas här</string>
+    <string name="scan_idle_date_message">Håll kameran stilla mot det tryckta datumet.</string>
+    <string name="scan_idle_photo_title">Ditt foto visas här</string>
+    <string name="scan_idle_photo_message">Ta en bild för att få förslag på namn.</string>
+    <string name="scan_allergen_note">Det här matchar din allergenlista. Matchningen är ungefärlig, så läs etiketten.</string>
+    <string name="scan_offline_title">Du är offline</string>
+    <string name="scan_offline_message">Kunde inte slå upp produkten. Du kan fortsätta för hand, och streckkoden följer med varan.</string>
+    <string name="scan_busy_title">Open Food Facts är överbelastat</string>
+    <string name="scan_busy_message">Kunde inte slå upp produkten just nu. Försök igen om en minut eller fortsätt för hand, och streckkoden följer med varan.</string>
+    <string name="scan_try_again">Försök igen</string>
+    <string name="scan_continue_by_hand">Fortsätt för hand</string>
+    <string name="scan_best_before_format">Bäst före %1$s</string>
+    <string name="scan_date_from_barcode">Avläst från streckkoden</string>
+    <string name="scan_date_from_packaging">Avläst från förpackningen</string>
+    <string name="scan_use_this_date">Använd det här datumet</string>
+    <string name="scan_reading_receipt">Läser kvittot…</string>
+    <string name="receipt_queue_empty">Läs ett kvitto för att starta listan</string>
+    <string name="scan_queue_cleared">Kön rensades</string>
+    <string name="scan_capture_failed">Kunde inte ta fotot. Försök igen.</string>
+    <string name="batch_queue_estimated_format">Uppskattat %1$s</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Påminnelser</string>
+    <string name="settings_group_kitchen">Ditt kök</string>
+    <string name="settings_notifications_blocked_title">Påminnelser är avstängda</string>
+    <string name="settings_off">Av</string>
+    <string name="settings_allergens_none">Inga än</string>
+    <string name="settings_add_allergen_label">Lägg till en allergen</string>
+    <string name="settings_data_summary">Säkerhetskopia och rensning</string>
+    <string name="settings_location_default">Standard</string>
+    <string name="settings_location_taken">Du har redan en plats som heter %1$s</string>
+    <string name="settings_rename_location_format">Byt namn: %1$s</string>
+    <string name="settings_delete_location_format">Radera: %1$s</string>
+    <string name="settings_set_default_location_format">Ange som standard: %1$s</string>
+    <string name="settings_remove_format">Ta bort: %1$s</string>
+    <string name="settings_try_again">Försök igen</string>
+    <string name="restore_mode_cancel">Importera inte</string>
+    <string name="clear_data_keep">Behåll mitt skafferi</string>
+    <string name="category_settings_empty_title">Inga kategorier än</string>
+    <string name="category_settings_scan">Skanna en produkt</string>
+    <string name="category_settings_move_up">Flytta upp</string>
+    <string name="category_settings_move_down">Flytta ned</string>
+    <string name="category_settings_move_done">Klar</string>
+    <string name="category_settings_rename_field_label">Kategorinamn</string>
+    <string name="category_settings_rename_confirm">Byt namn</string>
+    <string name="category_settings_rename_format">Byt namn på kategori: %1$s</string>
+    <string name="category_settings_drag_handle_format">Dra för att ändra ordning: %1$s</string>
+    <string name="category_settings_show_format">Visa: %1$s</string>
+    <string name="category_settings_shelf_life_format">Ange standardhållbarhet: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Standardhållbarhet för %1$s</string>
+    <string name="category_settings_shelf_life_range">Från 0 till 3650 dagar</string>
+    <string name="category_settings_shelf_life_error">Ange ett tal från 0 till 3650, vilket är ungefär 10 år</string>
+    <string name="category_settings_shelf_life_save">Spara</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">Det här tar bort %1$d vara och avbryter dess påminnelser. Det går inte att ångra.</item>
+        <item quantity="other">Det här tar bort alla %1$d varor och avbryter deras påminnelser. Det går inte att ångra.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Inköpslista</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d sak att köpa</item>
+        <item quantity="other">%d saker att köpa</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Inget att köpa</string>
+    <string name="shopping_list_already_listed">%1$s finns redan på din lista</string>
+    <string name="shopping_list_check_off">Bocka av</string>
+    <string name="shopping_list_import_label">Din lista</string>
+    <string name="shopping_list_close">Stäng</string>
+    <string name="shopping_list_done">Klar</string>
+    <string name="shopping_sections_label">Sektioner</string>
+    <string name="shopping_section_name_label">Sektionens namn</string>
+    <string name="shopping_section_keep">Behåll sektionen</string>
+    <string name="shopping_section_delete_confirm">Radera sektion</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">Dess %d vara flyttas till huvudlistan.</item>
+        <item quantity="other">Dess %d varor flyttas till huvudlistan.</item>
+    </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Lägg till ett namn så att du hittar den senare</string>
+    <string name="add_see_details">Visa detaljer</string>
+    <string name="add_notes_placeholder">t.ex. öppnad, mängd, hylla</string>
+    <string name="discard_changes_title">Kasta ändringarna?</string>
+    <string name="discard_changes_confirm">Kasta ändringar</string>
+    <string name="discard_changes_keep">Fortsätt redigera</string>
+    <string name="discard_new_message">Varan har inte sparats, så den läggs inte till i ditt skafferi.</string>
+    <string name="discard_edit_message">Dina ändringar av %1$s sparas inte. Varan förblir som den var.</string>
+
+
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s användes</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Kom igång</string>
+    <string name="onboarding_welcome_title">Påminner dig innan maten blir dålig, inte efteråt.</string>
+    <string name="onboarding_private_title">Inget konto behövs</string>
+    <string name="onboarding_private_body">Ingen reklam. Ditt skafferi sparas på den här telefonen. Ett recept från ett paket skickar varorna du kryssar i och dina allergener till vår server.</string>
+    <string name="onboarding_notifications_title">En diskret påminnelse, dagen innan</string>
+    <string name="onboarding_notifications_body">Vi påminner dig kl. 09:00, dagen före ett datum. Du kan ändra tiden eller stänga av påminnelserna i Inställningar.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Bäst att använda snart</string>
+    <string name="onboarding_sample_body">Datumet för grekisk yoghurt är i morgon.</string>
+    <string name="onboarding_sample_description">Exempel på påminnelse: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Slå på påminnelser</string>
+    <string name="onboarding_not_now">Inte nu</string>
+    <string name="onboarding_camera_title">Skanna i stället för att skriva</string>
+    <string name="onboarding_camera_body">Rikta kameran mot en produkt så fyller %1$s i uppgifterna åt dig. Foton stannar på din enhet.</string>
+    <string name="onboarding_camera_barcodes_title">Streckkoder</string>
+    <string name="onboarding_camera_barcodes_body">Hittar produkten och dess namn</string>
+    <string name="onboarding_camera_dates_title">Tryckta datum</string>
+    <string name="onboarding_camera_dates_body">Läser datumet på förpackningen</string>
+    <string name="onboarding_camera_allow">Tillåt kameran</string>
+    <string name="onboarding_ready_title">Redo för din första vara</string>
+    <string name="onboarding_ready_body">Ta fram något ur kylskåpet och skanna det. Det tar några sekunder.</string>
+    <string name="onboarding_skip">Hoppa över så länge</string>
+    <string name="onboarding_declined_title">Du kan börja utan dem</string>
+    <string name="onboarding_declined_body">Allt annat fungerar. Du kan ändra dig när som helst.</string>
+    <string name="onboarding_declined_reminders_title">Påminnelser är avstängda</string>
+    <string name="onboarding_declined_reminders_body">Hem visar en notis med ett sätt att slå på dem</string>
+    <string name="onboarding_declined_camera_title">Kameran är avstängd</string>
+    <string name="onboarding_declined_camera_body">Skannern visar hur du tillåter den</string>
+    <string name="onboarding_add_by_hand">Lägg till en vara för hand</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Vad ska vi laga?</string>
+    <string name="recipe_saved_action">Sparade recept</string>
+    <string name="recipe_settings_action">Receptinställningar</string>
+    <string name="recipe_cook_with">Laga med</string>
+    <string name="recipe_add_other">Lägg till andra varor</string>
+    <string name="recipe_difficulty">Svårighetsgrad</string>
+    <string name="recipe_difficulty_easy">Enkel</string>
+    <string name="recipe_difficulty_medium">Medel</string>
+    <string name="recipe_difficulty_ambitious">Avancerad</string>
+    <string name="recipe_servings">Portioner</string>
+    <string name="recipe_servings_fewer">Färre</string>
+    <string name="recipe_servings_more">Fler</string>
+    <string name="recipe_time">Tid</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 timme</string>
+    <string name="recipe_time_any">Valfri</string>
+    <string name="recipe_more_options">Fler alternativ</string>
+    <string name="recipe_detail_summary_brief">Kortfattat</string>
+    <string name="recipe_detail_summary_standard">Normal detaljnivå</string>
+    <string name="recipe_detail_summary_step_by_step">Steg för steg</string>
+    <string name="recipe_meal_summary_any">Valfri måltid</string>
+    <string name="recipe_diet_summary_none">Ingen specialkost</string>
+    <!-- Time range slider, multi-choice meal and diet -->
+    <string name="recipe_time_range">%1$d–%2$d min</string>
+    <string name="recipe_time_up_to">upp till %1$d min</string>
+    <string name="recipe_time_at_least">minst %1$d min</string>
+    <string name="recipe_time_shortest">Kortaste tid</string>
+    <string name="recipe_time_longest">Längsta tid</string>
+    <string name="recipe_time_no_minimum">Inget minimum</string>
+    <string name="recipe_time_no_limit">Ingen gräns</string>
+    <plurals name="recipe_time_minutes_spoken">
+        <item quantity="one">%d minut</item>
+        <item quantity="other">%d minuter</item>
+    </plurals>
+    <string name="recipe_time_guide_hint">Den längsta tiden är en gräns; den kortaste är bara en riktlinje.</string>
+    <string name="recipe_prompt_min_minutes">Helst runt %1$d minuter eller mer</string>
+    <string name="recipe_prompt_meals">Passar till någon av dessa måltider: %1$s</string>
+    <string name="recipe_not_enough_items">Det finns inte tillräckligt att laga med när din kost och dina allergener har räknats bort. Kryssa i några varor till. Inget recept drogs.</string>
+    <string name="recipe_not_enough_items_menu">Det räcker inte till tre dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</string>
+    <string name="recipe_diets_need_update">Recept från paket kan ännu inte kombinera glutenfritt med en annan kost. Behåll en av dem i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga recept drogs.</string>
+    <string name="recipe_language_needs_update">Recept från paket kan ännu inte skrivas på danska. Välj ett annat receptspråk i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga recept drogs.</string>
+    <string name="recipe_not_from_pantry_hint">Ingredienser utan märket ”I ditt skafferi” kommer inte från ditt skafferi: basingredienser, eller några saker du kanske behöver köpa.</string>
+    <!-- Add to shopping list -->
+    <string name="recipe_shopping_add">Lägg till i inköpslistan</string>
+    <string name="recipe_shopping_title">Lägg till i inköpslistan (%1$d)</string>
+    <string name="recipe_shopping_message">Kryssa ur det du redan har.</string>
+    <plurals name="recipe_shopping_confirm">
+        <item quantity="one">Lägg till %d vara</item>
+        <item quantity="other">Lägg till %d varor</item>
+    </plurals>
+    <string name="recipe_shopping_already">Finns redan på din lista</string>
+    <plurals name="recipe_shopping_added">
+        <item quantity="one">La till %d i din inköpslista</item>
+        <item quantity="other">La till %d i din inköpslista</item>
+    </plurals>
+    <plurals name="recipe_menu_meal_note">
+        <item quantity="one">%2$s gäller bara huvudrätterna.</item>
+        <item quantity="other">%2$s gäller bara huvudrätterna.</item>
+    </plurals>
+    <string name="recipe_shopping_nothing_added">Allt finns redan på din inköpslista</string>
+    <string name="recipe_share_prompt">Dela prompt</string>
+    <string name="recipe_copy_prompt">Kopiera prompt</string>
+    <string name="recipe_prompt_copied">Prompten kopierades</string>
+    <string name="recipe_prompt_clip_label">Receptprompt</string>
+    <string name="recipe_generate_on_phone">Skapa på den här enheten</string>
+    <string name="recipe_cost_free">Gratis</string>
+    <string name="recipe_prompt_hint">Gratis: skicka prompten till en AI-app som du redan använder.</string>
+    <string name="recipe_tick_hint">Kryssa i minst en vara att laga med.</string>
+    <string name="recipe_writing_phone_title">Skriver på den här enheten</string>
+    <string name="recipe_writing_phone_body">Inget skickas någonstans. Det kan ta en minut.</string>
+    <string name="recipe_stop">Stoppa</string>
+    <string name="recipe_failed_phone">Kunde inte skriva receptet på den här enheten.</string>
+    <string name="recipe_try_again">Försök igen</string>
+    <string name="recipe_preparing_title">Din enhet gör sig redo</string>
+    <string name="recipe_preparing_body">Dess egen modell laddas fortfarande ned. Dela prompten så länge.</string>
+    <string name="recipe_empty_title">Inget att laga med än</string>
+    <string name="recipe_empty_body">Lägg till det du har hemma, så väljs varorna som är närmast sitt datum ut åt dig.</string>
+    <string name="recipe_done">Klar</string>
+    <string name="recipe_result_title">Recept</string>
+    <string name="recipe_share_recipe">Dela recept</string>
+    <string name="recipe_duration_hours">%1$d h</string>
+    <string name="recipe_duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="recipe_ingredients">Ingredienser</string>
+    <string name="recipe_method">Gör så här</string>
+    <string name="recipe_in_pantry">I ditt skafferi</string>
+    <string name="recipe_tip">Tips</string>
+    <string name="recipe_source_phone">Skrivet på den här enheten · Inget skickades någonstans</string>
+    <string name="recipe_source_server">Skrivet av vår server · Sparat på den här enheten</string>
+    <string name="recipe_not_found">Receptet är inte längre sparat.</string>
+    <string name="recipe_saved_today">I dag</string>
+    <string name="recipe_saved_yesterday">I går</string>
+    <string name="recipe_saved_from_phone">Skrivet på den här enheten</string>
+    <string name="recipe_saved_from_pack">Från ditt paket</string>
+    <string name="recipe_saved_empty_title">Inga recept än</string>
+    <string name="recipe_saved_empty_body">Recept och menyer som skrivs i appen sparas här.</string>
+    <string name="recipe_deleted">Receptet raderades</string>
+    <string name="recipe_cooking">Matlagning</string>
+    <string name="recipe_cooking_desc">Används för alla recept, promptar och menyer tills du ändrar dem.</string>
+    <string name="recipe_detail">Detaljnivå</string>
+    <string name="recipe_detail_brief">Kort</string>
+    <string name="recipe_detail_standard">Normal</string>
+    <string name="recipe_detail_step_by_step">Steg för steg</string>
+    <string name="recipe_meal_and_diet">Måltid och kost</string>
+    <string name="recipe_meal">Måltid</string>
+    <string name="recipe_meal_any">Valfri</string>
+    <string name="recipe_meal_breakfast">Frukost</string>
+    <string name="recipe_meal_lunch">Lunch</string>
+    <string name="recipe_meal_dinner">Middag</string>
+    <string name="recipe_meal_snack">Mellanmål</string>
+    <string name="recipe_meal_dessert">Efterrätt</string>
+    <string name="recipe_diet">Kost</string>
+    <string name="recipe_diet_none">Ingen</string>
+    <string name="recipe_diet_vegetarian">Vegetarisk</string>
+    <string name="recipe_diet_vegan">Vegansk</string>
+    <string name="recipe_diet_pescatarian">Pescetarisk</string>
+    <string name="recipe_diet_gluten_free">Glutenfri</string>
+    <string name="recipe_diet_dairy_free">Mjölkfri</string>
+    <string name="recipe_allergens_note">Din allergenlista från Inställningar används alltid: %1$s.</string>
+    <string name="recipe_allergens_none">inga än</string>
+    <string name="recipe_language">Språk</string>
+    <string name="recipe_write_in">Skriv recept på</string>
+    <string name="recipe_on_device_language_note">Modellen på den här enheten kan inte skriva recept på det här språket, så ”Skapa på den här enheten” visas inte för det.</string>
+    <string name="recipe_language_same_as_app">Samma som appen (%1$s)</string>
+    <string name="recipe_account">Konto</string>
+    <string name="recipe_account_none">Inget konto. Du behöver bara bestämma dig när du köper ett paket, och de gratis sätten använder aldrig något konto.</string>
+    <string name="recipe_prompt_preferences_intro">Håll dig till detta:</string>
+    <string name="recipe_prompt_difficulty_easy">Lätt att laga, för en nybörjare</string>
+    <string name="recipe_prompt_difficulty_medium">Medelsvårt</string>
+    <string name="recipe_prompt_difficulty_ambitious">Avancerat, för en entusiastisk kock</string>
+    <string name="recipe_prompt_detail_brief">En kort beskrivning i några få steg</string>
+    <string name="recipe_prompt_detail_standard">En normal detaljnivå</string>
+    <string name="recipe_prompt_detail_step_by_step">Varje steg utförligt beskrivet</string>
+    <string name="recipe_prompt_servings">Portioner: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Klart på %1$d minuter eller mindre</string>
+    <string name="recipe_prompt_meal">Måltid: %1$s</string>
+    <string name="recipe_prompt_diet">Kost: %1$s</string>
+    <string name="recipe_prompt_allergens">Inget som innehåller: %1$s</string>
+    <string name="recipe_prompt_language">Skriv receptet på %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d till i ditt skafferi</item>
+        <item quantity="other">%1$d till i ditt skafferi</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d portion</item>
+        <item quantity="other">%1$d portioner</item>
+    </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Recept kvar: %1$d. Köp fler</string>
+    <string name="recipe_balance_only_description">Recept kvar: %1$d</string>
+    <string name="recipe_mode_label">Vad ska det bli?</string>
+    <string name="recipe_mode_recipe">Recept</string>
+    <string name="recipe_mode_menu">Meny för 3 dagar</string>
+    <string name="recipe_courses">Rätter per dag</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d rätt</item>
+        <item quantity="other">%1$d rätter</item>
+    </plurals>
+    <string name="recipe_generate">Skapa recept</string>
+    <string name="recipe_generate_menu">Skapa meny</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d recept</item>
+        <item quantity="other">%1$d recept</item>
+    </plurals>
+    <string name="recipe_buy">Köp recept</string>
+    <string name="recipe_menu_hint">En meny skrivs på vår server och drar %1$s från ett paket.</string>
+    <string name="recipe_menu_short_title">En meny kräver %1$s</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">Du har %1$d kvar. Ett enskilt recept fungerar fortfarande.</item>
+        <item quantity="other">Du har %1$d kvar. Ett enskilt recept fungerar fortfarande.</item>
+    </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">%1$d recept kvar</item>
+        <item quantity="other">%1$d recept kvar</item>
+    </plurals>
+    <string name="recipe_menu_short_none">Du har inga recept kvar.</string>
+    <string name="recipe_writing_server_title">Skriver ditt recept</string>
+    <string name="recipe_writing_server_body">Några sekunder. Du kan lämna den här skärmen; receptet hamnar i Sparade recept.</string>
+    <string name="recipe_writing_menu_title">Planerar tre dagar</string>
+    <string name="recipe_writing_menu_body">Det kan ta upp till två minuter. Du kan lämna den här skärmen; menyn hamnar i Sparade recept.</string>
+    <string name="recipe_offline_title">Ingen anslutning</string>
+    <string name="recipe_offline_body">Recept från ditt paket kräver internet. De gratis sätten nedan fungerar fortfarande.</string>
+    <string name="recipe_failed_server">Kunde inte skriva receptet. Inget recept drogs.</string>
+    <string name="recipe_failed_server_menu">Kunde inte skriva menyn. Inga recept drogs.</string>
+    <string name="recipe_failed_limit_today">Det är gränsen för i dag. Försök igen i morgon. Inga recept drogs.</string>
+    <string name="recipe_failed_trouble_today">Vi har problem med att skriva recept just nu. Försök igen i morgon. Inga recept drogs.</string>
+    <string name="recipe_failed_server_later">Kunde inte skriva det just nu. Försök igen senare. Inga recept drogs.</string>
+    <string name="recipe_failed_server_busy">Ett annat recept skrivs fortfarande. Försök igen om en minut. Inga recept drogs.</string>
+    <string name="recipe_failed_rate_limited">För många recept på kort tid. Försök igen om en minut. Inga recept drogs.</string>
+    <string name="recipe_left_out">”%1$s” utelämnades: namnet kunde inte skickas.</string>
+    <string name="recipe_ingredient_not_sent">”%1$s” kunde inte skickas. Kryssa ur den eller byt namn på den och försök sedan igen. Inga recept drogs.</string>
+    <string name="recipe_allergen_not_sent">Din allergen ”%1$s” kunde inte skickas, så inget skrevs: ett recept utan den kanske inte är säkert. Byt namn på den under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">Inget skrevs: ett recept kan ta med högst %1$d allergen, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</item>
+        <item quantity="other">Inget skrevs: ett recept kan ta med högst %1$d allergener, och fler är angivna. Ta bort några under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.</item>
+    </plurals>
+    <plurals name="recipe_refused">
+        <item quantity="one">Kunde inte göra ett recept av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+        <item quantity="other">Kunde inte göra ett recept av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">Kunde inte göra en meny av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+        <item quantity="other">Kunde inte göra en meny av de här varorna. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra. Prova färre eller andra varor.</item>
+    </plurals>
+    <string name="recipe_paused_title">Recept från paket är pausade</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Ditt %1$d recept finns kvar. De gratis sätten nedan fungerar fortfarande.</item>
+        <item quantity="other">Dina %1$d recept finns kvar. De gratis sätten nedan fungerar fortfarande.</item>
+    </plurals>
+    <string name="recipe_paused_body_none">De gratis sätten nedan fungerar fortfarande.</string>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d recept har lagts till</item>
+        <item quantity="other">%1$d recept har lagts till</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Sparat. %1$d recept kvar</item>
+        <item quantity="other">Sparat. %1$d recept kvar</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Ditt köp bekräftas</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Du har betalat för %1$d recept och det har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</item>
+        <item quantity="other">Du har betalat för %1$d recept och de har inte lagts till än. Vi fortsätter att försöka; du behöver inte köpa igen.</item>
+    </plurals>
+    <string name="recipe_try_now">Försök nu</string>
+    <string name="recipe_pending_title">Väntar på betalning</string>
+    <string name="recipe_pending_body">Dina recept läggs till när butiken bekräftar betalningen. Det kan ta en stund.</string>
+    <string name="recipe_packs_body">Ett recept är en rätt som skrivs av vår server. En meny för 3 dagar kräver %1$s med två rätter per dag, %2$s med tre. De går inte ut.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d recept</item>
+        <item quantity="other">%1$d recept</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s per recept</string>
+    <string name="recipe_cancel">Avbryt</string>
+    <string name="recipe_back">Tillbaka</string>
+    <string name="recipe_close">Stäng</string>
+    <string name="recipe_ok">OK</string>
+    <string name="recipe_choice_title">Var ska dina recept finnas?</string>
+    <string name="recipe_choice_body">Du väljer en gång. Du kan logga in senare i Receptinställningar.</string>
+    <string name="recipe_choice_phone_title">På den här enheten, inget konto</string>
+    <string name="recipe_choice_phone_body">Inget att logga in på. Recepten finns kvar i den här installationen av appen: om du raderar appen eller byter enhet går de som du inte har använt förlorade.</string>
+    <string name="recipe_choice_account_title">I ett konto</string>
+    <string name="recipe_choice_account_body">Logga in med Google. Dina recept följer med till en ny telefon, Android eller iPhone, var du än loggar in med Google. Vi sparar ditt konto-id och din e-postadress.</string>
+    <string name="recipe_sign_in_google">Logga in med Google</string>
+    <string name="recipe_apple_on_iphone_hint">Inloggad med Apple på en iPhone? Lägg till Google-inloggning där, i Receptinställningar, för att använda dina recept på den här enheten.</string>
+    <string name="recipe_have_account_hint">Har du redan recept i ett konto? Logga in för att använda dem här.</string>
+    <string name="recipe_store_error_title">Når inte butiken</string>
+    <string name="recipe_store_error_body">Kontrollera anslutningen och försök igen. Inget debiterades.</string>
+    <string name="recipe_rejected_title">Köpet kunde inte läggas till</string>
+    <string name="recipe_rejected_body">Butiken rapporterar det som återbetalt eller redan använt. Om du har debiterats och inte har några recept, kontakta butiken för att få pengarna tillbaka.</string>
+    <string name="recipe_your_recipes">Dina recept</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">recept på den här enheten</item>
+        <item quantity="other">recept på den här enheten</item>
+    </plurals>
+    <string name="recipe_on_phone_body">De finns kvar i den här installationen av appen. Om du raderar appen eller byter enhet går de som du inte har använt förlorade. Logga in för att ha dem i ett konto i stället; de flyttas över direkt.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">recept i ditt konto</item>
+        <item quantity="other">recept i ditt konto</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Inloggad med %1$s</string>
+    <string name="recipe_signed_in_add_google">Apple-inloggning fungerar bara i iPhone-appen. Lägg till Google-inloggning här för att fortsätta använda dem på Android.</string>
+    <string name="recipe_signed_in_google">Logga in med Google på en annan telefon, Android eller iPhone, för att använda dem där.</string>
+    <string name="recipe_signed_in_google_and_apple">Logga in med Google på en annan telefon, Android eller iPhone, eller med Apple på en iPhone, för att använda dem där.</string>
+    <string name="recipe_add_sign_in">Lägg till inloggning med %1$s</string>
+    <string name="recipe_sign_out">Logga ut</string>
+    <string name="recipe_delete_account">Radera konto</string>
+    <string name="recipe_sign_out_title">Logga ut?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Ditt %1$d recept finns kvar i ditt konto. Logga in igen för att använda det. Sparade recept finns kvar på den här enheten.</item>
+        <item quantity="other">Dina %1$d recept finns kvar i ditt konto. Logga in igen för att använda dem. Sparade recept finns kvar på den här enheten.</item>
+    </plurals>
+    <string name="recipe_delete_title">Radera ditt konto?</string>
+    <string name="recipe_apple_link_left_title">Apple-kopplingen togs inte bort</string>
+    <string name="recipe_apple_link_left_body">Ditt konto och dess recept har raderats, men ditt Apple-konto är fortfarande kopplat till appen. Om du vill ta bort kopplingen också stänger du av Logga in med Apple för appen i inställningarna för ditt Apple-konto.</string>
+    <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
+    <string name="recipe_allergen_consent_title">Skicka dina allergener till vår server?</string>
+    <string name="recipe_allergen_consent_body">För att skriva det här skickas din allergenlista (%1$s) tillsammans med de ikryssade varorna och dina inställningar till vår server och till Googles AI-modell, så att receptet undviker de livsmedlen. Google kan behandla den utanför EU. Vi använder den bara för den här förfrågan och sparar den inte efteråt. Google behandlar den för att skriva receptet och kan logga förfrågningar för att upptäcka missbruk. Du kan återkalla detta i Receptinställningar.\n\nDe gratis sätten, enhetens egen modell och den delade prompten, skickar den inte till oss.</string>
+    <string name="recipe_allergen_consent_agree">Godkänn och fortsätt</string>
+    <string name="recipe_allergen_consent_agree_only">Godkänn</string>
+    <string name="recipe_allergen_consent_declined">Dina allergener skickas inte till vår server, så den kan inte skriva det här. Slå på att skicka dem i Receptinställningar, eller använd enhetens modell eller den delade prompten.</string>
+    <string name="recipe_allergen_consent_setting">Skicka mina allergener till vår server</string>
+    <string name="recipe_allergen_consent_setting_on">Du godkände den %1$s. Stäng av för att återkalla: vår server skriver då inga recept medan allergener är angivna.</string>
+    <string name="recipe_allergen_consent_setting_off">Krävs för recept från vår server medan allergener är angivna. Vi använder dem bara för förfrågan och sparar dem inte.</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Ditt %1$d oanvända recept går förlorat och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+        <item quantity="other">Dina %1$d oanvända recept går förlorade och kan inte återbetalas eller återställas. Din inloggning och e-postadress raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+    </plurals>
+    <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
+    <string name="recipe_delete_device_data">Radera mina data från vår server</string>
+    <string name="recipe_delete_device_title">Radera dina data från vår server?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Ditt %1$d oanvända recept går förlorat och kan inte återbetalas eller återställas. Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+        <item quantity="other">Dina %1$d oanvända recept går förlorade och kan inte återbetalas eller återställas. Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om köpen finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">Den anonyma inloggning som den här enheten använder raderas från vår server; en uppgift om eventuella köp finns kvar, inte längre kopplad till dig. Sparade recept och ditt skafferi finns kvar på den här enheten.</string>
+    <string name="recipe_delete_device_confirm">Radera data</string>
+    <string name="recipe_device_data_deleted">Dina data har raderats från vår server</string>
+    <string name="recipe_delete_waits_for_purchase">Ett köp håller fortfarande på att slutföras. Du kan radera när det är klart.</string>
+    <string name="recipe_merge_title">Lägga till den här enhetens recept i ditt konto?</string>
+    <string name="recipe_merge_body">Ditt konto har redan %1$d recept. De %2$d på den här enheten läggs till, så att det blir %3$d. Det går inte att ångra.</string>
+    <string name="recipe_merge_body_unknown">De %1$d recepten på den här enheten läggs till i ditt konto. Det går inte att ångra.</string>
+    <string name="recipe_merge_confirm">Lägg till och logga in</string>
+    <string name="recipe_sign_in_failed">Kunde inte logga in. Dina recept är oförändrade.</string>
+    <string name="recipe_sign_in_in_use">Den inloggningen tillhör redan ett annat konto. Dina recept är oförändrade.</string>
+    <string name="recipe_account_deleted">Kontot raderades</string>
+    <string name="recipe_purchases_blocked">Det går inte att köpa recept med det här kontot eftersom tidigare köp återbetalades efter att recepten hade använts.</string>
+    <string name="recipe_account_busy">Ett recept skrivs fortfarande. Försök igen om en stund.</string>
+    <string name="recipe_account_action_failed">Kunde inte nå vår server. Inget ändrades.</string>
+    <string name="recipe_writing_busy_title">Vår server är upptagen</string>
+    <string name="recipe_writing_busy_body">Försöker igen om en stund. Du kan lämna den här skärmen; det som kommer hamnar i Sparade recept.</string>
+    <string name="recipe_busy_title">Vår server är upptagen</string>
+    <string name="recipe_busy_body">Din förfrågan finns kvar och kan fortfarande bli skriven. Försök igen om en minut för att hämta den. De gratis sätten nedan fungerar fortfarande.</string>
+    <string name="recipe_elsewhere_title">Ett köp tillhör ett annat konto</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d recept på den här enheten köptes med ett annat konto. Logga in på kontot som du köpte det med för att lägga till det.</item>
+        <item quantity="other">%1$d recept på den här enheten köptes med ett annat konto. Logga in på kontot som du köpte dem med för att lägga till dem.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Den här kopian av appen är gjord för en annan butik, så den kan inte lägga till köp från Google Play. Köpet lades inte till bland dina recept. Google Play återbetalar normalt ett köp som inte läggs till inom tre dagar. Installera appen från Google Play för att köpa recept.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d recept flyttades från den här enheten till ditt konto</item>
+        <item quantity="other">%1$d recept flyttades från den här enheten till ditt konto</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">Den här enheten var skyldig %1$d recept efter en återbetalning från butiken. Det drogs från ditt konto.</item>
+        <item quantity="other">Den här enheten var skyldig %1$d recept efter en återbetalning från butiken. De drogs från ditt konto.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">Ett recept som du bad om tidigare är klart. Det finns i Sparade recept.</string>
+    <string name="recipe_earlier_menu_saved">En meny som du bad om tidigare är klar. Den finns i Sparade recept.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra.</item>
+        <item quantity="other">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra.</item>
+    </plurals>
+    <string name="recipe_menu_bar_title">Meny</string>
+    <string name="recipe_menu_title">Meny för tre dagar</string>
+    <string name="recipe_menu_summary">%1$d rätter per dag för %2$d, med det som går ut först.</string>
+    <string name="recipe_menu_today">I dag, %1$s</string>
+    <string name="recipe_menu_uses">Använder %1$s</string>
+    <string name="recipe_course_starter">Förrätt</string>
+    <string name="recipe_course_main">Huvudrätt</string>
+    <string name="recipe_course_dessert">Efterrätt</string>
+    <string name="recipe_part_of_menu">Del av Meny för tre dagar</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d rätt</item>
+        <item quantity="other">%1$d rätter</item>
+    </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredienser</string>
+    <string name="recipe_send_all">Skicka alla produkter</string>
+    <string name="recipe_send_all_desc">Utöver de ikryssade varorna erbjuds resten av ditt skafferi som varor som receptet också får använda. När detta är på skickar ett recept från ett paket namn, datum och antal för allt i ditt skafferi till vår server, och en delad prompt listar dem också.</string>
+    <string name="recipe_intro_title">Så fungerar recepten</string>
+    <string name="recipe_intro_body">Kryssa i det du vill använda upp, välj typ av rätt och få ett recept byggt kring det. Recept som du får i appen sparas på den här enheten när de kommer.</string>
+    <string name="recipe_intro_prompt_title">Gratis, med valfri AI-app</string>
+    <string name="recipe_intro_prompt_body">Dela eller kopiera en färdig prompt till AI-appen som du redan använder.</string>
+    <string name="recipe_intro_device_title">Gratis, på den här enheten</string>
+    <string name="recipe_intro_device_body">Den här enheten skriver receptet själv, och inget skickas någonstans.</string>
+    <string name="recipe_intro_packs_title">Från ett receptpaket</string>
+    <string name="recipe_intro_packs_body">Vår server skriver receptet och kan också planera en meny för 3 dagar. Ett recept drar %1$s från ett paket; en meny drar %2$s med 2 rätter per dag eller %3$s med 3.</string>
+    <string name="recipe_intro_packs_price">Paket från %1$s.</string>
+    <string name="recipe_intro_free_stays">De gratis sätten finns kvar när du har ett paket.</string>
+    <string name="recipe_intro_again">Du kan öppna det här igen i Receptinställningar.</string>
+    <string name="recipe_intro_start">Uppfattat</string>
+    <string name="recipe_intro_packs_action">Se receptpaket</string>
+    <string name="recipe_intro_settings_supporting">Sätten att få ett recept</string>
+    <string name="recipe_not_available_title">Recept från paket är inte tillgängliga i den här installationen</string>
+    <string name="recipe_not_available_body">Inget debiterades. De gratis sätten fungerar fortfarande: dela prompten med en AI-app, eller skriv receptet på den här enheten där det går.</string>
+    <string name="recipe_not_available_debug">Debug-version: App Check avvisade den här versionen. Registrera debug-token för App Check som logcat skriver ut (docs/recipe-setup.md, ”Debug builds against the real project”).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">Den andra varan i ditt skafferi kan också användas</item>
+        <item quantity="other">De andra %1$d varorna i ditt skafferi kan också användas</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">En ikryssad vara har passerat datumet med %1$s. Kontrollera att den fortfarande går att äta, eller kryssa ur den.</string>
+    <string name="recipe_past_date_result_one">Över datum: %1$s. Kontrollera att den fortfarande går att äta innan du lagar mat.</string>
+    <string name="recipe_past_date_result_many">Över datum: %1$s. Kontrollera att de fortfarande går att äta innan du lagar mat.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date_one">En av dessa har passerat sitt datum. Jag har valt att använda den ändå, så utelämna den inte.</string>
+    <string name="recipe_prompt_past_date_many">Några av dessa har passerat sitt datum. Jag har valt att använda dem ändå, så utelämna dem inte.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d ikryssade varor har passerat datumet, en med %2$s. Kontrollera att de fortfarande går att äta, eller kryssa ur dem.</item>
+        <item quantity="other">%1$d ikryssade varor har passerat datumet, en med %2$s. Kontrollera att de fortfarande går att äta, eller kryssa ur dem.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dagar</item>
+    </plurals>
+</resources>

@@ -23,10 +23,11 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
-| `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption) and the prompt |
+| `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption, the board's Cloud Storage bucket) and the prompt |
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
@@ -41,6 +42,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `getBalance`, `getGeneration` | callable, App Check enforced, token not consumed | See CONTRACT.md |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
+| `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
 | `playNotifications` | Pub/Sub topic `PLAY_RTDN_TOPIC` | Play voided-purchase RTDNs (full and quantity-based partial refunds) |
 | `appStoreNotifications` | HTTPS (public) | App Store Server Notifications v2: `REFUND`, `REVOKE`, `REFUND_REVERSED`, `CONSUMPTION_REQUEST`; signature verified |
 | `budgetKillSwitch` | Pub/Sub topic `BUDGET_ALERT_TOPIC` | Sets `config/runtime.generationEnabled = false` when a budget notification reports cost ≥ budget × `budgetKillFraction` |
@@ -346,6 +348,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `registerAppleSignIn` | 1 | 10 | 30 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
+| `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
 
 Before any Firestore access, every callable is throttled per instance in memory: 30 calls a minute
 per uid, 120 per client address (IPv4 address, or IPv6 /64), and the per-instance ceiling above
@@ -484,6 +487,9 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `callable_failed` | error | Unexpected error in a callable (sampled, 5 a minute per instance). |
 | `appstore_notification_rejected` | warning | Sampled: rejected bodies on the public endpoint (fixed `outcome` code + suppressed count). |
 | `Budget kill switch flipped: generation disabled` | error | The budget alert paused generation. |
+| `board_redraw_failed` | error | The hourly `redrawBoard` failed (Firestore, Storage permission, upload). `bucket`, `code`, a short `error`. The page keeps its last version and shows its own stale warning after 3 hours. |
+| `board_bucket_public` | error | `redrawBoard` refused to write: the board bucket is missing, not private (`reason`: `missing`, `public_access_prevention_not_enforced`, `uniform_access_off`, `public_binding` with the `role`, `default_firebase_bucket`), or its settings could not be read (then `board_redraw_failed`). Never a member. Check the bucket at once ("The board", "Always on"). |
+| `board_purchases_capped` | warning | The period held more purchases than one redraw reads (`total`, `read`); the board says so and its purchase figures are partial. |
 
 ## Prompt injection defences
 
@@ -526,14 +532,14 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    whitespace collapsed; then 1–40 code points, ≤ 8 words, ≤ 28 code points per word part (no part
    limit in scripts written without spaces: Chinese, Japanese, Thai, Lao, Khmer, Burmese).
    Letters, combining marks and decimal digits of **any script** are accepted: pantry names come
-   from Open Food Facts in the shop's language, which has nothing to do with the ten recipe
+   from Open Food Facts in the shop's language, which has nothing to do with the eleven recipe
    languages. Space, hyphen and `' % , . / &` only where product names use them; no other
    punctuation, symbols or emoji. Combining marks: at most 4 per letter (1 on a Latin, Cyrillic or
    Greek letter), no repeats, at most 60 % of the name. Suspicious patterns are refused: Latin,
    Cyrillic and Greek mixed inside one word part (the look-alike scripts; other mixing, such as
    kanji with kana or Chinese with a Latin brand, is normal), encoded-looking words, repetition,
    spaced-out letters, a short list of words about the model (`ignore`, `instructions`, `prompt`,
-   `system`, `assistant`, `forget`, `json`...) in the ten app languages, also when written with
+   `system`, `assistant`, `forget`, `json`...) in the eleven recipe languages, also when written with
    Cyrillic or Greek look-alikes or digits. The full rule is in CONTRACT.md "Name rules";
    `test/fixtures/names.json` holds about 180 real product names in 25 languages (`Crème fraîche
    15%`, `Сметана 20%`, `Φέτα ΠΟΠ`, `חלב 3% תנובה`, `可口可乐 Zero`, `明治おいしい牛乳`,
@@ -566,9 +572,9 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `REPETITION` | A character 10× in a row, a word 4× in a row, duplicate steps | yes |
    | `PANTRY_REF` | A `pantryId` or `uses` entry that is not a sent item | yes |
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
-   | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite); free-from wording and plant-milk style exemptions apply | yes |
+   | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite; a gluten allergen also refuses bread, pasta and beer, as the gluten-free diet does); free-from wording ("glutenfri", "gluten-free", "sans gluten"; the inflected Scandinavian "frie", "fria", "fritt", "frit" only inside a compound, since French "frit" and Spanish "fría" are cooking words) and plant-milk style exemptions apply | yes |
    | `DIET` | The same for the diet (meat, fish, seafood, dairy, egg, honey, gluten grains and wheat foods) | yes |
-   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the ten languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; an ingredient written as nothing but staple words, such as "water", counts as the ticked item its `pantryId` names only when that item's own name has a staple word too (the user's "Olive oil" or "Filippo Berio Olive Oil 500ml", `hasStapleWord`); otherwise it is delivered as a staple and does not count as using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish past `NO_PANTRY` / `STAPLES_ONLY`. Only the written words are judged, the names are never compared, so "макароны" written for "Pasta" counts); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
+   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the eleven recipe languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; an ingredient written as nothing but staple words, such as "water", counts as the ticked item its `pantryId` names only when that item's own name has a staple word too (the user's "Olive oil" or "Filippo Berio Olive Oil 500ml", `hasStapleWord`); otherwise it is delivered as a staple and does not count as using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish past `NO_PANTRY` / `STAPLES_ONLY`. Only the written words are judged, the names are never compared, so "макароны" written for "Pasta" counts); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
 
    Charging: every refusal except the quality gate's is a **content failure**: refunded within the existing allowance (one
    per 10 credits paid over the account's life), charged after it. So an attacker gets no free
@@ -650,14 +656,14 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   item name cannot be used to unlock free text in a language the word lists do not read. The cost:
   an honest answer that writes a compound around a quoted name ("炒花生" for an item "花生") is
   refused and regenerated.
-- **The meta-word list covers the ten app languages only.** Since names are accepted in every
+- **The meta-word list covers the eleven recipe languages only.** Since names are accepted in every
   script, an instruction written in Chinese, Arabic, Hebrew, Hindi, Greek... ("忽略之前的指令")
   passes the input rule as a plain name (the fixture records this). It is still only data in the
   untrusted block, and what the model does with it is bounded by the output checks, exactly as
   for a plain-language instruction in English. Extending the list to more languages was not done:
   every entry has to be checked against real product names in that language.
 - **Allergens in other scripts are matched literally.** The allergen and diet word lists cover the
-  ten app languages. An allergen typed as `花生` or `γάλα` is matched only as written (folded, and
+  eleven recipe languages. An allergen typed as `花生` or `γάλα` is matched only as written (folded, and
   as a substring for Chinese, Japanese, Korean and Thai): an answer that writes "peanuts" or
   "milk" instead is not caught. The prompt still tells the model to avoid it.
 - **Look-alike spoofing is only checked between Latin, Cyrillic and Greek.** Other confusables
@@ -682,7 +688,7 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   hostile answer into a refunded one. With the judge off, a hostile answer that only the judge
   would have caught is refused by the gate and refunded: not delivered, but not counted either.
 - **The staple list is a word list.** It catches "water", "olivenolje", "freshly ground black
-  pepper" in the ten languages, not "a splash of stock" or a staple in another language; a
+  pepper" in the eleven recipe languages, not "a splash of stock" or a staple in another language; a
   staples-only dish written that way passes. It deliberately leaves out words that are also real
   ingredients (paprika, which is a bell pepper in several languages; chilli; garlic), so an
   honest roasted-pepper starter is never refused. The per-day pantry rule and the prompt carry
@@ -991,6 +997,201 @@ Apple only on the live project; on the emulators, `--play-order` searches the st
 - Google and Apple keep their own records of the purchase and the receipt; the person deals with
   them directly.
 
+## The board
+
+`npm run admin -- board` is the owner's read-only view of model spend and recipe-pack sales: one
+self-contained HTML file (inline CSS and SVG, light and dark, readable on a phone; it loads
+nothing from anywhere) plus a short text summary on stdout. It reads Firestore through the Admin
+SDK and writes nothing there; the file is written locally and uploaded nowhere. The command is run
+by hand (`src/admin/cli.ts`); the reader, aggregation and page are in `src/board/`, shared with the
+scheduled `redrawBoard`, which keeps the same board up to date in a private bucket ("Always on" below).
+
+```bash
+cd functions
+npm ci
+# Emulators (default; project demo-foodtracker on 127.0.0.1:8080, e.g. from `npm run serve`):
+npm run admin -- board
+npm run admin -- board --days 7 --out /tmp/board.html
+# Live project: only when --project says so, with the credentials below.
+npm run admin -- board --project bestbefore-f9ee1
+```
+
+`--days` is 1 to 90 (default 30, ending today, UTC). Without `--out` the file goes to
+`functions/board/board-<project>-<yyyymmdd-hhmm>.html` (git-ignored). To see a filled board
+without live data, the test that seeds 30 realistic days can copy its board out:
+`npx firebase emulators:exec --only auth,firestore --project demo-foodtracker 'BOARD_DEMO_OUT=/tmp/board.html npx vitest run test/board.test.ts'`.
+
+**Credentials (live).** The same procedure as "Deletion requests by email", "Credentials":
+Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
+(`gcloud auth application-default login --impersonate-service-account=…`, then
+`gcloud auth application-default revoke` when done). The board needs only Firestore read access
+(`roles/datastore.viewer` would do); it reads no secret and calls neither store. It refuses a live
+`--project` while `FIRESTORE_EMULATOR_HOST` or `FIREBASE_AUTH_EMULATOR_HOST` is set.
+
+**What it shows, and where each number comes from** (days are UTC, as in `stats`):
+
+| on the board | source |
+|---|---|
+| Generation on / paused, sandbox on / off | `config/runtime.generationEnabled` (kill switch), `allowSandbox` |
+| Estimated spend today against today's ceiling | `stats/{today}.spentMicroUsd + reservedMicroUsd` (what the breaker compares), against `dailySpendCeiling` from `src/model.ts` (the server's own function) over today's `config/runtime` and the `netCreditsGranted` of today and the 6 days before |
+| Recipes used today against the daily cap | `stats/{today}.generationUnits` against `dailyCap` |
+| Recipes sold today, purchases per day by pack and per store, refunds, net | `purchases/` with `grantedAt` in the period, `env: "production"` only; `credits`, `refundedCredits` (refunds of those purchases up to now). A deleted account's purchases (`uid: null`) count; a purchase refunded before it was granted (no `grantedAt`) does not |
+| Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
+| Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
+| Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
+| Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |
+| Spend per day, ceiling line | `stats/{day}.spentMicroUsd + reservedMicroUsd`; each day's ceiling as above, with **today's** config (past configs are not kept) |
+| Month to date, month-end worst case | the month's `stats` days; worst case = month to date + what is left of today's ceiling + every remaining day at `dailySpendMaxMicroUsd` |
+| Answers per day | `succeeded`, `contentFailures`, `infraFailures`, `qualityFailures`; also `refundedCredits`, `unknownUsageCalls`, token counts, `generationUnits` |
+| Average cost | period spend / written answers, and / recipes kept (`generationUnits − refundedCredits`) |
+
+Spend is the server's own estimate from token counts and the price table ("Spend control"), not
+the Google Cloud bill: the bill and the budget are in the Cloud console
+(<https://console.cloud.google.com/billing>), Firestore and Functions usage on the Firebase
+usage page (<https://console.firebase.google.com/project/bestbefore-f9ee1/usage>); the board
+links to both. It shows aggregates only: no uid, email, purchase token, order or transaction id
+(the purchases query projects only `store`, `env`, `productId`, `credits`, `refundedCredits`,
+`grantedAt`). Lifetime totals per account (`purchasedCredits`, …) are left out on purpose: a
+merged-away account's tombstone keeps its counters, so a sum over `users` would count them twice.
+
+**Cost.** One run reads `config/runtime`, the `stats` docs of the period, the month and the 6 days
+before them plus `stats/ledger` (38 documents for 30 days), one document per purchase granted in
+the period (one read when there are none), and one aggregation (one read per 1,000 accounts with a
+balance): 40 reads plus the period's purchases, about 100 for a month with 60 sales. The purchases
+query is a single-field range on `grantedAt`, ordered on the same field, and needs no composite
+index. It reads at most `BOARD_PURCHASES_CAP` (2,000) purchases, the newest first: a period with
+more is counted with one count aggregation (one read per 1,000), and the board, the summary and
+`board.json` say that only the newest 2,000 were counted and from when; spend, generations and
+the ceiling stay complete. A run therefore never reads more than about 2,050 documents. The
+summary prints the exact count.
+
+### Always on
+
+`redrawBoard` (scheduled, hourly at :17 UTC, region `europe-west1`, the runtime service account,
+1 instance, 120 s, no retry) draws the same 30-day board as the command and writes two objects to a
+**dedicated private bucket** (`BOARD_BUCKET`, default `<project id>-owner-board`, so
+`bestbefore-f9ee1-owner-board`; set in `.env.bestbefore-f9ee1`):
+
+- `board.html`, the page, with a line "Updated <UTC time>, redrawn hourly" and a red banner its own
+  inline script shows once the page is more than 3 hours old (the redraw has stopped). Still one
+  self-contained file: no request of any kind.
+- `board.json`, the same aggregates as the text summary (micro-USD integers, recipe and pack
+  counts; nothing that identifies a person).
+
+Both carry `Content-Type` (`text/html; charset=utf-8`, `application/json; charset=utf-8`),
+`Cache-Control: no-store, private` and `Content-Disposition: inline`. The owner opens
+
+**<https://storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html>**
+
+from any device, signed in with their Google account (the "authenticated browser download"; see
+"Caveats" for what Google documents about it). Anyone else, signed in or not, gets 403.
+
+**Fail closed.** Before reading Firestore and again just before writing, the function reads the
+bucket's settings and IAM policy and writes nothing (logs `board_bucket_public`, and the run fails)
+unless the bucket exists, public access prevention is `enforced`, uniform bucket-level access is
+on, and no binding names `allUsers`, `allAuthenticatedUsers` or a `domain:`. It refuses the default
+Firebase Storage buckets (`*.appspot.com`, `*.firebasestorage.app`) by name: their Security Rules
+are a second way in. It never creates a bucket or changes a policy, and its role on the bucket
+does not allow either. Any other failure logs `board_redraw_failed` ("Logs to alert on").
+
+**One-time setup (owner), in order**, from a shell where `gcloud` is signed in as the owner:
+
+```bash
+PROJECT=bestbefore-f9ee1
+BUCKET=gs://bestbefore-f9ee1-owner-board
+SA=recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com
+OWNER=$(gcloud config get-value account)   # the Google account that will open the board
+
+# 1. The bucket: one region, uniform access, public access prevention enforced, no soft delete
+#    (each hourly overwrite would otherwise keep a deleted copy for 7 days), no versioning.
+gcloud storage buckets create "$BUCKET" --project="$PROJECT" --location=europe-west1 \
+  --default-storage-class=STANDARD --uniform-bucket-level-access --public-access-prevention \
+  --soft-delete-duration=0
+
+# 2. A role with exactly what the function does on that bucket: read its settings and policy,
+#    write and overwrite objects. No storage.buckets.setIamPolicy, no list, no read of objects.
+gcloud iam roles create ownerBoardWriter --project="$PROJECT" --title="Owner board writer" \
+  --description="redrawBoard: check the board bucket is private, write board.html and board.json" \
+  --permissions=storage.buckets.get,storage.buckets.getIamPolicy,storage.objects.create,storage.objects.delete \
+  --stage=GA
+
+# 3. Granted to the runtime account on this bucket only (not on the project).
+gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+  --member="serviceAccount:$SA" --role="projects/$PROJECT/roles/ownerBoardWriter"
+
+# 4. Read access for the owner's Google account only.
+gcloud storage buckets add-iam-policy-binding "$BUCKET" \
+  --member="user:$OWNER" --role=roles/storage.objectViewer
+
+# 5. Optional: drop the project-viewer convenience bindings a new bucket gets, so project Viewers
+#    (if the project ever has any) can't read it. Run each only if step 6 lists it.
+gcloud storage buckets remove-iam-policy-binding "$BUCKET" \
+  --member="projectViewer:$PROJECT" --role=roles/storage.legacyBucketReader
+gcloud storage buckets remove-iam-policy-binding "$BUCKET" \
+  --member="projectViewer:$PROJECT" --role=roles/storage.legacyObjectReader
+
+# 6. Check it is private (expect "enforced" and "True", and no allUsers / allAuthenticatedUsers).
+gcloud storage buckets describe "$BUCKET" \
+  --format="value(public_access_prevention,uniform_bucket_level_access,soft_delete_policy)"
+gcloud storage buckets get-iam-policy "$BUCKET" --format=json
+
+# 7. Deploy only this function (lint and build run first, as for every deploy).
+cd functions && npm ci && npx firebase deploy --only functions:redrawBoard --project bestbefore-f9ee1
+
+# 8. Run it once now instead of waiting for :17. The deploy creates the Cloud Scheduler job
+#    firebase-schedule-redrawBoard-europe-west1 (the list shows it if the name differs).
+gcloud scheduler jobs list --project="$PROJECT" --location=europe-west1
+gcloud scheduler jobs run firebase-schedule-redrawBoard-europe-west1 --project="$PROJECT" --location=europe-west1
+```
+
+Then open the link above. To check from outside that it is private: in a private window (signed
+out), the link asks for a Google sign-in, and
+`curl -sI https://storage.googleapis.com/bestbefore-f9ee1-owner-board/board.html` answers 401 or
+403, never 200. Project Owners and Editors can always read the bucket through their project roles
+(the `projectOwner` / `projectEditor` convenience bindings, and `roles/owner` itself); on this
+project that is the owner.
+
+**Cost** (europe-west1, prices as in "Worst-case daily bill"; Cloud Storage Standard regional
+assumed at USD 0.05 per 10,000 Class A operations and USD 0.004 per 10,000 Class B, USD 0.02 per
+GB-month; free tiers ignored): 720 runs a month. Firestore: 40 reads plus one per purchase in the
+period a run, so about 72,000 reads a month with 60 sales in the period (USD 0.04), and at the cap
+(2,050 a run) at most 1.5 M reads (USD 0.89). Storage: two uploads and two policy/settings reads a
+run, about 2,900 operations a month (≤ USD 0.015); about 150 KB stored; the owner's views are
+negligible egress. Instance time: a couple of seconds a run at 1/6 vCPU, about USD 0.01 a month.
+Cloud Scheduler: USD 0.10 a month for the job beyond the three free per billing account (this is
+the third job here, so likely free). **About USD 0.10 a month, at most about USD 1 a month** with a
+period of thousands of sales.
+
+**Turn it off**: `cd functions && npx firebase functions:delete redrawBoard --region europe-west1 --project bestbefore-f9ee1`
+(and remove its export from `src/index.ts`, or the next full deploy brings it back), then
+`gcloud storage rm --recursive gs://bestbefore-f9ee1-owner-board` (deletes the objects and the
+bucket) and `gcloud iam roles delete ownerBoardWriter --project=bestbefore-f9ee1`.
+
+**Caveats.**
+
+- What Google documents about the link
+  (<https://docs.cloud.google.com/storage/docs/request-endpoints>, "Authenticated browser
+  downloads"; <https://docs.cloud.google.com/storage/docs/collaboration>): it is
+  `https://storage.cloud.google.com/BUCKET_NAME/OBJECT_NAME`, uses cookie-based authentication,
+  needs `storage.objects.get` (Storage Object Viewer), prompts for a Google sign-in, "After
+  successfully signing in, you are redirected to the requested content" at
+  `https://ALPHANUMERIC_SEQUENCE-apidata.googleusercontent.com/download/storage/v1/b/BUCKET_NAME/o/OBJECT_NAME`,
+  and "All requests to the `storage.cloud.google.com` URI require authentication … even when
+  `allUsers` have permission". Neither page says whether an HTML object is shown in the browser or
+  saved (the collaboration page says the object "is downloaded"); Data Access audit logs are not
+  mentioned as a requirement. The objects are written with `Content-Type: text/html` and
+  `Content-Disposition: inline`, which is what makes a browser display a response, but that it
+  renders on a phone is confirmed only by opening it after the first redraw. If it is saved
+  instead, the saved file is the same self-contained page and opens in the browser; or use the
+  Cloud Console (`Buckets > bestbefore-f9ee1-owner-board > board.html > Authenticated URL`).
+- The page is served from a `googleusercontent.com` origin. If that origin ever blocks inline
+  script, the hover readout and the stale banner don't appear; the "Updated … redrawn hourly" line
+  is plain text and still says how old the page is.
+- With several Google accounts signed in on the phone, Google may pick another one and answer 403:
+  switch account, or add `?authuser=<the owner's email>` to the link.
+- The board shows 30 days. Days before the deploy show zeros where `stats` has none, as on the
+  command's board. Without sales, the page is mostly zeros; that's expected.
+
 ## Parameters and secrets
 
 Asked for by `firebase deploy` the first time (and saved to `functions/.env.bestbefore-f9ee1`,
@@ -1011,6 +1212,7 @@ Not a param: the Cloud KMS key for stored Apple tokens has a fixed name
 before deploy (docs/recipe-setup.md step 5a).
 | `PLAY_RTDN_TOPIC` | `play-rtdn` | Pub/Sub topic Play publishes RTDNs to |
 | `BUDGET_ALERT_TOPIC` | `budget-alerts` | Pub/Sub topic the GCP budget publishes to |
+| `BOARD_BUCKET` | `<project id>-owner-board` | Private bucket `redrawBoard` writes the owner's board to; created by the owner ("The board", "Always on"), never the default Firebase Storage bucket |
 
 Secrets (Secret Manager, never in the repo), from `functions/`:
 
@@ -1038,7 +1240,8 @@ What a developer needs to know about the live project `bestbefore-f9ee1`:
   consume limited-use App Check tokens (`CONSUME_APP_CHECK_TOKENS`), and without the role every
   call to them fails. Plus **Cloud KMS CryptoKey Encrypter/Decrypter** on the one key
   `apple-refresh-token` (not on the project), for the stored Sign in with Apple tokens
-  (docs/recipe-setup.md step 5a). The deploying account needs Service Account User on it.
+  (docs/recipe-setup.md step 5a), and the custom role `ownerBoardWriter` on the board bucket only
+  (`redrawBoard`; "The board", "Always on"). The deploying account needs Service Account User on it.
 - **Auth**: Anonymous, Google and Apple providers (Apple is used by the iOS app only; Android
   offers Google sign-in only). Identity Platform's automatic clean-up of
   anonymous users stays **off**: it would delete paying anonymous buyers.

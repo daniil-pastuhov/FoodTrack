@@ -106,4 +106,68 @@ class NotificationCopyTest {
         assertEquals("Bread er 1 dag over datoen.", copy(-1).second)
         assertEquals("Bread er 2 dager over datoen.", copy(-2).second)
     }
+
+    /** The languages added after en, ru and nb: each day gets its own translated wording, with
+     *  the item and the count in it. Their exact wording is the translation's; this catches a
+     *  missing or English string and a dropped placeholder. */
+    @Test
+    fun `every app language has its own wording each side of the date`() {
+        for (language in listOf("es", "de", "fr", "sv", "da")) {
+            val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            val localized = context.createConfigurationContext(configuration)
+            for (days in listOf(-3, -1, 0, 1, 3)) {
+                val (title, body) = NotificationHelper.notificationCopy(localized, "Bread", "Acme", days)
+                val english = copy(days, "Acme")
+                org.junit.Assert.assertNotEquals("$language $days", english.first, title)
+                org.junit.Assert.assertNotEquals("$language $days", english.second, body)
+                org.junit.Assert.assertTrue("$language $days: $body", "Bread" in body && "Acme" in body)
+                if (days == -3 || days == 3) org.junit.Assert.assertTrue("$language $days: $body", "3" in body)
+            }
+        }
+    }
+
+    /** The words that tell each day's sentence apart, per language, read from the strings: the
+     *  today body says that language's today and not its tomorrow, and vice versa; the past body
+     *  says it is past the date, the countdown says it is still ahead. */
+    private class DayWords(val today: String, val tomorrow: String, val past: String, val ahead: String)
+
+    private val dayWords = mapOf(
+        "en" to DayWords(today = "today", tomorrow = "tomorrow", past = "past its date", ahead = "reaches its date in"),
+        "ru" to DayWords(today = "сегодня", tomorrow = "завтра", past = "прошёл", ahead = "через"),
+        "nb" to DayWords(today = "i dag", tomorrow = "i morgen", past = "over datoen", ahead = "når datoen sin om"),
+        "es" to DayWords(today = "hoy", tomorrow = "mañana", past = "pasó su fecha hace", ahead = "llega a su fecha en"),
+        "de" to DayWords(today = "heute", tomorrow = "morgen", past = "überschritten", ahead = "erreicht in"),
+        "fr" to DayWords(today = "aujourd'hui", tomorrow = "demain", past = "a dépassé sa date", ahead = "arrive à sa date dans"),
+        "sv" to DayWords(today = "i dag", tomorrow = "i morgon", past = "över datum", ahead = "är om"),
+        "da" to DayWords(today = "i dag", tomorrow = "i morgen", past = "over sin dato", ahead = "når sin dato om")
+    )
+
+    @Test
+    fun `every app language says the right day in each body`() {
+        for ((language, words) in dayWords) {
+            val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            val localized = context.createConfigurationContext(configuration)
+            fun body(days: Int) = NotificationHelper.notificationCopy(localized, "Bread", null, days).second
+            val today = body(0)
+            val tomorrow = body(1)
+            for (n in listOf(1, 3, 5)) {
+                val ahead = if (n == 1) tomorrow else body(n)
+                val past = body(-n)
+                val all = listOf(today, tomorrow, ahead, past).distinct()
+                if (n != 1) org.junit.Assert.assertEquals("$language $n: four different sentences $all", 4, all.size)
+                org.junit.Assert.assertNotEquals("$language: past $n differs from in $n", ahead, past)
+                org.junit.Assert.assertTrue("$language -$n: $past", words.past in past)
+                org.junit.Assert.assertFalse("$language -$n: $past", words.ahead in past || words.today in past || words.tomorrow in past)
+                if (n != 1) {
+                    org.junit.Assert.assertTrue("$language $n: $ahead", words.ahead in ahead && "$n" in ahead)
+                    org.junit.Assert.assertFalse("$language $n: $ahead", words.past in ahead || words.today in ahead || words.tomorrow in ahead)
+                }
+                org.junit.Assert.assertTrue("$language -$n: $past", "$n" in past)
+            }
+            org.junit.Assert.assertTrue("$language today: $today", words.today in today)
+            org.junit.Assert.assertFalse("$language today: $today", words.tomorrow in today || words.past in today || words.ahead in today)
+            org.junit.Assert.assertTrue("$language tomorrow: $tomorrow", words.tomorrow in tomorrow)
+            org.junit.Assert.assertFalse("$language tomorrow: $tomorrow", words.today in tomorrow || words.past in tomorrow || words.ahead in tomorrow)
+        }
+    }
 }

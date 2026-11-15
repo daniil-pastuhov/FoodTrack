@@ -28,7 +28,7 @@ Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), o
 - On the device: AVFoundation, Vision, Core Location region monitoring, UserNotifications, WidgetKit, SwiftData, StoreKit, Foundation Models.
 
 5. REGIONAL DIFFERENCES
-The app works the same in all regions, in English, Russian and Norwegian. Open Food Facts covers some countries' products better than others; when a barcode isn't found, the user types the name.
+Same in all regions and in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish. Open Food Facts covers some countries better; for an unknown barcode the user types the name.
 
 6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
 Not a regulated industry. Recipes are cooking suggestions, not medical or dietary advice; the app tells users to check labels for allergens. Third-party material: product data and pictures from Open Food Facts (database under the Open Database License, pictures under Creative Commons Attribution-ShareAlike; https://world.openfoodfacts.org/terms-of-use).

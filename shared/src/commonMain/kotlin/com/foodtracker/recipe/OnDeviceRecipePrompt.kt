@@ -21,6 +21,7 @@ fun recipeLanguageEnglishName(code: String): String = when (code) {
     "pl" -> "Polish"
     "sv" -> "Swedish"
     "uk" -> "Ukrainian"
+    "da" -> "Danish"
     else -> "English"
 }
 

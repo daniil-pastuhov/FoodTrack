@@ -82,9 +82,10 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
   updates all three and the table together.
 - **Costs come from the server.** What a recipe or a menu takes is in every response with a
   balance; never hard-code it in an app.
-- **Strings come in three languages**: English, Norwegian Bokmål and Russian, on both platforms.
-  If you can't translate a new string, add the English text in every language and mention it in
-  the pull request.
+- **Strings come in eight languages**: English, Russian, Norwegian Bokmål, Spanish, German, French,
+  Swedish and Danish, on both platforms (`scripts/tests/test_translations.py` checks that every
+  language has every key). If you can't translate a new string, add the English text in every
+  language and mention it in the pull request.
 
 ## Releases
 

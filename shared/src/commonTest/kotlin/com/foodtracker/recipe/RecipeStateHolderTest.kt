@@ -116,12 +116,18 @@ class RecipeStateHolderTest {
     private fun TestScope.holder(
         scope: CoroutineScope = backgroundScope,
         appLanguage: String = "en"
+    ) = holderReading(scope) { appLanguage }
+
+    /** A holder whose app language is read anew each time, as the app's can change while it runs. */
+    private fun TestScope.holderReading(
+        scope: CoroutineScope = backgroundScope,
+        appLanguage: () -> String
     ) = RecipeStateHolder(
         pantry = pantry,
         onDeviceModel = model,
         savedRecipeRepository = saved,
         configRepository = config,
-        appLanguage = { appLanguage },
+        appLanguage = appLanguage,
         coroutineScope = scope,
         nowMillis = { 1_000L + nextId },
         newId = { "r${nextId++}" }
@@ -197,6 +203,53 @@ class RecipeStateHolderTest {
         model.availability = OnDeviceAvailability.UNSUPPORTED
         holder.refresh()
         assertEquals(OnDeviceRoute.HIDDEN, holder.uiState.value.onDeviceRoute)
+    }
+
+    @Test
+    fun settingsSayWhyThePhoneModelIsGoneForTheChosenLanguage() = runUnconfined {
+        val holder = holder()
+        assertFalse(holder.uiState.value.onDeviceLanguageUnsupported)
+
+        holder.updateConfig { it.copy(language = "pl") }
+        assertTrue(holder.uiState.value.onDeviceLanguageUnsupported, "the model is there, but not for Polish")
+        assertEquals(RecipeActions(RecipeAction.SHARE, emptyList()), holder.uiState.value.actions, "Generate on this device goes at once")
+
+        holder.updateConfig { it.copy(language = null) }
+        assertFalse(holder.uiState.value.onDeviceLanguageUnsupported, "back to the app's English")
+        assertEquals(RecipeAction.ON_DEVICE, holder.uiState.value.actions.primary, "and it comes back at once")
+
+        model.availability = OnDeviceAvailability.UNSUPPORTED
+        holder.updateConfig { it.copy(language = "pl") }
+        holder.refresh()
+        assertFalse(holder.uiState.value.onDeviceLanguageUnsupported, "no model at all: nothing to explain")
+    }
+
+    @Test
+    fun aModelForALanguageItCantWriteIsNotDownloadedUntilOneItCanIsChosen() = runUnconfined {
+        model.availability = OnDeviceAvailability.DOWNLOADABLE
+        val holder = holder(appLanguage = "ru")
+
+        assertEquals(0, model.downloads, "nothing to fetch for Russian")
+        assertEquals(OnDeviceRoute.HIDDEN, holder.uiState.value.onDeviceRoute)
+        assertTrue(holder.uiState.value.onDeviceLanguageUnsupported)
+
+        holder.updateConfig { it.copy(servings = 3) }
+        assertEquals(0, model.downloads, "another setting changes nothing")
+
+        holder.updateConfig { it.copy(language = "en") }
+        assertEquals(1, model.downloads)
+        assertEquals(OnDeviceRoute.READY, holder.uiState.value.onDeviceRoute)
+    }
+
+    @Test
+    fun aDownloadingModelIsNotPromisedForALanguageItCantWrite() = runUnconfined {
+        model.availability = OnDeviceAvailability.DOWNLOADING
+        model.availableAfterDownload = OnDeviceAvailability.DOWNLOADING
+        config.stored = RecipeConfig(language = "uk")
+
+        val state = holder().uiState.value
+        assertEquals(OnDeviceRoute.HIDDEN, state.onDeviceRoute, "no \"getting ready\" callout")
+        assertTrue(state.onDeviceLanguageUnsupported)
     }
 
     @Test
@@ -571,5 +624,51 @@ class RecipeStateHolderTest {
 
         saved.save(SavedRecipe.of("elsewhere", Recipe(title = "Saved elsewhere", steps = listOf("s")), 5L))
         assertTrue(holder.uiState.value.hasSaved, "follows the store, whoever saved it")
+    }
+
+    @Test
+    fun nothingIsSaidAboutTheLanguageWhileThePhoneHasNotAnswered() {
+        val unknown = RecipeUiState(onDeviceAvailability = null, onDeviceSupportsLanguage = false)
+        assertFalse(unknown.onDeviceLanguageUnsupported, "availability unknown: no note yet")
+        assertEquals(OnDeviceRoute.CHECKING, unknown.onDeviceRoute)
+        assertTrue(unknown.copy(onDeviceAvailability = OnDeviceAvailability.AVAILABLE).onDeviceLanguageUnsupported)
+        assertTrue(unknown.copy(onDeviceAvailability = OnDeviceAvailability.DOWNLOADABLE).onDeviceLanguageUnsupported)
+        assertFalse(unknown.copy(onDeviceAvailability = OnDeviceAvailability.UNSUPPORTED).onDeviceLanguageUnsupported)
+    }
+
+    @Test
+    fun thePhonesModelIsAskedInTheChosenLanguageNotTheAppsOne() = runUnconfined {
+        model.languages = setOf("en", "ru", "sv")
+        model.replies += { GOOD_REPLY }
+        val holder = holder(appLanguage = "ru")
+        holder.updateConfig { it.copy(language = "sv") }
+        assertEquals(OnDeviceRoute.READY, holder.uiState.value.onDeviceRoute)
+
+        holder.generateOnDevice()
+
+        val prompt = model.prompts.single()
+        assertTrue(prompt.contains("Write every text value in Swedish."), prompt)
+        assertFalse(prompt.contains("Russian"), prompt)
+    }
+
+    @Test
+    fun aChangeOfAppLanguageIsPickedUpOnRefreshWithSameAsTheApp() = runUnconfined {
+        var appLanguage = "en"
+        val holder = holderReading { appLanguage }
+        assertNull(holder.uiState.value.config.language, "Same as the app")
+        assertEquals(OnDeviceRoute.READY, holder.uiState.value.onDeviceRoute)
+
+        appLanguage = "pl"
+        holder.refresh()
+        assertEquals("pl", holder.uiState.value.language)
+        assertEquals(OnDeviceRoute.HIDDEN, holder.uiState.value.onDeviceRoute, "the model doesn't write Polish")
+        assertTrue(holder.uiState.value.onDeviceLanguageUnsupported)
+        assertEquals(RecipeAction.SHARE, holder.uiState.value.actions.primary)
+
+        appLanguage = "en-GB"
+        holder.refresh()
+        assertEquals(OnDeviceRoute.READY, holder.uiState.value.onDeviceRoute, "and back")
+        assertFalse(holder.uiState.value.onDeviceLanguageUnsupported)
+        assertEquals(RecipeAction.ON_DEVICE, holder.uiState.value.actions.primary)
     }
 }

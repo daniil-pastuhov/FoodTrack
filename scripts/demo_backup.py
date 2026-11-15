@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Writes the demo pantry that the store screenshots show, as a backup file both apps restore:
 
-    scripts/demo_backup.py <en|ru|nb> <out.json> [scan picture url]
+    scripts/demo_backup.py <en|ru|nb|es|de|fr|sv|da> <out.json> [scan picture url]
 
 Used by scripts/ios_screenshots.sh and scripts/android_screenshots.sh. Dates are relative to
 today, so the "expires today / tomorrow" labels always read right. Item ids are fixed
@@ -31,6 +31,26 @@ names = {
            "Jordbær", "Appelsinjuice", "Egg", "Gulost", "Kyllingfilet",
            "Frosne erter", "Mørk sjokolade", "Spagetti",
            "Smør", "Bananer", "Tomater", "Kaffebønner", "Brunost"],
+    "es": ["Pan de masa madre", "Espinacas baby", "Yogur griego", "Leche semidesnatada", "Lomo de salmón",
+           "Fresas", "Zumo de naranja", "Huevos camperos", "Queso manchego", "Pechuga de pollo",
+           "Guisantes congelados", "Chocolate negro", "Espaguetis",
+           "Mantequilla", "Plátanos", "Tomates", "Café en grano", "Queso fresco"],
+    "de": ["Sauerteigbrot", "Babyspinat", "Griechischer Joghurt", "Fettarme Milch", "Lachsfilet",
+           "Erdbeeren", "Orangensaft", "Freilandeier", "Bergkäse", "Hähnchenbrustfilet",
+           "TK-Erbsen", "Zartbitterschokolade", "Spaghetti",
+           "Butter", "Bananen", "Tomaten", "Kaffeebohnen", "Quark"],
+    "fr": ["Pain au levain", "Pousses d'épinard", "Yaourt à la grecque", "Lait demi-écrémé", "Pavé de saumon",
+           "Fraises", "Jus d'orange", "Œufs plein air", "Comté", "Blanc de poulet",
+           "Petits pois surgelés", "Chocolat noir", "Spaghetti",
+           "Beurre", "Bananes", "Tomates", "Café en grains", "Crème fraîche"],
+    "sv": ["Surdegsbröd", "Babyspenat", "Grekisk yoghurt", "Mellanmjölk", "Laxfilé",
+           "Jordgubbar", "Apelsinjuice", "Ägg", "Prästost", "Kycklingfilé",
+           "Frysta ärter", "Mörk choklad", "Spagetti",
+           "Smör", "Bananer", "Tomater", "Kaffebönor", "Havredryck"],
+    "da": ["Rugbrød", "Babyspinat", "Græsk yoghurt", "Letmælk", "Laksefilet",
+           "Jordbær", "Appelsinjuice", "Frilandsæg", "Danbo", "Kyllingebryst",
+           "Frosne ærter", "Mørk chokolade", "Spaghetti",
+           "Smør", "Bananer", "Tomater", "Kaffebønner", "Skyr"],
 }[lang]
 pantry = [  # (storage location, category, days until expiry, quantity)
     ("Pantry", "Bakery", -1, 1), ("Fridge", "Vegetables", 0, 1), ("Fridge", "Dairy", 1, 2),

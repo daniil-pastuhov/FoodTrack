@@ -21,7 +21,7 @@ public enum RecipeDiet: String, Codable, CaseIterable, Sendable {
 
 /// What a recipe is written in, when it isn't the app's own language.
 public enum RecipeLanguage: String, Codable, CaseIterable, Sendable {
-    case en, nb, ru, de, es, fr, it, pl, sv, uk
+    case en, nb, ru, de, es, fr, it, pl, sv, uk, da
 
     /// The language's own name, as the picker lists it: "Deutsch", not "German".
     public var endonym: String {
@@ -36,6 +36,7 @@ public enum RecipeLanguage: String, Codable, CaseIterable, Sendable {
         case .pl: return "Polski"
         case .sv: return "Svenska"
         case .uk: return "Українська"
+        case .da: return "Dansk"
         }
     }
 
@@ -45,7 +46,7 @@ public enum RecipeLanguage: String, Codable, CaseIterable, Sendable {
     }
 
     /// The app's own language: the first of its localisations the system picked. The app ships
-    /// in en, nb and ru, so this is one of those.
+    /// in en, ru, nb, es, de, fr, sv and da, so this is one of those.
     public static var app: RecipeLanguage {
         app(preferredLocalizations: Bundle.main.preferredLocalizations)
     }
@@ -57,6 +58,34 @@ public enum RecipeLanguage: String, Codable, CaseIterable, Sendable {
             if let language = RecipeLanguage(rawValue: base) { return language }
         }
         return .en
+    }
+}
+
+/// Whether the phone's own model can write a recipe in a given language right now.
+enum OnDeviceRecipeAvailability: Equatable, Sendable {
+    case available
+    /// The phone has a model, still downloading. The design's "Your phone is getting ready".
+    case preparing
+    /// The phone has a model, but not for the language recipes are set to be written in: the
+    /// route is hidden (also while the model is still downloading, as nothing would come of it)
+    /// and Recipe settings says why under the language.
+    case unsupportedLanguage
+    /// No model on this phone: too old, Apple Intelligence off, or iOS before 26.
+    case unsupported
+
+    /// What the phone's model is doing, whatever the language.
+    enum ModelState: Sendable { case none, preparing, ready }
+
+    /// The one rule, as Android's `RecipeUiState.onDeviceRoute` / `onDeviceLanguageUnsupported`:
+    /// no model hides the route; a model that doesn't write the chosen recipe language hides it
+    /// too, ready or not; otherwise ready or preparing.
+    static func of(_ model: ModelState, writesLanguage: Bool) -> OnDeviceRecipeAvailability {
+        switch model {
+        case .none: return .unsupported
+        case _ where !writesLanguage: return .unsupportedLanguage
+        case .preparing: return .preparing
+        case .ready: return .available
+        }
     }
 }
 

@@ -92,6 +92,11 @@ sealed interface RecipeEvent {
      *  contain something the person excluded. One diet, or a free route, still works. */
     data object DietsNeedServerUpdate : RecipeEvent
 
+    /** The recipe would be in Danish and the server hasn't said `acceptsDanish` (one deployed
+     *  before it): nothing was sent, since another language in its place isn't what was asked.
+     *  Another recipe language, or a free route, still works. */
+    data object LanguageNeedsServerUpdate : RecipeEvent
+
     /** The phone's model failed or returned something that isn't a recipe. */
     data object Failed : RecipeEvent
 
@@ -244,6 +249,14 @@ data class RecipeUiState(
         }
     }
 
+    /**
+     * The phone has its own model, but not for the recipe language chosen: the reason "Generate
+     * on this device" isn't offered, said once under the language in Recipe settings. Follows
+     * [language] as it changes. iOS: `RecipeViewModel.onDeviceLanguageUnsupported`.
+     */
+    val onDeviceLanguageUnsupported: Boolean =
+        onDeviceAvailability != null && onDeviceAvailability != OnDeviceAvailability.UNSUPPORTED && !onDeviceSupportsLanguage
+
     /** What the current mode takes from a pack. */
     val serverCost: Int get() = if (mode == RecipeMode.MENU) paid.costs.menu(courses) else paid.costs.recipe
 
@@ -371,20 +384,29 @@ class RecipeStateHolder(
         coroutineScope.launch {
             val availability = runCatching { onDeviceModel.availability() }.getOrDefault(OnDeviceAvailability.UNSUPPORTED)
             _uiState.update { it.copy(onDeviceAvailability = availability) }
-            val needsDownload = availability == OnDeviceAvailability.DOWNLOADABLE ||
-                availability == OnDeviceAvailability.DOWNLOADING
-            // tryLock, so a second refresh while the first download runs doesn't start another.
-            if (needsDownload && downloadLock.tryLock()) {
-                try {
-                    runCatching { onDeviceModel.download() }
-                    val after = runCatching { onDeviceModel.availability() }.getOrDefault(OnDeviceAvailability.UNSUPPORTED)
-                    _uiState.update { it.copy(onDeviceAvailability = after) }
-                } finally {
-                    downloadLock.unlock()
-                }
-            }
+            downloadIfNeeded()
         }
         paid.resume()
+    }
+
+    /**
+     * Downloads the phone's model when it is missing, but only while the recipe language is one
+     * it writes: a model the route would stay hidden for isn't fetched. Called again when the
+     * language changes to one it does write.
+     */
+    private suspend fun downloadIfNeeded() {
+        val state = _uiState.value
+        val needsDownload = state.onDeviceAvailability == OnDeviceAvailability.DOWNLOADABLE ||
+            state.onDeviceAvailability == OnDeviceAvailability.DOWNLOADING
+        // tryLock, so a second refresh while the first download runs doesn't start another.
+        if (!needsDownload || !state.onDeviceSupportsLanguage || !downloadLock.tryLock()) return
+        try {
+            runCatching { onDeviceModel.download() }
+            val after = runCatching { onDeviceModel.availability() }.getOrDefault(OnDeviceAvailability.UNSUPPORTED)
+            _uiState.update { it.copy(onDeviceAvailability = after) }
+        } finally {
+            downloadLock.unlock()
+        }
     }
 
     /** The app came to the front: resubmits purchases the server hasn't confirmed, asks again
@@ -414,7 +436,10 @@ class RecipeStateHolder(
         val updated = transform(_uiState.value.config).normalized()
         if (updated == _uiState.value.config) return
         configRepository.save(updated)
+        val supportedBefore = _uiState.value.onDeviceSupportsLanguage
         _uiState.update { it.copy(config = updated).withLanguageSupport() }
+        // A language the model writes, chosen while its model is still missing: fetch it now.
+        if (!supportedBefore && _uiState.value.onDeviceSupportsLanguage) coroutineScope.launch { downloadIfNeeded() }
     }
 
     /** Recipe or Menu for 3 days. The menu is offered only with the paid route. */

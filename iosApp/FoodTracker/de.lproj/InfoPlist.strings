@@ -1,0 +1,5 @@
+/* Name auf dem Home-Bildschirm und Texte der Berechtigungsabfragen. Der Name muss zu app_name in androidApp/src/main/res/values-de/strings.xml passen. */
+"CFBundleDisplayName" = "BestBefore";
+"NSCameraUsageDescription" = "BestBefore nutzt die Kamera, um Barcodes zu scannen, auf Verpackungen gedruckte Ablaufdaten zu lesen und Lebensmittel zu fotografieren. Fotos bleiben auf deinem iPhone.";
+"NSLocationWhenInUseUsageDescription" = "BestBefore nutzt deinen Standort einmal, wenn du auf „Aktuellen Standort speichern“ tippst, um sich zu merken, wo ein Geschäft ist. Der Standort wird auf deinem iPhone gespeichert, und BestBefore sendet ihn nicht an uns und gibt ihn an niemanden weiter.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "BestBefore prüft, ob du bei einem deiner gespeicherten Geschäfte bist, um dir dort deine Einkaufsliste zu zeigen. Bei geschlossener App funktioniert das nur, wenn du den Zugriff immer erlaubst. BestBefore sendet deinen Standort nicht an uns und gibt ihn an niemanden weiter.";

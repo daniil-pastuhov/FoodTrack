@@ -122,7 +122,7 @@ own.
 >
 > It is on the App Store now: https://apps.apple.com/app/id6818647200. [Android: "Google Play is
 > in closed testing; it will be public soon." or the Play link once it is public.] It speaks
-> English, Russian and Norwegian.
+> English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
 >
 > **What I would love feedback on**
 > - Does the date reading work on your packaging? Which date formats or labels does it miss?

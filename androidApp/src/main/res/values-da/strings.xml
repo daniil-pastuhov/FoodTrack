@@ -1,0 +1,1121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BestBefore</string>
+    <string name="app_subtitle">Forråd og holdbarhedsdatoer</string>
+
+    <string name="scan_item">Scan vare</string>
+    <string name="scan_content_description">Scan</string>
+
+    <string name="nav_label_home">Hjem</string>
+    <string name="nav_label_recipe">Opskrift</string>
+    <string name="nav_label_shopping_list">Indkøb</string>
+    <string name="nav_label_settings">Indstillinger</string>
+
+    <string name="metric_expired">Udløbet</string>
+    <string name="metric_soon">Snart</string>
+    <string name="metric_fresh">Frisk</string>
+
+    <string name="search_placeholder">Søg efter varer eller mærker</string>
+    <string name="clear_content_description">Ryd</string>
+
+    <string name="filter_all_locations">Alle steder</string>
+    <string name="filter_all_categories">Alle kategorier</string>
+    <string name="filter_content_description">Filtre</string>
+    <string name="filters_sheet_title">Filtre</string>
+
+    <string name="tab_all">Alle</string>
+    <string name="tab_expiring_soon">Udløber snart</string>
+    <string name="tab_expired">Udløbet</string>
+
+    <string name="sort_content_description">Sortér</string>
+    <string name="sort_sheet_title">Sortér efter</string>
+    <string name="sort_option_expiry_date">Holdbarhedsdato</string>
+    <string name="sort_option_name">Navn</string>
+    <string name="sort_option_date_added">Tilføjet</string>
+    <string name="sort_option_storage_location">Opbevaringssted</string>
+
+
+    <string name="back_content_description">Tilbage</string>
+
+    <string name="edit_item_title">Redigér vare</string>
+    <string name="add_item_title">Tilføj vare</string>
+    <string name="barcode_format">Stregkode: %1$s</string>
+    <string name="new_item_placeholder">Ny vare</string>
+    <string name="photo_suggestions_title">Det ligner…</string>
+    <string name="photo_suggestions_analyzing">Genkender…</string>
+    <string name="food_label_apple">Æble</string>
+    <string name="food_label_banana">Banan</string>
+    <string name="food_label_orange">Appelsin</string>
+    <string name="food_label_lemon">Citron</string>
+    <string name="food_label_strawberry">Jordbær</string>
+    <string name="food_label_grape">Vindruer</string>
+    <string name="food_label_watermelon">Vandmelon</string>
+    <string name="food_label_pineapple">Ananas</string>
+    <string name="food_label_peach">Fersken</string>
+    <string name="food_label_pear">Pære</string>
+    <string name="food_label_cherry">Kirsebær</string>
+    <string name="food_label_avocado">Avocado</string>
+    <string name="food_label_berry">Bær</string>
+    <string name="food_label_fruit">Frugt</string>
+    <string name="food_label_tomato">Tomat</string>
+    <string name="food_label_potato">Kartoffel</string>
+    <string name="food_label_carrot">Gulerod</string>
+    <string name="food_label_broccoli">Broccoli</string>
+    <string name="food_label_cucumber">Agurk</string>
+    <string name="food_label_onion">Løg</string>
+    <string name="food_label_pumpkin">Græskar</string>
+    <string name="food_label_mushroom">Svampe</string>
+    <string name="food_label_lettuce">Salat</string>
+    <string name="food_label_cabbage">Kål</string>
+    <string name="food_label_salad">Salat</string>
+    <string name="food_label_vegetable">Grøntsager</string>
+    <string name="food_label_bread">Brød</string>
+    <string name="food_label_bun">Bolle</string>
+    <string name="food_label_croissant">Croissant</string>
+    <string name="food_label_cake">Kage</string>
+    <string name="food_label_cookie">Småkager</string>
+    <string name="food_label_pastry">Wienerbrød</string>
+    <string name="food_label_doughnut">Doughnut</string>
+    <string name="food_label_pie">Tærte</string>
+    <string name="food_label_waffle">Vafler</string>
+    <string name="food_label_pancake">Pandekager</string>
+    <string name="food_label_cheese">Ost</string>
+    <string name="food_label_milk">Mælk</string>
+    <string name="food_label_yogurt">Yoghurt</string>
+    <string name="food_label_butter">Smør</string>
+    <string name="food_label_egg">Æg</string>
+    <string name="food_label_meat">Kød</string>
+    <string name="food_label_steak">Bøf</string>
+    <string name="food_label_chicken">Kylling</string>
+    <string name="food_label_sausage">Pølse</string>
+    <string name="food_label_bacon">Bacon</string>
+    <string name="food_label_fish">Fisk</string>
+    <string name="food_label_seafood">Skaldyr</string>
+    <string name="food_label_shrimp">Rejer</string>
+    <string name="food_label_juice">Juice</string>
+    <string name="food_label_coffee">Kaffe</string>
+    <string name="food_label_tea">Te</string>
+    <string name="food_label_beer">Øl</string>
+    <string name="food_label_wine">Vin</string>
+    <string name="food_label_drink">Drik</string>
+    <string name="food_label_chocolate">Chokolade</string>
+    <string name="food_label_candy">Slik</string>
+    <string name="food_label_ice_cream">Is</string>
+    <string name="food_label_dessert">Dessert</string>
+    <string name="food_label_honey">Honning</string>
+    <string name="food_label_rice">Ris</string>
+    <string name="food_label_pasta">Pasta</string>
+    <string name="food_label_bean">Bønner</string>
+    <string name="food_label_corn">Majs</string>
+    <string name="food_label_nut">Nødder</string>
+    <string name="food_label_soup">Suppe</string>
+    <string name="food_label_pizza">Pizza</string>
+    <string name="food_label_sandwich">Sandwich</string>
+    <string name="food_label_food">Mad</string>
+    <string name="product_name_label">Varenavn *</string>
+    <string name="brand_label">Mærke</string>
+    <string name="expiry_section_title">Bedst før</string>
+    <string name="expiry_suggestion_remembered">Samme som sidst · %1$s</string>
+    <string name="expiry_suggestion_category">Standard for %1$s · %2$s</string>
+    <plurals name="expiry_suggestion_days">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dage</item>
+    </plurals>
+    <string name="expiry_date_implausible_warning">Datoen ligger mere end %1$d år ude i fremtiden. Tjek årstallet.</string>
+    <string name="quick_date_3_days">+3 dage</string>
+    <string name="quick_date_1_week">+1 uge</string>
+    <string name="quick_date_2_weeks">+2 uger</string>
+    <string name="quick_date_1_month">+1 måned</string>
+    <string name="storage_location_title">Opbevaringssted</string>
+    <string name="category_label">Kategori (valgfri)</string>
+    <string name="quantity_label">Antal</string>
+    <string name="quantity_decrease_content_description">Sænk antal</string>
+    <string name="quantity_increase_content_description">Øg antal</string>
+    <string name="update_item_button">Opdatér vare</string>
+    <!-- %1$s is the selected storage location, e.g. "Fridge" -->
+    <string name="save_item_button">Gem i %1$s</string>
+    <string name="date_picker_ok">OK</string>
+    <string name="date_picker_cancel">Annullér</string>
+
+    <string name="manual_entry_button">Skriv det selv</string>
+    <string name="camera_off_title">Kameraet er slået fra</string>
+    <string name="camera_off_body">BestBefore skal bruge kameraet for at scanne. Du kan stadig tilføje mad i hånden.</string>
+    <string name="camera_off_open_settings">Åbn indstillinger</string>
+    <string name="camera_off_allow">Tillad kamera</string>
+    <string name="camera_off_add_by_hand">Skriv det selv</string>
+    <string name="scan_mode_batch">Flere</string>
+    <string name="reticle_hint_batch">Bliv ved med at scanne. Alt havner på listen</string>
+    <string name="scan_mode_receipt">Kvittering</string>
+    <string name="reticle_hint_receipt">Få hele kvitteringen med i rammen, og tryk så for at læse den</string>
+    <string name="scan_receipt_button">Læs kvittering</string>
+    <string name="receipt_nothing_found">Der blev ikke fundet nogen varer på kvitteringen. Prøv igen med hele kvitteringen i rammen</string>
+    <plurals name="receipt_lines_added">
+        <item quantity="one">%1$d vare tilføjet fra kvitteringen. Tjek den nedenfor</item>
+        <item quantity="other">%1$d varer tilføjet fra kvitteringen. Tjek dem nedenfor</item>
+    </plurals>
+    <string name="batch_queue_empty">Scan en vare for at starte listen</string>
+    <string name="batch_queue_remove_content_description">Fjern fra listen: %1$s</string>
+    <string name="batch_queue_needs_date">Tjek dato</string>
+    <string name="batch_commit_button">Tilføj alle</string>
+    <string name="batch_clear_button">Ryd</string>
+    <plurals name="batch_queue_count">
+        <item quantity="one">%1$d vare i kø</item>
+        <item quantity="other">%1$d varer i kø</item>
+    </plurals>
+    <plurals name="batch_added_snackbar">
+        <item quantity="one">%1$d vare tilføjet</item>
+        <item quantity="other">%1$d varer tilføjet</item>
+    </plurals>
+    <string name="duplicate_dialog_title">Allerede i dit forråd</string>
+    <string name="duplicate_dialog_message">Du har allerede %1$s. Vil du lægge én mere til, eller beholde denne separat?</string>
+    <string name="duplicate_dialog_add_one">Læg én til</string>
+    <string name="duplicate_dialog_separate">Behold separat</string>
+    <string name="duplicate_added_snackbar">%1$s er nu %2$d</string>
+    <string name="in_pantry_count">I dit forråd: %1$d</string>
+    <string name="scan_mode_barcode">Stregkode</string>
+    <string name="scan_mode_date_ocr">Dato</string>
+    <string name="scan_mode_photo">Foto</string>
+    <string name="reticle_hint_barcode">Hold stregkoden inden for rammen</string>
+    <string name="reticle_hint_date_ocr">Ret kameraet mod den trykte dato, fx Bedst før 24.11.2026</string>
+    <string name="reticle_hint_photo">Placér varen i midten, og tag så billedet</string>
+    <string name="torch_toggle_content_description">Lommelygte</string>
+    <string name="expiry_date_found_format">Holdbarhedsdato fundet: %1$s</string>
+    <string name="looking_up_product">Slår varen op…</string>
+    <string name="scan_date_button">Scan dato</string>
+    <string name="continue_button">Fortsæt</string>
+
+    <string name="product_not_found_title">Varen blev ikke fundet</string>
+    <string name="switch_to_photo_button">Fototilstand</string>
+
+    <string name="take_photo_button">Tag billede</string>
+    <string name="photo_captured_title">Billedet er taget</string>
+    <string name="photo_captured_message">Brug billedet til varen, eller tag det om.</string>
+    <string name="retake_photo_button">Tag om</string>
+
+    <string name="delete">Slet</string>
+    <string name="use_one_content_description">Brug én</string>
+    <string name="quantity_format">×%1$d</string>
+
+    <string name="item_removed_snackbar">%1$s fjernet</string>
+    <string name="item_added_to_shopping_list_snackbar">%1$s er tilføjet til indkøbslisten</string>
+    <string name="undo_action">Fortryd</string>
+
+    <string name="essential_item_label">Basisvare</string>
+    <string name="essential_item_description">Kommer automatisk på indkøbslisten, når den fjernes fra forrådet</string>
+    <string name="item_notifications_label">Påmind mig, før den udløber</string>
+    <string name="item_notifications_description">Slå fra for aldrig at få notifikationer om denne vare</string>
+
+    <string name="shopping_list_title">Indkøbsliste</string>
+    <string name="shopping_list_content_description">Indkøbsliste</string>
+    <string name="shopping_list_add_placeholder">Tilføj en vare…</string>
+    <string name="shopping_list_add_button">Tilføj</string>
+    <string name="shopping_list_scan_content_description">Scan vare</string>
+    <string name="shopping_list_share_content_description">Del eller importér liste</string>
+    <string name="shopping_list_share_dialog_title">Del liste</string>
+    <string name="shopping_list_share_dialog_message">Send din liste til en anden, eller hent en ind. Importerede varer føjes til din liste, og intet bliver erstattet.</string>
+    <string name="shopping_list_share_as_text">Del som tekst</string>
+    <string name="shopping_list_share_as_qr">Vis QR-kode</string>
+    <string name="shopping_list_share_qr_content_description">QR-kode med indkøbslisten</string>
+    <string name="shopping_list_share_qr_hint">Scan den fra indkøbslisten på den anden telefon.</string>
+    <string name="shopping_list_share_qr_too_large">Listen er for lang til en QR-kode. Del den som tekst i stedet.</string>
+    <string name="shopping_list_import">Importér en liste</string>
+    <string name="shopping_list_import_message">Indsæt en liste, som nogen har sendt dig, eller scan deres QR-kode med scanneren.</string>
+    <string name="shopping_list_import_placeholder">Mælk\nBrød (2)</string>
+    <string name="shopping_list_import_confirm">Importér</string>
+    <plurals name="shopping_list_import_added">
+        <item quantity="one">%1$d vare tilføjet</item>
+        <item quantity="other">%1$d varer tilføjet</item>
+    </plurals>
+    <string name="shopping_list_import_all_present">Alt på den liste er her allerede</string>
+    <string name="shopping_list_import_nothing">Der er intet at importere</string>
+    <string name="shopping_list_empty_title">Din indkøbsliste er tom</string>
+    <string name="shopping_list_empty_subtitle">Basisvarer, du fjerner fra forrådet, dukker op her.</string>
+    <string name="shopping_list_uncategorized">Andet</string>
+    <string name="shopping_section_default">Indkøbsliste</string>
+    <string name="shopping_section_new">Ny sektion</string>
+    <string name="shopping_section_rename">Omdøb sektion</string>
+    <string name="shopping_section_delete">Slet</string>
+    <string name="shopping_section_delete_title">Slet »%1$s«?</string>
+    <string name="shopping_section_save">Gem</string>
+    <string name="shopping_section_name_placeholder">fx Mejeri</string>
+    <string name="shopping_section_move_to">Flyt til sektion</string>
+    <string name="shopping_section_options">Valg for %1$s</string>
+    <string name="shopping_section_drag_handle_content_description">Træk for at flytte sektionen</string>
+    <string name="shopping_section_collapsed">Skjult</string>
+    <string name="shopping_section_expanded">Udvidet</string>
+    <string name="widget_shopping_list_more">+%1$d mere</string>
+    <string name="shopping_list_quantity_decrease_content_description">Sænk antal</string>
+    <string name="shopping_list_quantity_increase_content_description">Øg antal</string>
+    <string name="shopping_list_did_you_mean_title">Mente du en af disse?</string>
+    <string name="shopping_list_did_you_mean_none_of_these">Ingen af dem, tilføj ny vare</string>
+    <string name="shopping_list_did_you_mean_cancel">Annullér</string>
+    <string name="shopping_list_drag_handle_content_description">Træk for at flytte</string>
+
+    <string name="selection_count_format">%1$d valgt</string>
+    <string name="exit_selection_content_description">Afslut valg</string>
+    <string name="action_get_recipe_ideas">Få opskriftsidéer</string>
+    <string name="recipe_prompt_intro">Jeg har disse madvarer derhjemme og vil gerne undgå at smide dem ud. Foreslå én opskrift, jeg kan lave, og brug først dem, der er tættest på holdbarhedsdatoen:</string>
+    <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+    <string name="recipe_prompt_other_items_intro">Jeg har også disse andre varer derhjemme, hvis nogle af dem kan bruges:</string>
+    <string name="recipe_prompt_other_items_omitted">(+%1$d varer mere, ikke vist)</string>
+    <string name="share_recipe_cancel_button">Annullér</string>
+
+    <string name="expires_today">Udløber i dag</string>
+    <string name="expires_tomorrow">Udløber i morgen</string>
+
+    <plurals name="expires_in_days">
+        <item quantity="one">Om %d dag</item>
+        <item quantity="other">Om %d dage</item>
+    </plurals>
+    <plurals name="expires_in_months">
+        <item quantity="one">Om %d måned</item>
+        <item quantity="other">Om %d måneder</item>
+    </plurals>
+    <plurals name="expires_in_years">
+        <item quantity="one">Om %d år</item>
+        <item quantity="other">Om %d år</item>
+    </plurals>
+    <plurals name="expired_days_ago">
+        <item quantity="one">Udløbet for %d dag siden</item>
+        <item quantity="other">Udløbet for %d dage siden</item>
+    </plurals>
+    <plurals name="expired_months_ago">
+        <item quantity="one">Udløbet for %d måned siden</item>
+        <item quantity="other">Udløbet for %d måneder siden</item>
+    </plurals>
+    <plurals name="expired_years_ago">
+        <item quantity="one">Udløbet for %d år siden</item>
+        <item quantity="other">Udløbet for %d år siden</item>
+    </plurals>
+
+    <string name="notification_channel_name">Påmindelser for hver vare</string>
+    <string name="notification_channel_desc">Én notifikation pr. vare, kort før den udløber</string>
+    <string name="notification_digest_channel_name">Oversigt over datoer</string>
+    <string name="notification_digest_channel_desc">Én notifikation med det, der udløber i den kommende uge</string>
+    <string name="notif_title_today">Bør bruges i dag</string>
+    <string name="notif_title_soon">Bør bruges snart</string>
+    <string name="notif_title_past">Værd at kigge på</string>
+    <string name="notif_body_today_format">%1$s når sin dato i dag.</string>
+    <string name="notif_body_tomorrow_format">%1$s når sin dato i morgen.</string>
+    <plurals name="notif_body_soon_format">
+        <item quantity="one">%1$s når sin dato om %2$d dag.</item>
+        <item quantity="other">%1$s når sin dato om %2$d dage.</item>
+    </plurals>
+    <plurals name="notif_body_past_format">
+        <item quantity="one">%1$s er %2$d dag over sin dato.</item>
+        <item quantity="other">%1$s er %2$d dage over sin dato.</item>
+    </plurals>
+    <string name="notif_fallback_title">Påmindelse fra dit forråd</string>
+    <string name="notif_fallback_body">Noget i dit forråd når snart sin dato.</string>
+    <string name="notif_action_used">Brugt</string>
+    <string name="notif_action_snooze">I morgen</string>
+    <string name="shortcut_scan_barcode_short">Scan</string>
+    <string name="shortcut_scan_barcode_long">Scan en stregkode</string>
+    <string name="shortcut_add_item_short">Tilføj vare</string>
+    <string name="shortcut_add_item_long">Tilføj en vare i hånden</string>
+    <string name="shortcut_shopping_list_short">Indkøb</string>
+    <string name="shortcut_shopping_list_long">Åbn indkøbslisten</string>
+    <string name="notif_action_remove">Fjern</string>
+    <plurals name="notif_digest_title_format">
+        <item quantity="one">%1$d vare udløber i denne uge</item>
+        <item quantity="other">%1$d varer udløber i denne uge</item>
+    </plurals>
+    <string name="notif_digest_item_format">%1$s – %2$s</string>
+    <plurals name="notif_digest_more_format">
+        <item quantity="one">+%1$d mere</item>
+        <item quantity="other">+%1$d mere</item>
+    </plurals>
+    <string name="notif_action_recipe_ideas">Opskriftsidéer</string>
+
+    <string name="settings_content_description">Indstillinger</string>
+    <string name="settings_title">Indstillinger</string>
+
+
+    <string name="settings_section_notifications">Notifikationer</string>
+    <string name="settings_notifications_enabled">Påmind mig, før maden udløber</string>
+    <string name="settings_lead_days_label">Påmind mig</string>
+    <string name="settings_time_label">Tidspunkt</string>
+    <string name="settings_digest_frequency_label">Hvor ofte</string>
+    <string name="settings_digest_daily">Dagligt</string>
+    <string name="settings_digest_weekly">Ugentligt</string>
+    <string name="settings_digest_weekday_label">Ugedag</string>
+    <string name="settings_reminder_style_label">Hvordan</string>
+    <string name="settings_reminder_style_each_item">Hver vare</string>
+    <string name="settings_reminder_style_summary">Oversigt</string>
+    <string name="settings_reminder_style_both">Begge</string>
+    <plurals name="settings_lead_days_phrase">
+            <item quantity="one">%1$d dag før</item>
+            <item quantity="other">%1$d dage før</item>
+    </plurals>
+    <string name="settings_reminder_preview_each_item">En notifikation for hver vare %1$s den udløber, kl. %2$s.</string>
+    <string name="settings_reminder_preview_summary_daily">Hver dag kl. %1$s får du en liste over alt, der udløber inden for 7 dage.</string>
+    <string name="settings_reminder_preview_summary_weekly">Hver %1$s kl. %2$s får du en liste over alt, der udløber inden for 7 dage.</string>
+    <plurals name="settings_digest_every_days_chip">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dage</item>
+    </plurals>
+    <plurals name="settings_digest_every_days_phrase">
+        <item quantity="one">Hver %1$d. dag</item>
+        <item quantity="other">Hver %1$d. dag</item>
+    </plurals>
+    <string name="settings_reminder_preview_summary_every">%1$s kl. %2$s får du en liste over alt, der udløber inden for 7 dage.</string>
+    <string name="settings_reminder_preview_none">Vælg, hvordan du vil påmindes. Lige nu bliver der ikke sendt nogen påmindelser.</string>
+    <string name="settings_notifications_blocked">Notifikationer er slået fra for appen i telefonens indstillinger, så påmindelserne når ikke frem.</string>
+    <string name="settings_notifications_open_settings">Åbn indstillinger</string>
+
+    <string name="settings_section_expiring_soon">Grænse for »Udløber snart«</string>
+    <string name="settings_expiring_soon_desc">Varer, der udløber inden for så mange dage, markeres som »Udløber snart«</string>
+
+    <string name="settings_section_locations">Opbevaringssteder</string>
+    <string name="settings_locations_desc">Tryk på stjernen for at vælge standard for nye varer</string>
+    <string name="settings_remember_last_location">Husk sidste opbevaringssted</string>
+    <string name="settings_remember_last_location_desc">Varer, du ikke har tilføjet før, starter på det opbevaringssted, du valgte sidst</string>
+    <string name="settings_confirm_rename">Bekræft nyt navn</string>
+    <string name="settings_set_default_location">Brug som standard</string>
+    <!-- Names for the built-in storage locations and categories, which are stored under fixed
+         English keys (DefaultStorageLocations, FoodLabels.CATEGORY_*) and shown translated. -->
+    <string name="storage_location_fridge">Køleskab</string>
+    <string name="storage_location_freezer">Fryser</string>
+    <string name="storage_location_pantry">Skab</string>
+    <string name="category_builtin_fruit">Frugt</string>
+    <string name="category_builtin_vegetables">Grøntsager</string>
+    <string name="category_builtin_bakery">Brød og kager</string>
+    <string name="category_builtin_dairy">Mejeri</string>
+    <string name="category_builtin_meat_fish">Kød og fisk</string>
+    <string name="category_builtin_drinks">Drikkevarer</string>
+    <string name="category_builtin_sweets">Søde sager</string>
+    <string name="category_builtin_pantry">Kolonial</string>
+    <string name="settings_rename_location">Omdøb</string>
+    <string name="settings_delete_location">Slet</string>
+    <string name="settings_add_location_placeholder">Navn på nyt sted</string>
+    <string name="settings_add_location">Tilføj sted</string>
+
+    <string name="settings_section_categories">Kategorier</string>
+    <string name="settings_categories_desc">Omdøb, flyt eller skjul de kategorier, der er fundet ud fra dine varer</string>
+    <string name="settings_manage_categories_button">Administrér kategorier</string>
+
+    <string name="category_settings_title">Kategorier</string>
+    <string name="category_settings_description">Træk for at ændre rækkefølgen. Tryk på blyanten for at omdøbe en kategori, eller slå den fra for at skjule den overalt.</string>
+    <string name="category_settings_toggle_all">Vis alle kategorier</string>
+    <string name="category_settings_empty">Kategorierne dukker op her, når en scannet eller tilføjet vare har en</string>
+    <string name="category_settings_rename_title">Omdøb kategori</string>
+    <string name="category_settings_original_name_format">Oprindeligt »%1$s«</string>
+    <string name="category_settings_drag_handle_content_description">Træk for at flytte</string>
+    <string name="category_settings_shelf_life_none">Angiv holdbarhed</string>
+    <string name="category_settings_shelf_life_content_description">Angiv standardholdbarhed</string>
+    <string name="category_settings_shelf_life_dialog_title">Standardholdbarhed</string>
+    <string name="category_settings_shelf_life_dialog_message">Nye varer i denne kategori starter med så mange dage, til de udløber, medmindre stregkoden allerede har en husket holdbarhed, eller der blev læst en dato på emballagen.</string>
+    <string name="category_settings_shelf_life_field_label">Dage</string>
+    <string name="category_settings_shelf_life_clear">Ryd</string>
+    <plurals name="category_settings_shelf_life_days_format">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dage</item>
+    </plurals>
+    <string name="category_settings_rename_content_description">Omdøb kategori</string>
+
+    <string name="product_detail_nutriscore">Nutri-Score</string>
+    <string name="product_detail_nova">NOVA</string>
+    <string name="product_detail_allergens">Allergener</string>
+    <string name="product_detail_ingredients">Ingredienser</string>
+    <string name="product_detail_content_description">Næringsindhold og allergener</string>
+    <string name="allergen_warning_format">Indeholder: %1$s</string>
+    <string name="settings_section_allergens">Allergenadvarsler</string>
+    <string name="settings_allergens_desc">Advar mig, når en scannet vare nævner et af disse. Sammenligningen er løs, så den kan også slå ud på noget, der kun ligner.</string>
+    <string name="settings_add_allergen_placeholder">fx mælk, gluten, nødder</string>
+    <string name="settings_add_allergen">Tilføj</string>
+    <string name="settings_remove_allergen_content_description">Fjern allergen</string>
+    <string name="settings_section_appearance">Udseende</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Lyst</string>
+    <string name="settings_theme_dark">Mørkt</string>
+
+    <string name="settings_section_data">Data</string>
+    <string name="widget_expiry_label">Varer, der udløber</string>
+    <string name="widget_expiry_description">Viser, hvad der er udløbet eller udløber snart i dit forråd</string>
+    <string name="widget_expiry_title">Udløber</string>
+    <string name="widget_expiry_empty">Intet udløber snart</string>
+
+    <string name="widget_shopping_list_label">Indkøbsliste</string>
+    <string name="widget_shopping_list_description">Viser din aktuelle indkøbsliste</string>
+    <string name="widget_shopping_list_title">Indkøbsliste</string>
+    <string name="widget_shopping_list_empty">Din indkøbsliste er tom</string>
+    <string name="widget_action_used">Brugt én</string>
+    <string name="widget_action_used_item">Brugt én: %1$s</string>
+    <string name="widget_action_mark_bought">Markér %1$s som købt</string>
+
+    <string name="widget_overview_label">Overblik over forrådet</string>
+    <string name="widget_overview_description">Viser, hvad der er udløbet eller udløber snart, efterfulgt af din indkøbsliste</string>
+
+    <string name="settings_backup_desc">Dit forråd findes kun på denne enhed. Eksportér en sikkerhedskopi for at passe på det eller flytte det til en anden telefon.</string>
+    <string name="settings_export_backup_button">Eksportér sikkerhedskopi</string>
+    <string name="settings_import_backup_button">Importér sikkerhedskopi</string>
+    <string name="restore_mode_message">Billeder, du selv har taget, er ikke med i filen, så gendanner du på en anden enhed, vises de varer uden billede.</string>
+    <string name="restore_mode_merge_title">Tilføj det, der mangler</string>
+    <string name="restore_mode_merge_subtitle">Beholder alt, der allerede er her. Dine indstillinger forbliver uændrede.</string>
+    <string name="restore_mode_replace_title">Erstat alt</string>
+    <string name="restore_mode_replace_subtitle">Sletter først det, der er på denne enhed, også indstillingerne.</string>
+    <string name="backup_export_success">Sikkerhedskopien er gemt</string>
+    <string name="backup_export_failed">Sikkerhedskopien kunne ikke gemmes</string>
+    <string name="backup_import_malformed">Filen er ikke en sikkerhedskopi fra BestBefore. Intet blev ændret.</string>
+    <string name="backup_import_unsupported">Sikkerhedskopien er lavet med en nyere version af appen</string>
+    <string name="backup_import_empty">Der er intet at gendanne i sikkerhedskopien</string>
+    <plurals name="backup_import_success">
+        <item quantity="one">%1$d vare gendannet</item>
+        <item quantity="other">%1$d varer gendannet</item>
+    </plurals>
+    <string name="settings_clear_data_button">Slet alle data i forrådet</string>
+    <string name="clear_data_dialog_title">Slet alle data i forrådet?</string>
+    <string name="clear_data_dialog_message">Alle varer fjernes fra dit forråd, og alle planlagte påmindelser annulleres. Det kan ikke fortrydes.</string>
+    <string name="clear_data_confirm">Slet alle data</string>
+    <string name="settings_section_stores">Indkøbspåmindelser</string>
+    <string name="settings_store_reminders_enabled">Påmind mig nær en butik</string>
+    <string name="settings_store_reminders_desc">Viser din indkøbsliste, når du stopper ved en af dine gemte butikker. Bruger din placering i baggrunden; BestBefore sender den ikke til os og deler den ikke med nogen.</string>
+    <string name="settings_add_store_placeholder">Giv butikken et navn</string>
+    <string name="settings_add_store">Gem min nuværende placering</string>
+    <string name="settings_remove_store_content_description">Fjern butik</string>
+    <string name="settings_store_location_failed">Din placering kunne ikke findes. Tjek tilladelsen til placering, og prøv igen udendørs.</string>
+    <string name="background_location_disclosure_title">Bruge din placering i baggrunden?</string>
+    <string name="background_location_disclosure_message">BestBefore bruger din placering til at vise din indkøbsliste, når du kommer til en butik, du har gemt, også når appen er lukket eller ikke er i brug.\n\nDin placering bruges kun på denne telefon: BestBefore sender den ikke til os og deler den ikke med nogen.\n\nVælg »Tillad altid« på næste skærm.</string>
+    <string name="background_location_disclosure_continue">Fortsæt</string>
+    <string name="background_location_disclosure_not_now">Ikke nu</string>
+    <string name="store_reminder_channel_name">Indkøbspåmindelser</string>
+    <string name="store_reminder_channel_desc">Din indkøbsliste, når du er i en butik, du har gemt</string>
+    <string name="store_reminder_title_named_format">Du er i %1$s</string>
+    <plurals name="store_reminder_title_format">
+        <item quantity="one">%1$d ting at købe</item>
+        <item quantity="other">%1$d ting at købe</item>
+    </plurals>
+    <plurals name="store_reminder_more_format">
+        <item quantity="one">+%1$d mere</item>
+        <item quantity="other">+%1$d mere</item>
+    </plurals>
+
+    <string name="date_captured_title">Holdbarhedsdato læst</string>
+    <string name="scan_again_button">Scan igen</string>
+    <string name="shopping_list_scan_unsupported">Åbn scanneren fra dit forråd for at importere en delt liste</string>
+    <string name="batch_discard_title">Kassér scannede varer?</string>
+    <plurals name="batch_discard_message">
+        <item quantity="one">%1$d vare står i kø og er ikke tilføjet endnu.</item>
+        <item quantity="other">%1$d varer står i kø og er ikke tilføjet endnu.</item>
+    </plurals>
+    <string name="batch_discard_confirm">Kassér</string>
+    <string name="batch_discard_keep">Scan videre</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Indlæser</string>
+    <string name="status_today">I dag</string>
+    <string name="status_tomorrow">I morgen</string>
+    <plurals name="status_days_over">
+        <item quantity="one">%d dag over</item>
+        <item quantity="other">%d dage over</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d vare</item>
+        <item quantity="other">%1$d varer</item>
+    </plurals>
+    <string name="item_saved_snackbar">%1$s gemt i %2$s</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">%d vare slettet</item>
+        <item quantity="other">%d varer slettet</item>
+    </plurals>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Næste: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">Intet skal bruges i denne uge</string>
+    <string name="home_section_use_first">Brug først</string>
+    <string name="home_section_later_this_week">Senere i ugen</string>
+    <string name="home_section_later">Senere</string>
+    <string name="home_clear_filters">Ryd filtre</string>
+    <string name="home_search_description">Søg</string>
+    <string name="home_filters_on_description">Filtre, til</string>
+    <string name="home_empty_title">Dine hylder er tomme</string>
+    <string name="home_empty_message">Scan din første vare, så dukker den op her, med den tidligste dato først.</string>
+    <string name="home_empty_scan">Scan en vare</string>
+    <string name="home_empty_add_by_hand">Tilføj i hånden</string>
+    <string name="home_no_results_title">Intet passer til »%1$s«</string>
+    <string name="home_no_results_message">Tjek stavningen, eller prøv mærkets navn.</string>
+    <string name="home_clear_search">Ryd søgning</string>
+    <string name="home_no_filter_results_title">Intet passer til filtrene</string>
+    <string name="home_no_filter_results_message">Prøv et andet sted eller en anden kategori.</string>
+    <string name="home_reminders_off_title">Påmindelser er slået fra</string>
+    <string name="home_reminders_off_message">Notifikationer er slået fra for BestBefore i telefonens indstillinger.</string>
+    <string name="home_dismiss">Luk</string>
+    <string name="home_swipe_to_list">Til listen</string>
+    <string name="home_use_one_item">Brug én: %1$s</string>
+    <string name="home_used_one_snackbar">Én %1$s brugt. %2$d tilbage.</string>
+    <string name="home_location_label">Sted</string>
+    <string name="home_category_label">Kategori</string>
+    <string name="home_best_before_label">Bedst før</string>
+    <string name="home_notes_label">Noter</string>
+    <string name="home_done">Færdig</string>
+    <string name="detail_close">Luk</string>
+    <string name="detail_edit">Redigér</string>
+    <string name="detail_to_shopping_list">Til indkøbslisten</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Uforarbejdet</string>
+    <string name="detail_nova_2">Køkkeningredienser</string>
+    <string name="detail_nova_3">Forarbejdet</string>
+    <string name="detail_nova_4">Ultraforarbejdet</string>
+    <string name="detail_credit">Varedata og billeder fra Open Food Facts (openfoodfacts.org) under Open Database License og CC BY-SA</string>
+    <string name="detail_allergen_note">Den passer med din allergenliste. Sammenligningen er løs, så tjek etiketten.</string>
+    <string name="detail_choose_item">Vælg en vare for at se detaljerne.</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s ting skal bruges senest i morgen</item>
+        <item quantity="other">%1$s ting skal bruges senest i morgen</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s ting er over sin dato</item>
+        <item quantity="other">%1$s ting er over deres dato</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d resultat</item>
+        <item quantity="other">%d resultater</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d af %2$d vare</item>
+        <item quantity="other">%1$d af %2$d varer</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Vis %d vare</item>
+        <item quantity="other">Vis %d varer</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>Én</item>
+        <item>To</item>
+        <item>Tre</item>
+        <item>Fire</item>
+        <item>Fem</item>
+        <item>Seks</item>
+        <item>Syv</item>
+        <item>Otte</item>
+        <item>Ni</item>
+        <item>Ti</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>på mandag</item>
+        <item>på tirsdag</item>
+        <item>på onsdag</item>
+        <item>på torsdag</item>
+        <item>på fredag</item>
+        <item>på lørdag</item>
+        <item>på søndag</item>
+    </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Luk scanneren</string>
+    <string name="scan_torch_on">Til</string>
+    <string name="scan_torch_off">Fra</string>
+    <string name="scan_idle_results_title">Resultater vises her</string>
+    <string name="scan_idle_results_message">Scan en stregkode, så vises varen på denne side.</string>
+    <string name="scan_idle_date_title">Datoen vises her</string>
+    <string name="scan_idle_date_message">Hold kameraet roligt over den trykte dato.</string>
+    <string name="scan_idle_photo_title">Dit billede vises her</string>
+    <string name="scan_idle_photo_message">Tag et billede for at få forslag til navne.</string>
+    <string name="scan_allergen_note">Den passer med din allergenliste. Sammenligningen er løs, så tjek etiketten.</string>
+    <string name="scan_offline_title">Du er offline</string>
+    <string name="scan_offline_message">Varen kunne ikke slås op. Du kan fortsætte i hånden, og stregkoden bliver gemt med varen.</string>
+    <string name="scan_busy_title">Open Food Facts har travlt</string>
+    <string name="scan_busy_message">Varen kunne ikke slås op lige nu. Prøv igen om et minut, eller fortsæt i hånden, og stregkoden bliver gemt med varen.</string>
+    <string name="scan_try_again">Prøv igen</string>
+    <string name="scan_continue_by_hand">Fortsæt i hånden</string>
+    <string name="scan_best_before_format">Bedst før %1$s</string>
+    <string name="scan_date_from_barcode">Læst fra stregkoden</string>
+    <string name="scan_date_from_packaging">Læst fra emballagen</string>
+    <string name="scan_use_this_date">Brug denne dato</string>
+    <string name="scan_reading_receipt">Læser kvitteringen…</string>
+    <string name="receipt_queue_empty">Læs en kvittering for at starte listen</string>
+    <string name="scan_queue_cleared">Køen er ryddet</string>
+    <string name="scan_capture_failed">Billedet kunne ikke tages. Prøv igen.</string>
+    <string name="batch_queue_estimated_format">Anslået %1$s</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Påmindelser</string>
+    <string name="settings_group_kitchen">Dit køkken</string>
+    <string name="settings_notifications_blocked_title">Påmindelser er slået fra</string>
+    <string name="settings_off">Fra</string>
+    <string name="settings_allergens_none">Ingen endnu</string>
+    <string name="settings_add_allergen_label">Tilføj et allergen</string>
+    <string name="settings_data_summary">Sikkerhedskopi og sletning</string>
+    <string name="settings_location_default">Standard</string>
+    <string name="settings_location_taken">Du har allerede et sted, der hedder %1$s</string>
+    <string name="settings_rename_location_format">Omdøb: %1$s</string>
+    <string name="settings_delete_location_format">Slet: %1$s</string>
+    <string name="settings_set_default_location_format">Brug som standard: %1$s</string>
+    <string name="settings_remove_format">Fjern: %1$s</string>
+    <string name="settings_try_again">Prøv igen</string>
+    <string name="restore_mode_cancel">Importér ikke</string>
+    <string name="clear_data_keep">Behold mit forråd</string>
+    <string name="category_settings_empty_title">Ingen kategorier endnu</string>
+    <string name="category_settings_scan">Scan en vare</string>
+    <string name="category_settings_move_up">Flyt op</string>
+    <string name="category_settings_move_down">Flyt ned</string>
+    <string name="category_settings_move_done">Færdig</string>
+    <string name="category_settings_rename_field_label">Kategoriens navn</string>
+    <string name="category_settings_rename_confirm">Omdøb</string>
+    <string name="category_settings_rename_format">Omdøb kategori: %1$s</string>
+    <string name="category_settings_drag_handle_format">Træk for at flytte: %1$s</string>
+    <string name="category_settings_show_format">Vis: %1$s</string>
+    <string name="category_settings_shelf_life_format">Angiv standardholdbarhed: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Standardholdbarhed for %1$s</string>
+    <string name="category_settings_shelf_life_range">Fra 0 til 3650 dage</string>
+    <string name="category_settings_shelf_life_error">Skriv et tal fra 0 til 3650, hvilket er omkring 10 år</string>
+    <string name="category_settings_shelf_life_save">Gem</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">%1$d vare fjernes, og dens påmindelser annulleres. Det kan ikke fortrydes.</item>
+        <item quantity="other">Alle %1$d varer fjernes, og deres påmindelser annulleres. Det kan ikke fortrydes.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Indkøbsliste</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d ting at købe</item>
+        <item quantity="other">%d ting at købe</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Intet at købe</string>
+    <string name="shopping_list_already_listed">%1$s står allerede på din liste</string>
+    <string name="shopping_list_check_off">Kryds af</string>
+    <string name="shopping_list_import_label">Din liste</string>
+    <string name="shopping_list_close">Luk</string>
+    <string name="shopping_list_done">Færdig</string>
+    <string name="shopping_sections_label">Sektioner</string>
+    <string name="shopping_section_name_label">Sektionens navn</string>
+    <string name="shopping_section_keep">Behold sektion</string>
+    <string name="shopping_section_delete_confirm">Slet sektion</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">Dens %d vare flyttes til hovedlisten.</item>
+        <item quantity="other">Dens %d varer flyttes til hovedlisten.</item>
+    </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Giv den et navn, så du kan finde den igen</string>
+    <string name="add_see_details">Se detaljer</string>
+    <string name="add_notes_placeholder">fx åbnet, mængde, hylde</string>
+    <string name="discard_changes_title">Kassér ændringer?</string>
+    <string name="discard_changes_confirm">Kassér ændringer</string>
+    <string name="discard_changes_keep">Fortsæt redigering</string>
+    <string name="discard_new_message">Varen er ikke gemt, så den bliver ikke føjet til dit forråd.</string>
+    <string name="discard_edit_message">Dine ændringer af %1$s bliver ikke gemt. Varen forbliver, som den var.</string>
+
+
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">%1$s brugt</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Kom i gang</string>
+    <string name="onboarding_welcome_title">Minder dig om det, før maden bliver dårlig, ikke bagefter.</string>
+    <string name="onboarding_private_title">Ingen konto nødvendig</string>
+    <string name="onboarding_private_body">Ingen reklamer. Dit forråd gemmes på denne telefon. En opskrift fra en pakke sender de varer, du sætter kryds ved, og dine allergener til vores server.</string>
+    <string name="onboarding_notifications_title">Et stille puf, dagen før</string>
+    <string name="onboarding_notifications_body">Vi minder dig om det kl. 09.00 dagen før en dato. Du kan ændre tidspunktet eller slå påmindelser fra i Indstillinger.</string>
+    <string name="onboarding_sample_source">%1$s · 09.00</string>
+    <string name="onboarding_sample_title">Bør bruges snart</string>
+    <string name="onboarding_sample_body">Græsk yoghurt når sin dato i morgen.</string>
+    <string name="onboarding_sample_description">Eksempel på påmindelse: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Slå påmindelser til</string>
+    <string name="onboarding_not_now">Ikke nu</string>
+    <string name="onboarding_camera_title">Scan i stedet for at skrive</string>
+    <string name="onboarding_camera_body">Ret kameraet mod en vare, så udfylder %1$s detaljerne for dig. Billederne bliver på din enhed.</string>
+    <string name="onboarding_camera_barcodes_title">Stregkoder</string>
+    <string name="onboarding_camera_barcodes_body">Finder varen og dens navn</string>
+    <string name="onboarding_camera_dates_title">Trykte datoer</string>
+    <string name="onboarding_camera_dates_body">Læser datoen på pakken</string>
+    <string name="onboarding_camera_allow">Tillad kameraet</string>
+    <string name="onboarding_ready_title">Klar til din første vare</string>
+    <string name="onboarding_ready_body">Hent noget fra køleskabet, og scan det. Det tager få sekunder.</string>
+    <string name="onboarding_skip">Spring over</string>
+    <string name="onboarding_declined_title">Du kan starte uden dem</string>
+    <string name="onboarding_declined_body">Alt andet virker. Du kan altid ombestemme dig.</string>
+    <string name="onboarding_declined_reminders_title">Påmindelser er slået fra</string>
+    <string name="onboarding_declined_reminders_body">Hjem viser en besked med en måde at slå dem til på</string>
+    <string name="onboarding_declined_camera_title">Kameraet er slået fra</string>
+    <string name="onboarding_declined_camera_body">Scanneren viser, hvordan du tillader det</string>
+    <string name="onboarding_add_by_hand">Tilføj en vare i hånden</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Hvad skal du lave?</string>
+    <string name="recipe_saved_action">Gemte opskrifter</string>
+    <string name="recipe_settings_action">Opskriftsindstillinger</string>
+    <string name="recipe_cook_with">Lav mad med</string>
+    <string name="recipe_add_other">Tilføj andre varer</string>
+    <string name="recipe_difficulty">Sværhedsgrad</string>
+    <string name="recipe_difficulty_easy">Let</string>
+    <string name="recipe_difficulty_medium">Mellem</string>
+    <string name="recipe_difficulty_ambitious">Ambitiøs</string>
+    <string name="recipe_servings">Portioner</string>
+    <string name="recipe_servings_fewer">Færre</string>
+    <string name="recipe_servings_more">Flere</string>
+    <string name="recipe_time">Tid</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 time</string>
+    <string name="recipe_time_any">Vilkårlig</string>
+    <string name="recipe_more_options">Flere valg</string>
+    <string name="recipe_detail_summary_brief">Få detaljer</string>
+    <string name="recipe_detail_summary_standard">Normale detaljer</string>
+    <string name="recipe_detail_summary_step_by_step">Trin for trin</string>
+    <string name="recipe_meal_summary_any">Alle måltider</string>
+    <string name="recipe_diet_summary_none">Ingen særlig kost</string>
+    <!-- Time range slider, multi-choice meal and diet -->
+    <string name="recipe_time_range">%1$d–%2$d min</string>
+    <string name="recipe_time_up_to">op til %1$d min</string>
+    <string name="recipe_time_at_least">mindst %1$d min</string>
+    <string name="recipe_time_shortest">Korteste tid</string>
+    <string name="recipe_time_longest">Længste tid</string>
+    <string name="recipe_time_no_minimum">Intet minimum</string>
+    <string name="recipe_time_no_limit">Ingen grænse</string>
+    <plurals name="recipe_time_minutes_spoken">
+        <item quantity="one">%d minut</item>
+        <item quantity="other">%d minutter</item>
+    </plurals>
+    <string name="recipe_time_guide_hint">Den længste tid er en grænse; den korteste er kun vejledende.</string>
+    <string name="recipe_prompt_min_minutes">Helst omkring %1$d minutter eller mere</string>
+    <string name="recipe_prompt_meals">Passer til et af disse måltider: %1$s</string>
+    <string name="recipe_not_enough_items">Der er ikke nok at lave mad med, når din kost og dine allergener er trukket fra. Sæt kryds ved nogle flere varer. Der er ikke trukket nogen opskrift.</string>
+    <string name="recipe_not_enough_items_menu">Der er ikke nok til tre dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_diets_need_update">Opskrifter fra pakker kan endnu ikke kombinere glutenfri med en anden kost. Behold én af dem i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_language_needs_update">Opskrifter fra pakker kan endnu ikke skrives på dansk. Vælg et andet opskriftssprog i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_not_from_pantry_hint">Ingredienser uden mærket »I dit forråd« kommer ikke fra dit forråd: basisvarer eller nogle få ting, du måske skal købe.</string>
+    <!-- Add to shopping list -->
+    <string name="recipe_shopping_add">Føj til indkøbslisten</string>
+    <string name="recipe_shopping_title">Føj til indkøbslisten (%1$d)</string>
+    <string name="recipe_shopping_message">Fjern krydset ved det, du allerede har.</string>
+    <plurals name="recipe_shopping_confirm">
+        <item quantity="one">Tilføj %d vare</item>
+        <item quantity="other">Tilføj %d varer</item>
+    </plurals>
+    <string name="recipe_shopping_already">Allerede på din liste</string>
+    <plurals name="recipe_shopping_added">
+        <item quantity="one">%d tilføjet til din indkøbsliste</item>
+        <item quantity="other">%d tilføjet til din indkøbsliste</item>
+    </plurals>
+    <plurals name="recipe_menu_meal_note">
+        <item quantity="one">%2$s gælder kun hovedretterne.</item>
+        <item quantity="other">%2$s gælder kun hovedretterne.</item>
+    </plurals>
+    <string name="recipe_shopping_nothing_added">Alt står allerede på din indkøbsliste</string>
+    <string name="recipe_share_prompt">Del prompt</string>
+    <string name="recipe_copy_prompt">Kopiér prompt</string>
+    <string name="recipe_prompt_copied">Prompten er kopieret</string>
+    <string name="recipe_prompt_clip_label">Opskriftsprompt</string>
+    <string name="recipe_generate_on_phone">Lav på denne enhed</string>
+    <string name="recipe_cost_free">Gratis</string>
+    <string name="recipe_prompt_hint">Gratis: send prompten til en AI-app, du allerede bruger.</string>
+    <string name="recipe_tick_hint">Sæt kryds ved mindst én vare at lave mad med.</string>
+    <string name="recipe_writing_phone_title">Skriver på denne enhed</string>
+    <string name="recipe_writing_phone_body">Intet bliver sendt nogen steder hen. Det kan tage et minut.</string>
+    <string name="recipe_stop">Stop</string>
+    <string name="recipe_failed_phone">Opskriften kunne ikke skrives på denne enhed.</string>
+    <string name="recipe_try_again">Prøv igen</string>
+    <string name="recipe_preparing_title">Din enhed gør sig klar</string>
+    <string name="recipe_preparing_body">Dens egen model bliver stadig hentet. Indtil da kan du dele prompten.</string>
+    <string name="recipe_empty_title">Intet at lave mad med endnu</string>
+    <string name="recipe_empty_body">Tilføj det, du har derhjemme, så bliver de varer, der er tættest på deres dato, valgt for dig.</string>
+    <string name="recipe_done">Færdig</string>
+    <string name="recipe_result_title">Opskrift</string>
+    <string name="recipe_share_recipe">Del opskrift</string>
+    <string name="recipe_duration_hours">%1$d t</string>
+    <string name="recipe_duration_hours_minutes">%1$d t %2$d min</string>
+    <string name="recipe_ingredients">Ingredienser</string>
+    <string name="recipe_method">Fremgangsmåde</string>
+    <string name="recipe_in_pantry">I dit forråd</string>
+    <string name="recipe_tip">Tip</string>
+    <string name="recipe_source_phone">Skrevet på denne enhed · Intet blev sendt nogen steder hen</string>
+    <string name="recipe_source_server">Skrevet af vores server · Gemt på denne enhed</string>
+    <string name="recipe_not_found">Opskriften er ikke længere gemt.</string>
+    <string name="recipe_saved_today">I dag</string>
+    <string name="recipe_saved_yesterday">I går</string>
+    <string name="recipe_saved_from_phone">Skrevet på denne enhed</string>
+    <string name="recipe_saved_from_pack">Fra din pakke</string>
+    <string name="recipe_saved_empty_title">Ingen opskrifter endnu</string>
+    <string name="recipe_saved_empty_body">Opskrifter og menuer, der er skrevet i appen, gemmes her.</string>
+    <string name="recipe_deleted">Opskriften er slettet</string>
+    <string name="recipe_cooking">Madlavning</string>
+    <string name="recipe_cooking_desc">Bruges til alle opskrifter, prompter og menuer, indtil du ændrer dem.</string>
+    <string name="recipe_detail">Detaljegrad</string>
+    <string name="recipe_detail_brief">Kort</string>
+    <string name="recipe_detail_standard">Normal</string>
+    <string name="recipe_detail_step_by_step">Trin for trin</string>
+    <string name="recipe_meal_and_diet">Måltid og kost</string>
+    <string name="recipe_meal">Måltid</string>
+    <string name="recipe_meal_any">Alle</string>
+    <string name="recipe_meal_breakfast">Morgenmad</string>
+    <string name="recipe_meal_lunch">Frokost</string>
+    <string name="recipe_meal_dinner">Aftensmad</string>
+    <string name="recipe_meal_snack">Snack</string>
+    <string name="recipe_meal_dessert">Dessert</string>
+    <string name="recipe_diet">Kost</string>
+    <string name="recipe_diet_none">Ingen</string>
+    <string name="recipe_diet_vegetarian">Vegetarisk</string>
+    <string name="recipe_diet_vegan">Vegansk</string>
+    <string name="recipe_diet_pescatarian">Pescetarisk</string>
+    <string name="recipe_diet_gluten_free">Glutenfri</string>
+    <string name="recipe_diet_dairy_free">Mælkefri</string>
+    <string name="recipe_allergens_note">Din allergenliste fra Indstillinger bruges altid: %1$s.</string>
+    <string name="recipe_allergens_none">ingen endnu</string>
+    <string name="recipe_language">Sprog</string>
+    <string name="recipe_write_in">Skriv opskrifter på</string>
+    <string name="recipe_on_device_language_note">Modellen på denne enhed kan ikke skrive opskrifter på dette sprog, så »Lav på denne enhed« vises ikke for det.</string>
+    <string name="recipe_language_same_as_app">Samme som appen (%1$s)</string>
+    <string name="recipe_account">Konto</string>
+    <string name="recipe_account_none">Ingen konto. Du skal først tage stilling, når du køber en pakke, og de gratis muligheder bruger aldrig en konto.</string>
+    <string name="recipe_prompt_preferences_intro">Hold dig til følgende:</string>
+    <string name="recipe_prompt_difficulty_easy">Let at lave, for en nybegynder</string>
+    <string name="recipe_prompt_difficulty_medium">Middel sværhedsgrad</string>
+    <string name="recipe_prompt_difficulty_ambitious">Ambitiøs, for en, der elsker at lave mad</string>
+    <string name="recipe_prompt_detail_brief">En kort fremgangsmåde i få trin</string>
+    <string name="recipe_prompt_detail_standard">En normal detaljegrad</string>
+    <string name="recipe_prompt_detail_step_by_step">Hvert trin beskrevet i detaljer</string>
+    <string name="recipe_prompt_servings">Portioner: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Klar på højst %1$d minutter</string>
+    <string name="recipe_prompt_meal">Måltid: %1$s</string>
+    <string name="recipe_prompt_diet">Kost: %1$s</string>
+    <string name="recipe_prompt_allergens">Intet, der indeholder: %1$s</string>
+    <string name="recipe_prompt_language">Skriv opskriften på %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d mere i dit forråd</item>
+        <item quantity="other">%1$d mere i dit forråd</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d portion</item>
+        <item quantity="other">%1$d portioner</item>
+    </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Opskrifter tilbage: %1$d. Køb flere</string>
+    <string name="recipe_balance_only_description">Opskrifter tilbage: %1$d</string>
+    <string name="recipe_mode_label">Hvad skal laves</string>
+    <string name="recipe_mode_recipe">Opskrift</string>
+    <string name="recipe_mode_menu">Menu for 3 dage</string>
+    <string name="recipe_courses">Retter om dagen</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d ret</item>
+        <item quantity="other">%1$d retter</item>
+    </plurals>
+    <string name="recipe_generate">Lav opskrift</string>
+    <string name="recipe_generate_menu">Lav menu</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d opskrift</item>
+        <item quantity="other">%1$d opskrifter</item>
+    </plurals>
+    <string name="recipe_buy">Køb opskrifter</string>
+    <string name="recipe_menu_hint">En menu skrives på vores server og bruger %1$s fra en pakke.</string>
+    <string name="recipe_menu_short_title">En menu bruger %1$s</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">Du har %1$d tilbage. En enkelt opskrift kan stadig laves.</item>
+        <item quantity="other">Du har %1$d tilbage. En enkelt opskrift kan stadig laves.</item>
+    </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">%1$d opskrift tilbage</item>
+        <item quantity="other">%1$d opskrifter tilbage</item>
+    </plurals>
+    <string name="recipe_menu_short_none">Du har ingen opskrifter tilbage.</string>
+    <string name="recipe_writing_server_title">Skriver din opskrift</string>
+    <string name="recipe_writing_server_body">Et par sekunder. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.</string>
+    <string name="recipe_writing_menu_title">Planlægger tre dage</string>
+    <string name="recipe_writing_menu_body">Det kan tage op til to minutter. Du kan godt forlade skærmen; menuen kommer i Gemte opskrifter.</string>
+    <string name="recipe_offline_title">Ingen forbindelse</string>
+    <string name="recipe_offline_body">Opskrifter fra din pakke kræver internet. De gratis muligheder nedenfor virker stadig.</string>
+    <string name="recipe_failed_server">Opskriften kunne ikke skrives. Der er ikke trukket nogen opskrift.</string>
+    <string name="recipe_failed_server_menu">Menuen kunne ikke skrives. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_failed_limit_today">Det er grænsen for i dag. Prøv igen i morgen. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_failed_trouble_today">Vi har problemer med at skrive opskrifter lige nu. Prøv igen i morgen. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_failed_server_later">Det kunne ikke skrives lige nu. Prøv igen senere. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_failed_server_busy">En anden opskrift er stadig ved at blive skrevet. Prøv igen om et minut. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_failed_rate_limited">For mange opskrifter på kort tid. Prøv igen om et minut. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_left_out">»%1$s« blev udeladt: navnet kunne ikke sendes.</string>
+    <string name="recipe_ingredient_not_sent">»%1$s« kunne ikke sendes. Fjern krydset, eller giv den et nyt navn, og prøv så igen. Der er ikke trukket nogen opskrifter.</string>
+    <string name="recipe_allergen_not_sent">Dit allergen »%1$s« kunne ikke sendes, så der blev ikke skrevet noget: en opskrift uden det er måske ikke sikker. Giv det et nyt navn under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %1$d allergen, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</item>
+        <item quantity="other">Der blev ikke skrevet noget: en opskrift kan højst tage hensyn til %1$d allergener, og der er angivet flere. Fjern nogle under Allergenadvarsler i Indstillinger, og prøv så igen. Der er ikke trukket nogen opskrifter.</item>
+    </plurals>
+    <plurals name="recipe_refused">
+        <item quantity="one">Der kunne ikke laves en opskrift af disse varer. Det brugte %1$d opskrift, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+        <item quantity="other">Der kunne ikke laves en opskrift af disse varer. Det brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">Der kunne ikke laves en menu af disse varer. Det brugte %1$d opskrift, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+        <item quantity="other">Der kunne ikke laves en menu af disse varer. Det brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre. Prøv med færre eller andre varer.</item>
+    </plurals>
+    <string name="recipe_paused_title">Opskrifter fra pakker er sat på pause</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Din %1$d opskrift er i sikkerhed. De gratis muligheder nedenfor virker stadig.</item>
+        <item quantity="other">Dine %1$d opskrifter er i sikkerhed. De gratis muligheder nedenfor virker stadig.</item>
+    </plurals>
+    <string name="recipe_paused_body_none">De gratis muligheder nedenfor virker stadig.</string>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d opskrift tilføjet</item>
+        <item quantity="other">%1$d opskrifter tilføjet</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Gemt. %1$d opskrift tilbage</item>
+        <item quantity="other">Gemt. %1$d opskrifter tilbage</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Dit køb bliver bekræftet</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Du har betalt for %1$d opskrift, og den er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</item>
+        <item quantity="other">Du har betalt for %1$d opskrifter, og de er ikke tilføjet endnu. Vi bliver ved med at prøve; du behøver ikke at købe igen.</item>
+    </plurals>
+    <string name="recipe_try_now">Prøv nu</string>
+    <string name="recipe_pending_title">Venter på betaling</string>
+    <string name="recipe_pending_body">Dine opskrifter bliver tilføjet, når butikken bekræfter betalingen. Det kan tage et stykke tid.</string>
+    <string name="recipe_packs_body">Én opskrift er én ret skrevet af vores server. En menu for 3 dage bruger %1$s med to retter om dagen og %2$s med tre. De udløber ikke.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d opskrift</item>
+        <item quantity="other">%1$d opskrifter</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s pr. stk.</string>
+    <string name="recipe_cancel">Annullér</string>
+    <string name="recipe_back">Tilbage</string>
+    <string name="recipe_close">Luk</string>
+    <string name="recipe_ok">OK</string>
+    <string name="recipe_choice_title">Hvor skal dine opskrifter ligge?</string>
+    <string name="recipe_choice_body">Du vælger én gang. Du kan logge ind senere under Opskriftsindstillinger.</string>
+    <string name="recipe_choice_phone_title">På denne enhed, uden konto</string>
+    <string name="recipe_choice_phone_body">Intet at logge ind på. Opskrifterne hører til denne installation af appen: hvis du sletter appen eller skifter enhed, mister du dem, du ikke har brugt.</string>
+    <string name="recipe_choice_account_title">På en konto</string>
+    <string name="recipe_choice_account_body">Log ind med Google. Dine opskrifter følger med til en ny telefon, Android eller iPhone, hvor du end logger ind med Google. Vi gemmer dit konto-id og din e-mailadresse.</string>
+    <string name="recipe_sign_in_google">Log ind med Google</string>
+    <string name="recipe_apple_on_iphone_hint">Logget ind med Apple på en iPhone? Tilføj login med Google dér, under Opskriftsindstillinger, for at bruge dine opskrifter på denne enhed.</string>
+    <string name="recipe_have_account_hint">Har du allerede opskrifter på en konto? Log ind for at bruge dem her.</string>
+    <string name="recipe_store_error_title">Kan ikke få forbindelse til butikken</string>
+    <string name="recipe_store_error_body">Tjek din forbindelse, og prøv igen. Der er ikke trukket nogen penge.</string>
+    <string name="recipe_rejected_title">Købet kunne ikke tilføjes</string>
+    <string name="recipe_rejected_body">Butikken melder, at det er refunderet eller allerede brugt. Hvis du har betalt og ikke har fået nogen opskrifter, så kontakt butikken for at få pengene tilbage.</string>
+    <string name="recipe_your_recipes">Dine opskrifter</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">opskrift på denne enhed</item>
+        <item quantity="other">opskrifter på denne enhed</item>
+    </plurals>
+    <string name="recipe_on_phone_body">De hører til denne installation af appen. Hvis du sletter appen eller skifter enhed, mister du dem, du ikke har brugt. Log ind for i stedet at gemme dem på en konto; de flyttes med det samme.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">opskrift på din konto</item>
+        <item quantity="other">opskrifter på din konto</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Logget ind med %1$s</string>
+    <string name="recipe_signed_in_add_google">Login med Apple virker kun i iPhone-appen. Tilføj login med Google her for at blive ved med at bruge dem på Android.</string>
+    <string name="recipe_signed_in_google">Log ind med Google på en anden telefon, Android eller iPhone, for at bruge dem dér.</string>
+    <string name="recipe_signed_in_google_and_apple">Log ind med Google på en anden telefon, Android eller iPhone, eller med Apple på en iPhone, for at bruge dem dér.</string>
+    <string name="recipe_add_sign_in">Tilføj login med %1$s</string>
+    <string name="recipe_sign_out">Log ud</string>
+    <string name="recipe_delete_account">Slet konto</string>
+    <string name="recipe_sign_out_title">Log ud?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Din %1$d opskrift bliver på din konto. Log ind igen for at bruge den. Gemte opskrifter bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d opskrifter bliver på din konto. Log ind igen for at bruge dem. Gemte opskrifter bliver på denne enhed.</item>
+    </plurals>
+    <string name="recipe_delete_title">Slet din konto?</string>
+    <string name="recipe_apple_link_left_title">Forbindelsen til Apple er ikke fjernet</string>
+    <string name="recipe_apple_link_left_body">Din konto og dens opskrifter er slettet, men din Apple-konto er stadig forbundet med appen. For også at fjerne forbindelsen skal du slå Log ind med Apple fra for appen i indstillingerne for din Apple-konto.</string>
+    <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
+    <string name="recipe_allergen_consent_title">Send dine allergener til vores server?</string>
+    <string name="recipe_allergen_consent_body">For at skrive dette sendes din allergenliste (%1$s) sammen med de afkrydsede varer og dine præferencer til vores server og til Googles AI-model, så opskriften undgår de fødevarer. Google kan behandle den uden for EU. Vi bruger den kun til denne forespørgsel og gemmer den ikke bagefter. Google behandler den for at skrive opskriften og kan logge forespørgsler for at opdage misbrug. Du kan trække samtykket tilbage under Opskriftsindstillinger.\n\nDe gratis muligheder, enhedens egen model og den delte prompt, sender den ikke til os.</string>
+    <string name="recipe_allergen_consent_agree">Acceptér og fortsæt</string>
+    <string name="recipe_allergen_consent_agree_only">Acceptér</string>
+    <string name="recipe_allergen_consent_declined">Dine allergener bliver ikke sendt til vores server, så den kan ikke skrive dette. Slå afsendelse til under Opskriftsindstillinger, eller brug enhedens egen model eller den delte prompt.</string>
+    <string name="recipe_allergen_consent_setting">Send mine allergener til vores server</string>
+    <string name="recipe_allergen_consent_setting_on">Du gav samtykke den %1$s. Slå fra for at trække det tilbage: så skriver vores server ikke opskrifter, mens der er angivet allergener.</string>
+    <string name="recipe_allergen_consent_setting_off">Kræves for opskrifter fra vores server, mens der er angivet allergener. Vi bruger det kun til forespørgslen og gemmer det ikke.</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Dit login og din e-mailadresse slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+    </plurals>
+    <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
+    <string name="recipe_delete_device_data">Slet mine data fra vores server</string>
+    <string name="recipe_delete_device_title">Slet dine data fra vores server?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Din %1$d ubrugte opskrift går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+        <item quantity="other">Dine %1$d ubrugte opskrifter går tabt og kan hverken refunderes eller gendannes. Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af købene bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">Det anonyme login, som denne enhed bruger, slettes fra vores server; en registrering af eventuelle køb bliver gemt, men er ikke længere knyttet til dig. Gemte opskrifter og dit forråd bliver på denne enhed.</string>
+    <string name="recipe_delete_device_confirm">Slet data</string>
+    <string name="recipe_device_data_deleted">Dine data er slettet fra vores server</string>
+    <string name="recipe_delete_waits_for_purchase">Et køb er stadig ved at blive gennemført. Du kan slette, når det er færdigt.</string>
+    <string name="recipe_merge_title">Føje enhedens opskrifter til din konto?</string>
+    <string name="recipe_merge_body">Din konto har allerede %1$d opskrifter. De %2$d på denne enhed bliver føjet til den, så det bliver %3$d i alt. Det kan ikke fortrydes.</string>
+    <string name="recipe_merge_body_unknown">De %1$d opskrifter på denne enhed bliver føjet til din konto. Det kan ikke fortrydes.</string>
+    <string name="recipe_merge_confirm">Tilføj og log ind</string>
+    <string name="recipe_sign_in_failed">Du kunne ikke logges ind. Dine opskrifter er uændrede.</string>
+    <string name="recipe_sign_in_in_use">Det login hører allerede til en anden konto. Dine opskrifter er uændrede.</string>
+    <string name="recipe_account_deleted">Kontoen er slettet</string>
+    <string name="recipe_purchases_blocked">Du kan ikke købe opskrifter med denne konto, fordi tidligere køb blev refunderet, efter at opskrifterne var brugt.</string>
+    <string name="recipe_account_busy">En opskrift er stadig ved at blive skrevet. Prøv igen om et øjeblik.</string>
+    <string name="recipe_account_action_failed">Kunne ikke få forbindelse til vores server. Intet blev ændret.</string>
+    <string name="recipe_writing_busy_title">Vores server har travlt</string>
+    <string name="recipe_writing_busy_body">Prøver igen om et øjeblik. Du kan godt forlade skærmen; det, der kommer, ligger i Gemte opskrifter.</string>
+    <string name="recipe_busy_title">Vores server har travlt</string>
+    <string name="recipe_busy_body">Din forespørgsel er gemt og kan stadig blive skrevet. Prøv igen om et minut for at hente den. De gratis muligheder nedenfor virker stadig.</string>
+    <string name="recipe_elsewhere_title">Et køb hører til en anden konto</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d opskrift på denne enhed blev købt med en anden konto. Log ind på den konto, du købte den med, for at tilføje den.</item>
+        <item quantity="other">%1$d opskrifter på denne enhed blev købt med en anden konto. Log ind på den konto, du købte dem med, for at tilføje dem.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Denne kopi af appen er sat op til en anden butik, så den kan ikke tilføje køb fra Google Play. Købet blev ikke føjet til dine opskrifter. Google Play refunderer normalt et køb, der ikke er tilføjet inden for tre dage. Installér appen fra Google Play for at købe opskrifter.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d opskrift er flyttet fra denne enhed til din konto</item>
+        <item quantity="other">%1$d opskrifter er flyttet fra denne enhed til din konto</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">Denne enhed skyldte %1$d opskrift efter en refundering fra butikken. Den er trukket fra din konto.</item>
+        <item quantity="other">Denne enhed skyldte %1$d opskrifter efter en refundering fra butikken. De er trukket fra din konto.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">En opskrift, du bad om tidligere, er klar. Den ligger i Gemte opskrifter.</string>
+    <string name="recipe_earlier_menu_saved">En menu, du bad om tidligere, er klar. Den ligger i Gemte opskrifter.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d opskrift, da forsøget alligevel kostede os penge at køre.</item>
+        <item quantity="other">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre.</item>
+    </plurals>
+    <string name="recipe_menu_bar_title">Menu</string>
+    <string name="recipe_menu_title">Menu for tre dage</string>
+    <string name="recipe_menu_summary">%1$d retter om dagen til %2$d, med det, der udløber først.</string>
+    <string name="recipe_menu_today">I dag, %1$s</string>
+    <string name="recipe_menu_uses">Bruger %1$s</string>
+    <string name="recipe_course_starter">Forret</string>
+    <string name="recipe_course_main">Hovedret</string>
+    <string name="recipe_course_dessert">Dessert</string>
+    <string name="recipe_part_of_menu">Del af Menu for tre dage</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d ret</item>
+        <item quantity="other">%1$d retter</item>
+    </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredienser</string>
+    <string name="recipe_send_all">Send alle varer</string>
+    <string name="recipe_send_all_desc">Ud over de afkrydsede varer får opskriften resten af dit forråd som varer, den også må bruge. Når det er slået til, sender en opskrift fra en pakke navne, datoer og antal for alt i dit forråd til vores server, og en delt prompt viser dem også.</string>
+    <string name="recipe_intro_title">Sådan virker opskrifter</string>
+    <string name="recipe_intro_body">Sæt kryds ved det, du vil bruge op, vælg slags ret, og få en opskrift bygget op omkring det. Opskrifter, du får i appen, gemmes på denne enhed, efterhånden som de kommer.</string>
+    <string name="recipe_intro_prompt_title">Gratis, med enhver AI-app</string>
+    <string name="recipe_intro_prompt_body">Del eller kopiér en færdig prompt til den AI-app, du allerede bruger.</string>
+    <string name="recipe_intro_device_title">Gratis, på denne enhed</string>
+    <string name="recipe_intro_device_body">Enheden skriver selv opskriften, og intet bliver sendt nogen steder hen.</string>
+    <string name="recipe_intro_packs_title">Fra en opskriftspakke</string>
+    <string name="recipe_intro_packs_body">Vores server skriver opskriften og kan også planlægge en menu for 3 dage. En opskrift bruger %1$s fra en pakke; en menu bruger %2$s med 2 retter om dagen eller %3$s med 3.</string>
+    <string name="recipe_intro_packs_price">Pakker fra %1$s.</string>
+    <string name="recipe_intro_free_stays">De gratis muligheder er der stadig, når du har en pakke.</string>
+    <string name="recipe_intro_again">Du kan åbne dette igen under Opskriftsindstillinger.</string>
+    <string name="recipe_intro_start">Forstået</string>
+    <string name="recipe_intro_packs_action">Se opskriftspakker</string>
+    <string name="recipe_intro_settings_supporting">Måderne at få en opskrift på</string>
+    <string name="recipe_not_available_title">Opskrifter fra pakker er ikke tilgængelige i denne installation</string>
+    <string name="recipe_not_available_body">Der er ikke trukket nogen penge. De gratis muligheder virker stadig: del prompten med en AI-app, eller skriv opskriften på denne enhed, hvor det er muligt.</string>
+    <string name="recipe_not_available_debug">Debug-build: App Check afviste dette build. Registrér App Check-debugtokenet, som logcat udskriver (docs/recipe-setup.md, »Debug builds against the real project«).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">Den anden vare i dit forråd må også bruges</item>
+        <item quantity="other">De andre %1$d varer i dit forråd må også bruges</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">En afkrydset vare er %1$s over sin dato. Tjek, at den stadig er sikker at spise, eller fjern krydset.</string>
+    <string name="recipe_past_date_result_one">Over sin dato: %1$s. Tjek, at den stadig er sikker at spise, før du laver mad.</string>
+    <string name="recipe_past_date_result_many">Over deres dato: %1$s. Tjek, at de stadig er sikre at spise, før du laver mad.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date_one">En af dem er over sin dato. Jeg har valgt at bruge den alligevel, så lad være med at udelade den.</string>
+    <string name="recipe_prompt_past_date_many">Nogle af dem er over deres dato. Jeg har valgt at bruge dem alligevel, så lad være med at udelade dem.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d afkrydsede varer er over deres dato, den ældste med %2$s. Tjek, at de stadig er sikre at spise, eller fjern krydset.</item>
+        <item quantity="other">%1$d afkrydsede varer er over deres dato, den ældste med %2$s. Tjek, at de stadig er sikre at spise, eller fjern krydset.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d dag</item>
+        <item quantity="other">%d dage</item>
+    </plurals>
+</resources>

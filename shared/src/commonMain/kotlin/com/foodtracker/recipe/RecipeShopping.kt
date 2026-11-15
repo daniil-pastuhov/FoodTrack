@@ -88,15 +88,17 @@ private fun isShortItem(words: List<String>): Boolean =
 /** A word as the note lists hold it: lower case, edge punctuation off. */
 private fun noteWord(w: String): String = w.lowercase().trim('.', ';', ':', '(', ')', '!', '?', '"', '«', '»')
 
-private val OR_WORDS = setOf("or", "или", "eller")
+private val OR_WORDS = setOf("or", "или", "eller", "o", "u", "oder", "ou")
 
 /** Endings dropped from a part: the cook adds these to taste. */
 private val TASTE_TAILS: List<List<String>> = listOf(
     listOf("to", "taste"), listOf("as", "needed"), listOf("if", "needed"), listOf("optional"),
-    listOf("по", "вкусу"), listOf("по", "желанию"), listOf("etter", "smak"), listOf("etter", "behov"), listOf("valgfritt")
+    listOf("по", "вкусу"), listOf("по", "желанию"), listOf("etter", "smak"), listOf("etter", "behov"), listOf("valgfritt"),
+    listOf("al", "gusto"), listOf("a", "gusto"), listOf("opcional"), listOf("si", "es", "necesario"), listOf("nach", "geschmack"), listOf("nach", "belieben"), listOf("nach", "bedarf"),
+    listOf("selon", "goût"), listOf("au", "goût"), listOf("à", "volonté"), listOf("facultatif"), listOf("si", "nécessaire"), listOf("efter", "smak"), listOf("efter", "behov"), listOf("valfritt"), listOf("efter", "smag"), listOf("valgfrit")
 )
 
-/** Words that make a comma part a preparation or description note, in en, ru and nb. */
+/** Words that make a comma part a preparation or description note, in en, ru, nb, es, de, fr, sv and da. */
 private val NOTE_WORDS: Set<String> = setOf(
     // en
     "sliced", "chopped", "minced", "diced", "peeled", "grated", "crushed", "cubed", "halved", "quartered",
@@ -110,20 +112,48 @@ private val NOTE_WORDS: Set<String> = setOf(
     // nb
     "i", "til", "etter", "uten", "hakket", "finhakket", "grovhakket", "skivet", "skiver", "revet", "finrevet",
     "skrelt", "presset", "knust", "smeltet", "delt", "terninger", "strimler", "båter", "smak", "fint", "grovt",
-    "tynt", "tynne", "store", "stor", "små", "liten", "moden", "modne", "romtemperert", "servering", "pynt"
+    "tynt", "tynne", "store", "stor", "små", "liten", "moden", "modne", "romtemperert", "servering", "pynt",
+    // es
+    "en", "para", "sin", "al", "gusto", "rodajas", "dados", "tiras", "trozos", "cubos", "finamente", "fino",
+    "fina", "grande", "grandes", "pequeño", "pequeña", "pequeños", "pequeñas", "mediano", "mediana",
+    "maduro", "madura", "maduros", "maduras", "temperatura", "ambiente", "servir", "decorar",
+    "aproximadamente", "opcional", "cocido", "cocida",
+    // de
+    "in", "für", "ohne", "zum", "zur", "fein", "grob", "scheiben", "würfel", "würfeln", "streifen", "stücke",
+    "stücken", "ringe", "ringen", "geschmack", "belieben", "groß", "große", "großer", "klein", "kleine",
+    "kleiner", "reif", "reife", "zimmertemperatur", "servieren", "garnieren", "etwa", "ca", "gekocht",
+    "gekochte",
+    // fr
+    "pour", "sans", "dés", "tranches", "rondelles", "lamelles", "morceaux", "finement", "grossièrement",
+    "goût", "volonté", "facultatif", "mûr", "mûre",
+    "mûrs", "mûres", "température", "ambiante", "décorer", "environ", "cuit", "cuite",
+    // sv
+    "till", "efter", "utan", "hackad", "hackade", "skivad", "skivade", "skivor", "riven", "rivna", "skalad",
+    "skalade", "pressad", "pressade", "krossad", "krossade", "smält", "smälta", "delad", "delade", "tärnad",
+    "tärnade", "tärningar", "strimlor", "klyftor", "tunt", "tunna", "stora", "mogen", "mogna",
+    "rumstempererad", "rumstempererat", "garnering", "valfritt", "kokt", "kokta",
+    // da
+    "uden", "finthakket", "groft", "skåret", "skrællet", "skrællede", "tern", "både", "smag", "tyndt",
+    "tynde", "lille", "stuetemperatur", "valgfrit", "kogt", "kogte"
 )
 
-/** Stems of Russian and Norwegian preparation words, which have many endings. */
+/** Stems of preparation words with many endings (Russian, Norwegian, Spanish, German, French,
+ *  Swedish, Danish). */
 private val NOTE_PREFIXES: List<String> = listOf(
     "нарез", "мелк", "крупн", "тонк", "очищ", "натер", "натёр", "тёрт", "терт", "измельч", "рублен", "порублен",
     "нашинк", "размят", "растоп", "размягч", "охлажд", "комнатн", "вкус", "желани", "спел", "отвар",
-    "finhakk", "grovhakk", "valgfri"
+    "finhakk", "grovhakk", "valgfri",
+    "picad", "cortad", "rallad", "pelad", "trocead", "escurrid", "derretid", "machacad", "lavad",
+    "deshuesad", "gehackt", "geschnitt", "gewürfelt", "gerieb", "geschält", "halbiert", "geviertelt",
+    "zerdrück", "geschmolz", "gepresst", "abgetropf", "gewaschen", "entkernt", "zerlassen", "hach", "éminc",
+    "coupé", "coupée", "râpé", "éplu", "pelé", "écras", "égoutt", "fondu", "ciselé", "épépin", "dénoyaut",
+    "finhack", "grovhack", "finriv", "valfri", "finthakk", "grofthakk", "skåre"
 )
 
-/** Water in the ten recipe languages (the staple words' first group on the server). */
+/** Water in the recipe languages (the staple words' first group on the server). */
 private val WATER_WORDS = setOf(
     "water", "vann", "vannet", "wasser", "agua", "eau", "acqua", "woda", "wody", "wodę", "vatten",
-    "вода", "воды", "воду", "води", "кипяток", "окріп"
+    "вода", "воды", "воду", "води", "кипяток", "окріп", "vand", "vandet"
 )
 
 /** Whether a name the server marked a staple is water ("Water", "Cold water", "Тёплая вода"):

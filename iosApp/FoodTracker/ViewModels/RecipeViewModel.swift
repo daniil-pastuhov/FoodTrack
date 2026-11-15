@@ -77,6 +77,10 @@ enum RecipeFailure: Equatable {
     /// The selected diets can't all be sent to the server as it is now (gluten-free with another
     /// diet, before it reads several): nothing was sent. Android: `DietsNeedServerUpdate`.
     case dietsNeedServerUpdate
+    /// The recipe would be in Danish and the server hasn't said `acceptsDanish` (one deployed
+    /// before it): nothing was sent, never another language in its place. Android:
+    /// `LanguageNeedsServerUpdate`.
+    case languageNeedsServerUpdate
 }
 
 extension RecipeFailure {
@@ -272,6 +276,10 @@ final class RecipeViewModel: ObservableObject {
     }
 
     var routes: RecipeRoutes { RecipeRoutes.from(onDeviceAvailability) }
+
+    /// The phone has its own model, but not for the chosen recipe language: Recipe settings says
+    /// why "Generate on this device" isn't offered. Android: `RecipeUiState.onDeviceLanguageUnsupported`.
+    var onDeviceLanguageUnsupported: Bool { onDeviceAvailability == .unsupportedLanguage }
 
     // MARK: Configuration
 
@@ -481,6 +489,11 @@ final class RecipeViewModel: ObservableObject {
             multiChoice: credits.storage.serverTakesMultiChoice
         ) else {
             failure = .dietsNeedServerUpdate
+            return
+        }
+        // Danish only to a server that writes it.
+        if fresh.config.language == RecipeLanguage.da.rawValue, !credits.storage.serverTakesDanish {
+            failure = .languageNeedsServerUpdate
             return
         }
         guard !fresh.ingredients.isEmpty else {
@@ -694,6 +707,8 @@ final class RecipeViewModel: ObservableObject {
         // reads only the legacy config. The next try sends the legacy values (or says it can't);
         // the next answer with a balance says again what the server reads.
         if serverError == .invalidRequest, wire.config.isMultiChoice { credits.storage.serverTakesMultiChoice = false }
+        // Likewise Danish refused as invalid: a server rolled back to one from before it.
+        if serverError == .invalidRequest, wire.config.language == RecipeLanguage.da.rawValue { credits.storage.serverTakesDanish = false }
         if serverError == .insufficientCredits {
             if credits.canBuy { showsBuySheet = true }
             return

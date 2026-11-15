@@ -177,8 +177,8 @@ Apple says the app's manifest "doesn't need to cover data collected by third-par
 - [x] PurchaseHistory, UserID, EmailAddress, Name, OtherUserContent, Health: each linked, not
       tracking, App Functionality. Matches the table above.
 - [x] Crash Data, Other Diagnostic Data: in the Firebase manifests, not the app's. Matches.
-- [ ] Device ID: in neither manifest, but in the answers (judgement call 1). Not a contradiction:
+- [x] Device ID: in neither manifest, but in the answers (judgement call 1). Not a contradiction:
       the label may declare more than the manifests.
-- [ ] Analytics on Other Diagnostic Data: from the Firebase manifests (judgement call 2).
+- [x] Analytics on Other Diagnostic Data: from the Firebase manifests (judgement call 2).
 
 No disagreement that makes the manifest wrong was found, so it is unchanged.

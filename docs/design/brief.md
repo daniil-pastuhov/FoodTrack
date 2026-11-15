@@ -20,7 +20,7 @@ Artifacts: options https://claude.ai/artifact/TeLu92BMaS1QDhDVj98fPw · design h
 - Type: custom open-licence display face for headings and dates (Latin + Cyrillic), system fonts for body text
 
 ## Content
-- Language / locale: en-GB, ru-RU, nb-NO. Type must cover Cyrillic and Norwegian letters; Russian and Norwegian strings run longer than English.
+- Language / locale: en-GB, ru-RU, nb-NO; es, de, fr, sv and da added 2026-11-15. Type must cover Cyrillic and the Latin letters of all eight (å, æ, ø, ä, ö, ü, ß, é, ñ...); Russian, Norwegian, German and French strings run longer than English.
 - Voice and tone: plain and helpful, from store copy ("reminds you before food goes off, not after")
 - Sample data domain: groceries (Sourdough bread, Baby spinach, Greek yoghurt, Salmon fillet)
 

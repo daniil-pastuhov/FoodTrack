@@ -22,9 +22,9 @@ tipssiden sin (listen nederst). Ingen vedlegg; lenk til appsiden med skjermbilde
 > Appen krever ingen konto, har ingen reklame og ingen sporing, og matvarene lagres bare på
 > telefonen. Kildekoden er åpen.
 >
-> Norske husholdninger kastet i snitt 35 kilo mat per innbygger i 2023, ifølge NORSUS' kartlegging
+> Norske husholdninger kastet i snitt 35 kilo mat per innbygger i 2023, ifølge NORSUS' plukkanalyser
 > for Matvett. Mattilsynet forklarer at «best før» handler om kvalitet, mens mat
-> merket «siste forbruksdag» ikke skal spises etter datoen. Matvakt er laget for nettopp den hverdagen: å vite hva som står i
+> merket «siste forbruksdag» ikke bør spises etter datoen. Matvakt er laget for nettopp den hverdagen: å vite hva som står i
 > kjøleskapet, og når det bør brukes.
 >
 > Mer om appen, med skjermbilder: https://daniil-pastuhov.github.io/bestbefore-privacy/app.html
@@ -79,14 +79,19 @@ Gratis app for å holde oversikt over holdbarheten på maten hjemme.
 **Bakgrunnstall (kilder)**
 
 - Husholdningene kastet 35,0 kg mat per innbygger i 2023 (193 200 tonn), 18 % mindre per innbygger
-  enn i 2016 (42,6 kg). Kilde: NORSUS for Matvett, «Faktaark om matsvinn i husholdningene 2023»,
-  rapport OR.16.24, 2024:
-  https://www.matvett.no/uploads/documents/OR.16.24-Faktaark-om-matsvinn-i-husholdningene.pdf
+  enn i 2016 (42,6 kg; 40,3 kg i 2020). Tallet gjelder matsvinn, «den nyttbare delen av
+  matavfallet»; alt matavfall, også det ikke-nyttbare, var 70,6 kg. Beregnet fra plukkanalyser i
+  kommuner og IKS som dekker 42 % av befolkningen, og SSBs avfalls- og befolkningsstatistikk.
+  Kilde: NORSUS (Aina Stensgård) for Matvett, «Faktaark om matsvinn i husholdningene 2023»,
+  rapport OR.16.24, 2024 (sjekket 2026-11-15):
+  https://www.matvett.no/uploads/documents/Rapporter/OR.16.24-Faktaark-om-matsvinn-i-husholdningene.pdf
   (lenket fra https://www.matvett.no/rapporter). Matvett gjentar «35 kg mat per person i norske
   husholdninger i 2023» i «Slik var matsvinnåret 2024»:
   https://matvett.no/uploads/documents/Slik-var-matsvinnaret-2024.pdf
 - «Best før» og «siste forbruksdag»: Mattilsynet, «Holdbarhetsmerking på matvarer», publisert
-  31.03.2022:
+  31.03.2022, sjekket 2026-11-15: «Du bør altså ikke spise varer merket med "siste forbruksdag"
+  etter utløpsdato»; «best før» er en veiledning om hvor lenge kvaliteten kan forventes å holde
+  seg, og «"Best før" betyr ofte god etter»:
   https://mattilsynet.no/mat-og-drikke/merking-av-mat/holdbarhetsmerking-pa-matvarer
 - Mål om å halvere matsvinnet innen 2030 (bransjeavtalen): regjeringen.no, «Matsvinn»:
   https://www.regjeringen.no/no/tema/mat-fiske-og-landbruk/mat-og-ernaring/matsvinn/id2891197/

@@ -72,11 +72,15 @@ class GeminiNanoRecipeModel : OnDeviceRecipeModel {
 
     companion object {
         /**
-         * The recipe languages Gemini Nano is offered for. ML Kit validates the Prompt API in
-         * English (and Korean, which the app doesn't offer) and says other languages depend on
-         * the device and its downloaded models, with no way to ask. Rather than show a route
-         * that writes poorly, it is offered for English only; another language can be added
-         * here once it has been tried on real phones.
+         * The recipe languages Gemini Nano is offered for: the one place to widen it. ML Kit's
+         * Prompt API validated English (and Korean, which the app doesn't offer); its overview
+         * now says only that "availability of specific language support may vary depending on
+         * the particular device's configuration and the models that have been downloaded", and
+         * the API (genai-prompt 1.0.0-beta5) has no call that answers for a language: neither
+         * `checkStatus()` nor `getAvailableFeatures()` takes one. Rather than show a route that
+         * writes poorly, it is offered for English only; another language is added here once it
+         * has been tried on real phones. The route, the settings note and the model download all
+         * follow [supportsLanguage] for the chosen recipe language (`RecipeUiState`).
          */
         val SUPPORTED_LANGUAGES: Set<String> = setOf("en")
 

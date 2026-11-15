@@ -5,7 +5,7 @@
 #
 #   scripts/ios_preview.sh [output-dir]      # default: build/ios-preview
 #
-# Three clips per language, in <output-dir>/<en|ru|nb>/:
+# Three clips per language, in <output-dir>/<en|ru|nb|es|de|fr|sv|da>/:
 #   scan.mp4    the scanner opens on a pack, reads its barcode (the product card comes up) and then
 #               its printed date; Continue, Add item with the date filled in, Save; Home with
 #               "saved" and the list scrolled to the new item; then the Recipe tab, the items that
@@ -26,8 +26,8 @@
 #
 # It makes its own simulator ("Larder Preview 17 Pro Max", iOS 27.2) and deletes it at the end,
 # so it never changes the simulators the screenshot scripts keep; KEEP_SIM=1 leaves it for a
-# rerun, UDID=<udid> uses that one instead (and never deletes it). LANGS="en" records one
-# language. On a busy machine the recording drops frames: run it when the load is low.
+# rerun, UDID=<udid> uses that one instead (and never deletes it). Every language is recorded on
+# that one simulator, after one build; LANGS="en" (or "es de") records only those. On a busy machine the recording drops frames: run it when the load is low.
 set -euo pipefail
 
 ROOT=${0:A:h:h}
@@ -38,7 +38,7 @@ DERIVED=$ROOT/build/ios-preview-derived-data
 SIM_NAME="Larder Preview 17 Pro Max"
 DEVICE_TYPE=com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max
 RUNTIME=${RUNTIME:-com.apple.CoreSimulator.SimRuntime.iOS-27-2}
-LANGS=(${=LANGS:-en ru nb})
+LANGS=(${=LANGS:-en ru nb es de fr sv da})
 PACE=${PACE:-2.5}
 command -v maestro >/dev/null || { echo "needs maestro (https://maestro.dev) on PATH" >&2; exit 1; }
 
@@ -176,9 +176,13 @@ pause() { print -- "- extendedWaitUntil:\n    visible: \"zz-never-shown\"\n    t
   pause 1500
 } > "$OUT/flows/scroll.yaml"
 
-typeset -A REGIONS=(en en_GB ru ru_RU nb nb_NO)
+typeset -A REGIONS=(en en_GB ru ru_RU nb nb_NO es es_ES de de_DE fr fr_FR sv sv_SE da da_DK)
 # The scan card's Continue button, by language ("continue_button" in *.lproj/Localizable.strings).
-typeset -A CONTINUE=(en Continue ru Продолжить nb Fortsett)
+typeset -A CONTINUE=(en Continue ru Продолжить nb Fortsett es Continuar de Weiter fr Continuer
+  sv Fortsätt da Fortsæt)
+for LANG_CODE in $LANGS; do
+  [[ -n ${CONTINUE[$LANG_CODE]:-} ]] || { echo "unknown language $LANG_CODE (one of ${(k)REGIONS})"; exit 1; }
+done
 SCAN_DATE=$(python3 -c 'import datetime; print(datetime.date.today() + datetime.timedelta(days=12))')
 SCAN_BARCODE=$(cd "$ROOT/scripts" && python3 -c 'from demo_scan_image import BARCODE; print(BARCODE)')
 

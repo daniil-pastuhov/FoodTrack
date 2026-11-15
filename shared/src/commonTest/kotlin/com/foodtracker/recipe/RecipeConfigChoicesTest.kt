@@ -181,7 +181,32 @@ class RecipeConfigChoicesTest {
             "Hvitløk, presset" to listOf("Hvitløk"),
             "Gulrøtter, skrelt og i terninger" to listOf("Gulrøtter"),
             "Salt og pepper etter smak" to listOf("Salt og pepper"),
-            "Rømme eller crème fraîche" to listOf("Rømme eller crème fraîche")
+            "Rømme eller crème fraîche" to listOf("Rømme eller crème fraîche"),
+            "Sal, pimienta, aceite de oliva" to listOf("Sal", "Pimienta", "Aceite de oliva"),
+            "Cebolla, picada finamente" to listOf("Cebolla"),
+            "Sal y pimienta al gusto" to listOf("Sal y pimienta"),
+            "Ajo, 2 dientes" to listOf("Ajo"),
+            "Nata o leche" to listOf("Nata o leche"),
+            "Zwiebel, fein gehackt" to listOf("Zwiebel"),
+            "Salz, Pfeffer, Olivenöl" to listOf("Salz", "Pfeffer", "Olivenöl"),
+            "Salz und Pfeffer nach Geschmack" to listOf("Salz und Pfeffer"),
+            "Karotten, geschält und gewürfelt" to listOf("Karotten"),
+            "Oignon, émincé" to listOf("Oignon"),
+            "Sel, poivre, huile d'olive" to listOf("Sel", "Poivre", "Huile d'olive"),
+            "Sel et poivre au goût" to listOf("Sel et poivre"),
+            "Ail, 2 gousses, haché" to listOf("Ail"),
+            "Sel, petits pois" to listOf("Sel", "Petits pois"),
+            "Lök, finhackad" to listOf("Lök"),
+            "Salt, peppar, olivolja" to listOf("Salt", "Peppar", "Olivolja"),
+            "Salt och peppar efter smak" to listOf("Salt och peppar"),
+            "Morötter, skalade och tärnade" to listOf("Morötter"),
+            "Løg, finthakket" to listOf("Løg"),
+            "Salt, peber, olivenolie" to listOf("Salt", "Peber", "Olivenolie"),
+            "Salt og peber efter smag" to listOf("Salt og peber"),
+            "Gulerødder, skrællet og skåret i tern" to listOf("Gulerødder"),
+            "Salz, Pfeffer oder rote Chiliflocken" to listOf("Salz", "Pfeffer oder rote Chiliflocken"),
+            "Sal, pimienta si es necesario" to listOf("Sal", "Pimienta"),
+            "Tomates, pelées" to listOf("Tomates")
         )
         for ((raw, expected) in cases) assertEquals(expected, tidyShoppingNames(raw), raw)
     }
@@ -229,6 +254,104 @@ class RecipeConfigChoicesTest {
     fun withoutTheStapleMarkEveryNonPantryIngredientIsListed() {
         val rows = shoppingCandidates(listOf(dish(RecipeIngredient("1 l", "Water"), RecipeIngredient("", "salt"))), emptyList())
         assertEquals(listOf("Water", "Salt"), rows.map { it.name })
-        assertTrue(isPlainWater("Тёплая вода") && isPlainWater("Kaltes Wasser") && !isPlainWater("Watercress"))
+        assertTrue(isPlainWater("Тёплая вода") && isPlainWater("Kaltes Wasser") && isPlainWater("Koldt vand") && !isPlainWater("Watercress"))
+    }
+
+    // Every entry of the word lists, each in a case whose result depends on that entry alone
+    // (the same lists as RecipeShopping.kt and iosApp/RecipeConfigCheck/main.swift).
+
+    @Test
+    fun everyOrWordKeepsAThreeWordChoiceOneEntry() {
+        // Three words besides the "or": a short item only because the "or" is not counted.
+        for (or in listOf("or", "или", "eller", "o", "u", "oder", "ou")) {
+            assertEquals(listOf("Salt", "Chilli $or sweet paprika"), tidyShoppingNames("Salt, chilli $or sweet paprika"), or)
+        }
+    }
+
+    @Test
+    fun everyToTasteTailIsDropped() {
+        val tails = listOf(
+            "to taste", "as needed", "if needed", "optional", "по вкусу", "по желанию", "etter smak",
+            "etter behov", "valgfritt", "al gusto", "a gusto", "opcional", "si es necesario",
+            "nach geschmack", "nach belieben", "nach bedarf", "selon goût", "au goût", "à volonté",
+            "facultatif", "si nécessaire", "efter smak", "efter behov", "valfritt", "efter smag", "valgfrit"
+        )
+        for (tail in tails) {
+            assertEquals(listOf("Pepper"), tidyShoppingNames("Pepper $tail"), tail)
+            assertEquals(listOf("Pepper"), tidyShoppingNames("Pepper ${tail.uppercase()}"), tail)
+        }
+    }
+
+    @Test
+    fun everyNoteWordAndStemEndsTheList() {
+        // "Salt, <word> kale": two words, so only the note word keeps "<word> kale" off the list.
+        val noteWords = listOf(
+            "sliced", "chopped", "minced", "diced", "peeled", "grated", "crushed", "cubed", "halved",
+            "quartered", "drained", "rinsed", "washed", "trimmed", "beaten", "melted", "softened",
+            "shredded", "julienned", "divided", "zest", "deseeded", "seeded", "pitted", "cored", "stemmed",
+            "torn", "zested", "juiced", "squeezed", "thinly", "finely", "roughly", "coarsely", "cut", "into",
+            "taste", "optional", "needed", "such", "like", "for", "to", "about", "plus", "at", "room",
+            "temperature", "serving", "garnish", "preferably", "boneless", "skinless", "ripe", "large",
+            "small", "medium", "thick", "thin", "whole", "cooked", "uncooked", "по", "для", "без", "очень",
+            "кубиками", "ломтиками", "кольцами", "соломкой", "полосками", "дольками", "i", "til", "etter",
+            "uten", "hakket", "skivet", "skiver", "revet", "finrevet", "skrelt", "presset", "knust",
+            "smeltet", "delt", "terninger", "strimler", "båter", "smak", "fint", "grovt", "tynt", "tynne",
+            "store", "stor", "små", "liten", "moden", "modne", "romtemperert", "servering", "pynt", "en",
+            "para", "sin", "al", "gusto", "rodajas", "dados", "tiras", "trozos", "cubos", "finamente",
+            "fino", "fina", "grande", "grandes", "pequeño", "pequeña", "pequeños", "pequeñas", "mediano",
+            "mediana", "maduro", "madura", "maduros", "maduras", "temperatura", "ambiente", "servir",
+            "decorar", "aproximadamente", "opcional", "cocido", "cocida", "in", "für", "ohne", "zum", "zur",
+            "fein", "grob", "scheiben", "würfel", "würfeln", "streifen", "stücke", "stücken", "ringe",
+            "ringen", "geschmack", "belieben", "groß", "große", "großer", "klein", "kleine", "kleiner",
+            "reif", "reife", "zimmertemperatur", "servieren", "garnieren", "etwa", "ca", "gekocht",
+            "gekochte", "pour", "sans", "dés", "tranches", "rondelles", "lamelles", "morceaux", "finement",
+            "grossièrement", "goût", "volonté", "facultatif", "mûr", "mûre", "mûrs", "mûres", "température",
+            "ambiante", "décorer", "environ", "cuit", "cuite", "till", "efter", "utan", "hackad", "hackade",
+            "skivad", "skivade", "skivor", "riven", "rivna", "skalad", "skalade", "pressad", "pressade",
+            "krossad", "krossade", "smält", "smälta", "delad", "delade", "tärnad", "tärnade", "tärningar",
+            "strimlor", "klyftor", "tunt", "tunna", "stora", "mogen", "mogna", "rumstempererad",
+            "rumstempererat", "garnering", "kokt", "kokta", "uden", "groft", "skrællet", "skrællede", "tern",
+            "både", "smag", "tyndt", "tynde", "lille", "stuetemperatur", "kogt", "kogte"
+        )
+        val stems = listOf(
+            "нарез", "мелк", "крупн", "тонк", "очищ", "натер", "натёр", "тёрт", "терт", "измельч", "рублен",
+            "порублен", "нашинк", "размят", "растоп", "размягч", "охлажд", "комнатн", "вкус", "желани",
+            "спел", "отвар", "finhakk", "grovhakk", "valgfri", "picad", "cortad", "rallad", "pelad",
+            "trocead", "escurrid", "derretid", "machacad", "lavad", "deshuesad", "gehackt", "geschnitt",
+            "gewürfelt", "gerieb", "geschält", "halbiert", "geviertelt", "zerdrück", "geschmolz", "gepresst",
+            "abgetropf", "gewaschen", "entkernt", "zerlassen", "hach", "éminc", "coupé", "râpé", "éplu",
+            "pelé", "écras", "égoutt", "fondu", "ciselé", "épépin", "dénoyaut", "finhack", "grovhack",
+            "finriv", "valfri", "finthakk", "grofthakk", "skåre"
+        )
+        for (word in noteWords + stems) assertEquals(listOf("Salt"), tidyShoppingNames("Salt, $word kale"), word)
+        // Also in the lists, but each starts with a stem above, which is what makes it a note:
+        // "finhakket" (finhakk), "grovhakket" (grovhakk), "valfritt" (valfri), "finthakket"
+        // (finthakk), "skåret" (skåre), "valgfrit" (valgfri), and the stem "coupée" (coupé).
+        for (word in listOf("finhakket", "grovhakket", "valfritt", "finthakket", "skåret", "valgfrit", "coupée")) {
+            assertEquals(listOf("Salt"), tidyShoppingNames("Salt, $word kale"), word)
+        }
+        assertEquals(listOf("Salt", "Curly kale"), tidyShoppingNames("Salt, curly kale"), "without a note word the part is an item")
+    }
+
+    @Test
+    fun everyWaterWordIsWater() {
+        for (water in listOf("water", "vann", "vannet", "wasser", "agua", "eau", "acqua", "woda", "wody", "wodę", "vatten", "вода", "воды", "воду", "води", "кипяток", "окріп", "vand", "vandet")) {
+            assertTrue(isPlainWater("Cold $water"), water)
+            assertEquals(emptyList(), shoppingCandidates(listOf(dish(RecipeIngredient("1 l", water, staple = true))), emptyList()), water)
+        }
+        assertEquals(false, isPlainWater("Cold milk"))
+    }
+
+    // --- Recipe languages ----------------------------------------------------------------------
+
+    @Test
+    fun everyRecipeLanguageSurvivesNormalisingAndDanishIsAnAppLanguage() {
+        assertEquals(listOf("en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk", "da"), RECIPE_LANGUAGES)
+        for (code in RECIPE_LANGUAGES) assertEquals(code, RecipeConfig(language = code).normalized().language, code)
+        assertNull(RecipeConfig(language = "ja").normalized().language, "not a recipe language: back to the app's")
+        assertEquals("da", recipeConfigFromStoredJson("""{"language":"da"}""").language, "a stored Danish choice")
+        assertEquals("da", appRecipeLanguage("da"))
+        assertEquals("da", appRecipeLanguage("da-DK"))
+        assertEquals("da", RecipeConfig().resolvedLanguage(appRecipeLanguage("da_DK")))
     }
 }

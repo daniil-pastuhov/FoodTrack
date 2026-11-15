@@ -1,6 +1,7 @@
 #!/bin/sh
 # Checks the iOS ports of the multi-choice recipe config (toggling, normalising, reading old
-# stored configs), its legacy wire mapping, the exact past-date warnings and the shopping-list rows:
+# stored configs), its legacy wire mapping, the exact past-date warnings, the shopping-list rows
+# and the phone-model language rule:
 #   iosApp/RecipeConfigCheck/check.sh
 # Compiles RecipeModels.swift and RecipeWire.swift (with a stub of the pantry item)
 # outside the Xcode project and runs main.swift, the same cases as Android's

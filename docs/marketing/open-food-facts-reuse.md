@@ -31,7 +31,7 @@ BestBefore helps people use food before it expires. You scan a product's barcode
 
 How it uses Open Food Facts: read-only product lookups with the v2 product API (`GET https://world.openfoodfacts.org/api/v2/product/{barcode}.json`), one request per scanned barcode, sent from the user's phone with a custom User-Agent. Only the barcode is sent: no account, location or other user data. Each result is cached on the phone, so a product scanned before resolves without a new request. The product picture is loaded from the `image_front_url` Open Food Facts returns. The product sheet credits Open Food Facts and the licences (Open Database License, CC BY-SA). The app doesn't write anything back to Open Food Facts.
 
-Native apps for iPhone/iPad (SwiftUI) and Android (Jetpack Compose with Kotlin Multiplatform), in English, Russian and Norwegian. The pantry is stored only on the device and no account is needed. Free; recipe packs are an optional in-app purchase, and Open Food Facts data is not part of what is sold.
+Native apps for iPhone/iPad (SwiftUI) and Android (Jetpack Compose with Kotlin Multiplatform), in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish. The pantry is stored only on the device and no account is needed. Free; recipe packs are an optional in-app purchase, and Open Food Facts data is not part of what is sold.
 
 **Primary Theme**
 

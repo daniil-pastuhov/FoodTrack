@@ -144,7 +144,7 @@ export const MAX_TOTAL_INGREDIENTS = 30;
 export const MAX_OPTIONAL_NAME_CHARS = 1050;
 export const MAX_ALLERGENS = 20;
 export const NAME_MAX_LENGTH = 40;
-export const LANGUAGES = ["en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk"] as const;
+export const LANGUAGES = ["en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk", "da"] as const;
 
 /** deleteAccount requires a sign-in at most this old (non-anonymous accounts). */
 export const RECENT_SIGN_IN_SECONDS = 5 * 60;

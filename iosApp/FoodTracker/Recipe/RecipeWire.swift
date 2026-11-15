@@ -240,6 +240,8 @@ protocol BalanceCarrying {
     var acceptsOptionalIngredients: WireFlag? { get }
     /// From a server that reads the multi-choice config: `acceptsMultiChoiceConfig: true`.
     var acceptsMultiChoiceConfig: WireFlag? { get }
+    /// From a server that writes recipes in Danish: `acceptsDanish: true`.
+    var acceptsDanish: WireFlag? { get }
 }
 
 enum GenerateStatus: String, Decodable, Sendable {
@@ -258,6 +260,7 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
+    var acceptsDanish: WireFlag?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -277,6 +280,7 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
+    var acceptsDanish: WireFlag?
 }
 
 struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
@@ -285,6 +289,7 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
+    var acceptsDanish: WireFlag?
 }
 
 /// `moved` can be negative: a store refund's debt moves with the recipes.
@@ -295,6 +300,7 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var purchasesBlocked: WireFlag?
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
+    var acceptsDanish: WireFlag?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable, Equatable {
@@ -1191,15 +1197,17 @@ enum RecipeShopping {
         return String(s)
     }
 
-    private static let orWords: Set<String> = ["or", "или", "eller"]
+    private static let orWords: Set<String> = ["or", "или", "eller", "o", "u", "oder", "ou"]
 
     /// Endings dropped from a part: the cook adds these to taste.
     private static let tasteTails: [[String]] = [
         ["to", "taste"], ["as", "needed"], ["if", "needed"], ["optional"],
         ["по", "вкусу"], ["по", "желанию"], ["etter", "smak"], ["etter", "behov"], ["valgfritt"],
+        ["al", "gusto"], ["a", "gusto"], ["opcional"], ["si", "es", "necesario"], ["nach", "geschmack"], ["nach", "belieben"], ["nach", "bedarf"], ["selon", "goût"], ["au", "goût"],
+        ["à", "volonté"], ["facultatif"], ["si", "nécessaire"], ["efter", "smak"], ["efter", "behov"], ["valfritt"], ["efter", "smag"], ["valgfrit"],
     ]
 
-    /// Words that make a comma part a preparation or description note, in en, ru and nb.
+    /// Words that make a comma part a preparation or description note, in en, ru, nb, es, de, fr, sv and da.
     private static let noteWords: Set<String> = [
         // en
         "sliced", "chopped", "minced", "diced", "peeled", "grated", "crushed", "cubed", "halved", "quartered",
@@ -1214,19 +1222,47 @@ enum RecipeShopping {
         "i", "til", "etter", "uten", "hakket", "finhakket", "grovhakket", "skivet", "skiver", "revet", "finrevet",
         "skrelt", "presset", "knust", "smeltet", "delt", "terninger", "strimler", "båter", "smak", "fint", "grovt",
         "tynt", "tynne", "store", "stor", "små", "liten", "moden", "modne", "romtemperert", "servering", "pynt",
+        // es
+        "en", "para", "sin", "al", "gusto", "rodajas", "dados", "tiras", "trozos", "cubos", "finamente",
+        "fino", "fina", "grande", "grandes", "pequeño", "pequeña", "pequeños", "pequeñas", "mediano",
+        "mediana", "maduro", "madura", "maduros", "maduras", "temperatura", "ambiente", "servir", "decorar",
+        "aproximadamente", "opcional", "cocido", "cocida",
+        // de
+        "in", "für", "ohne", "zum", "zur", "fein", "grob", "scheiben", "würfel", "würfeln", "streifen",
+        "stücke", "stücken", "ringe", "ringen", "geschmack", "belieben", "groß", "große", "großer", "klein",
+        "kleine", "kleiner", "reif", "reife", "zimmertemperatur", "servieren", "garnieren", "etwa", "ca",
+        "gekocht", "gekochte",
+        // fr
+        "pour", "sans", "dés", "tranches", "rondelles", "lamelles", "morceaux", "finement", "grossièrement",
+        "goût", "volonté", "facultatif", "mûr",
+        "mûre", "mûrs", "mûres", "température", "ambiante", "décorer", "environ", "cuit", "cuite",
+        // sv
+        "till", "efter", "utan", "hackad", "hackade", "skivad", "skivade", "skivor", "riven", "rivna",
+        "skalad", "skalade", "pressad", "pressade", "krossad", "krossade", "smält", "smälta", "delad",
+        "delade", "tärnad", "tärnade", "tärningar", "strimlor", "klyftor", "tunt", "tunna", "stora", "mogen",
+        "mogna", "rumstempererad", "rumstempererat", "garnering", "valfritt", "kokt", "kokta",
+        // da
+        "uden", "finthakket", "groft", "skåret", "skrællet", "skrællede", "tern", "både", "smag", "tyndt",
+        "tynde", "lille", "stuetemperatur", "valgfrit", "kogt", "kogte",
     ]
 
-    /// Stems of Russian and Norwegian preparation words, which have many endings.
+    /// Stems of preparation words with many endings (Russian, Norwegian, Spanish, German, French,
+    /// Swedish, Danish).
     private static let notePrefixes: [String] = [
         "нарез", "мелк", "крупн", "тонк", "очищ", "натер", "натёр", "тёрт", "терт", "измельч", "рублен", "порублен",
         "нашинк", "размят", "растоп", "размягч", "охлажд", "комнатн", "вкус", "желани", "спел", "отвар",
         "finhakk", "grovhakk", "valgfri",
+        "picad", "cortad", "rallad", "pelad", "trocead", "escurrid", "derretid", "machacad", "lavad",
+        "deshuesad", "gehackt", "geschnitt", "gewürfelt", "gerieb", "geschält", "halbiert", "geviertelt",
+        "zerdrück", "geschmolz", "gepresst", "abgetropf", "gewaschen", "entkernt", "zerlassen", "hach",
+        "éminc", "coupé", "coupée", "râpé", "éplu", "pelé", "écras", "égoutt", "fondu", "ciselé", "épépin",
+        "dénoyaut", "finhack", "grovhack", "finriv", "valfri", "finthakk", "grofthakk", "skåre",
     ]
 
-    /// Water in the ten recipe languages (the server's staple words' first group).
+    /// Water in the recipe languages (the server's staple words' first group).
     private static let waterWords: Set<String> = [
         "water", "vann", "vannet", "wasser", "agua", "eau", "acqua", "woda", "wody", "wodę", "vatten",
-        "вода", "воды", "воду", "води", "кипяток", "окріп",
+        "вода", "воды", "воду", "води", "кипяток", "окріп", "vand", "vandet",
     ]
 
     /// Whether a name the server marked a staple is water: nobody buys tap water for a recipe.
