@@ -2,8 +2,9 @@
 
 A hand-over for continuing this workstream in a separate session. It records what was produced
 for store visibility and downloads, where each piece lives, what is still open and who has to
-act. Everything is on branch `feat/recipe` (PR #30) unless a line says otherwise. Nothing here
-has been posted, submitted or uploaded to a store.
+act. Everything is on `main` (PR #30, merged 2026-11-15) except the five new languages and what was
+retaken for them, which are on `feat/languages` (PR #33, to merge after the 2.1.0 release PR #31).
+Nothing here has been posted, submitted or uploaded to a store.
 
 ## Where things stand in the stores
 
@@ -34,7 +35,7 @@ has been posted, submitted or uploaded to a store.
 | README top with screenshots and store links | `README.md`, `docs/images/` | merged |
 | Product Hunt kit, community posts (en, nb, ru), press pitch (nb, en) | `docs/marketing/product-hunt.md`, `community-posts.md`, `press-pitch-no.md`, `press-pitch-en.md`, index in `docs/marketing/README.md` | drafts |
 | Landing page "About the app" | pull request `daniil-pastuhov/bestbefore-privacy#3`; URL after merge: `https://daniil-pastuhov.github.io/bestbefore-privacy/app.html` | merged and live since 2026-11-15, with the policy in eight languages (the owner accepts it being live ahead of the Recipe version) |
-| Privacy policy page per App Store language (en, ru, nb live; es, de, fr, sv, da on the same pull request #3) | `store-listing/app-store/<locale>/privacy_url.txt`, synced by `scripts/testflight.py` (a page not live yet gets the chooser root); Play stays on the root | in the repo; merge #3 before the release that syncs them |
+| Privacy policy page per App Store language (all eight live since 2026-11-15, `bestbefore-privacy#3`) | `store-listing/app-store/<locale>/privacy_url.txt`, synced by `scripts/testflight.py` (a page not live yet gets the chooser root); Play stays on the root | in the repo; set by the next release's listing sync |
 | App Store preview video, about 21 s, per language (en-GB, ru, no, es-ES, de-DE, fr-FR, sv, da; es-MX and fr-CA use es-ES's and fr-FR's) | scripts `scripts/ios_preview.sh`, `scripts/ios_preview_assemble.py`; output `build/app-store-preview/<locale>/preview.mp4` and `poster.png` (git-ignored, 26 MB each; regenerate with the two scripts) | recorded again 2026-11-15 in eight languages and checked frame by frame; not uploaded |
 
 ## Findings worth keeping from the analysis
@@ -87,8 +88,8 @@ has been posted, submitted or uploaded to a store.
    Nominations; by hand, there is no API in use).
 4. **Create the in-app event**: set `releaseDay`, run `python3 scripts/testflight.py event`
    (dry run), then `--apply`, preview the artwork in App Store Connect, later
-   `--apply --add-to-review`. The event's link `foodtracker://recipe` needs the app to route it
-   to the Recipe tab; that fix was in progress when this file was written.
+   `--apply --add-to-review`. The event's link `foodtracker://recipe` is routed to the Recipe tab by the
+   app (`AppRoute(externalName:)` in `AppRouter.swift`).
 5. **Post the Open Food Facts submission** (the owner posts it under their own GitHub name):
    `https://github.com/openfoodfacts/openfoodfacts-web/issues/new?template=new-reuse.yml`.
 6. **Set the Marketing URL.** The landing page pull request (`bestbefore-privacy#3`) was merged on

@@ -296,7 +296,7 @@ internal testing tracks are exempt").
       **check** that the merchant tax information and bank account are complete and verified,
       otherwise payouts stop. Recipe-setup step 4's "Payments profile and merchant account" box
       and the 15 % service fee tier are still open.
-- [ ] **Licence testers** (Settings > Licence testing): done 2026-11-14 (recipe-setup step 4).
+- [x] **Licence testers** (Settings > Licence testing): done 2026-11-14 (recipe-setup step 4).
 - [ ] **Store listing**: applied by the release (`play-listing` job); no console step.
 
 ## Pre-registration, experiments, custom listings
