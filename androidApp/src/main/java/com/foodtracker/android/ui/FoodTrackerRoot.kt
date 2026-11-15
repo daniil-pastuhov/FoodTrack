@@ -49,8 +49,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalWindowInfo
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.foodtracker.android.R
@@ -66,7 +64,6 @@ import com.foodtracker.android.ui.design.LocalShellChrome
 import com.foodtracker.android.ui.design.ScanFab
 import com.foodtracker.android.ui.design.ShellChrome
 import com.foodtracker.android.ui.design.isExpanded
-import com.foodtracker.android.ui.design.pinnedActionFitsBesidePill
 import com.foodtracker.android.ui.design.shellClearance
 import com.foodtracker.android.ui.navigation.AddItemMode
 import com.foodtracker.android.ui.navigation.ItemPrefill
@@ -696,41 +693,15 @@ fun FoodTrackerRoot(
             // composables themselves, so no surrounding padding is folded into the numbers.
             val density = LocalDensity.current
             var pillHeightPx by remember { mutableIntStateOf(0) }
-            var pillWidthPx by remember { mutableIntStateOf(0) }
             var scanHeightPx by remember { mutableIntStateOf(0) }
-            // The Recipe tab's pinned primary action, measured by the tab itself; 0 while the tab
-            // shows no action (writing, empty pantry) or isn't on screen.
-            var recipeActionSize by remember { mutableStateOf(IntSize.Zero) }
-            val recipeActionHeightPx = recipeActionSize.height
             val scanVisible = currentTab == LarderTab.Home && !shellChrome.scanHidden
-            val recipeActionVisible = currentTab == LarderTab.Recipe && recipeActionHeightPx > 0
             val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-            val windowWidth = with(density) { LocalWindowInfo.current.containerSize.width.toDp() }
-            // On a wide window the action sits level with the pill when it fits beside it, so a
-            // two-column form isn't covered at rest by an action stacked above the pill.
-            val recipeActionBesidePill = expanded && recipeActionVisible && pinnedActionFitsBesidePill(
-                windowWidth = windowWidth,
-                pillWidth = if (shellChrome.navHidden) 0.dp else with(density) { pillWidthPx.toDp() },
-                actionWidth = with(density) { recipeActionSize.width.toDp() }
-            )
             val clearance = shellClearance(
                 bottomInset = navBarInset,
                 pillHeight = if (shellChrome.navHidden) 0.dp else with(density) { pillHeightPx.toDp() },
-                scanHeight = when {
-                    scanVisible -> with(density) { scanHeightPx.toDp() }
-                    recipeActionVisible -> with(density) { recipeActionHeightPx.toDp() }
-                    else -> 0.dp
-                },
-                // The pinned action stacks above the pill unless it fits level with it.
-                expanded = expanded && (!recipeActionVisible || recipeActionBesidePill)
+                scanHeight = if (scanVisible) with(density) { scanHeightPx.toDp() } else 0.dp,
+                expanded = expanded
             )
-            // Level with the pill where it fits, as Scan on expanded Home; above it otherwise.
-            val recipeActionBottom = shellClearance(
-                bottomInset = navBarInset,
-                pillHeight = if (shellChrome.navHidden) 0.dp else with(density) { pillHeightPx.toDp() },
-                scanHeight = 0.dp,
-                expanded = recipeActionBesidePill
-            ).scan
 
             CompositionLocalProvider(
                 LocalLarderNavigator provides navigator,
@@ -820,9 +791,7 @@ fun FoodTrackerRoot(
                                 LarderRoute.Recipe -> {
                                     RecipeScreen(
                                         stateHolder = recipeStateHolder,
-                                        bottomOverlayClearance = clearance.content,
-                                        pinnedActionBottom = recipeActionBottom,
-                                        onPinnedActionSize = { recipeActionSize = it }
+                                        bottomOverlayClearance = clearance.content
                                     )
                                 }
                                 LarderRoute.Shopping -> {
@@ -896,7 +865,6 @@ fun FoodTrackerRoot(
                                     shoppingCount = shoppingListCount,
                                     modifier = Modifier.onGloballyPositioned {
                                         pillHeightPx = it.size.height
-                                        pillWidthPx = it.size.width
                                     }
                                 )
                             }

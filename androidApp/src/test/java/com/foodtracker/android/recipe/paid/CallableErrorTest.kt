@@ -94,6 +94,35 @@ class CallableErrorTest {
     }
 
     @Test
+    fun balanceAndMergeRepliesCarryMenuSetsAndTheirPrices() {
+        val reply = JsonObject(
+            mapOf(
+                "balance" to JsonPrimitive(4),
+                "acceptsMenuDays" to JsonPrimitive(true),
+                "costs" to JsonObject(
+                    mapOf(
+                        "recipe" to JsonPrimitive(1),
+                        "menu2" to JsonPrimitive(4),
+                        "menu3" to JsonPrimitive(5),
+                        "menuSets" to JsonObject(
+                            mapOf(
+                                "1" to JsonObject(mapOf("1" to JsonPrimitive(1), "2" to JsonPrimitive(2), "3" to JsonPrimitive(3))),
+                                "4" to JsonObject(mapOf("3" to JsonPrimitive(6)))
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        val balance = balanceReplyOf(reply)!!
+        assertEquals(true, balance.acceptsMenuDays)
+        assertEquals(1, balance.costs?.menuSet(1, 1))
+        assertEquals(6, balance.costs?.menuSet(4, 3))
+        assertEquals(true, mergeReplyOf(reply)?.acceptsMenuDays, "mergeBalance")
+        assertEquals(false, balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(4))))?.acceptsMenuDays, "a server from before menu sets")
+    }
+
+    @Test
     fun onlyAConnectionFailureLeavesAttestationUnknown() {
         assertEquals(true, RuntimeException("wrapped", IOException("reset")).isConnectionFailure(), "an I/O cause")
         assertEquals(false, RuntimeException("App attestation failed: 403").isConnectionFailure(), "a refusal")

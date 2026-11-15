@@ -79,6 +79,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     /** Whether getBalance says the server reads the multi-choice config. */
     var balanceMultiChoice = false
     var balanceDanish = false
+    var balanceMenuDays = false
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<DeleteReply>>()
     var deleteCalls = 0
@@ -112,7 +113,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays))
             is ServerResult.Err -> current
         }
     }
@@ -267,7 +268,8 @@ class RecipePaidTest {
     private var onWait: (RecipeStateHolder?) -> Unit = {}
     private var current: RecipeStateHolder? = null
 
-    private fun TestScope.holder() = makeHolder().also { current = it }
+    /** On the writing screen, as the person is when they ask for something. */
+    private fun TestScope.holder() = makeHolder().also { current = it; it.setOnScreen(true) }
 
     private fun TestScope.makeHolder() = RecipeStateHolder(
         pantry = pantry,
@@ -2590,5 +2592,346 @@ class RecipePaidTest {
             assertTrue(read(JsonPrimitive(true)), "$read: true")
             for (value in no) assertFalse(read(value), "$read: $value")
         }
+    }
+
+    // --- Menu sets: days and one course, only to a server that says acceptsMenuDays ----------
+
+    /** The server's default table (functions/CONTRACT.md "Costs"). */
+    private val menuSetTable: Map<Int, Map<Int, Int>> = (1..4).associateWith { days -> (1..3).associateWith { courses -> days + courses - 1 } }
+
+    private fun withMenuSets(balance: Int, takes: Boolean, table: Map<Int, Map<Int, Int>> = menuSetTable) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(
+            RecipePaidSnapshot(
+                allergenConsent = agreed,
+                balance = balance,
+                costs = RecipeCosts(menuSets = if (takes) table else emptyMap()),
+                serverTakesMenuDays = takes
+            )
+        )
+        backend.balanceMenuDays = takes
+        backend.balanceCosts = RecipeCosts(menuSets = if (takes) table else emptyMap())
+    }
+
+    private fun menuOf(days: Int, courses: Int): Menu = Menu(
+        (0 until days).map { day ->
+            MenuDay(
+                date = LocalDate(2026, 11, 4 + day),
+                uses = listOf("bread"),
+                courses = (if (courses == 1) listOf(MenuCourseKind.MAIN) else MenuCourseKind.entries.take(courses))
+                    .map { MenuCourse(it, sampleRecipe.copy(title = "Dish $day $it")) }
+            )
+        }
+    )
+
+    @Test
+    fun beforeTheServerSaysSoEveryMenuIsAThreeDayOneOfTwoOrThreeCourses() = runUnconfined {
+        withMenuSets(10, takes = false)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        holder.setDays(2)
+        holder.setCourses(1)
+        val state = holder.uiState.value
+        assertEquals(emptyList(), state.menuDayOptions, "no Days choice")
+        assertEquals(listOf(2, 3), state.menuCourseOptions)
+        assertEquals(3, state.menuDays)
+        assertEquals(3, state.menuCourses)
+        assertEquals(5, state.serverCost, "menu3")
+
+        backend.generateReplies += done(5, recipe = null, menu = menuOf(3, 3))
+        holder.generateOnServer()
+        val sent = backend.generated.single()
+        assertNull(sent.days)
+        assertEquals(3, sent.courses)
+        val json = RecipeJson.encodeToString(GenerateRequest.serializer(), sent)
+        assertFalse("\"days\"" in json, "the legacy request: $json")
+    }
+
+    @Test
+    fun aServerThatWritesMenuSetsGetsTheDaysAndOneCourse() = runUnconfined {
+        withMenuSets(10, takes = true)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        assertEquals(listOf(1, 2, 3, 4), holder.uiState.value.menuDayOptions)
+        assertEquals(listOf(1, 2, 3), holder.uiState.value.menuCourseOptions)
+        holder.setDays(1)
+        holder.setCourses(1)
+        val state = holder.uiState.value
+        assertEquals(1, state.menuDays)
+        assertEquals(1, state.menuCourses)
+        assertEquals(1, state.serverCost, "menuSets 1 x 1")
+
+        backend.generateReplies += done(9, recipe = null, menu = menuOf(1, 1))
+        holder.generateOnServer()
+        val sent = backend.generated.single()
+        assertEquals(1, sent.days)
+        assertEquals(1, sent.courses)
+        assertTrue("\"days\":1" in RecipeJson.encodeToString(GenerateRequest.serializer(), sent))
+        val written = holder.uiState.value.saved.single()
+        assertEquals(1, written.menu!!.days.size)
+        assertEquals("Menu for one day", written.title)
+    }
+
+    @Test
+    fun threeDaysIsStillTheLegacyRequestToAServerThatWritesMenuSets() = runUnconfined {
+        withMenuSets(10, takes = true)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        holder.setDays(4)
+        holder.setDays(3)
+        holder.setCourses(2)
+        assertEquals(4, holder.uiState.value.serverCost, "menuSets 3 x 2")
+        backend.generateReplies += done(6, recipe = null, menu = menuOf(3, 2))
+        holder.generateOnServer()
+        assertNull(backend.generated.single().days, "3 is never sent")
+        assertEquals(2, backend.generated.single().courses)
+    }
+
+    @Test
+    fun aCombinationWithoutAPriceIsNotOffered() = runUnconfined {
+        // A table without 4 days and without one course for 3 days.
+        withMenuSets(10, takes = true, table = mapOf(1 to mapOf(1 to 1, 2 to 2), 2 to mapOf(2 to 3), 3 to mapOf(2 to 4, 3 to 5)))
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        holder.setCourses(2)
+        assertEquals(listOf(1, 2, 3), holder.uiState.value.menuDayOptions, "no price for 4 days")
+        holder.setDays(4)
+        assertEquals(3, holder.uiState.value.menuDays)
+        holder.setDays(1)
+        assertEquals(listOf(1, 2), holder.uiState.value.menuCourseOptions, "1 day has no third course")
+        holder.setCourses(1)
+        assertEquals(1, holder.uiState.value.menuCourses)
+        assertEquals(listOf(1), holder.uiState.value.menuDayOptions, "one course only for 1 day")
+    }
+
+    @Test
+    fun aMenuSetRefusedAsInvalidClearsTheFlag() = runUnconfined {
+        withMenuSets(10, takes = true)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        holder.setDays(2)
+        // The server was rolled back: it refuses `days`, and its balance no longer says it takes them.
+        backend.balanceMenuDays = false
+        backend.balanceCosts = RecipeCosts()
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        holder.generateOnServer()
+
+        assertEquals(2, backend.generated.single().days)
+        assertFalse(paidRepository.get().serverTakesMenuDays)
+        assertFalse(holder.uiState.value.paid.menuSets)
+        assertEquals(emptyList(), holder.uiState.value.menuDayOptions)
+        assertEquals(3, holder.uiState.value.menuDays)
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+
+        // Try again: a 3-day menu, the legacy request.
+        holder.consumeEvent()
+        backend.generateReplies += done(5, recipe = null, menu = menuOf(3, 3))
+        holder.generateOnServer()
+        assertNull(backend.generated.last().days)
+    }
+
+    @Test
+    fun oneCourseRefusedAsInvalidClearsTheFlagToo() = runUnconfined {
+        withMenuSets(10, takes = true)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        holder.setCourses(1)
+        backend.balanceMenuDays = false
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        holder.generateOnServer()
+
+        assertEquals(1, backend.generated.single().courses)
+        assertNull(backend.generated.single().days)
+        assertFalse(paidRepository.get().serverTakesMenuDays)
+        assertEquals(listOf(2, 3), holder.uiState.value.menuCourseOptions)
+        assertEquals(2, holder.uiState.value.menuCourses, "one course falls back to two, as on iOS")
+        assertEquals(3, holder.uiState.value.menuDays)
+    }
+
+    private fun menuState(days: Int, courses: Int, sets: Boolean, table: Map<Int, Map<Int, Int>> = menuSetTable) = RecipeUiState(
+        mode = RecipeMode.MENU,
+        days = days,
+        courses = courses,
+        paid = PaidUiState(available = true, balance = 20, menuSets = sets, costs = RecipeCosts(menuSets = if (sets) table else emptyMap()))
+    )
+
+    @Test
+    fun theMenuAskedForFallsBackAsOnIos() {
+        fun asked(state: RecipeUiState) = state.menuDays to state.menuCourses
+        // Without the capability: 3 days, the chosen courses if 2 or 3, else 2.
+        assertEquals(3 to 3, asked(menuState(4, 3, sets = false)))
+        assertEquals(3 to 2, asked(menuState(1, 2, sets = false)))
+        assertEquals(3 to 2, asked(menuState(2, 1, sets = false)))
+        assertEquals(4, menuState(2, 1, sets = false).serverCost, "menu2")
+        // With it: the chosen pair when priced...
+        assertEquals(4 to 1, asked(menuState(4, 1, sets = true)))
+        assertEquals(4, menuState(4, 1, sets = true).serverCost)
+        // ...else 3 days with the chosen courses when priced...
+        val noFourDays = menuSetTable - 4
+        assertEquals(3 to 1, asked(menuState(4, 1, sets = true, table = noFourDays)))
+        // ...else 3 days of 2 courses.
+        val noOneCourse = menuSetTable.mapValues { (_, row) -> row - 1 }
+        assertEquals(3 to 2, asked(menuState(4, 1, sets = true, table = noOneCourse)))
+        assertEquals(4, menuState(4, 1, sets = true, table = noOneCourse).serverCost)
+    }
+
+    @Test
+    fun aBalanceThatSaysSoTurnsMenuSetsOnWithTheirPrices() = runUnconfined {
+        withMenuSets(10, takes = false)
+        backend.balanceMenuDays = true
+        backend.balanceCosts = RecipeCosts(menuSets = menuSetTable)
+        val holder = holder()
+        holder.onAppResume()
+        assertTrue(paidRepository.get().serverTakesMenuDays)
+        holder.setMode(RecipeMode.MENU)
+        holder.setDays(4)
+        holder.setCourses(3)
+        assertEquals(6, holder.uiState.value.serverCost)
+    }
+
+    @Test
+    fun theWritingScreenAndNotEnoughItemsFollowTheDays() = runUnconfined {
+        withMenuSets(10, takes = true)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        holder.setDays(2)
+        backend.generateGate = CompletableDeferred()
+        backend.generateReplies += ServerResult.Err(ServerError.NOT_ENOUGH_ITEMS)
+        holder.generateOnServer()
+        assertEquals(RecipeMode.MENU, holder.uiState.value.paid.writing)
+        assertEquals(2, holder.uiState.value.paid.writingDays)
+        backend.generateGate!!.complete(Unit)
+        assertEquals(RecipeEvent.NotEnoughItems(menu = true, days = 2), holder.uiState.value.event)
+    }
+
+    @Test
+    fun menuSetCostsAreReadLenientlyAndToleratedAbsent() {
+        val reply = buildJsonObject {
+            put("recipe", 1)
+            put("menu2", 4)
+            put("menu3", 5)
+            put("future", 9)
+            put("menuSets", buildJsonObject {
+                put("1", buildJsonObject { put("1", 1); put("2", 2); put("3", 3); put("4", 4) })
+                put("2", buildJsonObject { put("2", "3"); put("3", 4.0) })
+                put("9", buildJsonObject { put("2", 7) })
+                put("x", JsonPrimitive(true))
+                put("3", JsonPrimitive(5))
+            })
+        }
+        val costs = recipeCostsOf(reply)!!
+        assertEquals(mapOf(1 to mapOf(1 to 1, 2 to 2, 3 to 3), 2 to mapOf(3 to 4)), costs.menuSets)
+        assertEquals(1, costs.menuSet(1, 1))
+        assertNull(costs.menuSet(2, 2), "a string isn't a price")
+        assertEquals(4, costs.menuSet(3, 2), "3 days falls back to menu2")
+        assertEquals(5, costs.menuSet(3, 3))
+        assertNull(costs.menuSet(3, 1), "no flat price for one course")
+        assertNull(costs.menuSet(4, 2))
+        assertEquals(1..5, costs.menuSetRange)
+
+        val older = recipeCostsOf(buildJsonObject { put("recipe", 1); put("menu2", 3); put("menu3", 4) })!!
+        assertEquals(emptyMap(), older.menuSets)
+        assertNull(older.menuSetRange)
+        assertEquals(3, older.of(WireKind.MENU, 2))
+        assertEquals(4, older.of(WireKind.MENU, 3, days = null))
+        // Before any table: the 1 / 4 / 5 fallback, 3-day only.
+        assertNull(RecipeCosts().menuSet(2, 2))
+        assertEquals(5, RecipeCosts().menuSet(3, 3))
+    }
+
+    @Test
+    fun aRequestKeptByAnOlderVersionStillReads() {
+        val kept = """{"requestId":"r","kind":"menu","courses":3,"config":{"difficulty":"easy","servings":2,"maxMinutes":30,"language":"en"},"ingredients":[],"allergens":[],"today":"2026-11-04"}"""
+        val request = RecipeJson.decodeFromString(GenerateRequest.serializer(), kept)
+        assertNull(request.days)
+        assertEquals(5, RecipeCosts().of(request.kind, request.courses, request.days))
+    }
+
+    @Test
+    fun aMenuSavedBeforeMenuSetsStillLoadsWithThreeDays() {
+        val payload = RecipeJson.encodeToString(Menu.serializer(), sampleMenu(3))
+            // As an older version wrote it: no pastDate, nothing new.
+            .replace(",\"pastDate\":[]", "")
+        val saved = savedRecipeFromPayload("old", SavedRecipeKind.MENU, "Menu for three days", 1L, RecipeSource.SERVER, payload)!!
+        assertEquals(3, saved.menu!!.days.size)
+        assertEquals(9, saved.dishCount)
+        assertEquals("Menu for 2 days", menuSavedTitle(2))
+        assertEquals("Menu for one day", menuSavedTitle(1))
+    }
+
+    // --- Unread saved recipes --------------------------------------------------------------------
+
+    @Test
+    fun aResultShownOnArrivalIsRead() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertEquals(0, holder.uiState.value.unreadCount)
+        assertEquals(emptySet(), configRepository.storedOptions.unreadSaved)
+    }
+
+    @Test
+    fun aResultThatArrivesAfterThePersonLeftIsUnreadUntilOpened() = runUnconfined {
+        withBalance(5)
+        val holder = holder()
+        backend.generateGate = CompletableDeferred()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        // Left for another tab while it was being written.
+        holder.setOnScreen(false)
+        backend.generateGate!!.complete(Unit)
+
+        val state = holder.uiState.value
+        assertEquals(RecipeEvent.SavedUnread(menu = false, recipesLeft = 4), state.event)
+        val id = state.saved.single().id
+        assertTrue(state.isUnread(id))
+        assertEquals(1, state.unreadCount)
+        assertEquals(setOf(id), configRepository.storedOptions.unreadSaved, "kept beside the options")
+        assertNull(paidRepository.get().pendingGeneration)
+
+        holder.setOnScreen(true)
+        holder.markSavedRead(id)
+        assertEquals(0, holder.uiState.value.unreadCount)
+        assertEquals(emptySet(), configRepository.storedOptions.unreadSaved)
+    }
+
+    @Test
+    fun aRecoveredGenerationIsUnreadAndDeletingItRemovesIt() = runUnconfined {
+        withBalance(5)
+        paidRepository = InMemoryRecipePaidRepository(
+            RecipePaidSnapshot(
+                allergenConsent = agreed,
+                balance = 5,
+                pendingGeneration = GenerateRequest(
+                    "held", WireKind.MENU, courses = 2, config = WireConfig(language = "en"),
+                    ingredients = listOf(WireIngredient("Bread", "2026-11-03", 1)), allergens = emptyList(), today = "2026-11-04"
+                ),
+                pendingSinceMillis = now
+            )
+        )
+        backend.generateReplies += done(1, recipe = null, menu = sampleMenu(2))
+        val holder = holder()
+        holder.onAppResume()
+
+        val state = holder.uiState.value
+        assertEquals(PaidEvent.EarlierSaved(menu = true), state.paid.event)
+        assertEquals(1, state.unreadCount)
+        val id = state.saved.single().id
+        holder.deleteSaved(id)
+        assertEquals(0, holder.uiState.value.unreadCount)
+        assertEquals(emptySet(), configRepository.storedOptions.unreadSaved)
+    }
+
+    @Test
+    fun theBadgeCountsOnlyUnreadIdsThatAreStillSaved() = runUnconfined {
+        configRepository.storedOptions = RecipeOptions(unreadSaved = setOf("gone", "saved0"))
+        saved.rows.value = listOf(SavedRecipe.of("saved0", sampleRecipe, 1L))
+        val holder = holder()
+        assertEquals(1, holder.uiState.value.unreadCount)
+        holder.clearAll()
+        assertEquals(0, holder.uiState.value.unreadCount)
+        assertEquals(emptySet(), configRepository.storedOptions.unreadSaved)
     }
 }

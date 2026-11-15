@@ -1,6 +1,9 @@
 package com.foodtracker.android.ui.design
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -46,6 +49,7 @@ import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
+import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
@@ -192,6 +196,77 @@ private fun LarderButtonImpl(
     }
 }
 
+/**
+ * A form's primary action, the first and only filled button of its group (the Recipe tab's
+ * Generate or Share): full width as the caller sizes it, 56dp high, with [cost] as a small
+ * outlined pill at the end ("Free", "5 recipes"). Drawn in the flow of the form, not floating.
+ * The label wraps when large text needs it.
+ */
+@Composable
+fun LarderPrimaryAction(
+    text: String,
+    icon: LarderIcons,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    cost: String? = null,
+    enabled: Boolean = true
+) {
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val hovered by source.collectIsHoveredAsState()
+    val focused by source.collectIsFocusedAsState()
+    val scheme = MaterialTheme.colorScheme
+    val overlay = when {
+        pressed -> 0.14f
+        hovered -> 0.08f
+        else -> 0f
+    }
+    val container = when {
+        !enabled -> scheme.onSurface.copy(alpha = 0.12f)
+        overlay == 0f -> scheme.primary
+        else -> scheme.onPrimary.copy(alpha = overlay).compositeOver(scheme.primary)
+    }
+    val content = if (enabled) scheme.onPrimary else scheme.onSurface.copy(alpha = 0.38f)
+    CompositionLocalProvider(LocalRippleConfiguration provides null) {
+        Button(
+            onClick = onClick,
+            modifier = modifier
+                .heightIn(min = 56.dp)
+                .focusRing(focused, LarderTheme.colors.focusRing, CircleShape),
+            enabled = enabled,
+            shape = CircleShape,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = container,
+                contentColor = content,
+                disabledContainerColor = container,
+                disabledContentColor = content
+            ),
+            elevation = null,
+            contentPadding = PaddingValues(horizontal = LarderSpace.s5, vertical = LarderSpace.s2),
+            interactionSource = source
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LarderIcon(icon, contentDescription = null, tint = content)
+                Text(text = text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = content)
+                cost?.let {
+                    Text(
+                        text = it,
+                        modifier = Modifier
+                            .border(1.dp, content, RoundedCornerShape(LarderRadius.xl))
+                            .padding(horizontal = LarderSpace.s2, vertical = 2.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = content,
+                        maxLines = 1
+                    )
+                }
+            }
+        }
+    }
+}
+
 /** A 48dp round icon button. [contentDescription] is required: an icon alone says nothing to a
  *  screen reader. */
 @Composable
@@ -264,6 +339,17 @@ internal fun LarderButtonStylesPreview() = LarderPreview {
         LarderButton("Delete", {}, style = LarderButtonStyle.DangerText, leadingIcon = LarderIcons.Trash2)
         LarderButton("Use one", {}, leadingIcon = LarderIcons.CircleMinus, modifier = Modifier.fillMaxWidth())
         LarderButton("Keep separate", {}, style = LarderButtonStyle.Outline, enabled = false)
+    }
+}
+
+@PreviewLightDark
+@Composable
+internal fun LarderPrimaryActionPreview() = LarderPreview {
+    Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
+        LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 recipe")
+        LarderPrimaryAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
+        LarderPrimaryAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
+        LarderPrimaryAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
     }
 }
 

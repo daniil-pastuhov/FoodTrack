@@ -769,7 +769,10 @@
     <string name="recipe_prompt_min_minutes">Helst omkring %1$d minutter eller mere</string>
     <string name="recipe_prompt_meals">Passer til et af disse måltider: %1$s</string>
     <string name="recipe_not_enough_items">Der er ikke nok at lave mad med, når din kost og dine allergener er trukket fra. Sæt kryds ved nogle flere varer. Der er ikke trukket nogen opskrift.</string>
-    <string name="recipe_not_enough_items_menu">Der er ikke nok til tre dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</string>
+    <plurals name="recipe_not_enough_items_menu">
+        <item quantity="one">Der er ikke nok til én dag. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</item>
+        <item quantity="other">Der er ikke nok til %1$d dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</item>
+    </plurals>
     <string name="recipe_diets_need_update">Opskrifter fra pakker kan endnu ikke kombinere glutenfri med en anden kost. Behold én af dem i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen opskrifter.</string>
     <string name="recipe_language_needs_update">Opskrifter fra pakker kan endnu ikke skrives på dansk. Vælg et andet opskriftssprog i opskriftsindstillingerne, eller brug enhedens egen model eller den delte prompt. Der er ikke trukket nogen opskrifter.</string>
     <string name="recipe_not_from_pantry_hint">Ingredienser uden mærket »I dit forråd« kommer ikke fra dit forråd: basisvarer eller nogle få ting, du måske skal købe.</string>
@@ -883,7 +886,22 @@
     <string name="recipe_balance_only_description">Opskrifter tilbage: %1$d</string>
     <string name="recipe_mode_label">Hvad skal laves</string>
     <string name="recipe_mode_recipe">Opskrift</string>
-    <string name="recipe_mode_menu">Menu for 3 dage</string>
+    <string name="recipe_mode_menu">Menusæt</string>
+    <string name="recipe_menu_days">Dage</string>
+    <plurals name="recipe_menu_days_count">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dage</item>
+    </plurals>
+    <plurals name="recipe_packs_body_sets">
+        <item quantity="one">Én opskrift er én ret skrevet af vores server. Et menusæt bruger %1$d til %2$d opskrift, afhængigt af dage og retter om dagen. De udløber ikke.</item>
+        <item quantity="other">Én opskrift er én ret skrevet af vores server. Et menusæt bruger %1$d til %2$d opskrifter, afhængigt af dage og retter om dagen. De udløber ikke.</item>
+    </plurals>
+    <string name="recipe_intro_packs_body_sets">Vores server skriver opskriften og kan også planlægge et menusæt. En opskrift bruger %1$s fra en pakke; et menusæt bruger %2$d til %3$d, afhængigt af dage og retter om dagen.</string>
+    <plurals name="recipe_saved_unread_action">
+        <item quantity="one">Gemte opskrifter, %1$d ny</item>
+        <item quantity="other">Gemte opskrifter, %1$d nye</item>
+    </plurals>
+    <string name="recipe_saved_unread">Ny</string>
     <string name="recipe_courses">Retter om dagen</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d ret</item>
@@ -909,7 +927,10 @@
     <string name="recipe_menu_short_none">Du har ingen opskrifter tilbage.</string>
     <string name="recipe_writing_server_title">Skriver din opskrift</string>
     <string name="recipe_writing_server_body">Et par sekunder. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.</string>
-    <string name="recipe_writing_menu_title">Planlægger tre dage</string>
+    <plurals name="recipe_writing_menu_title">
+        <item quantity="one">Planlægger én dag</item>
+        <item quantity="other">Planlægger %1$d dage</item>
+    </plurals>
     <string name="recipe_writing_menu_body">Det kan tage op til to minutter. Du kan godt forlade skærmen; menuen kommer i Gemte opskrifter.</string>
     <string name="recipe_offline_title">Ingen forbindelse</string>
     <string name="recipe_offline_body">Opskrifter fra din pakke kræver internet. De gratis muligheder nedenfor virker stadig.</string>
@@ -1064,14 +1085,23 @@
         <item quantity="other">En opskrift, du bad om tidligere, kunne ikke laves. Den brugte %1$d opskrifter, da forsøget alligevel kostede os penge at køre.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
-    <string name="recipe_menu_title">Menu for tre dage</string>
-    <string name="recipe_menu_summary">%1$d retter om dagen til %2$d, med det, der udløber først.</string>
+    <plurals name="recipe_menu_title">
+        <item quantity="one">Menu for én dag</item>
+        <item quantity="other">Menu for %1$d dage</item>
+    </plurals>
+    <plurals name="recipe_menu_summary">
+        <item quantity="one">Én ret om dagen til %2$d, med det, der udløber først.</item>
+        <item quantity="other">%1$d retter om dagen til %2$d, med det, der udløber først.</item>
+    </plurals>
     <string name="recipe_menu_today">I dag, %1$s</string>
     <string name="recipe_menu_uses">Bruger %1$s</string>
     <string name="recipe_course_starter">Forret</string>
     <string name="recipe_course_main">Hovedret</string>
     <string name="recipe_course_dessert">Dessert</string>
-    <string name="recipe_part_of_menu">Del af Menu for tre dage</string>
+    <plurals name="recipe_part_of_menu">
+        <item quantity="one">Del af Menu for én dag</item>
+        <item quantity="other">Del af Menu for %1$d dage</item>
+    </plurals>
     <plurals name="recipe_saved_dishes">
         <item quantity="one">%1$d ret</item>
         <item quantity="other">%1$d retter</item>

@@ -87,13 +87,19 @@ internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onD
             if (content.packs) {
                 val costs = paid.costs
                 val body = buildString {
+                    // A menu set's range when the server writes them; else the 3-day menu.
+                    val range = costs.menuSetRange
                     append(
-                        stringResource(
-                            R.string.recipe_intro_packs_body,
-                            recipeCount(resources, costs.recipe),
-                            recipeCount(resources, costs.menu2),
-                            recipeCount(resources, costs.menu3)
-                        )
+                        if (range != null) {
+                            stringResource(R.string.recipe_intro_packs_body_sets, recipeCount(resources, costs.recipe), range.first, range.last)
+                        } else {
+                            stringResource(
+                                R.string.recipe_intro_packs_body,
+                                recipeCount(resources, costs.recipe),
+                                recipeCount(resources, costs.menu2),
+                                recipeCount(resources, costs.menu3)
+                            )
+                        }
                     )
                     content.lowestPrice?.let { append(' ').append(stringResource(R.string.recipe_intro_packs_price, it)) }
                     append(' ').append(stringResource(R.string.recipe_intro_free_stays))

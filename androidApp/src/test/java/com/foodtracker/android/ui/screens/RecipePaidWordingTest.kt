@@ -243,7 +243,17 @@ class RecipePaidWordingTest {
             }
         )
         val saved = SavedRecipe.of("m", "Menu for three days", menu, 1L)
-        assertEquals("Menu for three days", savedRecipeTitle(context.resources, saved))
+        // A menu saved before menu sets: three days, read from the menu itself.
+        assertEquals("Menu for 3 days", savedRecipeTitle(context.resources, saved))
+        val oneDay = SavedRecipe.of("m1", "Menu for one day", Menu(listOf(MenuDay(LocalDate(2026, 11, 4), courses = listOf(MenuCourse(MenuCourseKind.MAIN, recipe))))), 1L)
+        assertEquals("Menu for one day", savedRecipeTitle(context.resources, oneDay))
+        assertEquals(listOf("1 dish", "From your pack"), savedRecipeDetails(context.resources, oneDay))
+        assertEquals("One course a day for 2, using what expires first.", context.resources.getQuantityString(R.plurals.recipe_menu_summary, 1, 1, 2))
+        assertEquals(
+            "Not enough for one day. Tick a few more items, or ask for a single recipe. No recipes were taken.",
+            context.resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, 1, 1)
+        )
+        assertEquals(true, context.resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, 4, 4).startsWith("Not enough for 4 days."))
         assertEquals(listOf("9 dishes", "From your pack"), savedRecipeDetails(context.resources, saved))
         val label = menuDayLabel(context.resources, LocalDate(2026, 11, 4), LocalDate(2026, 11, 4))
         assertEquals(true, label.startsWith("Today, ") && "Wed" in label && "4" in label)

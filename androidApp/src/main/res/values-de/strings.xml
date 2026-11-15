@@ -768,7 +768,10 @@
     <string name="recipe_prompt_min_minutes">Am besten etwa %1$d Minuten oder länger</string>
     <string name="recipe_prompt_meals">Passend zu einer dieser Mahlzeiten: %1$s</string>
     <string name="recipe_not_enough_items">Nicht genug zum Kochen, wenn deine Ernährungsform und Allergene berücksichtigt werden. Wähle noch ein paar Artikel aus. Es wurde kein Rezept abgezogen.</string>
-    <string name="recipe_not_enough_items_menu">Nicht genug für drei Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</string>
+    <plurals name="recipe_not_enough_items_menu">
+        <item quantity="one">Nicht genug für einen Tag. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</item>
+        <item quantity="other">Nicht genug für %1$d Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.</item>
+    </plurals>
     <string name="recipe_diets_need_update">Rezepte aus Paketen können „Glutenfrei“ noch nicht mit einer anderen Ernährungsform kombinieren. Behalte in den Rezepteinstellungen nur eine davon oder nutze das Modell dieses Geräts oder den geteilten Prompt. Es wurden keine Rezepte abgezogen.</string>
     <string name="recipe_language_needs_update">Rezepte aus Paketen können noch nicht auf Dänisch erstellt werden. Wähle in den Rezepteinstellungen eine andere Rezeptsprache oder nutze das Modell dieses Geräts oder den geteilten Prompt. Es wurden keine Rezepte abgezogen.</string>
     <string name="recipe_not_from_pantry_hint">Zutaten ohne die Markierung „Im Vorrat“ stammen nicht aus deinem Vorrat: Grundzutaten oder ein paar Dinge, die du vielleicht kaufen musst.</string>
@@ -882,7 +885,22 @@
     <string name="recipe_balance_only_description">Verbleibende Rezepte: %1$d</string>
     <string name="recipe_mode_label">Was soll es sein?</string>
     <string name="recipe_mode_recipe">Rezept</string>
-    <string name="recipe_mode_menu">Menü für 3 Tage</string>
+    <string name="recipe_mode_menu">Menü-Set</string>
+    <string name="recipe_menu_days">Tage</string>
+    <plurals name="recipe_menu_days_count">
+        <item quantity="one">%1$d Tag</item>
+        <item quantity="other">%1$d Tage</item>
+    </plurals>
+    <plurals name="recipe_packs_body_sets">
+        <item quantity="one">Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet %1$d bis %2$d Rezept, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</item>
+        <item quantity="other">Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet %1$d bis %2$d Rezepte, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</item>
+    </plurals>
+    <string name="recipe_intro_packs_body_sets">Unser Server erstellt das Rezept und kann auch ein Menü-Set planen. Ein Rezept kostet %1$s aus einem Paket; ein Menü-Set kostet %2$d bis %3$d, je nach Tagen und Gängen pro Tag.</string>
+    <plurals name="recipe_saved_unread_action">
+        <item quantity="one">Gespeicherte Rezepte, %1$d neu</item>
+        <item quantity="other">Gespeicherte Rezepte, %1$d neu</item>
+    </plurals>
+    <string name="recipe_saved_unread">Neu</string>
     <string name="recipe_courses">Gänge pro Tag</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d Gang</item>
@@ -908,7 +926,10 @@
     <string name="recipe_menu_short_none">Du hast keine Rezepte mehr.</string>
     <string name="recipe_writing_server_title">Dein Rezept wird erstellt</string>
     <string name="recipe_writing_server_body">Ein paar Sekunden. Du kannst diesen Bildschirm verlassen; das Rezept landet in „Gespeicherte Rezepte“.</string>
-    <string name="recipe_writing_menu_title">Drei Tage werden geplant</string>
+    <plurals name="recipe_writing_menu_title">
+        <item quantity="one">Ein Tag wird geplant</item>
+        <item quantity="other">%1$d Tage werden geplant</item>
+    </plurals>
     <string name="recipe_writing_menu_body">Das kann bis zu zwei Minuten dauern. Du kannst diesen Bildschirm verlassen; das Menü landet in „Gespeicherte Rezepte“.</string>
     <string name="recipe_offline_title">Keine Verbindung</string>
     <string name="recipe_offline_body">Rezepte aus deinem Paket brauchen Internet. Die kostenlosen Wege unten funktionieren weiterhin.</string>
@@ -1063,14 +1084,23 @@
         <item quantity="other">Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurden %1$d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menü</string>
-    <string name="recipe_menu_title">Menü für drei Tage</string>
-    <string name="recipe_menu_summary">%1$d Gänge pro Tag für %2$d, mit dem, was zuerst abläuft.</string>
+    <plurals name="recipe_menu_title">
+        <item quantity="one">Menü für einen Tag</item>
+        <item quantity="other">Menü für %1$d Tage</item>
+    </plurals>
+    <plurals name="recipe_menu_summary">
+        <item quantity="one">Ein Gang pro Tag für %2$d, mit dem, was zuerst abläuft.</item>
+        <item quantity="other">%1$d Gänge pro Tag für %2$d, mit dem, was zuerst abläuft.</item>
+    </plurals>
     <string name="recipe_menu_today">Heute, %1$s</string>
     <string name="recipe_menu_uses">Verwendet %1$s</string>
     <string name="recipe_course_starter">Vorspeise</string>
     <string name="recipe_course_main">Hauptgericht</string>
     <string name="recipe_course_dessert">Dessert</string>
-    <string name="recipe_part_of_menu">Teil des Menüs für drei Tage</string>
+    <plurals name="recipe_part_of_menu">
+        <item quantity="one">Teil des Menüs für einen Tag</item>
+        <item quantity="other">Teil des Menüs für %1$d Tage</item>
+    </plurals>
     <plurals name="recipe_saved_dishes">
         <item quantity="one">%1$d Gericht</item>
         <item quantity="other">%1$d Gerichte</item>
