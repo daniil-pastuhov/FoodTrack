@@ -70,6 +70,58 @@ templates, and the search headline stays readable when the image is scaled to 38
 the width search shows it at on an iPhone. Neither image may show prices, URLs, a copyright
 symbol, other platforms or Apple awards.
 
+## App preview video
+
+An optional app preview per language (en-GB, ru, no): about 21 seconds of the app itself, no
+device frame or hands, in the order of the screenshots' story: a scan reads a pack's barcode and
+then its printed date; Add item with the date filled in, saved; Home with "saved to Fridge" and
+the new item in the list; the Recipe tab with what expires first ticked; a recipe written from
+those items; the three-day menu. The captions are screenshots 2, 1, 3 and 4's, on a Larder green
+band over the status bar. No sound: previews autoplay muted, in search results too, so the
+first seconds (the scan) carry the story.
+
+Apple's specs ([App preview specifications](https://developer.apple.com/help/app-store-connect/reference/app-preview-specifications),
+[App previews](https://developer.apple.com/app-store/app-previews/)): one preview for "iPhone
+with Dynamic Island (large display)" (6.9"/6.7") is enough, the smaller iPhones scale it down;
+886×1920 portrait; 15 to 30 seconds; at most 30 fps; H.264 High Profile up to level 4.0, about
+10–12 Mbps, `.mp4`; stereo AAC 256 kbps at 44.1 or 48 kHz ("All tracks should be enabled", so
+the video carries a silent stereo track); at most 500 MB; up to three per size and language,
+shown before the screenshots. Only footage of the app, text overlays allowed; purchases the
+preview shows must be disclosed (the menu is written by the server, from recipe packs: see
+below). The poster frame (shown when autoplay is off) defaults to 5 seconds in.
+
+Making them (Debug build, simulator, nothing sent): `scripts/ios_preview.sh [raw-dir]` creates
+its own 6.9" simulator, records the clips in every language with `xcrun simctl io recordVideo`,
+driving the app with the demo launch arguments and Maestro taps and swipes, and deletes the
+simulator; `scripts/ios_preview_assemble.py [raw-dir] [out-dir]` cuts them into
+`<out-dir>/<locale>/preview.mp4` and `poster.png` with ffmpeg. The defaults are
+`build/ios-preview` and `build/app-store-preview`: about 26 MB a video at Apple's 10 Mbps, so
+they stay out of git (the screenshot sets, ~15 MB a language, are committed; three videos would
+add ~80 MB with every retake). Run the capture when the machine is quiet: a busy one drops
+frames from the recording. Check the result by eye (`ffmpeg -ss <t> -i preview.mp4 -frames:v 1
+x.png` at a few points) and with `ffprobe`.
+
+Uploading, by hand for now: App Store Connect → the version → each language → "App Previews and
+Screenshots" → iPhone → drag `preview.mp4` in (or the Media Manager), then Edit Poster Frame and
+pick the frame `poster.png` shows (4.6 s in: the scan card with the product and its date).
+Processing takes up to a day. Poster frames can't change after approval without a new preview.
+
+Before uploading, decide the disclosure: the menu shot shows a server-written menu ("Written by
+our server"), which needs recipe packs. Apple asks for that to be said in the footage or the end
+frame; the screenshots' captions don't, as they describe what the routes do rather than what they
+cost. Either add a short line to the last caption run in `ios_preview_assemble.py` or end on the
+recipe, which the phone's own model writes free ("Written on this iPhone").
+
+The API can take it too, if the sync should do it one day (not built): the classic route is
+`POST /v1/appPreviewSets` (`previewType` `IPHONE_67`, on the `appStoreVersionLocalization`), then
+`POST /v1/appPreviews` (`fileName`, `fileSize`, `mimeType` `video/mp4`, `previewFrameTimeCode`
+for the poster), the upload operations, and `PATCH` with `uploaded: true` and
+`sourceFileChecksum`, the same reserve-upload-commit steps as `upload_screenshot` in
+`scripts/testflight.py`, then waiting for `assetDeliveryState` `COMPLETE`. The App Asset Library
+also takes videos (`POST /v1/appAssetLibraryVideos`, placed with the `APP_PREVIEW` placement
+type), like the Duo screenshots, but a version has one set either way, so the classic route,
+keyed by MD5 like the screenshot sets, is the smaller change.
+
 ## Changing the listing texts
 
 Edit the files here; the release PR's merge applies them. `scripts/testflight.py appstore`
