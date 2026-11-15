@@ -5,6 +5,14 @@ Nomination, ready to paste. Fill in the two placeholders in square brackets firs
 window and, once it exists, the in-app event's ID), and check the facts marked "check" against the
 build that ships.
 
+**Which version it is for (2026-11-15).** 2.1.0, the version that brings the Recipe tab, was
+submitted with release type "after approval", so it goes live as soon as Apple approves it,
+before any nomination could have three weeks' notice. The nomination is therefore for the
+launch day chosen in `docs/marketing/launch-plan.md`, with the version released by hand that day
+(repository variable `APP_STORE_RELEASE_TYPE` = `MANUAL` for that release). The description says
+"new Recipe tab" rather than "this update adds", so it holds either way; if the owner instead
+pulls 2.1.0 from review to release it on the launch day, it fits that too.
+
 Sources (read 2026-11-15):
 
 - Getting featured on the App Store, <https://developer.apple.com/app-store/getting-featured/>:
@@ -38,12 +46,12 @@ is already on the App Store, so it is not an App Launch.
 BestBefore: Recipe tab (cook what expires)
 ```
 
-**Description** (paste as is; 926 of 1,000 characters):
+**Description** (paste as is; 985 of 1,000 characters):
 
 ```text
-BestBefore is an expiry-date tracker for the fridge, freezer and pantry. This update adds a Recipe tab that turns the food closest to its date into a recipe, so less of it is thrown away.
+BestBefore is an expiry-date tracker for the fridge, freezer and pantry. Its new Recipe tab turns the food closest to its date into a recipe, so less of it is thrown away.
 
-The tab ticks the items that expire first; people can change the selection, servings, time, diet and more. There are three ways to get the recipe. Free: the app writes a ready-made prompt to copy or share to any AI app. Free and private: on supported iPhones with Apple Intelligence it is written on the device with the Foundation Models framework, and nothing leaves the phone. Optional recipe packs (consumable in-app purchases) have our server write recipes and a 3-day menu.
+The tab ticks the items that expire first; people can change the selection, servings, time, diet and more. There are three ways to get the recipe. Free: the app writes a ready-made prompt to copy or share to any AI app. Free and private: on supported iPhones with Apple Intelligence it is written on the device with the Foundation Models framework, and nothing leaves the phone. Optional recipe packs (in-app purchases) have our server write recipes and menu sets of one to four days, up to three courses a day.
 
 The rest stays as it was: scanning a barcode, reading the printed date with Vision, reminders and Home Screen widgets. No account, ads or tracking; the pantry stays on the iPhone. An in-app event will announce it. It ships in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
 ```
@@ -88,7 +96,7 @@ One developer, open source (Apache-2.0), so anyone can check what the app sends.
 - The release window above matches the plan, and is at least three weeks away.
 - Every claim matches the build that ships: the Recipe tab's three routes, "on supported iPhones with Apple
   Intelligence" for the on-device route (Apple's model doesn't take every language, which the app
-  checks before offering it), the 3-day menu only from
+  checks before offering it), menu sets (1 to 4 days, up to three courses a day) only from
   packs, and the allergen consent step.
 - No prices, competitor names or ratings figures in the text. The paid unit is a "recipe", never a
   credit or token.

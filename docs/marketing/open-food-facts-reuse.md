@@ -131,11 +131,12 @@ for the showcase entry only.
 
 **Before posting, check:**
 
-- The attribution change in `detail_credit` (product sheet: "Product data and pictures from Open
-  Food Facts (openfoodfacts.org), under the Open Database License and CC BY-SA") is in a released
-  build. Until then the shipped wording is "Product data from Open Food Facts", without the licence
-  names; ODbL and the terms of use ask for the licence to be mentioned.
-- The open points in "API usage" below, in particular the User-Agent.
+- Version 2.1.0 is live on the App Store (it was submitted for review on 2026-11-15). It is the
+  first release with the full credit on the product sheet ("Product data and pictures from Open
+  Food Facts (openfoodfacts.org), under the Open Database License and CC BY-SA"), the link to the
+  product's page and the `BestBefore-…` User-Agent; 2.0.0, live until then, still says "Product
+  data from Open Food Facts" without the licence names, which ODbL and the terms of use ask for.
+  On Android the same build is on Play's closed track.
 
 ### Attribution, against Open Food Facts' terms
 
@@ -146,41 +147,31 @@ Re-users "have to mention the licence and to attribute the authorship to Open Fo
 link to openfoodfacts.org (or the local version) or to the product page, and contributors are
 credited "by a link to the product to which they contribute".
 
-What the app does:
+What the app does, from 2.1.0 (checked in the code on 2026-11-15):
 
-- Product sheet: `ProductDetailSheet.kt:278` (Android) and `ProductDetailView.swift:38` (iOS) show
-  `detail_credit`. Now "Product data and pictures from Open Food Facts (openfoodfacts.org), under the
-  Open Database License and CC BY-SA" (en/ru/nb on both platforms); before this change "Product data
-  from Open Food Facts", with no licence and no mention of pictures.
-- The credit only appears when the product has nutrition data (`if (!nutrition.isEmpty)`). A product
-  that came from Open Food Facts with only a name and picture shows no credit.
-- There is no About, licences or acknowledgements screen on either platform. The licence texts for
-  Vollkorn, Google Sans and Lucide are bundled (`androidApp/src/main/assets/licenses/`,
-  `iosApp/FoodTracker/Resources/Licenses/`) but nothing in the UI shows them.
-- While a lookup runs, the Russian and Norwegian scanner text names Open Food Facts (`looking_up_product`); the English one ("Looking up this product…") does not.
-- The text isn't a link, and there is no link to the product page on openfoodfacts.org.
-- README "License" credits Open Food Facts, ODbL and CC BY-SA; the App Store description says
-  "(via Open Food Facts)".
+- Product sheet, both platforms: the credit line `detail_credit` above, in all eight app
+  languages. It shows for every item whose picture is on an Open Food Facts host or whose product
+  has nutrition data (`isFromOpenFoodFacts` on Android, `OpenFoodFacts.isSource` on iOS), not only
+  when there is nutrition data as before.
+- Tapping it opens the product's page on Open Food Facts (`openFoodFactsPageUrl`), or the site
+  itself for an item without a barcode: the terms' way of crediting the contributors.
+- README "License" credits Open Food Facts, ODbL and CC BY-SA; the store descriptions say "(via
+  Open Food Facts)".
 
-Still missing (larger UI work, not done here):
+Still missing:
 
-1. Show the credit for every item whose data came from Open Food Facts (it has a barcode and a
-   cached Open Food Facts product), not only when there is nutrition data.
-2. A permanent place: an "About" / "Acknowledgements" row in Settings (the "Data" section is the
-   natural spot on both platforms) naming Open Food Facts, ODbL and CC BY-SA with a link to
-   https://world.openfoodfacts.org, and showing the bundled font and icon licences too.
-3. Optionally a "View on Open Food Facts" link on the product sheet
-   (`https://world.openfoodfacts.org/product/{barcode}`), which is the terms' way of crediting the
-   contributors.
+- There is no About, licences or acknowledgements screen on either platform (not decided; see
+  `HANDOFF.md`, "Not decided"). The licence texts for Vollkorn, Google Sans and Lucide are bundled
+  (`androidApp/src/main/assets/licenses/`, `iosApp/FoodTracker/Resources/Licenses/`) but nothing
+  in the UI shows them.
 
 ### API usage, against Open Food Facts' guidance
 
 Guidance: <https://openfoodfacts.github.io/openfoodfacts-server/api/>.
 
-| Guidance | The app | Gap |
+| Guidance | The app (2.1.0) | Gap |
 | --- | --- | --- |
-| "always use a custom User-Agent", in the form `AppName/Version (ContactEmail)` | `FoodTracker-Android/1.0 (https://github.com/daniil-pastuhov/FoodTrack)` (`shared/src/commonMain/kotlin/com/foodtracker/api/OpenFoodFactsApi.kt:116`); `FoodTracker-iOS/1.0 (…same URL)` (`iosApp/FoodTracker/ViewModels/NativePantryViewModel.swift:1041`, and for pictures `iosApp/FoodTracker/Views/ProductImageView.swift:102`) | Name is the code name, not "BestBefore"; version is hard-coded "1.0" while the app is 2.0.0 (`Version.xcconfig`); a URL instead of an e-mail. Suggest `BestBefore-Android/<versionName> (https://github.com/daniil-pastuhov/FoodTrack)`, reading the version from the build. Whether a URL is acceptable in place of an e-mail is Open Food Facts' call; the owner has chosen not to publish an address. |
-| Product reads: 15 requests/min per IP | One request per scanned barcode, from the user's phone; cached products are not requested again | None in normal use. Nothing throttles a fast batch scan, and an HTTP 429 is shown as "offline" (the user can retry). |
+| "always use a custom User-Agent", in the form `AppName/Version (ContactEmail)` | `BestBefore-Android/<versionName> (https://github.com/daniil-pastuhov/FoodTrack)` (`openFoodFactsUserAgent`, passed to `OpenFoodFactsApi` from `AppModule`); `BestBefore-iOS/<CFBundleShortVersionString> (…same URL)` (`OpenFoodFacts.userAgent`). Pictures carry it too, on Open Food Facts' hosts only (Coil's `ImageLoader` from `FoodTrackerApp.newImageLoader`; iOS `ProductImageView`) | A URL instead of an e-mail: the owner has chosen not to publish an address. Whether that is acceptable is Open Food Facts' call; the maintainer note above offers to change it. |
+| Product reads: 15 requests/min per IP | One request per scanned barcode, from the user's phone; cached products are not requested again | None in normal use. Nothing throttles a fast batch scan; an HTTP 429 now says "Open Food Facts is busy" (`ProductLookupResult.Busy` / `LookupResult.busy`) with the same choices as offline, instead of "You're offline". |
 | Use the staging server while testing | Unit tests use a mock HTTP engine (`OpenFoodFactsLookupTest.kt`), so they make no requests | None. Debug builds use the production server. |
 | `fields` parameter (not required) | Full product requested | Optional: `?fields=product_name,brands,image_front_url,categories,quantity,…` would cut response size. |
-| Images | Android's image loader (Coil 2.7) sends its default User-Agent for pictures | Minor: iOS sets the custom one for pictures, Android doesn't. |

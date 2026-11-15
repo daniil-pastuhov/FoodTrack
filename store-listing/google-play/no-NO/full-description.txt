@@ -21,8 +21,9 @@ Matvakt holder oversikt over holdbarheten på maten i kjøleskapet, fryseren og 
 <b>Lag mat av det som snart går ut</b>
 • Oppskrift-fanen krysser av varene som går ut først; endre utvalget, antall porsjoner, tid, kosthold og mer
 • Gratis: kopier en ferdig ledetekst, eller del den med KI-appen du allerede bruker
-• Gratis på Android-telefoner som støtter det: oppskriften skrives på selve telefonen, med telefonens egen modell
-• Oppskriftspakker (kjøp i appen): oppskrifter skrevet av serveren vår og lagret i appen, og en måltidsplan for 3 dager («Meny for 3 dager») som bruker det som går ut først
+• Gratis på Android-telefoner som støtter det: oppskriften skrives på selve telefonen, med telefonens egen modell (foreløpig bare på engelsk)
+• Oppskriftspakker (kjøp i appen): oppskrifter skrevet av serveren vår og lagret i appen, og menysett for 1 til 4 dager, med opptil tre retter om dagen, bygd rundt det som går ut først
+• Det som mangler til en oppskrift, legger du på handlelisten med ett trykk
 
 <b>Dine data</b>
 • Ingen reklame, ingen sporing

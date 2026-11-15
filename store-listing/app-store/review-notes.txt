@@ -10,12 +10,12 @@ No login, demo account or sample files are needed.
 - Home: everything at home, sorted by expiry.
 - Shopping List: essentials move here when used up.
 - Settings: reminders, and optional "Remind me near a shop" (with "Always" location access the app shows the shopping list on arrival at a saved shop; the location is never sent anywhere).
-- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" / "Copy prompt" hand a text prompt to any app the user picks; on devices with Apple Intelligence (iOS 26 or later) the recipe is written on the device with Apple's Foundation Models. Paid: recipe packs of 10, 50 or 100 recipes; one recipe is one dish written by our server. "Menu for 3 days" is server-only and takes several recipes from the pack.
+- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" hands a text prompt to any app; with Apple Intelligence (iOS 26 or later) "Generate on this iPhone" writes it on the device (Foundation Models). Paid: packs of 10, 50 or 100 recipes; one recipe is one dish written by our server. "Menu set" (1 to 4 days, 1 to 3 courses a day) is server-only and takes several recipes; the form shows how many. "Add to shopping list" adds its missing ingredients.
 
 TO TEST THE PURCHASE (sandbox purchases are accepted during this review, within a daily limit shared by all sandbox testers):
 1. Add an item or two.
 2. Open the Recipe tab and tap "Buy recipes".
-3. Choose "On this phone, no account", or sign in with Apple or Google to keep the recipes in an account.
+3. Choose "On this iPhone, no account", or sign in with Apple or Google.
 4. Buy the 10-recipe pack. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
 5. Tap "Generate recipe". If allergens are set in Settings, the app first asks for consent to send them. The recipe appears after a few seconds and the balance drops to 9.
 Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), or Your recipes > "Delete my data from our server" (bought without an account).

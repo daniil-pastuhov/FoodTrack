@@ -33,8 +33,9 @@ Les reglene i et fellesskap før du legger ut noe der.
 > Multiplatform, med Android-klient i Jetpack Compose. Den skanner strekkoder (CameraX + ML Kit,
 > oppslag i Open Food Facts), leser trykte holdbarhetsdatoer med OCR på enheten, sender
 > påminnelser og skriver oppskrifter med det som går ut først: som en ferdig prompt til din egen
-> KI-app, med Gemini Nano på støttede telefoner, eller på en server gjennom valgfrie
-> oppskriftspakker.
+> KI-app, med Gemini Nano på støttede telefoner (foreløpig bare på engelsk), eller på en server
+> gjennom valgfrie oppskriftspakker, som også kan sette opp menysett for én til fire dager. Appen
+> finnes på norsk, engelsk, russisk, spansk, tysk, fransk, svensk og dansk.
 >
 > Play-kontoen min er ny, så Google krever 12 testere som er påmeldt i 14 dager på rad før jeg
 > kan publisere. Slik hjelper du:

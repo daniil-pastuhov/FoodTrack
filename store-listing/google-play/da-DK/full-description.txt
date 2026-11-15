@@ -21,8 +21,9 @@ BestBefore holder styr på holdbarheden af maden i køleskabet, fryseren og skab
 <b>Lav mad af det, der snart udløber</b>
 • Fanen Opskrift vælger de varer, der er tættest på deres dato; ret udvalget, antal portioner, tid, kost og meget mere
 • Gratis: kopiér en færdig prompt, eller del den med den AI-app, du allerede bruger
-• Gratis på Android-telefoner, der understøtter det: opskriften skrives på selve telefonen af dens egen model
-• Opskriftspakker (køb i appen): opskrifter skrevet af vores server og gemt i appen, og en madplan for 3 dage (»Menu for 3 dage«), der bruger det, der udløber først
+• Gratis på Android-telefoner, der understøtter det: opskriften skrives på selve telefonen af dens egen model (indtil videre kun på engelsk)
+• Opskriftspakker (køb i appen): opskrifter skrevet af vores server og gemt i appen, og menusæt for 1 til 4 dage med op til tre retter om dagen, der bruger det, der udløber først
+• Det, en opskrift mangler, kommer på indkøbslisten med ét tryk
 
 <b>Dine data</b>
 • Ingen reklamer, ingen sporing
