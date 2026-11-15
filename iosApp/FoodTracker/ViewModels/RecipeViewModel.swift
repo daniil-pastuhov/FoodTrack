@@ -139,6 +139,16 @@ enum RecipeDestination: Hashable {
     case dish(id: String, day: Int, course: Int)
     case saved
     case settings
+    /// The taste-profile quiz, over Recipe settings.
+    case tasteQuiz
+}
+
+/// The definition the open quiz shows.
+enum TasteQuizLoad: Equatable {
+    case loading
+    /// Couldn't load the questions, and none is cached: Retry and Close.
+    case failed
+    case ready(TasteQuiz)
 }
 
 /// The Recipe tab's state: the configuration, which items are ticked, the routes, the one write
@@ -181,6 +191,18 @@ final class RecipeViewModel: ObservableObject {
     @Published private(set) var allergenConsent: AllergenConsentRecord?
     /// "Send all products" and whether the introduction was seen.
     @Published private(set) var options: RecipeOptions
+    /// The taste profile as saved on this phone (empty: none). Only a server request carries it,
+    /// filtered through the definition (`TasteProfile.toSend`).
+    @Published private(set) var taste: TasteProfile
+    /// The quiz steps the person has been through, kept apart from the answers.
+    @Published private(set) var tasteSeen: Set<String>
+    /// The last good quiz definition in the app's language, from the cache: the row's summary and
+    /// what is sent read it. Nil until one was fetched in this language.
+    @Published private(set) var tasteQuiz: TasteQuiz?
+    /// The definition the open quiz shows; never swapped while it is open.
+    @Published private(set) var tasteQuizLoad: TasteQuizLoad = .loading
+    /// The sheet that says what a taste profile does (no recipes in a pack, no saved profile).
+    @Published var showsTastePromo = false
     /// "How recipes work" on screen, and where from; nil when it isn't.
     @Published var intro: RecipeIntroOrigin?
     /// A demo or screenshot launch (any `-demo…` argument): the introduction never opens by
@@ -200,6 +222,7 @@ final class RecipeViewModel: ObservableObject {
     /// requests so a refused name is never sent twice.
     private var refusedNames = Set<String>()
     private var creditsChanges: AnyCancellable?
+    private var tasteVersionChanges: AnyCancellable?
     private var allergenChanges: AnyCancellable?
 
     /// How many of the soonest items are ticked for the person (whatever their date, past it
@@ -223,11 +246,17 @@ final class RecipeViewModel: ObservableObject {
         self.credits = credits
         config = configStore.load()
         options = configStore.loadOptions()
+        taste = configStore.loadTaste()
+        tasteSeen = configStore.loadTasteSeen()
+        tasteQuiz = configStore.loadTasteQuiz(language: RecipeLanguage.app.rawValue)
         menuCourses = credits.storage.menuCourses
         menuDays = credits.storage.menuDays
         saved = self.savedStore.all()
         refreshAvailability()
         creditsChanges = credits.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        tasteVersionChanges = credits.$serverTasteQuizVersion.combineLatest(credits.$balance)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in self?.prefetchTasteQuizIfNeeded() }
         allergenConsent = credits.storage.allergenConsent
         // A refusal is forgotten once the allergen list is emptied (`AllergenConsent.afterListChange`).
         allergenChanges = SettingsStore.shared.$settings
@@ -305,6 +334,214 @@ final class RecipeViewModel: ObservableObject {
     }
 
     /// "Send all products" in Recipe settings.
+    // MARK: Taste profile
+
+    /// The quiz's definition is fetched in the app's own language (the server answers English for
+    /// one it doesn't have).
+    private var tasteLanguage: String { RecipeLanguage.app.rawValue }
+
+    /// What the settings row does: no row without the paid route or a server that takes taste
+    /// profiles; the quiz with recipes in a pack or a saved profile; otherwise the promo sheet.
+    var tasteEntry: TasteProfile.Entry {
+        TasteProfile.entry(
+            paidRouteAvailable: credits.isPaidRouteAvailable,
+            serverTakesTaste: credits.serverTakesTaste,
+            purchasesBlocked: credits.purchasesBlocked,
+            balance: credits.balance,
+            hasSavedProfile: !taste.isEmpty
+        )
+    }
+
+    /// Whether the next server request carries the profile: the server action's helper line
+    /// then says "Uses your taste profile".
+    var sendsTaste: Bool { tasteToSend != nil }
+
+    private var tasteToSend: [String: [String]]? {
+        TasteProfile.toSend(taste, quiz: tasteQuiz, serverTakesTaste: credits.serverTakesTaste)
+    }
+
+    /// The row tapped: the quiz (its definition from the cache at once, or fetched) or the promo.
+    /// The promo calls nothing.
+    func tasteRowTapped() {
+        switch tasteEntry {
+        case .quiz: openTasteQuiz()
+        case .promo: showsTastePromo = true
+        case .hidden: break
+        }
+    }
+
+    func openTasteQuiz() {
+        tasteQuiz = configStore.loadTasteQuiz(language: tasteLanguage)
+        #if DEBUG
+        if let demo = demoTasteQuiz { tasteQuiz = demo.failing ? nil : demo.quiz }
+        #endif
+        if let cached = tasteQuiz {
+            tasteQuizLoad = .ready(cached)
+            // Kept for the next open, never swapped under the person's fingers.
+            Task { await fetchTasteQuiz(updatingOpenQuiz: false) }
+        } else {
+            tasteQuizLoad = .loading
+            Task { await fetchTasteQuiz(updatingOpenQuiz: true) }
+        }
+        if path.last != .tasteQuiz { path.append(.tasteQuiz) }
+    }
+
+    /// "Retry" on the quiz's error state.
+    func retryTasteQuiz() {
+        tasteQuizLoad = .loading
+        Task { await fetchTasteQuiz(updatingOpenQuiz: true) }
+    }
+
+    /// Asks the server for the definition. Only someone with an account on our server opens the
+    /// quiz (recipes in a pack, or a profile saved then); without one nothing is created for it:
+    /// the cached definition, or the error state. A definition that can't be used leaves the last
+    /// good one in place.
+    private func fetchTasteQuiz(updatingOpenQuiz: Bool) async {
+        let language = tasteLanguage
+        var fetched: TasteQuiz?
+        #if DEBUG
+        if let demo = demoTasteQuiz {
+            fetched = demo.failing ? nil : demo.quiz
+            try? await Task.sleep(for: .milliseconds(300))
+        } else if credits.account.uid != nil, credits.serverTakesTaste {
+            fetched = try? await credits.backend.tasteQuiz(language: language)
+        }
+        #else
+        if credits.account.uid != nil, credits.serverTakesTaste {
+            fetched = try? await credits.backend.tasteQuiz(language: language)
+        }
+        #endif
+        var cached = configStore.loadTasteQuiz(language: language)
+        if let fetched, fetched.isUsable {
+            #if DEBUG
+            // A demo's sample never goes into the real cache.
+            if demoTasteQuiz == nil { configStore.saveTasteQuiz(fetched, language: language) }
+            #else
+            configStore.saveTasteQuiz(fetched, language: language)
+            #endif
+            tasteQuiz = fetched
+            cached = fetched
+        }
+        guard updatingOpenQuiz else { return }
+        if let quiz = TasteQuiz.afterFetch(fetched, cached: cached) {
+            tasteQuizLoad = .ready(quiz)
+        } else {
+            tasteQuizLoad = .failed
+        }
+    }
+
+    /// "See recipe packs" on the promo: the Buy sheet once the promo has gone.
+    func tastePromoToPacks() {
+        showsTastePromo = false
+        guard credits.canBuy else { return }
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            self?.showsBuySheet = true
+        }
+    }
+
+    /// The quiz's Save: the answers as edited against `quiz`; the steps `visited` in it count as
+    /// seen. Nothing chosen is the same as clearing (seen steps stay).
+    func saveTaste(_ draft: TasteProfile, quiz: TasteQuiz, visited: Set<String>) {
+        let stored = draft.saved(from: quiz)
+        setTaste(stored.isEmpty ? TasteProfile() : stored)
+        setTasteSeen(TasteProfile.seenAfter(tasteSeen, visited: visited))
+    }
+
+    /// "Clear taste profile": gone at once; what it was comes back with `restoreTaste`. The steps
+    /// been through stay so: clearing doesn't bring the dot back.
+    @discardableResult
+    func clearTaste() -> TasteProfile {
+        let previous = taste
+        setTaste(TasteProfile())
+        return previous
+    }
+
+    func restoreTaste(_ profile: TasteProfile) { setTaste(profile) }
+
+    /// Leaving the quiz without saving: the steps shown count as been through, with or without
+    /// a profile; the answers stay as stored.
+    func leaveTasteQuiz(seen visited: Set<String>) {
+        setTasteSeen(TasteProfile.seenAfter(tasteSeen, visited: visited))
+    }
+
+    private func setTasteSeen(_ seen: Set<String>) {
+        guard seen != tasteSeen else { return }
+        configStore.saveTasteSeen(seen)
+        tasteSeen = seen
+    }
+
+    /// The dot on the header's settings button and on the row without a profile.
+    var hasNewTasteQuestions: Bool {
+        TasteProfile.hasNewQuestions(entry: tasteEntry, seen: tasteSeen, quiz: tasteQuiz)
+    }
+
+    /// Versions already fetched in the background this run, by language.
+    private var tastePrefetches = Set<String>()
+
+    /// After a balance reply (and at launch, which is when iOS changes the app's language): fetch
+    /// the definition quietly when the server's `tasteQuizVersion` isn't the cached one and the row
+    /// opens the quiz, at most once per version and language. Silent on failure (a later reply
+    /// tries again); never under an open quiz.
+    private func prefetchTasteQuizIfNeeded() {
+        let language = tasteLanguage
+        let version = credits.serverTasteQuizVersion
+        let key = "\(language):\(version ?? "")"
+        guard TasteProfile.shouldPrefetch(
+            serverVersion: version,
+            cachedVersion: configStore.loadTasteQuiz(language: language)?.version,
+            entry: tasteEntry,
+            hasAccount: credits.account.uid != nil,
+            alreadyFetched: tastePrefetches.contains(key)
+        ) else { return }
+        #if DEBUG
+        if demoTasteQuiz != nil { return }
+        #endif
+        tastePrefetches.insert(key)
+        Task { [weak self, credits] in
+            guard let fetched = try? await credits.backend.tasteQuiz(language: language), fetched.isUsable else {
+                self?.tastePrefetches.remove(key)
+                return
+            }
+            guard let self else { return }
+            self.configStore.saveTasteQuiz(fetched, language: language)
+            // The row and the dot follow; an open quiz keeps its own definition (`tasteQuizLoad`).
+            self.tasteQuiz = fetched
+        }
+    }
+
+    private func setTaste(_ profile: TasteProfile) {
+        configStore.saveTaste(profile)
+        if profile != taste { taste = profile }
+    }
+
+    #if DEBUG
+    func showTasteLoadingForDemo() {
+        demoTasteQuiz = nil
+        tasteQuizLoad = .loading
+    }
+
+    /// `-demoRoute tasteQuiz` / `tasteQuizError`: the quiz from a bundled sample definition, or
+    /// its error state, with nothing fetched.
+    private(set) var demoTasteQuiz: (quiz: TasteQuiz?, failing: Bool)?
+    /// `-demoTasteStep N`: the quiz opens at step N (from 1) instead of where it would.
+    var demoTasteStep: Int?
+
+    /// Nothing is stored: the profile is this run's only.
+    func showTasteDemo(quiz: TasteQuiz?, profile: TasteProfile, seen: Set<String>, failing: Bool) {
+        demoTasteQuiz = (quiz, failing)
+        taste = profile
+        tasteSeen = seen
+        if failing {
+            tasteQuiz = nil
+            tasteQuizLoad = .failed
+        } else if let quiz {
+            tasteQuiz = quiz
+            tasteQuizLoad = .ready(quiz)
+        }
+    }
+    #endif
+
     func setSendAllItems(_ on: Bool) {
         updateOptions { $0.sendAllItems = on }
     }
@@ -561,7 +798,9 @@ final class RecipeViewModel: ObservableObject {
             for: request, kind: kind, courses: menuSet.courses, days: menuSet.days, requestID: UUID(), excluding: refusedNames,
             withOptional: options.sendAllItems && credits.storage.serverTakesOptional,
             multiChoice: credits.storage.serverTakesMultiChoice,
-            menuDays: credits.serverTakesMenuDays
+            menuDays: credits.serverTakesMenuDays,
+            // The taste profile only to a server that reads it; otherwise the request goes without.
+            taste: tasteToSend
         ) else {
             failure = .dietsNeedServerUpdate
             return
@@ -791,6 +1030,8 @@ final class RecipeViewModel: ObservableObject {
         if serverError == .invalidRequest, wire.config.language == RecipeLanguage.da.rawValue { credits.storage.serverTakesDanish = false }
         // And a menu set (days, or one course a day): back to the 3-day menu of two or three.
         if serverError == .invalidRequest, MenuSet.needsMenuDays(wire) { credits.setServerTakesMenuDays(false) }
+        // And a taste profile: the next request goes without it.
+        if TasteProfile.clearsFlag(after: serverError, request: wire) { credits.storage.serverTakesTaste = false }
         if serverError == .insufficientCredits {
             if credits.canBuy { showsBuySheet = true }
             return

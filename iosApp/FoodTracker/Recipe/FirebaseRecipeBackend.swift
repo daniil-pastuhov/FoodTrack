@@ -29,6 +29,14 @@ struct FirebaseRecipeBackend: RecipeBackend {
         try await call("getBalance", EmptyRequest(), limitedUseToken: false)
     }
 
+    /// Not consumed either: an ordinary token. Decoded leniently (`TasteQuiz`); one with no step
+    /// this version can show is an error, so the last good cached one stays in use.
+    func tasteQuiz(language: String) async throws -> TasteQuiz {
+        let quiz: TasteQuiz = try await call("getTasteQuiz", TasteQuizRequest(language: language), limitedUseToken: false)
+        guard quiz.isUsable else { throw RecipeServerError.server }
+        return quiz
+    }
+
     func verifyPurchase(signedTransaction: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse {
         try await call(
             "verifyPurchase",
@@ -67,7 +75,7 @@ struct FirebaseRecipeBackend: RecipeBackend {
         // `deleteAccount` and `registerAppleSignIn`, which consume theirs (CONTRACT.md, "Calling"), so none may be
         // reused: the SDK asks App Check for a new one on every `call`, which covers each
         // fallback to `generateRecipe` and each purchase resubmission, and nothing here keeps a
-        // token. `getGeneration` and `getBalance` take an ordinary one.
+        // token. `getGeneration`, `getBalance` and `getTasteQuiz` take an ordinary one.
         var callable = FirebaseBootstrap.functions(app: app).httpsCallable(
             name,
             options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: limitedUseToken),

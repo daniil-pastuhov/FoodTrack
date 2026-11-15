@@ -250,7 +250,7 @@ private struct LarderIconButtonStyle: ButtonStyle {
 /// `LarderBadge(text:)` is the quiet tag beside a value, such as a pack's saving ("−26%"):
 /// tinted, caption size, never louder than what it sits next to.
 struct LarderBadge: View {
-    private enum Content { case count(Int), text(String) }
+    private enum Content { case count(Int), text(String), dot }
     private let content: Content
     /// The pill's badge is smaller than the standalone one.
     private let isCompact: Bool
@@ -265,6 +265,14 @@ struct LarderBadge: View {
         isCompact = false
     }
 
+    private init(dot: Void) {
+        content = .dot
+        isCompact = true
+    }
+
+    /// Something new, without a number: the smallest badge, beside an icon button.
+    static var dot: LarderBadge { LarderBadge(dot: ()) }
+
     var body: some View {
         switch content {
         case .count(let count):
@@ -275,6 +283,13 @@ struct LarderBadge: View {
                 .padding(.horizontal, isCompact ? LarderSpace.s1 : 6)
                 .frame(minWidth: side, minHeight: side)
                 .background(LarderColor.primary, in: Capsule())
+        case .dot:
+            // 10pt, ringed in the page colour so it stands clear of the icon it sits on.
+            Circle()
+                .fill(LarderColor.primary)
+                .frame(width: 10, height: 10)
+                .padding(2)
+                .background(LarderColor.background, in: Circle())
         case .text(let text):
             Text(verbatim: text)
                 .larderFont(.caption)
@@ -365,6 +380,7 @@ private struct ButtonGallery: View {
                     LarderBadge(count: 120)
                     LarderBadge(count: 5, isCompact: true)
                     LarderBadge(text: "\u{2212}26%")
+                    LarderBadge.dot
                 }
                 LarderSpinner()
                 LarderProgressBar()

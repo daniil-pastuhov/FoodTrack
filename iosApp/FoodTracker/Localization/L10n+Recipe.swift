@@ -561,4 +561,66 @@ extension L10n {
     static func recipePartOfMenu(days: Int) -> String { plural("recipe_part_of_menu", days) }
     static var recipeShareMenu: String { paid("recipe_share_menu") }
     static func recipeDishes(_ count: Int) -> String { plural("recipe_dishes_count", count) }
+
+    // Taste profile: only the chrome. Questions, options and their texts come from the server
+    // with the quiz (`TasteQuiz`). Android: the taste_* strings, copied as they are.
+    static var tasteTitle: String { text("taste_title") }
+    static func tasteChooseUpTo(_ cap: Int) -> String { String(format: text("taste_choose_up_to"), cap) }
+    static var tasteChooseOne: String { text("taste_choose_one") }
+    static func tasteProgress(_ step: Int, of total: Int) -> String { String(format: text("taste_progress"), step, total) }
+    static var tasteIntro: String { text("taste_intro") }
+    static var tasteSkip: String { text("taste_skip") }
+    static var tasteBack: String { text("taste_back") }
+    static var tasteNext: String { text("taste_next") }
+    static var tasteSave: String { text("taste_save") }
+    static var tasteSettingsEmpty: String { text("taste_settings_empty") }
+    static func tasteSummaryMore(_ count: Int) -> String { String(format: text("taste_summary_more"), count) }
+    static var tasteClear: String { text("taste_clear") }
+    static var tasteUsesProfile: String { text("taste_uses_profile") }
+    static func tasteChosen(_ count: Int) -> String { String(format: text("taste_chosen"), count) }
+    static func tasteChosenOf(_ count: Int, _ cap: Int) -> String { String(format: text("taste_chosen_of"), count, cap) }
+    static func tasteCapReached(_ cap: Int) -> String { String(format: text("taste_cap_reached"), cap) }
+    static var tasteOnSkipNote: String { text("taste_on_skip_note") }
+    static var tasteOnLoveNote: String { text("taste_on_love_note") }
+    static func tasteChipOnSkip(_ label: String) -> String { String(format: text("taste_chip_on_skip"), label) }
+    static func tasteChipOnLove(_ label: String) -> String { String(format: text("taste_chip_on_love"), label) }
+    static func tasteChipAtCap(_ label: String) -> String { String(format: text("taste_chip_at_cap"), label) }
+    static func tasteMovedOffSkip(_ label: String) -> String { String(format: text("taste_moved_off_skip"), label) }
+    static func tasteMovedOffLove(_ label: String) -> String { String(format: text("taste_moved_off_love"), label) }
+    static var tasteSavedSnackbar: String { text("taste_saved_snackbar") }
+    static var tasteClearedSnackbar: String { text("taste_cleared_snackbar") }
+    static var tasteDiscardMessage: String { text("taste_discard_message") }
+    static var tastePromoLede: String { text("taste_promo_lede") }
+    static var tastePromoQuestionsTitle: String { text("taste_promo_questions_title") }
+    static var tastePromoQuestionsBody: String { text("taste_promo_questions_body") }
+    static var tastePromoTasteTitle: String { text("taste_promo_taste_title") }
+    static var tastePromoTasteBody: String { text("taste_promo_taste_body") }
+    static var tastePromoDeviceTitle: String { text("taste_promo_device_title") }
+    static var tastePromoDeviceBody: String { text("taste_promo_device_body") }
+    static var tasteLoading: String { text("taste_loading") }
+    static var tasteErrorTitle: String { text("taste_error_title") }
+    static var tasteErrorBody: String { text("taste_error_body") }
+    static var tasteRetry: String { text("taste_retry") }
+    static var tasteClose: String { text("taste_close") }
+    static var tasteNewTag: String { text("taste_new_tag") }
+    /// Added to the settings button's label with the dot: "new taste profile questions".
+    static var tasteSettingsBadge: String { text("taste_settings_badge") }
+    static func tasteAnswers(_ count: Int) -> String { plural("taste_answers", count) }
+    static func tasteNewQuestions(_ count: Int) -> String { plural("taste_new_questions", count) }
+
+    /// The row's supporting line: "Italian, Nordic · Medium · 5 more"; "N answers" without a
+    /// definition in this language; what it is for without answers (`TasteProfile.summary`). And,
+    /// apart so it is never cut, "1 new question" when the definition has steps the person hasn't
+    /// been through.
+    static func tasteSummary(_ profile: TasteProfile, seen: Set<String>, quiz: TasteQuiz?) -> (line: String, newQuestions: String?) {
+        guard !profile.isEmpty else { return (tasteSettingsEmpty, nil) }
+        guard let quiz else { return (tasteAnswers(profile.count), nil) }
+        guard let summary = profile.summary(quiz) else { return (tasteSettingsEmpty, nil) }
+        var parts: [String] = []
+        if !summary.named.isEmpty { parts.append(isolatedList(summary.named)) }
+        if let single = summary.single { parts.append(isolated(single)) }
+        if summary.more > 0 { parts.append(tasteSummaryMore(summary.more)) }
+        let new = TasteProfile.newSteps(seen: seen, quiz: quiz).count
+        return (parts.joined(separator: " \u{00B7} "), new > 0 ? tasteNewQuestions(new) : nil)
+    }
 }

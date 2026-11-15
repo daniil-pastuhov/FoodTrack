@@ -1,7 +1,7 @@
 import Foundation
 
 // Checks the iOS ports of the multi-choice recipe config, its legacy wire mapping, the exact
-// past-date warnings and the shopping-list rows against the same cases as Android's
+// past-date warnings, the shopping-list rows and the taste profile against the same cases as Android's
 // shared/src/commonTest/.../RecipeConfigChoicesTest.kt. Run with check.sh.
 
 /// What RecipeModels.swift needs of the pantry's item; the app's own is in LocalModels.swift.
@@ -354,6 +354,270 @@ expect(PackSavings.percents(offers("GBP", [(10, nil), (50, "10.99"), (100, "18.9
 expect(PackSavings.percents(offers("GBP", [(10, "0"), (50, "10.99"), (100, "18.99")])), [nil, nil, 13], "a free pack isn't the base")
 expect(PackSavings.percents(offers("GBP", [(10, "2.99"), (50, "0"), (100, "18.99")])), [nil, nil, 36], "a free larger pack gets none")
 expect(PackSavings.badgeText(26), "\u{2212}26%", "minus sign, no space")
+
+// Taste profile: the server's quiz definition, decoded leniently, and the rules on it (Android:
+// TasteProfileTest, the same cases).
+func quiz(_ json: String) -> TasteQuiz? { TasteQuiz.decoded(from: Data(json.utf8)) }
+func opts(_ ids: [String]) -> String { ids.map { #"{"id":"\#($0)","label":"\#($0.capitalized)"}"# }.joined(separator: ",") }
+func multi(_ id: String, _ ids: [String], max: Int, tone: String = "like", extra: String = "") -> String {
+    #"{"id":"\#(id)","kind":"multi","tone":"\#(tone)","icon":"globe","question":"\#(id)?","max":\#(max),"groups":[{"title":null,"options":[\#(opts(ids))]}]\#(extra)}"#
+}
+let heatStep = #"{"id":"heat","kind":"single","tone":"like","icon":"flame","question":"Hot?","max":1,"groups":[{"options":[{"id":"mild","label":"Mild","sub":"Little","level":1},{"id":"medium","label":"Medium","level":2},{"id":"hot","label":"Hot","level":9}]}]}"#
+func definition(_ steps: [String], conflicts: String = #"[["favourites:mushrooms","avoid:mushrooms"],["flavours:garlic","avoid:garlic"]]"#, version: String = "v1") -> String {
+    #"{"version":"\#(version)","language":"en","steps":[\#(steps.joined(separator: ","))],"conflicts":\#(conflicts),"summary":["cuisines","flavours","favourites","methods"]}"#
+}
+let baseSteps = [
+    multi("cuisines", ["italian", "french", "spanish", "greek", "nordic", "thai", "korean"], max: 6),
+    heatStep,
+    multi("flavours", ["garlic", "citrus", "umami"], max: 6),
+    multi("favourites", ["tomatoes", "mushrooms", "eggs", "berries"], max: 3),
+    multi("avoid", ["onion", "garlic", "mushrooms", "olives"], max: 8, tone: "avoid"),
+    multi("methods", ["oven", "pan"], max: 5),
+]
+let q = quiz(definition(baseSteps))!
+expect(q.steps.map(\.id), ["cuisines", "heat", "flavours", "favourites", "avoid", "methods"], "steps in order")
+expect(q.step("heat")?.option("hot")?.level, 3, "a level past 3 is 3")
+expect(q.step("heat")?.option("mild")?.sub, "Little", "a card's second line")
+expect(q.step("avoid")?.tone, .avoid, "tone")
+expect(q.conflicts.count, 2, "conflicts read")
+
+// Odd definitions: an unknown kind, an unknown field, an unknown icon, no options, a seventh step.
+let oddQuiz = quiz(definition(baseSteps + [
+    #"{"id":"mood","kind":"slider","question":"?","max":1,"groups":[{"options":[{"id":"a","label":"A"}]}]}"#,
+    #"{"id":"empty","kind":"multi","question":"?","max":2,"groups":[{"title":"x","options":[]}]}"#,
+    #"{"id":"moods","kind":"multi","tone":"curious","question":"?","max":1,"groups":[{"options":[{"id":"a","label":"A"}]}]}"#,
+    #"{"id":"meals","kind":"multi","icon":"no-such-icon","question":"Which meals?","max":3,"colour":"red","groups":[{"title":null,"options":[{"id":"breakfast","label":"Breakfast","shiny":true},{"label":"no id"},{"id":"snacks","label":"Snacks"}]}]}"#,
+    #"{"id":"cuisines","kind":"multi","question":"repeat","max":1,"groups":[{"options":[{"id":"z","label":"Z"}]}]}"#,
+    "42",
+], conflicts: #"[["favourites:eggs"],["nonsense","avoid:onion"],["methods:oven","methods:pan"]]"#))!
+expect(oddQuiz.steps.map(\.id), ["cuisines", "heat", "flavours", "favourites", "avoid", "methods", "meals"], "unknown kind or tone, no options, a repeat and junk skipped; a seventh kept")
+expect(oddQuiz.step("meals")?.options.map(\.id), ["breakfast", "snacks"], "an option without an id is skipped")
+expect(oddQuiz.step("meals")?.tone, .like, "no tone reads as like")
+expect(oddQuiz.step("moods") == nil, true, "an unknown tone skips the step")
+expect(oddQuiz.step("meals")?.icon, "no-such-icon", "an unknown icon is kept (the view falls back)")
+expect(oddQuiz.conflicts.count, 1, "malformed conflicts skipped")
+expect(oddQuiz.step("cuisines")?.question, "cuisines?", "the first of a repeated id")
+expect(quiz(#"{"version":"x","steps":[]}"#) == nil, true, "no usable step: couldn't load")
+expect(quiz(#"{"version":"x","steps":[\#(#"{"id":"m","kind":"slider","question":"?","max":1,"groups":[]}"#)]}"#) == nil, true, "only unknown steps: couldn't load")
+expect(quiz("not json") == nil, true, "undecodable: couldn't load")
+expect(TasteQuiz.afterFetch(nil, cached: q), q, "undecodable with a good cache: the cache")
+expect(TasteQuiz.afterFetch(nil, cached: nil), nil, "undecodable without a cache: the error")
+expect(TasteQuiz.afterFetch(oddQuiz, cached: q), oddQuiz, "a good fetch wins")
+let roundTrip = try! JSONDecoder().decode(TasteQuiz.self, from: try! JSONEncoder().encode(oddQuiz))
+expect(roundTrip, oddQuiz, "a cached definition reads back the same")
+
+// Toggling, caps and conflicts.
+let cuisines = q.step("cuisines")!, heat = q.step("heat")!, flavours = q.step("flavours")!
+let favourites = q.step("favourites")!, avoid = q.step("avoid")!
+var t = TasteProfile()
+t = t.toggled(cuisines, "nordic", in: q).toggled(cuisines, "italian", in: q)
+expect(t.selected("cuisines"), ["italian", "nordic"], "display order")
+expect(t.toggled(cuisines, "nordic", in: q).selected("cuisines"), ["italian"], "a chosen one goes")
+expect(t.toggled(cuisines, "vulcan", in: q), t, "an unknown option changes nothing")
+var full = TasteProfile()
+for id in ["italian", "french", "spanish", "greek", "nordic", "thai"] { full = full.toggled(cuisines, id, in: q) }
+expect(full.selected("cuisines").count, 6, "up to max")
+expect(full.toggled(cuisines, "korean", in: q), full, "past max changes nothing")
+expect(full.canToggle(cuisines, "korean"), false, "dimmed at max")
+expect(full.canToggle(cuisines, "thai"), true, "a chosen one still comes off")
+expect(TasteProfile().toggled(heat, "mild", in: q).toggled(heat, "hot", in: q).selected("heat"), ["hot"], "single replaces")
+expect(TasteProfile(answers: ["heat": ["hot"]]).toggled(heat, "hot", in: q).selected("heat"), [], "tapping the chosen card clears it")
+let likes = TasteProfile().toggled(favourites, "mushrooms", in: q).toggled(favourites, "eggs", in: q)
+expect(likes.conflictChosen(avoid, "mushrooms", in: q), TasteQuiz.Choice(step: "favourites", option: "mushrooms"), "marked on the skip step")
+let skips = likes.toggled(avoid, "mushrooms", in: q)
+expect(skips.selected("favourites"), ["eggs"], "moved off what you love")
+expect(skips.toggled(favourites, "mushrooms", in: q).selected("avoid"), [], "and back")
+expect(TasteProfile().toggled(flavours, "garlic", in: q).toggled(avoid, "garlic", in: q).selected("flavours"), [], "garlic flavour against garlic to skip")
+expect(skips.conflictChosen(favourites, "eggs", in: q), nil, "no mark without a conflict")
+
+// Shown and sent: the stored answers filtered through the definition, never rewritten.
+let oldAnswers = TasteProfile(answers: [
+    "cuisines": ["thai", "italian", "thai", "french", "spanish", "greek", "nordic", "korean", "vulcan"],
+    "heat": ["medium"], "favourites": ["mushrooms", "eggs"], "avoid": ["mushrooms"], "gone": ["x"],
+], version: "v0")
+let seenBefore: Set<String> = ["cuisines", "heat", "flavours", "favourites", "avoid", "methods"]
+let shown = oldAnswers.filtered(by: q)
+expect(shown.selected("cuisines"), ["italian", "french", "spanish", "greek", "nordic", "thai"], "known, unique, display order, cut to max")
+expect(shown.selected("favourites"), ["eggs"], "a conflict goes to the avoid side")
+expect(shown.selected("gone"), [], "a step the definition doesn't have is left out")
+expect(shown.version, "v0", "filtering doesn't restamp")
+// Option removed, step removed, option hidden then back, cap lowered, kind changed, conflict added.
+let v2 = quiz(definition([
+    multi("cuisines", ["italian", "french", "nordic"], max: 2),
+    #"{"id":"heat","kind":"multi","question":"Hot?","max":3,"groups":[{"options":[{"id":"mild","label":"Mild"},{"id":"medium","label":"Medium"}]}]}"#,
+    multi("favourites", ["mushrooms", "eggs"], max: 3),
+    multi("avoid", ["mushrooms"], max: 8, tone: "avoid"),
+], conflicts: #"[["favourites:eggs","heat:medium"]]"#, version: "v2"))!
+let underV2 = oldAnswers.filtered(by: v2)
+expect(underV2.selected("cuisines"), ["italian", "french"], "options removed, cap lowered: cut in display order")
+expect(underV2.selected("flavours"), [], "step removed")
+expect(underV2.selected("favourites"), ["mushrooms", "eggs"], "a conflict added between two stored answers: neither avoids, so the second listed goes")
+expect(underV2.selected("heat"), [], "the second listed")
+expect(oldAnswers.filtered(by: q).selected("cuisines").contains("thai"), true, "hidden in v2, back in v1: chosen again")
+expect(oldAnswers.answers["cuisines"]?.contains("korean"), true, "the stored answers are untouched")
+let toSingle = quiz(definition([#"{"id":"cuisines","kind":"single","question":"?","max":6,"groups":[{"options":[{"id":"italian","label":"I"},{"id":"french","label":"F"}]}]}"#]))!
+expect(oldAnswers.filtered(by: toSingle).selected("cuisines"), ["italian"], "kind changed to single: the first in display order")
+let allGone = quiz(definition([multi("methods", ["oven"], max: 1)]))!
+expect(oldAnswers.filtered(by: allGone).isEmpty, true, "every oldAnswers answer gone")
+expect(oldAnswers.summary(allGone), nil, "then the row reads as without a profile")
+expect(TasteProfile.toSend(oldAnswers, quiz: allGone, serverTakesTaste: true), nil, "and nothing is sent")
+// Saving stores the filtered answers as edited, the new version, every step seen.
+let resaved = oldAnswers.saved(from: v2)
+expect(resaved.answers, underV2.answers, "Save stores what was shown")
+expect(resaved.version, "v2", "Save stamps the version")
+expect(TasteProfile.seenAfter(seenBefore, visited: ["meals"]), seenBefore.union(["meals"]), "seen after: what was seen plus what was visited")
+
+// Review fixes (Android and the server do the same).
+// 1. Conflicts are settled before the like steps are cut to their max.
+let capThree = quiz(definition([
+    multi("favourites", ["mushrooms", "tomatoes", "eggs", "berries"], max: 3),
+    multi("avoid", ["mushrooms", "olives"], max: 8, tone: "avoid"),
+]))!
+let beforeCut = TasteProfile(answers: ["favourites": ["mushrooms", "tomatoes", "eggs", "berries"], "avoid": ["mushrooms"]])
+expect(beforeCut.filtered(by: capThree).selected("favourites"), ["tomatoes", "eggs", "berries"], "the conflict goes first, then the cut")
+let avoidCap = quiz(definition([
+    multi("favourites", ["mushrooms", "eggs"], max: 3),
+    multi("avoid", ["olives", "mushrooms"], max: 1, tone: "avoid"),
+]))!
+expect(TasteProfile(answers: ["favourites": ["mushrooms"], "avoid": ["olives", "mushrooms"]]).filtered(by: avoidCap).selected("favourites"), ["mushrooms"],
+       "the avoid step is cut first, so a skip it no longer has doesn't take a favourite")
+// 2. Save marks only the visited steps: with two new steps, Save on the first leaves one note.
+let twoNew = quiz(definition(baseSteps + [multi("meals", ["breakfast"], max: 1), multi("drinks", ["tea"], max: 1)], version: "v4"))!
+let seenEarly = TasteProfile.seenAfter(seenBefore, visited: ["meals"])
+expect(TasteProfile.newSteps(seen: seenEarly, quiz: twoNew).map(\.id), ["drinks"], "Save on the first of two new steps: the other keeps its note")
+// 3. The single step's label is never the named step's.
+let singleFirst = quiz(#"{"version":"s","language":"en","steps":[\#(heatStep),\#(multi("cuisines", ["italian"], max: 2))],"summary":["heat","cuisines"]}"#)!
+expect(settled(TasteProfile(answers: ["heat": ["hot"], "cuisines": ["italian"]]), singleFirst),
+       TasteProfile.Summary(named: ["Hot"], single: nil, more: 1), "a single step named first isn't shown twice")
+// 4. Without a definition the answers go within the wire's shape; a max never exceeds the options.
+var wide: [String: [String]] = [:]
+for i in 0..<20 { wide["step\(i)"] = ["a"] }
+wide["step0"] = (0..<40).map { "o\($0)" } + ["o1", "", String(repeating: "x", count: 41)]
+wide[String(repeating: "k", count: 41)] = ["a"]
+let shaped = TasteProfile.toSend(TasteProfile(answers: wide), quiz: nil, serverTakesTaste: true)!
+expect(shaped.count, 16, "at most 16 steps")
+expect(shaped["step0"]?.count, 32, "at most 32 ids, repeats, blanks and long ids left out")
+expect(shaped.keys.contains { $0.count > 40 }, false, "no key over 40 characters")
+expect(quiz(definition([multi("few", ["a", "b"], max: 9)]))!.step("few")?.max, 2, "max clamped to the option count")
+// 5. Undo of a move takes back only that move.
+let moveQuiz = q
+var draft = TasteProfile(answers: ["avoid": ["mushrooms"]])
+let mushroomsHere = TasteQuiz.Choice(step: "favourites", option: "mushrooms")
+let movedOff = draft.conflictChosen(favourites, "mushrooms", in: moveQuiz)!
+draft = draft.toggled(favourites, "mushrooms", in: moveQuiz)
+draft = draft.toggled(favourites, "eggs", in: moveQuiz).toggled(cuisines, "thai", in: moveQuiz)
+draft = draft.undoneMove(quiz: moveQuiz, step: mushroomsHere.step, option: mushroomsHere.option, movedFrom: movedOff)
+expect(draft.selected("favourites"), ["eggs"], "Undo takes off only the moved choice")
+expect(draft.selected("avoid"), ["mushrooms"], "and puts it back where it was")
+expect(draft.selected("cuisines"), ["thai"], "later choices stay")
+
+// New questions.
+let v3 = quiz(definition(baseSteps + [multi("meals", ["breakfast", "snacks"], max: 3)], version: "v3"))!
+expect(TasteProfile.newSteps(seen: seenBefore, quiz: v3).map(\.id), ["meals"], "a step added since saving")
+expect(TasteProfile.firstStep(seen: seenBefore, quiz: v3), 6, "the quiz opens at the first new step")
+expect(TasteProfile.firstStep(seen: seenBefore, quiz: q), 0, "nothing new: the first step")
+expect(TasteProfile.newSteps(seen: [], quiz: v3).count, 7, "never opened: every question is new")
+expect(TasteProfile.isNewStep(v3.steps[0], seen: []), false, "but no \"New question\" tag on a first visit")
+expect(TasteProfile.isNewStep(v3.steps[6], seen: seenBefore), true, "the tag on a step added since")
+
+// The dot on Recipe settings (section 5).
+let seenAll = Set(q.steps.map(\.id))
+expect(TasteProfile.hasNewQuestions(entry: .quiz, seen: [], quiz: q), true, "recipes in a pack, never opened: the dot")
+expect(TasteProfile.hasNewQuestions(entry: .promo, seen: [], quiz: q), false, "the promo case: never")
+expect(TasteProfile.hasNewQuestions(entry: .hidden, seen: [], quiz: q), false, "no row: never")
+expect(TasteProfile.hasNewQuestions(entry: .quiz, seen: [], quiz: nil), false, "no definition yet: no dot until it is fetched")
+let openedAndLeft = TasteProfile.seenAfter([], visited: ["cuisines", "heat"])
+expect(TasteProfile.hasNewQuestions(entry: .quiz, seen: openedAndLeft, quiz: q), true, "opened and left after two steps: the rest still new")
+expect(TasteProfile.firstStep(seen: openedAndLeft, quiz: q), 2, "and the quiz reopens at the first not reached")
+expect(TasteProfile.hasNewQuestions(entry: .quiz, seen: seenAll, quiz: q), false, "every step shown, saved or not: no dot")
+expect(TasteProfile.hasNewQuestions(entry: .quiz, seen: seenAll, quiz: v3), true, "a step added after saving: the dot")
+// Clearing the profile leaves the seen steps alone: they are stored apart and the profile carries none.
+expect(String(decoding: try! JSONEncoder().encode(TasteProfile(answers: ["heat": ["hot"]])), as: UTF8.self).contains("seen"), false, "the profile stores no seen steps")
+expect(TasteProfile.hasNewQuestions(entry: .quiz, seen: seenAll, quiz: q), false, "clearing doesn't bring the dot back")
+
+// The quiet background fetch on a balance reply's tasteQuizVersion.
+func prefetch(_ server: String?, cached: String?, entry: TasteProfile.Entry = .quiz, account: Bool = true, fetched: Bool = false) -> Bool {
+    TasteProfile.shouldPrefetch(serverVersion: server, cachedVersion: cached, entry: entry, hasAccount: account, alreadyFetched: fetched)
+}
+expect(prefetch("v2", cached: "v1"), true, "a newer version: fetched")
+expect(prefetch("v2", cached: nil), true, "nothing cached: fetched")
+expect(prefetch("v1", cached: "v1"), false, "the cached one: not fetched")
+expect(prefetch(nil, cached: "v1"), false, "an old server names none: unknown, not changed")
+expect(prefetch("v2", cached: "v1", entry: .promo), false, "the promo case: never")
+expect(prefetch("v2", cached: "v1", entry: .hidden), false, "no row: never")
+expect(prefetch("v2", cached: "v1", account: false), false, "no server account: never (none is created)")
+expect(prefetch("v2", cached: "v1", fetched: true), false, "once per version and language")
+expect(try! JSONDecoder().decode(BalanceResponse.self, from: Data(#"{"balance":1,"tasteQuizVersion":"abc"}"#.utf8)).tasteQuizVersion?.value, "abc", "tasteQuizVersion read")
+expect(try! JSONDecoder().decode(BalanceResponse.self, from: Data(#"{"balance":1,"tasteQuizVersion":7}"#.utf8)).tasteQuizVersion?.value, nil, "not a string: none, the reply still reads")
+expect(TasteProfile.newSteps(seen: TasteProfile.seenAfter(seenBefore, visited: ["meals"]), quiz: v3).map(\.id), [], "leaving after seeing it clears the note")
+
+/// The summary of `profile` with every step of `quiz` been through (no new-question note).
+func settled(_ profile: TasteProfile, _ quiz: TasteQuiz) -> TasteProfile.Summary? {
+    profile.summary(quiz)
+}
+
+// The summary: two labels from the first answered summary step, the first single step's label, N more.
+let summed = TasteProfile(answers: ["cuisines": ["nordic", "italian"], "heat": ["medium"], "flavours": ["garlic", "citrus"],
+                                    "favourites": ["eggs"], "avoid": ["olives"], "methods": ["oven"]])
+expect(settled(summed, q), TasteProfile.Summary(named: ["Italian", "Nordic"], single: "Medium", more: 5), "Italian, Nordic · Medium · 5 more")
+expect(settled(TasteProfile(answers: ["heat": ["mild"]]), q), TasteProfile.Summary(named: [], single: "Mild", more: 0), "heat alone")
+expect(settled(TasteProfile(answers: ["flavours": ["umami", "garlic", "citrus"]]), q),
+       TasteProfile.Summary(named: ["Garlic", "Citrus"], single: nil, more: 1), "no cuisines: the flavours are named")
+expect(settled(TasteProfile(answers: ["avoid": ["olives", "onion"]]), q), TasteProfile.Summary(named: [], single: nil, more: 2), "the skip list counts, never named")
+
+// The gate.
+expect(TasteProfile.entry(paidRouteAvailable: false, serverTakesTaste: true, purchasesBlocked: false, balance: 40, hasSavedProfile: true), .hidden, "no paid route: no row")
+expect(TasteProfile.entry(paidRouteAvailable: true, serverTakesTaste: false, purchasesBlocked: false, balance: 40, hasSavedProfile: true), .hidden, "no acceptsTaste: no row")
+expect(TasteProfile.entry(paidRouteAvailable: true, serverTakesTaste: true, purchasesBlocked: false, balance: 3, hasSavedProfile: false), .quiz, "recipes in a pack: the quiz")
+expect(TasteProfile.entry(paidRouteAvailable: true, serverTakesTaste: true, purchasesBlocked: false, balance: 0, hasSavedProfile: true), .quiz, "a saved profile: the quiz")
+expect(TasteProfile.entry(paidRouteAvailable: true, serverTakesTaste: true, purchasesBlocked: false, balance: nil, hasSavedProfile: false), .promo, "never bought: the promo")
+expect(TasteProfile.entry(paidRouteAvailable: true, serverTakesTaste: true, purchasesBlocked: true, balance: 0, hasSavedProfile: false), .hidden, "buying blocked, nothing to use: no row")
+expect(TasteProfile.entry(paidRouteAvailable: true, serverTakesTaste: true, purchasesBlocked: true, balance: 5, hasSavedProfile: false), .quiz, "buying blocked with recipes: the quiz")
+
+// The request: only answers, only with the capability, never anywhere else.
+expect(TasteProfile.toSend(summed, quiz: q, serverTakesTaste: false), nil, "not without acceptsTaste")
+expect(TasteProfile.toSend(TasteProfile(), quiz: q, serverTakesTaste: true), nil, "not when empty")
+expect(TasteProfile.toSend(oldAnswers, quiz: q, serverTakesTaste: true)?["favourites"], ["eggs"], "filtered when sent")
+expect(TasteProfile.toSend(oldAnswers, quiz: nil, serverTakesTaste: true)?["gone"], ["x"], "without a definition: as oldAnswers, for the server to clean")
+func tasteWire(_ answers: [String: [String]]?, kind: RecipeKind = .recipe) -> GenerateRequest {
+    RecipeWire.request(for: menuRequest, kind: kind, courses: 2, requestID: UUID(), taste: answers)!
+}
+func json(_ request: GenerateRequest) -> [String: Any] {
+    try! JSONSerialization.jsonObject(with: try! JSONEncoder().encode(request)) as! [String: Any]
+}
+expect(json(tasteWire(nil))["taste"] == nil, true, "left out without answers")
+let sentTaste = json(tasteWire(["cuisines": ["italian"], "heat": ["hot"]]))["taste"] as? [String: [String]]
+expect(sentTaste ?? [:], ["cuisines": ["italian"], "heat": ["hot"]], "a map of step to option ids, a single step as a list of one")
+expect(tasteWire(["heat": ["hot"]], kind: .menu).taste, ["heat": ["hot"]], "a menu carries it too")
+expect(tasteWire(["heat": ["hot"]]).hasSameInputs(as: tasteWire(["heat": ["mild"]])), false, "the answers are an input")
+var storedWithoutTaste = json(tasteWire(nil))
+storedWithoutTaste.removeValue(forKey: "taste")
+expect(try! JSONDecoder().decode(GenerateRequest.self, from: try! JSONSerialization.data(withJSONObject: storedWithoutTaste)).taste == nil, true,
+       "a request oldAnswers before taste profiles")
+expect(TasteProfile.clearsFlag(after: .invalidRequest, request: tasteWire(["heat": ["hot"]])), true, "invalid with taste: cleared")
+expect(TasteProfile.clearsFlag(after: .invalidRequest, request: tasteWire(nil)), false, "invalid without taste: kept")
+expect(TasteProfile.clearsFlag(after: .refusedName(field: "ingredients[0].name"), request: tasteWire(["heat": ["hot"]])), false, "a refused name: kept")
+
+// The flag comes from every reply that carries a balance.
+expect(try! JSONDecoder().decode(BalanceResponse.self, from: Data(#"{"balance":3,"acceptsTaste":true}"#.utf8)).acceptsTaste?.value, true, "acceptsTaste read")
+expect(try! JSONDecoder().decode(GenerateResponse.self, from: Data(#"{"status":"DONE","balance":3,"charged":true,"acceptsTaste":true}"#.utf8)).acceptsTaste?.value, true, "on generateRecipe")
+expect(try! JSONDecoder().decode(VerifyPurchaseResponse.self, from: Data(#"{"status":"GRANTED","balance":3,"acceptsTaste":true}"#.utf8)).acceptsTaste?.value, true, "on verifyPurchase")
+expect(try! JSONDecoder().decode(MergeBalanceResponse.self, from: Data(#"{"balance":3,"moved":1,"acceptsTaste":true}"#.utf8)).acceptsTaste?.value, true, "on mergeBalance")
+expect(try! JSONDecoder().decode(BalanceResponse.self, from: Data(#"{"balance":3,"acceptsTaste":"yes"}"#.utf8)).acceptsTaste?.value ?? false, false, "not a bool: no")
+
+// Stored: field by field, anything unreadable as no answer.
+let storedTaste = try! JSONDecoder().decode(TasteProfile.self, from: Data(#"{"answers":{"cuisines":["korean",7],"heat":"hot","x":3},"seenSteps":["cuisines"],"future":1}"#.utf8))
+expect(storedTaste.answers, ["cuisines": ["korean"], "heat": ["hot"]], "a stored profile reads leniently")
+expect(try! JSONDecoder().decode(TasteProfile.self, from: try! JSONEncoder().encode(oldAnswers)), oldAnswers, "round trip")
+
+// Never in a free route: the shared prompt and the phone's model take a RecipeRequest, which has
+// no place for the profile.
+let freeRequest = RecipeRequest(items: [RecipeIngredientInput(name: "Milk", daysRemaining: 1, expiryText: "")], config: RecipeConfig(), allergens: ["Peanut"])
+func mentionsTaste(_ value: Any) -> Bool { Mirror(reflecting: value).children.contains { ($0.label ?? "").lowercased().contains("taste") || String(describing: type(of: $0.value)).contains("Taste") } }
+expect(mentionsTaste(tasteWire(["heat": ["hot"]])), true, "the check sees it where it is")
+expect(mentionsTaste(freeRequest), false, "no taste in a RecipeRequest")
+expect(mentionsTaste(RecipeConfig()), false, "no taste in RecipeConfig")
+expect(String(decoding: try! JSONEncoder().encode(RecipeConfig()), as: UTF8.self).contains("taste"), false, "nor in a oldAnswers config")
 
 if failures > 0 {
     print("\(failures) failed")
