@@ -1148,4 +1148,54 @@
         <item quantity="one">%d day</item>
         <item quantity="other">%d days</item>
     </plurals>
+
+    <!-- Recipe: taste profile (recipes from packs only). Only the chrome: the questions, options and their texts come from our server (getTasteQuiz). -->
+    <string name="taste_title">Taste profile</string>
+    <string name="taste_choose_up_to">Choose up to %1$d</string>
+    <string name="taste_choose_one">Choose one, or skip</string>
+    <string name="taste_progress">Step %1$d of %2$d</string>
+    <string name="taste_intro">A few short questions, and you can skip any of them. Your answers stay on this device and are sent only with requests for recipes from a pack.</string>
+    <string name="taste_skip">Skip</string>
+    <string name="taste_back">Back</string>
+    <string name="taste_next">Next</string>
+    <string name="taste_save">Save</string>
+    <string name="taste_settings_empty">For recipes from packs</string>
+    <string name="taste_summary_more">%1$d more</string>
+    <string name="taste_clear">Clear taste profile</string>
+    <string name="taste_uses_profile">Uses your taste profile</string>
+    <string name="taste_settings_badge">new taste profile questions</string>
+    <string name="taste_error_title">Couldn\'t load the questions</string>
+    <string name="taste_error_body">Check your connection and try again.</string>
+    <string name="taste_new_tag">New question</string>
+    <string name="taste_loading">Loading the questions…</string>
+    <string name="taste_retry">Retry</string>
+    <string name="taste_close">Close</string>
+    <plurals name="taste_answers">
+        <item quantity="one">%1$d answer</item>
+        <item quantity="other">%1$d answers</item>
+    </plurals>
+    <plurals name="taste_new_questions">
+        <item quantity="one">%1$d new question</item>
+        <item quantity="other">%1$d new questions</item>
+    </plurals>
+    <string name="taste_chosen">%1$d chosen</string>
+    <string name="taste_chosen_of">%1$d of %2$d</string>
+    <string name="taste_cap_reached">That\'s %1$d. Untick one to choose another.</string>
+    <string name="taste_on_skip_note">Marked items are on your skip list. Choosing one here takes it off.</string>
+    <string name="taste_on_love_note">Marked items are ones you love. Choosing one here takes it off that list.</string>
+    <string name="taste_chip_on_skip">%1$s, on your skip list</string>
+    <string name="taste_chip_on_love">%1$s, on what you love</string>
+    <string name="taste_chip_at_cap">%1$s. You have chosen the most already</string>
+    <string name="taste_moved_off_skip">%1$s taken off your skip list</string>
+    <string name="taste_moved_off_love">%1$s taken off what you love</string>
+    <string name="taste_saved_snackbar">Taste profile saved. Recipes from packs will use it.</string>
+    <string name="taste_cleared_snackbar">Taste profile cleared</string>
+    <string name="taste_discard_message">Your answers haven\'t been saved, so your taste profile stays as it was.</string>
+    <string name="taste_promo_lede">Recipes from your packs, written the way you like to eat.</string>
+    <string name="taste_promo_questions_title">A few short questions</string>
+    <string name="taste_promo_questions_body">Cuisines, heat, flavours, what you love, what you\'d rather skip and how you like to cook. Skip any of them.</string>
+    <string name="taste_promo_taste_title">Recipes and menus to your taste</string>
+    <string name="taste_promo_taste_body">Our server leans towards what you like and leaves out what you\'d rather skip. Your pantry, allergens and diet still come first.</string>
+    <string name="taste_promo_device_title">Kept on this device</string>
+    <string name="taste_promo_device_body">It is sent only with requests for recipes from a pack.</string>
 </resources>

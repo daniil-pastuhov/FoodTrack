@@ -1149,4 +1149,54 @@
         <item quantity="one">%d dag</item>
         <item quantity="other">%d dage</item>
     </plurals>
+
+    <!-- Recipe: taste profile (recipes from packs only). Only the chrome: the questions, options and their texts come from our server (getTasteQuiz). -->
+    <string name="taste_title">Smagsprofil</string>
+    <string name="taste_choose_up_to">Vælg op til %1$d</string>
+    <string name="taste_choose_one">Vælg én, eller spring over</string>
+    <string name="taste_progress">Trin %1$d af %2$d</string>
+    <string name="taste_intro">Nogle få korte spørgsmål, og du kan springe et hvilket som helst over. Dine svar bliver på denne enhed og sendes kun med forespørgsler om opskrifter fra en pakke.</string>
+    <string name="taste_skip">Spring over</string>
+    <string name="taste_back">Tilbage</string>
+    <string name="taste_next">Næste</string>
+    <string name="taste_save">Gem</string>
+    <string name="taste_settings_empty">Til opskrifter fra pakker</string>
+    <string name="taste_summary_more">%1$d mere</string>
+    <string name="taste_clear">Ryd smagsprofilen</string>
+    <string name="taste_uses_profile">Bruger din smagsprofil</string>
+    <string name="taste_settings_badge">nye spørgsmål i smagsprofilen</string>
+    <string name="taste_error_title">Spørgsmålene kunne ikke indlæses</string>
+    <string name="taste_error_body">Tjek forbindelsen, og prøv igen.</string>
+    <string name="taste_new_tag">Nyt spørgsmål</string>
+    <string name="taste_loading">Indlæser spørgsmålene …</string>
+    <string name="taste_retry">Prøv igen</string>
+    <string name="taste_close">Luk</string>
+    <plurals name="taste_answers">
+        <item quantity="one">%1$d svar</item>
+        <item quantity="other">%1$d svar</item>
+    </plurals>
+    <plurals name="taste_new_questions">
+        <item quantity="one">%1$d nyt spørgsmål</item>
+        <item quantity="other">%1$d nye spørgsmål</item>
+    </plurals>
+    <string name="taste_chosen">%1$d valgt</string>
+    <string name="taste_chosen_of">%1$d af %2$d</string>
+    <string name="taste_cap_reached">Det er %1$d. Fjern én for at vælge en anden.</string>
+    <string name="taste_on_skip_note">Markerede valg står på listen over det, du helst vil være fri for. Vælger du ét her, fjernes det derfra.</string>
+    <string name="taste_on_love_note">Markerede valg er noget, du elsker. Vælger du ét her, fjernes det fra den liste.</string>
+    <string name="taste_chip_on_skip">%1$s, på listen over det, du vil være fri for</string>
+    <string name="taste_chip_on_love">%1$s, blandt det, du elsker</string>
+    <string name="taste_chip_at_cap">%1$s. Du har allerede valgt det højeste antal</string>
+    <string name="taste_moved_off_skip">%1$s er fjernet fra listen over det, du vil være fri for</string>
+    <string name="taste_moved_off_love">%1$s er fjernet fra det, du elsker</string>
+    <string name="taste_saved_snackbar">Smagsprofilen er gemt. Opskrifter fra pakker bruger den.</string>
+    <string name="taste_cleared_snackbar">Smagsprofilen er ryddet</string>
+    <string name="taste_discard_message">Dine svar er ikke gemt, så din smagsprofil forbliver, som den var.</string>
+    <string name="taste_promo_lede">Opskrifter fra dine pakker, skrevet sådan som du kan lide at spise.</string>
+    <string name="taste_promo_questions_title">Nogle få korte spørgsmål</string>
+    <string name="taste_promo_questions_body">Køkkener, styrke, smage, det du elsker, det du helst vil være fri for, og hvordan du kan lide at lave mad. Spring et hvilket som helst over.</string>
+    <string name="taste_promo_taste_title">Opskrifter og menuer efter din smag</string>
+    <string name="taste_promo_taste_body">Vores server læner sig mod det, du kan lide, og udelader det, du helst vil være fri for. Dit forråd, dine allergener og din kost kommer stadig først.</string>
+    <string name="taste_promo_device_title">Bliver på denne enhed</string>
+    <string name="taste_promo_device_body">Den sendes kun med forespørgsler om opskrifter fra en pakke.</string>
 </resources>

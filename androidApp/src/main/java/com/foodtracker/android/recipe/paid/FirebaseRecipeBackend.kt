@@ -16,6 +16,8 @@ import com.foodtracker.recipe.VerifyReply
 import com.foodtracker.recipe.WireKind
 import com.foodtracker.recipe.acceptsDanishOf
 import com.foodtracker.recipe.acceptsMenuDaysOf
+import com.foodtracker.recipe.acceptsTasteOf
+import com.foodtracker.recipe.tasteQuizVersionOf
 import com.foodtracker.recipe.acceptsMultiChoiceConfigOf
 import com.foodtracker.recipe.acceptsOptionalIngredientsOf
 import com.foodtracker.recipe.purchasesBlockedOf
@@ -93,6 +95,11 @@ class FirebaseRecipeBackend(
 
     override suspend fun getBalance(): ServerResult<BalanceReply> = callBalance(firebase.functions())
 
+    // A normal App Check token, as for the balance (see CONSUMING_CALLABLES). The reply is read
+    // leniently by the caller (tasteQuizOf), so it is handed over as JSON.
+    override suspend fun getTasteQuiz(language: String): ServerResult<JsonElement> =
+        callRaw(firebase.functions(), "getTasteQuiz", JsonObject(mapOf("language" to JsonPrimitive(language))), 30L)
+
     override suspend fun deleteAccount(): ServerResult<DeleteReply> =
         // No `appleAuthorizationCode`: Android has no Sign in with Apple to get one from. For an
         // account with Apple attached (added on an iPhone) the server revokes the Apple token it
@@ -143,14 +150,14 @@ internal fun mergeReplyOf(json: JsonElement): MergeReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: return null
     val moved = (reply["moved"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: 0
-    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]))
+    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]))
 }
 
 /** `getBalance`'s reply: the count, and the costs when they came and could be read. */
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.longOrNull?.toInt() ?: return null
-    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]))
+    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]))
 }
 
 internal suspend fun <T> call(

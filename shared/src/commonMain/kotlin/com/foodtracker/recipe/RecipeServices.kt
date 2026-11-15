@@ -17,6 +17,22 @@ interface RecipeConfigRepository {
     /** The tab's own settings that aren't part of a request's config. */
     fun getOptions(): RecipeOptions
     fun saveOptions(options: RecipeOptions)
+
+    /** The taste profile ([TasteProfile]): a key of its own beside the config, never inside it,
+     *  so it is never part of a request's `config`. Kept as given (a definition change never
+     *  rewrites it); an empty profile removes what was kept. */
+    fun getTaste(): TasteProfile
+    fun saveTaste(taste: TasteProfile)
+
+    /** The last good taste quiz definition in [language] (`getTasteQuiz`'s JSON as text), or
+     *  null. One per language, beside the profile; never in backups. */
+    fun getTasteQuiz(language: String): String?
+    fun saveTasteQuiz(language: String, json: String)
+
+    /** The taste quiz steps the person has been through, kept apart from the answers (with or
+     *  without a profile) so new questions can be told ([tasteNewSteps]). */
+    fun getTasteSeen(): List<String>
+    fun saveTasteSeen(seen: List<String>)
 }
 
 /**

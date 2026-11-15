@@ -1,0 +1,402 @@
+{
+ "version": "demo-2026-11-16",
+ "language": "ru",
+ "steps": [
+  {
+   "id": "cuisines",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "globe",
+   "question": "Какие кухни вам нравятся?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "italian",
+       "label": "Итальянская"
+      },
+      {
+       "id": "french",
+       "label": "Французская"
+      },
+      {
+       "id": "spanish",
+       "label": "Испанская"
+      },
+      {
+       "id": "greek",
+       "label": "Греческая"
+      },
+      {
+       "id": "nordic",
+       "label": "Скандинавская"
+      },
+      {
+       "id": "eastern_european",
+       "label": "Восточноевропейская"
+      },
+      {
+       "id": "georgian",
+       "label": "Грузинская"
+      },
+      {
+       "id": "middle_eastern",
+       "label": "Ближневосточная"
+      },
+      {
+       "id": "indian",
+       "label": "Индийская"
+      },
+      {
+       "id": "chinese",
+       "label": "Китайская"
+      },
+      {
+       "id": "japanese",
+       "label": "Японская"
+      },
+      {
+       "id": "korean",
+       "label": "Корейская"
+      },
+      {
+       "id": "thai",
+       "label": "Тайская"
+      },
+      {
+       "id": "mexican",
+       "label": "Мексиканская"
+      },
+      {
+       "id": "american",
+       "label": "Американская"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "heat",
+   "kind": "single",
+   "tone": "like",
+   "icon": "flame",
+   "question": "Насколько остро вы любите?",
+   "note": null,
+   "max": 1,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "mild",
+       "label": "Не острое",
+       "sub": "Почти без чили",
+       "level": 1
+      },
+      {
+       "id": "medium",
+       "label": "Средне острое",
+       "sub": "Лёгкая острота",
+       "level": 2
+      },
+      {
+       "id": "hot",
+       "label": "Острое",
+       "sub": "Побольше чили",
+       "level": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flavours",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "citrus",
+   "question": "Какие вкусы вам по душе?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "garlic",
+       "label": "Чеснок"
+      },
+      {
+       "id": "fresh_herbs",
+       "label": "Свежая зелень"
+      },
+      {
+       "id": "citrus",
+       "label": "Цитрусы"
+      },
+      {
+       "id": "smoky",
+       "label": "Копчёное"
+      },
+      {
+       "id": "creamy",
+       "label": "Сливочное"
+      },
+      {
+       "id": "tangy",
+       "label": "Кислое и маринованное"
+      },
+      {
+       "id": "sweet_savoury",
+       "label": "Сладко-солёное"
+      },
+      {
+       "id": "umami",
+       "label": "Умами"
+      },
+      {
+       "id": "peppery",
+       "label": "С перчинкой"
+      },
+      {
+       "id": "warm_spices",
+       "label": "Пряности"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "favourites",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "heart",
+   "question": "Что вы любите есть?",
+   "note": null,
+   "max": 8,
+   "groups": [
+    {
+     "title": "Овощи и бобовые",
+     "options": [
+      {
+       "id": "tomatoes",
+       "label": "Помидоры"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Грибы"
+      },
+      {
+       "id": "potatoes",
+       "label": "Картофель"
+      },
+      {
+       "id": "leafy_greens",
+       "label": "Листовая зелень"
+      },
+      {
+       "id": "peppers",
+       "label": "Сладкий перец"
+      },
+      {
+       "id": "aubergine",
+       "label": "Баклажаны"
+      },
+      {
+       "id": "legumes",
+       "label": "Фасоль и чечевица"
+      }
+     ]
+    },
+    {
+     "title": "Белок и молочное",
+     "options": [
+      {
+       "id": "cheese",
+       "label": "Сыр"
+      },
+      {
+       "id": "eggs",
+       "label": "Яйца"
+      },
+      {
+       "id": "chicken",
+       "label": "Курица"
+      },
+      {
+       "id": "fish_seafood",
+       "label": "Рыба и морепродукты"
+      },
+      {
+       "id": "red_meat",
+       "label": "Красное мясо"
+      }
+     ]
+    },
+    {
+     "title": "Фрукты",
+     "options": [
+      {
+       "id": "berries",
+       "label": "Ягоды"
+      },
+      {
+       "id": "apples_pears",
+       "label": "Яблоки и груши"
+      },
+      {
+       "id": "citrus_fruit",
+       "label": "Цитрусовые"
+      },
+      {
+       "id": "bananas",
+       "label": "Бананы"
+      },
+      {
+       "id": "stone_fruit",
+       "label": "Косточковые фрукты"
+      },
+      {
+       "id": "tropical_fruit",
+       "label": "Тропические фрукты"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "avoid",
+   "kind": "multi",
+   "tone": "avoid",
+   "icon": "heart-off",
+   "question": "Без чего вы бы обошлись?",
+   "note": "Это предпочтение, а не настройка аллергии. Аллергены задаются в разделе «Предупреждения об аллергенах» в Настройках.",
+   "max": 8,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "onion",
+       "label": "Лук"
+      },
+      {
+       "id": "garlic",
+       "label": "Чеснок"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Грибы"
+      },
+      {
+       "id": "fresh_coriander",
+       "label": "Кинза"
+      },
+      {
+       "id": "olives",
+       "label": "Оливки"
+      },
+      {
+       "id": "fish",
+       "label": "Рыба"
+      },
+      {
+       "id": "seafood",
+       "label": "Морепродукты"
+      },
+      {
+       "id": "offal",
+       "label": "Субпродукты"
+      },
+      {
+       "id": "aubergine",
+       "label": "Баклажаны"
+      },
+      {
+       "id": "bell_pepper",
+       "label": "Болгарский перец"
+      },
+      {
+       "id": "blue_cheese",
+       "label": "Сыр с плесенью"
+      },
+      {
+       "id": "mayonnaise",
+       "label": "Майонез"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "methods",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "cooking-pot",
+   "question": "Как вы любите готовить?",
+   "note": null,
+   "max": 5,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "oven",
+       "label": "Духовка"
+      },
+      {
+       "id": "pan",
+       "label": "Сковорода"
+      },
+      {
+       "id": "one_pot",
+       "label": "В одной кастрюле"
+      },
+      {
+       "id": "grill",
+       "label": "Гриль"
+      },
+      {
+       "id": "slow_cook",
+       "label": "Томление"
+      },
+      {
+       "id": "air_fryer",
+       "label": "Аэрогриль"
+      },
+      {
+       "id": "no_cook",
+       "label": "Без готовки"
+      },
+      {
+       "id": "steam",
+       "label": "На пару"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "conflicts": [
+  [
+   "favourites:mushrooms",
+   "avoid:mushrooms"
+  ],
+  [
+   "favourites:aubergine",
+   "avoid:aubergine"
+  ],
+  [
+   "flavours:garlic",
+   "avoid:garlic"
+  ]
+ ],
+ "summary": [
+  "cuisines",
+  "flavours",
+  "favourites",
+  "methods"
+ ]
+}

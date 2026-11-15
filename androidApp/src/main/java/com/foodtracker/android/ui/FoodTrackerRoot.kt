@@ -87,6 +87,7 @@ import com.foodtracker.android.ui.screens.MenuDishScreen
 import com.foodtracker.android.ui.screens.RecipeResultScreen
 import com.foodtracker.android.ui.screens.RecipeScreen
 import com.foodtracker.android.ui.screens.RecipeSettingsScreen
+import com.foodtracker.android.ui.screens.TasteProfileScreen
 import com.foodtracker.android.ui.screens.SavedRecipesScreen
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
@@ -680,6 +681,8 @@ fun FoodTrackerRoot(
                         is LarderRoute.RecipeResult -> currentScreen = recipeResultReturn
                         is LarderRoute.MenuDish -> currentScreen = LarderRoute.RecipeResult((currentScreen as LarderRoute.MenuDish).savedId)
                         LarderRoute.SavedRecipes, LarderRoute.RecipeSettings -> currentScreen = LarderRoute.Recipe
+                        // The quiz handles back itself (a step back, or leaving); this is a fallback.
+                        LarderRoute.TasteProfile -> currentScreen = LarderRoute.RecipeSettings
                         LarderRoute.Settings, LarderRoute.Recipe, LarderRoute.Shopping -> navigateToDashboard()
                         is LarderRoute.ProductDetail, LarderRoute.Home, LarderRoute.Onboarding -> Unit
                     }
@@ -1052,7 +1055,15 @@ fun FoodTrackerRoot(
                         LarderRoute.RecipeSettings -> {
                             RecipeSettingsScreen(
                                 stateHolder = recipeStateHolder,
-                                onBack = { currentScreen = LarderRoute.Recipe }
+                                onBack = { currentScreen = LarderRoute.Recipe },
+                                onOpenTaste = { currentScreen = LarderRoute.TasteProfile }
+                            )
+                        }
+
+                        LarderRoute.TasteProfile -> {
+                            TasteProfileScreen(
+                                stateHolder = recipeStateHolder,
+                                onClose = { currentScreen = LarderRoute.RecipeSettings }
                             )
                         }
 

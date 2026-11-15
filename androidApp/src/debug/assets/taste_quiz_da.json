@@ -1,0 +1,402 @@
+{
+ "version": "demo-2026-11-16",
+ "language": "da",
+ "steps": [
+  {
+   "id": "cuisines",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "globe",
+   "question": "Hvilke køkkener kan du lide?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "italian",
+       "label": "Italiensk"
+      },
+      {
+       "id": "french",
+       "label": "Fransk"
+      },
+      {
+       "id": "spanish",
+       "label": "Spansk"
+      },
+      {
+       "id": "greek",
+       "label": "Græsk"
+      },
+      {
+       "id": "nordic",
+       "label": "Nordisk"
+      },
+      {
+       "id": "eastern_european",
+       "label": "Østeuropæisk"
+      },
+      {
+       "id": "georgian",
+       "label": "Georgisk"
+      },
+      {
+       "id": "middle_eastern",
+       "label": "Mellemøstlig"
+      },
+      {
+       "id": "indian",
+       "label": "Indisk"
+      },
+      {
+       "id": "chinese",
+       "label": "Kinesisk"
+      },
+      {
+       "id": "japanese",
+       "label": "Japansk"
+      },
+      {
+       "id": "korean",
+       "label": "Koreansk"
+      },
+      {
+       "id": "thai",
+       "label": "Thailandsk"
+      },
+      {
+       "id": "mexican",
+       "label": "Mexicansk"
+      },
+      {
+       "id": "american",
+       "label": "Amerikansk"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "heat",
+   "kind": "single",
+   "tone": "like",
+   "icon": "flame",
+   "question": "Hvor stærkt kan du lide det?",
+   "note": null,
+   "max": 1,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "mild",
+       "label": "Mild",
+       "sub": "Lidt eller ingen chili",
+       "level": 1
+      },
+      {
+       "id": "medium",
+       "label": "Middel",
+       "sub": "En mild varme",
+       "level": 2
+      },
+      {
+       "id": "hot",
+       "label": "Stærk",
+       "sub": "Gerne masser af chili",
+       "level": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flavours",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "citrus",
+   "question": "Hvilke smage går du efter?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "garlic",
+       "label": "Hvidløg"
+      },
+      {
+       "id": "fresh_herbs",
+       "label": "Friske krydderurter"
+      },
+      {
+       "id": "citrus",
+       "label": "Citrus"
+      },
+      {
+       "id": "smoky",
+       "label": "Røget"
+      },
+      {
+       "id": "creamy",
+       "label": "Cremet"
+      },
+      {
+       "id": "tangy",
+       "label": "Syrligt og syltet"
+      },
+      {
+       "id": "sweet_savoury",
+       "label": "Sødt og salt"
+      },
+      {
+       "id": "umami",
+       "label": "Umami"
+      },
+      {
+       "id": "peppery",
+       "label": "Pebret"
+      },
+      {
+       "id": "warm_spices",
+       "label": "Varme krydderier"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "favourites",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "heart",
+   "question": "Hvad elsker du at spise?",
+   "note": null,
+   "max": 8,
+   "groups": [
+    {
+     "title": "Grøntsager og bælgfrugter",
+     "options": [
+      {
+       "id": "tomatoes",
+       "label": "Tomater"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Svampe"
+      },
+      {
+       "id": "potatoes",
+       "label": "Kartofler"
+      },
+      {
+       "id": "leafy_greens",
+       "label": "Bladgrøntsager"
+      },
+      {
+       "id": "peppers",
+       "label": "Peberfrugt"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "legumes",
+       "label": "Bønner og linser"
+      }
+     ]
+    },
+    {
+     "title": "Protein og mejeri",
+     "options": [
+      {
+       "id": "cheese",
+       "label": "Ost"
+      },
+      {
+       "id": "eggs",
+       "label": "Æg"
+      },
+      {
+       "id": "chicken",
+       "label": "Kylling"
+      },
+      {
+       "id": "fish_seafood",
+       "label": "Fisk og skaldyr"
+      },
+      {
+       "id": "red_meat",
+       "label": "Rødt kød"
+      }
+     ]
+    },
+    {
+     "title": "Frugt",
+     "options": [
+      {
+       "id": "berries",
+       "label": "Bær"
+      },
+      {
+       "id": "apples_pears",
+       "label": "Æbler og pærer"
+      },
+      {
+       "id": "citrus_fruit",
+       "label": "Citrusfrugter"
+      },
+      {
+       "id": "bananas",
+       "label": "Bananer"
+      },
+      {
+       "id": "stone_fruit",
+       "label": "Stenfrugter"
+      },
+      {
+       "id": "tropical_fruit",
+       "label": "Tropiske frugter"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "avoid",
+   "kind": "multi",
+   "tone": "avoid",
+   "icon": "heart-off",
+   "question": "Hvad vil du helst være fri for?",
+   "note": "Dette er en præference, ikke en allergiindstilling. Allergier indstiller du under Allergenadvarsler i Indstillinger.",
+   "max": 8,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "onion",
+       "label": "Løg"
+      },
+      {
+       "id": "garlic",
+       "label": "Hvidløg"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Svampe"
+      },
+      {
+       "id": "fresh_coriander",
+       "label": "Frisk koriander"
+      },
+      {
+       "id": "olives",
+       "label": "Oliven"
+      },
+      {
+       "id": "fish",
+       "label": "Fisk"
+      },
+      {
+       "id": "seafood",
+       "label": "Skaldyr"
+      },
+      {
+       "id": "offal",
+       "label": "Indmad"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "bell_pepper",
+       "label": "Peberfrugt"
+      },
+      {
+       "id": "blue_cheese",
+       "label": "Blåskimmelost"
+      },
+      {
+       "id": "mayonnaise",
+       "label": "Mayonnaise"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "methods",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "cooking-pot",
+   "question": "Hvordan kan du lide at lave mad?",
+   "note": null,
+   "max": 5,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "oven",
+       "label": "Ovn"
+      },
+      {
+       "id": "pan",
+       "label": "Pande"
+      },
+      {
+       "id": "one_pot",
+       "label": "Alt i én gryde"
+      },
+      {
+       "id": "grill",
+       "label": "Grill"
+      },
+      {
+       "id": "slow_cook",
+       "label": "Langtidstilberedning"
+      },
+      {
+       "id": "air_fryer",
+       "label": "Airfryer"
+      },
+      {
+       "id": "no_cook",
+       "label": "Uden tilberedning"
+      },
+      {
+       "id": "steam",
+       "label": "Dampning"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "conflicts": [
+  [
+   "favourites:mushrooms",
+   "avoid:mushrooms"
+  ],
+  [
+   "favourites:aubergine",
+   "avoid:aubergine"
+  ],
+  [
+   "flavours:garlic",
+   "avoid:garlic"
+  ]
+ ],
+ "summary": [
+  "cuisines",
+  "flavours",
+  "favourites",
+  "methods"
+ ]
+}

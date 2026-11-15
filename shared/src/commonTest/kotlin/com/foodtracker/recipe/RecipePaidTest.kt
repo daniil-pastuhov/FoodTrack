@@ -40,6 +40,21 @@ private class PaidConfigRepository : RecipeConfigRepository {
     override fun saveOptions(options: RecipeOptions) {
         storedOptions = options
     }
+    var storedTaste = TasteProfile()
+    override fun getTaste(): TasteProfile = storedTaste
+    override fun saveTaste(taste: TasteProfile) {
+        storedTaste = taste
+    }
+    val storedQuizzes = mutableMapOf<String, String>()
+    override fun getTasteQuiz(language: String): String? = storedQuizzes[language]
+    override fun saveTasteQuiz(language: String, json: String) {
+        storedQuizzes[language] = json
+    }
+    var storedSeen: List<String> = emptyList()
+    override fun getTasteSeen(): List<String> = storedSeen
+    override fun saveTasteSeen(seen: List<String>) {
+        storedSeen = seen
+    }
 }
 
 private class PaidSavedRepository : SavedRecipeRepository {
@@ -80,6 +95,10 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balanceMultiChoice = false
     var balanceDanish = false
     var balanceMenuDays = false
+    var balanceTaste = false
+    var balanceTasteVersion: String? = null
+    val tasteQuizReplies = ArrayDeque<ServerResult<kotlinx.serialization.json.JsonElement>>()
+    val tasteQuizAsked = mutableListOf<String>()
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<DeleteReply>>()
     var deleteCalls = 0
@@ -113,9 +132,13 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays, balanceTaste, balanceTasteVersion))
             is ServerResult.Err -> current
         }
+    }
+    override suspend fun getTasteQuiz(language: String): ServerResult<kotlinx.serialization.json.JsonElement> {
+        tasteQuizAsked += language
+        return tasteQuizReplies.removeFirstOrNull() ?: ServerResult.Err(ServerError.OFFLINE)
     }
     override suspend fun deleteAccount(): ServerResult<DeleteReply> {
         deleteCalls++
@@ -3014,5 +3037,467 @@ class RecipePaidTest {
         holder.clearAll()
         assertEquals(0, holder.uiState.value.unreadCount)
         assertEquals(emptySet(), configRepository.storedOptions.unreadSaved)
+    }
+
+    // --- Taste profile: only when saved, and only to a server that says acceptsTaste ---------
+
+    private val someTaste = TasteProfile(mapOf("cuisines" to listOf("nordic", "italian"), "heat" to listOf("medium"), "avoid" to listOf("olives")))
+
+    private fun withTasteServer(balance: Int, takes: Boolean, taste: TasteProfile = someTaste) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = balance, serverTakesTaste = takes))
+        // getBalance keeps saying the old value, so only the reply under test can change it.
+        backend.balanceTaste = takes
+        configRepository.storedTaste = taste
+    }
+
+    @Test
+    fun aSavedProfileGoesToAServerThatReadsIt() = runUnconfined {
+        withTasteServer(5, takes = true)
+        val holder = holder()
+        assertTrue(holder.uiState.value.sendsTaste, "the server action says it uses the profile")
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(someTaste.answers, backend.generated.single().taste)
+    }
+
+    @Test
+    fun aMenuCarriesTheProfileToo() = runUnconfined {
+        withTasteServer(10, takes = true)
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, menu = sampleMenu(2), balance = 5, charged = true, acceptsTaste = JsonPrimitive(true)))
+        holder.generateOnServer()
+        assertEquals(WireKind.MENU, backend.generated.single().kind)
+        assertEquals(someTaste.answers, backend.generated.single().taste)
+    }
+
+    @Test
+    fun aServerThatDoesntReadItGetsTheRequestWithoutIt() = runUnconfined {
+        withTasteServer(5, takes = false)
+        val holder = holder()
+        assertFalse(holder.uiState.value.sendsTaste)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.single().taste, "no error and nothing blocked: just not sent")
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun anEmptyProfileIsNeverSent() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        val holder = holder()
+        assertFalse(holder.uiState.value.sendsTaste)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.single().taste)
+    }
+
+    @Test
+    fun aProfileSavedOrClearedNowGoesWithTheNextRequest() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        val holder = holder()
+        holder.saveTaste(TasteProfile(mapOf("methods" to listOf("oven"))))
+        assertEquals(TasteProfile(mapOf("methods" to listOf("oven"))), configRepository.storedTaste)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(mapOf("methods" to listOf("oven")), backend.generated.last().taste)
+
+        holder.consumeEvent()
+        holder.clearTaste()
+        assertTrue(configRepository.storedTaste.isEmpty)
+        backend.generateReplies += done(3)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().taste)
+        assertEquals(2, backend.generated.size)
+    }
+
+    @Test
+    fun aHeldGenerationIsSentAgainWithTheProfileItWasAskedWith() = runUnconfined {
+        withTasteServer(5, takes = true)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        assertEquals(someTaste.answers, paidRepository.get().pendingGeneration?.taste, "kept as sent")
+        holder.saveTaste(TasteProfile())
+        backend.generateReplies += done(4)
+        holder.retryServer()
+        assertEquals(backend.generated[0], backend.generated[1], "same id, same inputs, whatever changed meanwhile")
+    }
+
+    @Test
+    fun aRequestWithTheProfileRefusedAsInvalidClearsTheFlagAndAsksAgain() = runUnconfined {
+        withTasteServer(5, takes = true)
+        val holder = holder()
+        // A server rolled back to one from before taste profiles.
+        backend.balanceTaste = false
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        val before = backend.balanceCalls
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals(before + 1, backend.balanceCalls)
+        assertFalse(paidRepository.get().serverTakesTaste)
+        assertFalse(holder.uiState.value.paid.takesTaste)
+        holder.consumeEvent()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().taste, "the next try goes without it")
+    }
+
+    @Test
+    fun anInvalidRequestWithoutTheProfileLeavesTheFlag() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        holder.generateOnServer()
+        assertTrue(paidRepository.get().serverTakesTaste)
+    }
+
+    private fun tasteFlag(says: Boolean) = if (says) JsonPrimitive(true) else null
+
+    private fun TestScope.generateReplySetsTaste(status: GenerateStatus, before: Boolean) {
+        withTasteServer(5, takes = before)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(
+            GenerateReply(status, recipe = sampleRecipe.takeIf { status == GenerateStatus.DONE }, balance = 4, charged = status == GenerateStatus.DONE, acceptsTaste = tasteFlag(!before))
+        )
+        holder.generateOnServer()
+        assertEquals(1, backend.generated.size)
+        assertEquals(!before, paidRepository.get().serverTakesTaste, "$status: from $before")
+        assertEquals(!before, holder.uiState.value.paid.takesTaste)
+    }
+
+    @Test
+    fun aWrittenRecipeSaysTheServerNowReadsTaste() = runUnconfined { generateReplySetsTaste(GenerateStatus.DONE, before = false) }
+
+    @Test
+    fun aWrittenRecipeFromARolledBackServerClearsTaste() = runUnconfined { generateReplySetsTaste(GenerateStatus.DONE, before = true) }
+
+    @Test
+    fun aFailedGenerationSaysTheServerNowReadsTaste() = runUnconfined { generateReplySetsTaste(GenerateStatus.FAILED, before = false) }
+
+    @Test
+    fun aPollsAnswerSaysTheServerReadsTaste() = runUnconfined {
+        withTasteServer(5, takes = false)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe, balance = 4, charged = true, acceptsTaste = JsonPrimitive(true)))
+        holder.generateOnServer()
+        assertTrue(paidRepository.get().serverTakesTaste)
+    }
+
+    @Test
+    fun theBalanceSaysWhetherTheServerReadsTaste() = runUnconfined {
+        withTasteServer(5, takes = false)
+        backend.balanceTaste = true
+        val holder = holder()
+        holder.onAppResume()
+        assertTrue(paidRepository.get().serverTakesTaste)
+    }
+
+    private suspend fun TestScope.verifyReplySetsTaste(before: Boolean) {
+        account = FakeAccount(AccountKind.ANONYMOUS)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 0, serverTakesTaste = before))
+        backend.balanceTaste = before
+        val holder = holder()
+        backend.verifyReplies += ServerResult.Ok(VerifyReply(VerifyStatus.GRANTED, 10, acceptsTaste = tasteFlag(!before)))
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("tok", listOf("recipes_10"), 1, pending = false))))
+        assertEquals(10, holder.uiState.value.paid.balance)
+        assertEquals(!before, paidRepository.get().serverTakesTaste, "from $before")
+    }
+
+    @Test
+    fun aVerifiedPurchaseSaysTheServerNowReadsTaste() = runUnconfined { verifyReplySetsTaste(before = false) }
+
+    @Test
+    fun aVerifiedPurchaseFromARolledBackServerClearsTaste() = runUnconfined { verifyReplySetsTaste(before = true) }
+
+    private fun TestScope.mergeReplySetsTaste(before: Boolean) {
+        withTasteServer(-3, takes = before)
+        val holder = holder()
+        account.mergeResult = ServerResult.Ok(MergeReply(balance = 35, moved = -3, acceptsTaste = !before))
+        account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
+        holder.signIn(SignInProvider.GOOGLE)
+        assertEquals(35, holder.uiState.value.paid.balance)
+        assertEquals(!before, paidRepository.get().serverTakesTaste, "from $before")
+    }
+
+    @Test
+    fun aJoinSaysTheServerNowReadsTaste() = runUnconfined { mergeReplySetsTaste(before = false) }
+
+    @Test
+    fun aJoinWithARolledBackServerClearsTaste() = runUnconfined { mergeReplySetsTaste(before = true) }
+
+    @Test
+    fun onlyAJsonTrueSaysAServerReadsTaste() {
+        assertTrue(acceptsTasteOf(JsonPrimitive(true)))
+        for (value in listOf(null, kotlinx.serialization.json.JsonNull, JsonPrimitive(false), JsonPrimitive("true"), JsonPrimitive(1))) {
+            assertFalse(acceptsTasteOf(value), "$value")
+        }
+    }
+
+    @Test
+    fun theGateFollowsThePackAndTheSavedProfile() = runUnconfined {
+        withTasteServer(0, takes = true, taste = TasteProfile())
+        val holder = holder()
+        holder.refresh()
+        assertEquals(TasteEntry.PROMO, holder.uiState.value.tasteEntry)
+        holder.saveTaste(TasteProfile(mapOf("heat" to listOf("hot"))))
+        assertEquals(TasteEntry.QUIZ, holder.uiState.value.tasteEntry, "a saved profile can always be changed")
+    }
+
+    @Test
+    fun withoutThePaidRouteThereIsNoRow() = runUnconfined {
+        backend.available = false
+        configRepository.storedTaste = someTaste
+        val holder = holder()
+        assertEquals(TasteEntry.HIDDEN, holder.uiState.value.tasteEntry)
+        assertFalse(holder.uiState.value.sendsTaste)
+    }
+
+    @Test
+    fun clearAllForgetsTheProfile() = runUnconfined {
+        withTasteServer(5, takes = true)
+        val holder = holder()
+        holder.clearAll()
+        assertTrue(configRepository.storedTaste.isEmpty)
+        assertTrue(holder.uiState.value.taste.isEmpty)
+        assertEquals(RecipeConfig(), configRepository.stored, "never inside the config")
+    }
+
+    // --- Taste quiz: fetched only to open it, cached per language, never swapped while open ----
+
+    private fun quizReply(json: String = TasteQuizFixture.json()) = ServerResult.Ok(TasteQuizFixture.element(json))
+
+    @Test
+    fun withACachedDefinitionTheQuizOpensAtOnceAndTheRefreshWaitsForTheNextOpen() = runUnconfined {
+        withTasteServer(5, takes = true)
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json(version = "v1")
+        val holder = holder()
+        backend.tasteQuizReplies += quizReply(TasteQuizFixture.json(version = "v2"))
+        holder.openTasteQuiz()
+        val shown = assertIs<TasteQuizScreen.Ready>(holder.uiState.value.tasteQuiz)
+        assertEquals("v1", shown.quiz.version, "never swapped under the person's fingers")
+        assertEquals(listOf("en"), backend.tasteQuizAsked, "refreshed in the background")
+        assertTrue(configRepository.storedQuizzes.getValue("en").contains("v2"))
+        holder.closeTasteQuiz()
+        backend.tasteQuizReplies += quizReply(TasteQuizFixture.json(version = "v2"))
+        holder.openTasteQuiz()
+        assertEquals("v2", assertIs<TasteQuizScreen.Ready>(holder.uiState.value.tasteQuiz).quiz.version, "applied on the next open")
+    }
+
+    @Test
+    fun withoutACacheTheQuizLoadsAndFailsToRetry() = runUnconfined {
+        withTasteServer(5, takes = true)
+        val holder = holder()
+        backend.tasteQuizReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.openTasteQuiz()
+        assertEquals(TasteQuizScreen.Failed, holder.uiState.value.tasteQuiz)
+        backend.tasteQuizReplies += quizReply()
+        holder.retryTasteQuiz()
+        assertIs<TasteQuizScreen.Ready>(holder.uiState.value.tasteQuiz)
+        assertEquals("v1", holder.uiState.value.tasteDefinition?.version, "the summary has its labels now")
+        assertTrue("en" in configRepository.storedQuizzes)
+    }
+
+    @Test
+    fun anUndecodableDefinitionIsCouldntLoadAndKeepsTheLastGoodOne() = runUnconfined {
+        withTasteServer(5, takes = true)
+        val holder = holder()
+        backend.tasteQuizReplies += ServerResult.Ok(TasteQuizFixture.element("""{"version":"v9","steps":[{"id":"x","kind":"wheel"}]}"""))
+        holder.openTasteQuiz()
+        assertEquals(TasteQuizScreen.Failed, holder.uiState.value.tasteQuiz, "no good cache: couldn't load")
+        assertTrue(configRepository.storedQuizzes.isEmpty())
+
+        holder.closeTasteQuiz()
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json(version = "v1")
+        val second = holder()
+        backend.tasteQuizReplies += ServerResult.Ok(TasteQuizFixture.element("""{"nonsense":true}"""))
+        second.openTasteQuiz()
+        assertEquals("v1", assertIs<TasteQuizScreen.Ready>(second.uiState.value.tasteQuiz).quiz.version)
+        assertTrue(configRepository.storedQuizzes.getValue("en").contains("v1"), "the good cache stays")
+        assertEquals("v1", second.uiState.value.tasteDefinition?.version)
+    }
+
+    @Test
+    fun theQuizIsAskedForOnlyWhenTheGateSaysQuiz() = runUnconfined {
+        withTasteServer(0, takes = true, taste = TasteProfile())
+        val holder = holder()
+        holder.openTasteQuiz()
+        assertNull(holder.uiState.value.tasteQuiz, "the promo, which calls nothing")
+        assertTrue(backend.tasteQuizAsked.isEmpty())
+
+        withTasteServer(5, takes = false)
+        val older = holder()
+        older.openTasteQuiz()
+        assertEquals(TasteEntry.HIDDEN, older.uiState.value.tasteEntry, "a server without it: no row")
+        assertTrue(backend.tasteQuizAsked.isEmpty())
+    }
+
+    @Test
+    fun withoutAnAccountNothingIsCreatedToFetchIt() = runUnconfined {
+        withTasteServer(0, takes = true)
+        account = FakeAccount(AccountKind.NONE)
+        val holder = holder()
+        holder.openTasteQuiz()
+        assertEquals(TasteQuizScreen.Failed, holder.uiState.value.tasteQuiz)
+        assertTrue(backend.tasteQuizAsked.isEmpty())
+        assertEquals(0, account.anonymousCreated)
+    }
+
+    @Test
+    fun theQuizOpensAtTheFirstNewQuestionAndLeavingMarksItSeen() = runUnconfined {
+        val drinks = """{"id":"drinks","tone":"like","kind":"multi","question":"What do you drink?","groups":[{"options":[{"id":"tea","label":"Tea"}]}]}"""
+        val all = TasteQuizFixture.ALL
+        val saved = TasteProfile(mapOf("cuisines" to listOf("italian")), "v1")
+        withTasteServer(5, takes = true, taste = saved)
+        configRepository.storedSeen = listOf("cuisines", "heat", "flavours", "favourites", "avoid", "methods")
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json(all.take(2) + drinks + all.drop(2), version = "v2")
+        val holder = holder()
+        assertEquals(1, holder.uiState.value.tasteNewQuestions)
+        assertTrue(holder.uiState.value.tasteBadge)
+        assertFalse(holder.uiState.value.tasteRowDot, "with a profile the row says it in words")
+        holder.openTasteQuiz()
+        assertEquals(2, assertIs<TasteQuizScreen.Ready>(holder.uiState.value.tasteQuiz).startStep)
+        holder.closeTasteQuiz(visited = listOf("drinks"))
+        assertEquals(0, holder.uiState.value.tasteNewQuestions)
+        assertFalse(holder.uiState.value.tasteBadge)
+        assertEquals(saved, configRepository.storedTaste, "answers untouched")
+        assertTrue("drinks" in configRepository.storedSeen)
+    }
+
+    @Test
+    fun withRecipesButNeverOpenedTheDotShowsUntilOpenedAndLeft() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json()
+        val holder = holder()
+        assertTrue(holder.uiState.value.tasteBadge)
+        assertTrue(holder.uiState.value.tasteRowDot)
+        holder.openTasteQuiz()
+        assertEquals(0, assertIs<TasteQuizScreen.Ready>(holder.uiState.value.tasteQuiz).startStep)
+        // Left at step 2 without saving anything: those two are seen, the rest stay new.
+        holder.closeTasteQuiz(visited = listOf("cuisines", "heat"))
+        assertEquals(listOf("cuisines", "heat"), configRepository.storedSeen, "kept without a profile")
+        assertTrue(holder.uiState.value.tasteBadge)
+        holder.openTasteQuiz()
+        holder.closeTasteQuiz(visited = TasteQuizFixture.quiz().steps.map { it.id })
+        assertFalse(holder.uiState.value.tasteBadge)
+        assertFalse(holder().uiState.value.tasteBadge, "read back on the next start")
+    }
+
+    @Test
+    fun clearingTheProfileDoesntBringTheDotBack() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile(mapOf("heat" to listOf("hot"))))
+        configRepository.storedSeen = TasteQuizFixture.quiz().steps.map { it.id }
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json()
+        val holder = holder()
+        holder.clearTaste()
+        assertFalse(holder.uiState.value.tasteBadge)
+        assertFalse(holder.uiState.value.tasteRowDot)
+        assertEquals(TasteQuizFixture.quiz().steps.map { it.id }, configRepository.storedSeen)
+    }
+
+    @Test
+    fun thePromoCaseNeverHasTheDot() = runUnconfined {
+        withTasteServer(0, takes = true, taste = TasteProfile())
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json()
+        assertFalse(holder().uiState.value.tasteBadge)
+    }
+
+    // --- tasteQuizVersion: a quiet fetch so the dot can tell ----------------------------------
+
+    @Test
+    fun aNewVersionInABalanceReplyFetchesTheQuizOnceQuietly() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json(version = "v1")
+        backend.balanceTasteVersion = "v2"
+        backend.tasteQuizReplies += quizReply(TasteQuizFixture.json(version = "v2"))
+        // Opening the tab asks for the balance, whose reply carries the version.
+        val holder = holder()
+        assertEquals(listOf("en"), backend.tasteQuizAsked)
+        assertEquals("v2", holder.uiState.value.tasteDefinition?.version)
+        assertNull(holder.uiState.value.tasteQuiz, "nothing opened")
+        now += 120_000
+        holder.onAppResume()
+        assertEquals(1, backend.tasteQuizAsked.size, "once per version and language")
+    }
+
+    @Test
+    fun theSameVersionFetchesNothing() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json(version = "v1")
+        backend.balanceTasteVersion = "v1"
+        holder().onAppResume()
+        assertTrue(backend.tasteQuizAsked.isEmpty())
+    }
+
+    @Test
+    fun withNothingCachedTheVersionFetchesItAndAFailureIsSilentAndRetried() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        backend.balanceTasteVersion = "v1"
+        backend.tasteQuizReplies += ServerResult.Err(ServerError.OFFLINE)
+        val holder = holder()
+        assertEquals(1, backend.tasteQuizAsked.size)
+        assertNull(holder.uiState.value.event)
+        assertNull(holder.uiState.value.tasteQuiz)
+        backend.tasteQuizReplies += quizReply(TasteQuizFixture.json(version = "v1"))
+        now += 120_000
+        holder.onAppResume()
+        assertEquals(2, backend.tasteQuizAsked.size, "a later reply tries again")
+        assertEquals("v1", holder.uiState.value.tasteDefinition?.version)
+    }
+
+    @Test
+    fun thePromoCaseAndNoAccountNeverFetch() = runUnconfined {
+        withTasteServer(0, takes = true, taste = TasteProfile())
+        backend.balanceTasteVersion = "v1"
+        holder().onAppResume()
+        assertTrue(backend.tasteQuizAsked.isEmpty(), "promo")
+
+        withTasteServer(5, takes = true, taste = TasteProfile(mapOf("heat" to listOf("hot"))))
+        account = FakeAccount(AccountKind.NONE)
+        backend.balanceTasteVersion = "v1"
+        holder().onAppResume()
+        assertTrue(backend.tasteQuizAsked.isEmpty(), "no account")
+    }
+
+    @Test
+    fun aQuietFetchNeverSwapsAnOpenQuiz() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile())
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json(version = "v1")
+        val holder = holder()
+        backend.tasteQuizReplies += quizReply(TasteQuizFixture.json(version = "v1"))
+        holder.openTasteQuiz()
+        backend.balanceTasteVersion = "v2"
+        backend.tasteQuizReplies += quizReply(TasteQuizFixture.json(version = "v2"))
+        now += 120_000
+        holder.onAppResume()
+        assertEquals("v1", assertIs<TasteQuizScreen.Ready>(holder.uiState.value.tasteQuiz).quiz.version)
+    }
+
+    @Test
+    fun repliesCarryTheQuizVersion() {
+        assertEquals("v3", tasteQuizVersionOf(JsonPrimitive("v3")))
+        for (value in listOf(null, JsonPrimitive(3), JsonPrimitive(true), JsonPrimitive(""), kotlinx.serialization.json.JsonNull)) {
+            assertNull(tasteQuizVersionOf(value), "$value")
+        }
+    }
+
+    @Test
+    fun theSummaryFollowsTheCachedDefinitionOfTheAppsLanguage() = runUnconfined {
+        withTasteServer(5, takes = true, taste = TasteProfile(mapOf("cuisines" to listOf("italian", "nordic"), "heat" to listOf("hot"))))
+        configRepository.storedQuizzes["en"] = TasteQuizFixture.json()
+        var language = "en"
+        val holder = RecipeStateHolder(
+            pantry = pantry, onDeviceModel = NoModel, savedRecipeRepository = saved, configRepository = configRepository,
+            backend = backend, store = store, account = account, paidRepository = paidRepository, appLanguage = { language },
+            coroutineScope = backgroundScope, nowMillis = { now }
+        )
+        assertEquals(TasteSummary(listOf("Italian", "Nordic"), "Hot", 0), holder.uiState.value.tasteSummary)
+        language = "de"
+        holder.refresh()
+        assertEquals(TasteSummary(emptyList(), null, 3), holder.uiState.value.tasteSummary, "N answers until German is fetched")
+        assertEquals(3, holder.uiState.value.taste.count, "nothing lost")
     }
 }

@@ -1148,4 +1148,54 @@
         <item quantity="one">%d dag</item>
         <item quantity="other">%d dagar</item>
     </plurals>
+
+    <!-- Recipe: taste profile (recipes from packs only). Only the chrome: the questions, options and their texts come from our server (getTasteQuiz). -->
+    <string name="taste_title">Smakprofil</string>
+    <string name="taste_choose_up_to">Välj upp till %1$d</string>
+    <string name="taste_choose_one">Välj en eller hoppa över</string>
+    <string name="taste_progress">Steg %1$d av %2$d</string>
+    <string name="taste_intro">Några korta frågor, och du kan hoppa över vilken som helst. Svaren stannar på den här enheten och skickas bara med förfrågningar om recept från ett paket.</string>
+    <string name="taste_skip">Hoppa över</string>
+    <string name="taste_back">Tillbaka</string>
+    <string name="taste_next">Nästa</string>
+    <string name="taste_save">Spara</string>
+    <string name="taste_settings_empty">För recept från paket</string>
+    <string name="taste_summary_more">%1$d till</string>
+    <string name="taste_clear">Rensa smakprofilen</string>
+    <string name="taste_uses_profile">Använder din smakprofil</string>
+    <string name="taste_settings_badge">nya frågor i smakprofilen</string>
+    <string name="taste_error_title">Det gick inte att läsa in frågorna</string>
+    <string name="taste_error_body">Kontrollera anslutningen och försök igen.</string>
+    <string name="taste_new_tag">Ny fråga</string>
+    <string name="taste_loading">Läser in frågorna …</string>
+    <string name="taste_retry">Försök igen</string>
+    <string name="taste_close">Stäng</string>
+    <plurals name="taste_answers">
+        <item quantity="one">%1$d svar</item>
+        <item quantity="other">%1$d svar</item>
+    </plurals>
+    <plurals name="taste_new_questions">
+        <item quantity="one">%1$d ny fråga</item>
+        <item quantity="other">%1$d nya frågor</item>
+    </plurals>
+    <string name="taste_chosen">%1$d valda</string>
+    <string name="taste_chosen_of">%1$d av %2$d</string>
+    <string name="taste_cap_reached">Det är %1$d. Avmarkera en för att välja en annan.</string>
+    <string name="taste_on_skip_note">Markerade val finns på listan över sådant du vill slippa. Väljer du ett här tas det bort därifrån.</string>
+    <string name="taste_on_love_note">Markerade val är sådant du älskar. Väljer du ett här tas det bort från den listan.</string>
+    <string name="taste_chip_on_skip">%1$s, på listan över sådant du vill slippa</string>
+    <string name="taste_chip_on_love">%1$s, bland det du älskar</string>
+    <string name="taste_chip_at_cap">%1$s. Du har redan valt så många du kan</string>
+    <string name="taste_moved_off_skip">%1$s togs bort från listan över sådant du vill slippa</string>
+    <string name="taste_moved_off_love">%1$s togs bort från det du älskar</string>
+    <string name="taste_saved_snackbar">Smakprofilen är sparad. Recept från paket använder den.</string>
+    <string name="taste_cleared_snackbar">Smakprofilen är rensad</string>
+    <string name="taste_discard_message">Svaren har inte sparats, så smakprofilen förblir som den var.</string>
+    <string name="taste_promo_lede">Recept från dina paket, skrivna som du gillar att äta.</string>
+    <string name="taste_promo_questions_title">Några korta frågor</string>
+    <string name="taste_promo_questions_body">Kök, styrka, smaker, det du älskar, det du helst vill slippa och hur du gillar att laga mat. Hoppa över vilken som helst.</string>
+    <string name="taste_promo_taste_title">Recept och menyer efter din smak</string>
+    <string name="taste_promo_taste_body">Vår server lutar åt det du gillar och utelämnar det du helst vill slippa. Ditt skafferi, dina allergener och din kost går fortfarande först.</string>
+    <string name="taste_promo_device_title">Stannar på den här enheten</string>
+    <string name="taste_promo_device_body">Den skickas bara med förfrågningar om recept från ett paket.</string>
 </resources>

@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
 import com.foodtracker.android.ui.screens.ScanDemo
 import com.foodtracker.android.ui.screens.ScanDemoFeed
+import com.foodtracker.android.ui.screens.TasteDemo
 import com.foodtracker.recipe.menuSavedTitle
 import com.foodtracker.recipe.AccountKind
 import com.foodtracker.recipe.AccountState
@@ -41,6 +42,10 @@ import com.foodtracker.recipe.Recipe
 import com.foodtracker.recipe.RecipeJson
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.SavedRecipe
+import com.foodtracker.recipe.TasteProfile
+import com.foodtracker.recipe.TasteQuizScreen
+import com.foodtracker.recipe.appRecipeLanguage
+import com.foodtracker.recipe.tasteQuizOf
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.LocalDate
 import com.foodtracker.api.ProductLookupResult
@@ -142,6 +147,18 @@ class MainActivity : ComponentActivity() {
      * that file (scripts/demo_recipes.py) and opens it, and `--es demoRoute scan` with
      * `demoScanImage <png>`, `demoScanBarcode <code>` and `demoScanDate <yyyy-mm-dd>` opens the
      * scanner on that picture instead of the camera (see [ScanDemo]), like iOS's `-demoRoute`.
+     *
+     * Taste profile (with `--ei demoRecipeCredits <n>`, which turns on the paid route): `--es
+     * demoRoute recipeSettings` opens Recipe settings; `tastePromo` opens it with the promo sheet;
+     * `tasteQuiz` opens the quiz on the bundled sample definition (debug assets
+     * `taste_quiz_<language>.json`, in the app's language) at `--ei demoTasteStep <1..n>`, or its
+     * `--es demoTasteState loading|failed`. `--es demoTasteAnswers sample` fills the sample answers:
+     * unsaved in the quiz, or saved with `--ez demoTasteSaved true` (then the row shows the summary
+     * and the quiz opens as editing). With it, `--ez demoTasteNew true` makes the last step one added
+     * since (the row's "· 1 new question", the quiz's "New question" tag), and `--ez demoTasteNoCache
+     * true` leaves no definition in the app's language (the row reads "N answers"), and `--ez
+     * demoTasteUnseen true` the quiz never opened (the dots). `--es demoRoute tasteRecipe` opens the
+     * Recipe tab with the same setup (the header's dot). Nothing is asked of the server.
      */
     private fun loadDemoFromIntent(intent: Intent) {
         // A rating prompt, or the Recipe introduction, must never appear in a store screenshot.
@@ -201,6 +218,8 @@ class MainActivity : ComponentActivity() {
                     currentScreenState.value = LarderRoute.RecipeResult(id)
                 }
             }
+            "recipeSettings", "tastePromo", "tasteQuiz" -> openTasteDemo(intent, route)
+            "tasteRecipe" -> openTasteDemo(intent, "recipe")
             "scan" -> {
                 val picture = intent.getStringExtra(EXTRA_DEMO_SCAN_IMAGE) ?: return
                 val barcode = intent.getStringExtra(EXTRA_DEMO_SCAN_BARCODE) ?: return
@@ -244,7 +263,9 @@ class MainActivity : ComponentActivity() {
             },
             packsOffered = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_PACKS, false),
             costs = if (menuSets) RecipeCosts(menuSets = table) else RecipeCosts(),
-            menuSets = menuSets
+            menuSets = menuSets,
+            // A server that has the taste quiz, so its row shows.
+            takesTaste = credits != null
         )
         return RecipeDemo(
             paid = paid,
@@ -254,6 +275,43 @@ class MainActivity : ComponentActivity() {
             days = intent.getIntExtra(EXTRA_DEMO_RECIPE_DAYS, DEFAULT_MENU_DAYS),
             courses = intent.getIntExtra(EXTRA_DEMO_RECIPE_COURSES, DEFAULT_MENU_COURSES)
         )
+    }
+
+    /** See [loadDemoFromIntent]. Debug builds only: the sample definitions are debug assets. */
+    private fun openTasteDemo(intent: Intent, route: String) {
+        if (!isDebuggable()) return
+        val language = appRecipeLanguage(java.util.Locale.getDefault().toLanguageTag())
+        val json = runCatching { assets.open("taste_quiz_$language.json").bufferedReader().use { it.readText() } }.getOrNull() ?: return
+        val quiz = tasteQuizOf(RecipeJson.parseToJsonElement(json)) ?: return
+        val answers = if (intent.getStringExtra(EXTRA_DEMO_TASTE_ANSWERS) == "sample") TASTE_DEMO_ANSWERS else TasteProfile()
+        val saved = intent.getBooleanExtra(EXTRA_DEMO_TASTE_SAVED, false) && !answers.isEmpty
+        // Every step seen; `demoTasteNew`: the last one added since; `demoTasteUnseen`: the quiz
+        // never opened (every step new: the header's dot, and the row's without a profile).
+        val seen = when {
+            intent.getBooleanExtra(EXTRA_DEMO_TASTE_UNSEEN, false) -> emptyList()
+            intent.getBooleanExtra(EXTRA_DEMO_TASTE_NEW, false) -> quiz.steps.map { it.id }.dropLast(1)
+            else -> quiz.steps.map { it.id }
+        }
+        recipeStateHolder.showTasteSeenDemo(seen)
+        recipeStateHolder.saveTaste(if (saved) answers.copy(version = quiz.version) else TasteProfile())
+        // `demoTasteNoCache`: no definition in this language yet, so the row reads "N answers".
+        if (!intent.getBooleanExtra(EXTRA_DEMO_TASTE_NO_CACHE, false)) recipeStateHolder.showTasteDefinitionDemo(json)
+        when (route) {
+            "recipeSettings" -> currentScreenState.value = LarderRoute.RecipeSettings
+            "recipe" -> currentScreenState.value = LarderRoute.Recipe
+            "tastePromo" -> {
+                TasteDemo.promo = true
+                currentScreenState.value = LarderRoute.RecipeSettings
+            }
+            "tasteQuiz" -> {
+                when (intent.getStringExtra(EXTRA_DEMO_TASTE_STATE)) {
+                    "loading" -> recipeStateHolder.showTasteQuizStateDemo(TasteQuizScreen.Loading)
+                    "failed" -> recipeStateHolder.showTasteQuizStateDemo(TasteQuizScreen.Failed)
+                    else -> recipeStateHolder.showTasteQuizDemo(json, intent.getIntExtra(EXTRA_DEMO_TASTE_STEP, 1) - 1, answers.takeUnless { saved })
+                }
+                currentScreenState.value = LarderRoute.TasteProfile
+            }
+        }
     }
 
     private fun isDebuggable(): Boolean =
@@ -457,6 +515,25 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_DEMO_SCAN_IMAGE = "demoScanImage"
         private const val EXTRA_DEMO_SCAN_BARCODE = "demoScanBarcode"
         private const val EXTRA_DEMO_SCAN_DATE = "demoScanDate"
+        private const val EXTRA_DEMO_TASTE_STEP = "demoTasteStep"
+        private const val EXTRA_DEMO_TASTE_STATE = "demoTasteState"
+        private const val EXTRA_DEMO_TASTE_ANSWERS = "demoTasteAnswers"
+        private const val EXTRA_DEMO_TASTE_SAVED = "demoTasteSaved"
+        private const val EXTRA_DEMO_TASTE_NEW = "demoTasteNew"
+        private const val EXTRA_DEMO_TASTE_NO_CACHE = "demoTasteNoCache"
+        private const val EXTRA_DEMO_TASTE_UNSEEN = "demoTasteUnseen"
+
+        /** The design's sample answers: "Italian, Nordic · Medium · 7 more", Mushrooms on the
+         *  skip list (so it is marked on the love step). */
+        private val TASTE_DEMO_ANSWERS = TasteProfile(
+            mapOf(
+                "cuisines" to listOf("italian", "nordic", "japanese"),
+                "heat" to listOf("medium"),
+                "flavours" to listOf("garlic", "citrus"),
+                "favourites" to listOf("tomatoes", "eggs", "berries"),
+                "avoid" to listOf("mushrooms", "olives", "offal")
+            )
+        )
 
         const val EXTRA_OPEN_SHOPPING_LIST = "com.foodtracker.android.EXTRA_OPEN_SHOPPING_LIST"
 

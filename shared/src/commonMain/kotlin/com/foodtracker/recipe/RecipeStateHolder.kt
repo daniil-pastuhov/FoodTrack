@@ -210,6 +210,15 @@ data class RecipeUiState(
     val event: RecipeEvent? = null,
     /** The tab's settings outside the config: "Send all products", the introduction seen. */
     val options: RecipeOptions = RecipeOptions(),
+    /** The saved taste profile ([TasteProfile]), exactly as stored; empty until the quiz is saved. */
+    val taste: TasteProfile = TasteProfile(),
+    /** The last good taste quiz definition in the app's language, from the cache: names the
+     *  settings row's summary and filters what is sent. Null until one was fetched in it. */
+    val tasteDefinition: TasteQuiz? = null,
+    /** The quiz screen's content while it is open; null when it isn't. */
+    val tasteQuiz: TasteQuizScreen? = null,
+    /** The quiz steps the person has been through, kept apart from the answers. */
+    val tasteSeen: List<String> = emptyList(),
     /** The introduction on screen, and where from; null when it isn't. */
     val intro: RecipeIntro? = null,
     /** The system share sheet has a Copy action of its own (Android 10 and up), so the form
@@ -221,6 +230,27 @@ data class RecipeUiState(
 
     /** Whether the server route can be offered on this build. */
     val paidRouteAvailable: Boolean get() = paid.available
+
+    /** A taste profile goes with a server request: one is saved and the server reads it. The
+     *  server action's helper then says "Uses your taste profile". */
+    val sendsTaste: Boolean get() = wireTasteFor(taste, tasteDefinition, paid.takesTaste) != null
+
+    /** What tapping the Taste profile row does ([tasteEntry]); [TasteEntry.HIDDEN] hides the row. */
+    val tasteEntry: TasteEntry get() = tasteEntry(paid.available, paid.balance, !taste.isEmpty, paid.purchasesBlocked, paid.takesTaste)
+
+    /** The row's summary ([tasteSummary]), null without answers to show. */
+    val tasteSummary: TasteSummary? get() = tasteSummary(taste, tasteDefinition)
+
+    /** Questions not yet been through, for the row's "· N new questions" once a profile exists
+     *  ([tasteNewSteps]); 0 without one (the row then carries the dot, [tasteRowDot]). */
+    val tasteNewQuestions: Int get() = if (tasteSummary == null) 0 else tasteNewSteps(tasteSeen, tasteDefinition).size
+
+    /** The dot on the header's settings button ([tasteHasNewQuestions]). */
+    val tasteBadge: Boolean get() = tasteHasNewQuestions(tasteEntry, tasteSeen, tasteDefinition)
+
+    /** The same dot on the settings row, before its chevron: only without a profile (with one,
+     *  "· N new questions" says it). */
+    val tasteRowDot: Boolean get() = tasteBadge && tasteSummary == null
 
     /** Something is being written, on the phone or on the server. */
     val isBusy: Boolean get() = isWriting || paid.writing != null
@@ -377,11 +407,26 @@ class RecipeStateHolder(
 ) {
     private val _uiState = MutableStateFlow(
         configRepository.get().normalized().let { config ->
-            RecipeUiState(config = config, appLanguage = appRecipeLanguage(appLanguage()), options = configRepository.getOptions(), shareSheetCopies = shareSheetCopies)
+            RecipeUiState(
+                config = config,
+                appLanguage = appRecipeLanguage(appLanguage()),
+                options = configRepository.getOptions(),
+                taste = configRepository.getTaste(),
+                tasteSeen = configRepository.getTasteSeen(),
+                tasteDefinition = cachedTasteQuiz(appRecipeLanguage(appLanguage())),
+                shareSheetCopies = shareSheetCopies
+            )
                 .withLanguageSupport()
         }
     )
     val uiState: StateFlow<RecipeUiState> = _uiState.asStateFlow()
+
+    private val tasteBackend = backend
+    private val tasteAccount = account
+
+    /** (Version, language) pairs fetched quietly already: at most once each. */
+    private val prefetchedTasteQuizzes = mutableSetOf<String>()
+    private var prefetchingTasteQuiz = false
 
     private val paid = RecipePaid(
         state = _uiState,
@@ -397,7 +442,8 @@ class RecipeStateHolder(
         today = today,
         pollDelay = pollDelay,
         isOnScreen = { onScreen.value > 0 },
-        markUnread = ::markUnread
+        markUnread = ::markUnread,
+        onTermsReply = { prefetchTasteQuiz() }
     )
 
     /** How many copies of the writing screen are on screen and resumed (a transition can briefly
@@ -442,7 +488,14 @@ class RecipeStateHolder(
      */
     fun refresh() {
         if (demoShown) return
-        _uiState.update { it.copy(appLanguage = appRecipeLanguage(appLanguage())).withLanguageSupport() }
+        _uiState.update { state ->
+            val language = appRecipeLanguage(appLanguage())
+            // The cache is per language: another language's summary reads "N answers" until its
+            // definition is fetched.
+            val definition = if (language == state.appLanguage) state.tasteDefinition else cachedTasteQuiz(language)
+            state.copy(appLanguage = language, tasteDefinition = definition).withLanguageSupport()
+        }
+        prefetchTasteQuiz()
         coroutineScope.launch {
             val availability = runCatching { onDeviceModel.availability() }.getOrDefault(OnDeviceAvailability.UNSUPPORTED)
             // A demo launch that came in meanwhile shows its own.
@@ -760,24 +813,158 @@ class RecipeStateHolder(
         }
     }
 
+    /** Stores [profile] as given (the quiz passes [savedTaste]; Undo passes what was there). An
+     *  empty profile is the same as [clearTaste]. Nothing is sent or called. */
+    fun saveTaste(profile: TasteProfile) {
+        val kept = if (profile.isEmpty) TasteProfile() else profile
+        configRepository.saveTaste(kept)
+        _uiState.update { it.copy(taste = kept) }
+    }
+
+    /** "Clear taste profile": forgotten on this phone; requests go without it from now on. */
+    fun clearTaste() = saveTaste(TasteProfile())
+
+    /**
+     * Opens the quiz. With a good cached definition in the app's language it shows at once, and a
+     * fresh one is fetched in the background for the next open (never swapped under the person's
+     * fingers). Without one it loads, and fails to [TasteQuizScreen.Failed] (Retry, Close). Asks the
+     * server only when the gate says [TasteEntry.QUIZ], and never creates an account to do it.
+     */
+    fun openTasteQuiz() {
+        val state = _uiState.value
+        if (state.tasteEntry != TasteEntry.QUIZ) return
+        val language = state.appLanguage
+        val cached = cachedTasteQuiz(language)
+        if (cached != null) {
+            _uiState.update { it.copy(tasteDefinition = cached, tasteQuiz = TasteQuizScreen.Ready(cached, firstTasteStep(it.tasteSeen, cached))) }
+            coroutineScope.launch { fetchTasteQuiz(language) }
+        } else {
+            loadTasteQuiz(language)
+        }
+    }
+
+    /** Retry on the quiz's error. */
+    fun retryTasteQuiz() {
+        if (_uiState.value.tasteQuiz != TasteQuizScreen.Failed) return
+        loadTasteQuiz(_uiState.value.appLanguage)
+    }
+
+    /** The quiz was left: saved, discarded or closed. [visited] are the steps shown, which count
+     *  as seen with or without a profile ([tasteSeenAfter]), so the dot and the note go; a step
+     *  never reached stays new. */
+    fun closeTasteQuiz(visited: Collection<String> = emptyList()) {
+        val state = _uiState.value
+        val seen = tasteSeenAfter(state.tasteSeen, visited)
+        if (seen != state.tasteSeen) configRepository.saveTasteSeen(seen)
+        _uiState.update { it.copy(tasteQuiz = null, tasteSeen = seen) }
+    }
+
+    /**
+     * After a reply that carries a balance: when its `tasteQuizVersion` isn't the cached
+     * definition's ([shouldPrefetchTasteQuiz]), the definition is fetched quietly so the dot can tell
+     * new questions. Silent on failure, which a later reply retries; never for the promo; never
+     * swaps an open quiz's definition.
+     */
+    private fun prefetchTasteQuiz() {
+        val state = _uiState.value
+        val language = state.appLanguage
+        val version = state.paid.tasteQuizVersion
+        val key = "$version|$language"
+        val hasAccount = tasteAccount.state.value.kind != AccountKind.NONE
+        if (prefetchingTasteQuiz || !shouldPrefetchTasteQuiz(version, state.tasteDefinition?.version, state.tasteEntry, hasAccount, key in prefetchedTasteQuizzes)) return
+        prefetchingTasteQuiz = true
+        coroutineScope.launch {
+            try {
+                if (fetchTasteQuiz(language) != null) prefetchedTasteQuizzes += key
+            } finally {
+                prefetchingTasteQuiz = false
+            }
+        }
+    }
+
+    private fun loadTasteQuiz(language: String) {
+        _uiState.update { it.copy(tasteQuiz = TasteQuizScreen.Loading) }
+        coroutineScope.launch {
+            val quiz = fetchTasteQuiz(language)
+            _uiState.update { state ->
+                if (state.tasteQuiz != TasteQuizScreen.Loading) state
+                else state.copy(tasteQuiz = quiz?.let { TasteQuizScreen.Ready(it, firstTasteStep(state.tasteSeen, it)) } ?: TasteQuizScreen.Failed)
+            }
+        }
+    }
+
+    /** Asks the server; caches and returns the definition when it can be read, else keeps the
+     *  last good one (also for an answer that can't be decoded) and returns null. */
+    private suspend fun fetchTasteQuiz(language: String): TasteQuiz? {
+        // Only for someone with an account (who has bought), and only from a server that has it.
+        if (tasteAccount.state.value.kind == AccountKind.NONE || !_uiState.value.paid.takesTaste) return null
+        val result = runCatching { tasteBackend.getTasteQuiz(language) }.getOrNull() as? ServerResult.Ok ?: return null
+        val quiz = tasteQuizOf(result.value) ?: return null
+        configRepository.saveTasteQuiz(language, result.value.toString())
+        // The summary follows at once; an open quiz keeps the definition it opened with.
+        _uiState.update { if (it.appLanguage == language) it.copy(tasteDefinition = quiz) else it }
+        return quiz
+    }
+
+    private fun cachedTasteQuiz(language: String): TasteQuiz? =
+        configRepository.getTasteQuiz(language)?.let { raw -> runCatching { tasteQuizOf(RecipeJson.parseToJsonElement(raw)) }.getOrNull() }
+
+    /** Debug demo launches: opens the quiz on [json] (a bundled sample definition) at [step],
+     *  with [draft] as unsaved answers, without asking the server. */
+    fun showTasteQuizDemo(json: String, step: Int, draft: TasteProfile? = null) {
+        val quiz = tasteQuizOf(RecipeJson.parseToJsonElement(json)) ?: return
+        _uiState.update { it.copy(tasteDefinition = quiz, tasteQuiz = TasteQuizScreen.Ready(quiz, step.coerceIn(0, quiz.steps.lastIndex), draft)) }
+    }
+
+    /** Debug demo launches: the quiz's loading or error state, without asking the server. */
+    fun showTasteQuizStateDemo(screen: TasteQuizScreen) {
+        _uiState.update { it.copy(tasteQuiz = screen) }
+    }
+
+    /** Debug demo launches: the steps counted as seen. */
+    fun showTasteSeenDemo(seen: List<String>) {
+        configRepository.saveTasteSeen(seen)
+        _uiState.update { it.copy(tasteSeen = seen) }
+    }
+
+    /** Debug demo launches: the row's summary from [json] without asking the server. */
+    fun showTasteDefinitionDemo(json: String) {
+        val quiz = tasteQuizOf(RecipeJson.parseToJsonElement(json)) ?: return
+        _uiState.update { it.copy(tasteDefinition = quiz) }
+    }
+
     fun restoreSaved(saved: SavedRecipe) {
         coroutineScope.launch { savedRecipeRepository.save(saved) }
     }
 
     /**
-     * Settings' Clear all data: the saved recipes and the form go back to how a new install has
+     * Settings' Clear all data: the saved recipes, the form and the taste profile go back to how a new install has
      * them. What was bought is not touched: the count lives on our server, and a purchase still
      * waiting to be confirmed must not be forgotten.
      */
     fun clearAll() {
         configRepository.save(RecipeConfig())
         configRepository.saveOptions(RecipeOptions())
+        configRepository.saveTaste(TasteProfile())
+        configRepository.saveTasteSeen(emptyList())
         _uiState.update {
-            it.copy(config = RecipeConfig(), options = RecipeOptions(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, days = DEFAULT_MENU_DAYS, selection = RecipeSelection.Default)
+            it.copy(config = RecipeConfig(), options = RecipeOptions(), taste = TasteProfile(), tasteQuiz = null, tasteSeen = emptyList(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, days = DEFAULT_MENU_DAYS, selection = RecipeSelection.Default)
                 .withLanguageSupport()
         }
         coroutineScope.launch { savedRecipeRepository.clearAll() }
     }
+}
+
+/** The taste quiz screen's content ([RecipeStateHolder.openTasteQuiz]). */
+sealed interface TasteQuizScreen {
+    data object Loading : TasteQuizScreen
+
+    /** "Couldn't load the questions", with Retry and Close. */
+    data object Failed : TasteQuizScreen
+
+    /** [quiz] stays as it opened until the quiz is closed; [startStep] is the first new step.
+     *  [draft]: unsaved answers to start from, for debug demo launches only. */
+    data class Ready(val quiz: TasteQuiz, val startStep: Int, val draft: TasteProfile? = null) : TasteQuizScreen
 }
 
 /** The courses a day a menu can have: 1 (the main course only) only with a server that says

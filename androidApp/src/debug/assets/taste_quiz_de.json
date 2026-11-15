@@ -1,0 +1,402 @@
+{
+ "version": "demo-2026-11-16",
+ "language": "de",
+ "steps": [
+  {
+   "id": "cuisines",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "globe",
+   "question": "Welche Küchen magst du?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "italian",
+       "label": "Italienisch"
+      },
+      {
+       "id": "french",
+       "label": "Französisch"
+      },
+      {
+       "id": "spanish",
+       "label": "Spanisch"
+      },
+      {
+       "id": "greek",
+       "label": "Griechisch"
+      },
+      {
+       "id": "nordic",
+       "label": "Nordisch"
+      },
+      {
+       "id": "eastern_european",
+       "label": "Osteuropäisch"
+      },
+      {
+       "id": "georgian",
+       "label": "Georgisch"
+      },
+      {
+       "id": "middle_eastern",
+       "label": "Nahöstlich"
+      },
+      {
+       "id": "indian",
+       "label": "Indisch"
+      },
+      {
+       "id": "chinese",
+       "label": "Chinesisch"
+      },
+      {
+       "id": "japanese",
+       "label": "Japanisch"
+      },
+      {
+       "id": "korean",
+       "label": "Koreanisch"
+      },
+      {
+       "id": "thai",
+       "label": "Thailändisch"
+      },
+      {
+       "id": "mexican",
+       "label": "Mexikanisch"
+      },
+      {
+       "id": "american",
+       "label": "Amerikanisch"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "heat",
+   "kind": "single",
+   "tone": "like",
+   "icon": "flame",
+   "question": "Wie scharf magst du es?",
+   "note": null,
+   "max": 1,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "mild",
+       "label": "Mild",
+       "sub": "Wenig oder kein Chili",
+       "level": 1
+      },
+      {
+       "id": "medium",
+       "label": "Mittel",
+       "sub": "Eine sanfte Schärfe",
+       "level": 2
+      },
+      {
+       "id": "hot",
+       "label": "Scharf",
+       "sub": "Gern mit viel Chili",
+       "level": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flavours",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "citrus",
+   "question": "Welche Aromen magst du am liebsten?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "garlic",
+       "label": "Knoblauch"
+      },
+      {
+       "id": "fresh_herbs",
+       "label": "Frische Kräuter"
+      },
+      {
+       "id": "citrus",
+       "label": "Zitrus"
+      },
+      {
+       "id": "smoky",
+       "label": "Rauchig"
+      },
+      {
+       "id": "creamy",
+       "label": "Cremig"
+      },
+      {
+       "id": "tangy",
+       "label": "Säuerlich und eingelegt"
+      },
+      {
+       "id": "sweet_savoury",
+       "label": "Süß-herzhaft"
+      },
+      {
+       "id": "umami",
+       "label": "Umami"
+      },
+      {
+       "id": "peppery",
+       "label": "Pfeffrig"
+      },
+      {
+       "id": "warm_spices",
+       "label": "Warme Gewürze"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "favourites",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "heart",
+   "question": "Was isst du am liebsten?",
+   "note": null,
+   "max": 8,
+   "groups": [
+    {
+     "title": "Gemüse und Hülsenfrüchte",
+     "options": [
+      {
+       "id": "tomatoes",
+       "label": "Tomaten"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Pilze"
+      },
+      {
+       "id": "potatoes",
+       "label": "Kartoffeln"
+      },
+      {
+       "id": "leafy_greens",
+       "label": "Blattgemüse"
+      },
+      {
+       "id": "peppers",
+       "label": "Paprika"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "legumes",
+       "label": "Bohnen und Linsen"
+      }
+     ]
+    },
+    {
+     "title": "Eiweiß und Milchprodukte",
+     "options": [
+      {
+       "id": "cheese",
+       "label": "Käse"
+      },
+      {
+       "id": "eggs",
+       "label": "Eier"
+      },
+      {
+       "id": "chicken",
+       "label": "Hähnchen"
+      },
+      {
+       "id": "fish_seafood",
+       "label": "Fisch und Meeresfrüchte"
+      },
+      {
+       "id": "red_meat",
+       "label": "Rotes Fleisch"
+      }
+     ]
+    },
+    {
+     "title": "Obst",
+     "options": [
+      {
+       "id": "berries",
+       "label": "Beeren"
+      },
+      {
+       "id": "apples_pears",
+       "label": "Äpfel und Birnen"
+      },
+      {
+       "id": "citrus_fruit",
+       "label": "Zitrusfrüchte"
+      },
+      {
+       "id": "bananas",
+       "label": "Bananen"
+      },
+      {
+       "id": "stone_fruit",
+       "label": "Steinobst"
+      },
+      {
+       "id": "tropical_fruit",
+       "label": "Tropische Früchte"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "avoid",
+   "kind": "multi",
+   "tone": "avoid",
+   "icon": "heart-off",
+   "question": "Worauf verzichtest du lieber?",
+   "note": "Das ist eine Vorliebe, keine Allergie-Einstellung. Allergien legst du unter Allergen-Warnungen in den Einstellungen fest.",
+   "max": 8,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "onion",
+       "label": "Zwiebeln"
+      },
+      {
+       "id": "garlic",
+       "label": "Knoblauch"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Pilze"
+      },
+      {
+       "id": "fresh_coriander",
+       "label": "Frischer Koriander"
+      },
+      {
+       "id": "olives",
+       "label": "Oliven"
+      },
+      {
+       "id": "fish",
+       "label": "Fisch"
+      },
+      {
+       "id": "seafood",
+       "label": "Meeresfrüchte"
+      },
+      {
+       "id": "offal",
+       "label": "Innereien"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "bell_pepper",
+       "label": "Paprika"
+      },
+      {
+       "id": "blue_cheese",
+       "label": "Blauschimmelkäse"
+      },
+      {
+       "id": "mayonnaise",
+       "label": "Mayonnaise"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "methods",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "cooking-pot",
+   "question": "Wie kochst du am liebsten?",
+   "note": null,
+   "max": 5,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "oven",
+       "label": "Ofen"
+      },
+      {
+       "id": "pan",
+       "label": "Pfanne"
+      },
+      {
+       "id": "one_pot",
+       "label": "Aus einem Topf"
+      },
+      {
+       "id": "grill",
+       "label": "Grill"
+      },
+      {
+       "id": "slow_cook",
+       "label": "Schmoren"
+      },
+      {
+       "id": "air_fryer",
+       "label": "Heißluftfritteuse"
+      },
+      {
+       "id": "no_cook",
+       "label": "Ohne Kochen"
+      },
+      {
+       "id": "steam",
+       "label": "Dämpfen"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "conflicts": [
+  [
+   "favourites:mushrooms",
+   "avoid:mushrooms"
+  ],
+  [
+   "favourites:aubergine",
+   "avoid:aubergine"
+  ],
+  [
+   "flavours:garlic",
+   "avoid:garlic"
+  ]
+ ],
+ "summary": [
+  "cuisines",
+  "flavours",
+  "favourites",
+  "methods"
+ ]
+}

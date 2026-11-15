@@ -198,7 +198,9 @@ fun LarderListItem(
     supporting: String? = null,
     leading: (@Composable () -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    /** Clamps [supporting], ending it with an ellipsis, for a summary that can run long. */
+    supportingMaxLines: Int = Int.MAX_VALUE
 ) {
     Row(
         modifier = modifier
@@ -220,7 +222,9 @@ fun LarderListItem(
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = supportingMaxLines,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
