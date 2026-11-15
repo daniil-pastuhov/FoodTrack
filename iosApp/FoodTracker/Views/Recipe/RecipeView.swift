@@ -3,10 +3,10 @@ import SwiftUI
 import UIKit
 
 /// The Recipe tab: what can I cook from what is about to expire? The soonest items are ticked,
-/// a short form sets the kind of dish, and one primary action writes it, pinned above the pill
-/// where Scan sits on Home. Three routes: our server while the pack has recipes, the phone's
-/// own model where it has one, and a prompt shared to another AI app. A menu for three days is
-/// the server's only.
+/// a short form sets the kind of dish, and the button group at the form's end writes it: the
+/// primary action first, filled, then the other routes. Three routes: our server while the pack
+/// has recipes, the phone's own model where it has one, and a prompt shared to another AI app. A
+/// menu set is the server's only.
 struct RecipeView: View {
     @ObservedObject var pantry: NativePantryViewModel
     @ObservedObject var model: RecipeViewModel
@@ -21,7 +21,6 @@ struct RecipeView: View {
     @Environment(\.shellClearance) private var shellClearance
     @Environment(\.requestReview) private var requestReview
 
-    @State private var pinnedHeight: CGFloat = 0
     @State private var sharedPrompt: SharedText?
     @State private var addingItems: OtherItems?
 
@@ -51,11 +50,14 @@ struct RecipeView: View {
                 .navigationDestination(for: RecipeDestination.self) { destination in
                     switch destination {
                     case .result(let id):
+                        // Shown, so read: on arrival, from Saved recipes or anywhere else.
                         RecipeResultView(entry: model.savedRecipe(id: id)) { day, course in
                             model.path.append(.dish(id: id, day: day, course: course))
                         }
+                        .onAppear { model.markRead(id) }
                     case .dish(let id, let day, let course):
                         RecipeResultView(entry: model.savedRecipe(id: id), dish: (day, course))
+                            .onAppear { model.markRead(id) }
                     case .saved:
                         SavedRecipesView(model: model)
                     case .settings:
@@ -65,27 +67,15 @@ struct RecipeView: View {
         }
         // On the stack, so every pushed result has it.
         .environment(\.recipeShopping, shoppingContext)
-        // Outside the stack, which doesn't pass the shell's clearance on to its content's own
-        // insets, so the form pads for it itself. The inset starts at the content clearance,
-        // the content gap above the pill; the button comes down by the difference to sit where
-        // Scan sits on Home and Android puts it, the shell gap above the pill. It used to sit
-        // 16pt higher, over more of the form at rest.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if showsPinnedAction {
-                // The shared prompt pinned alone sits as Scan does on Home: a pill as wide as its
-                // label at the trailing edge, not a bar across the form. Actions with a cost stay wide.
-                let compact = model.actions.primary == .share
-                pinnedAction
-                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { pinnedHeight = $0 }
-                    .padding(.horizontal, LarderSpace.s4)
-                    .frame(maxWidth: isExpanded || compact ? 440 + 2 * LarderSpace.s4 : .infinity, alignment: .trailing)
-                    .frame(maxWidth: .infinity, alignment: isExpanded || compact ? .trailing : .center)
-                    .padding(.trailing, isExpanded ? LarderSpace.s2 : 0)
-                    .padding(.bottom, ShellMetrics.shellGap - ShellMetrics.contentGap)
-            }
-        }
-        .shellPinnedAction(height: showsPinnedAction ? pinnedHeight : 0)
         .onAppear {
+            // A result arriving while the tab is on screen opens; otherwise it waits, unread.
+            model.setTabOnScreen(true)
+            model.setSceneActive(scenePhase == .active)
+            // A snackbar raised while the tab was away (a recipe saved meanwhile) is said now.
+            if let failure = model.failure {
+                model.failure = nil
+                show(failure)
+            }
             model.syncSelection(with: pantry.items)
             model.refreshAvailability()
             model.reloadSaved()
@@ -95,6 +85,7 @@ struct RecipeView: View {
         }
         // Prices from the store, and the count for an install that already has a user. Neither
         // creates a user nor calls our server for anyone who never bought.
+        .onDisappear { model.setTabOnScreen(false) }
         .task {
             await credits.loadPacksIfNeeded()
             await credits.refreshBalance()
@@ -114,6 +105,7 @@ struct RecipeView: View {
         // The model can finish downloading, or Apple Intelligence be switched on, meanwhile; a
         // purchase waiting for the server is tried again.
         .onChange(of: scenePhase) { _, phase in
+            model.setSceneActive(phase == .active)
             guard phase == .active else { return }
             model.refreshAvailability()
             if !credits.unconfirmedHere.isEmpty {
@@ -219,10 +211,26 @@ struct RecipeView: View {
             }
             // Only once something is saved; it follows the saved list as it changes.
             if model.hasSaved {
-                LarderIconButton(.bookmark, label: L10n.recipeSavedButton) { model.path.append(.saved) }
+                savedButton
             }
             LarderIconButton(.slidersHorizontal, label: L10n.recipeSettingsButton) { model.path.append(.settings) }
         }
+    }
+
+    /// Saved recipes, with a count of those not seen yet (written or recovered while the writing
+    /// screen was away), as the pill's Shopping badge.
+    private var savedButton: some View {
+        let unread = model.unreadCount
+        return LarderIconButton(.bookmark, label: L10n.recipeSavedButtonUnread(unread)) { model.path.append(.saved) }
+            .overlay(alignment: .topTrailing) {
+                if unread > 0 {
+                    LarderBadge(count: unread, isCompact: true)
+                        .fixedSize()
+                        .offset(x: -4, y: 6)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 
     private var form: some View {
@@ -262,20 +270,25 @@ struct RecipeView: View {
                     }
                 }
                 .padding(.horizontal, LarderSpace.s4)
-                // The stack keeps the shell's clearance and the pinned action from reaching
-                // this scroll view as insets, so the form leaves room for them itself.
-                // Ends the content gap above the pinned action, as Android's form does.
-                .padding(.bottom, shellClearance + (showsPinnedAction ? pinnedHeight + ShellMetrics.shellGap : LarderSpace.s4))
+                // The stack keeps the shell's clearance from reaching this scroll view as an
+                // inset, so the form leaves room for the pill (and Scan) itself: the last button
+                // ends the content gap above them.
+                .padding(.bottom, shellClearance + LarderSpace.s4)
             }
             .frame(maxWidth: isExpanded ? 960 : .infinity)
             .frame(maxWidth: .infinity)
         }
+        .defaultScrollAnchor(Self.opensAtEnd ? .bottom : .top)
     }
 
-    /// Whether the pinned action shows: on the form, not over a pushed screen or a state that
-    /// has nothing to act on.
-    private var showsPinnedAction: Bool {
-        model.path.isEmpty && !pantry.items.isEmpty && model.phase == .idle && (!isMenu || model.serverCanWriteMenu)
+    /// `-demoRecipeScrollEnd YES` (Debug): the form opens scrolled to its buttons, for layout
+    /// checks of the button group.
+    private static var opensAtEnd: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "demoRecipeScrollEnd")
+        #else
+        false
+        #endif
     }
 
     // MARK: Paid route
@@ -378,7 +391,7 @@ struct RecipeView: View {
     private func writingOnServer(_ kind: RecipeKind) -> some View {
         VStack(spacing: LarderSpace.s3) {
             LarderSpinner()
-            Text(model.serverBusyRetrying ? L10n.recipeServerBusyRetryingTitle : L10n.recipeWritingServerTitle(kind))
+            Text(model.serverBusyRetrying ? L10n.recipeServerBusyRetryingTitle : L10n.recipeWritingServerTitle(kind, days: model.writingMenuDays))
                 .larderFont(.title)
                 .foregroundStyle(LarderColor.onSurface)
                 .padding(.top, LarderSpace.s2)
@@ -431,7 +444,10 @@ struct RecipeView: View {
         case .arrived(let balance):
             showSnackbar(L10n.recipeArrived(balance: balance))
         case .earlierArrived(let kind):
-            showSnackbar(L10n.recipeEarlierArrived(kind))
+            // Saved unseen: the way to the list it is in, as on Android.
+            showSnackbar(L10n.recipeEarlierArrived(kind), actionTitle: L10n.recipeSavedButton) {
+                model.path = [.saved]
+            }
         case .earlierRefused(let taken):
             showSnackbar(L10n.recipeEarlierRefused(taken: taken))
         case .itemLeftOut(let name):
@@ -447,9 +463,9 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeAllergenConsentDeclined, actionTitle: L10n.recipeSettingsButton) {
                 model.path.append(.settings)
             }
-        case .notEnoughItems(let kind):
+        case .notEnoughItems(let kind, let days):
             // The form stays as it is; the next try is a new request.
-            showSnackbar(L10n.recipeNotEnoughItems(kind))
+            showSnackbar(L10n.recipeNotEnoughItems(kind, days: days))
         case .dietsNeedServerUpdate:
             showSnackbar(L10n.recipeDietsNeedUpdate, actionTitle: L10n.recipeSettingsButton) {
                 model.path.append(.settings)
@@ -536,10 +552,21 @@ struct RecipeView: View {
     private var quickForm: some View {
         RecipeFormCard {
             if isMenu {
+                // Days only from a server that writes menu sets; until then the menu is 3 days.
+                let dayOptions = model.menuDayOptions
+                if dayOptions.count > 1 {
+                    RecipeFormField(label: L10n.recipeDaysLabel) {
+                        LarderSegmented(
+                            selection: Binding(get: { model.menuSet.days }, set: { model.setMenuDays($0) }),
+                            options: dayOptions,
+                            fill: true
+                        ) { L10n.recipeDays($0) }
+                    }
+                }
                 RecipeFormField(label: L10n.recipeCoursesLabel) {
                     LarderSegmented(
-                        selection: Binding(get: { model.menuCourses }, set: { model.setMenuCourses($0) }),
-                        options: [2, 3],
+                        selection: Binding(get: { model.menuSet.courses }, set: { model.setMenuCourses($0) }),
+                        options: model.menuCourseOptions,
                         fill: true
                     ) { L10n.recipeCourses($0) }
                 }
@@ -579,44 +606,53 @@ struct RecipeView: View {
 
     // MARK: Actions
 
-    /// The routes that aren't the pinned one, and the line that explains a disabled button.
+    /// The form's one button group, at its end and scrolling with it: the primary action first,
+    /// filled and full width (with what it takes), then the other routes as `RecipeActions` says,
+    /// and the line that explains a disabled one. Nothing floats over the form.
     @ViewBuilder
     private var actions: some View {
-        if isMenu {
-            menuActions
-        } else if nothingTicked {
-            hint(L10n.recipeNoneSelectedHint)
-        } else if model.actions.primary == .server {
-            // The server is pinned; the free routes follow, the phone's own first.
-            VStack(spacing: LarderSpace.s2) {
-                if routes.onDevice {
-                    LarderButton(L10n.recipeGenerateOnPhone, icon: .smartphone, variant: .outline, fullWidth: true) {
-                        model.writeOnDevice(from: pantry.items)
+        VStack(spacing: LarderSpace.s2) {
+            if isMenu {
+                menuActions
+            } else {
+                if nothingTicked { hint(L10n.recipeNoneSelectedHint) }
+                primaryButton
+                switch model.actions.primary {
+                case .server:
+                    // The free routes follow, the phone's own first.
+                    if routes.onDevice {
+                        LarderButton(L10n.recipeGenerateOnPhone, icon: .smartphone, variant: .outline, fullWidth: true) {
+                            model.writeOnDevice(from: pantry.items)
+                        }
+                        .disabled(nothingTicked)
+                        .accessibilityLabel("\(L10n.recipeGenerateOnPhone), \(L10n.recipeCostFree)")
                     }
-                    .accessibilityLabel("\(L10n.recipeGenerateOnPhone), \(L10n.recipeCostFree)")
+                    shareButton
+                case .onDevice:
+                    buyOrBlocked
+                    shareButton
+                default:
+                    // Share is the primary and the share sheet copies too: the line says what it
+                    // does, Buy (where offered) follows.
+                    if !nothingTicked { hint(L10n.recipePromptOnlyHint) }
+                    buyOrBlocked
                 }
-                shareButton
-            }
-        } else if model.actions.primary == .onDevice {
-            VStack(spacing: LarderSpace.s2) {
-                buyOrBlocked
-                shareButton
-            }
-        } else {
-            // Share is pinned and the share sheet copies too: the line says what it does, Buy
-            // (where offered) follows.
-            VStack(spacing: LarderSpace.s2) {
-                hint(L10n.recipePromptOnlyHint)
-                buyOrBlocked
             }
         }
+        .padding(.top, LarderSpace.s2)
+        .frame(maxWidth: isExpanded ? .infinity : 560)
+        .frame(maxWidth: .infinity)
     }
 
-    /// A menu has no free route: the line under the button says why, and with too few recipes
-    /// a callout takes the button's place.
+    /// A menu has no free route: with enough recipes its button and the line under it; with too
+    /// few a callout in the button's place, and Buy.
     @ViewBuilder
     private var menuActions: some View {
         if model.serverCanWriteMenu {
+            RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(model.menuCost)) {
+                model.writeOnServer(from: pantry.items)
+            }
+            .disabled(nothingTicked)
             hint(nothingTicked ? L10n.recipeNoneSelectedHint : L10n.recipeMenuServerHint(model.menuCost))
         } else if !credits.serverPaused {
             LarderCallout(
@@ -628,10 +664,32 @@ struct RecipeView: View {
         }
     }
 
+    /// The server while the pack has recipes, else the free route that writes in the app where
+    /// the phone can, else the shared prompt.
+    @ViewBuilder
+    private var primaryButton: some View {
+        switch model.actions.primary {
+        case .server:
+            RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(model.recipeCost)) {
+                model.writeOnServer(from: pantry.items)
+            }
+            .disabled(nothingTicked)
+        case .onDevice:
+            RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
+                model.writeOnDevice(from: pantry.items)
+            }
+            .disabled(nothingTicked)
+        default:
+            RecipeGoButton(title: L10n.recipeSharePrompt, icon: .share2, action: sharePrompt)
+                .disabled(nothingTicked)
+        }
+    }
+
     /// The share sheet has Copy too, so there is no button of its own for it.
     private var shareButton: some View {
         LarderButton(L10n.recipeSharePrompt, icon: .share2, variant: .text, action: sharePrompt)
             .frame(maxWidth: .infinity)
+            .disabled(nothingTicked)
     }
 
     private func hint(_ text: String) -> some View {
@@ -641,31 +699,6 @@ struct RecipeView: View {
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity)
-    }
-
-    /// The server while the pack has recipes, else the free route that writes in the app where
-    /// the phone can, else the shared prompt. A menu is the server's only.
-    @ViewBuilder
-    private var pinnedAction: some View {
-        if isMenu {
-            RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(model.menuCost)) {
-                model.writeOnServer(from: pantry.items)
-            }
-            .disabled(nothingTicked)
-        } else if model.actions.primary == .server {
-            RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(model.recipeCost)) {
-                model.writeOnServer(from: pantry.items)
-            }
-            .disabled(nothingTicked)
-        } else if model.actions.primary == .onDevice {
-            RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
-                model.writeOnDevice(from: pantry.items)
-            }
-            .disabled(nothingTicked)
-        } else {
-            RecipeGoButton(title: L10n.recipeSharePrompt, icon: .share2, compact: true, action: sharePrompt)
-                .disabled(nothingTicked)
-        }
     }
 
     private var writingOnDevice: some View {

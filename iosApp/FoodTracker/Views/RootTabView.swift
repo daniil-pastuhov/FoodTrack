@@ -63,8 +63,7 @@ struct RootTabView: View {
             scanHeight: scanHeight,
             isNavVisible: !shellChrome.navHidden,
             isScanVisible: isScanFloating,
-            isExpanded: isExpanded,
-            pinnedActionHeight: shellChrome.pinnedActionHeight
+            isExpanded: isExpanded
         )
     }
 
@@ -519,6 +518,25 @@ extension RootTabView {
         if let text = arguments.string(forKey: "demoSnackbar") {
             snackbar = LarderSnackbarContent(message: text, actionTitle: L10n.undoAction, action: {})
         }
+        // Before the route, so a demo menu has the demo's menu set.
+        if arguments.object(forKey: "demoRecipeCredits") != nil {
+            recipeViewModel.credits.showDemo(
+                balance: arguments.integer(forKey: "demoRecipeCredits"),
+                state: arguments.string(forKey: "demoRecipeState"),
+                menuSets: arguments.object(forKey: "demoRecipeMenuSets") == nil || arguments.bool(forKey: "demoRecipeMenuSets")
+            )
+            if arguments.string(forKey: "demoRecipeMode") == "menu" { recipeViewModel.mode = .menu }
+            // `-demoRecipeCourses 1|2|3` and `-demoRecipeDays 1|2|3|4`: the menu set, and so what it
+            // takes (one course and days other than 3 only as from a server with menu sets, the
+            // demo's default; `-demoRecipeMenuSets NO` shows the older server's 3-day menu).
+            if arguments.object(forKey: "demoRecipeCourses") != nil {
+                recipeViewModel.setMenuCourses(arguments.integer(forKey: "demoRecipeCourses"))
+            }
+            if arguments.object(forKey: "demoRecipeDays") != nil {
+                recipeViewModel.setMenuDays(arguments.integer(forKey: "demoRecipeDays"))
+            }
+            if arguments.string(forKey: "demoRecipeState") == "busy" { recipeViewModel.showDemoServerBusy() }
+        }
         switch arguments.string(forKey: "demoRoute") {
         case "onboarding": apply(.onboarding)
         case "categories": apply(.categories)
@@ -555,17 +573,11 @@ extension RootTabView {
         // `-demoRecipeIntro YES`: "How recipes work" as on a first visit (demo launches never
         // open it by themselves).
         if arguments.bool(forKey: "demoRecipeIntro") { recipeViewModel.showIntroForDemo() }
-        if arguments.object(forKey: "demoRecipeCredits") != nil {
-            recipeViewModel.credits.showDemo(
-                balance: arguments.integer(forKey: "demoRecipeCredits"),
-                state: arguments.string(forKey: "demoRecipeState")
-            )
-            if arguments.string(forKey: "demoRecipeMode") == "menu" { recipeViewModel.mode = .menu }
-            if arguments.string(forKey: "demoRecipeState") == "busy" { recipeViewModel.showDemoServerBusy() }
-            // `-demoRecipeCourses 2|3`: the menu's course count, and so what it takes.
-            if arguments.object(forKey: "demoRecipeCourses") != nil {
-                recipeViewModel.setMenuCourses(arguments.integer(forKey: "demoRecipeCourses"))
-            }
+        // `-demoRecipeUnread YES`: a recipe and a menu saved unseen (the badge, the list's dots).
+        if arguments.bool(forKey: "demoRecipeUnread") { recipeViewModel.showDemoUnread() }
+        // `-demoRecipeOnDevice YES|NO`: "Generate on this device" offered or not, whatever the device has.
+        if arguments.object(forKey: "demoRecipeOnDevice") != nil {
+            recipeViewModel.demoOnDevice = arguments.bool(forKey: "demoRecipeOnDevice")
         }
     }
 

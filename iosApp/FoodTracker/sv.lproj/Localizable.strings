@@ -657,7 +657,12 @@
 
 /* Recipe tab: paid route */
 "recipe_mode_recipe" = "Recept";
-"recipe_mode_menu" = "Meny för 3 dagar";
+"recipe_mode_menu" = "Menyset";
+"recipe_days_label" = "Dagar";
+"recipe_buy_message" = "Ett recept är en rätt som skrivs av vår server. En meny för 3 dagar kräver %1$@ med två rätter per dag, %2$@ med tre. De går inte ut.";
+"recipe_intro_packs_message" = "Vår server skriver receptet och kan också planera en meny för 3 dagar. Ett recept drar %1$@ från ett paket; en meny drar %2$@ med 2 rätter per dag eller %3$@ med 3.";
+"recipe_intro_packs_body_sets" = "Vår server skriver receptet och kan också planera ett menyset. Ett recept drar %1$@ från ett paket; ett menyset drar %2$d till %3$d, beroende på dagar och rätter per dag.";
+"recipe_saved_new" = "Ny";
 "recipe_courses_label" = "Rätter per dag";
 "recipe_generate_recipe" = "Skapa recept";
 "recipe_generate_menu" = "Skapa meny";
@@ -675,7 +680,6 @@
 "recipe_item_left_out" = "”%@” utelämnades: namnet kunde inte skickas.";
 "recipe_item_not_sent" = "”%@” kunde inte skickas. Kryssa ur den eller byt namn på den och försök sedan igen. Inga recept drogs.";
 "recipe_allergen_refused" = "Din allergen ”%@” kunde inte skickas, så inget skrevs: ett recept utan den kanske inte är säkert. Byt namn på den under Allergenvarningar i Inställningar och försök sedan igen. Inga recept drogs.";
-"recipe_writing_menu_title" = "Planerar tre dagar";
 "recipe_writing_menu_message" = "Det kan ta upp till två minuter. Du kan lämna den här skärmen; menyn hamnar i Sparade recept.";
 "recipe_offline_title" = "Ingen anslutning";
 "recipe_offline_message" = "Recept från ditt paket kräver internet. De gratis sätten nedan fungerar fortfarande.";
@@ -694,7 +698,6 @@
 "recipe_try_now" = "Försök nu";
 "recipe_payment_pending_title" = "Väntar på betalning";
 "recipe_payment_pending_message" = "Dina recept läggs till när butiken bekräftar betalningen. Det kan ta en stund.";
-"recipe_buy_message" = "Ett recept är en rätt som skrivs av vår server. En meny för 3 dagar kräver %1$@ med två rätter per dag, %2$@ med tre. De går inte ut.";
 "recipe_pack_each" = "%@ per recept";
 "recipe_continue" = "Fortsätt";
 "recipe_close" = "Stäng";
@@ -753,14 +756,11 @@
 "recipe_purchases_blocked" = "Det går inte att köpa recept med det här kontot eftersom tidigare köp återbetalades efter att recepten hade använts.";
 "recipe_consumption_note" = "Om du ber Apple om återbetalning meddelar vi Apple hur många av de här recepten du har använt.";
 "recipe_menu_result_title" = "Meny";
-"recipe_menu_heading" = "Meny för tre dagar";
-"recipe_menu_summary" = "%1$d rätter per dag för %2$d, med det som går ut först.";
 "recipe_menu_today" = "I dag, %@";
 "recipe_menu_uses" = "Använder %@";
 "recipe_course_starter" = "Förrätt";
 "recipe_course_main" = "Huvudrätt";
 "recipe_course_dessert" = "Efterrätt";
-"recipe_part_of_menu" = "Del av Meny för tre dagar";
 "recipe_share_menu" = "Dela meny";
 "recipe_not_found" = "Receptet är inte längre sparat.";
 "recipe_prompt_difficulty_easy" = "Lätt att laga, för en nybörjare";
@@ -785,7 +785,6 @@
 "recipe_intro_device_title" = "Gratis, på din {device}";
 "recipe_intro_device_message" = "Din {device} skriver receptet själv, och inget skickas någonstans.";
 "recipe_intro_packs_title" = "Från ett receptpaket";
-"recipe_intro_packs_message" = "Vår server skriver receptet och kan också planera en meny för 3 dagar. Ett recept drar %1$@ från ett paket; en meny drar %2$@ med 2 rätter per dag eller %3$@ med 3.";
 "recipe_intro_packs_price" = "Paket från %@.";
 "recipe_intro_free_stays" = "De gratis sätten finns kvar när du har ett paket.";
 "recipe_intro_again" = "Du kan öppna det här igen i Receptinställningar.";
@@ -820,7 +819,6 @@
 "recipe_prompt_min_minutes" = "Helst runt %d minuter eller mer";
 "recipe_prompt_meals" = "Passar till någon av dessa måltider: %@";
 "recipe_not_enough_items" = "Det finns inte tillräckligt att laga med när din kost och dina allergener har räknats bort. Kryssa i några varor till. Inget recept drogs.";
-"recipe_not_enough_items_menu" = "Det räcker inte till tre dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.";
 "recipe_diets_need_update" = "Recept från paket kan ännu inte kombinera glutenfritt med en annan kost. Behåll en av dem i Receptinställningar, eller använd modellen på din {device} eller den delade prompten. Inga recept drogs.";
 "recipe_language_needs_update" = "Recept från paket kan ännu inte skrivas på danska. Välj ett annat receptspråk i Receptinställningar, eller använd modellen på din {device} eller den delade prompten. Inga recept drogs.";
 "recipe_not_from_pantry_hint" = "Ingredienser utan märket ”I ditt skafferi” kommer inte från ditt skafferi: basingredienser, eller några saker du kanske behöver köpa.";

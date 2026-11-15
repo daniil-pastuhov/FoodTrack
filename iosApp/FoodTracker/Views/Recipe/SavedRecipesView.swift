@@ -35,6 +35,7 @@ struct SavedRecipesView: View {
     }
 
     private func row(_ entry: SavedRecipe) -> some View {
+        let unread = model.isUnread(entry.id)
         return Button {
             model.path.append(.result(id: entry.id))
         } label: {
@@ -54,6 +55,13 @@ struct SavedRecipesView: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // Not opened yet (saved while the writing screen was away): a small dot.
+                if unread {
+                    Circle()
+                        .fill(LarderColor.primary)
+                        .frame(width: 8, height: 8)
+                        .accessibilityLabel(L10n.recipeSavedNew)
+                }
                 LarderIcon(.chevronRight).foregroundStyle(LarderColor.onSurfaceVariant)
             }
             .padding(.vertical, LarderSpace.s2)
@@ -74,7 +82,7 @@ struct SavedRecipesView: View {
     static func title(_ entry: SavedRecipe) -> String {
         switch entry.content {
         case .recipe(let recipe): return recipe.title
-        case .menu: return L10n.recipeMenuHeading
+        case .menu(let menu): return L10n.recipeMenuHeading(days: menu.days.count)
         }
     }
 

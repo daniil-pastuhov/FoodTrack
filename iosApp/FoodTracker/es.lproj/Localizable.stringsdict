@@ -1154,5 +1154,149 @@
 			<string>%d añadidos a tu lista de compras</string>
 		</dict>
 	</dict>
+    <key>recipe_days_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d día</string>
+            <key>many</key>
+            <string>%d días</string>
+            <key>other</key>
+            <string>%d días</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_heading</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Menú de %d día</string>
+            <key>many</key>
+            <string>Menú de %d días</string>
+            <key>other</key>
+            <string>Menú de %d días</string>
+        </dict>
+    </dict>
+    <key>recipe_part_of_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Parte del Menú de %d día</string>
+            <key>many</key>
+            <string>Parte del Menú de %d días</string>
+            <key>other</key>
+            <string>Parte del Menú de %d días</string>
+        </dict>
+    </dict>
+    <key>recipe_writing_menu_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Planificando %d día</string>
+            <key>many</key>
+            <string>Planificando %d días</string>
+            <key>other</key>
+            <string>Planificando %d días</string>
+        </dict>
+    </dict>
+    <key>recipe_not_enough_items_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>No hay suficiente para %d día. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+            <key>many</key>
+            <string>No hay suficiente para %d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+            <key>other</key>
+            <string>No hay suficiente para %d días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_summary</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d plato al día para {servings}, con lo que caduca antes.</string>
+            <key>many</key>
+            <string>%d platos al día para {servings}, con lo que caduca antes.</string>
+            <key>other</key>
+            <string>%d platos al día para {servings}, con lo que caduca antes.</string>
+        </dict>
+    </dict>
+    <key>recipe_saved_button_unread</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Recetas guardadas, %d nueva</string>
+            <key>many</key>
+            <string>Recetas guardadas, %d nuevas</string>
+            <key>other</key>
+            <string>Recetas guardadas, %d nuevas</string>
+        </dict>
+    </dict>
+    <key>recipe_packs_body_sets</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de {min} a %d receta, según los días y los platos al día. Las recetas no caducan.</string>
+            <key>many</key>
+            <string>Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de {min} a %d recetas, según los días y los platos al día. Las recetas no caducan.</string>
+            <key>other</key>
+            <string>Una receta es un plato escrito por nuestro servidor. Un set de menús cuesta de {min} a %d recetas, según los días y los platos al día. Las recetas no caducan.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

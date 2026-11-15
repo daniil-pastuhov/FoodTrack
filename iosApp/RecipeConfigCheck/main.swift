@@ -242,6 +242,94 @@ expect(OnDeviceRecipeAvailability.of(.preparing, writesLanguage: false), .unsupp
 expect(OnDeviceRecipeAvailability.of(.none, writesLanguage: true), .unsupported, "no model")
 expect(OnDeviceRecipeAvailability.of(.none, writesLanguage: false), .unsupported, "no model says nothing about the language")
 
+// Menu sets (days 1-4, courses a day 1-3): prices only from the server's `menuSets`, offered and
+// sent only after `acceptsMenuDays` (Android's MenuSetTest).
+let serverSets = #"{"recipe":1,"menu2":4,"menu3":5,"menuSets":{"1":{"1":1,"2":2,"3":3},"2":{"1":2,"2":3,"3":4},"3":{"1":3,"2":4,"3":5},"4":{"1":4,"2":5,"3":6}}}"#
+let withSets = try! JSONDecoder().decode(RecipeCosts.self, from: Data(serverSets.utf8))
+expect(withSets.menuPrice(days: 1, courses: 1), 1, "1 day, 1 course")
+expect(withSets.menuPrice(days: 4, courses: 3), 6, "4 days, 3 courses")
+expect(withSets.cost(of: .menu, courses: 2, days: 2), 3, "2 days, 2 courses")
+expect(withSets.cost(of: .menu, courses: 3), 5, "3 days by default")
+let olderServer = try! JSONDecoder().decode(RecipeCosts.self, from: Data(#"{"recipe":1,"menu2":4,"menu3":6}"#.utf8))
+expect(olderServer.menuSets, nil, "an older server sends no menuSets")
+expect(olderServer.menuPrice(days: 3, courses: 3), 6, "3 days from menu3")
+expect(olderServer.menuPrice(days: 2, courses: 2), nil, "no price for 2 days")
+expect(olderServer.menuPrice(days: 3, courses: 1), nil, "no flat price for one course")
+// A table cached by the previous version (no menuSets) keeps decoding; the new one round-trips.
+let cachedOld = try! JSONDecoder().decode(RecipeCosts.self, from: try! JSONEncoder().encode(RecipeCosts(recipe: 2, menu2: 4, menu3: 5)))
+expect(cachedOld, RecipeCosts(recipe: 2, menu2: 4, menu3: 5), "an old cached table")
+expect(try! JSONDecoder().decode(RecipeCosts.self, from: try! JSONEncoder().encode(withSets)), withSets, "a cached table with menu sets")
+let odd = try! JSONDecoder().decode(RecipeCosts.self, from: Data(#"{"recipe":1,"menu2":4,"menu3":5,"menuSets":{"2":{"2":"x","3":0,"1":2},"9":{"2":3},"x":{}}}"#.utf8))
+expect(odd.menuSets, ["2": ["1": 2]], "unreadable menu-set entries are left out")
+let broken = try! JSONDecoder().decode(RecipeCosts.self, from: Data(#"{"recipe":1,"menu2":4,"menu3":5,"menuSets":[1,2]}"#.utf8))
+expect(broken.menuSets, nil, "an unreadable menuSets is absent")
+expect(RecipeCosts.fallback.menuPrice(days: 1, courses: 2), nil, "the fallback is 3-day only")
+// The packs text's range (Android's menuSetRange), and prices above 100 not believed.
+expect(withSets.menuSetRange, 1...6, "range over menuSets with menu2 / menu3")
+expect(olderServer.menuSetRange, nil, "no table, no range: the 3-day wording")
+expect(RecipeCosts(recipe: 1, menu2: 4, menu3: 9, menuSets: ["1": ["2": 2]]).menuSetRange, 2...9, "menu2 / menu3 count in the range")
+let dear = try! JSONDecoder().decode(RecipeCosts.self, from: Data(#"{"recipe":101,"menu2":4,"menu3":5,"menuSets":{"1":{"1":101,"2":100}}}"#.utf8))
+expect(dear.recipe, 1, "a recipe price above 100 takes the fallback")
+expect(dear.menuSets, ["1": ["2": 100]], "a menu-set price above 100 is left out")
+
+// Effective choice and what the form offers.
+expect(MenuSet.effective(days: 1, courses: 1, takesMenuDays: false, costs: withSets), MenuSet(days: 3, courses: 2), "no capability: 3 days, one course is two")
+expect(MenuSet.effective(days: 2, courses: 3, takesMenuDays: false, costs: withSets), MenuSet(days: 3, courses: 3), "no capability keeps three courses")
+expect(MenuSet.effective(days: 1, courses: 1, takesMenuDays: true, costs: withSets), MenuSet(days: 1, courses: 1), "1 day x 1 course")
+expect(MenuSet.effective(days: 2, courses: 2, takesMenuDays: true, costs: olderServer), MenuSet(days: 3, courses: 2), "unpriced days fall back to 3")
+expect(MenuSet.effective(days: 2, courses: 1, takesMenuDays: true, costs: olderServer), MenuSet(days: 3, courses: 2), "unpriced one course falls back to two")
+expect(MenuSet.dayOptions(for: MenuSet(days: 3, courses: 2), takesMenuDays: false, costs: withSets), [], "Days hidden without the capability")
+expect(MenuSet.courseOptions(for: MenuSet(days: 3, courses: 2), takesMenuDays: false, costs: withSets), [2, 3], "two and three without it")
+expect(MenuSet.dayOptions(for: MenuSet(days: 3, courses: 1), takesMenuDays: true, costs: withSets), [1, 2, 3, 4], "every day count priced")
+expect(MenuSet.courseOptions(for: MenuSet(days: 1, courses: 2), takesMenuDays: true, costs: withSets), [1, 2, 3], "every course count priced")
+let partial = RecipeCosts(recipe: 1, menu2: 4, menu3: 5, menuSets: ["1": ["2": 2], "3": ["1": 3, "2": 4, "3": 5]])
+expect(MenuSet.dayOptions(for: MenuSet(days: 3, courses: 3), takesMenuDays: true, costs: partial), [3], "a day count without a price isn't offered")
+expect(MenuSet.dayOptions(for: MenuSet(days: 3, courses: 2), takesMenuDays: true, costs: partial), [1, 3], "priced for two courses")
+expect(MenuSet.courseOptions(for: MenuSet(days: 1, courses: 2), takesMenuDays: true, costs: partial), [2], "one day priced only for two")
+
+// The request's shape: `days` only when not 3 and only with the capability; one course likewise.
+let menuRequest = RecipeRequest(items: [RecipeIngredientInput(name: "Milk", daysRemaining: 1, expiryText: "")], config: RecipeConfig(), allergens: [])
+func wire(_ courses: Int, _ days: Int, _ takes: Bool, kind: RecipeKind = .menu) -> GenerateRequest {
+    RecipeWire.request(for: menuRequest, kind: kind, courses: courses, days: days, requestID: UUID(), menuDays: takes)!
+}
+expect(wire(2, 3, true).days, nil, "3 days is left out")
+expect(wire(2, 1, true).days, 1, "1 day is sent")
+expect(wire(3, 4, true).days, 4, "4 days is sent")
+expect(wire(2, 2, false).days, nil, "no days without the capability")
+expect(wire(1, 3, true).courses, 1, "one course with the capability")
+expect(wire(1, 3, false).courses, 2, "one course is never sent without it")
+expect(wire(2, 2, true, kind: .recipe).days, nil, "a recipe has no days")
+expect(wire(2, 2, true, kind: .recipe).courses, nil, "a recipe has no courses")
+let encoded = String(decoding: try! JSONEncoder().encode(wire(2, 3, true)), as: UTF8.self)
+expect(encoded.contains("\"days\""), false, "a 3-day request is the legacy shape")
+expect(MenuSet.needsMenuDays(wire(2, 3, true)), false, "legacy request: a refusal keeps the flag")
+expect(MenuSet.needsMenuDays(wire(2, 1, true)), true, "days: a refusal clears the flag")
+expect(MenuSet.needsMenuDays(wire(1, 3, true)), true, "one course: a refusal clears the flag")
+expect(withSets.cost(of: wire(1, 1, true)), 1, "a request's cost by its days and courses")
+expect(withSets.cost(of: wire(3, 3, true)), 5, "a 3-day request's cost")
+// A request stored by the previous version (no days) still decodes, as 3 days.
+var storedRequest = try! JSONSerialization.jsonObject(with: try! JSONEncoder().encode(wire(2, 1, true))) as! [String: Any]
+storedRequest.removeValue(forKey: "days")
+let restored = try! JSONDecoder().decode(GenerateRequest.self, from: try! JSONSerialization.data(withJSONObject: storedRequest))
+expect(restored.days, nil, "an old stored request")
+expect(olderServer.cost(of: restored), 4, "priced as 3 days")
+
+// A menu saved before menu sets (three days, no new fields) still loads.
+let oldMenu = #"{"days":[{"date":"2026-11-01","uses":[],"courses":[]},{"date":"2026-11-02","uses":[],"courses":[]},{"date":"2026-11-03","uses":[],"courses":[]}]}"#
+expect(try! JSONDecoder().decode(RecipeMenu.self, from: Data(oldMenu.utf8)).days.count, 3, "an old saved menu")
+
+// Unread saved recipes: the header's badge.
+var unread = Set<String>()
+unread = RecipeUnread.afterSave(unread, id: "a", shown: true)
+expect(unread, [], "shown on arrival is read")
+unread = RecipeUnread.afterSave(unread, id: "b", shown: false)
+unread = RecipeUnread.afterSave(unread, id: "c", shown: false)
+expect(RecipeUnread.count(unread, savedIDs: ["a", "b", "c"]), 2, "two unread")
+expect(RecipeUnread.count(unread, savedIDs: ["a", "b"]), 1, "only ids still saved count")
+unread = RecipeUnread.afterOpen(unread, id: "b")
+expect(unread, ["c"], "opened is read")
+expect(RecipeUnread.pruned(unread, savedIDs: []), [], "deleted ones go")
+
 if failures > 0 {
     print("\(failures) failed")
     exit(1)

@@ -74,6 +74,7 @@ struct RecipeCreditsStorage {
         static let generation = "com.foodtracker.recipe.pending_generation"
         static let generationSavedAt = "com.foodtracker.recipe.pending_generation_saved_at"
         static let courses = "com.foodtracker.recipe.menu_courses"
+        static let days = "com.foodtracker.recipe.menu_days"
         static let costs = "com.foodtracker.recipe.costs"
         static let blocked = "com.foodtracker.recipe.purchases_blocked"
         static let consentStarts = "com.foodtracker.recipe.consumption_consent_started"
@@ -81,6 +82,7 @@ struct RecipeCreditsStorage {
         static let serverTakesOptional = "com.foodtracker.recipe.server_takes_optional"
         static let serverTakesMultiChoice = "com.foodtracker.recipe.server_takes_multi_choice"
         static let serverTakesDanish = "com.foodtracker.recipe.server_takes_danish"
+        static let serverTakesMenuDays = "com.foodtracker.recipe.server_takes_menu_days"
     }
 
     /// The server's last answer that carried a balance said `acceptsOptionalIngredients`: only
@@ -101,6 +103,13 @@ struct RecipeCreditsStorage {
     var serverTakesDanish: Bool {
         get { defaults.bool(forKey: Key.serverTakesDanish) }
         nonmutating set { defaults.set(newValue, forKey: Key.serverTakesDanish) }
+    }
+
+    /// The same for `acceptsMenuDays`: only then are the Days choice and one course a day
+    /// offered, and `days` / `courses: 1` sent (`MenuSet`).
+    var serverTakesMenuDays: Bool {
+        get { defaults.bool(forKey: Key.serverTakesMenuDays) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesMenuDays) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -174,9 +183,24 @@ struct RecipeCreditsStorage {
 
     static let pendingGenerationLifetime: TimeInterval = 6 * 24 * 60 * 60
 
+    /// The menu's courses a day as last chosen: 1, 2 or 3 (two when never chosen). One is used
+    /// only while the server takes menu sets (`MenuSet.effective`).
     var menuCourses: Int {
-        get { defaults.integer(forKey: Key.courses) == 3 ? 3 : 2 }
-        nonmutating set { defaults.set(newValue == 3 ? 3 : 2, forKey: Key.courses) }
+        get {
+            let stored = defaults.integer(forKey: Key.courses)
+            return MenuSet.courseChoices.contains(stored) ? stored : 2
+        }
+        nonmutating set { defaults.set(MenuSet.courseChoices.contains(newValue) ? newValue : 2, forKey: Key.courses) }
+    }
+
+    /// The menu's days as last chosen: 1 to 4 (three when never chosen). Used only while the
+    /// server takes menu sets.
+    var menuDays: Int {
+        get {
+            let stored = defaults.integer(forKey: Key.days)
+            return MenuSet.dayChoices.contains(stored) ? stored : MenuSet.defaultDays
+        }
+        nonmutating set { defaults.set(MenuSet.dayChoices.contains(newValue) ? newValue : MenuSet.defaultDays, forKey: Key.days) }
     }
 
     private func decode<T: Decodable>(_ type: T.Type, _ key: String) -> T? {
@@ -205,6 +229,9 @@ final class RecipeCredits: ObservableObject {
     @Published private(set) var balance: Int?
     /// What a recipe and a menu take, as the server last said; 1, 4 and 5 until it has.
     @Published private(set) var costs: RecipeCosts
+    /// The server's last answer with a balance said `acceptsMenuDays` (kept in `storage`):
+    /// the form offers Days and one course a day.
+    @Published private(set) var serverTakesMenuDays: Bool
     @Published private(set) var account: RecipeAccountState = .none
     @Published private(set) var packs: RecipePacksState = .idle { didSet { if packs == .unreachable { Self.noteReviewProblem() } } }
     @Published private(set) var unconfirmed: [UnconfirmedPurchase] = []
@@ -259,6 +286,7 @@ final class RecipeCredits: ObservableObject {
         self.backend = backend
         self.storage = storage
         costs = storage.costs ?? .fallback
+        serverTakesMenuDays = storage.serverTakesMenuDays
         unconfirmed = storage.unconfirmed
         paymentPending = Self.isPending(since: storage.paymentPendingSince, now: Date())
     }
@@ -335,6 +363,10 @@ final class RecipeCredits: ObservableObject {
             let online = path.status == .satisfied
             Task { @MainActor in
                 guard let self else { return }
+                #if DEBUG
+                // A demo's "offline" stays, whatever the simulator's connection.
+                if self.demoMode { return }
+                #endif
                 self.isOnline = online
                 if online { self.connectionLost = false }
             }
@@ -410,6 +442,14 @@ final class RecipeCredits: ObservableObject {
         storage.serverTakesOptional = response.acceptsOptionalIngredients?.value ?? false
         storage.serverTakesMultiChoice = response.acceptsMultiChoiceConfig?.value ?? false
         storage.serverTakesDanish = response.acceptsDanish?.value ?? false
+        setServerTakesMenuDays(response.acceptsMenuDays?.value ?? false)
+    }
+
+    /// Kept, and republished so the form's choices follow at once. Cleared too when a request
+    /// that needed it was refused as invalid (a rolled-back server).
+    func setServerTakesMenuDays(_ takes: Bool) {
+        storage.serverTakesMenuDays = takes
+        if serverTakesMenuDays != takes { serverTakesMenuDays = takes }
     }
 
     /// The cheapest pack as the store formats its price, once the store has answered (the tab
@@ -419,9 +459,9 @@ final class RecipeCredits: ObservableObject {
         return packs.min { $0.product.price < $1.product.price }?.displayPrice
     }
 
-    /// What a recipe, or a menu of `courses` courses a day, takes.
-    func cost(of kind: RecipeKind, courses: Int) -> Int {
-        costs.cost(of: kind, courses: courses)
+    /// What a recipe, or a menu of `courses` courses a day for `days` days, takes.
+    func cost(of kind: RecipeKind, courses: Int, days: Int = MenuSet.defaultDays) -> Int {
+        costs.cost(of: kind, courses: courses, days: days)
     }
 
     func callSucceeded() {
@@ -748,9 +788,21 @@ final class RecipeCredits: ObservableObject {
     /// `-demoRecipeCredits <n>` with `-demoRecipeState <state>` (phone, account, unconfirmed,
     /// pending, paused, offline, blocked, otherAccount, busy): the paid route's screens without a server or a store, for
     /// screenshots and layout checks. Nothing is sent anywhere.
-    func showDemo(balance: Int, state: String?) {
+    /// `menuSets` (unless `-demoRecipeMenuSets NO`): as from a server that says
+    /// `acceptsMenuDays`, with the server's default menu-set prices; kept for this run only.
+    func showDemo(balance: Int, state: String?, menuSets: Bool = true) {
         demoMode = true
         self.balance = balance
+        if menuSets {
+            serverTakesMenuDays = true
+            costs = RecipeCosts(recipe: 1, menu2: 4, menu3: 5, menuSets: [
+                "1": ["1": 1, "2": 2, "3": 3], "2": ["1": 2, "2": 3, "3": 4],
+                "3": ["1": 3, "2": 4, "3": 5], "4": ["1": 4, "2": 5, "3": 6],
+            ])
+        } else {
+            serverTakesMenuDays = false
+            costs = .fallback
+        }
         account = state == "account"
             ? .signedIn(uid: "demo", providers: [.apple], email: "k7x2m9@privaterelay.appleid.com")
             : .anonymous(uid: "demo")

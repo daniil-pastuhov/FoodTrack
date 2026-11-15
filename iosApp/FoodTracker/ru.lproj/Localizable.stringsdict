@@ -1282,5 +1282,165 @@
             <string>Добавлено %d продукта в список покупок</string>
         </dict>
     </dict>
+    <key>recipe_days_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d день</string>
+            <key>few</key>
+            <string>%d дня</string>
+            <key>many</key>
+            <string>%d дней</string>
+            <key>other</key>
+            <string>%d дня</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_heading</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Меню на %d день</string>
+            <key>few</key>
+            <string>Меню на %d дня</string>
+            <key>many</key>
+            <string>Меню на %d дней</string>
+            <key>other</key>
+            <string>Меню на %d дня</string>
+        </dict>
+    </dict>
+    <key>recipe_part_of_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Из меню на %d день</string>
+            <key>few</key>
+            <string>Из меню на %d дня</string>
+            <key>many</key>
+            <string>Из меню на %d дней</string>
+            <key>other</key>
+            <string>Из меню на %d дня</string>
+        </dict>
+    </dict>
+    <key>recipe_writing_menu_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Планируем %d день</string>
+            <key>few</key>
+            <string>Планируем %d дня</string>
+            <key>many</key>
+            <string>Планируем %d дней</string>
+            <key>other</key>
+            <string>Планируем %d дня</string>
+        </dict>
+    </dict>
+    <key>recipe_not_enough_items_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>На %d день продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</string>
+            <key>few</key>
+            <string>На %d дня продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</string>
+            <key>many</key>
+            <string>На %d дней продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</string>
+            <key>other</key>
+            <string>На %d дня продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_summary</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Блюд в день: %d, порций: {servings}. Сначала то, что скоро испортится.</string>
+            <key>few</key>
+            <string>Блюд в день: %d, порций: {servings}. Сначала то, что скоро испортится.</string>
+            <key>many</key>
+            <string>Блюд в день: %d, порций: {servings}. Сначала то, что скоро испортится.</string>
+            <key>other</key>
+            <string>Блюд в день: %d, порций: {servings}. Сначала то, что скоро испортится.</string>
+        </dict>
+    </dict>
+    <key>recipe_saved_button_unread</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Сохранённые рецепты, новых: %d</string>
+            <key>few</key>
+            <string>Сохранённые рецепты, новых: %d</string>
+            <key>many</key>
+            <string>Сохранённые рецепты, новых: %d</string>
+            <key>other</key>
+            <string>Сохранённые рецепты, новых: %d</string>
+        </dict>
+    </dict>
+    <key>recipe_packs_body_sets</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от {min} до %d рецепта в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</string>
+            <key>few</key>
+            <string>Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от {min} до %d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</string>
+            <key>many</key>
+            <string>Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от {min} до %d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</string>
+            <key>other</key>
+            <string>Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от {min} до %d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

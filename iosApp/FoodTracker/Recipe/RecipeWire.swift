@@ -11,28 +11,48 @@ enum RecipeKind: String, Codable, Sendable {
     case recipe, menu
 }
 
-/// What the server takes for a recipe and for a menu of two or three courses a day. The server
+/// What the server takes for a recipe and for a menu. `menu2` / `menu3` are a 3-day menu of two
+/// and three courses a day; `menuSets` (from a server that says `acceptsMenuDays`) is every menu
+/// set it writes, days -> courses a day -> recipes, string keys as on the wire. The server
 /// decides and sends it beside every `balance`; the app only says it, from the last value it
-/// received, or from `fallback` before it has received one.
+/// received, or from `fallback` (3-day only) before it has received one. Android: `RecipeCosts`.
 struct RecipeCosts: Codable, Equatable, Sendable {
     var recipe: Int
     var menu2: Int
     var menu3: Int
+    /// Nil from a server that predates menu sets, and in a table cached by an earlier version.
+    var menuSets: [String: [String: Int]]?
 
     static let fallback = RecipeCosts(recipe: 1, menu2: 4, menu3: 5)
+    /// A price above this is not believed (as Android's `MAX_COST`).
+    static let maxCost = 100
 
-    init(recipe: Int, menu2: Int, menu3: Int) {
+    /// The cheapest and dearest menu set (`menuSets` with `menu2` / `menu3`), for the packs text;
+    /// nil without a table, when the text says what a 3-day menu takes instead. Android:
+    /// `RecipeCosts.menuSetRange`.
+    var menuSetRange: ClosedRange<Int>? {
+        guard let menuSets, !menuSets.isEmpty else { return nil }
+        let prices = menuSets.values.flatMap(\.values) + [menu2, menu3]
+        return prices.min()!...prices.max()!
+    }
+
+    init(recipe: Int, menu2: Int, menu3: Int, menuSets: [String: [String: Int]]? = nil) {
         self.recipe = recipe
         self.menu2 = menu2
         self.menu3 = menu3
+        self.menuSets = menuSets
     }
 
-    /// Leniently: a field that is missing, not a whole number or below 1 takes its fallback
-    /// value. Throws only when `costs` isn't an object at all.
+    private enum CodingKeys: String, CodingKey { case recipe, menu2, menu3, menuSets }
+
+    /// Leniently: a field that is missing, not a whole number, below 1 or above `maxCost` takes
+    /// its fallback value; in `menuSets` such an entry (or a day or course count outside 1...4 / 1...3) is
+    /// left out, and an unreadable `menuSets` reads as absent. Throws only when `costs` isn't an
+    /// object at all.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         func read(_ key: CodingKeys, _ fallback: Int) -> Int {
-            guard let value = (try? container.decodeIfPresent(Int.self, forKey: key)) ?? nil, value >= 1 else {
+            guard let value = (try? container.decodeIfPresent(Int.self, forKey: key)) ?? nil, (1...Self.maxCost).contains(value) else {
                 return fallback
             }
             return value
@@ -40,18 +60,140 @@ struct RecipeCosts: Codable, Equatable, Sendable {
         recipe = read(.recipe, Self.fallback.recipe)
         menu2 = read(.menu2, Self.fallback.menu2)
         menu3 = read(.menu3, Self.fallback.menu3)
-    }
-
-    func cost(of kind: RecipeKind, courses: Int) -> Int {
-        switch kind {
-        case .recipe: return recipe
-        case .menu: return courses == 3 ? menu3 : menu2
+        let raw = (try? container.decodeIfPresent([String: [String: LenientInt]].self, forKey: .menuSets)) ?? nil
+        menuSets = raw.map { rows in
+            var sets: [String: [String: Int]] = [:]
+            for (days, row) in rows {
+                guard let d = Int(days), MenuSet.dayChoices.contains(d) else { continue }
+                var prices: [String: Int] = [:]
+                for (courses, price) in row {
+                    guard let c = Int(courses), MenuSet.courseChoices.contains(c), let value = price.value, (1...Self.maxCost).contains(value) else { continue }
+                    prices[String(c)] = value
+                }
+                if !prices.isEmpty { sets[String(d)] = prices }
+            }
+            return sets
         }
     }
 
-    /// What `request` takes, by its own kind and course count.
+    /// What a menu of `days` days and `courses` courses a day takes: from `menuSets`, or for the
+    /// 3-day menu of two or three courses `menu2` / `menu3`; nil when the server gave no price for
+    /// it (then that choice isn't offered).
+    func menuPrice(days: Int, courses: Int) -> Int? {
+        if let price = menuSets?[String(days)]?[String(courses)] { return price }
+        guard days == MenuSet.defaultDays else { return nil }
+        switch courses {
+        case 2: return menu2
+        case 3: return menu3
+        default: return nil
+        }
+    }
+
+    /// A recipe, or a menu of `courses` courses a day for `days` days (a combination without a
+    /// price is never asked for; it reads as the 3-day one of as many courses).
+    func cost(of kind: RecipeKind, courses: Int, days: Int = MenuSet.defaultDays) -> Int {
+        switch kind {
+        case .recipe: return recipe
+        case .menu: return menuPrice(days: days, courses: courses) ?? (courses == 3 ? menu3 : menu2)
+        }
+    }
+
+    /// What `request` takes, by its own kind, course count and days (absent: 3).
     func cost(of request: GenerateRequest) -> Int {
-        cost(of: request.kind, courses: request.courses ?? 2)
+        cost(of: request.kind, courses: request.courses ?? 2, days: request.days ?? MenuSet.defaultDays)
+    }
+}
+
+/// A whole number, or nil for anything else, without failing what it is inside.
+struct LenientInt: Decodable, Sendable {
+    let value: Int?
+
+    init(from decoder: Decoder) throws {
+        value = try? decoder.singleValueContainer().decode(Int.self)
+    }
+}
+
+/// The menu set's two choices, days and courses a day, and what may be offered and sent. Until
+/// a reply said `acceptsMenuDays` the menu is the 3-day one of two or three courses and Days isn't
+/// shown; after it, every combination the server priced in `menuSets`. Android: `RecipeUiState.menuPair` and `menuOffered` in `RecipeStateHolder.kt`.
+struct MenuSet: Equatable, Sendable {
+    var days: Int
+    var courses: Int
+
+    static let defaultDays = 3
+    static let dayChoices = [1, 2, 3, 4]
+    static let courseChoices = [1, 2, 3]
+    /// What a server without menu sets writes.
+    static let legacyCourseChoices = [2, 3]
+
+    /// The menu set the form asks for, from the stored choices: as chosen when it may be sent
+    /// and has a price; otherwise the same courses for 3 days, otherwise 3 days of two courses.
+    static func effective(days: Int, courses: Int, takesMenuDays: Bool, costs: RecipeCosts) -> MenuSet {
+        guard takesMenuDays else {
+            return MenuSet(days: defaultDays, courses: legacyCourseChoices.contains(courses) ? courses : 2)
+        }
+        if costs.menuPrice(days: days, courses: courses) != nil { return MenuSet(days: days, courses: courses) }
+        if costs.menuPrice(days: defaultDays, courses: courses) != nil { return MenuSet(days: defaultDays, courses: courses) }
+        return MenuSet(days: defaultDays, courses: 2)
+    }
+
+    /// The Days choices to show next to `current` (its own courses): empty until the server takes
+    /// menu sets, so the choice isn't shown; then each day count priced for those courses.
+    static func dayOptions(for current: MenuSet, takesMenuDays: Bool, costs: RecipeCosts) -> [Int] {
+        guard takesMenuDays else { return [] }
+        return dayChoices.filter { costs.menuPrice(days: $0, courses: current.courses) != nil }
+    }
+
+    /// The Courses choices next to `current` (its own days): two and three until the server takes
+    /// menu sets; then each count priced for those days.
+    static func courseOptions(for current: MenuSet, takesMenuDays: Bool, costs: RecipeCosts) -> [Int] {
+        guard takesMenuDays else { return legacyCourseChoices }
+        return courseChoices.filter { costs.menuPrice(days: current.days, courses: $0) != nil }
+    }
+
+    /// `days` as the request carries it: only when it isn't 3, and only to a server that takes
+    /// menu sets; nil (left out: the 3-day menu) otherwise. Android: `RecipeUiState.menuDays`.
+    static func wireDays(_ days: Int, takesMenuDays: Bool) -> Int? {
+        guard takesMenuDays, days != defaultDays, dayChoices.contains(days) else { return nil }
+        return days
+    }
+
+    /// `courses` as the request carries it: one only to a server that takes menu sets, otherwise
+    /// two or three (anything else is two). Android: `RecipeUiState.menuCourses`.
+    static func wireCourses(_ courses: Int, takesMenuDays: Bool) -> Int {
+        if courses == 1 { return takesMenuDays ? 1 : 2 }
+        return courses == 3 ? 3 : 2
+    }
+
+    /// Whether `request` asked for something only a server with menu sets reads, so its refusal
+    /// as INVALID_REQUEST means the server was rolled back: then the flag is cleared.
+    static func needsMenuDays(_ request: GenerateRequest) -> Bool {
+        request.kind == .menu && (request.days != nil || request.courses == 1)
+    }
+}
+
+/// Saved recipes and menus the person hasn't seen yet: written or recovered while the writing
+/// screen wasn't on screen. Kept as ids beside the recipe options (`RecipeOptions.unreadSaved`);
+/// the header's badge counts those still saved. Android: `RecipeUiState.unreadCount` / `isUnread`.
+enum RecipeUnread {
+    /// Just saved: unread unless its result was shown as it arrived.
+    static func afterSave(_ unread: Set<String>, id: String, shown: Bool) -> Set<String> {
+        shown ? unread.subtracting([id]) : unread.union([id])
+    }
+
+    /// Opened (from Saved recipes or anywhere), or deleted: no longer unread.
+    static func afterOpen(_ unread: Set<String>, id: String) -> Set<String> {
+        unread.subtracting([id])
+    }
+
+    /// The ids that still are saved recipes.
+    static func pruned(_ unread: Set<String>, savedIDs: [String]) -> Set<String> {
+        unread.intersection(savedIDs)
+    }
+
+    /// The badge: unread ids that are still saved.
+    static func count(_ unread: Set<String>, savedIDs: [String]) -> Int {
+        pruned(unread, savedIDs: savedIDs).count
     }
 }
 
@@ -154,6 +296,9 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     var requestId: String
     var kind: RecipeKind
     var courses: Int?
+    /// A menu's days, only when not 3 and only to a server that said `acceptsMenuDays`; nil (left
+    /// out: 3 days) otherwise, and in a request stored by an older version.
+    var days: Int?
     var config: WireRecipeConfig
     var ingredients: [WireIngredient]
     var allergens: [String]
@@ -242,6 +387,9 @@ protocol BalanceCarrying {
     var acceptsMultiChoiceConfig: WireFlag? { get }
     /// From a server that writes recipes in Danish: `acceptsDanish: true`.
     var acceptsDanish: WireFlag? { get }
+    /// From a server that writes menu sets (`days`, `courses: 1`, `costs.menuSets`):
+    /// `acceptsMenuDays: true`.
+    var acceptsMenuDays: WireFlag? { get }
 }
 
 enum GenerateStatus: String, Decodable, Sendable {
@@ -261,6 +409,7 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
+    var acceptsMenuDays: WireFlag?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -281,6 +430,7 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
+    var acceptsMenuDays: WireFlag?
 }
 
 struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
@@ -290,6 +440,7 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
+    var acceptsMenuDays: WireFlag?
 }
 
 /// `moved` can be negative: a store refund's debt moves with the recipes.
@@ -301,6 +452,7 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsOptionalIngredients: WireFlag?
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
+    var acceptsMenuDays: WireFlag?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable, Equatable {
@@ -855,17 +1007,21 @@ enum RecipeWire {
 
     /// `withOptional`: "Send all products" is on and the server said it reads them; then the
     /// request's `otherItems` go as `optionalIngredients`. `multiChoice`: the server said
-    /// `acceptsMultiChoiceConfig`. Nil when the selected diets can't all be sent to this server
+    /// `acceptsMultiChoiceConfig`. `menuDays`: the server said `acceptsMenuDays`, so a menu
+    /// carries `days` when not 3 and may have one course a day (`MenuSet.wireDays` /
+    /// `wireCourses`); otherwise it is the 3-day menu of two or three. Nil when the selected diets can't all be sent to this server
     /// (`WireRecipeConfig.make`): never sent with one left out.
     static func request(
         for request: RecipeRequest,
         kind: RecipeKind,
         courses: Int,
+        days: Int = MenuSet.defaultDays,
         requestID: UUID,
         today: Date = Date(),
         excluding refused: Set<String> = [],
         withOptional: Bool = false,
-        multiChoice: Bool = false
+        multiChoice: Bool = false,
+        menuDays: Bool = false
     ) -> GenerateRequest? {
         guard let config = WireRecipeConfig.make(request.config, takesMultiChoice: multiChoice) else { return nil }
         // Names the server refused earlier (lower-cased) stay out: sending one again would only
@@ -900,7 +1056,8 @@ enum RecipeWire {
         return GenerateRequest(
             requestId: requestID.uuidString.lowercased(),
             kind: kind,
-            courses: kind == .menu ? (courses == 3 ? 3 : 2) : nil,
+            courses: kind == .menu ? MenuSet.wireCourses(courses, takesMenuDays: menuDays) : nil,
+            days: kind == .menu ? MenuSet.wireDays(days, takesMenuDays: menuDays) : nil,
             config: config,
             ingredients: Array(ingredients.prefix(maxIngredients)),
             allergens: Array(allergens),

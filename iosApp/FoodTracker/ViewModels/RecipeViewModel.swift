@@ -22,7 +22,7 @@ enum RecipePhase: Equatable {
     case writingOnServer(RecipeKind)
 }
 
-/// A single recipe, or the three-day menu that only the server writes.
+/// A single recipe, or the menu set (days and courses a day) that only the server writes.
 enum RecipeMode: Hashable {
     case recipe, menu
 }
@@ -73,7 +73,8 @@ enum RecipeFailure: Equatable {
     case allergenConsentDeclined
     /// `NOT_ENOUGH_ITEMS`: the ticked items can't make it once the allergens and diets are
     /// applied (for a menu, some day has nothing it may use). Nothing taken; the form stays.
-    case notEnoughItems(RecipeKind)
+    /// `days`: a menu's day count, for the wording (3 for a recipe).
+    case notEnoughItems(RecipeKind, days: Int)
     /// The selected diets can't all be sent to the server as it is now (gluten-free with another
     /// diet, before it reads several): nothing was sent. Android: `DietsNeedServerUpdate`.
     case dietsNeedServerUpdate
@@ -101,14 +102,14 @@ enum RecipeAction: Equatable {
     case server, onDevice, share, buy
 }
 
-/// What the form offers: `primary` is pinned above the pill (nil: nothing pinned), `secondary`
-/// sits under the form in this order. Android: `RecipeActions` (`RecipeUiState.actions`).
+/// What the form offers: `primary` is the first, filled button of the form's button group (nil:
+/// none), `secondary` follows it in this order. Android: `RecipeActions` (`RecipeUiState.actions`).
 struct RecipeActions: Equatable {
     var primary: RecipeAction?
     var secondary: [RecipeAction]
 
-    /// With recipes in the pack the server is pinned and both free ways stay one tap away; without
-    /// (or offline), the phone's model or the shared prompt is pinned. A menu is the server's only.
+    /// With recipes in the pack the server is the primary and both free ways stay one tap away;
+    /// without (or offline), the phone's model or the shared prompt is. A menu is the server's only.
     static func of(isMenu: Bool, serverCanWrite: Bool, offline: Bool, onDevice: Bool, canBuy: Bool) -> RecipeActions {
         if isMenu { return RecipeActions(primary: serverCanWrite ? .server : nil, secondary: []) }
         let primary: RecipeAction = serverCanWrite && !offline ? .server : onDevice ? .onDevice : .share
@@ -159,7 +160,15 @@ final class RecipeViewModel: ObservableObject {
         didSet { if failure?.blocksReviewPrompt == true { ReviewPrompter.shared.problemShown() } }
     }
     @Published var mode: RecipeMode = .recipe
+    /// The menu's courses a day and days as last chosen; what is asked for is `menuSet`.
     @Published private(set) var menuCourses: Int
+    @Published private(set) var menuDays: Int
+    /// The day count of the menu being written, for the writing screen's title.
+    @Published private(set) var writingMenuDays = MenuSet.defaultDays
+    /// Whether the Recipe tab is on screen with the app active (`RecipeView` says so): a result
+    /// arriving then, with nothing pushed over the writing screen, is shown and so read.
+    private var tabOnScreen = false
+    private var sceneActive = true
     /// Opens the pack sheet: Buy recipes, the count in the bar, or a generation that found the
     /// pack empty.
     @Published var showsBuySheet = false
@@ -215,6 +224,7 @@ final class RecipeViewModel: ObservableObject {
         config = configStore.load()
         options = configStore.loadOptions()
         menuCourses = credits.storage.menuCourses
+        menuDays = credits.storage.menuDays
         saved = self.savedStore.all()
         refreshAvailability()
         creditsChanges = credits.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
@@ -350,6 +360,44 @@ final class RecipeViewModel: ObservableObject {
     func reloadSaved() {
         let current = savedStore.all()
         if current.map(\.id) != saved.map(\.id) { saved = current }
+        pruneUnread()
+    }
+
+    // MARK: Unread saved recipes
+
+    /// How many saved recipes and menus haven't been seen yet: the header's badge.
+    var unreadCount: Int { RecipeUnread.count(options.unreadSaved, savedIDs: saved.map(\.id)) }
+
+    func isUnread(_ id: String) -> Bool { options.unreadSaved.contains(id) }
+
+    /// A result's screen appeared (on arrival, from Saved recipes or anywhere else): read.
+    func markRead(_ id: String) {
+        updateOptions { $0.unreadSaved = RecipeUnread.afterOpen($0.unreadSaved, id: id) }
+    }
+
+    private func pruneUnread() {
+        let ids = saved.map(\.id)
+        updateOptions { $0.unreadSaved = RecipeUnread.pruned($0.unreadSaved, savedIDs: ids) }
+    }
+
+    /// `RecipeView` appearing and disappearing, and the app becoming active or not.
+    func setTabOnScreen(_ onScreen: Bool) { tabOnScreen = onScreen }
+    func setSceneActive(_ active: Bool) { sceneActive = active }
+
+    /// Whether a result arriving now would be seen: the writing screen is what is on screen.
+    private var writingScreenOnScreen: Bool { tabOnScreen && sceneActive && path.isEmpty }
+
+    /// Saves a result that just arrived. Shown on the writing screen when that is on screen (and
+    /// so read); otherwise kept unread for the badge, and the snackbar says it is in Saved recipes.
+    /// Returns whether it was shown.
+    @discardableResult
+    private func saveArrived(_ entry: SavedRecipe) -> Bool {
+        let shown = writingScreenOnScreen
+        savedStore.save(entry)
+        saved = savedStore.all()
+        updateOptions { $0.unreadSaved = RecipeUnread.afterSave($0.unreadSaved, id: entry.id, shown: shown) }
+        if shown { path = [.result(id: entry.id)] }
+        return shown
     }
 
     /// `items` past their date, soonest first, by how many days: the form's red warning, the
@@ -385,7 +433,18 @@ final class RecipeViewModel: ObservableObject {
     /// Re-asks the model, which can finish downloading or be switched on while the app runs.
     func refreshAvailability() {
         onDeviceAvailability = onDeviceModel.availability(for: config.resolvedLanguage)
+        #if DEBUG
+        if let demoOnDevice { onDeviceAvailability = demoOnDevice ? .available : .unsupported }
+        #endif
     }
+
+    #if DEBUG
+    /// `-demoRecipeOnDevice YES|NO`: the form as on a phone whose model writes the language, or
+    /// one without a model, whatever this device has, for layout checks.
+    var demoOnDevice: Bool? = nil {
+        didSet { refreshAvailability() }
+    }
+    #endif
 
     // MARK: Ticked items
 
@@ -435,9 +494,24 @@ final class RecipeViewModel: ObservableObject {
     }
 
     func setMenuCourses(_ courses: Int) {
-        menuCourses = courses == 3 ? 3 : 2
+        menuCourses = MenuSet.courseChoices.contains(courses) ? courses : 2
         credits.storage.menuCourses = menuCourses
     }
+
+    func setMenuDays(_ days: Int) {
+        menuDays = MenuSet.dayChoices.contains(days) ? days : MenuSet.defaultDays
+        credits.storage.menuDays = menuDays
+    }
+
+    /// The menu set the form asks for: the chosen days and courses where the server takes and
+    /// prices them, otherwise the 3-day menu (`MenuSet.effective`).
+    var menuSet: MenuSet {
+        MenuSet.effective(days: menuDays, courses: menuCourses, takesMenuDays: credits.serverTakesMenuDays, costs: credits.costs)
+    }
+
+    /// The Days choices (empty: not shown) and the Courses choices for the form.
+    var menuDayOptions: [Int] { MenuSet.dayOptions(for: menuSet, takesMenuDays: credits.serverTakesMenuDays, costs: credits.costs) }
+    var menuCourseOptions: [Int] { MenuSet.courseOptions(for: menuSet, takesMenuDays: credits.serverTakesMenuDays, costs: credits.costs) }
 
     // MARK: Server route
 
@@ -446,13 +520,13 @@ final class RecipeViewModel: ObservableObject {
     var serverCanWriteRecipe: Bool { serverCanWrite(.recipe) }
     var serverCanWriteMenu: Bool { serverCanWrite(.menu) }
 
-    /// What a recipe, or a menu of the chosen number of courses, takes, from the server's costs.
-    var recipeCost: Int { credits.cost(of: .recipe, courses: menuCourses) }
-    var menuCost: Int { credits.cost(of: .menu, courses: menuCourses) }
+    /// What a recipe, or the chosen menu set, takes, from the server's costs.
+    var recipeCost: Int { credits.cost(of: .recipe, courses: 2) }
+    var menuCost: Int { credits.cost(of: .menu, courses: menuSet.courses, days: menuSet.days) }
 
     private func serverCanWrite(_ kind: RecipeKind) -> Bool {
         credits.isPaidRouteAvailable && !credits.serverPaused
-            && (credits.balance ?? 0) >= credits.cost(of: kind, courses: menuCourses)
+            && (credits.balance ?? 0) >= (kind == .menu ? menuCost : recipeCost)
     }
 
     func writeOnServer(from items: [PantryItem]) {
@@ -484,9 +558,10 @@ final class RecipeViewModel: ObservableObject {
         // The multi-choice config only to a server that said it reads it; otherwise the closest
         // legacy values, or nothing at all when a selected diet would be lost.
         guard let fresh = RecipeWire.request(
-            for: request, kind: kind, courses: menuCourses, requestID: UUID(), excluding: refusedNames,
+            for: request, kind: kind, courses: menuSet.courses, days: menuSet.days, requestID: UUID(), excluding: refusedNames,
             withOptional: options.sendAllItems && credits.storage.serverTakesOptional,
-            multiChoice: credits.storage.serverTakesMultiChoice
+            multiChoice: credits.storage.serverTakesMultiChoice,
+            menuDays: credits.serverTakesMenuDays
         ) else {
             failure = .dietsNeedServerUpdate
             return
@@ -529,6 +604,7 @@ final class RecipeViewModel: ObservableObject {
     /// stops rather than trying again.
     private func runServerWrite(_ wire: GenerateRequest, start: Bool, collecting earlier: GenerateRequest? = nil, afterRefusal: Bool = false) {
         phase = .writingOnServer(wire.kind)
+        writingMenuDays = wire.days ?? MenuSet.defaultDays
         serverBusyRetrying = false
         let credits = credits
         writeTask = Task { [weak self] in
@@ -632,8 +708,11 @@ final class RecipeViewModel: ObservableObject {
         credits.callSucceeded()
         switch Self.outcome(of: response, for: earlier, costs: credits.costs) {
         case .saved(let content):
-            savedStore.save(SavedRecipe(content: content))
+            // Never shown: unread until opened.
+            let entry = SavedRecipe(content: content)
+            savedStore.save(entry)
             saved = savedStore.all()
+            updateOptions { $0.unreadSaved = RecipeUnread.afterSave($0.unreadSaved, id: entry.id, shown: false) }
             failure = .earlierArrived(earlier.kind)
         case .failure(.serverRefused(_, let taken)):
             failure = .earlierRefused(taken: taken)
@@ -683,12 +762,13 @@ final class RecipeViewModel: ObservableObject {
         if outcome.clearsRequest { credits.storage.pendingGeneration = nil }
         switch outcome {
         case .saved(let content):
-            let entry = SavedRecipe(content: content)
-            savedStore.save(entry)
-            saved = savedStore.all()
-            path = [.result(id: entry.id)]
-            ReviewPrompter.shared.recipeArrived()
-            failure = .arrived(balance: response.balance)
+            // Shown if the writing screen is on screen; otherwise unread, and said to be saved.
+            if saveArrived(SavedRecipe(content: content)) {
+                ReviewPrompter.shared.recipeArrived()
+                failure = .arrived(balance: response.balance)
+            } else {
+                failure = .earlierArrived(wire.kind)
+            }
         case .failure(let failure):
             self.failure = failure
         }
@@ -709,12 +789,16 @@ final class RecipeViewModel: ObservableObject {
         if serverError == .invalidRequest, wire.config.isMultiChoice { credits.storage.serverTakesMultiChoice = false }
         // Likewise Danish refused as invalid: a server rolled back to one from before it.
         if serverError == .invalidRequest, wire.config.language == RecipeLanguage.da.rawValue { credits.storage.serverTakesDanish = false }
+        // And a menu set (days, or one course a day): back to the 3-day menu of two or three.
+        if serverError == .invalidRequest, MenuSet.needsMenuDays(wire) { credits.setServerTakesMenuDays(false) }
         if serverError == .insufficientCredits {
             if credits.canBuy { showsBuySheet = true }
             return
         }
         let kind = kind ?? wire.kind
-        guard var failure = Self.failure(for: serverError, kind: kind, takenIfCharged: credits.costs.cost(of: wire)) else { return }
+        guard var failure = Self.failure(
+            for: serverError, kind: kind, takenIfCharged: credits.costs.cost(of: wire), days: wire.days ?? MenuSet.defaultDays
+        ) else { return }
         if retriesFresh, case .serverFailed = failure { failure = .serverFailed(kind, sameRequest: false) }
         self.failure = failure
     }
@@ -722,7 +806,8 @@ final class RecipeViewModel: ObservableObject {
     /// The snackbar a failed `generateRecipe` call raises, or nil where a lasting condition's
     /// callout (or the pack sheet, for INSUFFICIENT_CREDITS) says it instead. `takenIfCharged` is
     /// what the request takes, for an unknown refusal that says it was charged.
-    static func failure(for error: RecipeServerError, kind: RecipeKind, takenIfCharged: Int) -> RecipeFailure? {
+    /// `days`: the menu's day count, for NOT_ENOUGH_ITEMS' wording.
+    static func failure(for error: RecipeServerError, kind: RecipeKind, takenIfCharged: Int, days: Int = MenuSet.defaultDays) -> RecipeFailure? {
         switch error {
         case .insufficientCredits, .offline, .generationDisabled, .accountClosed:
             return nil
@@ -731,7 +816,7 @@ final class RecipeViewModel: ObservableObject {
         case .userDailyLimit: return .userDailyLimit
         case .infraFailureLimit: return .infraFailureLimit
         case .dailyCap: return .dailyCap
-        case .notEnoughItems: return .notEnoughItems(kind)
+        case .notEnoughItems: return .notEnoughItems(kind, days: kind == .menu ? days : MenuSet.defaultDays)
         case .server, .appCheckReplayed, .unknownRequest, .callableMissing, .serversBusy:
             // Nothing was decided on the server for this attempt: ask again under the same id.
             return .serverFailed(kind, sameRequest: true)
@@ -835,12 +920,12 @@ final class RecipeViewModel: ObservableObject {
     private func finishWriting(with recipe: Recipe) {
         guard phase == .writingOnDevice else { return }
         writeTask = nil
-        let entry = SavedRecipe(content: .recipe(recipe))
-        savedStore.save(entry)
-        saved = savedStore.all()
         phase = .idle
-        path = [.result(id: entry.id)]
-        ReviewPrompter.shared.recipeArrived()
+        if saveArrived(SavedRecipe(content: .recipe(recipe))) {
+            ReviewPrompter.shared.recipeArrived()
+        } else {
+            failure = .earlierArrived(.recipe)
+        }
     }
 
     private func failWriting(_ error: OnDeviceRecipeError) {
@@ -873,6 +958,7 @@ final class RecipeViewModel: ObservableObject {
         guard let entry = savedRecipe(id: id) else { return nil }
         savedStore.delete(id: id)
         saved = savedStore.all()
+        updateOptions { $0.unreadSaved = RecipeUnread.afterOpen($0.unreadSaved, id: id) }
         return entry
     }
 
@@ -886,7 +972,15 @@ final class RecipeViewModel: ObservableObject {
     /// request is sent again. Nothing is sent.
     func showDemoServerBusy() {
         phase = .writingOnServer(mode == .menu ? .menu : .recipe)
+        writingMenuDays = menuSet.days
         serverBusyRetrying = true
+    }
+
+    /// `-demoRecipeUnread YES`: a recipe and a menu saved as if they arrived while the writing
+    /// screen was away, so the header's badge and the Saved list's dots show.
+    func showDemoUnread() {
+        let ids = [saveDemoRecipe(), saveDemoMenu()]
+        updateOptions { $0.unreadSaved.formUnion(ids) }
     }
 
     /// `-demoRoute recipeResult`: a recipe as the phone's model would write one, saved so the
@@ -920,8 +1014,8 @@ final class RecipeViewModel: ObservableObject {
         return entry.id
     }
 
-    /// `-demoRoute recipeMenu`: a three-day menu as the server would write one, saved; `given` as
-    /// for `saveDemoRecipe`.
+    /// `-demoRoute recipeMenu`: a menu as the server would write one, of the form's days and
+    /// courses (`-demoRecipeDays`, `-demoRecipeCourses`), saved; `given` as for `saveDemoRecipe`.
     func saveDemoMenu(_ given: RecipeMenu? = nil) -> String {
         func dish(_ title: String, _ minutes: Int) -> Recipe {
             Recipe(
@@ -936,16 +1030,17 @@ final class RecipeViewModel: ObservableObject {
             )
         }
         let calendar = Calendar.current
-        let days = (0..<3).map { offset -> RecipeMenuDay in
+        let set = menuSet
+        let days = (0..<set.days).map { offset -> RecipeMenuDay in
             let date = calendar.date(byAdding: .day, value: offset, to: Date()) ?? Date()
+            let o = offset % 4
+            let starter = RecipeMenuCourse(course: .starter, recipe: dish(["Spinach and yoghurt soup", "Cucumber and yoghurt salad", "Salmon rillettes on toast", "Tomato bruschetta"][o], 20))
+            let main = RecipeMenuCourse(course: .main, recipe: dish(["Eggs on garlic sourdough toast", "Creamy milk-poached salmon", "Pan-fried salmon with greens", "Cheese omelette"][o], 25))
+            let dessert = RecipeMenuCourse(course: .dessert, recipe: dish(["Yoghurt with honey and toasted crumbs", "Vanilla milk pudding", "Strawberries with sweet cream", "Baked apples"][o], 10))
             return RecipeMenuDay(
                 date: RecipeWire.isoDay(date),
-                uses: [["bread", "spinach", "yoghurt"], ["yoghurt", "milk"], ["salmon", "strawberries"]][offset],
-                courses: [
-                    RecipeMenuCourse(course: .starter, recipe: dish(["Spinach and yoghurt soup", "Cucumber and yoghurt salad", "Salmon rillettes on toast"][offset], 20)),
-                    RecipeMenuCourse(course: .main, recipe: dish(["Eggs on garlic sourdough toast", "Creamy milk-poached salmon", "Pan-fried salmon with greens"][offset], 25)),
-                    RecipeMenuCourse(course: .dessert, recipe: dish(["Yoghurt with honey and toasted crumbs", "Vanilla milk pudding", "Strawberries with sweet cream"][offset], 10)),
-                ]
+                uses: [["bread", "spinach", "yoghurt"], ["yoghurt", "milk"], ["salmon", "strawberries"], ["eggs", "cheese"]][o],
+                courses: set.courses == 1 ? [main] : set.courses == 2 ? [starter, main] : [starter, main, dessert]
             )
         }
         let entry = SavedRecipe(content: .menu(given ?? RecipeMenu(days: days)))
