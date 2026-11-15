@@ -166,6 +166,6 @@ Removing one item, marking used or tossed, and removing from a queue are reversi
 - Recipe: Apple and Google sign-in buttons use stand-in icons; the real ones must follow each company's button rules.
 - Recipe, resolved 2026-11-14: the design HTML now draws the 2026-11-14 states (How recipes work, Send all products, the content-width Share pill, the header without Saved, Not available on this install, past-date warnings, deleting this device's data) and design.html is rebuilt; the artifact still needs republishing from `.artifact/design.html`.
 - Recipe, resolved 2026-11-15: the provisional wording (NOT_ENOUGH_ITEMS, time range values and handle names, the guide line, meal/diet summaries, the menu meal note, Add to shopping list in en and ru, the "to buy" line) is replaced by the apps' strings.
-- Recipe, app: "Add to shopping list" cuts a name at its first comma, so an ingredient written "Salt, pepper, chilli flakes" goes to the list as "Salt". The page's sample lists them as separate rows.
-- Recipe, app: with every candidate already on the list the button still opens a sheet titled "(0)" with "Add 0 items" off; hiding the button then may be better.
-- Recipe, app: Android shows Add to shopping list as a dialog, iOS as a sheet.
+- Recipe, app, resolved 2026-11-15: "Add to shopping list" no longer cuts a name at its first comma: "Salt, pepper, chilli flakes" is three rows, as the page's sample shows, and a preparation note (", thinly sliced") is still dropped.
+- Recipe, app, resolved 2026-11-15: the button is hidden when every candidate is on the list already (or there is nothing to buy), and comes back when the list changes.
+- Recipe, app, resolved 2026-11-15: Android shows Add to shopping list as a sheet, as iOS and the design do.

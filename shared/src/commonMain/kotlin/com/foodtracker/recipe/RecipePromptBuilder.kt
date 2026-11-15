@@ -51,9 +51,11 @@ data class RecipePromptStrings(
     val allergens: (String) -> String,
     /** "Write the recipes in %1$s", given a code from [RECIPE_LANGUAGES]. */
     val language: (String) -> String,
-    /** "These are past their date and I have chosen to use them: %1$s", given the ticked items
-     *  past their date already joined. Null leaves the line out. */
-    val pastDateNote: ((String) -> String)? = null
+    /** One line under the item list when some of [buildRecipePrompt]'s items are past their date,
+     *  given how many (singular for exactly one): "Some of these are past their date. I have
+     *  chosen to use them anyway, so please don't leave them out." No names: each item's own
+     *  line already says it is past its date. Null leaves the line out. */
+    val pastDateNote: ((count: Int) -> String)? = null
 )
 
 /**
@@ -87,10 +89,11 @@ fun buildRecipePrompt(
         .append("\n\n")
         .append(lines)
 
-    // The cook chose to use these despite their date: said so, so the other AI doesn't drop them.
-    val pastDate = items.filter { it.daysRemaining(today) < 0 }.sortedBy { it.daysRemaining(today) }
-    if (pastDate.isNotEmpty() && strings.pastDateNote != null) {
-        prompt.append("\n\n").append(strings.pastDateNote.invoke(pastDate.joinToString(", ") { it.name }))
+    // The cook chose to use these despite their date: said once, under the ticked items it is
+    // about (not the "other items", which the recipe may leave out), so the other AI doesn't drop them.
+    val pastDate = items.count { it.daysRemaining(today) < 0 }
+    if (pastDate > 0 && strings.pastDateNote != null) {
+        prompt.append("\n\n").append(strings.pastDateNote.invoke(pastDate))
     }
 
     if (otherItems.isNotEmpty()) {

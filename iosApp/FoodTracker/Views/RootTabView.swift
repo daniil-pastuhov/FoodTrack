@@ -40,6 +40,8 @@ struct RootTabView: View {
     @State private var remindersCalloutDismissed = false
     @State private var showCategories: Bool = false
     @State private var showOnboarding: Bool = false
+    /// A tab a link asked for while onboarding was up, opened when it finishes.
+    @State private var tabAfterOnboarding: RootTab?
     /// The one snackbar on screen. Hosted here, rather than in each tab, so it sits above the
     /// pill and Scan; tabs reach it through `\.showSnackbar`.
     @State private var snackbar: LarderSnackbarContent?
@@ -178,8 +180,8 @@ struct RootTabView: View {
         }
         .onChange(of: router.route) { _, route in
             guard let route else { return }
-            // First run finishes before anything else opens.
-            if !showOnboarding { apply(route) }
+            // First run finishes before anything else opens; a tab link waits for it.
+            if !showOnboarding { apply(route) } else { holdUntilOnboarded(route) }
             router.route = nil
         }
         .onChange(of: viewModel.homeConfirmation) { _, confirmation in
@@ -197,13 +199,13 @@ struct RootTabView: View {
                 && !FoodTrackerApp.isTakingScreenshots
             if let pending = router.pendingLaunchRoute {
                 router.pendingLaunchRoute = nil
-                if !isFirstRun { apply(pending) }
+                if !isFirstRun { apply(pending) } else { holdUntilOnboarded(pending) }
             }
-            // A route set before this view was observing, such as a notification action that
-            // started the app, would otherwise wait for the next one.
+            // A route set before this view was observing, such as a notification action or a
+            // `foodtracker://` link that started the app, would otherwise wait for the next one.
             if let pending = router.route {
                 router.route = nil
-                if !isFirstRun { apply(pending) }
+                if !isFirstRun { apply(pending) } else { holdUntilOnboarded(pending) }
             }
             if isFirstRun { showOnboarding = true }
         }
@@ -425,11 +427,21 @@ struct RootTabView: View {
     private func finishOnboarding(_ exit: OnboardingExit) {
         viewModel.completeOnboarding()
         withAnimation { showOnboarding = false }
+        let held = tabAfterOnboarding
+        tabAfterOnboarding = nil
         switch exit {
         case .scanner: presentScanner(mode: .barcode)
         case .addByHand: presentAddEdit(editing: nil)
-        case .home: break
+        // A tab a link asked for during first run (`foodtracker://recipe` from the App Store's
+        // event) opens now, as if tapped; a scanner or form the person chose wins over it.
+        case .home: if let held { selectedTab = held }
         }
+    }
+
+    /// Keeps a tab route that arrived during first run for `finishOnboarding`. Other routes
+    /// (a sheet, the scanner) are dropped, as before: onboarding offers its own way in.
+    private func holdUntilOnboarded(_ route: AppRoute) {
+        if case .tab(let tab) = route { tabAfterOnboarding = tab }
     }
 
     private func presentScanner(mode: IOSCameraMode? = nil) {

@@ -108,19 +108,40 @@ class PastDateWordingTest {
         assertFalse(recipeShareText(context.resources, recipe.copy(pastDate = emptyList())).contains("⚠"))
     }
 
+    private fun promptItem(name: String, days: Int): PantryItem {
+        val today = DateUtils.today()
+        return PantryItem(id = name, name = name, expiryDate = LocalDate.fromEpochDays(today.toEpochDays() + days), addedDate = today)
+    }
+
     @Test
     @Config(sdk = [34], qualifiers = "en")
-    fun theSharedPromptSaysWhichTickedItemsArePastTheirDate() {
-        val today = DateUtils.today()
-        fun item(name: String, days: Int) = PantryItem(
-            id = name,
-            name = name,
-            expiryDate = LocalDate.fromEpochDays(today.toEpochDays() + days),
-            addedDate = today
+    fun theSharedPromptSaysOnceWithoutNamesThatTickedItemsArePastTheirDate() {
+        val items = listOf(promptItem("Milk", -3), promptItem("Bread", 2), promptItem("Cheese", -40))
+        val others = listOf(promptItem("Old rice", -9), promptItem("Flour", 300))
+        val prompt = buildRecipePrompt(context, items, RecipeConfig(), listOf("peanut"), others)
+        println("--- en prompt ---\n$prompt")
+        val note = "Some of these are past their date. I have chosen to use them anyway, so please don't leave them out."
+        assertTrue(prompt, prompt.contains("\n\n$note\n\nI also have"))
+        assertEquals(prompt, 1, Regex("past their date").findAll(prompt).count())
+        assertFalse("no names in the note: $prompt", prompt.contains("anyway:"))
+        val one = buildRecipePrompt(context, listOf(promptItem("Milk", -1), promptItem("Bread", 2)), RecipeConfig(), emptyList())
+        assertTrue(one, one.contains("One of these is past its date. I have chosen to use it anyway, so please don't leave it out."))
+        val fresh = buildRecipePrompt(context, listOf(promptItem("Bread", 2)), RecipeConfig(), emptyList(), others)
+        assertFalse(fresh, fresh.contains("past their date") || fresh.contains("past its date"))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun theRussianPromptSaysItOnceToo() {
+        val prompt = buildRecipePrompt(
+            context,
+            listOf(promptItem("Молоко", -3), promptItem("Хлеб", 2), promptItem("Сыр", -40)),
+            RecipeConfig(),
+            listOf("арахис"),
+            listOf(promptItem("Рис", -9), promptItem("Мука", 300))
         )
-        val prompt = buildRecipePrompt(context, listOf(item("Milk", -3), item("Bread", 2), item("Cheese", -40)), RecipeConfig(), emptyList())
-        assertTrue(prompt, prompt.contains("These items are past their date, and I have chosen to use them anyway: Cheese, Milk."))
-        val fresh = buildRecipePrompt(context, listOf(item("Bread", 2)), RecipeConfig(), emptyList())
-        assertFalse(fresh, fresh.contains("past their date"))
+        println("--- ru prompt ---\n$prompt")
+        assertTrue(prompt, prompt.contains("\n\nУ некоторых из этих продуктов истёк срок годности. Я всё равно хочу их использовать, так что не исключай их.\n\n"))
+        assertEquals(prompt, 1, Regex("истёк срок").findAll(prompt).count())
     }
 }

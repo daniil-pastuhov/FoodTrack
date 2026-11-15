@@ -307,7 +307,9 @@ of it in the answer is not caught unless the word lists have it.
 ```
 
 `amount` may be an empty string (e.g. "salt to taste" in `name`). `fromPantry` is decided by the
-server (the model names which pantry item an ingredient is; the server checks it exists).
+server (the model names which pantry item an ingredient is; the server checks it exists, and an
+ingredient written as only a staple, such as "water", labelled as an item whose own name is not a
+staple is delivered with `fromPantry: false` and `staple: true`).
 `pantryIndex` (integer, optional) is present exactly when the ingredient is one of the request's
 `ingredients`: its 0-based index there. `optionalIndex` (integer, optional) is present exactly
 when it is one of the request's `optionalIngredients`: its 0-based index in that list **as

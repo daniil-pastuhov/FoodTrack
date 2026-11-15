@@ -463,6 +463,8 @@
 "scan_allergen_note" = "Dette samsvarer med allergenlisten din. Treffene er omtrentlige, så sjekk etiketten.";
 "scan_offline_title" = "Du er frakoblet";
 "scan_offline_message" = "Kunne ikke slå opp denne varen. Du kan fortsette for hånd, og strekkoden blir med varen.";
+"scan_busy_title" = "Open Food Facts har mye å gjøre";
+"scan_busy_message" = "Kunne ikke slå opp denne varen akkurat nå. Prøv igjen om et minutt, eller fortsett for hånd, og strekkoden blir med varen.";
 "scan_try_again" = "Prøv igjen";
 "scan_continue_by_hand" = "Fortsett for hånd";
 "scan_best_before_format" = "Best før %@";
@@ -804,7 +806,8 @@
 "recipe_past_date_result_one" = "Gått ut på dato: %1$@. Sjekk at den fortsatt er trygg å spise før du lager mat.";
 "recipe_past_date_result_many" = "Gått ut på dato: %1$@. Sjekk at de fortsatt er trygge å spise før du lager mat.";
 "recipe_past_date_item" = "%1$@ (%2$@)";
-"recipe_prompt_past_date" = "Disse varene er gått ut på dato, men jeg har valgt å bruke dem likevel: %1$@.";
+"recipe_prompt_past_date_one" = "Én av disse er gått ut på dato. Jeg har valgt å bruke den likevel, så ikke utelat den.";
+"recipe_prompt_past_date_many" = "Noen av disse er gått ut på dato. Jeg har valgt å bruke dem likevel, så ikke utelat dem.";
 
 /* Recipe: time range, multi-choice meal and diet, NOT_ENOUGH_ITEMS, shopping list */
 "recipe_time_range" = "%1$d–%2$d min";

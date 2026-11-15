@@ -210,7 +210,7 @@ class MainActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             stateHolder.uiState
-                .map { it.lookupResult == ProductLookupResult.Offline }
+                .map { it.lookupResult == ProductLookupResult.Offline || it.lookupResult == ProductLookupResult.Busy }
                 .distinctUntilChanged()
                 .collect { offline -> if (offline) reviewPrompter.onProblemShown() }
         }

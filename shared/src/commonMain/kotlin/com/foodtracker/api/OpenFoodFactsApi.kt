@@ -81,6 +81,39 @@ sealed interface ProductLookupResult {
 
     /** No answer worth trusting: no network, a timeout, a server error or an unreadable reply. */
     data object Offline : ProductLookupResult
+
+    /** Open Food Facts answered 429, too many requests: it is there but won't look this up right
+     *  now. Shown like [Offline] (try again, or carry on by hand) without saying the phone has no
+     *  connection. */
+    data object Busy : ProductLookupResult
+}
+
+/** How the apps introduce themselves to Open Food Facts, as its API guidance asks:
+ *  `AppName/Version (contact)`, the contact being the public repository (no email address).
+ *  iOS: `OpenFoodFacts.userAgent` in `NativePantryViewModel.swift`, the same form. */
+fun openFoodFactsUserAgent(platform: String, version: String): String =
+    "BestBefore-$platform/$version (https://github.com/daniil-pastuhov/FoodTrack)"
+
+/** Whether [host] is one of Open Food Facts' own (the API and its picture hosts), the only
+ *  requests that carry [openFoodFactsUserAgent]. */
+fun isOpenFoodFactsHost(host: String): Boolean {
+    val h = host.lowercase().trimEnd('.')
+    return h == "openfoodfacts.org" || h.endsWith(".openfoodfacts.org") || h == "openfoodfacts.net" || h.endsWith(".openfoodfacts.net")
+}
+
+/** Whether an item's data came from Open Food Facts, for its credit line: its picture is on an
+ *  Open Food Facts host, or its product has nutrition data (only a lookup brings that). A name
+ *  alone can't tell, since nothing records where a name came from. iOS: `OpenFoodFacts.isSource`. */
+fun isFromOpenFoodFacts(imageUrl: String?, nutrition: ProductNutrition?): Boolean {
+    val host = imageUrl?.let { Regex("^https?://([^/:?#]+)", RegexOption.IGNORE_CASE).find(it.trim())?.groupValues?.get(1) }
+    return (host != null && isOpenFoodFactsHost(host)) || (nutrition != null && !nutrition.isEmpty)
+}
+
+/** The product's page on Open Food Facts, for the credit line: the product when its barcode is
+ *  known, else the site. */
+fun openFoodFactsPageUrl(barcode: String?): String {
+    val code = barcode?.trim().orEmpty()
+    return if (code.isNotEmpty() && code.all { it.isDigit() }) "https://world.openfoodfacts.org/product/$code" else "https://world.openfoodfacts.org"
 }
 
 /** The product, when there is one. */
@@ -104,7 +137,9 @@ internal fun OffResponse.toLookupResult(barcode: String): ProductLookupResult {
 }
 
 class OpenFoodFactsApi(
-    private val httpClient: HttpClient = createDefaultClient()
+    private val httpClient: HttpClient = createDefaultClient(),
+    /** [openFoodFactsUserAgent] with the app's real version; the default only for tests. */
+    private val userAgent: String = openFoodFactsUserAgent("Android", "dev")
 ) {
     suspend fun lookupProduct(barcode: String): ProductLookupResult {
         val cleanBarcode = barcode.trim()
@@ -113,13 +148,14 @@ class OpenFoodFactsApi(
         return try {
             val url = "https://world.openfoodfacts.org/api/v2/product/$cleanBarcode.json"
             val response = httpClient.get(url) {
-                header("User-Agent", "FoodTracker-Android/1.0 (https://github.com/daniil-pastuhov/FoodTrack)")
+                header("User-Agent", userAgent)
             }
             when {
                 // How the v2 API reports an unknown barcode, usually with a JSON body saying the
                 // same. Read from the status code so a differently shaped body can't turn a real
                 // not-found into a failure.
                 response.status == HttpStatusCode.NotFound -> ProductLookupResult.NotFound
+                response.status == HttpStatusCode.TooManyRequests -> ProductLookupResult.Busy
                 !response.status.isSuccess() -> ProductLookupResult.Offline
                 else -> response.body<OffResponse>().toLookupResult(cleanBarcode)
             }

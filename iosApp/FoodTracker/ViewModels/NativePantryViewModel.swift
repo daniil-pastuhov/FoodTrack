@@ -42,6 +42,46 @@ public enum LookupResult: Equatable {
     /// There was no answer: no network, or a failure on the way. Says nothing about the product,
     /// so the design offers to carry on by hand rather than saying it wasn't found.
     case offline(barcode: String)
+    /// Open Food Facts answered 429, too many requests: shown like `offline` (try again, or carry
+    /// on by hand) without saying there is no connection. Android: `ProductLookupResult.Busy`.
+    case busy(barcode: String)
+}
+
+/// How the app introduces itself to Open Food Facts, as its API guidance asks:
+/// `AppName/Version (contact)`, the contact being the public repository (no email address).
+/// Android: `openFoodFactsUserAgent`, the same form.
+enum OpenFoodFacts {
+    static let userAgent: String = {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        return "BestBefore-iOS/\(version) (https://github.com/daniil-pastuhov/FoodTrack)"
+    }()
+
+    /// Whether `host` is one of Open Food Facts' own (the API and its picture hosts), the only
+    /// requests that carry `userAgent`.
+    static func isHost(_ host: String?) -> Bool {
+        guard let h = host?.lowercased() else { return false }
+        return h == "openfoodfacts.org" || h.hasSuffix(".openfoodfacts.org") || h == "openfoodfacts.net" || h.hasSuffix(".openfoodfacts.net")
+    }
+
+    /// Whether an item's data came from Open Food Facts, for its credit line: its picture is on
+    /// an Open Food Facts host, or its product has nutrition data (only a lookup brings that).
+    /// Android: `isFromOpenFoodFacts`.
+    static func isSource(imageUrl: String?, nutrition: ProductNutrition) -> Bool {
+        let host = imageUrl.flatMap { URL(string: $0.trimmingCharacters(in: .whitespaces)) }
+            .flatMap { ($0.scheme?.lowercased()).map { s in s == "http" || s == "https" } == true ? $0.host : nil }
+        return isHost(host) || !nutrition.isEmpty
+    }
+
+    /// The product's page on Open Food Facts, for the credit line: the product when its barcode
+    /// is known, else the site.
+    static func pageURL(barcode: String?) -> URL {
+        let code = barcode?.trimmingCharacters(in: .whitespaces) ?? ""
+        if !code.isEmpty, code.allSatisfy(\.isASCII), code.allSatisfy(\.isNumber),
+           let url = URL(string: "https://world.openfoodfacts.org/product/\(code)") {
+            return url
+        }
+        return URL(string: "https://world.openfoodfacts.org")!
+    }
 }
 
 /// What the Home screen confirms after an add, as a snackbar.
@@ -70,7 +110,12 @@ public class NativePantryViewModel: ObservableObject {
     /// How the last barcode lookup ended, or nil before one ends. New screens switch on this.
     @Published public var lookupResult: LookupResult? = nil {
         // A lookup that couldn't be made is an error on screen: no rating prompt this session.
-        didSet { if case .offline = lookupResult { ReviewPrompter.shared.problemShown() } }
+        didSet {
+            switch lookupResult {
+            case .offline, .busy: ReviewPrompter.shared.problemShown()
+            default: break
+            }
+        }
     }
     /// The product `lookupResult` found.
     public var scannedProduct: ProductInfo? {
@@ -81,7 +126,7 @@ public class NativePantryViewModel: ObservableObject {
     /// "not found" card; `lookupResult` tells the two reasons apart.
     public var productNotFoundBarcode: String? {
         switch lookupResult {
-        case .notFound(let barcode), .offline(let barcode): return barcode
+        case .notFound(let barcode), .offline(let barcode), .busy(let barcode): return barcode
         case .found, nil: return nil
         }
     }
@@ -1038,7 +1083,7 @@ public class NativePantryViewModel: ObservableObject {
             return nil
         }
         var request = URLRequest(url: url)
-        request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
+        request.setValue(OpenFoodFacts.userAgent, forHTTPHeaderField: "User-Agent")
         guard let (data, response) = try? await URLSession.shared.data(for: request) else {
             return .offline(barcode: barcode)
         }
@@ -1048,8 +1093,10 @@ public class NativePantryViewModel: ObservableObject {
 
     /// Reads an Open Food Facts response. Only a well-formed answer counts as "not found": it
     /// says so with `status: 0`, usually under a 404. Anything else, like a 5xx, a rate limit or
-    /// a proxy's HTML page, tells us nothing about the product, so it is `.offline`.
+    /// a proxy's HTML page, tells us nothing about the product, so it is `.offline`; a rate limit
+    /// (429) is `.busy`.
     nonisolated static func parseLookupResponse(barcode: String, statusCode: Int, data: Data) -> LookupResult {
+        if statusCode == 429 { return .busy(barcode: barcode) }
         guard (200..<300).contains(statusCode) || statusCode == 404,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let status = json["status"] as? Int else {

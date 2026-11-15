@@ -55,6 +55,7 @@ import com.foodtracker.android.ui.design.LarderSnackbar
 import com.foodtracker.android.ui.design.isExpanded
 import com.foodtracker.android.ui.theme.LocalIsDarkTheme
 import com.foodtracker.android.util.foodLabelName
+import com.foodtracker.api.ProductLookupResult
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.share.ShoppingListShare
@@ -649,7 +650,8 @@ fun ScannerScreen(
                         val retried = stateHolder.retryBarcodeLookup()
                         if (retried != null && checkDuplicates) stateHolder.checkForDuplicate(retried)
                     },
-                    onContinueByHand = { proceed(barcode) }
+                    onContinueByHand = { proceed(barcode) },
+                    busy = state.lookupResult == ProductLookupResult.Busy
                 )
             }
             ScanPanel.Date -> { wide ->

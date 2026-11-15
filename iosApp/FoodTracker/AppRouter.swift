@@ -15,10 +15,12 @@ public enum AppRoute: Equatable {
     /// notification's Recipe ideas action.
     case recipeIdeas(itemIds: [String])
 
-    /// The name a widget URL or a home-screen quick action gives for its target.
+    /// The name a widget URL, a home-screen quick action or a store link (the App Store's
+    /// in-app event opens `foodtracker://recipe`) gives for its target.
     init?(externalName: String) {
         switch externalName {
         case "home": self = .tab(.home)
+        case "recipe": self = .tab(.recipe)
         case "shopping-list": self = .tab(.shopping)
         case "scan": self = .scanner(.barcode)
         case "add-item": self = .addItem(.new)

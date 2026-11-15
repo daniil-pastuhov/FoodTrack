@@ -96,16 +96,21 @@ class RecipePromptBuilderTest {
     }
 
     @Test
-    fun saysWhichTickedItemsArePastTheirDateRightAfterTheList() {
+    fun saysOnceWithoutNamesThatSomeTickedItemsArePastTheirDate() {
+        val note = strings.copy(pastDateNote = { "PAST x$it" })
         val prompt = buildRecipePrompt(
-            strings = strings.copy(pastDateNote = { "PAST: $it" }),
+            strings = note,
             today = today,
             items = listOf(item("Milk", -2), item("Bread", 3), item("Cheese", -30)),
-            otherItems = listOf(item("Old rice", -9))
+            otherItems = listOf(item("Old rice", -9), item("Flour", 300))
         )
-        assertTrue(prompt.startsWith("INTRO\n\n- Cheese (-30d)\n- Milk (-2d)\n- Bread (3d)\n\nPAST: Cheese, Milk\n\nALSO:"), prompt)
-        val fresh = buildRecipePrompt(strings = strings.copy(pastDateNote = { "PAST: $it" }), today = today, items = listOf(item("Bread", 3)))
-        assertFalse(fresh.contains("PAST"), fresh)
+        // The items' own lines mark their dates; the note names nobody, comes once, right after
+        // the ticked items, and counts only them (not the "other items", which may be left out).
+        assertEquals("INTRO\n\n- Cheese (-30d)\n- Milk (-2d)\n- Bread (3d)\n\nPAST x2\n\nALSO:\n- Old rice (-9d)\n- Flour (300d)", prompt)
+        assertEquals(1, Regex("PAST").findAll(prompt).count())
+        assertTrue(buildRecipePrompt(strings = note, today = today, items = listOf(item("Milk", -1))).endsWith("\n\nPAST x1"), "singular for one")
+        val fresh = buildRecipePrompt(strings = note, today = today, items = listOf(item("Bread", 3)), otherItems = listOf(item("Old rice", -9)))
+        assertFalse(fresh.contains("PAST"), "only a ticked item past its date adds the line: $fresh")
     }
 
     @Test

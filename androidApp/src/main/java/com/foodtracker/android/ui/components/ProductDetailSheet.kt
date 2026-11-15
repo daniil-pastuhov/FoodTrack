@@ -2,6 +2,15 @@ package com.foodtracker.android.ui.components
 
 import android.text.format.DateFormat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextDecoration
+import com.foodtracker.android.ui.theme.LarderSize
+import com.foodtracker.api.isFromOpenFoodFacts
+import com.foodtracker.api.openFoodFactsPageUrl
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -273,10 +282,19 @@ private fun ProductDetailBody(
         item.notes?.takeIf { it.isNotBlank() }?.let {
             DetailSection(stringResource(R.string.home_notes_label)) { BodyText(it) }
         }
-        if (!nutrition.isEmpty) {
+        if (isFromOpenFoodFacts(item.imageUrl, nutrition)) {
+            // Open Food Facts' terms: credit it and name the licences, here as a link to the
+            // product's page there (the site when there is no barcode).
+            val uriHandler = LocalUriHandler.current
+            val url = openFoodFactsPageUrl(item.barcode)
             Text(
                 text = stringResource(R.string.detail_credit),
-                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = LarderSize.touch)
+                    .clickable(role = Role.Button) { runCatching { uriHandler.openUri(url) } }
+                    .wrapContentHeight(Alignment.CenterVertically),
+                style = MaterialTheme.typography.labelMedium.copy(textDecoration = TextDecoration.Underline),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

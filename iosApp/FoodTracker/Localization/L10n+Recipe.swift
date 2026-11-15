@@ -405,7 +405,9 @@ extension L10n {
         return withDevice(String.localizedStringWithFormat(NSLocalizedString("recipe_past_date_form", comment: ""), items.count, days))
     }
 
-    static func recipePromptPastDate(_ names: String) -> String { String(format: paid("recipe_prompt_past_date"), names) }
+    /// The shared prompt's line under its item list when `count` (> 0) of them are past their
+    /// date: no names, since each item's line already says it.
+    static func recipePromptPastDate(count: Int) -> String { paid(count == 1 ? "recipe_prompt_past_date_one" : "recipe_prompt_past_date_many") }
 
     // How recipes work
     static var recipeIntroTitle: String { paid("recipe_intro_title") }

@@ -38,6 +38,7 @@ export type Assertion = AssertionBase & (
   | { type: "datesRespected" }
   | { type: "idsInEnum" }
   | { type: "staplesNotPantry" }
+  | { type: "leak" }
   | { type: "usesHonest" }
   | { type: "maxExtras"; max: number }
   | { type: "usage"; maxOutputTokens?: number; maxThinkingTokens?: number; belowReserved?: boolean }
@@ -45,7 +46,7 @@ export type Assertion = AssertionBase & (
 
 export const ASSERTION_TYPES = [
   "forbid", "forbidUnless", "language", "maxSteps", "maxStepChars", "maxMinutes", "idsNotUsed", "idsUsed",
-  "minPantryItems", "day1Uses", "everyDayUses", "datesRespected", "idsInEnum", "staplesNotPantry", "usesHonest",
+  "minPantryItems", "day1Uses", "everyDayUses", "datesRespected", "idsInEnum", "staplesNotPantry", "leak", "usesHonest",
   "maxExtras", "usage",
 ] as const satisfies readonly Assertion["type"][];
 
