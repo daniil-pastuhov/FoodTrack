@@ -8,3 +8,5 @@ coverage/
 # Red-team runner output (model answers) and the owner's local cases (e.g. real slurs for item 21).
 test/redteam/results/
 test/redteam/cases.local.json
+# The owner's board (npm run admin -- board): local HTML files, never committed.
+board/

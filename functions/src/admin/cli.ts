@@ -3,17 +3,18 @@
  *
  *   npm run admin -- find   --email <address> | --play-order <GPA.…> | --apple-order <id> | --apple-transaction <id> | --uid <uid>
  *   npm run admin -- delete <one of the above> [--apply --confirm <uid>] [--kind <request kind>, with --uid]
+ *   npm run admin -- board  [--days 30] [--out <file.html>]   (README "The board": read-only)
  *
  * Against the emulators (project demo-foodtracker, 127.0.0.1:8080 / :9099) unless `--project` names
  * a live project; then with the operator's Application Default Credentials. `delete` is a dry run
  * unless `--apply` is given together with `--confirm` set to the uid it deletes.
  */
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 import { IOS_BUNDLE_ID, KMS_APPLE_TOKEN_KEY, KMS_KEY_RING, KMS_LOCATION } from "../constants";
 import { loadRuntimeConfig } from "../model";
 import type { AppStoreVerifier, Deps, Logger, OutputJudge, PlayVerifier, RecipeGenerator } from "../ports";
@@ -31,6 +32,9 @@ import {
   type Lookup,
   type RequestKind,
 } from "./accountRequests";
+import { BOARD_MAX_DAYS, buildBoard } from "./boardData";
+import { boardSummary, renderBoardHtml } from "./boardHtml";
+import { readBoardInput } from "./boardReader";
 import { LiveStoreLookups, accessSecret, cloudLogger, emulatorStoreLookups } from "./stores";
 
 export const EMULATOR_PROJECT = "demo-foodtracker";
@@ -46,6 +50,7 @@ export interface AdminEnv {
 const USAGE = `usage:
   npm run admin -- find   (--email <a> | --play-order <GPA.…> | --apple-order <id> | --apple-transaction <id> | --uid <uid>) [--project <id>]
   npm run admin -- delete (same lookup) [--project <id>] [--apply --confirm <uid>] [--kind <${REQUEST_KINDS.join("|")}>, with --uid]
+  npm run admin -- board  [--days <1-${BOARD_MAX_DAYS}, default 30>] [--out <file.html>] [--project <id>]
 Without --project: the local emulators (${EMULATOR_PROJECT}). delete is a dry run without --apply.`;
 
 const OPTIONS = {
@@ -147,6 +152,69 @@ export async function runAdmin(argv: string[], env: AdminEnv, parsed = parseAdmi
   if (!out.applied) print(`To delete: the same command with --apply --confirm ${match.uid}`);
 }
 
+// --- The board (read-only) ----------------------------------------------------------------------
+
+const BOARD_OPTIONS = {
+  days: { type: "string" },
+  out: { type: "string" },
+  project: { type: "string" },
+} as const;
+
+export interface BoardArgs {
+  days: number;
+  /** Absolute path of the HTML file; default under functions/board/ (git-ignored). */
+  out?: string;
+  project: string;
+}
+
+export function parseBoardArgs(argv: string[]): BoardArgs {
+  let parsed;
+  try {
+    parsed = parseArgs({ args: argv, options: BOARD_OPTIONS, allowPositionals: true, strict: true });
+  } catch (e) {
+    throw new AdminRefusal(`${(e as Error).message}\n${USAGE}`);
+  }
+  const { values, positionals } = parsed;
+  if (positionals[0] !== "board" || positionals.length !== 1) throw new AdminRefusal(USAGE);
+  const days = values.days === undefined ? 30 : Number(values.days);
+  if (!Number.isInteger(days) || days < 1 || days > BOARD_MAX_DAYS) {
+    throw new AdminRefusal(`--days must be a whole number from 1 to ${BOARD_MAX_DAYS}.`);
+  }
+  if (values.out !== undefined && !/\.html?$/i.test(values.out)) throw new AdminRefusal("--out must name an .html file.");
+  return {
+    days,
+    ...(values.out !== undefined ? { out: resolve(values.out) } : {}),
+    project: values.project ?? EMULATOR_PROJECT,
+  };
+}
+
+/** Where the board goes without --out: functions/board/ (git-ignored). */
+export function defaultBoardPath(project: string, nowMs: number): string {
+  const stamp = new Date(nowMs).toISOString().slice(0, 16).replace(/[-:]/g, "").replace("T", "-");
+  return join(__dirname, "..", "..", "board", `board-${project.replace(/[^a-z0-9-]/gi, "_")}-${stamp}.html`);
+}
+
+export interface BoardEnv {
+  db: Firestore;
+  now(): number;
+  print(line: string): void;
+  logger?: Logger;
+}
+
+/** Reads, aggregates, writes the HTML file and prints the summary. Writes nothing to Firestore. */
+export async function runBoard(args: BoardArgs, env: BoardEnv): Promise<{ path: string; html: string }> {
+  const nowMs = env.now();
+  const input = await readBoardInput(env.db, { project: args.project, days: args.days, nowMs, logger: env.logger });
+  const board = buildBoard(input);
+  const html = renderBoardHtml(board);
+  const path = args.out ?? defaultBoardPath(args.project, nowMs);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, html, { encoding: "utf8", mode: 0o600 });
+  for (const line of boardSummary(board)) env.print(line);
+  env.print(`Board written to ${path}`);
+  return { path, html };
+}
+
 // --- Wiring -----------------------------------------------------------------------------------
 
 /** One JSON line per log entry, on stderr, so stdout stays the report. */
@@ -185,7 +253,12 @@ function param(params: Record<string, string>, name: string, project: string): s
   return v;
 }
 
-export function buildEnv(project: string): AdminEnv {
+/**
+ * The Admin SDK app for `project`: the emulators for a demo- project (their default hosts unless
+ * the environment names others), the live project only when named, and never a live project while
+ * emulator hosts are set.
+ */
+function adminApp(project: string) {
   const live = !project.startsWith("demo-");
   if (live) {
     if (process.env.FIRESTORE_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST) {
@@ -195,7 +268,16 @@ export function buildEnv(project: string): AdminEnv {
     process.env.FIRESTORE_EMULATOR_HOST ??= "127.0.0.1:8080";
     process.env.FIREBASE_AUTH_EMULATOR_HOST ??= "127.0.0.1:9099";
   }
-  const app = getApps()[0] ?? initializeApp({ projectId: project });
+  return { live, app: getApps()[0] ?? initializeApp({ projectId: project }) };
+}
+
+export function buildBoardEnv(project: string): BoardEnv {
+  const { app } = adminApp(project);
+  return { db: getFirestore(app), now: () => Date.now(), print: (l) => console.log(l), logger: stderrLogger };
+}
+
+export function buildEnv(project: string): AdminEnv {
+  const { live, app } = adminApp(project);
   const db = getFirestore(app);
   const params = live ? deployParams(project) : {};
   const logging = live ? cloudLogger(project, stderrLogger) : { logger: stderrLogger, flush: async () => undefined };
@@ -253,6 +335,13 @@ async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   let env: AdminEnv | undefined;
   try {
+    if (argv[0] === "board") {
+      const args = parseBoardArgs(argv);
+      const boardEnv = buildBoardEnv(args.project);
+      console.log(args.project.startsWith("demo-") ? `[emulators, ${args.project}]` : `[LIVE project ${args.project}, read-only]`);
+      await runBoard(args, boardEnv);
+      return;
+    }
     const parsed = parseAdminArgs(argv);
     env = buildEnv(parsed.project);
     console.log(parsed.project.startsWith("demo-") ? `[emulators, ${parsed.project}]` : `[LIVE project ${parsed.project}]`);
