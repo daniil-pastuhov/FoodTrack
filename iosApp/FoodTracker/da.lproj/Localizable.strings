@@ -699,6 +699,7 @@
 "recipe_payment_pending_title" = "Venter på betaling";
 "recipe_payment_pending_message" = "Dine opskrifter bliver tilføjet, når butikken bekræfter betalingen. Det kan tage et stykke tid.";
 "recipe_pack_each" = "%@ pr. stk.";
+"recipe_pack_saving_a11y" = "%d %% billigere pr. opskrift";
 "recipe_continue" = "Fortsæt";
 "recipe_close" = "Luk";
 "recipe_ok" = "OK";

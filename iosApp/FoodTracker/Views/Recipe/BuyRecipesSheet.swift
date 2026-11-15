@@ -63,9 +63,10 @@ struct BuyRecipesSheet: View {
                     .larderFont(.body)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
+                let savings = PackSavings.percents(packs.map(\.offer))
                 LarderGroup {
-                    ForEach(packs) { pack in
-                        packRow(pack, isSelected: pack.id == (selectedID ?? Self.defaultSelection(packs)))
+                    ForEach(Array(zip(packs, savings)), id: \.0.id) { pack, saving in
+                        packRow(pack, saving: saving, isSelected: pack.id == (selectedID ?? Self.defaultSelection(packs)))
                     }
                 }
                 // Seeing this and continuing is the consent the server passes on to Apple.
@@ -95,7 +96,9 @@ struct BuyRecipesSheet: View {
         packs.count >= 3 ? packs[1].id : packs.first?.id
     }
 
-    private func packRow(_ pack: RecipePack, isSelected: Bool) -> some View {
+    /// `saving`: how much cheaper per recipe than the smallest pack, in whole percent
+    /// (`PackSavings.percents`); nil shows no badge.
+    private func packRow(_ pack: RecipePack, saving: Int?, isSelected: Bool) -> some View {
         Button { selectedID = pack.id } label: {
             HStack(spacing: LarderSpace.s3) {
                 LarderTick(isOn: isSelected, label: L10n.recipeCost(pack.credits)) { selectedID = pack.id }
@@ -109,10 +112,16 @@ struct BuyRecipesSheet: View {
                         .foregroundStyle(LarderColor.onSurfaceVariant)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Text(pack.displayPrice)
-                    .larderFont(.label)
-                    .monospacedDigit()
-                    .foregroundStyle(LarderColor.onSurface)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(pack.displayPrice)
+                        .larderFont(.label)
+                        .monospacedDigit()
+                        .foregroundStyle(LarderColor.onSurface)
+                    if let saving {
+                        LarderBadge(text: PackSavings.badgeText(saving))
+                            .accessibilityLabel(L10n.recipePackSavingA11y(saving))
+                    }
+                }
             }
             .padding(.vertical, LarderSpace.s3)
             .padding(.horizontal, LarderSpace.s4)

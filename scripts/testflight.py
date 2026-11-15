@@ -28,6 +28,11 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     # is in preparation) for the release job's `appstore` to send with the version.
     python3 scripts/testflight.py event [--apply [--add-to-review]]
 
+    # The in-app purchases' prices against scripts/pack_prices.py (base territory USA, the other
+    # storefronts by Apple's equalisation): dry run by default, --apply sets a new price schedule
+    # for each one whose USA price differs.
+    python3 scripts/testflight.py iap-prices [--apply] [PRODUCT_ID ...]
+
     # Read-only overview of the app's builds and groups.
     python3 scripts/testflight.py status
 
@@ -500,6 +505,202 @@ def cmd_iaps(args):
     print("Review submission: " + (f"{chosen['submission']['id']} (open)" if chosen else
                                    "a new one, with the app version"))
     return 0
+
+
+# --- In-app purchase prices: scripts/pack_prices.py onto each purchase's price schedule ---------
+#
+# developer.apple.com/documentation/appstoreconnectapi: an in-app purchase's prices are one price
+# schedule (GET /v2/inAppPurchases/{id}/iapPriceSchedule) with a base territory and manual prices
+# (GET /v1/inAppPurchasePriceSchedules/{id}/manualPrices, each an inAppPurchasePrice pointing at
+# an inAppPurchasePricePoint, whose customerPrice is the price); the other storefronts follow the
+# base territory's price point by Apple's equalisation (automaticPrices). A change is a new
+# schedule, POST /v1/inAppPurchasePriceSchedules (InAppPurchasePriceScheduleCreateRequest:
+# relationships inAppPurchase, baseTerritory and manualPrices, all required, the manual prices
+# inline in `included` as InAppPurchasePriceInlineCreate with relationships inAppPurchaseV2 and
+# inAppPurchasePricePoint; "a base territory is now required"). It replaces the whole schedule,
+# so a manual price set by hand in another territory, or a change scheduled for later, is
+# dropped: the dry run lists them. The price point comes from GET
+# /v2/inAppPurchases/{id}/pricePoints?filter[territory]=USA.
+
+PRICE_BASE_TERRITORY = "USA"
+# Storefronts the dry run shows besides the base, through the price points' equalizations.
+PRICE_SAMPLE_TERRITORIES = ("GBR", "DEU", "FRA", "ESP", "NOR", "SWE", "DNK", "JPN")
+NEW_PRICE_ID = "${new-base-price}"
+
+
+def price_in_force(prices, today):
+    """Of a schedule's manual prices in one territory ({"start", "end", ...}, ISO dates or None),
+    the one in force on `today` (an ISO date): started (no start, or on or before today) and not
+    ended (no end, or after today); the latest start wins."""
+    live = [p for p in prices if (not p.get("start") or p["start"] <= today)
+            and (not p.get("end") or p["end"] > today)]
+    return max(live, key=lambda p: p.get("start") or "", default=None)
+
+
+def pick_price_point(points, usd):
+    """The price point whose customerPrice is `usd` (a decimal string), or None."""
+    from decimal import Decimal, InvalidOperation
+    wanted = Decimal(usd)
+    for point in points:
+        try:
+            if Decimal((point.get("attributes") or {}).get("customerPrice") or "x") == wanted:
+                return point
+        except InvalidOperation:
+            continue
+    return None
+
+
+def price_schedule_body(iap_id, price_point_id, territory=PRICE_BASE_TERRITORY):
+    """A new price schedule: `territory` as base, at that price point, starting now."""
+    return {
+        "data": {
+            "type": "inAppPurchasePriceSchedules",
+            "relationships": {
+                "inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap_id}},
+                "baseTerritory": {"data": {"type": "territories", "id": territory}},
+                "manualPrices": {"data": [{"type": "inAppPurchasePrices", "id": NEW_PRICE_ID}]},
+            },
+        },
+        "included": [{
+            "type": "inAppPurchasePrices", "id": NEW_PRICE_ID,
+            "attributes": {"startDate": None},
+            "relationships": {
+                "inAppPurchaseV2": {"data": {"type": "inAppPurchases", "id": iap_id}},
+                "inAppPurchasePricePoint": {"data": {"type": "inAppPurchasePricePoints",
+                                                     "id": price_point_id}},
+            },
+        }],
+    }
+
+
+def plan_price(base_territory, manual, usd, today):
+    """What `iap-prices` does with one in-app purchase. `manual` is the schedule's manual prices
+    as [{"territory", "start", "end", "price"}]. Returns (action, detail, current base price or
+    None, the other manual prices a new schedule would drop): action "same", "change" or
+    "unknown" (no price in force in the base territory: set it anyway)."""
+    from decimal import Decimal
+    base = [p for p in manual if p["territory"] == PRICE_BASE_TERRITORY]
+    current = price_in_force(base, today)
+    dropped = [p for p in manual if p is not current]
+    if base_territory == PRICE_BASE_TERRITORY and current and current.get("price") is not None \
+            and Decimal(current["price"]) == Decimal(usd):
+        return "same", f"USD {current['price']} in {PRICE_BASE_TERRITORY}, as the table", current, []
+    if current is None or current.get("price") is None:
+        return "unknown", f"no price in force in {PRICE_BASE_TERRITORY}; would set USD {usd}", \
+            None, dropped
+    note = "" if base_territory == PRICE_BASE_TERRITORY else \
+        f" (base territory now {base_territory}; would become {PRICE_BASE_TERRITORY})"
+    return "change", f"USD {current['price']} -> USD {usd}{note}", current, dropped
+
+
+def schedule_prices(asc, schedule_id):
+    """A price schedule's manual prices as [{"territory", "start", "end", "price", "point"}]."""
+    prices, included = get_all(asc, f"/v1/inAppPurchasePriceSchedules/{schedule_id}/manualPrices", {
+        "include": "inAppPurchasePricePoint,territory",
+        "fields[inAppPurchasePrices]": "startDate,endDate,manual,inAppPurchasePricePoint,territory",
+        "fields[inAppPurchasePricePoints]": "customerPrice,territory", "limit": 200})
+    points = {i["id"]: i for i in included if i.get("type") == "inAppPurchasePricePoints"}
+    result = []
+    for price in prices:
+        attrs = price.get("attributes") or {}
+        rel = price.get("relationships") or {}
+        point_id = ((rel.get("inAppPurchasePricePoint") or {}).get("data") or {}).get("id")
+        territory = ((rel.get("territory") or {}).get("data") or {}).get("id")
+        point = points.get(point_id) or {}
+        if not territory:
+            territory = (((point.get("relationships") or {}).get("territory") or {})
+                         .get("data") or {}).get("id")
+        result.append({"territory": territory, "start": attrs.get("startDate"),
+                       "end": attrs.get("endDate"), "point": point_id,
+                       "price": (point.get("attributes") or {}).get("customerPrice")})
+    return result
+
+
+def equalized(asc, point_id):
+    """Some storefronts' prices for a price point (PRICE_SAMPLE_TERRITORIES), as
+    {territory: "CUR price"}; empty when App Store Connect doesn't answer."""
+    try:
+        points, included = get_all(asc, f"/v1/inAppPurchasePricePoints/{point_id}/equalizations", {
+            "filter[territory]": ",".join(PRICE_SAMPLE_TERRITORIES), "include": "territory",
+            "fields[inAppPurchasePricePoints]": "customerPrice,territory",
+            "fields[territories]": "currency", "limit": 200}, pages=2)
+    except AscError as error:
+        print(f"    (equalizations of {point_id} not read: HTTP {error.status})")
+        return {}
+    currencies = {i["id"]: (i.get("attributes") or {}).get("currency")
+                  for i in included if i.get("type") == "territories"}
+    shown = {}
+    for point in points:
+        territory = (((point.get("relationships") or {}).get("territory") or {})
+                     .get("data") or {}).get("id")
+        shown[territory] = f"{currencies.get(territory) or '?'} " \
+                           f"{(point.get('attributes') or {}).get('customerPrice')}"
+    return shown
+
+
+def cmd_iap_prices(args):
+    """Sets each in-app purchase's price to scripts/pack_prices.py's, through a new price schedule
+    with the United States as base territory (dry run unless --apply)."""
+    from pack_prices import USD_PRICES
+    live = Asc()
+    asc = live if args.apply else ReadOnlyAsc(live)
+    print("APPLY" if args.apply else "DRY RUN (pass --apply to write)")
+    app_id = asc.app_id()
+    today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+    iaps, _ = get_all(asc, f"/apps/{app_id}/inAppPurchasesV2", {"limit": 200})
+    by_product = {(i.get("attributes") or {}).get("productId"): i for i in iaps}
+    failed = False
+    for product, usd in USD_PRICES.items():
+        if args.products and product not in args.products:
+            continue
+        iap = by_product.get(product)
+        if not iap:
+            print(f"{product}: no such in-app purchase in App Store Connect")
+            failed = True
+            continue
+        state = (iap.get("attributes") or {}).get("state")
+        try:
+            schedule = asc.call("GET", f"/v2/inAppPurchases/{iap['id']}/iapPriceSchedule",
+                                {"include": "baseTerritory"})
+        except AscError as error:
+            if error.status != 404:
+                raise
+            schedule = {}
+        schedule_id = (schedule.get("data") or {}).get("id")
+        base = (((schedule.get("data") or {}).get("relationships") or {}).get("baseTerritory")
+                or {}).get("data") or {}
+        manual = schedule_prices(asc, schedule_id) if schedule_id else []
+        action, detail, current, dropped = plan_price(base.get("id"), manual, usd, today)
+        print(f"{product} (id {iap['id']}, {state}): {detail}")
+        if action == "same":
+            continue
+        for price in dropped:
+            print(f"    dropped by the new schedule: {price['territory']} {price['price']} "
+                  f"from {price['start'] or 'the start'} to {price['end'] or 'no end'}")
+        points, _ = get_all(asc, f"/v2/inAppPurchases/{iap['id']}/pricePoints", {
+            "filter[territory]": PRICE_BASE_TERRITORY, "fields[inAppPurchasePricePoints]":
+            "customerPrice,territory", "limit": 8000}, pages=3)
+        point = pick_price_point(points, usd)
+        if not point:
+            print(f"    ::error::no {PRICE_BASE_TERRITORY} price point at USD {usd} "
+                  f"(of {len(points)}); not changed")
+            failed = True
+            continue
+        print(f"    price point {point['id']} (USD {point['attributes']['customerPrice']})")
+        old = equalized(asc, current["point"]) if current and current.get("point") else {}
+        new = equalized(asc, point["id"])
+        for territory in PRICE_SAMPLE_TERRITORIES:
+            if territory in old or territory in new:
+                print(f"    {territory}: {old.get(territory, '?')} -> {new.get(territory, '?')}")
+        if not args.apply:
+            continue
+        live.call("POST", "/inAppPurchasePriceSchedules", body=price_schedule_body(iap["id"], point["id"]))
+        after = schedule_prices(live, live.call("GET", f"/v2/inAppPurchases/{iap['id']}/iapPriceSchedule")
+                                ["data"]["id"])
+        now = price_in_force([p for p in after if p["territory"] == PRICE_BASE_TERRITORY], today)
+        print(f"    set; App Store Connect now has USD {now['price'] if now else '?'}")
+        failed |= not now or now["point"] != point["id"]
+    return 1 if failed else 0
 
 
 # --- Store listing: store-listing/app-store/<locale>/ onto the version in preparation ----------
@@ -2422,6 +2623,11 @@ def main() -> int:
     iaps.add_argument("--version", help="the version to plan for (default: the one in "
                                         "preparation, else the newest)")
     iaps.set_defaults(func=cmd_iaps)
+    prices = commands.add_parser("iap-prices", help="set the in-app purchases' prices to "
+                                                    "scripts/pack_prices.py's (dry run unless --apply)")
+    prices.add_argument("products", nargs="*", metavar="PRODUCT_ID", help="only these; default all")
+    prices.add_argument("--apply", action="store_true", help="set the new price schedules")
+    prices.set_defaults(func=cmd_iap_prices)
     commands.add_parser("status", help="list groups and recent builds").set_defaults(func=cmd_status)
     revoke = commands.add_parser("revoke-ci-certs", help="revoke development certificates left by CI runs")
     revoke.set_defaults(func=cmd_revoke_ci_certs)

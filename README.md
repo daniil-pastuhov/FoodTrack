@@ -131,6 +131,27 @@ python3 -m unittest discover -s scripts/tests     # the sync's tests, offline
 The App Store commands compare with the version in preparation; while none is (between a
 release's submission and the next merge), they compare with the newest version and say so.
 
+**Changing a pack's price**: the recipe packs' USD base prices are one table,
+`scripts/pack_prices.py`, which both stores are set from (Play converts the USD price to every
+region; on the App Store the United States is the base territory and Apple's equalisation sets the
+other storefronts). Edit it, then compare with what the stores charge; the dry runs print old and
+new prices for the US and a few regions, and write nothing:
+
+```sh
+PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --reprice
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py iap-prices
+```
+
+To change the prices, the same with `--apply` (each takes product ids to limit it, e.g.
+`recipes_10`). Play's change patches only the `buy` option's prices; App Store Connect's is a new
+price schedule starting now, which replaces any manual price set by hand in another storefront or
+scheduled for later (the dry run lists them). Neither runs in CI.
+
+```sh
+PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_products.py --reprice --apply
+ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_KEY_PATH=… python3 scripts/testflight.py iap-prices --apply
+```
+
 **Screenshot check**: `scripts/screenshot_check.py` takes every screenshot the store capture
 scripts take (`scripts/android_screenshots.sh`, `scripts/ios_screenshots.sh`) on each of their
 devices in turn, booting one, shooting every language, shutting it down before the next, and

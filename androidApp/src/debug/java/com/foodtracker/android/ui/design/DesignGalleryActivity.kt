@@ -16,7 +16,8 @@ import androidx.compose.ui.Modifier
  *     adb shell am start -n com.foodtracker.android/.ui.design.DesignGalleryActivity
  *     adb shell am start -n com.foodtracker.android/.ui.design.DesignGalleryActivity --es overlay sheet
  *
- * `overlay` shows one of the things that can't sit in a list: dialog, sheet or date.
+ * `overlay` shows one of the things that can't sit in a list: dialog, sheet or date, or `buy`,
+ * the Recipe tab's Buy sheet with sample packs (its saving badges included).
  */
 class DesignGalleryActivity : ComponentActivity() {
 
@@ -58,6 +59,7 @@ class DesignGalleryActivity : ComponentActivity() {
                 "dialog" -> LarderDialogPreview()
                 "sheet" -> LarderSheetPreview()
                 "date" -> LarderDatePickerPreview()
+                "buy" -> com.foodtracker.android.ui.screens.BuyPacksPreview()
                 else -> LarderPreview {
                     LazyColumn(Modifier.fillMaxSize().safeDrawingPadding()) {
                         items(sections.size) { index -> sections[index]() }

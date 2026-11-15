@@ -979,6 +979,7 @@
         <item quantity="other">%1$d oppskrifter</item>
     </plurals>
     <string name="recipe_pack_each">%1$s per oppskrift</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% billigere per oppskrift</string>
     <string name="recipe_cancel">Avbryt</string>
     <string name="recipe_back">Tilbake</string>
     <string name="recipe_close">Lukk</string>

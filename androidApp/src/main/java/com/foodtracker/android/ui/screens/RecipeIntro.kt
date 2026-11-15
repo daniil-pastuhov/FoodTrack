@@ -143,7 +143,7 @@ private fun IntroPreview(content: RecipeIntroContent) = LarderTheme {
 
 @PreviewLightDark
 @Composable
-internal fun RecipeIntroEverythingPreview() = IntroPreview(RecipeIntroContent(onDevice = true, packs = true, canBuy = true, lowestPrice = "£3.99"))
+internal fun RecipeIntroEverythingPreview() = IntroPreview(RecipeIntroContent(onDevice = true, packs = true, canBuy = true, lowestPrice = "£2.99"))
 
 @Preview
 @Composable

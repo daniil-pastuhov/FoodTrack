@@ -1040,6 +1040,7 @@
         <item quantity="other">%1$d recetas</item>
     </plurals>
     <string name="recipe_pack_each">%1$s cada una</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% menos por receta</string>
     <string name="recipe_cancel">Cancelar</string>
     <string name="recipe_back">Atrás</string>
     <string name="recipe_close">Cerrar</string>

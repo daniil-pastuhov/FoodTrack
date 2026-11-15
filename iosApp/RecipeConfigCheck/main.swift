@@ -330,6 +330,31 @@ unread = RecipeUnread.afterOpen(unread, id: "b")
 expect(unread, ["c"], "opened is read")
 expect(RecipeUnread.pruned(unread, savedIDs: []), [], "deleted ones go")
 
+// The Buy sheet's saving badge, from the store's prices only (Android: the same cases).
+func offers(_ currency: String?, _ list: [(Int, String?)]) -> [PackOffer] {
+    list.map { PackOffer(recipes: $0.0, price: $0.1.flatMap { Decimal(string: $0) }, currencyCode: currency) }
+}
+expect(PackSavings.percents(offers("GBP", [(10, "2.99"), (50, "10.99"), (100, "18.99")])), [nil, 26, 36], "10 for 2.99")
+expect(PackSavings.percents(offers("GBP", [(10, "3.99"), (50, "10.99"), (100, "18.99")])), [nil, 44, 52], "10 for 3.99: 44, not 45")
+expect(PackSavings.percents(offers("GBP", [(10, "1.99"), (50, "10.99"), (100, "18.99")])), [nil, nil, nil], "dearer, then only 4 %")
+expect(PackSavings.percents(offers("NOK", [(10, "35"), (50, "129"), (100, "219")])), [nil, 26, 37], "NOK 35 / 129 / 219")
+expect(PackSavings.percents(offers("GBP", [(10, "4.00"), (50, "14.80")])), [nil, 26], "exactly 26 % stays 26")
+expect(PackSavings.percents(offers("GBP", [(10, "1.00"), (50, "3.55")])), [nil, 29], "exactly 29 % stays 29")
+expect(PackSavings.percents(offers("GBP", [(10, "1.00"), (50, "4.75")])), [nil, 5], "exactly 5 % shows")
+expect(PackSavings.percents(offers("GBP", [(10, "1.00"), (50, "4.76")])), [nil, nil], "4.8 % doesn't")
+expect(PackSavings.percents(offers("GBP", [(10, "2.99")])), [nil], "one pack")
+expect(PackSavings.percents([]), [], "no packs")
+expect(PackSavings.percents(offers("GBP", [(100, "18.99"), (10, "2.99"), (50, "10.99")])), [36, nil, 26], "in the order given")
+let mixed = [PackOffer(recipes: 10, price: Decimal(string: "2.99"), currencyCode: "GBP"),
+             PackOffer(recipes: 50, price: Decimal(string: "10.99"), currencyCode: "EUR"),
+             PackOffer(recipes: 100, price: Decimal(string: "18.99"), currencyCode: "EUR")]
+expect(PackSavings.percents(mixed), [nil, nil, nil], "mixed currencies")
+expect(PackSavings.percents(offers(nil, [(10, "2.99"), (50, "10.99")])), [nil, nil], "no currency")
+expect(PackSavings.percents(offers("GBP", [(10, nil), (50, "10.99"), (100, "18.99")])), [nil, nil, 13], "no price: the next pack is the base")
+expect(PackSavings.percents(offers("GBP", [(10, "0"), (50, "10.99"), (100, "18.99")])), [nil, nil, 13], "a free pack isn't the base")
+expect(PackSavings.percents(offers("GBP", [(10, "2.99"), (50, "0"), (100, "18.99")])), [nil, nil, 36], "a free larger pack gets none")
+expect(PackSavings.badgeText(26), "\u{2212}26%", "minus sign, no space")
+
 if failures > 0 {
     print("\(failures) failed")
     exit(1)
