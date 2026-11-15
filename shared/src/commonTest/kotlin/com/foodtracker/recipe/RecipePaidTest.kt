@@ -2483,4 +2483,112 @@ class RecipePaidTest {
         holder.generateOnServer()
         assertEquals(setOf<List<PastDateItem>?>(emptyList(), listOf(PastDateItem("Bread", 1))), saved.rows.value.mapTo(HashSet()) { it.recipe?.pastDate })
     }
+
+    // --- Every reply that carries a balance says whether the server writes Danish -------------
+
+    private fun danishFlag(says: Boolean) = if (says) JsonPrimitive(true) else null
+
+    private fun withDanishFlag(balance: Int, takes: Boolean) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = balance, serverTakesDanish = takes))
+        // getBalance keeps saying the old value, so only the reply under test can change it.
+        backend.balanceDanish = takes
+    }
+
+    private fun TestScope.generateReplySetsDanish(status: GenerateStatus, before: Boolean) {
+        withDanishFlag(5, takes = before)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(
+            GenerateReply(status, recipe = sampleRecipe.takeIf { status == GenerateStatus.DONE }, balance = 4, charged = status == GenerateStatus.DONE, acceptsDanish = danishFlag(!before))
+        )
+        holder.generateOnServer()
+        assertEquals(1, backend.generated.size)
+        assertEquals(!before, paidRepository.get().serverTakesDanish, "$status: from $before")
+    }
+
+    @Test
+    fun aWrittenRecipeSaysTheServerNowWritesDanish() = runUnconfined { generateReplySetsDanish(GenerateStatus.DONE, before = false) }
+
+    @Test
+    fun aWrittenRecipeFromARolledBackServerClearsDanish() = runUnconfined { generateReplySetsDanish(GenerateStatus.DONE, before = true) }
+
+    @Test
+    fun aFailedGenerationSaysTheServerNowWritesDanish() = runUnconfined { generateReplySetsDanish(GenerateStatus.FAILED, before = false) }
+
+    @Test
+    fun aFailedGenerationFromARolledBackServerClearsDanish() = runUnconfined { generateReplySetsDanish(GenerateStatus.FAILED, before = true) }
+
+    @Test
+    fun aGenerationStillBeingWrittenSaysTheServerWritesDanish() = runUnconfined {
+        withDanishFlag(5, takes = false)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true, acceptsDanish = JsonPrimitive(true)))
+        // The poll is lost: what IN_PROGRESS said is what stays.
+        backend.polls!! += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0"), backend.polled)
+        assertTrue(paidRepository.get().serverTakesDanish)
+    }
+
+    @Test
+    fun aPollsAnswerSaysTheServerWritesDanish() = runUnconfined {
+        withDanishFlag(5, takes = false)
+        backend.polls = ArrayDeque()
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.IN_PROGRESS, balance = 4, charged = true))
+        backend.polls!! += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe, balance = 4, charged = true, acceptsDanish = JsonPrimitive(true)))
+        holder.generateOnServer()
+
+        assertEquals(listOf("req0"), backend.polled)
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertTrue(paidRepository.get().serverTakesDanish)
+    }
+
+    private suspend fun TestScope.verifyReplySetsDanish(before: Boolean) {
+        account = FakeAccount(AccountKind.ANONYMOUS)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = 0, serverTakesDanish = before))
+        backend.balanceDanish = before
+        val holder = holder()
+        backend.verifyReplies += ServerResult.Ok(VerifyReply(VerifyStatus.GRANTED, 10, acceptsDanish = danishFlag(!before)))
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("tok", listOf("recipes_10"), 1, pending = false))))
+
+        assertEquals(listOf("tok"), backend.verified)
+        assertEquals(10, holder.uiState.value.paid.balance)
+        assertEquals(!before, paidRepository.get().serverTakesDanish, "from $before")
+    }
+
+    @Test
+    fun aVerifiedPurchaseSaysTheServerNowWritesDanish() = runUnconfined { verifyReplySetsDanish(before = false) }
+
+    @Test
+    fun aVerifiedPurchaseFromARolledBackServerClearsDanish() = runUnconfined { verifyReplySetsDanish(before = true) }
+
+    private fun TestScope.mergeReplySetsDanish(before: Boolean) {
+        withDanishFlag(-3, takes = before)
+        val holder = holder()
+        account.mergeResult = ServerResult.Ok(MergeReply(balance = 35, moved = -3, acceptsDanish = !before))
+        account.signInResults += SignInResult.NeedsMerge(FakeMerge(accountBalance = 38))
+        holder.signIn(SignInProvider.GOOGLE)
+
+        assertEquals(35, holder.uiState.value.paid.balance)
+        assertEquals(!before, paidRepository.get().serverTakesDanish, "from $before")
+    }
+
+    @Test
+    fun aJoinSaysTheServerNowWritesDanish() = runUnconfined { mergeReplySetsDanish(before = false) }
+
+    @Test
+    fun aJoinWithARolledBackServerClearsDanish() = runUnconfined { mergeReplySetsDanish(before = true) }
+
+    @Test
+    fun onlyAJsonTrueSaysAServerTakesSomething() {
+        val readers = listOf(::acceptsDanishOf, ::acceptsMultiChoiceConfigOf, ::acceptsOptionalIngredientsOf, ::purchasesBlockedOf)
+        val no = listOf(null, kotlinx.serialization.json.JsonNull, JsonPrimitive(false), JsonPrimitive("true"), JsonPrimitive(1), JsonPrimitive(0), buildJsonObject { put("value", true) })
+        for (read in readers) {
+            assertTrue(read(JsonPrimitive(true)), "$read: true")
+            for (value in no) assertFalse(read(value), "$read: $value")
+        }
+    }
 }

@@ -154,4 +154,73 @@ class DateOcrParserTest {
             assertEquals(date, DateOcrParser.parseBestDate(listOf(line), referenceYear = 2026)?.date, line)
         }
     }
+
+    /** A keyword printed at the end of a longer word is not one: the boundary before it counts
+     *  as much as the one after it. The keyword-free first date wins (both score 0.70). */
+    @Test
+    fun testKeywordAtTheEndOfALongerWordIsNoKeyword() {
+        for (word in listOf("LOT-XEXP", "DECAD", "BOBB", "INTERVAL", "AMHD", "XDDM", "OVERBB")) {
+            assertEquals(
+                LocalDate(2026, 11, 1),
+                DateOcrParser.parseBestDate(listOf("PACKED 01.11.2026", "$word 24.11.2026"), referenceYear = 2026)?.date,
+                word
+            )
+        }
+        // The same keywords on their own do count, so the cases above fail only for the boundary.
+        for (word in listOf("EXP", "CAD", "BB", "VAL", "MHD", "DDM")) {
+            assertEquals(
+                LocalDate(2026, 11, 24),
+                DateOcrParser.parseBestDate(listOf("PACKED 01.11.2026", "LOT-X $word 24.11.2026"), referenceYear = 2026)?.date,
+                word
+            )
+        }
+    }
+
+    /** Every entry of the month table, in every language, read as its own month both day-first
+     *  and month-first, in lower and upper case. The list is the parser's table, entry for entry. */
+    @Test
+    fun testEveryMonthNameInTheTable() {
+        val months = mapOf(
+            1 to listOf("jan", "ene", "janv", "янв"),
+            2 to listOf("feb", "fev", "fév", "фев"),
+            3 to listOf("mar", "mrz", "mär", "мар"),
+            4 to listOf("apr", "avr", "abr", "апр"),
+            5 to listOf("may", "mai", "maj", "мая", "май"),
+            6 to listOf("jun", "juin", "июн"),
+            7 to listOf("jul", "juil", "juillet", "июл"),
+            8 to listOf("aug", "août", "aout", "aoû", "ago", "авг"),
+            9 to listOf("sep", "sept", "сен"),
+            10 to listOf("oct", "okt", "окт"),
+            11 to listOf("nov", "ноя"),
+            12 to listOf("dec", "dez", "déc", "dic", "des", "дек")
+        )
+        for ((month, names) in months) {
+            for (name in names) {
+                for (spelled in listOf(name, name.uppercase())) {
+                    val date = LocalDate(2027, month, 15)
+                    assertEquals(date, DateOcrParser.parseBestDate(listOf("15 $spelled 2027"), referenceYear = 2026)?.date, "15 $spelled 2027")
+                    assertEquals(date, DateOcrParser.parseBestDate(listOf("$spelled 15 2027"), referenceYear = 2026)?.date, "$spelled 15 2027")
+                }
+            }
+        }
+    }
+
+    @Test
+    fun testMonthFirstDates() {
+        val cases = mapOf(
+            "NOV 15 2026" to LocalDate(2026, 11, 15),
+            "Nov. 15, 2026" to LocalDate(2026, 11, 15),
+            "BEST BY DÉC 15 2026" to LocalDate(2026, 12, 15),
+            "MÄR 15 2027" to LocalDate(2027, 3, 15),
+            "ОКТ 15 2026" to LocalDate(2026, 10, 15),
+            "годен до ОКТ 15 26" to LocalDate(2026, 10, 15)
+        )
+        for ((line, date) in cases) {
+            val result = DateOcrParser.parseBestDate(listOf(line), referenceYear = 2026)
+            assertEquals(date, result?.date, line)
+            assertEquals("MMM DD YYYY", result?.formatDescription, line)
+        }
+        // Not the end of a longer word: "XNOV 15 2026" has no month.
+        assertNull(DateOcrParser.parseBestDate(listOf("XNOV 15 2026"), referenceYear = 2026))
+    }
 }

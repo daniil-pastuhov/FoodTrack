@@ -198,4 +198,57 @@ class OnDeviceRecipePromptTest {
         assertEquals("de", RecipeConfig(language = "de").resolvedLanguage("ru"))
         assertEquals("ru", RecipeConfig(language = null).resolvedLanguage("ru"))
     }
+
+    @Test
+    fun everyRecipeLanguageHasItsOwnEnglishName() {
+        val names = mapOf(
+            "en" to "English", "nb" to "Norwegian Bokmål", "ru" to "Russian", "de" to "German", "es" to "Spanish",
+            "fr" to "French", "it" to "Italian", "pl" to "Polish", "sv" to "Swedish", "uk" to "Ukrainian", "da" to "Danish"
+        )
+        assertEquals(RECIPE_LANGUAGES.toSet(), names.keys, "every recipe language is named here")
+        for ((code, name) in names) {
+            assertEquals(name, recipeLanguageEnglishName(code), code)
+            val prompt = buildOnDeviceRecipePrompt(listOf(RecipePromptItem("Milk", 1)), config, code, emptyList())
+            assertTrue(prompt.contains("Write every text value in $name."), "$code: $prompt")
+        }
+        assertEquals("English", recipeLanguageEnglishName("ja"), "anything else is English")
+    }
+
+    @Test
+    fun onlyAnItemPastItsDateAddsThePastDateSentence() {
+        val sentence = "Items past their date are ones I have checked and chosen to use"
+        fun prompt(vararg days: Int) = buildOnDeviceRecipePrompt(days.map { RecipePromptItem("Item $it", it) }, config, "en", emptyList())
+        assertFalse(prompt(0).contains(sentence), "its date is today: not past it")
+        assertFalse(prompt(0, 1, 5).contains(sentence))
+        assertTrue(prompt(-1).contains(sentence))
+        assertTrue(prompt(0, -1).contains(sentence))
+        // An optional item past its date is no ticked one the cook chose.
+        assertFalse(buildOnDeviceRecipePrompt(listOf(RecipePromptItem("Milk", 2)), config, "en", emptyList(), listOf(RecipePromptItem("Old bread", -3))).contains(sentence))
+    }
+
+    @Test
+    fun tickedAndOptionalItemsTogetherKeepToTheCap() {
+        val ticked = (0 until 25).map { RecipePromptItem("ticked $it", it) }
+        val optional = (0 until 20).map { RecipePromptItem("optional $it", it) }
+        val prompt = buildOnDeviceRecipePrompt(ticked, config, "en", emptyList(), optional)
+        val lines = prompt.lines()
+        assertEquals(25, lines.count { it.startsWith("- ticked ") })
+        assertEquals(MAX_RECIPE_INGREDIENTS - 25, lines.count { it.startsWith("- optional ") }, "only the room the ticked items leave")
+        assertTrue(prompt.contains("- optional 4 (") && !prompt.contains("- optional 5 ("), "the soonest optional ones")
+
+        val full = buildOnDeviceRecipePrompt((0 until 40).map { RecipePromptItem("ticked $it", it) }, config, "en", emptyList(), optional)
+        assertEquals(MAX_RECIPE_INGREDIENTS, full.lines().count { it.startsWith("- ticked ") })
+        assertFalse(full.contains("- optional "), "no room left: no optional items")
+        assertFalse(full.contains("I also have these at home"), full)
+        assertTrue(full.contains("only for items from the list above."), full)
+    }
+
+    @Test
+    fun thePantryFlagNamesOneListOrTwo() {
+        val one = buildOnDeviceRecipePrompt(listOf(RecipePromptItem("Milk", 1)), config, "en", emptyList())
+        assertTrue(one.contains("Set fromPantry to true only for items from the list above."), one)
+        val two = buildOnDeviceRecipePrompt(listOf(RecipePromptItem("Milk", 1)), config, "en", emptyList(), listOf(RecipePromptItem("Rice", 90)))
+        assertTrue(two.contains("Set fromPantry to true only for items from the lists above."), two)
+        assertTrue(two.contains("I also have these at home") && two.contains("- Rice (90 days left)"), two)
+    }
 }

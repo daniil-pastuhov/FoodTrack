@@ -197,4 +197,34 @@ class ReceiptParserTest {
             assertEquals(listOf(lines.first().substringBefore("  ").trim()), ReceiptParser.parseLines(lines).map { it.name }, language)
         }
     }
+
+    /** Every furniture word added for es, de, fr, sv and da, alone on a line with a price, so the
+     *  word is the only thing that drops it: without it "<WORD>   1,99" would be a product (as
+     *  "QUESO 1,99" is). The same list is in iosApp/FoodTracker/Parsers/ReceiptParser.swift. */
+    @Test
+    fun everyNewShopLanguageFurnitureWordDropsItsLine() {
+        val words = listOf(
+            // totals
+            "importe", "a pagar", "zu zahlen", "à payer", "a payer", "att betala", "at betale", "i alt",
+            // tax
+            "mwst", "tva", "moms", "i.v.a", "base imp",
+            // payment and change
+            "efectivo", "tarjeta", "cambio", "rückgeld", "kartenzahlung", "ec-karte", "espèces", "especes",
+            "carte bancaire", "monnaie rendue", "swish", "växel", "mobilepay", "byttepenge",
+            // receipt furniture
+            "kassenbon", "kassierer", "ticket de caisse", "kvitto", "gracias", "vielen dank", "merci",
+            "bienvenue", "tack för", "välkommen", "tak for",
+            "descuento", "puntos", "punkte", "remise", "fidélité", "fidelite", "poäng", "rabat"
+        )
+        assertEquals(listOf("QUESO"), ReceiptParser.parseLines(listOf("QUESO   1,99")).map { it.name }, "the control: a priced word is a product")
+        for (word in words) {
+            assertEquals(emptyList(), ReceiptParser.parseLines(listOf("${word.uppercase()}   1,99")), word)
+            assertEquals(emptyList(), ReceiptParser.parseLines(listOf("$word   1,99")), word)
+        }
+        // Also in the list, but matched by substring, so a shorter entry already drops them:
+        // "summe" by "sum", "dankort" by "kort". Pinned here as lines, not as entries.
+        for (line in listOf("SUMME   1,99", "Dankort   1,99")) assertEquals(emptyList(), ReceiptParser.parseLines(listOf(line)), line)
+        // The ones the mutation run found, as they are printed.
+        for (line in listOf("EFECTIVO 10,00", "Rabat -5,00", "A PAGAR 0,95")) assertEquals(emptyList(), ReceiptParser.parseLines(listOf(line)), line)
+    }
 }

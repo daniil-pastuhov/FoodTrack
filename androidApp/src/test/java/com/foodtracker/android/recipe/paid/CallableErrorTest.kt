@@ -283,5 +283,46 @@ class CallableErrorTest {
         assertEquals(JsonPrimitive(1.5), 1.5.toJsonElement())
     }
 
+    /** Each capability on its own (the others absent or false), so a reply parser that reads one
+     *  flag from another's field fails; and only a JSON true counts. */
+    @Test
+    fun eachCapabilityIsReadFromItsOwnField() {
+        val fields = listOf("acceptsOptionalIngredients", "acceptsMultiChoiceConfig", "acceptsDanish")
+        for (on in fields) {
+            val reply = JsonObject(mapOf("balance" to JsonPrimitive(4)) + fields.associateWith { JsonPrimitive(it == on) })
+            val expected = Triple(on == fields[0], on == fields[1], on == fields[2])
+            val balance = balanceReplyOf(reply)!!
+            assertEquals(expected, Triple(balance.acceptsOptional, balance.acceptsMultiChoice, balance.acceptsDanish), "getBalance, only $on")
+            val merge = mergeReplyOf(reply)!!
+            assertEquals(expected, Triple(merge.acceptsOptional, merge.acceptsMultiChoice, merge.acceptsDanish), "mergeBalance, only $on")
+            val generate = com.foodtracker.recipe.RecipeJson.decodeFromString(
+                com.foodtracker.recipe.GenerateReply.serializer(),
+                JsonObject(reply + ("status" to JsonPrimitive("DONE"))).toString()
+            )
+            assertEquals(
+                expected,
+                Triple(com.foodtracker.recipe.acceptsOptionalIngredientsOf(generate.acceptsOptionalIngredients), com.foodtracker.recipe.acceptsMultiChoiceConfigOf(generate.acceptsMultiChoiceConfig), com.foodtracker.recipe.acceptsDanishOf(generate.acceptsDanish)),
+                "generateRecipe, only $on"
+            )
+            val verify = com.foodtracker.recipe.RecipeJson.decodeFromString(
+                com.foodtracker.recipe.VerifyReply.serializer(),
+                JsonObject(reply + ("status" to JsonPrimitive("GRANTED"))).toString()
+            )
+            assertEquals(
+                expected,
+                Triple(com.foodtracker.recipe.acceptsOptionalIngredientsOf(verify.acceptsOptionalIngredients), com.foodtracker.recipe.acceptsMultiChoiceConfigOf(verify.acceptsMultiChoiceConfig), com.foodtracker.recipe.acceptsDanishOf(verify.acceptsDanish)),
+                "verifyPurchase, only $on"
+            )
+        }
+        // Not a JSON true: a string, a number, null or absent.
+        for (value in listOf(JsonPrimitive("true"), JsonPrimitive(1), JsonNull, null)) {
+            val reply = JsonObject(mapOf("balance" to JsonPrimitive(4)) + if (value == null) emptyMap() else fields.associateWith { value })
+            val balance = balanceReplyOf(reply)!!
+            assertEquals(Triple(false, false, false), Triple(balance.acceptsOptional, balance.acceptsMultiChoice, balance.acceptsDanish), "getBalance, $value")
+            val merge = mergeReplyOf(reply)!!
+            assertEquals(Triple(false, false, false), Triple(merge.acceptsOptional, merge.acceptsMultiChoice, merge.acceptsDanish), "mergeBalance, $value")
+        }
+    }
+
     private fun assertEquals(expected: Any?, actual: Any?, message: String) = org.junit.Assert.assertEquals(message, expected, actual)
 }
