@@ -39,9 +39,11 @@ iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product pa
 April 2027 they are required for apps built with the iOS 27.1 SDK.
 
 Every set tells the same story, Google Play's too: 1 Home, 2 a scan that has read a product and
-its printed date, 3 a written recipe (the three that search results show), 4 the Recipe form, scrolled to its end, in
-Menu set mode with Days and Courses chosen and the Generate menu button with its cost ("Choose
-the days and the courses"), 5 the menu set of four days it writes ("Plan up to four days around
+its printed date, 3 a written recipe (the three that search results show), 4 the Recipe form in
+Menu set mode with Days and Courses chosen ("Choose the days and the courses"; on the iPhones
+the form at its top with a three-item pantry, `DEMO_ITEMS` in `scripts/demo_backup.py`, so the
+switch, "Cook with" and both choices are in view; on Play scrolled to its end, Generate menu with
+its cost included; on the iPad the whole form), 5 the menu set of four days it writes ("Plan up to four days around
 what you have": four is the most the form offers, so keep the demo menu in
 `scripts/demo_recipes.py` at four days while the caption says so), 6 the shopping list. The two
 iPhone Duo sets share one group of at most 10 images per language in App Store Connect, so they

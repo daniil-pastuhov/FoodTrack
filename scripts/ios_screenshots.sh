@@ -108,10 +108,12 @@ LANGS=(${=LANGS:-en ru nb es de fr sv da})
 for LANG_CODE in $LANGS; do
   [[ -n ${REGIONS[$LANG_CODE]:-} ]] || { echo "unknown language $LANG_CODE (one of ${(k)REGIONS})"; exit 1; }
 done
-# The Menu set shot: on an iPhone the Recipe form opens scrolled to its end, so Days, Courses and
-# Generate menu with its cost are on screen; an iPad shows the whole form as it opens (scrolled
-# to the end, it would sit at the bottom under an empty top). FORM_END=YES|NO overrides.
-[[ $DEVICE_NAME == iPad* ]] && FORM_END=${FORM_END:-NO} || FORM_END=${FORM_END:-YES}
+# The Menu set shot opens the Recipe form at its top. An iPad shows the whole form with the
+# full demo pantry; an iPhone gets a pantry of three items (DEMO_ITEMS, scripts/demo_backup.py)
+# so that the Recipe / Menu set switch, a short "Cook with" and the Days and Courses choices are
+# all in view. (Scrolled to its end instead, the form's rows slide under the status bar.)
+# MENUSET_ITEMS=<indices> overrides; empty keeps the full pantry.
+[[ $DEVICE_NAME == iPad* ]] && MENUSET_ITEMS=${MENUSET_ITEMS-} || MENUSET_ITEMS=${MENUSET_ITEMS-1,2,3}
 # The date printed on the scanned pack, and so the one the scan reads.
 SCAN_DATE=$(python3 -c 'import datetime; print(datetime.date.today() + datetime.timedelta(days=12))')
 SCAN_BARCODE=$(cd "$ROOT/scripts" && python3 -c 'from demo_scan_image import BARCODE; print(BARCODE)')
@@ -120,6 +122,7 @@ for LANG_CODE in $LANGS; do
   rm -f "$OUT/$LANG_CODE"/*.png(N)
   python3 "$ROOT/scripts/demo_scan_image.py" "$LANG_CODE" "$SCAN_DATE" "$DATA/tmp/scan.png" "$DATA/tmp/scan-thumb.png"
   python3 "$ROOT/scripts/demo_backup.py" "$LANG_CODE" "$DATA/tmp/demo.json" "file://$DATA/tmp/scan-thumb.png"
+  DEMO_ITEMS=$MENUSET_ITEMS python3 "$ROOT/scripts/demo_backup.py" "$LANG_CODE" "$DATA/tmp/demo-menuset.json" "file://$DATA/tmp/scan-thumb.png"
   python3 "$ROOT/scripts/demo_recipes.py" "$LANG_CODE" "$DATA/tmp/recipe.json" "$DATA/tmp/menu.json"
   typeset -A SHOTS=(
     home "-demoTab home"
@@ -127,12 +130,12 @@ for LANG_CODE in $LANGS; do
     recipe "-demoRoute recipeResult -demoRecipe $DATA/tmp/recipe.json"
     menu "-demoRoute recipeMenu -demoRecipe $DATA/tmp/menu.json"
     shopping "-demoTab shopping"
-    menuset "-demoTab recipe -demoRecipeCredits 12 -demoRecipeMode menu -demoRecipeDays 4 -demoRecipeCourses 3 -demoRecipeScrollEnd $FORM_END"
+    menuset "-demoTab recipe -demoRecipeCredits 12 -demoRecipeMode menu -demoRecipeDays 4 -demoRecipeCourses 3"
   )
   N=1
   for SHOT in home scan recipe menuset menu shopping; do
     xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" \
-      -demoBackup "$DATA/tmp/demo.json" ${=SHOTS[$SHOT]} \
+      -demoBackup "$DATA/tmp/$([[ $SHOT == menuset ]] && echo demo-menuset || echo demo).json" ${=SHOTS[$SHOT]} \
       -AppleLanguages "($LANG_CODE)" -AppleLocale "${REGIONS[$LANG_CODE]}" >/dev/null
     sleep ${SETTLE:-4}
     xcrun simctl io "$UDID" screenshot ${SCREEN:+--display="$SCREEN"} "$OUT/$LANG_CODE/$N-$SHOT.png" >/dev/null 2>&1
