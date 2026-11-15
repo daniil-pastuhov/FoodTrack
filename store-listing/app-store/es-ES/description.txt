@@ -22,7 +22,8 @@ COCINA LO QUE ESTÁ A PUNTO DE CADUCAR
 • La pestaña Receta elige los productos con la fecha más próxima; cambia la selección, las raciones, el tiempo, la dieta y más
 • Gratis: copia o comparte un prompt ya preparado con la app de IA que ya usas
 • Gratis en iPhone con Apple Intelligence (iOS 26 o posterior): la receta se escribe en el propio teléfono
-• Paquetes de recetas (compra dentro de la app): recetas escritas por nuestro servidor y guardadas en la app, y un plan de comidas de 3 días ("Menú de 3 días") que usa primero lo que caduca antes
+• Paquetes de recetas (compra dentro de la app): recetas escritas por nuestro servidor y guardadas en la app, y sets de menús de 1 a 4 días, con hasta tres platos al día, que usan primero lo que caduca antes
+• Añade con un toque a la lista de la compra lo que le falta a una receta
 
 TUS DATOS
 • Sin anuncios ni seguimiento

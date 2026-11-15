@@ -55,8 +55,8 @@ Android, Privacy.
 - Google Play: only once the listing is public (it is in closed testing now); otherwise leave it out
   and say so in the first comment
 - Source: <https://github.com/daniil-pastuhov/FoodTrack>
-- About page: <https://daniil-pastuhov.github.io/bestbefore-privacy/app.html> (once the
-  `landing-page` pull request in `bestbefore-privacy` is merged)
+- About page: <https://daniil-pastuhov.github.io/bestbefore-privacy/app.html> (live since
+  2026-11-15)
 
 **Thumbnail**: `store-listing/google-play/icon-512.png`, scaled to 240 × 240.
 
@@ -71,9 +71,10 @@ with two or three framed screenshots side by side and their existing captions. O
    canvas.
 2. **Know what's about to expire + Scan the pack, the date is read**:
    `store-listing/app-store/en-GB/screenshots/1.png` and `2.png`.
-3. **Cook what needs using first + A three-day menu around what you have**:
-   `store-listing/app-store/en-GB/screenshots/3.png` and `4.png`. Note the menu is from a recipe
-   pack (server only); the caption should not suggest it is free.
+3. **Cook what needs using first + the menu set**: `store-listing/app-store/en-GB/screenshots/3.png`
+   and `4.png`. Use the set regenerated on `chore/store-screenshots-2.1` once it is merged: the
+   screenshots on `main` still caption the menu as a three-day menu. Note the menu is from a
+   recipe pack (server only); the caption should not suggest it is free.
 4. **Used it up? It's on your list + Reminders when it suits you**:
    `store-listing/app-store/en-GB/screenshots/5.png` and `6.png`.
 5. Optional, for Android: two of `store-listing/google-play/en-GB/phone-screenshots/1-6.png`, only
@@ -104,9 +105,14 @@ own.
 > recipe from them, in one of three ways:
 > 1. **Free**: share a ready-made prompt to any AI app you already use.
 > 2. **Free, on the phone itself**, where the phone supports it: Apple Intelligence on recent
->    iPhones (iOS 26 or later), Gemini Nano on some Android phones. Nothing leaves the phone.
+>    iPhones (iOS 26 or later), Gemini Nano on some Android phones (English recipes for now).
+>    Nothing leaves the phone.
 > 3. **Optional recipe packs**: recipes written by the app's server, bought once in the app, no
->    subscription. The 3-day menu comes from a pack too.
+>    subscription, from USD 2.99 for 10 recipes (the stores convert it). A pack can also plan a
+>    menu set: 1 to 4 days, up to three courses a day, around what expires first.
+>
+> Whatever a recipe needs that isn't in the pantry goes onto the shopping list in one tap, and a
+> recipe that uses something past its date says so plainly.
 >
 > Why a paid option at all: every recipe written on the server costs me money to run, so the server
 > route is paid per pack, and the two free ways stay free.
@@ -122,7 +128,8 @@ own.
 >
 > It is on the App Store now: https://apps.apple.com/app/id6818647200. [Android: "Google Play is
 > in closed testing; it will be public soon." or the Play link once it is public.] It speaks
-> English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
+> English, Russian, Norwegian, Spanish, German, French, Swedish and Danish, and writes recipes in
+> eleven languages.
 >
 > **What I would love feedback on**
 > - Does the date reading work on your packaging? Which date formats or labels does it miss?
@@ -137,7 +144,8 @@ own.
 Before scheduling:
 
 - [ ] The version with the Recipe tab is live on the App Store (and on Google Play, if linked).
-- [ ] The `landing-page` pull request in `bestbefore-privacy` is merged and `app.html` loads.
+- [ ] `app.html` still loads and describes the current version (it says "Android in testing"
+      until Play is public).
 - [ ] Gallery images made at 1270 × 760; thumbnail at 240 × 240.
 - [ ] Every field re-checked against the live form's limits.
 - [ ] The first comment's bracketed parts filled in or removed; it says nothing the app can't do.

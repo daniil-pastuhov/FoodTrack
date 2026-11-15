@@ -21,8 +21,9 @@ BestBefore behält das Mindesthaltbarkeitsdatum (MHD) und den Vorrat in Kühlsch
 <b>Kochen, was bald abläuft</b>
 • Der Rezept-Tab wählt die Artikel mit dem nächsten Datum aus; Auswahl, Portionen, Zeit, Ernährung und mehr kannst du ändern
 • Kostenlos: einen fertigen Prompt kopieren oder mit der KI-App teilen, die du schon nutzt
-• Kostenlos auf unterstützten Android-Handys: Das Rezept entsteht direkt auf dem Handy, mit dessen eigenem Modell
-• Rezeptpakete (In-App-Kauf): Rezepte von unserem Server, in der App gespeichert, und ein Essensplan für 3 Tage („Menü für 3 Tage“), der zuerst verwendet, was bald abläuft
+• Kostenlos auf unterstützten Android-Handys: Das Rezept entsteht direkt auf dem Handy, mit dessen eigenem Modell (vorerst nur auf Englisch)
+• Rezeptpakete (In-App-Kauf): Rezepte von unserem Server, in der App gespeichert, und Menü-Sets für 1 bis 4 Tage mit bis zu drei Gängen pro Tag, die zuerst verwenden, was bald abläuft
+• Was einem Rezept noch fehlt, kommt mit einem Tipp auf die Einkaufsliste
 
 <b>Deine Daten</b>
 • Keine Werbung, kein Tracking

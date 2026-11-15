@@ -32,8 +32,10 @@ Check a community's rules before posting there.
 > I'm the developer of BestBefore, an open-source (Apache-2.0) Kotlin Multiplatform app with a
 > Jetpack Compose Android client. It scans barcodes (CameraX + ML Kit, Open Food Facts lookup),
 > reads printed expiry dates with on-device OCR, sends reminders, and writes recipes from what
-> expires first: as a prompt for your own AI app, with Gemini Nano on supported phones, or on a
-> server through optional recipe packs.
+> expires first: as a prompt for your own AI app, with Gemini Nano on supported phones (English
+> recipes for now), or on a server through optional recipe packs, which also plan menu sets of
+> 1 to 4 days. The UI is in English, Russian, Norwegian, Spanish, German, French, Swedish and
+> Danish.
 >
 > My Play account is new, so Google requires 12 testers opted in for 14 consecutive days before
 > I can publish. To help:

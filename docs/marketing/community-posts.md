@@ -19,7 +19,11 @@ to answer replies.
 - [ ] Android: Google Play is in closed testing. Until it is public, say so, and don't post in
       Android-only places.
 - [ ] Never ask for upvotes, ratings or reviews; ask for feedback.
-- [ ] The 3-day menu comes from a paid recipe pack. Don't describe it as free.
+- [ ] Menu sets (1 to 4 days, up to three courses a day) come from a paid recipe pack. Don't
+      describe them as free. If you name a price, say "from USD 2.99 for 10 recipes, converted by
+      the stores"; don't quote other currencies from memory.
+- [ ] On-device recipes: Gemini Nano on Android writes English only for now, and Apple's model
+      writes no Russian. Don't promise a free on-device recipe in a language it doesn't write.
 
 Kinds of places to look at (check each one's rules): food-waste and zero-waste groups and forums,
 meal-prep and home-cooking groups, budget and frugal-living groups, iOS and Android app
@@ -29,7 +33,7 @@ elsewhere in Europe.
 
 Links to use: App Store <https://apps.apple.com/app/id6818647200>, source
 <https://github.com/daniil-pastuhov/FoodTrack>, and the about page
-<https://daniil-pastuhov.github.io/bestbefore-privacy/app.html> once it is merged. Some communities
+<https://daniil-pastuhov.github.io/bestbefore-privacy/app.html> (live). Some communities
 prefer the link in a comment rather than the post; follow theirs.
 
 ---
@@ -49,7 +53,8 @@ prefer the link in a comment rather than the post; follow theirs.
 > The new version adds a Recipe tab that takes whatever is closest to its date and writes a recipe
 > from it. Two ways are free: share a ready-made prompt to an AI app you already use, or let a
 > recent phone write it on the device. There are also optional paid recipe packs, one-off, no
-> subscription.
+> subscription, from USD 2.99 for 10 recipes (converted by the stores). Whatever a recipe needs
+> and you don't have goes onto the shopping list in one tap.
 >
 > No account, no ads, no tracking, and it's open source. iPhone now; Android is in testing.
 >
@@ -67,14 +72,15 @@ prefer the link in a comment rather than the post; follow theirs.
 > reminders before things go off). The new Recipe tab ticks the items closest to their date, you
 > set servings, time and diet, and it writes a recipe that uses them. Free ways: copy a ready-made
 > prompt into any AI app you like, or have a recent phone write it on the device. There is also a
-> 3-day menu with two or three courses a day, which comes from an optional paid recipe pack
-> (one-off, no subscription). Recipes are saved in the app, and ingredients you don't have can go
+> menu set: 1 to 4 days, one to three courses a day, planned around what expires first. Menu sets
+> come from an optional paid recipe pack (one-off, no subscription, from USD 2.99 for 10 recipes,
+> converted by the stores). Recipes are saved in the app, and ingredients you don't have can go
 > to the shopping list.
 >
 > No account, no ads; your food list stays on your phone. iPhone now, Android in testing.
 >
-> My question: would a 3-day plan built around what's expiring fit the way you actually prep, or
-> do you plan a whole week at a time?
+> My question: would a plan of a few days built around what's expiring fit the way you actually
+> prep, or do you plan a whole week at a time?
 
 ## 3. iOS / Android apps community (English)
 
@@ -90,8 +96,10 @@ prefer the link in a comment rather than the post; follow theirs.
 >
 > New: a Recipe tab with three ways to get a recipe from what's expiring. Share a ready-made prompt
 > to any AI app (free); run it on the device where the phone supports it, Apple Intelligence on
-> iOS 26+ or Gemini Nano on some Android phones (free, nothing leaves the phone); or buy an optional
-> pack of recipes written by the app's server (one-off, no subscription).
+> iOS 26+ or Gemini Nano on some Android phones (free, nothing leaves the phone; English only on
+> Android for now); or buy an optional pack of recipes written by the app's server, which can also
+> plan menu sets of 1 to 4 days (one-off, no subscription, from USD 2.99 for 10 recipes).
+> The app is in eight languages, and recipes can be written in eleven.
 >
 > iPhone: App Store. Android: in closed testing on Google Play.
 >
@@ -118,7 +126,9 @@ name, Matvakt.
 > I den nye versjonen kommer en Oppskrift-fane som tar det som snart går ut og lager en oppskrift
 > av det. To måter er gratis: del en ferdig ledetekst med KI-appen du allerede bruker, eller la
 > telefonen skrive oppskriften selv der den støtter det. Det finnes også valgfrie oppskriftspakker
-> som engangskjøp, uten abonnement.
+> som engangskjøp, uten abonnement, fra USD 2,99 for ti oppskrifter (omregnet til kroner av
+> butikkene). Med en pakke kan appen også sette opp et menysett for én til fire dager, med opptil
+> tre retter om dagen.
 >
 > Ingen konto, ingen reklame, ingen sporing, og matvarene blir på telefonen. Koden er åpen. Appen
 > finnes på iPhone nå; Android-versjonen er i testing.
@@ -153,8 +163,9 @@ Store Connect in which countries the app is offered.
 > В новой версии появится вкладка «Рецепт»: она берёт то, что скоро испортится, и составляет из
 > этого рецепт. Бесплатно — готовым запросом в любое ИИ-приложение, которым вы уже пользуетесь,
 > или прямо на телефоне, если он это умеет (Apple Intelligence на новых iPhone, Gemini Nano на
-> некоторых Android). Там, где работают встроенные покупки, есть ещё платные пакеты рецептов —
-> разовая покупка, без подписки.
+> некоторых Android; по-русски эти модели пока не пишут, но могут, например, по-английски). Там,
+> где работают встроенные покупки, есть ещё платные пакеты рецептов — разовая покупка, без
+> подписки; из них же составляются наборы меню на 1–4 дня.
 >
 > Аккаунт не нужен, рекламы и слежки нет, список продуктов хранится только на телефоне. Код
 > открыт. Сейчас приложение есть для iPhone, версия для Android на тестировании.

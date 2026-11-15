@@ -22,7 +22,8 @@ KOCHEN, WAS BALD ABLÄUFT
 • Der Rezept-Tab wählt die Artikel mit dem nächsten Datum aus; Auswahl, Portionen, Zeit, Ernährung und mehr kannst du ändern
 • Kostenlos: einen fertigen Prompt kopieren oder mit der KI-App teilen, die du schon nutzt
 • Kostenlos auf iPhones mit Apple Intelligence (ab iOS 26): Das Rezept entsteht direkt auf dem iPhone
-• Rezeptpakete (In-App-Kauf): Rezepte von unserem Server, in der App gespeichert, und ein Essensplan für 3 Tage („Menü für 3 Tage“), der zuerst verwendet, was bald abläuft
+• Rezeptpakete (In-App-Kauf): Rezepte von unserem Server, in der App gespeichert, und Menü-Sets für 1 bis 4 Tage mit bis zu drei Gängen pro Tag, die zuerst verwenden, was bald abläuft
+• Was einem Rezept noch fehlt, kommt mit einem Tipp auf die Einkaufsliste
 
 DEINE DATEN
 • Keine Werbung, kein Tracking

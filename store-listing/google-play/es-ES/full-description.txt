@@ -21,8 +21,9 @@ BestBefore controla las fechas de caducidad y el inventario de tu nevera, congel
 <b>Cocina lo que está a punto de caducar</b>
 • La pestaña Receta elige los productos con la fecha más próxima; cambia la selección, las raciones, el tiempo, la dieta y más
 • Gratis: copia o comparte un prompt ya preparado con la app de IA que ya usas
-• Gratis en teléfonos Android compatibles: la receta se escribe en el propio teléfono, con su propio modelo
-• Paquetes de recetas (compra dentro de la app): recetas escritas por nuestro servidor y guardadas en la app, y un plan de comidas de 3 días ("Menú de 3 días") que usa primero lo que caduca antes
+• Gratis en teléfonos Android compatibles: la receta se escribe en el propio teléfono, con su propio modelo (por ahora, solo en inglés)
+• Paquetes de recetas (compra dentro de la app): recetas escritas por nuestro servidor y guardadas en la app, y sets de menús de 1 a 4 días, con hasta tres platos al día, que usan primero lo que caduca antes
+• Añade con un toque a la lista de la compra lo que le falta a una receta
 
 <b>Tus datos</b>
 • Sin anuncios ni seguimiento
