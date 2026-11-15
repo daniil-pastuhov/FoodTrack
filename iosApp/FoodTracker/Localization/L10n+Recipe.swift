@@ -29,6 +29,12 @@ extension L10n {
     static var recipeTab: String { text("recipe_tab") }
     static var recipeLede: String { text("recipe_lede") }
     static var recipeSavedButton: String { text("recipe_saved_button") }
+    /// The header's Saved recipes button with `count` not seen yet: "Saved recipes, 2 new".
+    static func recipeSavedButtonUnread(_ count: Int) -> String {
+        count > 0 ? String.localizedStringWithFormat(text("recipe_saved_button_unread"), count) : recipeSavedButton
+    }
+    /// A Saved recipes row not opened yet, for VoiceOver beside its dot.
+    static var recipeSavedNew: String { text("recipe_saved_new") }
     static var recipeSettingsButton: String { text("recipe_settings_button") }
     static var recipeCookWith: String { text("recipe_cook_with") }
     static var recipeAddOtherItems: String { text("recipe_add_other_items") }
@@ -251,8 +257,10 @@ extension L10n {
 /// The paid route's strings. The unit is a "recipe" everywhere the person reads it.
 extension L10n {
     private static func paid(_ key: String) -> String { withDevice(NSLocalizedString(key, comment: "")) }
-    private static func plural(_ key: String, _ count: Int) -> String {
-        withDevice(String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count))
+    private static func plural(_ key: String, _ count: Int, _ inserts: [String: String] = [:]) -> String {
+        var text = withDevice(String.localizedStringWithFormat(NSLocalizedString(key, comment: ""), count))
+        for (name, value) in inserts { text = text.replacingOccurrences(of: "{\(name)}", with: value) }
+        return text
     }
 
     // Tab
@@ -260,6 +268,9 @@ extension L10n {
     static var recipeModeMenu: String { paid("recipe_mode_menu") }
     static var recipeCoursesLabel: String { paid("recipe_courses_label") }
     static func recipeCourses(_ count: Int) -> String { plural("recipe_courses_count", count) }
+    static var recipeDaysLabel: String { paid("recipe_days_label") }
+    /// "1 day", "4 days": the Days choice.
+    static func recipeDays(_ count: Int) -> String { plural("recipe_days_count", count) }
     static var recipeGenerateRecipe: String { paid("recipe_generate_recipe") }
     static var recipeGenerateMenu: String { paid("recipe_generate_menu") }
     /// "1 recipe", "5 recipes": what an action takes, and a pack's size.
@@ -281,8 +292,9 @@ extension L10n {
     }
 
     // Writing on the server
-    static func recipeWritingServerTitle(_ kind: RecipeKind) -> String {
-        paid(kind == .menu ? "recipe_writing_menu_title" : "recipe_writing_server_title")
+    /// `days`: the menu's day count ("Planning 2 days").
+    static func recipeWritingServerTitle(_ kind: RecipeKind, days: Int = MenuSet.defaultDays) -> String {
+        kind == .menu ? plural("recipe_writing_menu_title", days) : paid("recipe_writing_server_title")
     }
     static func recipeWritingServerMessage(_ kind: RecipeKind) -> String {
         paid(kind == .menu ? "recipe_writing_menu_message" : "recipe_writing_server_message")
@@ -291,8 +303,8 @@ extension L10n {
         paid(kind == .menu ? "recipe_server_failed_menu" : "recipe_server_failed")
     }
     /// NOT_ENOUGH_ITEMS: tick a few more (for a menu: or ask for one recipe); nothing taken.
-    static func recipeNotEnoughItems(_ kind: RecipeKind) -> String {
-        paid(kind == .menu ? "recipe_not_enough_items_menu" : "recipe_not_enough_items")
+    static func recipeNotEnoughItems(_ kind: RecipeKind, days: Int = MenuSet.defaultDays) -> String {
+        kind == .menu ? plural("recipe_not_enough_items_menu", days) : paid("recipe_not_enough_items")
     }
     static var recipeDietsNeedUpdate: String { paid("recipe_diets_need_update") }
     static var recipeLanguageNeedsUpdate: String { paid("recipe_language_needs_update") }
@@ -349,9 +361,16 @@ extension L10n {
     static var recipePaymentPendingMessage: String { paid("recipe_payment_pending_message") }
 
     // Buying
-    /// What a menu takes with two and with three courses a day, from the server's costs.
-    static func recipeBuyMessage(_ costs: RecipeCosts) -> String {
-        String(format: paid("recipe_buy_message"), recipeCost(costs.menu2), recipeCost(costs.menu3))
+    /// What a menu set takes, from the server's costs: the range over its menu-set table when it
+    /// sent one, otherwise what a 3-day menu takes with two and with three courses a day. As
+    /// Android's `recipe_packs_body_sets` / `recipe_packs_body`.
+    /// The table counts only while the server says it takes menu sets (`menuSets`), as Android
+    /// leaves it out of the costs it shows until then.
+    static func recipeBuyMessage(_ costs: RecipeCosts, menuSets: Bool) -> String {
+        if menuSets, let range = costs.menuSetRange {
+            return plural("recipe_packs_body_sets", range.upperBound, ["min": "\(range.lowerBound)"])
+        }
+        return String(format: paid("recipe_buy_message"), recipeCost(costs.menu2), recipeCost(costs.menu3))
     }
     static func recipePackEach(_ price: String) -> String { String(format: paid("recipe_pack_each"), price) }
     static var recipeContinue: String { paid("recipe_continue") }
@@ -419,8 +438,15 @@ extension L10n {
     static var recipeIntroPacksTitle: String { paid("recipe_intro_packs_title") }
     /// What a recipe and a menu take, from the server's costs (the fallback before any), then the
     /// cheapest pack's store price when the store has answered, then that the free ways stay.
-    static func recipeIntroPacksMessage(_ costs: RecipeCosts, lowestPrice: String?) -> String {
-        var text = String(format: paid("recipe_intro_packs_message"), recipeCost(costs.recipe), recipeCost(costs.menu2), recipeCost(costs.menu3))
+    /// With a menu-set table, the range of what a menu set takes (Android's
+    /// `recipe_intro_packs_body_sets`); otherwise the 3-day menu's two prices.
+    static func recipeIntroPacksMessage(_ costs: RecipeCosts, menuSets: Bool, lowestPrice: String?) -> String {
+        var text: String
+        if menuSets, let range = costs.menuSetRange {
+            text = String(format: paid("recipe_intro_packs_body_sets"), recipeCost(costs.recipe), range.lowerBound, range.upperBound)
+        } else {
+            text = String(format: paid("recipe_intro_packs_message"), recipeCost(costs.recipe), recipeCost(costs.menu2), recipeCost(costs.menu3))
+        }
         if let lowestPrice { text += " " + String(format: paid("recipe_intro_packs_price"), lowestPrice) }
         return text + " " + paid("recipe_intro_free_stays")
     }
@@ -516,9 +542,10 @@ extension L10n {
 
     // Menu
     static var recipeMenuResultTitle: String { paid("recipe_menu_result_title") }
-    static var recipeMenuHeading: String { paid("recipe_menu_heading") }
+    /// "Menu for 2 days", from the menu's own day count (a menu saved before menu sets has 3).
+    static func recipeMenuHeading(days: Int) -> String { plural("recipe_menu_heading", days) }
     static func recipeMenuSummary(courses: Int, servings: Int) -> String {
-        String(format: paid("recipe_menu_summary"), courses >= 3 ? 3 : 2, servings)
+        plural("recipe_menu_summary", courses, ["servings": "\(servings)"])
     }
     static func recipeMenuToday(_ date: String) -> String { String(format: paid("recipe_menu_today"), date) }
     static func recipeMenuUses(_ items: [String]) -> String { String(format: paid("recipe_menu_uses"), isolatedList(items)) }
@@ -529,7 +556,7 @@ extension L10n {
         case .dessert: return paid("recipe_course_dessert")
         }
     }
-    static var recipePartOfMenu: String { paid("recipe_part_of_menu") }
+    static func recipePartOfMenu(days: Int) -> String { plural("recipe_part_of_menu", days) }
     static var recipeShareMenu: String { paid("recipe_share_menu") }
     static func recipeDishes(_ count: Int) -> String { plural("recipe_dishes_count", count) }
 }

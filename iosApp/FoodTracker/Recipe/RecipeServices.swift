@@ -64,16 +64,30 @@ struct RecipeOptions: Codable, Equatable, Sendable {
     var sendAllItems = false
     /// The first-open introduction to the tab was shown and closed.
     var introSeen = false
+    /// Saved recipes and menus not seen yet (`RecipeUnread`), by saved id: the header's badge.
+    /// JSON key `unreadSaved`, a list of ids. Android: `RecipeOptions.unreadSaved`.
+    var unreadSaved: Set<String> = []
 
-    init(sendAllItems: Bool = false, introSeen: Bool = false) {
+    init(sendAllItems: Bool = false, introSeen: Bool = false, unreadSaved: Set<String> = []) {
         self.sendAllItems = sendAllItems
         self.introSeen = introSeen
+        self.unreadSaved = unreadSaved
+    }
+
+    private enum CodingKeys: String, CodingKey { case sendAllItems, introSeen, unreadSaved }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(sendAllItems, forKey: .sendAllItems)
+        try container.encode(introSeen, forKey: .introSeen)
+        try container.encode(unreadSaved.sorted(), forKey: .unreadSaved)
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         sendAllItems = (try? container.decodeIfPresent(Bool.self, forKey: .sendAllItems)) ?? false
         introSeen = (try? container.decodeIfPresent(Bool.self, forKey: .introSeen)) ?? false
+        unreadSaved = Set((try? container.decodeIfPresent([String].self, forKey: .unreadSaved)) ?? nil ?? [])
     }
 }
 

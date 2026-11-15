@@ -23,6 +23,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,6 +56,7 @@ import com.foodtracker.recipe.RecipeDifficulty
 import com.foodtracker.recipe.RecipeIngredient
 import com.foodtracker.recipe.RecipeSource
 import com.foodtracker.recipe.RecipeStateHolder
+import com.foodtracker.recipe.DEFAULT_MENU_DAYS
 import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.MenuCourseKind
 import com.foodtracker.recipe.MenuCourse
@@ -137,7 +139,7 @@ internal fun menuCourseLabel(resources: Resources, course: MenuCourseKind): Stri
 
 /** A menu as plain text, for Share: each day with its dishes, then every recipe in full. */
 fun menuShareText(resources: Resources, menu: Menu, today: LocalDate): String = buildString {
-    append(resources.getString(R.string.recipe_menu_title))
+    append(menuTitle(resources, menu))
     pastDateWarning(resources, menu.pastDate)?.let { append("\n\n").append("⚠ ").append(it) }
     menu.days.forEach { day ->
         append("\n\n").append(menuDayLabel(resources, day.date, today))
@@ -177,6 +179,10 @@ fun RecipeResultScreen(
     val recipe = saved?.recipe
     val menu = saved?.menu
     val today = DateUtils.today()
+    // Opened, so no longer new in Saved recipes (also once it arrives, if it was still loading).
+    LaunchedEffect(savedId, saved != null) {
+        if (saved != null) stateHolder.markSavedRead(savedId)
+    }
     Scaffold(
         topBar = {
             LarderTopBar(
@@ -231,7 +237,8 @@ fun MenuDishScreen(
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val resources = context.resources
-    val menuDay = state.saved.firstOrNull { it.id == savedId }?.menu?.days?.getOrNull(day)
+    val menuDays = state.saved.firstOrNull { it.id == savedId }?.menu?.days
+    val menuDay = menuDays?.getOrNull(day)
     val dish = menuDay?.courses?.getOrNull(course)
     Scaffold(
         topBar = {
@@ -257,14 +264,15 @@ fun MenuDishScreen(
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
-                dish != null -> RecipeDocument(dish.recipe, partOfMenu = true, shopping = shopping)
+                dish != null -> RecipeDocument(dish.recipe, partOfMenu = true, menuDays = menuDays?.size ?: DEFAULT_MENU_DAYS, shopping = shopping)
                 state.savedLoaded -> EmptyState(title = stringResource(R.string.recipe_not_found), art = null)
             }
         }
     }
 }
 
-/** Three day sections of course rows, each day saying which dated items it uses. */
+/** One section of course rows per day (1 to 4, as many as the menu has), each day saying which
+ *  dated items it uses. A day of one course is a section with one row. */
 @Composable
 internal fun MenuDocument(
     menu: Menu,
@@ -284,14 +292,14 @@ internal fun MenuDocument(
     ) {
         Column(modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(top = LarderSpace.s2, bottom = LarderSpace.s8)) {
             Text(
-                text = stringResource(R.string.recipe_menu_title),
+                text = menuTitle(resources, menu),
                 modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
             if (courses > 0 && servings > 0) {
                 Text(
-                    text = stringResource(R.string.recipe_menu_summary, courses, servings),
+                    text = pluralStringResource(R.plurals.recipe_menu_summary, courses, courses, servings),
                     modifier = Modifier.padding(top = LarderSpace.s2),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -345,7 +353,13 @@ internal fun MenuDocument(
 }
 
 @Composable
-internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false, shopping: RecipeShoppingActions = RecipeShoppingActions()) {
+internal fun RecipeDocument(
+    recipe: Recipe,
+    partOfMenu: Boolean = false,
+    /** The days of the menu it is part of, for "Part of Menu for N days". */
+    menuDays: Int = DEFAULT_MENU_DAYS,
+    shopping: RecipeShoppingActions = RecipeShoppingActions()
+) {
     val resources = LocalContext.current.resources
     Column(
         modifier = Modifier
@@ -443,13 +457,11 @@ internal fun RecipeDocument(recipe: Recipe, partOfMenu: Boolean = false, shoppin
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = stringResource(
-                        when {
-                            partOfMenu -> R.string.recipe_part_of_menu
-                            fromPhone -> R.string.recipe_source_phone
-                            else -> R.string.recipe_source_server
-                        }
-                    ),
+                    text = when {
+                        partOfMenu -> pluralStringResource(R.plurals.recipe_part_of_menu, menuDays, menuDays)
+                        fromPhone -> stringResource(R.string.recipe_source_phone)
+                        else -> stringResource(R.string.recipe_source_server)
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -607,6 +619,23 @@ internal fun MenuDocumentPreview() = LarderTheme {
                 }
             )
         }
+    )
+    Surface(color = MaterialTheme.colorScheme.background) { MenuDocument(menu, today, onOpenDish = { _, _ -> }) }
+}
+
+/** A menu set of one day with only the main course. */
+@Preview
+@Composable
+internal fun MenuDocumentOneDayPreview() = LarderTheme {
+    val today = LocalDate(2026, 11, 4)
+    val menu = Menu(
+        listOf(
+            MenuDay(
+                date = today,
+                uses = listOf("bread", "spinach"),
+                courses = listOf(MenuCourse(MenuCourseKind.MAIN, previewRecipe.copy(source = RecipeSource.SERVER)))
+            )
+        )
     )
     Surface(color = MaterialTheme.colorScheme.background) { MenuDocument(menu, today, onOpenDish = { _, _ -> }) }
 }

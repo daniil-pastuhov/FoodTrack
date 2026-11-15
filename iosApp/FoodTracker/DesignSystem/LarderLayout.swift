@@ -37,9 +37,6 @@ extension View {
 final class ShellChrome: ObservableObject {
     @Published private var navHolds = 0
     @Published private var scanHolds = 0
-    /// Height of an action a tab pins above the pill where Scan sits on Home, such as Recipe's
-    /// Generate, so snackbars go above it. 0 when there is none. See `shellPinnedAction(height:)`.
-    @Published fileprivate(set) var pinnedActionHeight: CGFloat = 0
 
     var navHidden: Bool { navHolds > 0 }
     var scanHidden: Bool { scanHolds > 0 }
@@ -122,27 +119,6 @@ extension View {
     func shellChromeEffect(hideNav: Bool = false, hideScan: Bool = false) -> some View {
         modifier(ShellChromeEffect(hideNav: hideNav, hideScan: hideScan))
     }
-
-    /// Tells the shell a tab has pinned an action `height` tall where Scan sits on Home, a gap
-    /// above the pill, so snackbars clear it. Pass 0, or leave the screen, to release it.
-    ///
-    ///     content.safeAreaInset(edge: .bottom) { generateButton.onGeometryChange(...) { height = $0 } }
-    ///         .shellPinnedAction(height: height)
-    func shellPinnedAction(height: CGFloat) -> some View {
-        modifier(ShellPinnedAction(height: height))
-    }
-}
-
-private struct ShellPinnedAction: ViewModifier {
-    let height: CGFloat
-    @Environment(\.shellChrome) private var chrome
-
-    func body(content: Content) -> some View {
-        content
-            .onAppear { chrome.pinnedActionHeight = height }
-            .onChange(of: height) { _, height in chrome.pinnedActionHeight = height }
-            .onDisappear { chrome.pinnedActionHeight = 0 }
-    }
 }
 
 /// Where the shell's floating parts go, all measured up from the bottom of the safe area.
@@ -158,11 +134,9 @@ struct ShellMetrics: Equatable {
     var isNavVisible: Bool = true
     var isScanVisible: Bool = false
     var isExpanded: Bool = false
-    /// A tab's pinned action, a gap above the pill where Scan sits. See `ShellChrome`.
-    var pinnedActionHeight: CGFloat = 0
 
     static let defaultPillHeight: CGFloat = 72
-    /// Between floating things: the pill and Scan, or a pinned action, and a snackbar above them.
+    /// Between floating things: the pill and Scan, and a snackbar above them.
     static let shellGap = LarderSpace.s3
     /// Content's breathing room above whatever floats over it.
     static let contentGap = LarderSpace.s5
@@ -176,10 +150,8 @@ struct ShellMetrics: Equatable {
     var scanBottom: CGFloat { isExpanded ? pillBottom : pillTop + Self.gap }
     var scanTrailing: CGFloat { isExpanded ? LarderSpace.s5 : LarderSpace.s4 }
 
-    /// Above Scan on phones, above the pill when Scan sits beside it, and above a pinned action.
+    /// Above Scan on phones, above the pill when Scan sits beside it.
     var snackbarBottom: CGFloat {
-        // A pinned action sits where Scan does on a phone, a gap above the pill.
-        if pinnedActionHeight > 0 { return pillTop + Self.gap + pinnedActionHeight + Self.gap }
         return isScanVisible && !isExpanded ? scanBottom + scanHeight + Self.gap : pillTop + Self.gap
     }
 

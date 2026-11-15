@@ -30,7 +30,11 @@ data class RecipeOptions(
      *  may use as well, while the ticked items stay the ones to use up. Off until turned on. */
     val sendAllItems: Boolean = false,
     /** The first-open introduction to the tab was shown and closed. */
-    val introSeen: Boolean = false
+    val introSeen: Boolean = false,
+    /** Saved recipes and menus written without their result being shown (finished after the
+     *  person left the writing screen, or recovered later), by saved id, until opened or deleted.
+     *  Ids of rows gone otherwise are simply not counted ([RecipeUiState.unreadCount]). */
+    val unreadSaved: Set<String> = emptySet()
 )
 
 /** Recipes and menus written in the app, kept on this phone only. */

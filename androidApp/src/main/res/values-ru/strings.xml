@@ -834,7 +834,12 @@
     <string name="recipe_prompt_min_minutes">Желательно примерно %1$d минут или дольше</string>
     <string name="recipe_prompt_meals">Подойдёт для любого из этих приёмов пищи: %1$s</string>
     <string name="recipe_not_enough_items">С учётом диеты и аллергенов готовить почти не из чего. Отметьте ещё несколько продуктов. Рецепт не списан.</string>
-    <string name="recipe_not_enough_items_menu">На три дня продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</string>
+    <plurals name="recipe_not_enough_items_menu">
+        <item quantity="one">На один день продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</item>
+        <item quantity="few">На %1$d дня продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</item>
+        <item quantity="many">На %1$d дней продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</item>
+        <item quantity="other">На %1$d дня продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</item>
+    </plurals>
     <string name="recipe_diets_need_update">Рецепты из пакетов пока не сочетают безглютеновую диету с другой. Оставьте одну из них в настройках рецептов или воспользуйтесь моделью на этом устройстве или общим запросом. Рецепты не списаны.</string>
     <string name="recipe_language_needs_update">Рецепты из пакетов пока нельзя получить на датском. Выберите другой язык рецептов в настройках рецептов или воспользуйтесь моделью на этом устройстве или общим запросом. Рецепты не списаны.</string>
     <string name="recipe_not_from_pantry_hint">Продукты без пометки «Есть дома» — не из ваших запасов: базовые продукты или то, что, возможно, придётся купить.</string>
@@ -958,7 +963,28 @@
     <string name="recipe_balance_only_description">Осталось рецептов: %1$d</string>
     <string name="recipe_mode_label">Что составить</string>
     <string name="recipe_mode_recipe">Рецепт</string>
-    <string name="recipe_mode_menu">Меню на 3 дня</string>
+    <string name="recipe_mode_menu">Набор меню</string>
+    <string name="recipe_menu_days">Дни</string>
+    <plurals name="recipe_menu_days_count">
+        <item quantity="one">%1$d день</item>
+        <item quantity="few">%1$d дня</item>
+        <item quantity="many">%1$d дней</item>
+        <item quantity="other">%1$d дня</item>
+    </plurals>
+    <plurals name="recipe_packs_body_sets">
+        <item quantity="one">Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от %1$d до %2$d рецепта в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</item>
+        <item quantity="few">Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от %1$d до %2$d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</item>
+        <item quantity="many">Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от %1$d до %2$d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</item>
+        <item quantity="other">Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от %1$d до %2$d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</item>
+    </plurals>
+    <string name="recipe_intro_packs_body_sets">Рецепт составляет наш сервер; он же может спланировать набор меню. Рецепт стоит %1$s из пакета, набор меню — от %2$d до %3$d в зависимости от числа дней и блюд в день.</string>
+    <plurals name="recipe_saved_unread_action">
+        <item quantity="one">Сохранённые рецепты, %1$d новый</item>
+        <item quantity="few">Сохранённые рецепты, %1$d новых</item>
+        <item quantity="many">Сохранённые рецепты, %1$d новых</item>
+        <item quantity="other">Сохранённые рецепты, %1$d новых</item>
+    </plurals>
+    <string name="recipe_saved_unread">Новое</string>
     <string name="recipe_courses">Блюд в день</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d блюдо</item>
@@ -992,7 +1018,12 @@
     <string name="recipe_menu_short_none">Рецептов не осталось.</string>
     <string name="recipe_writing_server_title">Составляем рецепт</string>
     <string name="recipe_writing_server_body">Несколько секунд. С экрана можно уйти: рецепт появится в сохранённых рецептах.</string>
-    <string name="recipe_writing_menu_title">Планируем три дня</string>
+    <plurals name="recipe_writing_menu_title">
+        <item quantity="one">Планируем один день</item>
+        <item quantity="few">Планируем %1$d дня</item>
+        <item quantity="many">Планируем %1$d дней</item>
+        <item quantity="other">Планируем %1$d дня</item>
+    </plurals>
     <string name="recipe_writing_menu_body">Это может занять до двух минут. С экрана можно уйти: меню появится в сохранённых рецептах.</string>
     <string name="recipe_offline_title">Нет соединения</string>
     <string name="recipe_offline_body">Рецептам из пакета нужен интернет. Бесплатные способы ниже работают.</string>
@@ -1179,14 +1210,29 @@
         <item quantity="other">Рецепт, запрошенный раньше, составить не удалось. Списано %1$d рецепта: попытка всё равно потребовала работы сервера.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Меню</string>
-    <string name="recipe_menu_title">Меню на три дня</string>
-    <string name="recipe_menu_summary">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</string>
+    <plurals name="recipe_menu_title">
+        <item quantity="one">Меню на один день</item>
+        <item quantity="few">Меню на %1$d дня</item>
+        <item quantity="many">Меню на %1$d дней</item>
+        <item quantity="other">Меню на %1$d дня</item>
+    </plurals>
+    <plurals name="recipe_menu_summary">
+        <item quantity="one">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</item>
+        <item quantity="few">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</item>
+        <item quantity="many">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</item>
+        <item quantity="other">Блюд в день: %1$d, порций: %2$d. Сначала то, что скоро испортится.</item>
+    </plurals>
     <string name="recipe_menu_today">Сегодня, %1$s</string>
     <string name="recipe_menu_uses">Используем: %1$s</string>
     <string name="recipe_course_starter">Закуска</string>
     <string name="recipe_course_main">Основное</string>
     <string name="recipe_course_dessert">Десерт</string>
-    <string name="recipe_part_of_menu">Из меню на три дня</string>
+    <plurals name="recipe_part_of_menu">
+        <item quantity="one">Из меню на один день</item>
+        <item quantity="few">Из меню на %1$d дня</item>
+        <item quantity="many">Из меню на %1$d дней</item>
+        <item quantity="other">Из меню на %1$d дня</item>
+    </plurals>
     <plurals name="recipe_saved_dishes">
         <item quantity="one">%1$d блюдо</item>
         <item quantity="few">%1$d блюда</item>

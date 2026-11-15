@@ -85,7 +85,16 @@ sealed interface RecipeEvent {
     /** The server said the ticked items can't make what was asked (NOT_ENOUGH_ITEMS): once the
      *  allergens and diets are applied nothing is left, or for a [menu] some day has nothing it
      *  may use. Nothing was taken; the form stays as it is. */
-    data class NotEnoughItems(val menu: Boolean) : RecipeEvent
+    data class NotEnoughItems(val menu: Boolean, val days: Int = DEFAULT_MENU_DAYS) : RecipeEvent
+
+    /** A recipe or a menu was written and saved after the person had left the writing screen (the
+     *  tab, or the app): kept as unread in Saved recipes rather than opened. [recipesLeft] and
+     *  [leftOut] as for [Written]. */
+    data class SavedUnread(
+        val menu: Boolean,
+        val recipesLeft: Int? = null,
+        val leftOut: List<String> = emptyList()
+    ) : RecipeEvent
 
     /** The selected diets can't all be sent to the server as it is now (gluten-free with another
      *  diet, before it reads several diets): nothing was sent, since a recipe ignoring one could
@@ -148,9 +157,9 @@ enum class RecipeAction {
 }
 
 /**
- * What the form offers: [primary] is pinned above the pill (null: nothing pinned), [secondary]
- * sits under the form, in this order. With recipes in the pack the server is pinned and the free
- * routes stay one tap away; without, the phone's model or the shared prompt is pinned. A menu is
+ * What the form offers, as one group at its foot: [primary] first and filled (null: none),
+ * then [secondary], in this order. With recipes in the pack the server is the primary and the free
+ * routes stay one tap away; without, the phone's model or the shared prompt is. A menu is
  * the server's only: no free routes. iOS: `RecipeViewModel.actions`.
  */
 data class RecipeActions(val primary: RecipeAction?, val secondary: List<RecipeAction>)
@@ -164,10 +173,13 @@ enum class RecipeIntro {
     FROM_SETTINGS
 }
 
-/** What the tab writes: one recipe, or a menu for three days (server only). */
+/** What the tab writes: one recipe, or a menu set of 1 to 4 days (server only). */
 enum class RecipeMode { RECIPE, MENU }
 
 const val DEFAULT_MENU_COURSES = 3
+
+/** The courses a menu falls back to when the ones chosen can't be asked for ([RecipeUiState.menuCourses]). */
+const val FALLBACK_MENU_COURSES = 2
 
 data class RecipeUiState(
     val isLoading: Boolean = true,
@@ -183,8 +195,10 @@ data class RecipeUiState(
     /** The phone's own model is writing. */
     val isWriting: Boolean = false,
     val mode: RecipeMode = RecipeMode.RECIPE,
-    /** Courses a day for a menu: 2 or 3. */
+    /** Courses a day for a menu as chosen: 1, 2 or 3. What is asked for is [menuCourses]. */
     val courses: Int = DEFAULT_MENU_COURSES,
+    /** Days of a menu as chosen: 1 to 4. What is asked for is [menuDays]. */
+    val days: Int = DEFAULT_MENU_DAYS,
     /** Newest first. */
     val saved: List<SavedRecipe> = emptyList(),
     /** False until the saved list has been read once, so "nothing saved" doesn't flash. */
@@ -239,6 +253,47 @@ data class RecipeUiState(
      *  they change: the first one written shows it, deleting the last one hides it. */
     val hasSaved: Boolean get() = saved.isNotEmpty()
 
+    /** Saved recipes and menus written without being shown ([RecipeOptions.unreadSaved]) that are
+     *  still saved: the count on the header's Saved recipes button. */
+    val unreadCount: Int get() = if (options.unreadSaved.isEmpty()) 0 else saved.count { it.id in options.unreadSaved }
+
+    fun isUnread(id: String): Boolean = id in options.unreadSaved
+
+    /** Whether a menu of [days] days and [courses] courses a day can be asked for: the server said
+     *  it reads menu sets and prices that combination, or it is the 3-day menu of 2 or 3 courses
+     *  every server writes. */
+    private fun menuOffered(days: Int, courses: Int): Boolean =
+        if (paid.menuSets) paid.costs.menuSet(days, courses) != null else days == DEFAULT_MENU_DAYS && courses in LEGACY_MENU_COURSES
+
+    /**
+     * The (days, courses) asked for, one rule on both platforms (iOS `RecipeViewModel`): without
+     * `acceptsMenuDays`, 3 days with the chosen courses when that is 2 or 3, else 2. With it, the
+     * chosen pair when it has a price, else 3 days with the chosen courses when that has one, else
+     * 3 days of 2 courses.
+     */
+    private val menuPair: Pair<Int, Int>
+        get() = when {
+            !paid.menuSets -> DEFAULT_MENU_DAYS to (if (courses in LEGACY_MENU_COURSES) courses else FALLBACK_MENU_COURSES)
+            menuOffered(days, courses) -> days to courses
+            menuOffered(DEFAULT_MENU_DAYS, courses) -> DEFAULT_MENU_DAYS to courses
+            else -> DEFAULT_MENU_DAYS to FALLBACK_MENU_COURSES
+        }
+
+    /** The courses asked for; see [menuPair]. */
+    val menuCourses: Int get() = menuPair.second
+
+    /** The days asked for; see [menuPair]. Always 3 before the server says `acceptsMenuDays`. */
+    val menuDays: Int get() = menuPair.first
+
+    /** The Days choice: every day count offered with the courses asked for. Empty (and not
+     *  shown) until the server says `acceptsMenuDays`, when every menu is a 3-day one. */
+    val menuDayOptions: List<Int>
+        get() = if (!paid.menuSets) emptyList() else menuCourses.let { courses -> MENU_DAY_OPTIONS.filter { menuOffered(it, courses) } }
+
+    /** The Courses choice for the days asked for: 2 and 3 with any server (for 3 days), 1 too
+     *  with one that says `acceptsMenuDays` and prices it. */
+    val menuCourseOptions: List<Int> get() = menuDays.let { days -> MENU_COURSE_OPTIONS.filter { menuOffered(days, it) } }
+
     val onDeviceRoute: OnDeviceRoute = when (onDeviceAvailability) {
         null -> OnDeviceRoute.CHECKING
         OnDeviceAvailability.UNSUPPORTED -> OnDeviceRoute.HIDDEN
@@ -258,7 +313,7 @@ data class RecipeUiState(
         onDeviceAvailability != null && onDeviceAvailability != OnDeviceAvailability.UNSUPPORTED && !onDeviceSupportsLanguage
 
     /** What the current mode takes from a pack. */
-    val serverCost: Int get() = if (mode == RecipeMode.MENU) paid.costs.menu(courses) else paid.costs.recipe
+    val serverCost: Int get() = if (mode == RecipeMode.MENU) paid.costs.menuSet(menuDays, menuCourses) ?: paid.costs.menu(menuCourses) else paid.costs.recipe
 
     /** Whether the server can be asked now: a pack with enough left, nothing in the way. */
     val canGenerateOnServer: Boolean
@@ -340,8 +395,14 @@ class RecipeStateHolder(
         newSavedId = newId,
         newRequestId = newRequestId,
         today = today,
-        pollDelay = pollDelay
+        pollDelay = pollDelay,
+        isOnScreen = { onScreen.value > 0 },
+        markUnread = ::markUnread
     )
+
+    /** How many copies of the writing screen are on screen and resumed (a transition can briefly
+     *  hold two). Written on the main thread and read where a result arrives, off it. */
+    private val onScreen = MutableStateFlow(0)
 
     private var writingJob: Job? = null
 
@@ -380,9 +441,12 @@ class RecipeStateHolder(
      * ready by the next visit. Also catches up on the paid route (see [onAppResume]).
      */
     fun refresh() {
+        if (demoShown) return
         _uiState.update { it.copy(appLanguage = appRecipeLanguage(appLanguage())).withLanguageSupport() }
         coroutineScope.launch {
             val availability = runCatching { onDeviceModel.availability() }.getOrDefault(OnDeviceAvailability.UNSUPPORTED)
+            // A demo launch that came in meanwhile shows its own.
+            if (demoShown) return@launch
             _uiState.update { it.copy(onDeviceAvailability = availability) }
             downloadIfNeeded()
         }
@@ -442,15 +506,30 @@ class RecipeStateHolder(
         if (!supportedBefore && _uiState.value.onDeviceSupportsLanguage) coroutineScope.launch { downloadIfNeeded() }
     }
 
-    /** Recipe or Menu for 3 days. The menu is offered only with the paid route. */
+    /** Recipe or Menu set. The menu is offered only with the paid route. */
     fun setMode(mode: RecipeMode) {
         if (mode == RecipeMode.MENU && !_uiState.value.paid.available) return
         _uiState.update { it.copy(mode = mode) }
     }
 
     fun setCourses(courses: Int) {
-        if (courses !in MENU_COURSE_OPTIONS) return
+        if (courses !in _uiState.value.menuCourseOptions) return
         _uiState.update { it.copy(courses = courses) }
+    }
+
+    /** A menu set's days, among [RecipeUiState.menuDayOptions]. */
+    fun setDays(days: Int) {
+        if (days !in _uiState.value.menuDayOptions) return
+        _uiState.update { it.copy(days = days) }
+    }
+
+    /**
+     * The Recipe tab's screen (where a result being written is waited for) came on screen, or
+     * went: another screen or tab, or the app in the background. A result arriving while it isn't
+     * on screen is saved as unread instead of being opened.
+     */
+    fun setOnScreen(on: Boolean) {
+        onScreen.update { if (on) it + 1 else (it - 1).coerceAtLeast(0) }
     }
 
     /** "Send all products" in Recipe settings. */
@@ -458,11 +537,23 @@ class RecipeStateHolder(
         updateOptions { it.copy(sendAllItems = on) }
     }
 
+    /**
+     * Called from the main thread (settings, the introduction, opening a result) and from where a
+     * result arrives off it (`markUnread`), so the change is applied to whatever the options are
+     * at that moment, never to a copy read earlier, and what is saved is re-checked afterwards:
+     * of two changes at once neither is lost, in memory or in storage.
+     */
     private fun updateOptions(transform: (RecipeOptions) -> RecipeOptions) {
-        val updated = transform(_uiState.value.options)
-        if (updated == _uiState.value.options) return
-        configRepository.saveOptions(updated)
-        _uiState.update { it.copy(options = updated) }
+        val before = _uiState.value.options
+        _uiState.update { it.copy(options = transform(it.options)) }
+        var saved = _uiState.value.options
+        if (saved == before) return
+        while (true) {
+            configRepository.saveOptions(saved)
+            val now = _uiState.value.options
+            if (now == saved) return
+            saved = now
+        }
     }
 
     // --- Introduction ------------------------------------------------------------------------
@@ -500,6 +591,28 @@ class RecipeStateHolder(
     fun suppressIntroForSession() {
         introSuppressed = true
     }
+
+    /**
+     * Debug-only demo launches (`demoRecipeCredits` and its companions in `MainActivity`): the
+     * form as [demo] describes it, for screenshots of every combination of actions. Nothing is
+     * sent; the real paid route and the phone's model stop changing what is shown for this run.
+     */
+    fun showDemo(demo: RecipeDemo) {
+        demoShown = true
+        paid.showDemo(demo.paid)
+        _uiState.update {
+            it.copy(
+                onDeviceAvailability = if (demo.onDevice) OnDeviceAvailability.AVAILABLE else OnDeviceAvailability.UNSUPPORTED,
+                onDeviceSupportsLanguage = demo.onDevice,
+                shareSheetCopies = demo.shareSheetCopies,
+                mode = if (demo.paid.available) demo.mode else RecipeMode.RECIPE,
+                days = demo.days,
+                courses = demo.courses
+            )
+        }
+    }
+
+    private var demoShown = false
 
     /** Debug-only demo launches that ask for it: shown as on a first open. */
     fun showIntroForDemo() {
@@ -542,7 +655,12 @@ class RecipeStateHolder(
                 // The warning comes from the ticked items' own dates, never from the model's text.
                 val saved = SavedRecipe.of(newId(), recipe.copy(pastDate = state.pastDateTicked), nowMillis())
                 savedRecipeRepository.save(saved)
-                report(RecipeEvent.Written(saved.id), saved)
+                if (onScreen.value > 0) {
+                    report(RecipeEvent.Written(saved.id), saved)
+                } else {
+                    markUnread(saved.id)
+                    report(RecipeEvent.SavedUnread(menu = false), saved)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -618,10 +736,24 @@ class RecipeStateHolder(
 
     fun savedRecipe(id: String): SavedRecipe? = _uiState.value.saved.firstOrNull { it.id == id }
 
+    private fun markUnread(id: String) {
+        updateOptions { it.copy(unreadSaved = it.unreadSaved + id) }
+    }
+
+    /** Debug demo launches only (`demoUnread`): [id] shown as unread. */
+    fun markSavedUnreadForDemo(id: String) = markUnread(id)
+
+    /** A saved recipe or menu was opened: no longer unread. */
+    fun markSavedRead(id: String) {
+        if (id !in _uiState.value.options.unreadSaved) return
+        updateOptions { it.copy(unreadSaved = it.unreadSaved - id) }
+    }
+
     /** Deletes a saved recipe and hands it to [onDeleted], so the caller can offer Undo through
      *  [restoreSaved]. */
     fun deleteSaved(id: String, onDeleted: (SavedRecipe) -> Unit = {}) {
         val saved = savedRecipe(id) ?: return
+        markSavedRead(id)
         coroutineScope.launch {
             savedRecipeRepository.delete(id)
             onDeleted(saved)
@@ -641,12 +773,23 @@ class RecipeStateHolder(
         configRepository.save(RecipeConfig())
         configRepository.saveOptions(RecipeOptions())
         _uiState.update {
-            it.copy(config = RecipeConfig(), options = RecipeOptions(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, selection = RecipeSelection.Default)
+            it.copy(config = RecipeConfig(), options = RecipeOptions(), mode = RecipeMode.RECIPE, courses = DEFAULT_MENU_COURSES, days = DEFAULT_MENU_DAYS, selection = RecipeSelection.Default)
                 .withLanguageSupport()
         }
         coroutineScope.launch { savedRecipeRepository.clearAll() }
     }
 }
 
-/** The courses a day a menu can have. */
-val MENU_COURSE_OPTIONS: List<Int> = listOf(2, 3)
+/** The courses a day a menu can have: 1 (the main course only) only with a server that says
+ *  `acceptsMenuDays` ([RecipeUiState.menuCourseOptions]). */
+val MENU_COURSE_OPTIONS: List<Int> = listOf(1, 2, 3)
+
+/** What [RecipeStateHolder.showDemo] shows. Debug demo launches only. */
+data class RecipeDemo(
+    val paid: PaidUiState,
+    val onDevice: Boolean = false,
+    val shareSheetCopies: Boolean = true,
+    val mode: RecipeMode = RecipeMode.RECIPE,
+    val days: Int = DEFAULT_MENU_DAYS,
+    val courses: Int = DEFAULT_MENU_COURSES
+)

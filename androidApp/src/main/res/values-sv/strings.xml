@@ -768,7 +768,10 @@
     <string name="recipe_prompt_min_minutes">Helst runt %1$d minuter eller mer</string>
     <string name="recipe_prompt_meals">Passar till någon av dessa måltider: %1$s</string>
     <string name="recipe_not_enough_items">Det finns inte tillräckligt att laga med när din kost och dina allergener har räknats bort. Kryssa i några varor till. Inget recept drogs.</string>
-    <string name="recipe_not_enough_items_menu">Det räcker inte till tre dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</string>
+    <plurals name="recipe_not_enough_items_menu">
+        <item quantity="one">Det räcker inte till en dag. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</item>
+        <item quantity="other">Det räcker inte till %1$d dagar. Kryssa i några varor till, eller be om ett enskilt recept. Inga recept drogs.</item>
+    </plurals>
     <string name="recipe_diets_need_update">Recept från paket kan ännu inte kombinera glutenfritt med en annan kost. Behåll en av dem i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga recept drogs.</string>
     <string name="recipe_language_needs_update">Recept från paket kan ännu inte skrivas på danska. Välj ett annat receptspråk i Receptinställningar, eller använd enhetens modell eller den delade prompten. Inga recept drogs.</string>
     <string name="recipe_not_from_pantry_hint">Ingredienser utan märket ”I ditt skafferi” kommer inte från ditt skafferi: basingredienser, eller några saker du kanske behöver köpa.</string>
@@ -882,7 +885,22 @@
     <string name="recipe_balance_only_description">Recept kvar: %1$d</string>
     <string name="recipe_mode_label">Vad ska det bli?</string>
     <string name="recipe_mode_recipe">Recept</string>
-    <string name="recipe_mode_menu">Meny för 3 dagar</string>
+    <string name="recipe_mode_menu">Menyset</string>
+    <string name="recipe_menu_days">Dagar</string>
+    <plurals name="recipe_menu_days_count">
+        <item quantity="one">%1$d dag</item>
+        <item quantity="other">%1$d dagar</item>
+    </plurals>
+    <plurals name="recipe_packs_body_sets">
+        <item quantity="one">Ett recept är en rätt som skrivs av vår server. Ett menyset kräver %1$d till %2$d recept, beroende på dagar och rätter per dag. De går inte ut.</item>
+        <item quantity="other">Ett recept är en rätt som skrivs av vår server. Ett menyset kräver %1$d till %2$d recept, beroende på dagar och rätter per dag. De går inte ut.</item>
+    </plurals>
+    <string name="recipe_intro_packs_body_sets">Vår server skriver receptet och kan också planera ett menyset. Ett recept drar %1$s från ett paket; ett menyset drar %2$d till %3$d, beroende på dagar och rätter per dag.</string>
+    <plurals name="recipe_saved_unread_action">
+        <item quantity="one">Sparade recept, %1$d nytt</item>
+        <item quantity="other">Sparade recept, %1$d nya</item>
+    </plurals>
+    <string name="recipe_saved_unread">Ny</string>
     <string name="recipe_courses">Rätter per dag</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d rätt</item>
@@ -908,7 +926,10 @@
     <string name="recipe_menu_short_none">Du har inga recept kvar.</string>
     <string name="recipe_writing_server_title">Skriver ditt recept</string>
     <string name="recipe_writing_server_body">Några sekunder. Du kan lämna den här skärmen; receptet hamnar i Sparade recept.</string>
-    <string name="recipe_writing_menu_title">Planerar tre dagar</string>
+    <plurals name="recipe_writing_menu_title">
+        <item quantity="one">Planerar en dag</item>
+        <item quantity="other">Planerar %1$d dagar</item>
+    </plurals>
     <string name="recipe_writing_menu_body">Det kan ta upp till två minuter. Du kan lämna den här skärmen; menyn hamnar i Sparade recept.</string>
     <string name="recipe_offline_title">Ingen anslutning</string>
     <string name="recipe_offline_body">Recept från ditt paket kräver internet. De gratis sätten nedan fungerar fortfarande.</string>
@@ -1063,14 +1084,23 @@
         <item quantity="other">Ett recept som du bad om tidigare kunde inte göras. Det drog %1$d recept, eftersom försöket ändå kostade oss pengar att köra.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Meny</string>
-    <string name="recipe_menu_title">Meny för tre dagar</string>
-    <string name="recipe_menu_summary">%1$d rätter per dag för %2$d, med det som går ut först.</string>
+    <plurals name="recipe_menu_title">
+        <item quantity="one">Meny för en dag</item>
+        <item quantity="other">Meny för %1$d dagar</item>
+    </plurals>
+    <plurals name="recipe_menu_summary">
+        <item quantity="one">En rätt per dag för %2$d, med det som går ut först.</item>
+        <item quantity="other">%1$d rätter per dag för %2$d, med det som går ut först.</item>
+    </plurals>
     <string name="recipe_menu_today">I dag, %1$s</string>
     <string name="recipe_menu_uses">Använder %1$s</string>
     <string name="recipe_course_starter">Förrätt</string>
     <string name="recipe_course_main">Huvudrätt</string>
     <string name="recipe_course_dessert">Efterrätt</string>
-    <string name="recipe_part_of_menu">Del av Meny för tre dagar</string>
+    <plurals name="recipe_part_of_menu">
+        <item quantity="one">Del av Meny för en dag</item>
+        <item quantity="other">Del av Meny för %1$d dagar</item>
+    </plurals>
     <plurals name="recipe_saved_dishes">
         <item quantity="one">%1$d rätt</item>
         <item quantity="other">%1$d rätter</item>

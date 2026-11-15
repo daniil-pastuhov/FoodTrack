@@ -804,7 +804,11 @@
     <string name="recipe_prompt_min_minutes">Idéalement environ %1$d minutes ou plus</string>
     <string name="recipe_prompt_meals">Adaptée à l\'un de ces repas : %1$s</string>
     <string name="recipe_not_enough_items">Pas assez de produits une fois votre régime et vos allergènes exclus. Cochez quelques produits de plus. Aucune recette n\'a été décomptée.</string>
-    <string name="recipe_not_enough_items_menu">Pas assez pour trois jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</string>
+    <plurals name="recipe_not_enough_items_menu">
+        <item quantity="one">Pas assez pour un jour. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</item>
+        <item quantity="many">Pas assez pour %1$d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</item>
+        <item quantity="other">Pas assez pour %1$d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n\'a été décomptée.</item>
+    </plurals>
     <string name="recipe_diets_need_update">Les recettes des packs ne peuvent pas encore combiner « sans gluten » avec un autre régime. Gardez-en un seul dans les Réglages des recettes, ou utilisez le modèle de cet appareil ou le prompt à partager. Aucune recette n\'a été décomptée.</string>
     <string name="recipe_language_needs_update">Les recettes des packs ne peuvent pas encore être rédigées en danois. Choisissez une autre langue des recettes dans les Réglages des recettes, ou utilisez le modèle de cet appareil ou le prompt à partager. Aucune recette n\'a été décomptée.</string>
     <string name="recipe_not_from_pantry_hint">Les ingrédients sans la mention « Chez vous » ne viennent pas de votre garde-manger : ce sont des produits de base, ou quelques articles que vous devrez peut-être acheter.</string>
@@ -923,7 +927,25 @@
     <string name="recipe_balance_only_description">Recettes restantes : %1$d</string>
     <string name="recipe_mode_label">Que préparer</string>
     <string name="recipe_mode_recipe">Recette</string>
-    <string name="recipe_mode_menu">Menu sur 3 jours</string>
+    <string name="recipe_mode_menu">Set de menus</string>
+    <string name="recipe_menu_days">Jours</string>
+    <plurals name="recipe_menu_days_count">
+        <item quantity="one">%1$d jour</item>
+        <item quantity="many">%1$d jours</item>
+        <item quantity="other">%1$d jours</item>
+    </plurals>
+    <plurals name="recipe_packs_body_sets">
+        <item quantity="one">Une recette, c\'est un plat rédigé par notre serveur. Un set de menus décompte de %1$d à %2$d recette, selon les jours et les plats par jour. Elles n\'expirent pas.</item>
+        <item quantity="many">Une recette, c\'est un plat rédigé par notre serveur. Un set de menus décompte de %1$d à %2$d recettes, selon les jours et les plats par jour. Elles n\'expirent pas.</item>
+        <item quantity="other">Une recette, c\'est un plat rédigé par notre serveur. Un set de menus décompte de %1$d à %2$d recettes, selon les jours et les plats par jour. Elles n\'expirent pas.</item>
+    </plurals>
+    <string name="recipe_intro_packs_body_sets">Notre serveur rédige la recette et peut aussi planifier un set de menus. Une recette décompte %1$s d\'un pack ; un set de menus, de %2$d à %3$d, selon les jours et les plats par jour.</string>
+    <plurals name="recipe_saved_unread_action">
+        <item quantity="one">Recettes enregistrées, %1$d nouvelle</item>
+        <item quantity="many">Recettes enregistrées, %1$d nouvelles</item>
+        <item quantity="other">Recettes enregistrées, %1$d nouvelles</item>
+    </plurals>
+    <string name="recipe_saved_unread">Nouveau</string>
     <string name="recipe_courses">Plats par jour</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d plat</item>
@@ -953,7 +975,11 @@
     <string name="recipe_menu_short_none">Il ne vous reste aucune recette.</string>
     <string name="recipe_writing_server_title">Rédaction de votre recette</string>
     <string name="recipe_writing_server_body">Quelques secondes. Vous pouvez quitter cet écran ; la recette sera dans Recettes enregistrées.</string>
-    <string name="recipe_writing_menu_title">Planification sur trois jours</string>
+    <plurals name="recipe_writing_menu_title">
+        <item quantity="one">Planification sur un jour</item>
+        <item quantity="many">Planification sur %1$d jours</item>
+        <item quantity="other">Planification sur %1$d jours</item>
+    </plurals>
     <string name="recipe_writing_menu_body">Cela peut prendre jusqu\'à deux minutes. Vous pouvez quitter cet écran ; le menu sera dans Recettes enregistrées.</string>
     <string name="recipe_offline_title">Pas de connexion</string>
     <string name="recipe_offline_body">Les recettes de votre pack nécessitent Internet. Les options gratuites ci-dessous fonctionnent toujours.</string>
@@ -1125,14 +1151,26 @@
         <item quantity="other">Une recette demandée plus tôt n\'a pas pu être faite. %1$d recettes ont été décomptées, car la tentative nous a quand même coûté.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
-    <string name="recipe_menu_title">Menu sur trois jours</string>
-    <string name="recipe_menu_summary">%1$d plats par jour pour %2$d, avec ce qui arrive à sa date en premier.</string>
+    <plurals name="recipe_menu_title">
+        <item quantity="one">Menu sur un jour</item>
+        <item quantity="many">Menu sur %1$d jours</item>
+        <item quantity="other">Menu sur %1$d jours</item>
+    </plurals>
+    <plurals name="recipe_menu_summary">
+        <item quantity="one">Un plat par jour pour %2$d, avec ce qui arrive à sa date en premier.</item>
+        <item quantity="many">%1$d plats par jour pour %2$d, avec ce qui arrive à sa date en premier.</item>
+        <item quantity="other">%1$d plats par jour pour %2$d, avec ce qui arrive à sa date en premier.</item>
+    </plurals>
     <string name="recipe_menu_today">Aujourd\'hui, %1$s</string>
     <string name="recipe_menu_uses">Utilise : %1$s</string>
     <string name="recipe_course_starter">Entrée</string>
     <string name="recipe_course_main">Plat</string>
     <string name="recipe_course_dessert">Dessert</string>
-    <string name="recipe_part_of_menu">Fait partie du Menu sur trois jours</string>
+    <plurals name="recipe_part_of_menu">
+        <item quantity="one">Fait partie du Menu sur un jour</item>
+        <item quantity="many">Fait partie du Menu sur %1$d jours</item>
+        <item quantity="other">Fait partie du Menu sur %1$d jours</item>
+    </plurals>
     <plurals name="recipe_saved_dishes">
         <item quantity="one">%1$d plat</item>
         <item quantity="many">%1$d plats</item>

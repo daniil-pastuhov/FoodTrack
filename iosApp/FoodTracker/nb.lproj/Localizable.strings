@@ -657,7 +657,12 @@
 
 /* Recipe tab: paid route */
 "recipe_mode_recipe" = "Oppskrift";
-"recipe_mode_menu" = "Meny for 3 dager";
+"recipe_mode_menu" = "Menysett";
+"recipe_days_label" = "Dager";
+"recipe_buy_message" = "Én oppskrift er én rett skrevet av serveren vår. En meny for 3 dager bruker %1$@ med to retter om dagen, %2$@ med tre. De utløper ikke.";
+"recipe_intro_packs_message" = "Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$@ fra en pakke, en meny %2$@ med 2 retter om dagen eller %3$@ med 3.";
+"recipe_intro_packs_body_sets" = "Serveren vår skriver oppskriften og kan også sette opp et menysett. En oppskrift bruker %1$@ fra en pakke, et menysett %2$d til %3$d, etter antall dager og retter om dagen.";
+"recipe_saved_new" = "Ny";
 "recipe_courses_label" = "Retter per dag";
 "recipe_generate_recipe" = "Lag oppskrift";
 "recipe_generate_menu" = "Lag meny";
@@ -675,7 +680,6 @@
 "recipe_item_left_out" = "«%@» ble utelatt: det navnet kunne ikke sendes.";
 "recipe_item_not_sent" = "«%@» kunne ikke sendes. Fjern haken eller gi varen et nytt navn, og prøv igjen. Ingen oppskrifter ble trukket.";
 "recipe_allergen_refused" = "Allergenet ditt «%@» kunne ikke sendes, så ingenting ble skrevet: en oppskrift uten det er kanskje ikke trygg. Gi det et nytt navn under Allergivarsler i Innstillinger, og prøv igjen. Ingen oppskrifter ble trukket.";
-"recipe_writing_menu_title" = "Planlegger tre dager";
 "recipe_writing_menu_message" = "Dette kan ta opptil to minutter. Du kan gå fra denne skjermen; menyen havner i Lagrede oppskrifter.";
 "recipe_offline_title" = "Ingen tilkobling";
 "recipe_offline_message" = "Oppskrifter fra pakken trenger internett. De gratis valgene nedenfor virker fortsatt.";
@@ -694,7 +698,6 @@
 "recipe_try_now" = "Prøv nå";
 "recipe_payment_pending_title" = "Venter på betaling";
 "recipe_payment_pending_message" = "Oppskriftene legges til når butikken bekrefter betalingen. Det kan ta litt tid.";
-"recipe_buy_message" = "Én oppskrift er én rett skrevet av serveren vår. En meny for 3 dager bruker %1$@ med to retter om dagen, %2$@ med tre. De utløper ikke.";
 "recipe_pack_each" = "%@ per oppskrift";
 "recipe_continue" = "Fortsett";
 "recipe_close" = "Lukk";
@@ -753,14 +756,11 @@
 "recipe_purchases_blocked" = "Kjøp av oppskrifter er ikke tilgjengelig for denne kontoen fordi tidligere kjøp ble refundert etter at oppskriftene var brukt.";
 "recipe_consumption_note" = "Hvis du ber Apple om refusjon, forteller vi Apple hvor mange av disse oppskriftene du har brukt.";
 "recipe_menu_result_title" = "Meny";
-"recipe_menu_heading" = "Meny for tre dager";
-"recipe_menu_summary" = "%1$d retter per dag for %2$d, med det som går ut først.";
 "recipe_menu_today" = "I dag, %@";
 "recipe_menu_uses" = "Bruker %@";
 "recipe_course_starter" = "Forrett";
 "recipe_course_main" = "Hovedrett";
 "recipe_course_dessert" = "Dessert";
-"recipe_part_of_menu" = "Del av Meny for tre dager";
 "recipe_share_menu" = "Del menyen";
 "recipe_not_found" = "Denne oppskriften er ikke lagret lenger.";
 "recipe_prompt_difficulty_easy" = "Enkel å lage, for en nybegynner";
@@ -785,7 +785,6 @@
 "recipe_intro_device_title" = "Gratis, på denne {the_device}";
 "recipe_intro_device_message" = "Oppskriften lages på selve {the_device}, og ingenting sendes noe sted.";
 "recipe_intro_packs_title" = "Fra en oppskriftspakke";
-"recipe_intro_packs_message" = "Serveren vår skriver oppskriften og kan også sette opp en meny for 3 dager. En oppskrift bruker %1$@ fra en pakke, en meny %2$@ med 2 retter om dagen eller %3$@ med 3.";
 "recipe_intro_packs_price" = "Pakker fra %@.";
 "recipe_intro_free_stays" = "De gratis måtene er der fortsatt når du har en pakke.";
 "recipe_intro_again" = "Du kan åpne dette igjen i oppskriftsinnstillingene.";
@@ -820,7 +819,6 @@
 "recipe_prompt_min_minutes" = "Helst rundt %d minutter eller mer";
 "recipe_prompt_meals" = "Passer til ett av disse måltidene: %@";
 "recipe_not_enough_items" = "Det er for lite å lage mat av når dietten og allergenene er tatt hensyn til. Kryss av for noen flere varer. Ingen oppskrift ble trukket.";
-"recipe_not_enough_items_menu" = "Det er ikke nok til tre dager. Kryss av for noen flere varer, eller be om én oppskrift. Ingen oppskrifter ble trukket.";
 "recipe_diets_need_update" = "Oppskrifter fra pakker kan ennå ikke kombinere glutenfri med en annen diett. Behold én av dem i oppskriftsinnstillingene, eller bruk modellen på denne {the_device} eller den delte ledeteksten. Ingen oppskrifter ble trukket.";
 "recipe_language_needs_update" = "Oppskrifter fra pakker kan ennå ikke skrives på dansk. Velg et annet oppskriftsspråk i oppskriftsinnstillingene, eller bruk modellen på denne {the_device} eller den delte ledeteksten. Ingen oppskrifter ble trukket.";
 "recipe_not_from_pantry_hint" = "Ingredienser uten «I matskapet»-merket er ikke fra matskapet ditt: basisvarer, eller noe du kanskje må kjøpe.";

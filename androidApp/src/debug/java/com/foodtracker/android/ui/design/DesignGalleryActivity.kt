@@ -23,6 +23,7 @@ class DesignGalleryActivity : ComponentActivity() {
     private val sections = listOf<@androidx.compose.runtime.Composable () -> Unit>(
         { LarderButtonStatesPreview() },
         { LarderButtonStylesPreview() },
+        { LarderPrimaryActionPreview() },
         { LarderIconButtonPreview() },
         { LarderTextFieldPreview() },
         { LarderChipPreview() },

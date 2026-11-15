@@ -93,6 +93,8 @@ class ReviewPrompter(
         when (event) {
             null -> Unit
             is RecipeEvent.Written -> if (event.leftOut.isEmpty()) recipeShown = true else onProblemShown()
+            // Saved for later, not shown: nothing to leave, so it arms nothing; not a problem either.
+            is RecipeEvent.SavedUnread -> if (event.leftOut.isNotEmpty()) onProblemShown()
             else -> onProblemShown()
         }
     }

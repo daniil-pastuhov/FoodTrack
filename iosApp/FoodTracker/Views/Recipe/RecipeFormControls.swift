@@ -307,29 +307,25 @@ struct RecipeChoiceChips<Option: Hashable>: View {
     }
 }
 
-/// The tab's one primary action, pinned above the pill where Scan sits on Home: a wide block with
-/// the cost said on the right ("Free"), so it reads as what it takes before it is tapped.
+/// The form's primary action: the first button of its button group, filled and full width like a
+/// primary `LarderButton`, with what it takes in a pill beside the label ("1 recipe", "Free") so
+/// it reads as the cost before it is tapped. The label still wraps when large text needs it.
 struct RecipeGoButton: View {
     let title: String
     let icon: LarderIconName
     var cost: String? = nil
-    /// As wide as its label, like Scan on Home, for an action with no cost (the shared prompt
-    /// pinned alone), and drawn to Scan's metrics (`ScanFab`: 56pt high, 16pt side padding, the
-    /// large icon, 8pt to the label); the label still wraps when large text needs it.
-    var compact = false
     let action: () -> Void
 
     @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: compact ? LarderSpace.s2 : LarderSpace.s3) {
-                LarderIcon(icon, size: compact ? .large : .medium)
+            HStack(spacing: LarderSpace.s2) {
+                LarderIcon(icon)
                 Text(title)
                     .larderFont(.label)
-                    .multilineTextAlignment(.leading)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: compact ? nil : .infinity, alignment: .leading)
                 if let cost {
                     Text(cost)
                         .larderFont(.caption)
@@ -337,20 +333,17 @@ struct RecipeGoButton: View {
                         .padding(.horizontal, LarderSpace.s2)
                         .overlay { Capsule().strokeBorder(lineWidth: 1) }
                         .fixedSize()
+                        .padding(.leading, LarderSpace.s1)
                 }
             }
-            .foregroundStyle(isEnabled ? LarderColor.onPrimary : LarderColor.onSurfaceVariant)
+            .foregroundStyle(isEnabled ? LarderColor.onPrimary : LarderColor.onSurface.opacity(0.38))
             .padding(.vertical, LarderSpace.s2)
-            .padding(.horizontal, compact ? LarderSpace.s4 : LarderSpace.s5)
-            .frame(maxWidth: compact ? nil : .infinity, minHeight: ScanFab.minHeight)
-            .background(
-                isEnabled ? LarderColor.primary : LarderColor.surfaceContainerHigh,
-                in: RoundedRectangle(cornerRadius: LarderRadius.lg)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: LarderRadius.lg))
+            .padding(.horizontal, LarderSpace.s5)
+            .frame(maxWidth: .infinity, minHeight: LarderSize.control)
+            .background(isEnabled ? LarderColor.primary : LarderColor.onSurface.opacity(0.12), in: Capsule())
+            .contentShape(Capsule())
         }
         .buttonStyle(RecipeGoButtonStyle())
-        .larderElevation(isEnabled ? .level2 : .level1)
         .accessibilityLabel(cost.map { "\(title), \($0)" } ?? title)
     }
 }
@@ -359,8 +352,7 @@ private struct RecipeGoButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .overlay {
-                RoundedRectangle(cornerRadius: LarderRadius.lg)
-                    .fill(LarderColor.onPrimary.opacity(configuration.isPressed ? 0.14 : 0))
+                Capsule().fill(LarderColor.onPrimary.opacity(configuration.isPressed ? 0.14 : 0))
             }
     }
 }
@@ -392,7 +384,7 @@ struct RecipeIntroSheet: View {
                     OnboardingRow(
                         .sparkles,
                         title: L10n.recipeIntroPacksTitle,
-                        supporting: L10n.recipeIntroPacksMessage(credits.costs, lowestPrice: credits.lowestPackPrice)
+                        supporting: L10n.recipeIntroPacksMessage(credits.costs, menuSets: credits.serverTakesMenuDays, lowestPrice: credits.lowestPackPrice)
                     )
                 }
             }

@@ -72,9 +72,12 @@ internal fun signInProviderName(provider: SignInProvider): String = when (provid
 internal fun recipeCount(resources: Resources, count: Int): String =
     resources.getQuantityString(R.plurals.recipe_cost_recipes, count, count)
 
-/** What a pack is and what a menu takes from it, with the server's costs. */
+/** What a pack is and what a menu takes from it, with the server's costs: a menu set's range
+ *  when the server writes them, else what a 3-day menu takes. */
 internal fun recipePacksBody(resources: Resources, costs: RecipeCosts): String =
-    resources.getString(R.string.recipe_packs_body, recipeCount(resources, costs.menu2), recipeCount(resources, costs.menu3))
+    costs.menuSetRange?.let { range ->
+        resources.getQuantityString(R.plurals.recipe_packs_body_sets, range.last, range.first, range.last)
+    } ?: resources.getString(R.string.recipe_packs_body, recipeCount(resources, costs.menu2), recipeCount(resources, costs.menu3))
 
 /** The store price of one recipe in a pack, worked out from the pack's store price and never
  *  hard-coded: "£0.16 each". */

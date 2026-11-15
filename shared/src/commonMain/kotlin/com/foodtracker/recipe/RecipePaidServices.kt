@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
@@ -31,27 +33,75 @@ val RECIPE_PACKS: Map<String, Int> = linkedMapOf("recipes_10" to 10, "recipes_50
  * What one generation takes from a pack. The server decides and says so in a `costs` object on
  * every reply that carries a balance; this is the last one it sent, or these defaults before it
  * has sent any. The app only shows it.
+ *
+ * [menu2] and [menu3] are a 3-day menu's prices (2 and 3 courses a day). [menuSets] is the menu
+ * set's table, days to courses to price (functions/CONTRACT.md "Costs"), from a server that says
+ * `acceptsMenuDays`; empty from an older one and before any table arrived. iOS: `RecipeCosts`.
  */
 @Serializable
-data class RecipeCosts(val recipe: Int = 1, val menu2: Int = 4, val menu3: Int = 5) {
-    /** A menu of [courses] courses a day. */
+data class RecipeCosts(
+    val recipe: Int = 1,
+    val menu2: Int = 4,
+    val menu3: Int = 5,
+    val menuSets: Map<Int, Map<Int, Int>> = emptyMap()
+) {
+    /** A 3-day menu of [courses] courses a day (2 or 3), from [menu2] / [menu3]. */
     fun menu(courses: Int): Int = if (courses >= 3) menu3 else menu2
 
-    fun of(kind: WireKind, courses: Int?): Int = if (kind == WireKind.MENU) menu(courses ?: 2) else recipe
+    /**
+     * What a menu of [days] days and [courses] courses a day takes: the table's price, or for 3
+     * days with 2 or 3 courses [menu2] / [menu3]. Null when nobody said, so that combination is
+     * not offered. Never a price made up on the phone.
+     */
+    fun menuSet(days: Int, courses: Int): Int? =
+        menuSets[days]?.get(courses) ?: if (days == DEFAULT_MENU_DAYS && courses in LEGACY_MENU_COURSES) menu(courses) else null
+
+    /** The cheapest and dearest menu set in [menuSets] (with [menu2] / [menu3]), for the packs
+     *  text; null without a table, when the text says what a 3-day menu takes instead. */
+    val menuSetRange: IntRange?
+        get() {
+            if (menuSets.isEmpty()) return null
+            val prices = menuSets.values.flatMap { it.values } + menu2 + menu3
+            return prices.min()..prices.max()
+        }
+
+    fun of(kind: WireKind, courses: Int?, days: Int? = null): Int =
+        if (kind == WireKind.MENU) menuSet(days ?: DEFAULT_MENU_DAYS, courses ?: 2) ?: menu(courses ?: 2) else recipe
 }
 
+/** Days of a menu when a request doesn't say (an older server, and `days` left out). */
+const val DEFAULT_MENU_DAYS = 3
+
+/** The day counts a menu set can have, with a server that says `acceptsMenuDays`. */
+val MENU_DAY_OPTIONS: List<Int> = listOf(1, 2, 3, 4)
+
+/** The courses a day a menu can have with any server; [MENU_COURSE_OPTIONS] adds 1 (the main
+ *  course only) with a server that says `acceptsMenuDays`. */
+val LEGACY_MENU_COURSES: List<Int> = listOf(2, 3)
+
 /** The costs in a reply's `costs`, read leniently: a missing, mistyped or unlikely value keeps the
- *  default for that one field, and anything that isn't an object is no costs at all. */
+ *  default for that one field, and anything that isn't an object is no costs at all. `menuSets`
+ *  keeps only the day counts and courses the app knows ([MENU_DAY_OPTIONS], [MENU_COURSE_OPTIONS])
+ *  with a whole price; anything else in it, and any other key, is ignored. */
 fun recipeCostsOf(json: JsonElement?): RecipeCosts? {
     val costs = json as? JsonObject ?: return null
     val defaults = RecipeCosts()
-    fun read(key: String, fallback: Int): Int {
-        val value = costs[key] as? JsonPrimitive ?: return fallback
-        if (value.isString) return fallback
+    fun price(element: JsonElement?): Int? {
+        val value = element as? JsonPrimitive ?: return null
+        if (value.isString) return null
         val whole = value.intOrNull ?: value.doubleOrNull?.takeIf { it % 1.0 == 0.0 && it in 1.0..MAX_COST.toDouble() }?.toInt()
-        return whole?.takeIf { it in 1..MAX_COST } ?: fallback
+        return whole?.takeIf { it in 1..MAX_COST }
     }
-    return RecipeCosts(read("recipe", defaults.recipe), read("menu2", defaults.menu2), read("menu3", defaults.menu3))
+    fun read(key: String, fallback: Int): Int = price(costs[key]) ?: fallback
+    val sets = (costs["menuSets"] as? JsonObject).orEmpty().mapNotNull { (dayKey, row) ->
+        val days = dayKey.toIntOrNull()?.takeIf { it in MENU_DAY_OPTIONS } ?: return@mapNotNull null
+        val prices = (row as? JsonObject).orEmpty().mapNotNull { (courseKey, value) ->
+            val courses = courseKey.toIntOrNull()?.takeIf { it in MENU_COURSE_OPTIONS } ?: return@mapNotNull null
+            price(value)?.let { courses to it }
+        }.toMap()
+        prices.takeIf { it.isNotEmpty() }?.let { days to it }
+    }.toMap()
+    return RecipeCosts(read("recipe", defaults.recipe), read("menu2", defaults.menu2), read("menu3", defaults.menu3), sets)
 }
 
 private const val MAX_COST = 100
@@ -74,11 +124,12 @@ data class WireIngredient(
 
 /** `generateRecipe`'s request. Kept as it was sent, so a retry sends exactly the same thing with
  *  the same [requestId]. */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class GenerateRequest(
     val requestId: String,
     val kind: WireKind,
-    /** 2 or 3 for a menu; null for a recipe. */
+    /** 1, 2 or 3 for a menu (1 only to a server that said `acceptsMenuDays`); null for a recipe. */
     val courses: Int? = null,
     /** See [wireConfigFor]: the legacy shape unless the server takes the multi-choice one. */
     val config: WireConfig,
@@ -93,7 +144,12 @@ data class GenerateRequest(
      *  a server that said [acceptsOptionalIngredientsOf], already capped by
      *  [optionalWireIngredients]; null otherwise (and in a request kept by an older version). Part
      *  of the inputs a request id is bound to. */
-    val optionalIngredients: List<WireIngredient>? = null
+    val optionalIngredients: List<WireIngredient>? = null,
+    /** A menu's days, 1 to 4: only when not [DEFAULT_MENU_DAYS] and only to a server that said
+     *  `acceptsMenuDays`. Null (and then left out of the JSON altogether, so the request is the
+     *  legacy one) otherwise, and in a request kept by an older version. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val days: Int? = null
 ) {
     /** Whether [other] asks for the same thing, whatever its id. */
     fun sameAskAs(other: GenerateRequest): Boolean =
@@ -119,12 +175,13 @@ data class GenerateReply(
     /** Read with [purchasesBlockedOf]. */
     val purchasesBlocked: JsonElement? = null,
     /** Read with [acceptsOptionalIngredientsOf]. */
-    val acceptsOptionalIngredients: JsonElement? = null
-,
+    val acceptsOptionalIngredients: JsonElement? = null,
     /** Read with [acceptsMultiChoiceConfigOf]. */
     val acceptsMultiChoiceConfig: JsonElement? = null,
     /** Read with [acceptsDanishOf]. */
-    val acceptsDanish: JsonElement? = null
+    val acceptsDanish: JsonElement? = null,
+    /** Read with [acceptsMenuDaysOf]. */
+    val acceptsMenuDays: JsonElement? = null
 )
 
 @Serializable
@@ -143,7 +200,8 @@ data class VerifyReply(
     val purchasesBlocked: JsonElement? = null,
     val acceptsOptionalIngredients: JsonElement? = null,
     val acceptsMultiChoiceConfig: JsonElement? = null,
-    val acceptsDanish: JsonElement? = null
+    val acceptsDanish: JsonElement? = null,
+    val acceptsMenuDays: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -153,7 +211,8 @@ data class BalanceReply(
     val purchasesBlocked: Boolean = false,
     val acceptsOptional: Boolean = false,
     val acceptsMultiChoice: Boolean = false,
-    val acceptsDanish: Boolean = false
+    val acceptsDanish: Boolean = false,
+    val acceptsMenuDays: Boolean = false
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -165,7 +224,8 @@ data class MergeReply(
     val purchasesBlocked: Boolean = false,
     val acceptsOptional: Boolean = false,
     val acceptsMultiChoice: Boolean = false,
-    val acceptsDanish: Boolean = false
+    val acceptsDanish: Boolean = false,
+    val acceptsMenuDays: Boolean = false
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -184,6 +244,11 @@ fun acceptsMultiChoiceConfigOf(json: JsonElement?): Boolean = purchasesBlockedOf
 /** A reply's `acceptsDanish` (functions/CONTRACT.md): only a JSON `true` says the server writes
  *  recipes in Danish (`language: "da"`); absent says it refuses `da`. */
 fun acceptsDanishOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsMenuDays` (functions/CONTRACT.md): only a JSON `true` says the server reads a
+ *  menu's `days` (1 to 4) and `courses: 1`, priced by `costs.menuSets`; absent says it writes only
+ *  3-day menus of 2 or 3 courses. */
+fun acceptsMenuDaysOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 
 /** A failed call, by the contract's `details.reason`, plus the two the client sees itself. */
 enum class ServerError {
@@ -486,7 +551,10 @@ data class RecipePaidSnapshot(
      *  values can't say exactly ([wireConfigFor]). */
     val serverTakesMultiChoice: Boolean = false,
     /** The same for `acceptsDanish`: only then is a request in Danish sent. */
-    val serverTakesDanish: Boolean = false
+    val serverTakesDanish: Boolean = false,
+    /** The same for `acceptsMenuDays`: only then are the Days choice and one course a day
+     *  offered, and a menu's `days` (other than 3) or `courses: 1` sent. */
+    val serverTakesMenuDays: Boolean = false
 )
 
 interface RecipePaidRepository {
