@@ -1026,5 +1026,133 @@
             <string>%d tilføjet til din indkøbsliste</string>
         </dict>
     </dict>
+    <key>recipe_days_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d dag</string>
+            <key>other</key>
+            <string>%d dage</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_heading</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Menu for %d dag</string>
+            <key>other</key>
+            <string>Menu for %d dage</string>
+        </dict>
+    </dict>
+    <key>recipe_part_of_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Del af Menu for %d dag</string>
+            <key>other</key>
+            <string>Del af Menu for %d dage</string>
+        </dict>
+    </dict>
+    <key>recipe_writing_menu_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Planlægger %d dag</string>
+            <key>other</key>
+            <string>Planlægger %d dage</string>
+        </dict>
+    </dict>
+    <key>recipe_not_enough_items_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Der er ikke nok til %d dag. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</string>
+            <key>other</key>
+            <string>Der er ikke nok til %d dage. Sæt kryds ved nogle flere varer, eller bed om en enkelt opskrift. Der er ikke trukket nogen opskrifter.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_summary</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d ret om dagen til {servings}, med det, der udløber først.</string>
+            <key>other</key>
+            <string>%d retter om dagen til {servings}, med det, der udløber først.</string>
+        </dict>
+    </dict>
+    <key>recipe_saved_button_unread</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Gemte opskrifter, %d ny</string>
+            <key>other</key>
+            <string>Gemte opskrifter, %d nye</string>
+        </dict>
+    </dict>
+    <key>recipe_packs_body_sets</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Én opskrift er én ret skrevet af vores server. Et menusæt bruger {min} til %d opskrift, afhængigt af dage og retter om dagen. De udløber ikke.</string>
+            <key>other</key>
+            <string>Én opskrift er én ret skrevet af vores server. Et menusæt bruger {min} til %d opskrifter, afhængigt af dage og retter om dagen. De udløber ikke.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

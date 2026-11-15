@@ -128,6 +128,38 @@ describe("aggregation", () => {
     expect(b.todayRow).toMatchObject({ salesCount: 3, salesCredits: 160, sandboxPurchases: 2, sandboxPurchaseCredits: 110 });
   });
 
+  test("purchases per day and totals by store (Android = Google Play, iOS = App Store), and by store and pack", () => {
+    const yesterday = NOW - DAY;
+    const b = buildBoard(input({
+      purchases: [
+        row({ store: "play", pack: "recipes_10", credits: 10 }),
+        row({ store: "play", pack: "recipes_50", credits: 50, refundedCredits: 50 }),
+        row({ store: "appstore", pack: "recipes_100", credits: 100, grantedAtMs: yesterday }),
+        row({ store: "appstore", pack: "recipes_10", credits: 10 }),
+        // Sandbox stays out of every store figure, as it stays out of sales.
+        row({ store: "appstore", env: "sandbox", pack: "recipes_100", credits: 100 }),
+      ],
+    }));
+    expect(b.todayRow.salesByStore).toEqual({ play: { count: 2, credits: 60 }, appstore: { count: 1, credits: 10 }, other: { count: 0, credits: 0 } });
+    expect(b.days.at(-2)!.salesByStore.appstore).toEqual({ count: 1, credits: 100 });
+    expect(b.days[0].salesByStore.play).toEqual({ count: 0, credits: 0 });
+    expect(b.sales.byStoreAndPack.play.recipes_50).toEqual({ purchases: 1, credits: 50, refunded: 50, net: 0 });
+    expect(b.sales.byStoreAndPack.appstore.recipes_100).toEqual({ purchases: 1, credits: 100, refunded: 0, net: 100 });
+    expect(b.sales.byStoreAndPack.appstore.recipes_10.purchases).toBe(1);
+    expect(b.sales.byStoreAndPack.play.recipes_100.purchases).toBe(0);
+    // The splits add up to the store and pack totals.
+    for (const store of ["play", "appstore", "other"] as const) {
+      const packs = Object.values(b.sales.byStoreAndPack[store]);
+      expect(packs.reduce((n, t) => n + t.purchases, 0)).toBe(b.sales.byStore[store].purchases);
+      expect(packs.reduce((n, t) => n + t.credits, 0)).toBe(b.sales.byStore[store].credits);
+      expect(b.days.reduce((n, d) => n + d.salesByStore[store].count, 0)).toBe(b.sales.byStore[store].purchases);
+    }
+    const json = boardJson(b) as { sales: { byStoreAndPack: Record<string, Record<string, { packs: number; recipes: number }>> } };
+    expect(json.sales.byStoreAndPack.play.recipes_50).toMatchObject({ packs: 1, recipes: 50 });
+    expect(json.sales.byStoreAndPack.appstore.recipes_100).toMatchObject({ packs: 1, recipes: 100 });
+    expect(boardSummary(b).join("\n")).toContain("iOS (App Store) 2 packs, 110 recipes; Android (Google Play) 2 packs, 60 recipes.");
+  });
+
   test("a deleted account's purchase (uid null) counts; identifiers and unknown strings are dropped", () => {
     const r = purchaseRow({
       store: "play", uid: null, formerUid: "uid-former", env: "production", productId: "recipes_50", credits: 50,
@@ -216,6 +248,36 @@ describe("rendering", () => {
     expect(html).toContain("Paused");
     expect(html).toMatch(/Sandbox purchases<\/div><div class="t-value"><span class="status"><span class="s-icon warn"[^>]*>!<\/span>On/);
     expect(boardSummary(b).join("\n")).toContain("PAUSED");
+  });
+
+  test("purchases by platform: a chart with a legend, a split with text labels, a table by platform and pack", () => {
+    const html = renderBoardHtml(buildBoard(input({
+      purchases: [
+        row({ store: "play", pack: "recipes_10", credits: 10 }),
+        row({ store: "appstore", pack: "recipes_50", credits: 50 }),
+        row({ store: "appstore", pack: "recipes_10", credits: 10, grantedAtMs: NOW - DAY }),
+      ],
+    })));
+    expect(html).toContain("Purchases per day by platform (production)");
+    expect(html).toContain('<li><span class="key box s1"></span>Android (Google Play)</li><li><span class="key box s2"></span>iOS (App Store)</li>');
+    expect(html).toMatch(/class="bar s1"/);
+    expect(html).toMatch(/class="bar s2"/);
+    // The split says every figure in words, not by colour alone.
+    expect(html).toContain("Android (Google Play) 1 (33 %) · iOS (App Store) 2 (67 %)");
+    expect(html).toContain("Android (Google Play) 10 (14 %) · iOS (App Store) 60 (86 %)");
+    expect(html).toContain('aria-label="10-packs: Android (Google Play) 1 (50 %) · iOS (App Store) 1 (50 %)"');
+    expect(html).toContain("By platform and pack");
+    expect(html).toContain('<th scope="row">iOS, 50-pack</th><td>1</td><td>50</td>');
+    // An unknown store is not shown when it has nothing.
+    expect(html).not.toContain("Other store");
+  });
+
+  test("no purchases yet: the platform chart and split say so instead of drawing nothing", () => {
+    const html = renderBoardHtml(buildBoard(input()));
+    expect(html).toContain("Purchases per day by platform (production)");
+    expect(html.match(/No production purchases in this period/g)!.length).toBeGreaterThanOrEqual(3 * 2 + 3);
+    expect(html).toContain('<div class="sp-bar" role="img" aria-label="Packs: No production purchases in this period"></div>');
+    expect(html).not.toContain("NaN");
   });
 
   test("clean axis steps", () => {
@@ -356,6 +418,8 @@ describe("the scheduled redraw against the emulators", () => {
     }
     expect(html.body).toContain(`Updated ${new Date(now).toISOString().slice(0, 16).replace("T", " ")} UTC, redrawn hourly.`);
     expect(html.body).toContain(`data-generated="${now}" data-stale-hours="3" hidden`);
+    // Refreshing re-requests Google's expired download address, so the page links to its own.
+    expect(html.body).toContain(`<a id="reload" href="https://storage.cloud.google.com/${bucket.name}/board.html">Reload the board</a>`);
     expect(html.body).toContain(STALE_SCRIPT);
     expect(html.body.match(/<script>/g)).toHaveLength(1);
     expect(html.body).toContain("private Cloud Storage bucket");

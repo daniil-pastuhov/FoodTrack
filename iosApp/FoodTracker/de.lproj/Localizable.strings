@@ -657,7 +657,12 @@
 
 /* Recipe tab: paid route */
 "recipe_mode_recipe" = "Rezept";
-"recipe_mode_menu" = "Menü für 3 Tage";
+"recipe_mode_menu" = "Menü-Set";
+"recipe_days_label" = "Tage";
+"recipe_buy_message" = "Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü für 3 Tage kostet %1$@ mit zwei Gängen pro Tag, %2$@ mit drei. Sie verfallen nicht.";
+"recipe_intro_packs_message" = "Unser Server erstellt das Rezept und kann auch ein Menü für 3 Tage planen. Ein Rezept kostet %1$@ aus einem Paket; ein Menü kostet %2$@ mit 2 Gängen pro Tag oder %3$@ mit 3.";
+"recipe_intro_packs_body_sets" = "Unser Server erstellt das Rezept und kann auch ein Menü-Set planen. Ein Rezept kostet %1$@ aus einem Paket; ein Menü-Set kostet %2$d bis %3$d, je nach Tagen und Gängen pro Tag.";
+"recipe_saved_new" = "Neu";
 "recipe_courses_label" = "Gänge pro Tag";
 "recipe_generate_recipe" = "Rezept erstellen";
 "recipe_generate_menu" = "Menü erstellen";
@@ -675,7 +680,6 @@
 "recipe_item_left_out" = "„%@“ wurde weggelassen: Dieser Name konnte nicht gesendet werden.";
 "recipe_item_not_sent" = "„%@“ konnte nicht gesendet werden. Wähle den Artikel ab oder benenne ihn um und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.";
 "recipe_allergen_refused" = "Dein Allergen „%@“ konnte nicht gesendet werden, daher wurde nichts erstellt: Ein Rezept ohne diese Angabe wäre vielleicht nicht sicher. Benenne es in den Einstellungen unter „Allergen-Warnungen“ um und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.";
-"recipe_writing_menu_title" = "Drei Tage werden geplant";
 "recipe_writing_menu_message" = "Das kann bis zu zwei Minuten dauern. Du kannst diesen Bildschirm verlassen; das Menü landet in „Gespeicherte Rezepte“.";
 "recipe_offline_title" = "Keine Verbindung";
 "recipe_offline_message" = "Rezepte aus deinem Paket brauchen Internet. Die kostenlosen Wege unten funktionieren weiterhin.";
@@ -694,7 +698,6 @@
 "recipe_try_now" = "Jetzt versuchen";
 "recipe_payment_pending_title" = "Warten auf Zahlung";
 "recipe_payment_pending_message" = "Deine Rezepte werden hinzugefügt, sobald der Store die Zahlung bestätigt. Das kann eine Weile dauern.";
-"recipe_buy_message" = "Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü für 3 Tage kostet %1$@ mit zwei Gängen pro Tag, %2$@ mit drei. Sie verfallen nicht.";
 "recipe_pack_each" = "je %@";
 "recipe_continue" = "Weiter";
 "recipe_close" = "Schließen";
@@ -753,14 +756,11 @@
 "recipe_purchases_blocked" = "Rezepte kaufen ist für dieses Konto nicht möglich, weil frühere Käufe erstattet wurden, nachdem die Rezepte verwendet worden waren.";
 "recipe_consumption_note" = "Wenn du bei Apple eine Erstattung anfragst, teilen wir Apple mit, wie viele dieser Rezepte du verwendet hast.";
 "recipe_menu_result_title" = "Menü";
-"recipe_menu_heading" = "Menü für drei Tage";
-"recipe_menu_summary" = "%1$d Gänge pro Tag für %2$d, mit dem, was zuerst abläuft.";
 "recipe_menu_today" = "Heute, %@";
 "recipe_menu_uses" = "Verwendet %@";
 "recipe_course_starter" = "Vorspeise";
 "recipe_course_main" = "Hauptgericht";
 "recipe_course_dessert" = "Dessert";
-"recipe_part_of_menu" = "Teil des Menüs für drei Tage";
 "recipe_share_menu" = "Menü teilen";
 "recipe_not_found" = "Dieses Rezept ist nicht mehr gespeichert.";
 "recipe_prompt_difficulty_easy" = "Einfach zuzubereiten, für Anfänger";
@@ -785,7 +785,6 @@
 "recipe_intro_device_title" = "Kostenlos, auf diesem {device}";
 "recipe_intro_device_message" = "Dieses {device} erstellt das Rezept selbst, und es wird nichts gesendet.";
 "recipe_intro_packs_title" = "Aus einem Rezeptpaket";
-"recipe_intro_packs_message" = "Unser Server erstellt das Rezept und kann auch ein Menü für 3 Tage planen. Ein Rezept kostet %1$@ aus einem Paket; ein Menü kostet %2$@ mit 2 Gängen pro Tag oder %3$@ mit 3.";
 "recipe_intro_packs_price" = "Pakete ab %@.";
 "recipe_intro_free_stays" = "Die kostenlosen Wege bleiben, auch wenn du ein Paket hast.";
 "recipe_intro_again" = "Du kannst das in den Rezepteinstellungen wieder öffnen.";
@@ -820,7 +819,6 @@
 "recipe_prompt_min_minutes" = "Am besten etwa %d Minuten oder länger";
 "recipe_prompt_meals" = "Passend zu einer dieser Mahlzeiten: %@";
 "recipe_not_enough_items" = "Nicht genug zum Kochen, wenn deine Ernährungsform und Allergene berücksichtigt werden. Wähle noch ein paar Artikel aus. Es wurde kein Rezept abgezogen.";
-"recipe_not_enough_items_menu" = "Nicht genug für drei Tage. Wähle noch ein paar Artikel aus oder frag nach einem einzelnen Rezept. Es wurden keine Rezepte abgezogen.";
 "recipe_diets_need_update" = "Rezepte aus Paketen können „Glutenfrei“ noch nicht mit einer anderen Ernährungsform kombinieren. Behalte in den Rezepteinstellungen nur eine davon oder nutze das Modell auf diesem {device} oder den geteilten Prompt. Es wurden keine Rezepte abgezogen.";
 "recipe_language_needs_update" = "Rezepte aus Paketen können noch nicht auf Dänisch erstellt werden. Wähle in den Rezepteinstellungen eine andere Rezeptsprache oder nutze das Modell auf diesem {device} oder den geteilten Prompt. Es wurden keine Rezepte abgezogen.";
 "recipe_not_from_pantry_hint" = "Zutaten ohne die Markierung „Im Vorrat“ stammen nicht aus deinem Vorrat: Grundzutaten oder ein paar Dinge, die du vielleicht kaufen musst.";

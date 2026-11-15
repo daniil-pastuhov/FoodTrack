@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,7 +19,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,7 +27,8 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -36,7 +37,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -57,8 +57,8 @@ import com.foodtracker.android.ui.design.LarderSheet
 import com.foodtracker.android.ui.design.LarderSpinner
 import com.foodtracker.android.ui.design.LedeHeader
 import com.foodtracker.android.ui.design.PantryRow as PantryRowView
-import com.foodtracker.android.ui.design.PinnedAction
-import com.foodtracker.android.ui.design.PinnedActionEndGap
+import com.foodtracker.android.ui.design.LarderBadge
+import com.foodtracker.android.ui.design.LarderPrimaryAction
 import com.foodtracker.android.ui.design.SectionHeader
 import com.foodtracker.android.ui.design.categoryIcon
 import com.foodtracker.android.ui.design.expiryStatusLabel
@@ -78,7 +78,6 @@ import com.foodtracker.recipe.AccountKind
 import com.foodtracker.recipe.orderedMeals
 import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.AccountState
-import com.foodtracker.recipe.MENU_COURSE_OPTIONS
 import com.foodtracker.recipe.OnDeviceAvailability
 import com.foodtracker.recipe.OnDeviceRoute
 import com.foodtracker.recipe.PaidUiState
@@ -95,7 +94,7 @@ import com.foodtracker.recipe.ServerIssue
 import com.foodtracker.viewmodel.PantryRow
 import kotlinx.datetime.LocalDate
 
-/** What the tab's pinned action does, worked out from the state. The server leads when there are
+/** What the form's primary action does, worked out from the state. The server leads when there are
  *  recipes left and nothing stands in its way, as its recipes are the most reliable; then the
  *  phone's own model; then the shared prompt. A menu has only the server. */
 internal enum class RecipePrimary { Server, OnDevice, Share, None }
@@ -108,17 +107,14 @@ internal fun recipePrimary(state: RecipeUiState): RecipePrimary = when (state.ac
 }
 
 /**
- * The Recipe tab: the soonest items ticked, a short form, and the three routes. The primary
- * action is pinned where Scan sits on Home; the root measures it through [onPinnedActionSize],
- * places it ([pinnedActionBottom]: above the pill, or level with it on a wide window) and pads
- * content and snackbars to clear it.
+ * The Recipe tab: the soonest items ticked, a short form, and the three routes. The actions are
+ * one group at the foot of the form, the primary one first and filled ([RouteActions]); nothing
+ * floats over the form. [bottomOverlayClearance] keeps the last of them clear of the pill.
  */
 @Composable
 fun RecipeScreen(
     stateHolder: RecipeStateHolder,
-    bottomOverlayClearance: Dp,
-    pinnedActionBottom: Dp,
-    onPinnedActionSize: (IntSize) -> Unit
+    bottomOverlayClearance: Dp
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -129,9 +125,12 @@ fun RecipeScreen(
     val copiedMessage = stringResource(R.string.recipe_prompt_copied)
 
     // The model can finish downloading, or the app's language change, while the tab is away.
+    // While it is on screen and the app in front, a result that arrives opens; otherwise it waits
+    // in Saved recipes as unread.
     LifecycleResumeEffect(stateHolder) {
         stateHolder.refresh()
-        onPauseOrDispose { }
+        stateHolder.setOnScreen(true)
+        onPauseOrDispose { stateHolder.setOnScreen(false) }
     }
 
     val reviewPrompter = LocalReviewPrompter.current
@@ -159,6 +158,14 @@ fun RecipeScreen(
                     event.recipesLeft?.let { left ->
                         if (saved != null) snackbars.show(resources.getQuantityString(R.plurals.recipe_saved_left, left, left), null, null)
                     }
+                }
+            }
+            is RecipeEvent.SavedUnread -> {
+                // Written after the person left: kept unread in Saved recipes, not opened.
+                stateHolder.consumeEvent()
+                val text = if (event.menu) R.string.recipe_earlier_menu_saved else R.string.recipe_earlier_recipe_saved
+                snackbars.show(resources.getString(text), resources.getString(R.string.recipe_saved_action)) {
+                    navigator.navigate(LarderRoute.SavedRecipes)
                 }
             }
             is RecipeEvent.IngredientNotSent -> {
@@ -190,8 +197,12 @@ fun RecipeScreen(
             is RecipeEvent.NotEnoughItems -> {
                 stateHolder.consumeEvent()
                 // The form stays as it is; the next try is a new request.
-                val text = if (event.menu) R.string.recipe_not_enough_items_menu else R.string.recipe_not_enough_items
-                snackbars.show(resources.getString(text), null, null)
+                val text = if (event.menu) {
+                    resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, event.days, event.days)
+                } else {
+                    resources.getString(R.string.recipe_not_enough_items)
+                }
+                snackbars.show(text, null, null)
             }
             RecipeEvent.DietsNeedServerUpdate -> {
                 stateHolder.consumeEvent()
@@ -257,13 +268,12 @@ fun RecipeScreen(
     RecipeTabContent(
         state = state,
         bottomOverlayClearance = bottomOverlayClearance,
-        pinnedActionBottom = pinnedActionBottom,
-        onPinnedActionSize = onPinnedActionSize,
         actions = RecipeTabActions(
             onToggle = stateHolder::toggleItem,
             onConfigChange = stateHolder::updateConfig,
             onMode = stateHolder::setMode,
             onCourses = stateHolder::setCourses,
+            onDays = stateHolder::setDays,
             onGenerateServer = stateHolder::generateOnServer,
             onRetryServer = stateHolder::retryServer,
             onRetryPurchases = stateHolder::retryPurchases,
@@ -294,6 +304,7 @@ internal class RecipeTabActions(
     val onConfigChange: ((RecipeConfig) -> RecipeConfig) -> Unit = {},
     val onMode: (RecipeMode) -> Unit = {},
     val onCourses: (Int) -> Unit = {},
+    val onDays: (Int) -> Unit = {},
     val onGenerateServer: () -> Unit = {},
     val onRetryServer: () -> Unit = {},
     val onRetryPurchases: () -> Unit = {},
@@ -311,21 +322,11 @@ internal class RecipeTabActions(
 internal fun RecipeTabContent(
     state: RecipeUiState,
     bottomOverlayClearance: Dp,
-    pinnedActionBottom: Dp,
-    onPinnedActionSize: (IntSize) -> Unit,
     actions: RecipeTabActions
 ) {
     val expanded = isExpanded()
     var showingOthers by remember { mutableStateOf(false) }
-    val showForm = !state.isLoading && state.rows.isNotEmpty() && !state.isBusy
     val paid = state.paid
-    val primary = recipePrimary(state)
-    val showsAction = showForm && primary != RecipePrimary.None
-    // Reported on every composition rather than reset on dispose: an outgoing copy of this
-    // screen (a tab or launch transition) disposing after the new one measured used to leave
-    // the root with 0, so the end of the form ran under the pill.
-    var actionSize by remember { mutableStateOf(IntSize.Zero) }
-    SideEffect { onPinnedActionSize(if (showsAction) actionSize else IntSize.Zero) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -336,13 +337,7 @@ internal fun RecipeTabContent(
                         RecipeBalanceChip(paid.balance ?: 0, onClick = if (paid.canBuy) actions.onBuy else null)
                     }
                     // Only once something is saved; it follows the saved list as it changes.
-                    if (state.hasSaved) {
-                        LarderIconButton(
-                            icon = LarderIcons.Bookmark,
-                            contentDescription = stringResource(R.string.recipe_saved_action),
-                            onClick = actions.onOpenSaved
-                        )
-                    }
+                    if (state.hasSaved) SavedButton(state.unreadCount, actions.onOpenSaved)
                     LarderIconButton(
                         icon = LarderIcons.SlidersHorizontal,
                         contentDescription = stringResource(R.string.recipe_settings_action),
@@ -377,7 +372,7 @@ internal fun RecipeTabContent(
                     bottom = bottomOverlayClearance
                 )
                 paid.writing == RecipeMode.MENU -> Writing(
-                    title = stringResource(R.string.recipe_writing_menu_title),
+                    title = pluralStringResource(R.plurals.recipe_writing_menu_title, paid.writingDays, paid.writingDays),
                     body = stringResource(R.string.recipe_writing_menu_body),
                     bottom = bottomOverlayClearance
                 )
@@ -397,53 +392,6 @@ internal fun RecipeTabContent(
             }
         }
 
-        if (showsAction) {
-            val nothingTicked = state.selectedIds.isEmpty()
-            // The shared prompt pinned alone sits as Scan does on Home: a pill as wide as its
-            // label at the end, not a bar across the form. Actions with a cost stay wide.
-            val compact = primary == RecipePrimary.Share
-            PinnedAction(
-                text = when (primary) {
-                    RecipePrimary.Server -> stringResource(
-                        if (state.mode == RecipeMode.MENU) R.string.recipe_generate_menu else R.string.recipe_generate
-                    )
-                    RecipePrimary.OnDevice -> stringResource(R.string.recipe_generate_on_phone)
-                    else -> stringResource(R.string.recipe_share_prompt)
-                },
-                icon = when (primary) {
-                    RecipePrimary.Server -> LarderIcons.Sparkles
-                    RecipePrimary.OnDevice -> LarderIcons.Smartphone
-                    else -> LarderIcons.Share2
-                },
-                onClick = when (primary) {
-                    RecipePrimary.Server -> actions.onGenerateServer
-                    RecipePrimary.OnDevice -> actions.onGenerateOnDevice
-                    else -> actions.onShare
-                },
-                cost = when (primary) {
-                    RecipePrimary.Server -> pluralStringResource(R.plurals.recipe_cost_recipes, state.serverCost, state.serverCost)
-                    RecipePrimary.OnDevice -> stringResource(R.string.recipe_cost_free)
-                    else -> null
-                },
-                enabled = !nothingTicked,
-                compact = compact,
-                modifier = Modifier
-                    .align(if (expanded || compact) Alignment.BottomEnd else Alignment.BottomCenter)
-                    .padding(
-                        start = LarderSpace.s4,
-                        end = if (expanded) PinnedActionEndGap else LarderSpace.s4,
-                        bottom = pinnedActionBottom
-                    )
-                    .then(
-                        when {
-                            compact -> Modifier.widthIn(max = 440.dp)
-                            expanded -> Modifier.widthIn(max = 440.dp).fillMaxWidth(0.5f)
-                            else -> Modifier.fillMaxWidth()
-                        }
-                    )
-                    .onSizeChanged { actionSize = it }
-            )
-        }
     }
 
     if (showingOthers) {
@@ -456,6 +404,33 @@ internal fun RecipeTabContent(
     }
 }
 
+/** The header's way to Saved recipes, with a count of the ones not opened yet. */
+@Composable
+private fun SavedButton(unread: Int, onClick: () -> Unit) {
+    Box {
+        LarderIconButton(
+            icon = LarderIcons.Bookmark,
+            contentDescription = if (unread > 0) {
+                pluralStringResource(R.plurals.recipe_saved_unread_action, unread, unread)
+            } else {
+                stringResource(R.string.recipe_saved_action)
+            },
+            onClick = onClick
+        )
+        if (unread > 0) {
+            // Said by the button's own description, with the real number.
+            LarderBadge(
+                count = unread,
+                compact = true,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-4).dp, y = 6.dp)
+                    .clearAndSetSemantics { }
+            )
+        }
+    }
+}
+
 @Composable
 private fun RecipeForm(
     state: RecipeUiState,
@@ -464,51 +439,86 @@ private fun RecipeForm(
     actions: RecipeTabActions,
     onAddOthers: () -> Unit
 ) {
+    if (expanded) {
+        ExpandedRecipeForm(state, bottom, actions, onAddOthers)
+        return
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(start = LarderSpace.s4, end = LarderSpace.s4, bottom = bottom),
+        verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)
+    ) {
+        ModeSwitch(state, actions)
+        RecipeCallouts(state, actions)
+        CookWith(state, actions.onToggle, onAddOthers)
+        QuickForm(state, actions)
+        RouteActions(state, actions)
+    }
+}
+
+/**
+ * A wide window: the items on the left, the form and its actions on the right. Each column
+ * scrolls on its own, and the right one keeps its button group at its foot, clear of the
+ * floating pill ([bottom]) even at rest; a two-column form is too tall for one scroll to leave
+ * its last button uncovered.
+ */
+@Composable
+private fun ExpandedRecipeForm(state: RecipeUiState, bottom: Dp, actions: RecipeTabActions, onAddOthers: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = LarderSpace.s4),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Column(
-            modifier = Modifier.widthIn(max = 960.dp).fillMaxWidth(),
+            modifier = Modifier.widthIn(max = 960.dp).fillMaxWidth().weight(1f),
             verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)
         ) {
-            if (state.paid.available) {
-                val resources = LocalContext.current.resources
-                LarderSegmented(
-                    options = RecipeMode.entries,
-                    selected = state.mode,
-                    onSelect = actions.onMode,
-                    label = {
-                        resources.getString(if (it == RecipeMode.MENU) R.string.recipe_mode_menu else R.string.recipe_mode_recipe)
-                    },
-                    fill = true
-                )
-            }
-            RecipeCallouts(state, actions)
-            if (expanded) {
-                Row(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s6)) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        CookWith(state, actions.onToggle, onAddOthers)
-                    }
+            ModeSwitch(state, actions)
+            Row(modifier = Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(LarderSpace.s6)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = bottom),
+                    verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)
+                ) {
+                    RecipeCallouts(state, actions)
+                    CookWith(state, actions.onToggle, onAddOthers)
+                }
+                Column(modifier = Modifier.weight(1f).fillMaxHeight().padding(bottom = bottom)) {
                     // Lined up with the first row, under the "Cook with" label.
                     Column(
-                        modifier = Modifier.weight(1f).padding(top = LarderSpace.s8),
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .verticalScroll(rememberScrollState())
+                            .padding(top = LarderSpace.s8, bottom = LarderSpace.s2),
                         verticalArrangement = Arrangement.spacedBy(LarderSpace.s4)
                     ) {
                         QuickForm(state, actions)
-                        RouteActions(state, actions)
                     }
+                    RouteActions(state, actions)
                 }
-            } else {
-                CookWith(state, actions.onToggle, onAddOthers)
-                QuickForm(state, actions)
-                RouteActions(state, actions)
             }
         }
     }
+}
+
+/** Recipe or Menu set, only with the paid route. */
+@Composable
+private fun ModeSwitch(state: RecipeUiState, actions: RecipeTabActions) {
+    if (!state.paid.available) return
+    val resources = LocalContext.current.resources
+    LarderSegmented(
+        options = RecipeMode.entries,
+        selected = state.mode,
+        onSelect = actions.onMode,
+        label = {
+            resources.getString(if (it == RecipeMode.MENU) R.string.recipe_mode_menu else R.string.recipe_mode_recipe)
+        },
+        fill = true
+    )
 }
 
 /** The lasting conditions (T4) at the top of the form, most pressing first. */
@@ -658,11 +668,26 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
     val config = state.config
     RecipeFormCard {
         if (state.mode == RecipeMode.MENU) {
+            // Days only once the server writes menu sets and prices more than one; until then
+            // every menu is a 3-day one.
+            val dayOptions = state.menuDayOptions
+            if (dayOptions.size > 1) {
+                Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                    RecipeControlLabel(stringResource(R.string.recipe_menu_days))
+                    LarderSegmented(
+                        options = dayOptions,
+                        selected = state.menuDays,
+                        onSelect = actions.onDays,
+                        label = { resources.getQuantityString(R.plurals.recipe_menu_days_count, it, it) },
+                        fill = true
+                    )
+                }
+            }
             Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
                 RecipeControlLabel(stringResource(R.string.recipe_courses))
                 LarderSegmented(
-                    options = MENU_COURSE_OPTIONS,
-                    selected = state.courses,
+                    options = state.menuCourseOptions,
+                    selected = state.menuCourses,
                     onSelect = actions.onCourses,
                     label = { resources.getQuantityString(R.plurals.recipe_courses_count, it, it) },
                     fill = true
@@ -698,14 +723,28 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
     }
 }
 
-/** What sits under the form: the routes that aren't the pinned action, or why it is off. */
+/**
+ * The form's one group of actions, at its foot: the primary action first, filled and full width
+ * (with its cost where it has one), then the other routes, in [RecipeUiState.actions]' order. With
+ * nothing ticked the primary stays, off, under the hint that says why.
+ */
 @Composable
 private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabActions) {
     val paid = state.paid
-    when {
-        state.selectedIds.isEmpty() -> RecipeHint(stringResource(R.string.recipe_tick_hint))
-        state.mode == RecipeMode.MENU -> MenuActions(state, actions)
-        else -> when (recipePrimary(state)) {
+    val nothingTicked = state.selectedIds.isEmpty()
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = LarderSpace.s2),
+        verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)
+    ) {
+        if (nothingTicked) RecipeHint(stringResource(R.string.recipe_tick_hint))
+        if (state.mode == RecipeMode.MENU) {
+            MenuActions(state, actions, enabled = !nothingTicked)
+            return@Column
+        }
+        val primary = recipePrimary(state)
+        PrimaryAction(state, primary, actions, enabled = !nothingTicked)
+        if (nothingTicked) return@Column
+        when (primary) {
             RecipePrimary.Server -> {
                 if (state.onDeviceRoute == OnDeviceRoute.READY) {
                     LarderButton(
@@ -734,20 +773,50 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                     )
                 }
                 RecipeHint(stringResource(R.string.recipe_prompt_hint))
-                // Without Copy, Buy is the one button under the pinned Share: outlined, not a link.
+                // Without Copy, Buy is the one button under Share: outlined, not a link.
                 BuyOrBlocked(paid, actions, if (copy) LarderButtonStyle.Text else LarderButtonStyle.Outline)
             }
         }
     }
 }
 
-/** A menu has only the server: the cost, or how to get enough for one. */
+/** The filled first button of the group: the server, the phone's model or the shared prompt. */
 @Composable
-private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions) {
+private fun PrimaryAction(state: RecipeUiState, primary: RecipePrimary, actions: RecipeTabActions, enabled: Boolean) {
+    if (primary == RecipePrimary.None) return
+    LarderPrimaryAction(
+        text = when (primary) {
+            RecipePrimary.Server -> stringResource(if (state.mode == RecipeMode.MENU) R.string.recipe_generate_menu else R.string.recipe_generate)
+            RecipePrimary.OnDevice -> stringResource(R.string.recipe_generate_on_phone)
+            else -> stringResource(R.string.recipe_share_prompt)
+        },
+        icon = when (primary) {
+            RecipePrimary.Server -> LarderIcons.Sparkles
+            RecipePrimary.OnDevice -> LarderIcons.Smartphone
+            else -> LarderIcons.Share2
+        },
+        onClick = when (primary) {
+            RecipePrimary.Server -> actions.onGenerateServer
+            RecipePrimary.OnDevice -> actions.onGenerateOnDevice
+            else -> actions.onShare
+        },
+        cost = when (primary) {
+            RecipePrimary.Server -> pluralStringResource(R.plurals.recipe_cost_recipes, state.serverCost, state.serverCost)
+            RecipePrimary.OnDevice -> stringResource(R.string.recipe_cost_free)
+            else -> null
+        },
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth()
+    )
+}
+
+/** A menu has only the server: Generate menu with its cost, or how to get enough for one. */
+@Composable
+private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled: Boolean) {
     val paid = state.paid
     val balance = paid.balance ?: 0
     val resources = LocalContext.current.resources
-    // For the courses chosen: switching 2 and 3 moves the button and this together.
+    // For the days and courses chosen: changing either moves the button and this together.
     val cost = recipeCount(resources, state.serverCost)
     when {
         paid.issue == ServerIssue.PAUSED -> Unit
@@ -765,7 +834,10 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions) {
             )
             BuyOrBlocked(paid, actions, LarderButtonStyle.Primary)
         }
-        else -> RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
+        else -> {
+            PrimaryAction(state, recipePrimary(state), actions, enabled)
+            if (enabled) RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
+        }
     }
 }
 
@@ -948,7 +1020,7 @@ private fun previewState(
 @Composable
 private fun RecipeTabPreview(state: RecipeUiState) = LarderTheme {
     Surface(color = MaterialTheme.colorScheme.background) {
-        RecipeTabContent(state, 120.dp, 96.dp, {}, RecipeTabActions())
+        RecipeTabContent(state, 120.dp, RecipeTabActions())
     }
 }
 

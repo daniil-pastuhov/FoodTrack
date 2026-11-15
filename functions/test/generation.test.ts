@@ -3,6 +3,7 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { getBalance } from "../src/core/account";
 import { generateRecipe } from "../src/core/generation";
 import { sweep } from "../src/core/sweeper";
+import { DEFAULT_COSTS } from "../src/constants";
 import { emptyUser } from "../src/model";
 import { balanceOf, callerFor, db, fakeUsage, makeDeps, resetEmulators, sampleMenu, setConfig, type TestDeps } from "./helpers";
 
@@ -104,7 +105,7 @@ describe("generateRecipe charging", () => {
     slow.release();
     const res = await pending;
     expect(res).toMatchObject({ status: "DONE", balance: 8, costs: { recipe: 2, menu2: 3, menu3: 6 } });
-    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: { recipe: 1, menu2: 4, menu3: 5 }, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true });
+    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true });
   });
 
   test.each([

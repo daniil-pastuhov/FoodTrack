@@ -1154,5 +1154,149 @@
             <string>%d articles ajoutés à votre liste de courses</string>
         </dict>
     </dict>
+    <key>recipe_days_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d jour</string>
+            <key>many</key>
+            <string>%d jours</string>
+            <key>other</key>
+            <string>%d jours</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_heading</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Menu sur %d jour</string>
+            <key>many</key>
+            <string>Menu sur %d jours</string>
+            <key>other</key>
+            <string>Menu sur %d jours</string>
+        </dict>
+    </dict>
+    <key>recipe_part_of_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Fait partie du Menu sur %d jour</string>
+            <key>many</key>
+            <string>Fait partie du Menu sur %d jours</string>
+            <key>other</key>
+            <string>Fait partie du Menu sur %d jours</string>
+        </dict>
+    </dict>
+    <key>recipe_writing_menu_title</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Planification sur %d jour</string>
+            <key>many</key>
+            <string>Planification sur %d jours</string>
+            <key>other</key>
+            <string>Planification sur %d jours</string>
+        </dict>
+    </dict>
+    <key>recipe_not_enough_items_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Pas assez pour %d jour. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.</string>
+            <key>many</key>
+            <string>Pas assez pour %d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.</string>
+            <key>other</key>
+            <string>Pas assez pour %d jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_summary</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d plat par jour pour {servings}, avec ce qui arrive à sa date en premier.</string>
+            <key>many</key>
+            <string>%d plats par jour pour {servings}, avec ce qui arrive à sa date en premier.</string>
+            <key>other</key>
+            <string>%d plats par jour pour {servings}, avec ce qui arrive à sa date en premier.</string>
+        </dict>
+    </dict>
+    <key>recipe_saved_button_unread</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Recettes enregistrées, %d nouvelle</string>
+            <key>many</key>
+            <string>Recettes enregistrées, %d nouvelles</string>
+            <key>other</key>
+            <string>Recettes enregistrées, %d nouvelles</string>
+        </dict>
+    </dict>
+    <key>recipe_packs_body_sets</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Une recette, c'est un plat rédigé par notre serveur. Un set de menus décompte de {min} à %d recette, selon les jours et les plats par jour. Elles n'expirent pas.</string>
+            <key>many</key>
+            <string>Une recette, c'est un plat rédigé par notre serveur. Un set de menus décompte de {min} à %d recettes, selon les jours et les plats par jour. Elles n'expirent pas.</string>
+            <key>other</key>
+            <string>Une recette, c'est un plat rédigé par notre serveur. Un set de menus décompte de {min} à %d recettes, selon les jours et les plats par jour. Elles n'expirent pas.</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

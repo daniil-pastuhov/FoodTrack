@@ -86,6 +86,8 @@ export interface BoardDay extends DayStats {
   netCredits7d: number;
   /** Production purchases granted that day, per pack (count and recipes). */
   sales: Record<Pack, { count: number; credits: number }>;
+  /** The same production purchases per store (Google Play is Android, the App Store iOS). */
+  salesByStore: Record<Store, { count: number; credits: number }>;
   salesCount: number;
   salesCredits: number;
   sandboxPurchases: number;
@@ -119,6 +121,8 @@ export interface Board {
   sales: {
     byPack: Record<Pack, Totals>;
     byStore: Record<Store, Totals>;
+    /** Production purchases per store, then per pack (the same rows as byStore and byPack). */
+    byStoreAndPack: Record<Store, Record<Pack, Totals>>;
     total: Totals;
     /** total.net x netMicroUsdPerCredit: the config's conservative estimate, not a store payout. */
     estimatedNetMicroUsd: number;
@@ -229,6 +233,7 @@ export function buildBoard(input: BoardInput): Board {
       ceilingMicroUsd: dailySpendCeiling(config, netCredits7d),
       netCredits7d,
       sales: record(PACKS, () => ({ count: 0, credits: 0 })),
+      salesByStore: record(STORES, () => ({ count: 0, credits: 0 })),
       salesCount: 0,
       salesCredits: 0,
       sandboxPurchases: 0,
@@ -239,6 +244,7 @@ export function buildBoard(input: BoardInput): Board {
 
   const byPack = record(PACKS, emptyTotals);
   const byStore = record(STORES, emptyTotals);
+  const byStoreAndPack = record(STORES, () => record(PACKS, emptyTotals));
   const total = emptyTotals();
   const sandbox = { purchases: 0, credits: 0 };
   for (const p of inPeriod) {
@@ -252,9 +258,12 @@ export function buildBoard(input: BoardInput): Board {
     }
     addTo(byPack[p.pack], p);
     addTo(byStore[p.store], p);
+    addTo(byStoreAndPack[p.store][p.pack], p);
     addTo(total, p);
     d.sales[p.pack].count += 1;
     d.sales[p.pack].credits += p.credits;
+    d.salesByStore[p.store].count += 1;
+    d.salesByStore[p.store].credits += p.credits;
     d.salesCount += 1;
     d.salesCredits += p.credits;
   }
@@ -303,6 +312,7 @@ export function buildBoard(input: BoardInput): Board {
     sales: {
       byPack,
       byStore,
+      byStoreAndPack,
       total,
       estimatedNetMicroUsd: total.net * config.netMicroUsdPerCredit,
       sandbox,

@@ -100,9 +100,9 @@ describe("the planner's arithmetic", () => {
 
   test("stepByStep doubles the expected output; a 3-course menu uses its own figures", () => {
     const e = planOf("19").estimate!;
-    expect(e.costKey).toBe("menu3");
-    expect(e.expectedOutputTokens).toBe(2 * (EXPECTED_OUTPUT.menu3.output + EXPECTED_OUTPUT.menu3.thinking));
-    expect(EXPECTED_OUTPUT.menu3).toEqual({ output: 3965, thinking: 1338 });
+    expect(e.costKey).toBe("menu3x3");
+    expect(e.expectedOutputTokens).toBe(2 * (EXPECTED_OUTPUT.menu3x3.output + EXPECTED_OUTPUT.menu3x3.thinking));
+    expect(EXPECTED_OUTPUT.menu3x3).toEqual({ output: 3965, thinking: 1338 });
   });
 
   test("calibration: bytes per token from the live menu, and the live menu's expected cost is near what was logged", () => {
@@ -125,7 +125,7 @@ describe("the planner's arithmetic", () => {
     const planned = planCases(sel, options({ repeat: 3 }));
     const sum = planned.reduce((s, p) => s + p.attempts * (p.estimate?.expectedMicroUsd ?? 0), 0);
     expect(thrice.expectedMicroUsd).toBe(sum);
-    expect(thrice.byKind.find((k) => k.costKey === "menu3")!.calls).toBe(1);
+    expect(thrice.byKind.find((k) => k.costKey === "menu3x3")!.calls).toBe(1);
     expect(planCases(sel, options({ repeat: 2, repeatSections: "all" })).reduce((s, p) => s + p.attempts, 0)).toBe(8);
   });
 
@@ -166,7 +166,7 @@ const water: Ing[] = [
 function liveWaterMenu() {
   const titles = [["Whipped Cream Cheese Crostini", "Creamy Cheese Skillet"], ["Toasted Spiced Oil Consomme Broth", "Peppered Water Reduction"], ["Clear Salted Broth", "Robust Pepper Essence Emulsion"]];
   return {
-    days: menuDates("2026-11-14").map((date, d) => ({
+    days: menuDates("2026-11-14", 3).map((date, d) => ({
       date,
       uses: d === 0 ? ["p5"] : [],
       courses: ["starter", "main"].map((course, c) => ({
@@ -337,7 +337,7 @@ describe("attempts through the real adapter and checks (canned answers)", () => 
 
   test("an id outside the enum is FAIL whatever the server says (constrained decoding broken)", async () => {
     const p = planOf("40");
-    const days = menuDates(p.req!.today).map((date, i) => ({
+    const days = menuDates(p.req!.today, 3).map((date, i) => ({
       date, uses: ["p9"],
       courses: ["starter", "main"].map((course, c) => ({ course, recipe: dish(`Dish ${i}${c}`, [{ amount: "1", name: "pasta", pantryId: "p2" }, { amount: "1", name: "x", pantryId: "o3" }]) })),
     }));
@@ -376,7 +376,7 @@ describe("attempts through the real adapter and checks (canned answers)", () => 
 
 describe("assertion evaluators", () => {
   const req = planOf("28").req!; // 3-course menu: p1, p2 past; p3 expires 2026-11-16; p4 2026-11-29; p5 undated
-  const dates = menuDates(req.today);
+  const dates = menuDates(req.today, 3);
   const menuWith = (perDay: Ing[][], uses: string[][] = [[], [], []]) => ({
     days: dates.map((date, i) => ({ date, uses: uses[i], courses: ["starter", "main", "dessert"].map((course, c) => ({ course, recipe: dish(`D${i}${c}`, c === 0 ? perDay[i] : [{ amount: "1", name: "apple", pantryId: "none" }]) })) })),
   });

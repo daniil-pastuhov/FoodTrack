@@ -130,6 +130,11 @@ data class PaidUiState(
     val packsOffered: Boolean? = null,
     /** What a recipe and a menu take, as the server last said. */
     val costs: RecipeCosts = RecipeCosts(),
+    /** The server said `acceptsMenuDays`: the menu set's Days choice and one course a day are
+     *  offered, priced from [RecipeCosts.menuSets]. */
+    val menuSets: Boolean = false,
+    /** The days of the menu being written ([writing] MENU), for the writing screen's title. */
+    val writingDays: Int = DEFAULT_MENU_DAYS,
     /** The server won't sell to this account (earlier purchases refunded after use). */
     val purchasesBlocked: Boolean = false,
     /** The account was deleted but the server could not remove Apple's link to the app
@@ -220,8 +225,9 @@ private val KEEP_WHEN_ASKING = setOf(
     ServerError.CALLABLE_MISSING
 )
 
-/** The English title a menu is saved under; the app shows its own words for menus. */
-const val MENU_SAVED_TITLE = "Menu for three days"
+/** The English title a menu of [days] days is saved under; the app shows its own words for menus,
+ *  with the day count read from the menu itself. */
+fun menuSavedTitle(days: Int): String = if (days == 1) "Menu for one day" else "Menu for $days days"
 
 /**
  * The paid route: packs, the purchase's way to the server, the account, and generation on the
@@ -252,7 +258,11 @@ internal class RecipePaid(
     private val newRequestId: () -> String,
     private val today: () -> LocalDate,
     /** Waits the given milliseconds before asking the server again. */
-    private val pollDelay: suspend (Long) -> Unit
+    private val pollDelay: suspend (Long) -> Unit,
+    /** Whether the person is on the Recipe tab's writing screen right now. */
+    private val isOnScreen: () -> Boolean = { true },
+    /** Keeps [id] as unread in Saved recipes. */
+    private val markUnread: (String) -> Unit = {}
 ) {
     /** What is kept on the phone. Changed only through [persist], atomically: purchases, the
      *  generation and the count are updated from different coroutines on a multi-threaded
@@ -299,7 +309,17 @@ internal class RecipePaid(
     }
 
     private fun updatePaid(transform: (PaidUiState) -> PaidUiState) {
+        if (demo) return
         state.update { it.copy(paid = transform(it.paid)) }
+    }
+
+    /** A debug demo launch shows a made-up paid state: nothing real may overwrite it. */
+    private var demo = false
+
+    /** Debug demo launches only: shows [paid] and stops the real route from changing it. */
+    fun showDemo(paid: PaidUiState) {
+        state.update { it.copy(paid = paid) }
+        demo = true
     }
 
     private fun persist(transform: (RecipePaidSnapshot) -> RecipePaidSnapshot) {
@@ -307,17 +327,20 @@ internal class RecipePaid(
     }
 
     private fun publish(kept: RecipePaidSnapshot) {
+        if (demo) return
         val key = account.state.value.purchaseKey
         updatePaid {
             it.copy(
                 available = shown(it.packsOffered),
                 balance = kept.balance,
-                costs = kept.costs ?: RecipeCosts(),
+                // The menu set's table only while the server says it writes them.
+                costs = (kept.costs ?: RecipeCosts()).let { costs -> if (kept.serverTakesMenuDays) costs else costs.copy(menuSets = emptyMap()) },
                 purchasesBlocked = kept.purchasesBlocked,
                 unconfirmedRecipes = kept.unverified.filterNot { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
                 elsewhereRecipes = kept.unverified.filter { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
                 paymentPending = kept.paymentPending,
-                allergenConsent = kept.allergenConsent
+                allergenConsent = kept.allergenConsent,
+                menuSets = kept.serverTakesMenuDays
             )
         }
     }
@@ -328,13 +351,21 @@ internal class RecipePaid(
     /** What a reply that carries a balance says besides it: the costs, the block, which is
      *  `true` or absent (never `false`), so absent lifts it, and whether the server reads optional
      *  items and the multi-choice config, likewise. */
-    private fun RecipePaidSnapshot.withTerms(costs: JsonElement?, blocked: JsonElement?, optional: JsonElement?, multiChoice: JsonElement?, danish: JsonElement?): RecipePaidSnapshot =
+    private fun RecipePaidSnapshot.withTerms(
+        costs: JsonElement?,
+        blocked: JsonElement?,
+        optional: JsonElement?,
+        multiChoice: JsonElement?,
+        danish: JsonElement?,
+        menuDays: JsonElement?
+    ): RecipePaidSnapshot =
         copy(
             costs = recipeCostsOf(costs) ?: this.costs,
             purchasesBlocked = purchasesBlockedOf(blocked),
             serverTakesOptional = acceptsOptionalIngredientsOf(optional),
             serverTakesMultiChoice = acceptsMultiChoiceConfigOf(multiChoice),
-            serverTakesDanish = acceptsDanishOf(danish)
+            serverTakesDanish = acceptsDanishOf(danish),
+            serverTakesMenuDays = acceptsMenuDaysOf(menuDays)
         )
 
     /** Whether the route is on screen: only once the store has shown it sells this build a
@@ -371,6 +402,7 @@ internal class RecipePaid(
     }
 
     private fun markUnavailable() {
+        if (demo) return
         hiddenForRun = true
         // The menu has no free route, so the tab goes back to a single recipe.
         state.update { it.copy(mode = RecipeMode.RECIPE, paid = it.paid.copy(available = false, sheet = null, writing = null)) }
@@ -379,7 +411,7 @@ internal class RecipePaid(
     // --- Resume ------------------------------------------------------------------------------
 
     fun resume() {
-        if (!available) return
+        if (!available || demo) return
         pausedAt?.let { at ->
             if (nowMillis() - at >= PAUSE_RECHECK_MILLIS) {
                 pausedAt = null
@@ -409,7 +441,7 @@ internal class RecipePaid(
         balanceAskedAt = nowMillis()
         return when (val result = backend.getBalance()) {
             is ServerResult.Ok -> {
-                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish) }
+                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish, serverTakesMenuDays = result.value.acceptsMenuDays) }
                 updatePaid { if (it.issue == ServerIssue.BUSY && held() == null) it.copy(issue = null) else it }
                 updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                 true
@@ -687,7 +719,7 @@ internal class RecipePaid(
                             current.copy(
                                 unverified = if (settled) current.unverified.filterNot { it.token == purchase.token } else current.unverified,
                                 balance = reply.balance ?: current.balance
-                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish)
+                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays)
                         }
                         when (reply.status) {
                             VerifyStatus.GRANTED -> updatePaid { it.copy(event = PaidEvent.RecipesAdded(purchase.recipes)) }
@@ -786,7 +818,7 @@ internal class RecipePaid(
         when (val result = whileBusy(setOf(ServerError.OVERLOADED, ServerError.BUSY)) { account.completeMerge(merge) }) {
             is ServerResult.Ok -> {
                 val reply = result.value
-                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish) }
+                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish, serverTakesMenuDays = reply.acceptsMenuDays) }
                 val event = if (reply.moved != 0) PaidEvent.Merged(reply.moved) else null
                 updatePaid { it.copy(accountBusy = false, merge = null, event = event ?: it.event) }
             }
@@ -999,7 +1031,10 @@ internal class RecipePaid(
         val request = GenerateRequest(
             requestId = newRequestId(),
             kind = if (menu) WireKind.MENU else WireKind.RECIPE,
-            courses = if (menu) current.courses else null,
+            courses = if (menu) current.menuCourses else null,
+            // The legacy shape whenever it says the same: no `days` for 3, and none at all before
+            // the server said it reads it (menuDays is then 3 anyway).
+            days = if (menu && snapshot.serverTakesMenuDays) current.menuDays.takeIf { it != DEFAULT_MENU_DAYS } else null,
             config = config,
             ingredients = ingredients,
             optionalIngredients = optional.ifEmpty { null },
@@ -1040,7 +1075,7 @@ internal class RecipePaid(
             is Built.Ready -> result
         }
         val fresh = built.request
-        updatePaid { it.copy(writing = current.mode) }
+        updatePaid { it.copy(writing = current.mode, writingDays = fresh.days ?: DEFAULT_MENU_DAYS) }
         state.update { it.copy(event = null) }
         scope.launch {
             generationLock.withLock {
@@ -1081,7 +1116,7 @@ internal class RecipePaid(
                 val kept = snapshot.pendingGeneration?.takeIf { it.sameAskAs(next.request) }
                 val request = kept ?: next.request
                 if (kept == null) persist { it.copy(pendingGeneration = request, pendingSinceMillis = nowMillis()) }
-                updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE) }
+                updatePaid { it.copy(writing = if (request.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, writingDays = request.days ?: DEFAULT_MENU_DAYS) }
                 // Already sent once with these inputs: asked about, not started again.
                 send(request, interactive = true, start = kept == null, leftOut = next.leftOut)
             }
@@ -1102,7 +1137,7 @@ internal class RecipePaid(
             }
             return
         }
-        updatePaid { it.copy(writing = if (held.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, issue = null) }
+        updatePaid { it.copy(writing = if (held.kind == WireKind.MENU) RecipeMode.MENU else RecipeMode.RECIPE, writingDays = held.days ?: DEFAULT_MENU_DAYS, issue = null) }
         scope.launch {
             generationLock.withLock {
                 // A recovery in the background may have settled it while this waited for the lock.
@@ -1158,7 +1193,7 @@ internal class RecipePaid(
         retried: Boolean = false
     ): Sent {
         // What it takes as asked, before a reply can bring new costs.
-        val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses)
+        val cost = (snapshot.costs ?: RecipeCosts()).of(request.kind, request.courses, request.days)
         val began = nowMillis()
         val deadline = began + if (request.kind == WireKind.MENU) MENU_POLL_MILLIS else RECIPE_POLL_MILLIS
         val menu = request.kind == WireKind.MENU
@@ -1189,18 +1224,31 @@ internal class RecipePaid(
                             if (saved == null) {
                                 // The contract promises the content with DONE; without it there is
                                 // nothing to show, and asking again with this id returns the same.
-                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
+                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays) }
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
                             savedRecipeRepository.save(saved)
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
+                            // Shown on arrival only to someone still on the writing screen; a
+                            // recovery, or a result that came after they left, waits in Saved
+                            // recipes as unread.
+                            val shown = interactive && isOnScreen()
+                            if (!shown) markUnread(saved.id)
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
-                            if (interactive) {
+                            if (shown) {
                                 state.update { current ->
                                     current.copy(
                                         saved = listOf(saved) + current.saved.filterNot { it.id == saved.id },
                                         event = RecipeEvent.Written(saved.id, reply.balance, leftOut),
+                                        paid = current.paid.copy(writing = null)
+                                    )
+                                }
+                            } else if (interactive) {
+                                state.update { current ->
+                                    current.copy(
+                                        saved = listOf(saved) + current.saved.filterNot { it.id == saved.id },
+                                        event = RecipeEvent.SavedUnread(menu, reply.balance, leftOut),
                                         paid = current.paid.copy(writing = null)
                                     )
                                 }
@@ -1215,7 +1263,7 @@ internal class RecipePaid(
                             failures = 0
                             // The balance it reports is held, not spent: the count waits for the
                             // result. The costs and the block stand as they are.
-                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
+                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays) }
                             if (nowMillis() >= deadline) {
                                 finish(interactive, null, ServerIssue.OFFLINE)
                                 return Sent.KEPT_OFFLINE
@@ -1223,7 +1271,7 @@ internal class RecipePaid(
                             pollDelay(if (nowMillis() - began < SLOW_POLL_AFTER_MILLIS) POLL_MILLIS else SLOW_POLL_MILLIS)
                         }
                         GenerateStatus.FAILED -> {
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (!interactive && reply.charged) updatePaid { it.copy(event = PaidEvent.EarlierRefused(cost)) }
                             finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(cost) else RecipeEvent.ServerFailed)
@@ -1299,7 +1347,7 @@ internal class RecipePaid(
                     // the next try is a new request with a new id.
                     ServerError.NOT_ENOUGH_ITEMS -> {
                         persist { it.copy(pendingGeneration = null, pendingSinceMillis = null) }
-                        finish(interactive, RecipeEvent.NotEnoughItems(menu))
+                        finish(interactive, RecipeEvent.NotEnoughItems(menu, request.days ?: DEFAULT_MENU_DAYS))
                         return Sent.SETTLED
                     }
                     ServerError.INFRA_FAILURE_LIMIT -> {
@@ -1369,7 +1417,12 @@ internal class RecipePaid(
                                 // to one that doesn't read it: the balance's capability flags
                                 // are asked again, so Try again sends the legacy values. Likewise
                                 // Danish to a server that doesn't write it: the next try is held.
-                                if (request.config.isMultiChoice || request.config.language == DANISH) refreshBalance()
+                                // A menu's days, or one course a day, to a server rolled back to one
+                                // that writes only 3-day menus of 2 or 3: the flag goes at once, so
+                                // the next try is a 3-day menu, and is asked for again.
+                                val menuSet = request.days != null || request.courses == 1
+                                if (menuSet) persist { it.copy(serverTakesMenuDays = false) }
+                                if (request.config.isMultiChoice || request.config.language == DANISH || menuSet) refreshBalance()
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
@@ -1452,7 +1505,7 @@ internal class RecipePaid(
                 )
                 val serverMenu = plain.withPastDateByIndex(request.ingredients, optional, asked)
                     ?: plain.withPastDate(tickedPast, pastDateOf(optional, asked))
-                SavedRecipe.of(newSavedId(), MENU_SAVED_TITLE, serverMenu, created)
+                SavedRecipe.of(newSavedId(), menuSavedTitle(serverMenu.days.size), serverMenu, created)
             }
         }
     }

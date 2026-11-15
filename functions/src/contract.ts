@@ -6,12 +6,17 @@ import { HttpsError } from "firebase-functions/v2/https";
 import { createHash } from "node:crypto";
 import {
   type Costs,
+  DEFAULT_MENU_DAYS,
   GenerationKind,
   LANGUAGES,
   MAX_ALLERGENS,
   MAX_INGREDIENTS,
   MAX_OPTIONAL_NAME_CHARS,
   MAX_TOTAL_INGREDIENTS,
+  MENU_COURSES,
+  MENU_DAYS,
+  type MenuCourses,
+  type MenuDays,
 } from "./constants";
 import { SUSPICIOUS_INPUT_RULES, normalizeName, type InputRule } from "./core/inputSafety";
 
@@ -69,7 +74,12 @@ export interface IngredientInput {
 export interface GenerateRequest {
   requestId: string;
   kind: GenerationKind;
-  courses?: 2 | 3;
+  courses?: MenuCourses;
+  /**
+   * A menu's number of days, set on every validated menu (DEFAULT_MENU_DAYS when the client sent
+   * none, as every client before menu sets); absent on a recipe. Read it with menuDaysOf.
+   */
+  days?: MenuDays;
   config: RecipeConfig;
   ingredients: IngredientInput[];
   /**
@@ -162,10 +172,17 @@ export interface BlockFlag {
    * of sending a different one.
    */
   acceptsDanish?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that reads `days` on a
+   * menu (menu sets of 1 to 4 days, CONTRACT.md "Capability `acceptsMenuDays`"). A client sends
+   * `days` only after a response said so, and only when it is not 3; a server from before it
+   * ignores the field and would write a 3-day menu at the 3-day price.
+   */
+  acceptsMenuDays?: true;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
-export const CAPABILITIES = { acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true } as const;
+export const CAPABILITIES = { acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true } as const;
 
 /** generateRecipe and getGeneration. */
 export interface GenerateResponse extends BlockFlag {
@@ -369,9 +386,16 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
   if (!isObject(v)) invalid("request must be an object");
   const requestId = validateRequestId(v.requestId);
   const kind = oneOf(["recipe", "menu"] as const, v.kind, "kind");
-  let courses: 2 | 3 | undefined;
-  if (kind === "menu") courses = oneOf([2, 3] as const, v.courses, "courses");
-  else if (v.courses !== undefined && v.courses !== null) invalid("courses is only allowed for a menu");
+  let courses: MenuCourses | undefined;
+  let days: MenuDays | undefined;
+  if (kind === "menu") {
+    courses = oneOf(MENU_COURSES, v.courses, "courses");
+    // Absent (every client before menu sets) or null is the 3-day menu those clients asked for.
+    days = present(v.days) ? oneOf(MENU_DAYS, v.days, "days") : DEFAULT_MENU_DAYS;
+  } else {
+    if (present(v.courses)) invalid("courses is only allowed for a menu");
+    if (present(v.days)) invalid("days is only allowed for a menu");
+  }
 
   if (!isIsoDate(v.today)) invalid("today must be a YYYY-MM-DD date");
   const todayMs = Date.parse(`${v.today}T00:00:00Z`);
@@ -404,6 +428,7 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
     requestId,
     kind,
     ...(courses ? { courses } : {}),
+    ...(days ? { days } : {}),
     config: validateConfig(v.config),
     ingredients,
     optionalIngredients,
@@ -466,6 +491,9 @@ export function inputHashOf(req: GenerateRequest): string {
   const canonical = JSON.stringify({
     kind: inputs.kind,
     courses: inputs.courses ?? null,
+    // Only when not the default, so a 3-day menu (every request from before menu sets) hashes as
+    // it did before the field existed and a retry of a generation stored then still matches.
+    ...(inputs.kind === "menu" && menuDaysOf(inputs) !== DEFAULT_MENU_DAYS ? { days: menuDaysOf(inputs) } : {}),
     config: configHashPart(inputs.config),
     ingredients: inputs.ingredients.map((i) => [i.name, i.expiresOn, i.quantity]),
     // Only when there are some, so a request without them hashes as it did before the field
@@ -509,11 +537,18 @@ export function validateVerifyRequest(v: unknown): VerifyRequest {
   invalid("store must be play or appstore");
 }
 
-export function coursesFor(courses: 2 | 3): Course[] {
-  return courses === 2 ? ["starter", "main"] : ["starter", "main", "dessert"];
+/** The courses of each menu day, in order: 1 is the main course alone. */
+export function coursesFor(courses: MenuCourses): Course[] {
+  return courses === 1 ? ["main"] : courses === 2 ? ["starter", "main"] : ["starter", "main", "dessert"];
 }
 
-export function menuDates(today: string): string[] {
+/** A menu request's number of days: its `days`, or DEFAULT_MENU_DAYS for one built without it. */
+export function menuDaysOf(req: Pick<GenerateRequest, "days">): MenuDays {
+  return req.days ?? DEFAULT_MENU_DAYS;
+}
+
+/** The dates of a menu of `days` days starting `today`: today .. today + days - 1. */
+export function menuDates(today: string, days: MenuDays): string[] {
   const start = Date.parse(`${today}T00:00:00Z`);
-  return [0, 1, 2].map((d) => new Date(start + d * 86_400_000).toISOString().slice(0, 10));
+  return Array.from({ length: days }, (_, d) => new Date(start + d * 86_400_000).toISOString().slice(0, 10));
 }

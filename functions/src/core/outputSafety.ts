@@ -15,7 +15,7 @@
  * what was requested. Everything else that is wrong makes the whole answer invalid (an
  * OutputRule), which generation settles as a content failure.
  */
-import { coursesFor, menuDates, type Course, type GenerateRequest, type Menu, type MenuDay, type Recipe, type RecipeIngredient } from "../contract";
+import { coursesFor, menuDates, menuDaysOf, type Course, type GenerateRequest, type Menu, type MenuDay, type Recipe, type RecipeIngredient } from "../contract";
 import {
   ALLERGEN_ALIASES,
   ALLERGEN_GROUPS,
@@ -586,15 +586,15 @@ export function checkRecipeOutput(raw: unknown, ctx: OutputContext): OutputCheck
   return run(ctx, (ch) => recipe(ch, raw));
 }
 
-/** A menu must have exactly the 3 expected days, each with exactly the requested courses, in order. */
+/** A menu must have exactly the requested days (menuDates), each with exactly the requested courses, in order. */
 export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<Menu> {
   return run(ctx, (ch) => {
     const req = ctx.req;
-    if (!isObject(raw) || !Array.isArray(raw.days) || raw.days.length !== 3) bad("SHAPE");
-    const dates = menuDates(req.today);
+    const dates = menuDates(req.today, menuDaysOf(req));
+    if (!isObject(raw) || !Array.isArray(raw.days) || raw.days.length !== dates.length) bad("SHAPE");
     const wanted = coursesFor(req.courses!);
     const days: MenuDay[] = [];
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < dates.length; i++) {
       const d = (raw as { days: unknown[] }).days[i];
       if (!isObject(d) || d.date !== dates[i]) bad("SHAPE");
       const day = d as Record<string, unknown>;
@@ -625,7 +625,7 @@ export function checkMenuOutput(raw: unknown, ctx: OutputContext): OutputCheck<M
  * Whether the request can pass the quality gate at all, decided before anything is reserved or
  * any model is called. A pantry item is usable unless its own name breaks the allergens or any
  * selected diet (the same guards the answer is checked with, so the model could not use it
- * anyway). A recipe needs one usable item; a menu needs, on each of its 3 days, one usable item it
+ * anyway). A recipe needs one usable item; a menu needs, on each of its days, one usable item it
  * may be planned on that day: no date, already past its date at request time (those may go on any
  * day), or a date on or after that day. Anything thinner is left to the model and its few extras.
  */
@@ -637,7 +637,7 @@ export function hasEnoughItems(req: GenerateRequest): boolean {
     return !violates(name, allergen) && !violates(name, diet);
   });
   if (req.kind === "recipe") return usable.length > 0;
-  return menuDates(req.today).every((day) =>
+  return menuDates(req.today, menuDaysOf(req)).every((day) =>
     usable.some((i) => i.expiresOn === null || i.expiresOn < req.today || i.expiresOn >= day));
 }
 

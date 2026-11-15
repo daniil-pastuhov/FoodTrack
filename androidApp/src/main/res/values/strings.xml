@@ -768,7 +768,10 @@
     <string name="recipe_prompt_min_minutes">Ideally about %1$d minutes or more</string>
     <string name="recipe_prompt_meals">Suitable for any of these meals: %1$s</string>
     <string name="recipe_not_enough_items">Not enough to cook with once your diet and allergens are left out. Tick a few more items. No recipe was taken.</string>
-    <string name="recipe_not_enough_items_menu">Not enough for three days. Tick a few more items, or ask for a single recipe. No recipes were taken.</string>
+    <plurals name="recipe_not_enough_items_menu">
+        <item quantity="one">Not enough for one day. Tick a few more items, or ask for a single recipe. No recipes were taken.</item>
+        <item quantity="other">Not enough for %1$d days. Tick a few more items, or ask for a single recipe. No recipes were taken.</item>
+    </plurals>
     <string name="recipe_diets_need_update">Recipes from packs can\'t combine gluten-free with another diet yet. Keep one of them in Recipe settings, or use this device\'s model or the shared prompt. No recipes were taken.</string>
     <string name="recipe_language_needs_update">Recipes from packs can\'t be written in Danish yet. Choose another recipe language in Recipe settings, or use this device\'s model or the shared prompt. No recipes were taken.</string>
     <string name="recipe_not_from_pantry_hint">Ingredients without the “In your pantry” mark aren\'t from your pantry: staples, or a few things you may need to buy.</string>
@@ -882,7 +885,22 @@
     <string name="recipe_balance_only_description">Recipes left: %1$d</string>
     <string name="recipe_mode_label">What to make</string>
     <string name="recipe_mode_recipe">Recipe</string>
-    <string name="recipe_mode_menu">Menu for 3 days</string>
+    <string name="recipe_mode_menu">Menu set</string>
+    <string name="recipe_menu_days">Days</string>
+    <plurals name="recipe_menu_days_count">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="recipe_packs_body_sets">
+        <item quantity="one">One recipe is one dish written by our server. A menu set takes %1$d to %2$d recipe, depending on its days and courses a day. They don\'t expire.</item>
+        <item quantity="other">One recipe is one dish written by our server. A menu set takes %1$d to %2$d recipes, depending on its days and courses a day. They don\'t expire.</item>
+    </plurals>
+    <string name="recipe_intro_packs_body_sets">Our server writes the recipe, and can also plan a menu set. A recipe takes %1$s from a pack; a menu set takes %2$d to %3$d, depending on its days and courses a day.</string>
+    <plurals name="recipe_saved_unread_action">
+        <item quantity="one">Saved recipes, %1$d new</item>
+        <item quantity="other">Saved recipes, %1$d new</item>
+    </plurals>
+    <string name="recipe_saved_unread">New</string>
     <string name="recipe_courses">Courses a day</string>
     <plurals name="recipe_courses_count">
         <item quantity="one">%1$d course</item>
@@ -908,7 +926,10 @@
     <string name="recipe_menu_short_none">You have no recipes left.</string>
     <string name="recipe_writing_server_title">Writing your recipe</string>
     <string name="recipe_writing_server_body">A few seconds. You can leave this screen; the recipe will be in Saved recipes.</string>
-    <string name="recipe_writing_menu_title">Planning three days</string>
+    <plurals name="recipe_writing_menu_title">
+        <item quantity="one">Planning one day</item>
+        <item quantity="other">Planning %1$d days</item>
+    </plurals>
     <string name="recipe_writing_menu_body">This can take up to two minutes. You can leave this screen; the menu will be in Saved recipes.</string>
     <string name="recipe_offline_title">No connection</string>
     <string name="recipe_offline_body">Recipes from your pack need the internet. The free routes below still work.</string>
@@ -1063,14 +1084,23 @@
         <item quantity="other">A recipe you asked for earlier couldn\'t be made. It used %1$d recipes, because the attempt still cost us to run.</item>
     </plurals>
     <string name="recipe_menu_bar_title">Menu</string>
-    <string name="recipe_menu_title">Menu for three days</string>
-    <string name="recipe_menu_summary">%1$d courses a day for %2$d, using what expires first.</string>
+    <plurals name="recipe_menu_title">
+        <item quantity="one">Menu for one day</item>
+        <item quantity="other">Menu for %1$d days</item>
+    </plurals>
+    <plurals name="recipe_menu_summary">
+        <item quantity="one">One course a day for %2$d, using what expires first.</item>
+        <item quantity="other">%1$d courses a day for %2$d, using what expires first.</item>
+    </plurals>
     <string name="recipe_menu_today">Today, %1$s</string>
     <string name="recipe_menu_uses">Uses %1$s</string>
     <string name="recipe_course_starter">Starter</string>
     <string name="recipe_course_main">Main</string>
     <string name="recipe_course_dessert">Dessert</string>
-    <string name="recipe_part_of_menu">Part of Menu for three days</string>
+    <plurals name="recipe_part_of_menu">
+        <item quantity="one">Part of Menu for one day</item>
+        <item quantity="other">Part of Menu for %1$d days</item>
+    </plurals>
     <plurals name="recipe_saved_dishes">
         <item quantity="one">%1$d dish</item>
         <item quantity="other">%1$d dishes</item>

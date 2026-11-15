@@ -131,7 +131,7 @@ class RecipeStateHolderTest {
         coroutineScope = scope,
         nowMillis = { 1_000L + nextId },
         newId = { "r${nextId++}" }
-    )
+    ).also { it.setOnScreen(true) }
 
     private fun runUnconfined(block: suspend TestScope.() -> Unit) = runTest(UnconfinedTestDispatcher()) { block() }
 
@@ -308,6 +308,29 @@ class RecipeStateHolderTest {
         val state = holder.uiState.value
         assertTrue(state.isWriting, "the second run is still writing")
         assertNull(state.event)
+    }
+
+    @Test
+    fun aPhoneRecipeFinishedAfterThePersonLeftWaitsUnread() = runUnconfined {
+        model.gate = CompletableDeferred()
+        model.replies += { GOOD_REPLY }
+        val holder = holder()
+        holder.generateOnDevice()
+        holder.setOnScreen(false)
+        model.gate?.complete(Unit)
+
+        val state = holder.uiState.value
+        assertEquals(RecipeEvent.SavedUnread(menu = false), state.event)
+        assertEquals(1, state.unreadCount)
+        assertEquals(setOf(state.saved.single().id), config.getOptions().unreadSaved)
+        // Two screens on at once (a transition), one goes: still on screen.
+        holder.setOnScreen(true)
+        holder.setOnScreen(true)
+        holder.setOnScreen(false)
+        model.replies += { GOOD_REPLY }
+        holder.generateOnDevice()
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+        assertEquals(1, holder.uiState.value.unreadCount)
     }
 
     @Test

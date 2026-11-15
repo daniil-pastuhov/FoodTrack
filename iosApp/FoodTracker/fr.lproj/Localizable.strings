@@ -657,7 +657,12 @@
 
 /* Recipe tab: paid route */
 "recipe_mode_recipe" = "Recette";
-"recipe_mode_menu" = "Menu sur 3 jours";
+"recipe_mode_menu" = "Set de menus";
+"recipe_days_label" = "Jours";
+"recipe_buy_message" = "Une recette, c'est un plat rédigé par notre serveur. Un menu sur 3 jours décompte %1$@ avec deux plats par jour, %2$@ avec trois. Elles n'expirent pas.";
+"recipe_intro_packs_message" = "Notre serveur rédige la recette et peut aussi planifier un menu sur 3 jours. Une recette décompte %1$@ d'un pack ; un menu décompte %2$@ avec 2 plats par jour ou %3$@ avec 3.";
+"recipe_intro_packs_body_sets" = "Notre serveur rédige la recette et peut aussi planifier un set de menus. Une recette décompte %1$@ d'un pack ; un set de menus, de %2$d à %3$d, selon les jours et les plats par jour.";
+"recipe_saved_new" = "Nouvelle";
 "recipe_courses_label" = "Plats par jour";
 "recipe_generate_recipe" = "Générer la recette";
 "recipe_generate_menu" = "Générer le menu";
@@ -675,7 +680,6 @@
 "recipe_item_left_out" = "Nous avons laissé de côté « %@ » : ce nom n'a pas pu être envoyé.";
 "recipe_item_not_sent" = "Le nom « %@ » n'a pas pu être envoyé. Décochez ce produit ou renommez-le, puis réessayez. Aucune recette n'a été décomptée.";
 "recipe_allergen_refused" = "Votre allergène « %@ » n'a pas pu être envoyé, donc rien n'a été rédigé : une recette qui n'en tiendrait pas compte pourrait être dangereuse. Renommez-le dans Alertes allergènes des Réglages, puis réessayez. Aucune recette n'a été décomptée.";
-"recipe_writing_menu_title" = "Planification sur trois jours";
 "recipe_writing_menu_message" = "Cela peut prendre jusqu'à deux minutes. Vous pouvez quitter cet écran ; le menu sera dans Recettes enregistrées.";
 "recipe_offline_title" = "Pas de connexion";
 "recipe_offline_message" = "Les recettes de votre pack nécessitent Internet. Les options gratuites ci-dessous fonctionnent toujours.";
@@ -694,7 +698,6 @@
 "recipe_try_now" = "Réessayer maintenant";
 "recipe_payment_pending_title" = "En attente du paiement";
 "recipe_payment_pending_message" = "Vos recettes seront ajoutées quand la boutique aura confirmé le paiement. Cela peut prendre un moment.";
-"recipe_buy_message" = "Une recette, c'est un plat rédigé par notre serveur. Un menu sur 3 jours décompte %1$@ avec deux plats par jour, %2$@ avec trois. Elles n'expirent pas.";
 "recipe_pack_each" = "%@ la recette";
 "recipe_continue" = "Continuer";
 "recipe_close" = "Fermer";
@@ -753,14 +756,11 @@
 "recipe_purchases_blocked" = "L'achat de recettes n'est pas disponible pour ce compte, car des achats précédents ont été remboursés après utilisation des recettes.";
 "recipe_consumption_note" = "Si vous demandez un remboursement à Apple, nous indiquons à Apple combien de ces recettes vous avez utilisées.";
 "recipe_menu_result_title" = "Menu";
-"recipe_menu_heading" = "Menu sur trois jours";
-"recipe_menu_summary" = "%1$d plats par jour pour %2$d, avec ce qui arrive à sa date en premier.";
 "recipe_menu_today" = "Aujourd'hui, %@";
 "recipe_menu_uses" = "Utilise : %@";
 "recipe_course_starter" = "Entrée";
 "recipe_course_main" = "Plat";
 "recipe_course_dessert" = "Dessert";
-"recipe_part_of_menu" = "Fait partie du Menu sur trois jours";
 "recipe_share_menu" = "Partager le menu";
 "recipe_not_found" = "Cette recette n'est plus enregistrée.";
 "recipe_prompt_difficulty_easy" = "Facile à faire, pour un débutant";
@@ -785,7 +785,6 @@
 "recipe_intro_device_title" = "Gratuit, sur cet {device}";
 "recipe_intro_device_message" = "Cet {device} rédige lui-même la recette, et rien n'est envoyé nulle part.";
 "recipe_intro_packs_title" = "Avec un pack de recettes";
-"recipe_intro_packs_message" = "Notre serveur rédige la recette et peut aussi planifier un menu sur 3 jours. Une recette décompte %1$@ d'un pack ; un menu décompte %2$@ avec 2 plats par jour ou %3$@ avec 3.";
 "recipe_intro_packs_price" = "Packs à partir de %@.";
 "recipe_intro_free_stays" = "Les options gratuites restent disponibles quand vous avez un pack.";
 "recipe_intro_again" = "Vous pouvez rouvrir ceci dans les Réglages des recettes.";
@@ -820,7 +819,6 @@
 "recipe_prompt_min_minutes" = "Idéalement environ %d minutes ou plus";
 "recipe_prompt_meals" = "Adaptée à l'un de ces repas : %@";
 "recipe_not_enough_items" = "Pas assez de produits une fois votre régime et vos allergènes exclus. Cochez quelques produits de plus. Aucune recette n'a été décomptée.";
-"recipe_not_enough_items_menu" = "Pas assez pour trois jours. Cochez quelques produits de plus, ou demandez une seule recette. Aucune recette n'a été décomptée.";
 "recipe_diets_need_update" = "Les recettes des packs ne peuvent pas encore combiner « sans gluten » avec un autre régime. Gardez-en un seul dans les Réglages des recettes, ou utilisez le modèle de cet {device} ou le prompt à partager. Aucune recette n'a été décomptée.";
 "recipe_language_needs_update" = "Les recettes des packs ne peuvent pas encore être rédigées en danois. Choisissez une autre langue des recettes dans les Réglages des recettes, ou utilisez le modèle de cet {device} ou le prompt à partager. Aucune recette n'a été décomptée.";
 "recipe_not_from_pantry_hint" = "Les ingrédients sans la mention « Chez vous » ne viennent pas de votre garde-manger : ce sont des produits de base, ou quelques articles que vous devrez peut-être acheter.";

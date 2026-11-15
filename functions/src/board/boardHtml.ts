@@ -49,6 +49,11 @@ export const PACK_LABEL: Record<Pack, string> = {
 };
 const PACK_SHORT: Record<Pack, string> = { recipes_10: "10-pack", recipes_50: "50-pack", recipes_100: "100-pack", other: "Other" };
 export const STORE_LABEL: Record<Store, string> = { appstore: "App Store", play: "Google Play", other: "Other store" };
+/** Which app a store's purchases come from: Google Play only from Android, the App Store only from iOS. */
+export const PLATFORM_LABEL: Record<Store, string> = { play: "Android (Google Play)", appstore: "iOS (App Store)", other: "Other store" };
+/** Android first; "other" (an unknown stored value) only when it has purchases. */
+const PLATFORM_ORDER: readonly Store[] = ["play", "appstore", "other"];
+const PLATFORM_CLS: Record<Store, string> = { play: "s1", appstore: "s2", other: "other" };
 
 // --- Charts -------------------------------------------------------------------------------------
 
@@ -216,6 +221,34 @@ function totalsTable(caption: string, rows: [string, Totals][]): string {
     `<th scope="col">Recipes</th><th scope="col">Refunded</th><th scope="col">Net</th></tr></thead><tbody>${body}</tbody></table>`;
 }
 
+interface SharePart {
+  label: string;
+  cls: string;
+  value: number;
+}
+
+/**
+ * One 100 % bar per measure (packs, recipes, ...), split by the parts, each part also written out
+ * as text with its count and share, so nothing depends on colour. A measure with nothing in it
+ * shows an empty track and says so.
+ */
+function shareBars(title: string, parts: string[][], rows: { label: string; parts: SharePart[] }[], empty: string): string {
+  const legendItems = parts.map(([label, cls]) => `<li><span class="key box ${cls}"></span>${esc(label)}</li>`).join("");
+  const body = rows.map((r) => {
+    const whole = r.parts.reduce((sum, x) => sum + Math.max(0, x.value), 0);
+    const text = whole > 0
+      ? r.parts.map((x) => `${x.label} ${int(x.value)} (${pct(x.value, whole)} %)`).join(" · ")
+      : empty;
+    const segs = whole > 0
+      ? r.parts.filter((x) => x.value > 0).map((x) => `<span class="seg ${x.cls}" style="width:${((x.value / whole) * 100).toFixed(2)}%"></span>`).join("")
+      : "";
+    return `<div class="sp-row"><div class="sp-label">${esc(r.label)}</div>` +
+      `<div class="sp-bar" role="img" aria-label="${esc(`${r.label}: ${text}`)}">${segs}</div>` +
+      `<div class="sp-text">${esc(text)}</div></div>`;
+  }).join("");
+  return `<figure class="chart"><figcaption>${esc(title)}</figcaption><ul class="legend">${legendItems}</ul>${body}</figure>`;
+}
+
 function stat(label: string, value: string): string {
   return `<div class="stat"><div class="st-value">${value}</div><div class="st-label">${esc(label)}</div></div>`;
 }
@@ -290,6 +323,12 @@ figcaption{font-weight:600;margin:0 0 6px}
 .legend li{display:inline-flex;align-items:center;gap:6px}
 .key.box{width:10px;height:10px;border-radius:2px;display:inline-block;background:var(--s1)}
 .key.line{width:16px;height:0;border-top:2px solid var(--ink-2);display:inline-block}
+.split{margin:16px 0 0}
+.sp-row{display:grid;grid-template-columns:112px 1fr;gap:2px 12px;align-items:center;margin:0 0 10px}
+.sp-label{color:var(--ink-2);font-size:13px}
+.sp-bar{display:flex;gap:2px;height:14px;border-radius:4px;overflow:hidden;background:var(--grid)}
+.sp-text{grid-column:2;color:var(--ink-2);font-size:13px;font-variant-numeric:tabular-nums}
+.seg{display:block;height:100%}.seg.s1{background:var(--s1)}.seg.s2{background:var(--s2)}.seg.other{background:var(--other)}
 .key.s1{background:var(--s1)}.key.s2{background:var(--s2)}.key.s3{background:var(--s3)}.key.s4{background:var(--s4)}.key.other{background:var(--other)}
 .chart-svg{display:block;width:100%;height:auto;overflow:visible}
 .chart-svg text{font:11px system-ui,-apple-system,"Segoe UI",sans-serif;font-variant-numeric:tabular-nums}
@@ -326,7 +365,7 @@ border-radius:8px;padding:8px 10px;font-size:13px;box-shadow:0 4px 16px rgba(0,0
 #tip .row span:last-child{color:var(--ink-2)}
 #tip .k{width:12px;height:0;border-top:2px solid var(--ink-2);display:inline-block}
 #tip .k.s1{border-color:var(--s1)}#tip .k.s2{border-color:var(--s2)}#tip .k.s3{border-color:var(--s3)}#tip .k.s4{border-color:var(--s4)}#tip .k.other{border-color:var(--other)}
-@media (forced-colors:active){.bar,.m-fill{forced-color-adjust:none}}
+@media (forced-colors:active){.bar,.m-fill,.seg{forced-color-adjust:none}}
 `;
 
 // The hover / focus readout. Text goes in with textContent only.
@@ -353,6 +392,12 @@ export interface HostedOptions {
   everyHours: number;
   /** Past this age the page's own script shows the stale warning. */
   staleAfterHours: number;
+  /**
+   * The board's own address (the authenticated browser URL). The browser's refresh button asks
+   * again for the short-lived download address Google redirected to, which has expired by then,
+   * so the page offers this link instead.
+   */
+  reloadUrl?: string;
 }
 
 /**
@@ -429,6 +474,35 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
     empty: "No production purchases in this period",
   });
 
+  const storesShown = PLATFORM_ORDER.filter((k) => k !== "other" || b.sales.byStore.other.purchases > 0);
+  const storeChart = chart({
+    title: "Purchases per day by platform (production)",
+    unit: "packs",
+    days: dayList,
+    series: storesShown.map((k) => ({ label: PLATFORM_LABEL[k], cls: PLATFORM_CLS[k], values: b.days.map((d) => d.salesByStore[k].count) })),
+    axis: (v) => int(v),
+    value: (v) => int(v),
+    integer: true,
+    empty: "No production purchases in this period",
+  });
+  const storeSplit = shareBars(
+    "Split by platform (production, this period)",
+    storesShown.map((k) => [PLATFORM_LABEL[k], PLATFORM_CLS[k]]),
+    [
+      { label: "Packs", parts: storesShown.map((k) => ({ label: PLATFORM_LABEL[k], cls: PLATFORM_CLS[k], value: b.sales.byStore[k].purchases })) },
+      { label: "Recipes granted", parts: storesShown.map((k) => ({ label: PLATFORM_LABEL[k], cls: PLATFORM_CLS[k], value: b.sales.byStore[k].credits })) },
+      { label: "Net recipes", parts: storesShown.map((k) => ({ label: PLATFORM_LABEL[k], cls: PLATFORM_CLS[k], value: b.sales.byStore[k].net })) },
+      ...packsShown.map((pk) => ({
+        label: `${PACK_SHORT[pk]}s`,
+        parts: storesShown.map((k) => ({ label: PLATFORM_LABEL[k], cls: PLATFORM_CLS[k], value: b.sales.byStoreAndPack[k][pk].purchases })),
+      })),
+    ],
+    "No production purchases in this period",
+  );
+  const PLATFORM_SHORT: Record<Store, string> = { play: "Android", appstore: "iOS", other: "Other store" };
+  const storePackRows = storesShown.flatMap((k) => packsShown
+    .map((pk) => [`${PLATFORM_SHORT[k]}, ${PACK_SHORT[pk]}`, b.sales.byStoreAndPack[k][pk]] as [string, Totals]));
+
   const genChart = chart({
     title: "Answers per day",
     unit: "answers",
@@ -458,7 +532,8 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
 <h1>Recipe packs board</h1>
 <p class="sub">${esc(b.project)} · ${esc(b.firstDay)} to ${esc(b.today)} (${b.days.length} UTC days) · generated ${esc(utcTime(b.generatedAtMs))}</p>
 ${hosted ? `<p class="sub" id="updated">Updated ${esc(utcTime(b.generatedAtMs))}, redrawn ${hosted.everyHours === 1 ? "hourly" : `every ${esc(int(hosted.everyHours))} hours`}. ` +
-  `If that is more than ${esc(int(hosted.staleAfterHours))} hours ago, the redraw has stopped.</p>
+  `If that is more than ${esc(int(hosted.staleAfterHours))} hours ago, the redraw has stopped.` +
+  `${hosted.reloadUrl ? ` <a id="reload" href="${esc(hosted.reloadUrl)}">Reload the board</a> (the browser's refresh button stops working after a while).` : ""}</p>
 <p class="alert" id="stale" role="alert" data-generated="${b.generatedAtMs}" data-stale-hours="${hosted.staleAfterHours}" hidden></p>
 ` : ""}${cappedAlert(b)}
 <section aria-labelledby="h-today"><h2 id="h-today">Today at a glance (${esc(b.today)}, UTC)</h2><div class="tiles">${glance}</div></section>
@@ -489,6 +564,11 @@ ${stat(`Estimated net revenue (config's conservative ${usd(b.netMicroUsdPerCredi
 <div class="scroll">${totalsTable("By pack", packsShown.map((k) => [PACK_SHORT[k], s.byPack[k]] as [string, Totals]))}</div>
 <div class="scroll">${totalsTable("By store", STORES.filter((k) => k !== "other" || s.byStore.other.purchases > 0).map((k) => [STORE_LABEL[k], s.byStore[k]] as [string, Totals]))}</div>
 </div>
+<div class="split">${storeChart}</div>
+<div class="pair">
+<div>${storeSplit}</div>
+<div class="scroll">${totalsTable("By platform and pack", storePackRows)}</div>
+</div>
 <p class="note">Production purchases granted in the period, by the day they were granted. "Refunded since" counts store refunds of
 those purchases up to now, whenever they came. Sandbox purchases are never counted as sales:
 ${esc(int(s.sandbox.purchases))} in the period, worth ${esc(int(s.sandbox.credits))} recipes.</p>
@@ -504,7 +584,7 @@ ${stat("Tokens in / out / thinking", `${esc(compact(p.inputTokens))} / ${esc(com
 ${stat("Average estimated cost per written answer", b.avgPerAnswerMicroUsd === null ? "–" : esc(usd(b.avgPerAnswerMicroUsd, 3)))}
 ${stat("Average estimated cost per recipe kept", b.avgPerRecipeMicroUsd === null ? "–" : esc(usd(b.avgPerRecipeMicroUsd, 3)))}
 </div>
-<p class="note">An answer is one recipe or one menu (a menu costs ${esc(int(b.costs.menu2))} or ${esc(int(b.costs.menu3))} recipes, a recipe ${esc(int(b.costs.recipe))}).
+<p class="note">An answer is one recipe or one menu (a recipe costs ${esc(int(b.costs.recipe))}; a 3-day menu ${esc(int(b.costs.menu2))} or ${esc(int(b.costs.menu3))} recipes with 2 or 3 courses; menus of 1 to 4 days and 1 to 3 courses ${esc(int(b.costs.menuSets["1"]["1"]))} to ${esc(int(b.costs.menuSets["4"]["3"]))}).
 Quality refusals are always refunded; failures are refunded or charged by the server's rules.</p>
 </section>
 
@@ -535,7 +615,8 @@ export function boardSummary(b: Board): string[] {
       `at most ${usd(b.month.worstCaseMicroUsd)} by month end.`,
     `Sales (production): ${int(s.total.purchases)} packs, ${int(s.total.credits)} recipes granted, ${int(s.total.refunded)} refunded, ${int(s.total.net)} net; ` +
       `estimated net revenue ${usd(s.estimatedNetMicroUsd)} (config estimate, not the store payout). ` +
-      `App Store ${int(s.byStore.appstore.purchases)}, Google Play ${int(s.byStore.play.purchases)}. Sandbox: ${int(s.sandbox.purchases)} purchases, ${int(s.sandbox.credits)} recipes.`,
+      `iOS (App Store) ${int(s.byStore.appstore.purchases)} packs, ${int(s.byStore.appstore.credits)} recipes; ` +
+      `Android (Google Play) ${int(s.byStore.play.purchases)} packs, ${int(s.byStore.play.credits)} recipes. Sandbox: ${int(s.sandbox.purchases)} purchases, ${int(s.sandbox.credits)} recipes.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
     ...(b.purchasesCapped
@@ -583,6 +664,10 @@ export function boardJson(b: Board): Record<string, unknown> {
       ...totals(s.total),
       estimatedNetRevenueMicroUsd: s.estimatedNetMicroUsd,
       byStore: { appstore: totals(s.byStore.appstore), play: totals(s.byStore.play) },
+      byStoreAndPack: {
+        appstore: Object.fromEntries(PACKS.map((k) => [k, totals(s.byStoreAndPack.appstore[k])])),
+        play: Object.fromEntries(PACKS.map((k) => [k, totals(s.byStoreAndPack.play[k])])),
+      },
       byPack: Object.fromEntries(PACKS.map((k) => [k, totals(s.byPack[k])])),
       sandbox: { purchases: s.sandbox.purchases, recipes: s.sandbox.credits },
       capped: b.purchasesCapped ? { total: b.purchasesCapped.total, read: b.purchasesCapped.read } : null,

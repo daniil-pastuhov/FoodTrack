@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A three-day menu: one section a day, saying which dated items it uses, with a row per course
+/// A menu set (one to four days, one to three courses a day): one section a day, saying which dated items it uses, with a row per course
 /// that opens the dish's full recipe. Saved as one entry.
 struct RecipeMenuView: View {
     let menu: RecipeMenu
@@ -11,7 +11,7 @@ struct RecipeMenuView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                Text(L10n.recipeMenuHeading)
+                Text(L10n.recipeMenuHeading(days: menu.days.count))
                     .larderFont(.headline)
                     .foregroundStyle(LarderColor.onBackground)
                     .fixedSize(horizontal: false, vertical: true)
@@ -141,11 +141,13 @@ struct RecipeMenuView: View {
 struct RecipeDishView: View {
     let recipe: RecipeMenuCourse
     let date: String
+    /// The menu's day count, for "Part of Menu for 2 days".
+    var menuDays: Int = MenuSet.defaultDays
 
     @State private var sharing = false
 
     var body: some View {
-        RecipeDocument(recipe: recipe.recipe, footer: L10n.recipePartOfMenu)
+        RecipeDocument(recipe: recipe.recipe, footer: L10n.recipePartOfMenu(days: menuDays))
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     LarderIconButton(.share2, label: L10n.recipeShareRecipe, color: LarderColor.primary) { sharing = true }

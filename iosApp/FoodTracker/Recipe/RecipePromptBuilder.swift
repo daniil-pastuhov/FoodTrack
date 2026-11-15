@@ -221,7 +221,7 @@ enum RecipePromptBuilder {
 
     /// A menu as plain text: each day's heading, then each course and its full recipe.
     static func plainText(_ menu: RecipeMenu) -> String {
-        var parts = [L10n.recipeMenuHeading]
+        var parts = [L10n.recipeMenuHeading(days: menu.days.count)]
         if let warning = L10n.recipePastDateWarning(menu.pastDate) { parts.append("⚠ " + warning) }
         for day in menu.days {
             let heading = RecipeMenuView.dayTitle(day.date)

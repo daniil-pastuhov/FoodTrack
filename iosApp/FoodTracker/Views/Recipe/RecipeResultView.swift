@@ -29,7 +29,7 @@ struct RecipeResultView: View {
                     .navigationTitle(L10n.recipeResultTitle)
             case .menu(let menu)?:
                 if let dish, let course = Self.course(in: menu, day: dish.day, course: dish.course) {
-                    RecipeDishView(recipe: course, date: menu.days[dish.day].date)
+                    RecipeDishView(recipe: course, date: menu.days[dish.day].date, menuDays: menu.days.count)
                 } else {
                     RecipeMenuView(menu: menu, onOpenDish: onOpenDish)
                         .navigationTitle(L10n.recipeMenuResultTitle)

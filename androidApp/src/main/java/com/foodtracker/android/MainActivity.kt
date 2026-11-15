@@ -26,7 +26,16 @@ import kotlinx.coroutines.Dispatchers
 import androidx.lifecycle.lifecycleScope
 import com.foodtracker.android.ui.screens.ScanDemo
 import com.foodtracker.android.ui.screens.ScanDemoFeed
-import com.foodtracker.recipe.MENU_SAVED_TITLE
+import com.foodtracker.recipe.menuSavedTitle
+import com.foodtracker.recipe.AccountKind
+import com.foodtracker.recipe.AccountState
+import com.foodtracker.recipe.DEFAULT_MENU_COURSES
+import com.foodtracker.recipe.DEFAULT_MENU_DAYS
+import com.foodtracker.recipe.PaidUiState
+import com.foodtracker.recipe.RecipeCosts
+import com.foodtracker.recipe.RecipeDemo
+import com.foodtracker.recipe.RecipeMode
+import com.foodtracker.recipe.ServerIssue
 import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.recipe.RecipeJson
@@ -143,6 +152,11 @@ class MainActivity : ComponentActivity() {
             recipeStateHolder.suppressIntroForSession()
         }
         if (intent.getBooleanExtra(EXTRA_DEMO_RECIPE_INTRO, false)) recipeStateHolder.showIntroForDemo()
+        recipeDemoOf(intent)?.let { demo ->
+            reviewPrompter.suppressForSession()
+            recipeStateHolder.suppressIntroForSession()
+            recipeStateHolder.showDemo(demo)
+        }
         intent.getStringExtra(EXTRA_DEMO_BACKUP)?.let { path ->
             val raw = runCatching { java.io.File(path).readText() }.getOrNull()
             if (raw == null) {
@@ -170,11 +184,17 @@ class MainActivity : ComponentActivity() {
                 val id = "demo-$route"
                 val now = System.currentTimeMillis()
                 val saved = if (route == "recipeMenu") {
-                    SavedRecipe.of(id, MENU_SAVED_TITLE, RecipeJson.decodeFromString(Menu.serializer(), raw), now)
+                    val menu = RecipeJson.decodeFromString(Menu.serializer(), raw)
+                    SavedRecipe.of(id, menuSavedTitle(menu.days.size), menu, now)
                 } else {
                     SavedRecipe.of(id, RecipeJson.decodeFromString(Recipe.serializer(), raw), now)
                 }
                 recipeStateHolder.restoreSaved(saved)
+                // `--ez demoUnread true`: left unread in Saved recipes (the header's count), not opened.
+                if (intent.getBooleanExtra(EXTRA_DEMO_UNREAD, false)) {
+                    recipeStateHolder.markSavedUnreadForDemo(id)
+                    return
+                }
                 // Opened once it is in the saved list the result screen reads.
                 lifecycleScope.launch {
                     recipeStateHolder.uiState.first { state -> state.saved.any { it.id == id } }
@@ -190,6 +210,50 @@ class MainActivity : ComponentActivity() {
                 currentScreenState.value = LarderRoute.Scanner()
             }
         }
+    }
+
+    /**
+     * The Recipe form's actions in any combination, for screenshots (debug builds only; nothing is
+     * sent): `--ei demoRecipeCredits <n>` shows the paid route with that many recipes,
+     * `--es demoRecipeState offline|paused`, `--ez demoRecipePacks true` (the store sells packs, so
+     * Buy shows), `--ez demoRecipeMenuSets true` (a server that writes menu sets, with the
+     * server's default table), `--ez demoRecipeOnDevice true` (the phone's model is ready),
+     * `--ez demoRecipeCopy true` (a share sheet without Copy, as below Android 10),
+     * `--es demoRecipeMode menu` with `--ei demoRecipeDays <1-4>` and `--ei demoRecipeCourses <1-3>`.
+     * The counterpart of iOS's `-demoRecipeCredits` and its companions.
+     */
+    private fun recipeDemoOf(intent: Intent): RecipeDemo? {
+        val keys = listOf(
+            EXTRA_DEMO_RECIPE_CREDITS, EXTRA_DEMO_RECIPE_STATE, EXTRA_DEMO_RECIPE_PACKS, EXTRA_DEMO_RECIPE_MENU_SETS,
+            EXTRA_DEMO_RECIPE_ON_DEVICE, EXTRA_DEMO_RECIPE_COPY, EXTRA_DEMO_RECIPE_MODE
+        )
+        if (!isDebuggable() || keys.none(intent::hasExtra)) return null
+        val credits = if (intent.hasExtra(EXTRA_DEMO_RECIPE_CREDITS)) intent.getIntExtra(EXTRA_DEMO_RECIPE_CREDITS, 0) else null
+        val menuSets = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_MENU_SETS, true)
+        // The server's default table (functions/CONTRACT.md "Costs"), for the demo only: the app
+        // itself never prices a menu set on its own.
+        val table = (1..4).associateWith { days -> (1..3).associateWith { courses -> days + courses - 1 } }
+        val paid = PaidUiState(
+            available = credits != null,
+            balance = credits,
+            account = AccountState(if (credits == null) AccountKind.NONE else AccountKind.ANONYMOUS),
+            issue = when (intent.getStringExtra(EXTRA_DEMO_RECIPE_STATE)) {
+                "offline" -> ServerIssue.OFFLINE
+                "paused" -> ServerIssue.PAUSED
+                else -> null
+            },
+            packsOffered = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_PACKS, false),
+            costs = if (menuSets) RecipeCosts(menuSets = table) else RecipeCosts(),
+            menuSets = menuSets
+        )
+        return RecipeDemo(
+            paid = paid,
+            onDevice = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_ON_DEVICE, false),
+            shareSheetCopies = !intent.getBooleanExtra(EXTRA_DEMO_RECIPE_COPY, false),
+            mode = if (intent.getStringExtra(EXTRA_DEMO_RECIPE_MODE) == "menu") RecipeMode.MENU else RecipeMode.RECIPE,
+            days = intent.getIntExtra(EXTRA_DEMO_RECIPE_DAYS, DEFAULT_MENU_DAYS),
+            courses = intent.getIntExtra(EXTRA_DEMO_RECIPE_COURSES, DEFAULT_MENU_COURSES)
+        )
     }
 
     private fun isDebuggable(): Boolean =
@@ -379,6 +443,16 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_DEMO_TAB = "demoTab"
         private const val EXTRA_DEMO_RECIPE_INTRO = "demoRecipeIntro"
         private const val EXTRA_DEMO_ROUTE = "demoRoute"
+        private const val EXTRA_DEMO_UNREAD = "demoUnread"
+        private const val EXTRA_DEMO_RECIPE_CREDITS = "demoRecipeCredits"
+        private const val EXTRA_DEMO_RECIPE_STATE = "demoRecipeState"
+        private const val EXTRA_DEMO_RECIPE_PACKS = "demoRecipePacks"
+        private const val EXTRA_DEMO_RECIPE_MENU_SETS = "demoRecipeMenuSets"
+        private const val EXTRA_DEMO_RECIPE_ON_DEVICE = "demoRecipeOnDevice"
+        private const val EXTRA_DEMO_RECIPE_COPY = "demoRecipeCopy"
+        private const val EXTRA_DEMO_RECIPE_MODE = "demoRecipeMode"
+        private const val EXTRA_DEMO_RECIPE_DAYS = "demoRecipeDays"
+        private const val EXTRA_DEMO_RECIPE_COURSES = "demoRecipeCourses"
         private const val EXTRA_DEMO_RECIPE = "demoRecipe"
         private const val EXTRA_DEMO_SCAN_IMAGE = "demoScanImage"
         private const val EXTRA_DEMO_SCAN_BARCODE = "demoScanBarcode"

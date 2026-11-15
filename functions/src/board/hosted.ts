@@ -109,7 +109,7 @@ export async function redrawBoard(env: RedrawEnv): Promise<{ reads: number; byte
       ...(env.purchasesCap !== undefined ? { purchasesCap: env.purchasesCap } : {}),
     });
     const board = buildBoard(input);
-    const html = renderBoardHtml(board, HOSTED_BOARD);
+    const html = renderBoardHtml(board, { ...HOSTED_BOARD, reloadUrl: `https://storage.cloud.google.com/${bucketName}/${BOARD_HTML_OBJECT}` });
     const json = `${JSON.stringify(boardJson(board), null, 2)}\n`;
     await check();
     const common = { cacheControl: BOARD_CACHE_CONTROL, contentDisposition: "inline" };

@@ -2,7 +2,11 @@ package com.foodtracker.android.ui.screens
 
 import android.content.res.Resources
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -40,6 +46,8 @@ import com.foodtracker.android.ui.navigation.LocalLarderNavigator
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.formatDayMonth
+import com.foodtracker.recipe.DEFAULT_MENU_DAYS
+import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.recipe.RecipeSource
 import com.foodtracker.recipe.RecipeStateHolder
@@ -57,7 +65,13 @@ internal fun savedRecipeDate(saved: SavedRecipe, zone: TimeZone = TimeZone.curre
 
 /** A recipe's own title; a menu in the app's words, whatever language it was saved under. */
 internal fun savedRecipeTitle(resources: Resources, saved: SavedRecipe): String =
-    if (saved.kind == SavedRecipeKind.MENU) resources.getString(R.string.recipe_menu_title) else saved.title
+    if (saved.kind == SavedRecipeKind.MENU) saved.menu?.let { menuTitle(resources, it) } ?: menuTitle(resources, DEFAULT_MENU_DAYS) else saved.title
+
+/** "Menu for 2 days": the day count read from the menu itself, so one saved before menu sets
+ *  existed says three. */
+internal fun menuTitle(resources: Resources, menu: Menu): String = menuTitle(resources, menu.days.size.coerceAtLeast(1))
+
+internal fun menuTitle(resources: Resources, days: Int): String = resources.getQuantityString(R.plurals.recipe_menu_title, days, days)
 
 /** "15 min · Written on this phone", or "9 dishes · From your pack" for a menu, after the day;
  *  the day itself is formatted by the caller. */
@@ -87,7 +101,7 @@ fun SavedRecipesScreen(
         topBar = { LarderTopBar(title = stringResource(R.string.recipe_saved_action), onBack = onBack) },
         modifier = Modifier.fillMaxSize()
     ) { padding ->
-        SavedRecipesList(saved, !state.savedLoaded, padding, today = DateUtils.today(), onDelete = onDelete)
+        SavedRecipesList(saved, !state.savedLoaded, padding, today = DateUtils.today(), onDelete = onDelete, isUnread = state::isUnread)
     }
 }
 
@@ -97,7 +111,8 @@ private fun SavedRecipesList(
     loading: Boolean,
     padding: PaddingValues,
     today: LocalDate,
-    onDelete: (String) -> Unit
+    onDelete: (String) -> Unit,
+    isUnread: (String) -> Boolean = { false }
 ) {
     val resources = LocalContext.current.resources
     val navigator = LocalLarderNavigator.current
@@ -146,11 +161,18 @@ private fun SavedRecipesList(
                         modifier = Modifier.background(MaterialTheme.colorScheme.surface),
                         leading = { LarderThumb(imageUrl = null, fallbackIcon = if (item.kind == SavedRecipeKind.MENU) LarderIcons.CalendarRange else LarderIcons.Utensils) },
                         trailing = {
-                            LarderIcon(
-                                LarderIcons.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Written while the person was elsewhere and not opened yet.
+                                if (isUnread(item.id)) UnreadDot()
+                                LarderIcon(
+                                    LarderIcons.ChevronRight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         },
                         onClick = { navigator.navigate(LarderRoute.RecipeResult(item.id)) }
                     )
@@ -158,6 +180,18 @@ private fun SavedRecipesList(
             }
         }
     }
+}
+
+/** A small dot for a saved recipe not opened yet, said as "New". */
+@Composable
+private fun UnreadDot() {
+    val description = stringResource(R.string.recipe_saved_unread)
+    Box(
+        modifier = Modifier
+            .size(8.dp)
+            .background(MaterialTheme.colorScheme.primary, CircleShape)
+            .semantics { contentDescription = description }
+    )
 }
 
 @PreviewLightDark
@@ -175,7 +209,8 @@ internal fun SavedRecipesPreview() = LarderTheme {
             loading = false,
             padding = PaddingValues(0.dp),
             today = today,
-            onDelete = {}
+            onDelete = {},
+            isUnread = { it == "1" }
         )
     }
 }

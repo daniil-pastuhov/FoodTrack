@@ -8,7 +8,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { randomUUID } from "node:crypto";
 import type { GenerateRequest } from "../src/contract";
 import type { Prompt } from "../src/adapters/prompt";
-import { menuDates, coursesFor } from "../src/contract";
+import { menuDates, menuDaysOf, coursesFor } from "../src/contract";
 import { ANDROID_FIREBASE_APP_ID, IOS_FIREBASE_APP_ID } from "../src/constants";
 import { loadRuntimeConfig } from "../src/model";
 import { verifyPurchase as verifyCore } from "../src/core/purchases";
@@ -233,7 +233,7 @@ export function sampleRecipe(title = "Pantry pasta") {
 
 export function sampleMenu(req: GenerateRequest) {
   return {
-    days: menuDates(req.today).map((date, d) => ({
+    days: menuDates(req.today, menuDaysOf(req)).map((date, d) => ({
       date,
       uses: ["p1"],
       courses: coursesFor(req.courses!).map((course) => ({ course, recipe: sampleRecipe(`${course} ${d}`) })),
