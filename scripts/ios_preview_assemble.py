@@ -5,24 +5,27 @@ listing language:
     scripts/ios_preview_assemble.py [raw-dir] [out-dir] [--no-captions]
         # defaults: build/ios-preview, build/app-store-preview
 
-Writes <out-dir>/<listing folder>/preview.mp4 and poster.png (en-GB, ru, no, es-ES, de-DE, fr-FR,
-sv, da; es-MX and fr-CA take the es-ES and fr-FR files, uploaded by hand like the rest). The video follows App Store Connect's
+Writes <out-dir>/<listing folder>/preview.mp4, poster.png and poster_time.txt (en-GB, ru, no,
+es-ES, de-DE, fr-FR, sv, da; es-MX and fr-CA take the es-ES and fr-FR files; `scripts/testflight.py
+previews` uploads them and sets the poster frame). The video follows App Store Connect's
 "App preview specifications" (developer.apple.com/help/app-store-connect/reference/
 app-preview-specifications) for the iPhone 6.9" size (Dynamic Island, large display), which the
 smaller iPhones scale down from: 886x1920 portrait, 30 fps, H.264 High Profile level 4.0,
 progressive, at Apple's 10-12 Mbps target, with a stereo 256 kbps AAC track at 48 kHz (silent:
 previews autoplay muted and the captions tell the story), 15 to 30 seconds long (this one is
-about 21), about 27 MB.
+about 28), about 35 MB.
 
 The story (SHOTS below): the scanner reads a pack's barcode and then its printed date; the item is
 saved and lands in the list; the Recipe tab with the items that expire first ticked; a recipe
-written from them; the three-day menu. Each shot is cut from its clip between two of the moments
+written from them; the Recipe form choosing a menu set (Days, Courses, Generate menu); the
+four-day menu it writes. Each shot is cut from its clip between two of the moments
 ios_preview.sh wrote to timeline.json, and the shots are joined with short dissolves (Apple asks
 for simple transitions). The captions are the screenshots' own (scripts/frame_screenshots.py's
-CAPTIONS; the menu's, last, adds a smaller line saying it needs a recipe pack, PACK_NOTES),
+CAPTIONS; the menu set's and the menu's add a smaller line saying they need a recipe pack,
+PACK_NOTES),
 in Vollkorn SemiBold, warm white on a Larder green band across the top, over the status
 bar, so no app content and nothing at the bottom of the frame, where the App Store puts its
-controls, is covered. poster.png is the frame at POSTER_AT; App Store Connect uses the frame 5
+controls, is covered. poster.png is the frame at POSTER_AT (poster_time.txt says when); App Store Connect uses the frame 5
 seconds in unless it is told otherwise (Media Manager, Edit Poster Frame). Needs ffmpeg and
 Pillow.
 """
@@ -50,18 +53,20 @@ GREEN = (0x1F, 0x43, 0x31)  # green.800
 # "scanned" is when the scan demo reads the date: it starts counting as the scanner sheet comes
 # up, about a second before the screen counts as drawn, and reads the barcode after one pace and
 # the date after two. The caption is an index into CAPTIONS: 0 the list, 1 the scan, 2 a recipe,
-# 3 the menu.
+# 3 the Menu set form ("Choose the days and the courses"), 4 the menu ("Plan up to four days").
 SHOTS = [
-    ("scan", ("drawn", -0.3), ("scanned", 1.2), 1),   # the pack, its barcode, then its date
+    ("scan", ("drawn", -0.3), ("scanned", 2.2), 1),   # the pack, its barcode, then its date
     ("scan", ("save", -1.4), ("save", 0.75), 1),      # Add item with the date filled in; Save
     ("scan", ("save", 0.75), ("save", 2.9), 0),       # Home: "saved to Fridge"
     ("scan", ("list", 0.1), ("list", 2.3), 0),        # scrolled down to it
     ("scan", ("recipe", 1.0), ("recipe", 3.8), 2),    # Recipe: what expires first, ticked
     ("recipe", ("swipe", -1.0), ("swipe", 3.0), 2),   # the recipe, down to the method
-    ("menu", ("swipe", -1.0), ("swipe", 3.6), 3),     # the menu, down to the third day
+    ("menuset", ("swipe", -0.8), ("swipe", 5.4), 3),  # Menu set: down to Days, Courses, Generate menu
+    ("menu", ("swipe", -0.6), ("swipe", 4.4), 4),     # the four-day menu, down to the fourth day
 ]
-# The last shot, the three-day menu, is written only from a recipe pack, and Apple asks a preview
-# that shows something needing a purchase to say so: its caption gets this smaller line under it.
+# The captions of what only a recipe pack writes (the menu set and its menu): Apple asks a preview
+# that shows something needing a purchase to say so, so they get this smaller line under them.
+PAID_CAPTIONS = {3, 4}
 PACK_NOTES = {
     "en": "Needs a recipe pack",
     "ru": "Нужен пакет рецептов",
@@ -72,7 +77,7 @@ PACK_NOTES = {
     "sv": "Kräver ett receptpaket",
     "da": "Kræver en opskriftspakke",
 }
-POSTER_AT = 4.6  # seconds into the preview: the scan card with the product and its date
+POSTER_AT = 5.5  # seconds into the preview: the scan card with the product and its date
 
 
 def run(*args):
@@ -177,9 +182,9 @@ def assemble(lang, raw, out, captions):
                     runs.append([shot[3], n, n])
             for r, (caption, first, last) in enumerate(runs):
                 png = tmp / f"caption{r}.png"
-                # The run that ends the preview is the menu's: it carries the purchase note.
+                # The runs of what only a pack writes carry the purchase note.
                 caption_png(CAPTIONS[lang][caption], png,
-                            PACK_NOTES[lang] if last == len(SHOTS) - 1 else None)
+                            PACK_NOTES[lang] if caption in PAID_CAPTIONS else None)
                 shown = starts[first] if first else 0.0
                 hidden = starts[last] + lengths[last] if last < len(SHOTS) - 1 else duration
                 inputs += ["-loop", "1", "-framerate", str(FPS), "-t", f"{duration:.3f}", "-i", str(png)]
@@ -207,6 +212,8 @@ def assemble(lang, raw, out, captions):
             "-t", f"{duration:.3f}", "-movflags", "+faststart", str(video))
     run("ffmpeg", "-y", "-loglevel", "error", "-ss", f"{POSTER_AT}", "-i", str(video),
         "-frames:v", "1", str(folder / "poster.png"))
+    # The poster time, for `testflight.py previews` (previewFrameTimeCode).
+    (folder / "poster_time.txt").write_text(f"{POSTER_AT}\n")
     return video, duration, starts
 
 

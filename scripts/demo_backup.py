@@ -9,7 +9,7 @@ today, so the "expires today / tomorrow" labels always read right. Item ids are 
 salmon. The product cache holds the yoghurt the scan demo reads (scripts/demo_scan_image.py), so
 its lookup needs no network; [scan picture url] is its picture, where the app can read it.
 """
-import datetime, json, sys
+import datetime, json, os, sys
 from demo_scan_image import BARCODE, NAMES as SCAN_NAMES
 
 lang, out = sys.argv[1], sys.argv[2]
@@ -69,6 +69,11 @@ entries = [{
     "id": f"demo-entry-{i}", "productName": names[len(pantry) + i], "barcode": None,
     "category": category, "quantity": quantity, "addedDate": day(0), "sortOrder": float(i),
 } for i, (category, quantity) in enumerate(shopping)]
+# DEMO_ITEMS=1,2,3 keeps only those items (by index, ids unchanged): the Menu set screenshot on an
+# iPhone, where a short "Cook with" leaves Days and Courses in view with the form at its top.
+if os.environ.get("DEMO_ITEMS"):
+    keep = {int(i) for i in os.environ["DEMO_ITEMS"].split(",")}
+    items = [item for i, item in enumerate(items) if i in keep]
 document = {
     "version": 1, "exportedAtEpochMillis": 0, "items": items, "shoppingList": entries,
     "categoryPreferences": [],

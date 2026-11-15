@@ -6,7 +6,7 @@ store art:
     scripts/in_app_event_art.py
 
 reads store-listing/app-store/<listing folder>/screenshots/{2,3,4}.png (the scan, a written
-recipe and the three-day menu, as scripts/frame_screenshots.py made them), cuts the phone out of
+recipe and the menu set, as scripts/frame_screenshots.py made them), cuts the phone out of
 each (without its caption) and writes store-listing/app-store/in-app-event/<listing folder>/:
 
 - event-card.png, 3840x2160 (16:9): the three phones side by side, the recipe in the middle.
@@ -35,7 +35,7 @@ DETAILS_SIZE = (2160, 3840)
 # Larder green.800 (docs/design/tokens.json), flat: Apple adds its own gradient under the text.
 BACKGROUND = (0x1F, 0x43, 0x31)
 # The framed screenshots each phone is cut from: the scan, the recipe and the menu.
-SHOTS = {"scan": "2.png", "recipe": "3.png", "menu": "4.png"}
+SHOTS = {"scan": "2.png", "recipe": "3.png", "menu": "5.png"}
 # What the layouts keep clear: the share of the height (from the top) that holds every phone's
 # title bar and first lines, and the share of the width they stay within.
 KEY_HEIGHT = 0.55

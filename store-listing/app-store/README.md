@@ -39,9 +39,16 @@ iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product pa
 April 2027 they are required for apps built with the iOS 27.1 SDK.
 
 Every set tells the same story, Google Play's too: 1 Home, 2 a scan that has read a product and
-its printed date, 3 a written recipe, 4 a three-day menu, 5 the shopping list, 6 Settings with the
-reminders. The two iPhone Duo sets share one group of at most 10 images per language in App
-Store Connect, so they stop at 5 (`SHOT_LIMITS` in `scripts/frame_screenshots.py`). Retake them
+its printed date, 3 a written recipe (the three that search results show), 4 the Recipe form in
+Menu set mode with Days and Courses chosen ("Choose the days and the courses"; on the iPhones
+the form at its top with a three-item pantry, `DEMO_ITEMS` in `scripts/demo_backup.py`, so the
+switch, "Cook with" and both choices are in view; on Play scrolled to its end, Generate menu with
+its cost included; on the iPad the whole form), 5 the menu set of four days it writes ("Plan up to four days around
+what you have": four is the most the form offers, so keep the demo menu in
+`scripts/demo_recipes.py` at four days while the caption says so), 6 the shopping list. The two
+iPhone Duo sets share one group of at most 10 images per language in App Store Connect, so they
+stop at 5, without the Menu set form, which their outer display is too short to show whole
+(`SHOT_PICKS` in `scripts/frame_screenshots.py`). Retake them
 after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
 (`scripts/demo_backup.py`) in every language on one simulator (`LANGS="en de"` for some of
 them; `SKIP_BUILD=1` reuses the Debug build the previous device's run made, so a capture run is
@@ -83,14 +90,25 @@ templates, and the search headline stays readable when the image is scaled to 38
 the width search shows it at on an iPhone. Neither image may show prices, URLs, a copyright
 symbol, other platforms or Apple awards.
 
+Two more images come from the same captures but have no script of their own. `docs/images/`
+(the README's top) is the en-GB `screenshots/` 1, 2, 3 and 6 scaled to 460×1000 JPEG.
+`iap-review/buy-recipes-sheet.png`, the in-app purchases' review screenshot, is the Buy recipes
+sheet at US prices on the 6.9" simulator: it needs real StoreKit products, which only an Xcode
+run or test gets, so it is taken by a throwaway UI test (not committed) that launches the Debug
+app with `-demoBackup <file> -demoRecipeCredits 0 -demoRoute buyRecipes` under a scheme whose
+test action uses `Recipes.storekit` switched to the USA storefront. Retake it when the sheet or
+a price changes, and upload it to each pack by hand (`docs/recipe-setup.md`).
+
 ## App preview video
 
-An optional app preview per language (en-GB, ru, no, es-ES, de-DE, fr-FR, sv, da; upload
-es-ES's to es-MX and fr-FR's to fr-CA too, as previews aren't synced): about 21 seconds of the app itself, no
-device frame or hands, in the order of the screenshots' story: a scan reads a pack's barcode and
-then its printed date; Add item with the date filled in, saved; Home with "saved to Fridge" and
-the new item in the list; the Recipe tab with what expires first ticked; a recipe written from
-those items; the three-day menu. The captions are screenshots 2, 1, 3 and 4's, on a Larder green
+An optional app preview per language (en-GB, ru, no, es-ES, de-DE, fr-FR, sv, da; es-MX takes
+es-ES's and fr-CA fr-FR's, the other English localizations en-GB's): about 28 seconds of the app
+itself, no device frame or hands, in the order of the screenshots' story: a scan reads a pack's
+barcode and then its printed date; Add item with the date filled in, saved; Home with "saved to
+Fridge" and the new item in the list; the Recipe tab with what expires first ticked; a recipe
+written from those items; the Recipe form in Menu set mode, scrolled from the Recipe / Menu set
+switch down to Days (4), Courses (3) and Generate menu; the four-day menu it writes, scrolled
+from today to the fourth day. The captions are screenshots 2, 1, 3, 4 and 5's, on a Larder green
 band over the status bar. No sound: previews autoplay muted, in search results too, so the
 first seconds (the scan) carry the story.
 
@@ -108,33 +126,36 @@ Making them (Debug build, simulator, nothing sent): `scripts/ios_preview.sh [raw
 its own 6.9" simulator, records the clips in every language with `xcrun simctl io recordVideo`,
 driving the app with the demo launch arguments and Maestro taps and swipes, and deletes the
 simulator; `scripts/ios_preview_assemble.py [raw-dir] [out-dir]` cuts them into
-`<out-dir>/<locale>/preview.mp4` and `poster.png` with ffmpeg. The defaults are
-`build/ios-preview` and `build/app-store-preview`: about 26 MB a video at Apple's 10 Mbps, so
-they stay out of git (the screenshot sets, ~15 MB a language, are committed; three videos would
-add ~80 MB with every retake). Run the capture when the machine is quiet: a busy one drops
+`<out-dir>/<locale>/preview.mp4`, `poster.png` and `poster_time.txt` with ffmpeg. The defaults
+are `build/ios-preview` and `build/app-store-preview`: about 35 MB a video at Apple's 10 Mbps,
+so they stay out of git (the screenshot sets, ~15 MB a language, are committed; eight videos
+would add ~280 MB with every retake). Run the capture when the machine is quiet: a busy one drops
 frames from the recording. Check the result by eye (`ffmpeg -ss <t> -i preview.mp4 -frames:v 1
 x.png` at a few points) and with `ffprobe`.
 
-Uploading, by hand for now: App Store Connect → the version → each language → "App Previews and
-Screenshots" → iPhone → drag `preview.mp4` in (or the Media Manager), then Edit Poster Frame and
-pick the frame `poster.png` shows (4.6 s in: the scan card with the product and its date).
-Processing takes up to a day. Poster frames can't change after approval without a new preview.
+Uploading: `python3 scripts/testflight.py previews` (with the `ASC_*` variables of section 2)
+compares each localization of the version in preparation with
+`build/app-store-preview/<locale>/preview.mp4` (its fallback's for es-MX, fr-CA and the other
+English ones) and prints what differs; `--apply` replaces a preview only when the file's MD5
+differs from the one App Store Connect keeps, and sets the poster frame from `poster_time.txt`
+(5.5 s in: the scan card with the product and its date). It uses the classic route, `POST
+/v1/appPreviewSets` (`previewType` `IPHONE_67`, the iPhone 6.7"/6.9" set) and `POST
+/v1/appPreviews` (`fileName`, `fileSize`, `mimeType` `video/mp4`, `previewFrameTimeCode`), the
+upload operations, then `PATCH` with `uploaded: true` and `sourceFileChecksum`, the same steps as
+`upload_screenshot` (App Store Connect API OpenAPI spec 4.6). It doesn't wait for processing,
+which takes up to a day, and writes only while the version is editable. The release flow doesn't
+run it, and the videos are local (git-ignored), so it is run by hand from the machine that made
+them. `previewFrameTimeCode` is sent as hours:minutes:seconds:frames at 30 fps ("00:00:05:15"),
+the form App Store Connect reports for the previews uploaded on the website ("00:00:05:01"; the
+spec itself gives no format). Uploads are named `preview-<locale>.mp4`, like those.
+Poster frames can't change after approval without a new preview.
 
-The disclosure: the menu shot shows a server-written menu ("Written by our server"), which needs
-recipe packs, and Apple asks for that to be said in the footage or the end frame. So the last
-caption run carries a smaller second line in every language ("Needs a recipe pack", `PACK_NOTES`
+The disclosure: the menu set and menu shots show what only the server writes, from recipe packs,
+and Apple asks for that to be said in the footage or the end frame. So their caption runs carry
+a smaller second line in every language ("Needs a recipe pack", `PACK_NOTES` and `PAID_CAPTIONS`
 in `ios_preview_assemble.py`); the screenshots' captions don't, as they describe what the routes
-do rather than what they cost.
-
-The API can take it too, if the sync should do it one day (not built): the classic route is
-`POST /v1/appPreviewSets` (`previewType` `IPHONE_67`, on the `appStoreVersionLocalization`), then
-`POST /v1/appPreviews` (`fileName`, `fileSize`, `mimeType` `video/mp4`, `previewFrameTimeCode`
-for the poster), the upload operations, and `PATCH` with `uploaded: true` and
-`sourceFileChecksum`, the same reserve-upload-commit steps as `upload_screenshot` in
-`scripts/testflight.py`, then waiting for `assetDeliveryState` `COMPLETE`. The App Asset Library
-also takes videos (`POST /v1/appAssetLibraryVideos`, placed with the `APP_PREVIEW` placement
-type), like the Duo screenshots, but a version has one set either way, so the classic route,
-keyed by MD5 like the screenshot sets, is the smaller change.
+do rather than what they cost. The form's Generate menu button shows its cost in recipes (from
+the pack), never a price.
 
 ## Changing the listing texts
 
@@ -479,7 +500,7 @@ card is 16:9 from 1920×1080 to 3840×2160, the details page 9:16 from 1080×192
 Store Connect Help, [Offer In-App Events](https://developer.apple.com/help/app-store-connect/offer-in-app-events/offer-in-app-events)
 and [media specifications](https://developer.apple.com/help/app-store-connect/reference/in-app-event-media-and-audio-specifications);
 [In-App Events](https://developer.apple.com/app-store/in-app-events/)). `scripts/in_app_event_art.py`
-redraws the images from the framed screenshots (`screenshots/` 2, 3 and 4: the scan, a recipe,
+redraws the images from the framed screenshots (`screenshots/` 2, 3 and 5: the scan, a recipe,
 the menu) after those change. Apple's guidance on event media (In-App Events page, "Creating
 effective metadata", checked 2026-11-15) is a recommendation, not an App Review rule: "When
 possible, avoid using text or logos in your media, especially if they include your event name or
