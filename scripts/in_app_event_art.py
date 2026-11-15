@@ -35,7 +35,7 @@ DETAILS_SIZE = (2160, 3840)
 # Larder green.800 (docs/design/tokens.json), flat: Apple adds its own gradient under the text.
 BACKGROUND = (0x1F, 0x43, 0x31)
 # The framed screenshots each phone is cut from: the scan, the recipe and the menu.
-SHOTS = {"scan": "2.png", "recipe": "3.png", "menu": "4.png"}
+SHOTS = {"scan": "2.png", "recipe": "3.png", "menu": "5.png"}
 # What the layouts keep clear: the share of the height (from the top) that holds every phone's
 # title bar and first lines, and the share of the width they stay within.
 KEY_HEIGHT = 0.55

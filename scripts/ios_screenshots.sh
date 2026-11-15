@@ -1,7 +1,8 @@
 #!/bin/zsh
 # Takes the raw App Store screenshots: builds the debug app, loads a demo pantry in each of the
 # app's languages and captures, in this order, Home, a scan that has read a product and its
-# printed date, a written recipe, a four-day menu set, the shopping list and Settings on a 6.9"
+# printed date, a written recipe, the Recipe form choosing a menu set (Days, Courses), the four-day
+# menu set it writes and the shopping list on a 6.9"
 # iPhone simulator (1320x2868, the size App Store Connect requires). scripts/android_screenshots.sh
 # takes the same six for Google Play.
 #
@@ -107,6 +108,10 @@ LANGS=(${=LANGS:-en ru nb es de fr sv da})
 for LANG_CODE in $LANGS; do
   [[ -n ${REGIONS[$LANG_CODE]:-} ]] || { echo "unknown language $LANG_CODE (one of ${(k)REGIONS})"; exit 1; }
 done
+# The Menu set shot: on an iPhone the Recipe form opens scrolled to its end, so Days, Courses and
+# Generate menu with its cost are on screen; an iPad shows the whole form as it opens (scrolled
+# to the end, it would sit at the bottom under an empty top). FORM_END=YES|NO overrides.
+[[ $DEVICE_NAME == iPad* ]] && FORM_END=${FORM_END:-NO} || FORM_END=${FORM_END:-YES}
 # The date printed on the scanned pack, and so the one the scan reads.
 SCAN_DATE=$(python3 -c 'import datetime; print(datetime.date.today() + datetime.timedelta(days=12))')
 SCAN_BARCODE=$(cd "$ROOT/scripts" && python3 -c 'from demo_scan_image import BARCODE; print(BARCODE)')
@@ -122,10 +127,10 @@ for LANG_CODE in $LANGS; do
     recipe "-demoRoute recipeResult -demoRecipe $DATA/tmp/recipe.json"
     menu "-demoRoute recipeMenu -demoRecipe $DATA/tmp/menu.json"
     shopping "-demoTab shopping"
-    settings "-demoTab settings"
+    menuset "-demoTab recipe -demoRecipeCredits 12 -demoRecipeMode menu -demoRecipeDays 4 -demoRecipeCourses 3 -demoRecipeScrollEnd $FORM_END"
   )
   N=1
-  for SHOT in home scan recipe menu shopping settings; do
+  for SHOT in home scan recipe menuset menu shopping; do
     xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" \
       -demoBackup "$DATA/tmp/demo.json" ${=SHOTS[$SHOT]} \
       -AppleLanguages "($LANG_CODE)" -AppleLocale "${REGIONS[$LANG_CODE]}" >/dev/null

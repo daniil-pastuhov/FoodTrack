@@ -39,11 +39,14 @@ iPhone Duo screenshots put an "optimized for iPhone Duo" badge on the product pa
 April 2027 they are required for apps built with the iOS 27.1 SDK.
 
 Every set tells the same story, Google Play's too: 1 Home, 2 a scan that has read a product and
-its printed date, 3 a written recipe, 4 a menu set of four days (captioned "Plan up to four days
-around what you have": four is the most the Recipe form's Menu set offers, so keep the demo menu
-in `scripts/demo_recipes.py` at four days while the caption says so), 5 the shopping list, 6
-Settings with the reminders. The two iPhone Duo sets share one group of at most 10 images per language in App
-Store Connect, so they stop at 5 (`SHOT_LIMITS` in `scripts/frame_screenshots.py`). Retake them
+its printed date, 3 a written recipe (the three that search results show), 4 the Recipe form, scrolled to its end, in
+Menu set mode with Days and Courses chosen and the Generate menu button with its cost ("Choose
+the days and the courses"), 5 the menu set of four days it writes ("Plan up to four days around
+what you have": four is the most the form offers, so keep the demo menu in
+`scripts/demo_recipes.py` at four days while the caption says so), 6 the shopping list. The two
+iPhone Duo sets share one group of at most 10 images per language in App Store Connect, so they
+stop at 5, without the Menu set form, which their outer display is too short to show whole
+(`SHOT_PICKS` in `scripts/frame_screenshots.py`). Retake them
 after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
 (`scripts/demo_backup.py`) in every language on one simulator (`LANGS="en de"` for some of
 them; `SKIP_BUILD=1` reuses the Debug build the previous device's run made, so a capture run is
@@ -86,7 +89,7 @@ the width search shows it at on an iPhone. Neither image may show prices, URLs, 
 symbol, other platforms or Apple awards.
 
 Two more images come from the same captures but have no script of their own. `docs/images/`
-(the README's top) is the en-GB `screenshots/` 1, 2, 3 and 5 scaled to 460×1000 JPEG.
+(the README's top) is the en-GB `screenshots/` 1, 2, 3 and 6 scaled to 460×1000 JPEG.
 `iap-review/buy-recipes-sheet.png`, the in-app purchases' review screenshot, is the Buy recipes
 sheet at US prices on the 6.9" simulator: it needs real StoreKit products, which only an Xcode
 run or test gets, so it is taken by a throwaway UI test (not committed) that launches the Debug
@@ -490,7 +493,7 @@ card is 16:9 from 1920×1080 to 3840×2160, the details page 9:16 from 1080×192
 Store Connect Help, [Offer In-App Events](https://developer.apple.com/help/app-store-connect/offer-in-app-events/offer-in-app-events)
 and [media specifications](https://developer.apple.com/help/app-store-connect/reference/in-app-event-media-and-audio-specifications);
 [In-App Events](https://developer.apple.com/app-store/in-app-events/)). `scripts/in_app_event_art.py`
-redraws the images from the framed screenshots (`screenshots/` 2, 3 and 4: the scan, a recipe,
+redraws the images from the framed screenshots (`screenshots/` 2, 3 and 5: the scan, a recipe,
 the menu) after those change. Apple's guidance on event media (In-App Events page, "Creating
 effective metadata", checked 2026-11-15) is a recommendation, not an App Review rule: "When
 possible, avoid using text or logos in your media, especially if they include your event name or

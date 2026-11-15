@@ -2,7 +2,7 @@
 # Takes the raw Google Play screenshots: installs the debug app on a running emulator, loads the
 # demo pantry in each of the app's languages and captures, as scripts/ios_screenshots.sh does for
 # the App Store, Home, a scan that has read a product and its printed date, a written recipe, a
-# four-day menu set, the shopping list and Settings.
+# Recipe form choosing a menu set, the four-day menu set it writes and the shopping list.
 #
 #   ANDROID_SERIAL=<phone emulator> scripts/android_screenshots.sh [output-dir]   # default: build/android-screenshots
 #   scripts/frame_screenshots.py build/android-screenshots phone-screenshots
@@ -93,12 +93,19 @@ for LANG_CODE in $LANGS; do
     recipe "--es demoRoute recipeResult --es demoRecipe $FILES/recipe.json"
     menu "--es demoRoute recipeMenu --es demoRecipe $FILES/menu.json"
     shopping "--es demoTab shopping"
-    settings "--es demoTab settings"
+    menuset "--es demoTab recipe --ei demoRecipeCredits 12 --es demoRecipeMode menu --ei demoRecipeDays 4 --ei demoRecipeCourses 3"
   )
   N=1
-  for SHOT in home scan recipe menu shopping settings; do
+  for SHOT in home scan recipe menuset menu shopping; do
     adb shell am start -S -W -n $ACTIVITY ${=SHOTS[$SHOT]} >/dev/null
     sleep $SETTLE
+    if [[ $SHOT == menuset ]]; then
+      # The form scrolled to its end, as iOS's -demoRecipeScrollEnd opens it: Days, Courses and
+      # Generate menu with its cost (Android has no such extra, so two flings take it there).
+      W=${SIZE%x*} H=${SIZE#*x}
+      repeat 2 adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 8)) 300
+      sleep 2
+    fi
     # A slow emulator can raise "isn't responding" dialogs for other apps over ours.
     adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
     demo clock -e hhmm 0941  # again: System UI drops demo mode if it restarts
