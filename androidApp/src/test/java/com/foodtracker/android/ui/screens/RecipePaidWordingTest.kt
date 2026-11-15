@@ -171,6 +171,22 @@ class RecipePaidWordingTest {
     }
 
     @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun withAMenuSetTableThePacksTextGivesItsCheapestAndDearest() {
+        val table = mapOf(1 to mapOf(1 to 1, 2 to 2), 4 to mapOf(3 to 6))
+        assertEquals(
+            "One recipe is one dish written by our server. A menu set takes 1 to 6 recipes, depending on its days and courses a day. They don't expire.",
+            recipePacksBody(context.resources, RecipeCosts(1, 4, 5, menuSets = table))
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun aMenuWithNoDaysIsStillTitledForOneDay() {
+        assertEquals("Menu for one day", menuTitle(context.resources, Menu(emptyList())))
+    }
+
+    @Test
     @Config(sdk = [34], qualifiers = "ru")
     fun theMenuCostsTakeRussianPlurals() {
         val resources = context.resources
