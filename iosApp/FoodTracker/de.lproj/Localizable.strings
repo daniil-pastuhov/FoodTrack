@@ -699,6 +699,7 @@
 "recipe_payment_pending_title" = "Warten auf Zahlung";
 "recipe_payment_pending_message" = "Deine Rezepte werden hinzugefügt, sobald der Store die Zahlung bestätigt. Das kann eine Weile dauern.";
 "recipe_pack_each" = "je %@";
+"recipe_pack_saving_a11y" = "%d %% günstiger pro Rezept";
 "recipe_continue" = "Weiter";
 "recipe_close" = "Schließen";
 "recipe_ok" = "OK";

@@ -71,8 +71,12 @@ struct LarderButton: View {
         } label: {
             HStack(spacing: LarderSpace.s2) {
                 if let icon { LarderIcon(icon) }
-                Text(title).larderFont(.label)
+                // Centred when a label too long for the whole width wraps between its words.
+                Text(title).larderFont(.label).multilineTextAlignment(.center)
             }
+            // Clear of the capsule's curve when the text is large; inside the minimum height
+            // at the usual sizes, so those keep their height.
+            .padding(.vertical, LarderSpace.s2)
             // Hidden rather than removed, so loading keeps the button's width.
             .opacity(isLoading ? 0 : 1)
             .frame(maxWidth: fullWidth ? .infinity : nil)
@@ -243,19 +247,45 @@ private struct LarderIconButtonStyle: ButtonStyle {
 }
 
 /// Count badge: the number on the Shopping tab. Past 99 it reads "99+".
+/// `LarderBadge(text:)` is the quiet tag beside a value, such as a pack's saving ("−26%"):
+/// tinted, caption size, never louder than what it sits next to.
 struct LarderBadge: View {
-    let count: Int
+    private enum Content { case count(Int), text(String) }
+    private let content: Content
     /// The pill's badge is smaller than the standalone one.
-    var isCompact: Bool = false
+    private let isCompact: Bool
+
+    init(count: Int, isCompact: Bool = false) {
+        content = .count(count)
+        self.isCompact = isCompact
+    }
+
+    init(text: String) {
+        content = .text(text)
+        isCompact = false
+    }
 
     var body: some View {
-        let side: CGFloat = isCompact ? 16 : 20
-        Text(count > 99 ? "99+" : "\(count)")
-            .font(.system(size: isCompact ? 10 : 12, weight: .medium).monospacedDigit())
-            .foregroundStyle(LarderColor.onPrimary)
-            .padding(.horizontal, isCompact ? LarderSpace.s1 : 6)
-            .frame(minWidth: side, minHeight: side)
-            .background(LarderColor.primary, in: Capsule())
+        switch content {
+        case .count(let count):
+            let side: CGFloat = isCompact ? 16 : 20
+            Text(count > 99 ? "99+" : "\(count)")
+                .font(.system(size: isCompact ? 10 : 12, weight: .medium).monospacedDigit())
+                .foregroundStyle(LarderColor.onPrimary)
+                .padding(.horizontal, isCompact ? LarderSpace.s1 : 6)
+                .frame(minWidth: side, minHeight: side)
+                .background(LarderColor.primary, in: Capsule())
+        case .text(let text):
+            Text(verbatim: text)
+                .larderFont(.caption)
+                .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
+                .foregroundStyle(LarderColor.onSuccessContainer)
+                .padding(.vertical, 1)
+                .padding(.horizontal, LarderSpace.s2)
+                .background(LarderColor.successContainer, in: Capsule())
+        }
     }
 }
 
@@ -334,6 +364,7 @@ private struct ButtonGallery: View {
                     LarderBadge(count: 5)
                     LarderBadge(count: 120)
                     LarderBadge(count: 5, isCompact: true)
+                    LarderBadge(text: "\u{2212}26%")
                 }
                 LarderSpinner()
                 LarderProgressBar()

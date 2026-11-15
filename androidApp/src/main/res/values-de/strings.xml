@@ -983,6 +983,7 @@
         <item quantity="other">%1$d Rezepte</item>
     </plurals>
     <string name="recipe_pack_each">je %1$s</string>
+    <string name="recipe_pack_saving_a11y">%1$d %% günstiger pro Rezept</string>
     <string name="recipe_cancel">Abbrechen</string>
     <string name="recipe_back">Zurück</string>
     <string name="recipe_close">Schließen</string>
