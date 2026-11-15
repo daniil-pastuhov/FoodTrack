@@ -33,6 +33,7 @@ import {
   type FoldedText,
 } from "./foodTerms";
 import { fold, scriptOf } from "./inputSafety";
+import { TASTE_CATALOGUE } from "../taste/catalogue";
 
 export type OutputRule =
   | "SHAPE"
@@ -186,7 +187,24 @@ export interface LeakSource {
 }
 
 export function leakSourceOf(systemInstruction: string, canary: string): LeakSource {
-  return { canary: canary.toUpperCase(), leakNgrams: ngrams(foldText(systemInstruction).words, LEAK_NGRAM) };
+  return { canary: canary.toUpperCase(), leakNgrams: ngrams(foldText(withoutTasteLists(systemInstruction)).words, LEAK_NGRAM) };
+}
+
+/**
+ * How the taste block's list lines start: every catalogue step's prompt label (adapters/prompt.ts
+ * tasteLines). What follows a label is the server's words for the user's own choices
+ * ("tomatoes; mushrooms; potatoes; leafy greens..."), which an honest answer may well repeat in
+ * that order, so the leak check skips it; the label and every fixed sentence of the block stay in
+ * the check.
+ */
+const TASTE_LIST_LABELS: readonly string[] = TASTE_CATALOGUE.steps.map((s) => s.prompt.label);
+
+function withoutTasteLists(systemInstruction: string): string {
+  const labels = TASTE_LIST_LABELS;
+  return systemInstruction
+    .split("\n")
+    .map((line) => labels.find((l) => line.startsWith(`${l} `)) ?? line)
+    .join("\n");
 }
 
 /**
@@ -373,6 +391,15 @@ export function dietGuards(req: GenerateRequest): Guard[] {
   return req.config.diets.flatMap((d) => DIET_GUARDS[d as DietKey]);
 }
 
+/**
+ * Whether the answer checks would refuse an ingredient of this name under the request's diet or
+ * allergens. Used by the prompt to leave such a favourite out of the taste block; the checks on
+ * the answer are the same ones, unchanged.
+ */
+export function breaksDietOrAllergens(name: string, req: GenerateRequest): boolean {
+  return violates(foldText(name), [...dietGuards(req), ...allergenGuards(req.allergens)]);
+}
+
 /** A word in a script whose words are a character or two (Chinese, Japanese, Korean, Thai...). */
 const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}\p{Script=Yi}]/u;
 
@@ -522,11 +549,12 @@ function recipe(ch: Checker, raw: unknown): Recipe {
 
 function checker(ctx: OutputContext): Checker {
   const diet = dietGuards(ctx.req);
+  const leak = leakSourceOf(ctx.systemInstruction, ctx.canary);
   return {
     sc: {
       ctx,
-      leakNgrams: ngrams(foldText(ctx.systemInstruction).words, LEAK_NGRAM),
-      canary: ctx.canary.toUpperCase(),
+      leakNgrams: leak.leakNgrams,
+      canary: leak.canary,
       allowed: allowedScripts(ctx.req),
       quotable: [...itemNames(ctx.req), ...ctx.req.allergens].map(fold).join("\n"),
       wanted: ctx.req.config.language === "ru" || ctx.req.config.language === "uk" ? "Cyrillic" : "Latin",

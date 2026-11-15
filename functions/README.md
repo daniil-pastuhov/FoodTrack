@@ -26,6 +26,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
 | `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/taste/` | The taste profile quiz: `catalogue.ts` (every step, option, text and prompt word; see "Taste profile quiz") and `quiz.ts` (`getTasteQuiz`, the version, cleaning a request's `taste`) |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
 | `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption, the board's Cloud Storage bucket) and the prompt |
@@ -40,7 +41,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | name | trigger | does |
 |---|---|---|
 | `verifyPurchase`, `generateRecipe`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn` | callable, App Check enforced and limited-use tokens consumed (replays refused) | See CONTRACT.md |
-| `getBalance`, `getGeneration` | callable, App Check enforced, token not consumed | See CONTRACT.md |
+| `getBalance`, `getGeneration`, `getTasteQuiz` | callable, App Check enforced, token not consumed | See CONTRACT.md |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
@@ -267,9 +268,11 @@ Every LLM call is priced before it is made and paid for by a credit:
   4 days of 3 courses (12 dishes) is held at 24,000 (600 a day for the wrappers instead of 1,000)
   so that its worst case with the output judge on still fits the per-user ceiling below.
 - **Usage logs.** One `llm_call` log line per call: `uidHash` (sha256 of the uid with a fixed
-  prefix, not the uid), kind, courses, days (menus; 3 for one reserved before menu sets), model, input / output / thinking tokens, finish reason,
+  prefix, not the uid), kind, courses, days (menus; 3 for one reserved before menu sets), `taste`
+  (whether the request carried a taste profile: `true` / `false`, null on a line the sweeper
+  writes; never which ids), model, input / output / thinking tokens, finish reason,
   duration, outcome, cost, charged / refunded, reserved and estimated micro-USD. Never ingredient
-  names, prompts or outputs. In Logs Explorer: `jsonPayload.message="llm_call"`.
+  names, taste ids, prompts or outputs. In Logs Explorer: `jsonPayload.message="llm_call"`.
 
 #### Spend ceilings (defaults and arithmetic)
 
@@ -313,6 +316,23 @@ requests included. The largest requests are now:
 
 That is under USD 0.0005 a call; the per-user and global arithmetic below is unchanged (one
 3-course menu booked at its worst case, 0.323, still fits the 0.45 a day; a second does not).
+
+**A taste profile adds at most about 1,500 bytes** (November 2026, CONTRACT.md "Taste profile"):
+the TASTE block is the server's own words, so its size is bounded by the id lists and caps, not
+by the client. Measured with every list at its cap with its longest words, `hot`, and everything
+else at its maximum as above (fullest multi-choice config): +1,469 bytes on a recipe, +1,497 on a
+menu (the menu's "vary them over the menu"), about USD 0.0022 a call. The price is unchanged.
+
+| request | largest, no profile | largest, with the largest profile (judge off / on) |
+|---|---|---|
+| recipe | 13,979 bytes, USD 0.08241 / 0.10606 | 15,448 bytes, USD 0.08461 / 0.10827 |
+| 3-day 2-course menu | 15,243 bytes, USD 0.23286 / 0.27286 | 16,740 bytes, USD 0.23511 / 0.27511 |
+| 3-day 3-course menu | 15,262 bytes, USD 0.32289 / 0.37279 | 16,759 bytes, USD 0.32514 / 0.37503 |
+| 4-day 3-course menu | 15,287 bytes, USD 0.38293 / 0.43943 | 16,784 bytes, USD 0.38518 / 0.44167 |
+
+The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
+0.008); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
+and on, and that the block adds under 1,700 bytes and USD 0.003.
 
 **Menu sets** (November 2026, CONTRACT.md "Capability `acceptsMenuDays`"): a menu of 1 to 4 days
 and 1 to 3 courses. The 3-day 2- and 3-course menus are exactly as before (same prompt, schema,
@@ -374,6 +394,7 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `generateRecipe` | 5 (so at most 5 generations in flight service-wide) | 24 (and 12 per uid) | 180 s |
 | `getGeneration` | 1 | 120 | 10 s |
 | `getBalance` | 1 | 120 | 30 s (it may revoke a stored Apple token) |
+| `getTasteQuiz` | 1 | 120 | 10 s |
 | `verifyPurchase` | 1 | 30 | 60 s |
 | `mergeBalance` | 1 | 10 | 30 s |
 | `deleteAccount` | 1 | 10 | 120 s |
@@ -459,23 +480,24 @@ Calls a flood can push into Firestore per day = instances × per-instance thrott
 | `generateRecipe` (no credits) | 5 × 24 × 1,440 = 172,800 | 2 reads | 0.21 | 0.07 | 2.00 | 2.28 |
 | `getGeneration` | 172,800 | 2 reads | 0.21 | 0.07 | 0.40 | 0.68 |
 | `getBalance` | 172,800 | 1 read | 0.10 | 0.07 | 0.40 | 0.57 |
+| `getTasteQuiz` | 172,800 | 0 (`config/runtime`, cached per instance) | 0 | 0.07 | 0.40 | 0.47 |
 | `verifyPurchase` | 43,200 | 3 reads + 1 write | 0.16 | 0.02 | 0.40 | 0.58 |
 | `mergeBalance` | 14,400 | 2 reads + 2 writes | 0.07 | 0.01 | 0.40 | 0.48 |
 | `deleteAccount` | 14,400 | 3 reads + 1 write | 0.05 | 0.01 | 0.40 | 0.46 |
 | `registerAppleSignIn` (no valid Apple code, so no KMS call) | 14,400 | 2 reads + 1 write | 0.04 | 0.01 | 0.40 | 0.45 |
 | `appStoreNotifications` | (forged bodies never reach Firestore) | 0 | 0 | see below | 0.40 | 0.40 |
-| **infrastructure total** | | | **0.84** | **0.26** | **4.80** | **5.90** |
+| **infrastructure total** | | | **0.84** | **0.33** | **5.20** | **6.37** |
 | model spend, absolute maximum | | | | | | **2.00** |
 
 What this means against the 1000 NOK (≈ USD 95) monthly budget:
 
 - **Model spend** is bounded by code at USD 2.00/day (USD 60/month) and above USD 1.20/day only
   when sales fund it. Without credits nobody can make the model run.
-- **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.10/day.
-- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 4.80/day only
+- **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.17/day.
+- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 5.20/day only
   if every public function is kept busy around the clock (`generateRecipe`'s 5 instances are
   USD 2.00 of it; at 2 instances it was 0.80, so five at once cost USD 1.20 a day more in the
-  worst case). Together the infrastructure worst case is USD 5.90/day (≈ USD 177/month): **a flood
+  worst case). Together the infrastructure worst case is USD 6.37/day (≈ USD 191/month; `getTasteQuiz`, November 2026, added 0.47): **a flood
   sustained for a whole month on every endpoint would exceed the budget on its own**; any single
   endpoint's worst case is ≤ USD 2.28/day (≈ USD 68 a month, `generateRecipe`; every other
   endpoint ≤ USD 0.68/day).
@@ -560,6 +582,28 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    than refusing the request, and is not counted as a rejection: a pantry the person did not tick
    must not lock their account. The answer checks treat them like ticked items (allergens, diet,
    scripts, quoting), except that `NO_PANTRY` still needs a ticked item.
+   A **taste profile** (`taste`, CONTRACT.md "Taste profile") adds no data block and no user
+   text: it is a map of quiz step ids to option ids, an allow-list (the catalogue,
+   `src/taste/catalogue.ts`; see "Taste profile quiz"), unknown and hidden ids are dropped, and
+   each kept id reaches the system instruction only as the catalogue's own English prompt words
+   for it, in one block of fixed wording, `TASTE`, between the ingredient
+   rules and the output rules. So the only new surface is that block, and it is the server's own
+   text. It says first that every rule above wins: the pantry items stay the core of every dish
+   and are used up first, the allergens and the diet always win, the time limit and the meal type
+   stand, and a preference is never a reason to leave out a pantry item or add more than a few
+   extras; then the leanings (cuisines, heat, flavours, favourite ingredients, methods); then the
+   ingredients to skip, except a ticked item that is one (used: the person ticked it), and that
+   skipping is a taste preference, not an allergy, that never relaxes, replaces or adds to the
+   allergen and diet rules. A liked option (a favourite food, a flavour, the heat) that the request's diet or allergens
+   rule out is left out of the block (by the answer checks' own guards, `breaksDietOrAllergens`), so the block never asks
+   for what a rule forbids. Nothing of the profile reaches the answer checks: `avoid` is not an
+   allergen and never refuses an answer, and the allergen, diet, quality-gate and every other
+   check, the schema (time limit included) and the costs are exactly as without a profile. A
+   request without a profile gets a byte-identical prompt (pinned in `test/taste.test.ts`). The
+   leak check (layer 4) leaves the block's list lines (what follows a catalogue step's prompt
+   label: "- Cuisines they like:", "- Favourite ingredients:"...) out of its word runs, because an honest
+   answer may name the person's favourite foods in that order; the block's fixed sentences stay
+   in it.
 2. **Input names** (`src/core/inputSafety.ts`): NFKC, look-alike folding of apostrophes, dashes
    and the Arabic percent and decimal signs, invisible and bidi control characters removed,
    whitespace collapsed; then 1–40 code points, ≤ 8 words, ≤ 28 code points per word part (no part
@@ -741,6 +785,62 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   structured output keyword support <https://aistudio.google.com/docs/structured-output>, Model
   Armor <https://docs.cloud.google.com/model-armor/model-armor-vertex-integration>.
 
+## Taste profile quiz
+
+The quiz in Recipe settings > Taste profile is defined here, not in the apps: `getTasteQuiz`
+(CONTRACT.md) sends its steps, options and every text in the app's language, and
+`generateRecipe` reads the answers (`taste`, CONTRACT.md "Taste profile") against the same
+definition. The apps bundle only the chrome (buttons, progress, cap and snackbar lines, the promo
+sheet), so a question or an option can change after a release.
+
+**The catalogue** (`src/taste/catalogue.ts`, `TASTE_CATALOGUE`) is the single source of truth:
+per step its `id`, `kind` (`multi` chips or `single` cards), `tone` (`like` / `avoid`), `icon`,
+`max`, `question`, `note` and `groups`; per option its `id`, `label`, optional `sub` and `level`;
+the `conflicts` and the `summary` order; every text in the eight app languages (en, ru, nb, es,
+de, fr, sv, da); and, per step, the prompt's fixed label line (and suffix), per option the fixed
+English prompt words. The initial content is the approved design (`docs/design/`, "Taste
+profile", 2026-11-15); the seven translations were lifted from the Android strings the apps had
+then, and no native speaker has read them yet. `version` is the first 16 hex characters of a
+sha256 over the whole catalogue and the hidden entries that hide something, so it changes with
+any edit and with the hidden list, never by hand.
+
+**Icons**: a step's `icon` must be one of `TASTE_ICONS`, the Lucide names the apps bundle:
+`globe`, `flame`, `citrus`, `heart`, `heart-off`, `cooking-pot` (in use), and `utensils`, `leaf`,
+`salad`, `fish`, `wheat`, `clock`, `sparkles`, `list-checks` (bundled for later steps;
+`utensils` is what an app draws for a name it does not have). A new icon needs an app
+release that bundles it before a step uses it.
+
+**Changing a question or an option** is a code change and a deploy, reviewed like code (the
+prompt words reach the model):
+
+- Edit the catalogue; `npm test` checks that every text is in all eight languages, every option
+  has prompt words, ids are unique and well formed, conflicts and the summary name existing ids,
+  caps are sane (1 to the number of options, 1 for `single`), icons come from the allow-list, and
+  every id is in `test/fixtures/taste-ids.json` with the prompt words it means.
+- **An id is never reused with a different meaning.** Changing what an option means is a new id
+  (and a new ledger entry); the old id disappears, and old answers simply drop it. Changing a
+  label, a subtitle, a translation, the order, a group or a cap keeps the id. Rewording an
+  option's prompt words without changing its meaning keeps the id, and updates its ledger entry
+  in the same review; never delete a ledger entry. A step whose `kind` changes from `multi` to
+  `single` keeps only the first stored answer in catalogue order (its cap of 1).
+- New text in the seven other languages needs the same register as the app's strings; have a
+  native speaker read it when possible (`docs/marketing/HANDOFF.md`).
+- The prompt words change the TASTE block: replay `test/fixtures/taste-recipe-2026-11-15.json`
+  ("Replaying a prompt against the live model") and run red-team cases 48 and 49 after a change.
+- People keep their old answers: the server drops steps and options it no longer has, never
+  refuses, and binds a retry to the answers as sent, so a change between an attempt and its
+  retry does not make it `REQUEST_ID_REUSED`.
+
+**Hiding without a deploy**: `config/runtime.tasteQuiz.hidden` (a list of `"<step>"` or
+`"<step>:<option>"`) leaves those out of `getTasteQuiz` (a group or step left empty goes too, and
+so do the conflicts and summary entries that name them) and drops them from requests. It changes
+`version`, so the apps pick it up on the next refresh. The same version goes out as
+`tasteQuizVersion` beside `acceptsTaste` on every response that carries `balance` (`capabilitiesOf`
+in `src/contract.ts`; memoised per hidden list), so the apps learn that the quiz changed (the dot
+on Recipe settings for new questions) without fetching it. An answer to something hidden comes back
+when it is shown again (the apps keep stored answers as saved). Nothing else of the quiz is
+configurable there.
+
 ## Firestore
 
 Server-only. Documents:
@@ -754,7 +854,8 @@ Server-only. Documents:
   tombstone never has `appleToken`), and on an account the owner deleted for a request by email
   `adminDeletionAt` + `adminDeletionKind` (see "Deletion requests by email").
 - `users/{uid}/generations/{requestId}`: `state` (pending | done | failed), `kind`, `courses`,
-  `cost`, `inputHash`, `reservedMicroUsd`, `statsDay`, `createdAt`, `deadlineAt`, `charged`,
+  `days`, `cost`, `inputHash` (sha256 of the validated request: the only trace of its config,
+  ingredients, allergens and taste profile, none of which is stored), `reservedMicroUsd`, `statsDay`, `createdAt`, `deadlineAt`, `charged`,
   `failureClass`, `failureReason`, `usage`, `actualMicroUsd`, `recipe` / `menu`, `expiresAt`
   (terminal states only; TTL deletes the doc some time after it, 7 days after it finished).
 - `purchases/{id}`: `store`, `uid` (null after deleteAccount, which keeps `formerUid` for the ledger), `env`, `productId`, `quantity`, `credits`, `refundedCredits`,
@@ -806,6 +907,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
 | `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
+| `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
 
 `dailySpendCapMicroUsd` from earlier drafts is no longer read; use the four `dailySpend*` /
 `netMicroUsdPerCredit` fields.
@@ -859,6 +961,13 @@ dairy-free, with a chicken fillet and a yoghurt the diets rule out) and
 `config-menu3-2026-11-14.json` (3 courses in Russian, at least 40 minutes, dinner, vegan +
 vegetarian + gluten-free, with a soured cream the diets rule out).
 
+`taste-recipe-2026-11-15.json` is a recipe with a full taste profile (CONTRACT.md "Taste
+profile"): six cuisines, `medium` heat, six flavours, favourites including `mushrooms` (also in
+`avoid`, so avoided) and `chicken`, seven ingredients to skip of which `mushrooms` is a ticked item
+(`Champignon`, to be used) and `onion` and `olives` are optional items (`Rødløk`, `Oliven`, to be
+left out), and five methods. Replay it after a change to the TASTE block; it has not been sent to
+the live model yet.
+
 ### The red-team run
 
 The red-team checklist (`test/injection-prompts.md`) is also a case file,
@@ -896,7 +1005,8 @@ With `EMULATOR_FAKES=true` and a `demo-` project id (both required, besides the 
 `fake-` is a purchased `recipes_10` (`fake-recipes_50-…` for another pack), App Store JWS are
 decoded without verification (Xcode StoreKit transactions count as sandbox), and the model returns
 a canned recipe after 1.5 s; an ingredient named `fail infra` or `fail content` makes it fail with
-that class. Without `EMULATOR_FAKES` the emulator runs the real adapters with your local Google
+that class, and a request with a taste profile gets a canned tip saying "with your taste profile"
+(so an app can see the profile reached the server). Without `EMULATOR_FAKES` the emulator runs the real adapters with your local Google
 credentials, which do call the real Play Developer API and Vertex AI.
 
 In the emulator App Check tokens are decoded but not verified, so any well-formed token works, and

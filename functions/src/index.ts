@@ -53,6 +53,7 @@ import {
   scrubProfile,
 } from "./core/account";
 import { sweep } from "./core/sweeper";
+import { getTasteQuiz as tasteQuizCore } from "./taste/quiz";
 import { CallThrottle, LogSampler, assertFreshAppCheck, clientIp } from "./core/guard";
 import {
   APPLE_SIGNED_PAYLOAD_MAX,
@@ -263,6 +264,7 @@ const LIMITS = {
   generateRecipe: { maxInstances: 5, perMinute: 24, perUidPerMinute: 12 },
   getGeneration: { maxInstances: 1, perMinute: 120 },
   getBalance: { maxInstances: 1, perMinute: 120 },
+  getTasteQuiz: { maxInstances: 1, perMinute: 120 },
   verifyPurchase: { maxInstances: 1, perMinute: 30 },
   mergeBalance: { maxInstances: 1, perMinute: 10 },
   deleteAccount: { maxInstances: 1, perMinute: 10 },
@@ -273,6 +275,7 @@ const throttles = {
   generateRecipe: new CallThrottle(LIMITS.generateRecipe.perMinute, LIMITS.generateRecipe.perUidPerMinute),
   getGeneration: new CallThrottle(LIMITS.getGeneration.perMinute),
   getBalance: new CallThrottle(LIMITS.getBalance.perMinute),
+  getTasteQuiz: new CallThrottle(LIMITS.getTasteQuiz.perMinute),
   verifyPurchase: new CallThrottle(LIMITS.verifyPurchase.perMinute),
   mergeBalance: new CallThrottle(LIMITS.mergeBalance.perMinute),
   deleteAccount: new CallThrottle(LIMITS.deleteAccount.perMinute),
@@ -326,6 +329,15 @@ export const getBalance = onCall(
   { ...callable, secrets: [siwaPrivateKey], timeoutSeconds: 30, maxInstances: LIMITS.getBalance.maxInstances, concurrency: 1 },
   (request) =>
     guarded("getBalance", () => withCaller(callerOf(request, throttles.getBalance, false), (d, c) => balanceCore(d, c))),
+);
+
+// The taste quiz's definition (CONTRACT.md `getTasteQuiz`): a signed-in caller (anonymous
+// included), App Check enforced but not consumed, like getBalance. Reads only config/runtime
+// (cached); no account document, no reservation, no model, nothing charged.
+export const getTasteQuiz = onCall(
+  { ...callable, timeoutSeconds: 10, maxInstances: LIMITS.getTasteQuiz.maxInstances, concurrency: 1 },
+  (request) =>
+    guarded("getTasteQuiz", () => withCaller(callerOf(request, throttles.getTasteQuiz, false), (d) => tasteQuizCore(d, request.data))),
 );
 
 export const mergeBalance = onCall(

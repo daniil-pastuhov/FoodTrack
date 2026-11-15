@@ -14,10 +14,15 @@
  *   appear in the answer; core/outputSafety.ts refuses an answer that contains it or that repeats
  *   8 consecutive words of the system instruction.
  * - Nothing stored (earlier recipes, menus, failure reasons) is ever part of a prompt.
+ * - A taste profile (`taste`) is ids of the quiz's catalogue (taste/catalogue.ts); it reaches the
+ *   system instruction only as the catalogue's own prompt words for each id, in
+ *   one block of fixed wording (tasteLines) that puts every rule above it first. No id is ever
+ *   written as sent, and a request without a profile gets exactly the instruction it got before.
  */
 import { randomBytes } from "node:crypto";
 import { coursesFor, menuDates, menuDaysOf, type DietChoice, type GenerateRequest, type RecipeConfig } from "../contract";
-import { LIMITS, STEP_BOUNDS, idNamesFor, optionalIdsFor, pantryIdsFor } from "../core/outputSafety";
+import { LIMITS, STEP_BOUNDS, breaksDietOrAllergens, idNamesFor, optionalIdsFor, pantryIdsFor } from "../core/outputSafety";
+import { catalogueOption, catalogueStep } from "../taste/quiz";
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English", nb: "Norwegian Bokmål", ru: "Russian", de: "German", es: "Spanish",
@@ -84,6 +89,50 @@ function dietLine(c: RecipeConfig): string {
   const diets = promptDiets(c.diets);
   if (diets.length <= 1) return `- Diet: ${DIET[diets[0] ?? "none"]}. Never use an ingredient that breaks it, even if it is in the pantry.`;
   return `- Diet: all of these at once: ${diets.map((d) => DIET[d]).join("; ")}. Never use an ingredient that breaks any of them, even if it is in the pantry.`;
+}
+
+/**
+ * The TASTE block, or nothing without a profile. Fixed sentences around the catalogue's own
+ * words for the chosen options (taste/catalogue.ts: each step's prompt label and each option's
+ * prompt words), never client text; the order of precedence is stated first. The `like` steps
+ * come first, in catalogue order, then the `avoid` ones. On every `like` step (favourite foods,
+ * flavours, heat, anything a later step adds) an option whose words the request's diet or
+ * allergens rule out (by the answer check's own guards: chicken for a vegetarian, cheese for a
+ * milk allergy, garlic as a flavour for a garlic allergy) is left out, so the block never asks
+ * for what a rule forbids. The list lines start with the steps' labels, which the leak check leaves out of
+ * its word runs: an answer may name the user's favourite foods in any order.
+ */
+export function tasteLines(req: GenerateRequest): string[] {
+  if (!req.taste) return [];
+  const lineOf = (answer: { step: string; options: string[] }): { tone: string; line: string } | null => {
+    const step = catalogueStep(answer.step);
+    const words = answer.options
+      .map((id) => catalogueOption(step, id).prompt)
+      .filter((w) => step.tone === "avoid" || !breaksDietOrAllergens(w, req));
+    return words.length ? { tone: step.tone, line: `${step.prompt.label} ${words.join("; ")}${step.prompt.suffix ?? ""}.` } : null;
+  };
+  const lines = req.taste.map(lineOf).filter((l): l is { tone: string; line: string } => l !== null);
+  const leanings = lines.filter((l) => l.tone !== "avoid").map((l) => l.line);
+  const avoid = lines.filter((l) => l.tone === "avoid").map((l) => l.line);
+  if (leanings.length === 0 && avoid.length === 0) return [];
+  const optional = req.optionalIngredients.length > 0;
+  return [
+    "",
+    "TASTE",
+    "- The user's taste, chosen from the app's fixed lists. These are soft preferences, never rules, and every rule above comes first: the pantry items are still the core of every dish and are used up first, the allergens and the diet always win, and the time limit and the meal type stand. A preference is never a reason to leave out a pantry item or to add more than a few extras.",
+    ...(leanings.length
+      ? [
+          ...leanings,
+          `- Within those rules, lean towards these where they suit the pantry items${req.kind === "menu" ? " and vary them over the menu" : ""}; a dish need not use all of them.`,
+        ]
+      : []),
+    ...(avoid.length
+      ? [
+          ...avoid,
+          `- Leave those out of every dish, unless one of the pantry items is one of them: then use it, the user chose it.${optional ? " An optional item that is one of them is left out." : ""} This is a taste preference, not an allergy: it never relaxes, replaces or adds to the allergen and diet rules.`,
+        ]
+      : []),
+  ];
 }
 
 /** A fresh marker per request: 16 hex characters after a fixed prefix. */
@@ -167,6 +216,7 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
     "- Water, oil, salt, pepper, sugar and spices never make a dish on their own: every dish has real food in it.",
     `- Give every ingredient an amount. Set pantryId to the id of the ${optional ? "pantry or optional" : "pantry"} item it is, or "none" for anything else.`,
     "- Steps are plain cooking steps for this dish: safe food handling, meat, poultry, fish and eggs cooked through, nothing that is not food or not safe to eat.",
+    ...tasteLines(req),
     "",
     "OUTPUT",
     "- Plain text in every field: no markdown, HTML, emoji, links, web or email addresses, phone numbers, handles, or messages to the reader about anything other than cooking this dish.",

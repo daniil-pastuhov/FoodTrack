@@ -235,6 +235,12 @@ export interface RuntimeConfig {
   outputJudge: OutputJudgeMode;
   costs: Costs;
   prices: Prices;
+  /**
+   * The taste quiz's tuning without a deploy (README "Taste profile quiz"): `hidden` is a list of
+   * "<step>" or "<step>:<option>" ids left out of getTasteQuiz and dropped from requests. Nothing
+   * else of the quiz is configurable here.
+   */
+  tasteQuiz: { hidden: string[] };
 }
 
 export type OutputJudgeMode = "off" | "shadow" | "enforce";
@@ -264,6 +270,7 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   outputJudge: "off",
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES },
+  tasteQuiz: { hidden: [] },
 };
 
 const COUNT_FIELDS = [
@@ -409,8 +416,26 @@ export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logge
     if (p) out.prices = p;
     else bad.push("prices");
   }
+  if (data.tasteQuiz !== undefined) {
+    const t = validTasteQuiz(data.tasteQuiz);
+    if (t) out.tasteQuiz = t;
+    else bad.push("tasteQuiz");
+  }
   if (bad.length) logger?.warn("config/runtime has invalid fields; safe values used", { fields: bad });
   return out;
+}
+
+/**
+ * `tasteQuiz`: an object whose `hidden` is absent or a list of at most 200 strings of at most 81
+ * characters ("<step>:<option>"); anything else is refused as a whole (nothing hidden).
+ */
+export function validTasteQuiz(v: unknown): RuntimeConfig["tasteQuiz"] | null {
+  if (typeof v !== "object" || v === null || Array.isArray(v)) return null;
+  const hidden = (v as Record<string, unknown>).hidden;
+  if (hidden === undefined) return { hidden: [] };
+  if (!Array.isArray(hidden) || hidden.length > 200) return null;
+  if (!hidden.every((h) => typeof h === "string" && h.length <= 81)) return null;
+  return { hidden: [...hidden] as string[] };
 }
 
 export async function loadRuntimeConfig(db: Firestore, logger?: Logger): Promise<RuntimeConfig> {

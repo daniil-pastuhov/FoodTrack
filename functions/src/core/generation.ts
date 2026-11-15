@@ -8,7 +8,7 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
-  CAPABILITIES,
+  capabilitiesOf,
   fail,
   inputHashOf,
   isNameRejection,
@@ -534,11 +534,15 @@ async function recordInputRejection(deps: Deps, uid: string, details: { field: s
   });
 }
 
-/** One structured line per LLM call. Never ingredient names, prompts or outputs; the uid is hashed. */
+/**
+ * One structured line per LLM call. Never ingredient names, prompts or outputs; the uid is hashed.
+ * `taste` is whether the request carried a taste profile (never which ids); null when the line is
+ * written from a stored generation (sweeper, deletion), which does not keep it.
+ */
 export function logLlmCall(
   deps: Deps,
   uid: string,
-  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd">,
+  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd"> & { taste?: boolean },
   outcome: Outcome,
   settled: Settled,
   durationMs: number | null,
@@ -549,6 +553,7 @@ export function logLlmCall(
     kind: gen.kind,
     courses: gen.courses ?? null,
     days: gen.kind === "menu" ? (gen.days ?? 3) : null,
+    taste: gen.taste ?? null,
     model: u?.model ?? null,
     inputTokens: u?.inputTokens ?? null,
     outputTokens: u?.outputTokens ?? null,
@@ -576,9 +581,11 @@ export function logLlmCall(
 }
 
 export async function generateRecipe(deps: Deps, caller: Caller, data: unknown): Promise<GenerateResponse> {
+  // Read first (cached in production): the taste quiz's hidden list is part of reading `taste`.
+  const config = await deps.config();
   let req: GenerateRequest;
   try {
-    req = validateGenerateRequest(data, deps.now());
+    req = validateGenerateRequest(data, deps.now(), config.tasteQuiz.hidden);
   } catch (e) {
     if (e instanceof HttpsError && isNameRejection(e.details)) {
       await recordInputRejection(deps, caller.uid, e.details, isSuspiciousRejection(e.details));
@@ -591,10 +598,9 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     deps.logger.info("generation_not_enough_items", { uidHash: uidHash(caller.uid), kind: req.kind, courses: req.courses ?? null, days: req.kind === "menu" ? menuDaysOf(req) : null, items: req.ingredients.length });
     fail("failed-precondition", "NOT_ENOUGH_ITEMS", "The ticked items cannot make this request");
   }
-  const config = await deps.config();
   const plan = planFor(req, config);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
-  if (!reservation.reserved) return { ...reservation.response, ...CAPABILITIES, ...(await blockFlag(deps.db, reservation.user, config)) };
+  if (!reservation.reserved) return { ...reservation.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, reservation.user, config)) };
   const started = deps.now();
   const outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
   const durationMs = deps.now() - started;
@@ -602,12 +608,12 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   logLlmCall(
     deps,
     caller.uid,
-    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd },
+    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd, taste: req.taste !== undefined },
     outcome,
     settled,
     durationMs,
   );
-  return { ...settled.response, ...CAPABILITIES, ...(await blockFlag(deps.db, settled.user, config)) };
+  return { ...settled.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, settled.user, config)) };
 }
 
 /**
@@ -626,5 +632,5 @@ export async function getGeneration(deps: Deps, caller: Caller, data: unknown): 
   const gen = gSnap.data();
   if (!gen) fail("not-found", "UNKNOWN_REQUEST", "No generation with this requestId");
   const user = uSnap.data();
-  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...CAPABILITIES, ...(await blockFlag(deps.db, user, config)) };
+  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)) };
 }
