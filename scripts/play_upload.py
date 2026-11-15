@@ -27,12 +27,9 @@ import os
 import pathlib
 import sys
 
-import google_auth_httplib2
-import httplib2
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload
+# Google's client libraries are imported where they are used, not here, so that importing this
+# module (the other Play scripts and their offline tests take PACKAGE_NAME and publisher() from
+# it) needs nothing beyond the standard library.
 
 PACKAGE_NAME = "com.foodtracker.android"
 # Play's limit for "What's new in this release", per language.
@@ -72,6 +69,11 @@ def publisher(timeout: int = 600, static_discovery: bool = True):
     key = os.environ.get("PLAY_SERVICE_ACCOUNT_JSON")
     if not key:
         return None
+    import google_auth_httplib2
+    import httplib2
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+
     credentials = service_account.Credentials.from_service_account_info(
         json.loads(key), scopes=["https://www.googleapis.com/auth/androidpublisher"]
     )
@@ -80,6 +82,9 @@ def publisher(timeout: int = 600, static_discovery: bool = True):
 
 
 def main() -> int:
+    from googleapiclient.errors import HttpError
+    from googleapiclient.http import MediaFileUpload
+
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--aab", help="path to the .aab to upload")
     parser.add_argument("--promote-from", metavar="TRACK",
