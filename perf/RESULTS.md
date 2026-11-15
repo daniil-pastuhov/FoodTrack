@@ -101,6 +101,8 @@ them were `kotlinx.datetime.LocalDate` alone.
 
 ## On-device macrobenchmarks
 
+Note (2026-11-13): the Calendar tab was removed and replaced by Recipe, and `CalendarPagingBenchmark` with it; its rows below, and the `Calendar*` composables in `baseline/` and `optimized/`, are kept as a record of this run and can't be reproduced.
+
 | Benchmark | Metric | baseline | optimized | Change |
 |---|---|--:|--:|--:|
 | CalendarPagingBenchmark | frameCount (median) | 59.00 | 58.00 | -1.7% |

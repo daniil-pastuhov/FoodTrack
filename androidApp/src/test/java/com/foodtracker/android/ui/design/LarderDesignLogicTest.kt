@@ -88,6 +88,26 @@ class LarderDesignLogicTest {
     }
 
     @Test
+    fun testALevelActionTallerThanThePillIsClearedByItsOwnHeight() {
+        val clearance = shellClearance(0.dp, pillHeight = 72.dp, scanHeight = 90.dp, expanded = true)
+
+        assertEquals(122.dp, clearance.content)
+        assertEquals(12.dp, clearance.scan)
+    }
+
+    @Test
+    fun testAPinnedActionSitsBesideThePillOnlyWhereItFits() {
+        // A 1280dp landscape tablet: a 440dp action beside a 260dp pill.
+        assertTrue(pinnedActionFitsBesidePill(1280.dp, pillWidth = 260.dp, actionWidth = 440.dp))
+        // Just past 700dp the half-width action would run into the pill.
+        assertFalse(pinnedActionFitsBesidePill(720.dp, pillWidth = 260.dp, actionWidth = 330.dp))
+        // (800 - 260) / 2 = 270 = 234 + 24 (end gap) + 12 (gap): exactly fits.
+        assertTrue(pinnedActionFitsBesidePill(800.dp, pillWidth = 260.dp, actionWidth = 234.dp))
+        assertFalse(pinnedActionFitsBesidePill(800.dp, pillWidth = 260.dp, actionWidth = 235.dp))
+        assertFalse("not measured yet", pinnedActionFitsBesidePill(1280.dp, pillWidth = 260.dp, actionWidth = 0.dp))
+    }
+
+    @Test
     fun testTheNavigationBarLiftsEverything() {
         val clearance = shellClearance(24.dp, pillHeight = 72.dp, scanHeight = 56.dp, expanded = true)
 

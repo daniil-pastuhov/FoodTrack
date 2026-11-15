@@ -49,10 +49,12 @@ struct StatusChip: View {
     var body: some View {
         HStack(spacing: 3) {
             LarderIcon(icon, size: .small)
+            // One line wherever it fits. At the largest text sizes a long status ("Просрочено
+            // 1 день назад") wraps instead: held to one line it was wider than the row, and
+            // pushed the whole Recipe form past both edges of the screen.
             Text(text)
                 .larderFont(.caption)
-                .lineLimit(1)
-                .fixedSize()
+                .fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(colors.foreground)
         .padding(.vertical, 1)

@@ -110,15 +110,4 @@ enum HomeSummary {
         if let pickedID, let picked = rows.first(where: { $0.id == pickedID }) { return picked }
         return searching ? nil : rows.first
     }
-
-    /// "A and B", "A, B and C", then "A, B and 3 others", so the dialog stays short.
-    static func recipeNames(_ names: [String]) -> String {
-        switch names.count {
-        case 0: return ""
-        case 1: return names[0]
-        case 2: return L10n.recipeNamesTwo(names[0], names[1])
-        case 3: return L10n.recipeNamesThree(names[0], names[1], names[2])
-        default: return L10n.recipeNamesMore(names[0], names[1], others: names.count - 2)
-        }
-    }
 }

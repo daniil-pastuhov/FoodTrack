@@ -42,6 +42,46 @@ public enum LookupResult: Equatable {
     /// There was no answer: no network, or a failure on the way. Says nothing about the product,
     /// so the design offers to carry on by hand rather than saying it wasn't found.
     case offline(barcode: String)
+    /// Open Food Facts answered 429, too many requests: shown like `offline` (try again, or carry
+    /// on by hand) without saying there is no connection. Android: `ProductLookupResult.Busy`.
+    case busy(barcode: String)
+}
+
+/// How the app introduces itself to Open Food Facts, as its API guidance asks:
+/// `AppName/Version (contact)`, the contact being the public repository (no email address).
+/// Android: `openFoodFactsUserAgent`, the same form.
+enum OpenFoodFacts {
+    static let userAgent: String = {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        return "BestBefore-iOS/\(version) (https://github.com/daniil-pastuhov/FoodTrack)"
+    }()
+
+    /// Whether `host` is one of Open Food Facts' own (the API and its picture hosts), the only
+    /// requests that carry `userAgent`.
+    static func isHost(_ host: String?) -> Bool {
+        guard let h = host?.lowercased() else { return false }
+        return h == "openfoodfacts.org" || h.hasSuffix(".openfoodfacts.org") || h == "openfoodfacts.net" || h.hasSuffix(".openfoodfacts.net")
+    }
+
+    /// Whether an item's data came from Open Food Facts, for its credit line: its picture is on
+    /// an Open Food Facts host, or its product has nutrition data (only a lookup brings that).
+    /// Android: `isFromOpenFoodFacts`.
+    static func isSource(imageUrl: String?, nutrition: ProductNutrition) -> Bool {
+        let host = imageUrl.flatMap { URL(string: $0.trimmingCharacters(in: .whitespaces)) }
+            .flatMap { ($0.scheme?.lowercased()).map { s in s == "http" || s == "https" } == true ? $0.host : nil }
+        return isHost(host) || !nutrition.isEmpty
+    }
+
+    /// The product's page on Open Food Facts, for the credit line: the product when its barcode
+    /// is known, else the site.
+    static func pageURL(barcode: String?) -> URL {
+        let code = barcode?.trimmingCharacters(in: .whitespaces) ?? ""
+        if !code.isEmpty, code.allSatisfy(\.isASCII), code.allSatisfy(\.isNumber),
+           let url = URL(string: "https://world.openfoodfacts.org/product/\(code)") {
+            return url
+        }
+        return URL(string: "https://world.openfoodfacts.org")!
+    }
 }
 
 /// What the Home screen confirms after an add, as a snackbar.
@@ -58,14 +98,25 @@ public struct DeletedItems: Equatable {
 
 @MainActor
 public class NativePantryViewModel: ObservableObject {
-    @Published public var items: [PantryItem] = []
+    @Published public var items: [PantryItem] = [] {
+        // How many items the pantry has held at most, for the rating prompt's "two items" rule.
+        didSet { ReviewPrompter.shared.pantrySize(items.count) }
+    }
     @Published public var searchQuery: String = ""
     @Published public var selectedLocation: String? = nil
     @Published public var selectedCategory: String? = nil
     @Published public var selectedFilter: NativeStatusFilter = .all
     @Published public var isLookingUpBarcode: Bool = false
     /// How the last barcode lookup ended, or nil before one ends. New screens switch on this.
-    @Published public var lookupResult: LookupResult? = nil
+    @Published public var lookupResult: LookupResult? = nil {
+        // A lookup that couldn't be made is an error on screen: no rating prompt this session.
+        didSet {
+            switch lookupResult {
+            case .offline, .busy: ReviewPrompter.shared.problemShown()
+            default: break
+            }
+        }
+    }
     /// The product `lookupResult` found.
     public var scannedProduct: ProductInfo? {
         if case .found(let product) = lookupResult { return product }
@@ -75,7 +126,7 @@ public class NativePantryViewModel: ObservableObject {
     /// "not found" card; `lookupResult` tells the two reasons apart.
     public var productNotFoundBarcode: String? {
         switch lookupResult {
-        case .notFound(let barcode), .offline(let barcode): return barcode
+        case .notFound(let barcode), .offline(let barcode), .busy(let barcode): return barcode
         case .found, nil: return nil
         }
     }
@@ -130,7 +181,10 @@ public class NativePantryViewModel: ObservableObject {
             ProductNameRecord.self,
             LocalProductRecord.self,
             CategoryPreferenceRecord.self,
-            ShoppingSectionRecord.self
+            ShoppingSectionRecord.self,
+            // The Recipe tab's saved recipes. A new entity with defaults on every property, so
+            // an existing store gains its table in place.
+            SavedRecipeRecord.self
         ])
         guard let appGroupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppGroup.identifier) else {
             fatalError("App Group '\(AppGroup.identifier)' is not configured for this target — see \"Setup\" in CONTRIBUTING.md")
@@ -1029,7 +1083,7 @@ public class NativePantryViewModel: ObservableObject {
             return nil
         }
         var request = URLRequest(url: url)
-        request.setValue("FoodTracker-iOS/1.0 (https://github.com/daniil-pastuhov/FoodTrack)", forHTTPHeaderField: "User-Agent")
+        request.setValue(OpenFoodFacts.userAgent, forHTTPHeaderField: "User-Agent")
         guard let (data, response) = try? await URLSession.shared.data(for: request) else {
             return .offline(barcode: barcode)
         }
@@ -1039,8 +1093,10 @@ public class NativePantryViewModel: ObservableObject {
 
     /// Reads an Open Food Facts response. Only a well-formed answer counts as "not found": it
     /// says so with `status: 0`, usually under a 404. Anything else, like a 5xx, a rate limit or
-    /// a proxy's HTML page, tells us nothing about the product, so it is `.offline`.
+    /// a proxy's HTML page, tells us nothing about the product, so it is `.offline`; a rate limit
+    /// (429) is `.busy`.
     nonisolated static func parseLookupResponse(barcode: String, statusCode: Int, data: Data) -> LookupResult {
+        if statusCode == 429 { return .busy(barcode: barcode) }
         guard (200..<300).contains(statusCode) || statusCode == 404,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let status = json["status"] as? Int else {
@@ -1350,6 +1406,25 @@ public class NativePantryViewModel: ObservableObject {
         guard !trimmed.isEmpty else { return }
         addShoppingListEntryIfAbsent(name: trimmed, barcode: nil, category: nil)
         recordProductName(trimmed)
+    }
+
+    /// Several names at once through the same path as `addManualShoppingListEntry(_:)` (a recipe's
+    /// "Add to shopping list"); a name already on the list is skipped. Returns how many were added.
+    /// Android: `PantryStateHolder.addShoppingListEntries`.
+    @discardableResult
+    public func addShoppingListEntries(_ productNames: [String]) -> Int {
+        var added = 0
+        var seen = Set<String>()
+        for raw in productNames {
+            let name = raw.trimmingCharacters(in: .whitespaces)
+            let key = name.lowercased()
+            guard !name.isEmpty, seen.insert(key).inserted else { continue }
+            let onList = shoppingList.contains { $0.productName.trimmingCharacters(in: .whitespaces).lowercased() == key }
+            guard !onList else { continue }
+            addManualShoppingListEntry(name)
+            added += 1
+        }
+        return added
     }
 
     /// As `addManualShoppingListEntry(_:)`, but says when the name was on the list already, so
@@ -1992,45 +2067,5 @@ public class NativePantryViewModel: ObservableObject {
         items = []
         IOSNotificationManager.shared.cancelAll()
         WidgetCenter.shared.reloadAllTimelines()
-    }
-
-    /// The share sheet payload rides in-process (no IPC size ceiling like Android's Binder
-    /// transaction buffer), but a pantry-sized dump of "other items" is still capped so a huge
-    /// pantry can't balloon the prompt without bound.
-    private static let maxOtherItemsChars = 20_000
-
-    /// Builds a device-language prompt asking an AI assistant (ChatGPT/Gemini/Claude, via the
-    /// share sheet) for recipe ideas using the given items, ordered soonest-to-expire first.
-    ///
-    /// `otherItems` is an optional list of additional pantry items (e.g. everything not
-    /// explicitly selected) offered to the AI as extra ingredients it could also use. Only names
-    /// are listed, and the list is silently truncated at `maxOtherItemsChars`.
-    public static func recipePrompt(for items: [PantryItem], otherItems: [PantryItem] = []) -> String {
-        let lines = items
-            .sorted { $0.daysRemaining < $1.daysRemaining }
-            .map { "- " + L10n.recipePromptItem(name: $0.name, expiry: $0.daysRemainingFormatted) }
-            .joined(separator: "\n")
-        var prompt = L10n.recipePromptIntro + "\n\n" + lines
-
-        if !otherItems.isEmpty {
-            let names = otherItems.map { $0.name }.sorted()
-            var otherNames = ""
-            var includedCount = 0
-            for name in names {
-                let lengthIfAdded = otherNames.count + (otherNames.isEmpty ? 0 : 2) + name.count
-                if lengthIfAdded > maxOtherItemsChars { break }
-                if !otherNames.isEmpty { otherNames += ", " }
-                otherNames += name
-                includedCount += 1
-            }
-            if includedCount > 0 {
-                prompt += "\n\n" + L10n.recipePromptOtherItemsIntro + " " + otherNames
-                let omittedCount = otherItems.count - includedCount
-                if omittedCount > 0 {
-                    prompt += " " + L10n.recipePromptOtherItemsOmitted(omittedCount)
-                }
-            }
-        }
-        return prompt
     }
 }

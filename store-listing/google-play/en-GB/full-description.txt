@@ -1,4 +1,4 @@
-BestBefore keeps track of what's in your fridge, freezer and cupboards, and reminds you before food goes off, not after.
+BestBefore is an expiry date tracker and food inventory for your fridge, freezer and pantry: scan groceries, see what to use first, get a reminder before food goes off, and turn what's about to expire into a recipe.
 
 <b>Add food in seconds</b>
 • Scan a barcode and the product name and picture are filled in for you (via Open Food Facts)
@@ -8,20 +8,28 @@ BestBefore keeps track of what's in your fridge, freezer and cupboards, and remi
 • Read a shop receipt to add several items at once
 
 <b>Never miss a date</b>
+• Works with best-before and use-by dates
 • Reminders a few days before something expires, at the time you choose
-• "Expiring soon" and "Expired" lists at a glance
-• Calendar agenda: see what's due today, tomorrow and next week, and swipe to mark items used or tossed
+• "Expiring Soon" and "Expired" lists at a glance
 • Home-screen widgets for expiring items, your shopping list and a quick overview
 
 <b>Shop smarter</b>
 • Essentials you use up go straight onto your shopping list
 • Share the list as text or a QR code
 • Optional: get your shopping list when you arrive at a shop you've saved
-• Not sure what to cook? Get a ready-made prompt for your favourite AI assistant, built from what's expiring soonest
 
-<b>Private by design</b>
-• No account, no ads, no tracking
-• Your data is stored on your phone, not on our servers; export a backup whenever you like
+<b>Cook what's expiring</b>
+• The Recipe tab picks the items closest to their date; change the selection, servings, time, diet and more
+• Free: copy or share a ready-made prompt to the AI app you already use
+• Free on supported Android phones: the recipe is written on the phone itself, by its own model
+• Recipe packs (in-app purchase): recipes written by our server and saved in the app, and a 3-day meal plan ("Menu for 3 days") that uses what expires first
+
+<b>Your data</b>
+• No ads, no tracking
+• No subscription: the app is free, and recipe packs are optional one-off purchases
+• Your pantry is stored on your phone; export a backup whenever you like
+• No account needed, not even to buy a pack. Sign in with Google only if you want your recipes on other phones
+• A recipe from a pack sends the items you tick, your recipe settings and your allergens to our server. The free ways send nothing to us
 • Available in English, Russian and Norwegian
 
 Waste less food, save money and always know what you have at home.

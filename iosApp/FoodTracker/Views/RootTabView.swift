@@ -1,12 +1,15 @@
+import StoreKit
 import SwiftUI
 import UIKit
 
-/// Root of the app: hosts the four peer tabs (Home/Calendar/Shopping/Settings) behind the
-/// `FloatingNav` pill, with `ScanFab` on Home and Calendar and snackbars above both. Owns the
-/// single shared `NativePantryViewModel` so all four tabs (and the scan/add sheets) operate on
-/// the same pantry state.
+/// Root of the app: hosts the four peer tabs (Home/Recipe/Shopping/Settings) behind the
+/// `FloatingNav` pill, with `ScanFab` on Home and snackbars above both. Owns the single shared
+/// `NativePantryViewModel` so all four tabs (and the scan/add sheets) operate on the same pantry
+/// state, and the Recipe tab's `RecipeViewModel`, so a recipe being written outlives a trip to
+/// another tab.
 struct RootTabView: View {
     @StateObject private var viewModel = NativePantryViewModel()
+    @StateObject private var recipeViewModel = RecipeViewModel()
     @ObservedObject private var router = AppRouter.shared
     @State private var selectedTab: RootTab = .home
     /// Whether the system has moved the status bar and navigation bar into a strip down the
@@ -20,6 +23,8 @@ struct RootTabView: View {
     @State private var scanHeight: CGFloat = ScanFab.minHeight
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.isExpanded) private var isExpanded
+    /// The OS rating prompt, asked for only when `ReviewPrompter` says so.
+    @Environment(\.requestReview) private var requestReview
 
     /// What the scanner should open in, or nil while it is closed.
     @State private var isKeyboardVisible = false
@@ -35,6 +40,8 @@ struct RootTabView: View {
     @State private var remindersCalloutDismissed = false
     @State private var showCategories: Bool = false
     @State private var showOnboarding: Bool = false
+    /// A tab a link asked for while onboarding was up, opened when it finishes.
+    @State private var tabAfterOnboarding: RootTab?
     /// The one snackbar on screen. Hosted here, rather than in each tab, so it sits above the
     /// pill and Scan; tabs reach it through `\.showSnackbar`.
     @State private var snackbar: LarderSnackbarContent?
@@ -56,7 +63,8 @@ struct RootTabView: View {
             scanHeight: scanHeight,
             isNavVisible: !shellChrome.navHidden,
             isScanVisible: isScanFloating,
-            isExpanded: isExpanded
+            isExpanded: isExpanded,
+            pinnedActionHeight: shellChrome.pinnedActionHeight
         )
     }
 
@@ -84,9 +92,12 @@ struct RootTabView: View {
         .background(LarderColor.background.ignoresSafeArea())
         .environment(\.showSnackbar, showSnackbar)
         .environment(\.shellChrome, shellChrome)
+        .environment(\.shellClearance, metrics.contentClearance)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isScanFloating)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: shellChrome.navHidden)
         .background(safeAreaReader)
+        // Store transactions waiting for the server are sent at launch, not when Recipe opens.
+        .task { recipeViewModel.start() }
         #if DEBUG
         .onAppear(perform: applyScreenshotLaunchArguments)
         #endif
@@ -163,19 +174,14 @@ struct RootTabView: View {
                     .transition(.opacity)
             }
         }
-        .sheet(isPresented: Binding(
-            get: { router.pendingRecipeShare != nil },
-            set: { if !$0 { router.pendingRecipeShare = nil } }
-        )) {
-            // Non-nil whenever the sheet is up, per the binding above; the fallback keeps this
-            // total rather than force-unwrapping during the dismiss animation, when SwiftUI can
-            // still re-evaluate the body after the prompt has been cleared.
-            ActivityView(activityItems: [router.pendingRecipeShare ?? ""])
+        // Onboarding rules the rating prompt out for the session.
+        .onChange(of: showOnboarding) { _, shown in
+            if shown { ReviewPrompter.shared.onboardingShown() }
         }
         .onChange(of: router.route) { _, route in
             guard let route else { return }
-            // First run finishes before anything else opens.
-            if !showOnboarding { apply(route) }
+            // First run finishes before anything else opens; a tab link waits for it.
+            if !showOnboarding { apply(route) } else { holdUntilOnboarded(route) }
             router.route = nil
         }
         .onChange(of: viewModel.homeConfirmation) { _, confirmation in
@@ -193,7 +199,13 @@ struct RootTabView: View {
                 && !FoodTrackerApp.isTakingScreenshots
             if let pending = router.pendingLaunchRoute {
                 router.pendingLaunchRoute = nil
-                if !isFirstRun { apply(pending) }
+                if !isFirstRun { apply(pending) } else { holdUntilOnboarded(pending) }
+            }
+            // A route set before this view was observing, such as a notification action or a
+            // `foodtracker://` link that started the app, would otherwise wait for the next one.
+            if let pending = router.route {
+                router.route = nil
+                if !isFirstRun { apply(pending) } else { holdUntilOnboarded(pending) }
             }
             if isFirstRun { showOnboarding = true }
         }
@@ -214,19 +226,15 @@ struct RootTabView: View {
                     onItemsDeleted: offerDeletedItemsUndo,
                     onScan: { presentScanner() },
                     onAddByHand: { presentAddEdit(editing: nil) },
+                    onGetRecipeIdeas: { apply(.recipeIdeas(itemIds: $0)) },
                     showsHeaderScan: barsInSideStrip
                 ) { item in
                     productDetail(item, actions: productDetailActions(item) { $0() })
                 }
                 .transition(.opacity)
-            case .calendar:
-                CalendarView(
-                    viewModel: viewModel,
-                    onEditItem: { presentAddEdit(editing: $0) },
-                    onUseOne: { useOne($0) },
-                    onToss: { viewModel.deleteItem($0.id, onItemRemoved: offerItemUndo) }
-                )
-                .transition(.opacity)
+            case .recipe:
+                RecipeView(pantry: viewModel, model: recipeViewModel, onScan: { presentScanner() }, onOpenShopping: { selectedTab = .shopping })
+                    .transition(.opacity)
             case .shopping:
                 ShoppingListView(
                     viewModel: viewModel,
@@ -320,6 +328,10 @@ struct RootTabView: View {
             showCategories = true
         case .onboarding:
             showOnboarding = true
+        case .recipeIdeas(let itemIds):
+            recipeViewModel.select(itemIds, from: viewModel.items)
+            recipeViewModel.path = []
+            selectedTab = .recipe
         }
     }
 
@@ -361,6 +373,8 @@ struct RootTabView: View {
     /// same removal (essential items land on the shopping list, with an undo), and any other unit
     /// gets its own undo, since a count changing is easy to miss.
     private func useOne(_ item: PantryItem) {
+        // Used before its date: one of the rating prompt's moments, from the third on.
+        ReviewPrompter.shared.usedOne(daysRemaining: item.daysRemaining) { requestReview() }
         if item.quantity <= 1 {
             viewModel.decrementQuantity(item.id, onItemRemoved: offerItemUndo)
         } else {
@@ -413,11 +427,21 @@ struct RootTabView: View {
     private func finishOnboarding(_ exit: OnboardingExit) {
         viewModel.completeOnboarding()
         withAnimation { showOnboarding = false }
+        let held = tabAfterOnboarding
+        tabAfterOnboarding = nil
         switch exit {
         case .scanner: presentScanner(mode: .barcode)
         case .addByHand: presentAddEdit(editing: nil)
-        case .home: break
+        // A tab a link asked for during first run (`foodtracker://recipe` from the App Store's
+        // event) opens now, as if tapped; a scanner or form the person chose wins over it.
+        case .home: if let held { selectedTab = held }
         }
+    }
+
+    /// Keeps a tab route that arrived during first run for `finishOnboarding`. Other routes
+    /// (a sheet, the scanner) are dropped, as before: onboarding offers its own way in.
+    private func holdUntilOnboarded(_ route: AppRoute) {
+        if case .tab(let tab) = route { tabAfterOnboarding = tab }
     }
 
     private func presentScanner(mode: IOSCameraMode? = nil) {
@@ -463,9 +487,18 @@ private struct AddEditRequest: Identifiable {
 extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
-    /// calendar, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
-    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`)
-    /// goes to that route, and `-demoAllergen <name>` adds to the allergen list.
+    /// recipe, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
+    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`,
+    /// recipeSettings, savedRecipes, recipeResult, which saves a sample recipe first, or the one in
+    /// `-demoRecipe <file>`, likewise recipeMenu, and scan, see below) goes to that route, and
+    /// `-demoAllergen <name>` adds to the allergen list.
+    ///
+    /// `-demoRoute scan -demoScanImage <png> -demoScanBarcode <code> -demoScanDate <yyyy-mm-dd>`
+    /// opens the scanner on that picture instead of the camera, which the simulator lacks, and
+    /// hands the scanner the barcode and then the date as if the camera had read them off it: the
+    /// barcode is looked up as usual (the screenshots put it in the product cache) and the date
+    /// lands on the product as Scan date's does. scripts/demo_scan_image.py draws the picture.
+    /// `-demoScanPace <seconds>` waits that long before each, for the preview video.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
@@ -478,7 +511,7 @@ extension RootTabView {
             SettingsStore.shared.save(settings)
         }
         switch arguments.string(forKey: "demoTab") {
-        case "calendar": selectedTab = .calendar
+        case "recipe": selectedTab = .recipe
         case "shopping": selectedTab = .shopping
         case "settings": selectedTab = .settings
         default: break
@@ -492,8 +525,55 @@ extension RootTabView {
         case "productDetail":
             let item = viewModel.items.first { $0.name == arguments.string(forKey: "demoItem") }
             apply(.productDetail(itemId: (item ?? viewModel.filteredItems.first)?.id ?? ""))
+        case "recipeSettings":
+            selectedTab = .recipe
+            recipeViewModel.path = [.settings]
+        case "savedRecipes":
+            selectedTab = .recipe
+            recipeViewModel.path = [.saved]
+        case "recipeResult":
+            selectedTab = .recipe
+            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe(demoFile(Recipe.self)))]
+        case "recipeMenu":
+            selectedTab = .recipe
+            recipeViewModel.path = [.result(id: recipeViewModel.saveDemoMenu(demoFile(RecipeMenu.self)))]
+        case "scan":
+            if let path = arguments.string(forKey: "demoScanImage"), let image = UIImage(contentsOfFile: path),
+               let barcode = arguments.string(forKey: "demoScanBarcode"),
+               let day = arguments.string(forKey: "demoScanDate"),
+               case let parts = day.split(separator: "-").compactMap({ Int($0) }), parts.count == 3,
+               let date = Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) {
+                ScannerSheetView.demoFeed = ScanDemoFeed(
+                    image: image, barcode: barcode, date: date, pace: arguments.double(forKey: "demoScanPace"))
+                scannerRequest = ScannerRequest(mode: .barcode)
+            }
+        case "buyRecipes":
+            selectedTab = .recipe
+            recipeViewModel.showsBuySheet = true
         default: break
         }
+        // `-demoRecipeIntro YES`: "How recipes work" as on a first visit (demo launches never
+        // open it by themselves).
+        if arguments.bool(forKey: "demoRecipeIntro") { recipeViewModel.showIntroForDemo() }
+        if arguments.object(forKey: "demoRecipeCredits") != nil {
+            recipeViewModel.credits.showDemo(
+                balance: arguments.integer(forKey: "demoRecipeCredits"),
+                state: arguments.string(forKey: "demoRecipeState")
+            )
+            if arguments.string(forKey: "demoRecipeMode") == "menu" { recipeViewModel.mode = .menu }
+            if arguments.string(forKey: "demoRecipeState") == "busy" { recipeViewModel.showDemoServerBusy() }
+            // `-demoRecipeCourses 2|3`: the menu's course count, and so what it takes.
+            if arguments.object(forKey: "demoRecipeCourses") != nil {
+                recipeViewModel.setMenuCourses(arguments.integer(forKey: "demoRecipeCourses"))
+            }
+        }
+    }
+
+    /// The JSON file `-demoRecipe` names, decoded, or nil.
+    private func demoFile<T: Decodable>(_ type: T.Type) -> T? {
+        guard let path = UserDefaults.standard.string(forKey: "demoRecipe"),
+              let data = FileManager.default.contents(atPath: path) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
     }
 }
 #endif

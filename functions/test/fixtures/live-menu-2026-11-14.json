@@ -1,0 +1,16 @@
+{
+  "kind": "menu",
+  "courses": 2,
+  "config": { "difficulty": "easy", "detail": "standard", "servings": 2, "maxMinutes": null, "mealType": "dinner", "diet": "none", "language": "en" },
+  "ingredients": [
+    { "name": "Yoghurt Grekisk 10% 1kg Salakis", "expiresOn": "2026-10-28", "quantity": 1 },
+    { "name": "Cottage Cheese Original 4,3%", "expiresOn": "2026-10-15", "quantity": 1 },
+    { "name": "Q Lettrømme med skrulokk", "expiresOn": "2026-09-30", "quantity": 1 },
+    { "name": "seaweed", "expiresOn": "2026-06-22", "quantity": 1 },
+    { "name": "Philadelphia naturell", "expiresOn": "2026-10-25", "quantity": 1 },
+    { "name": "Hamburgare", "expiresOn": "2026-09-15", "quantity": 4 },
+    { "name": "Tomatpuré", "expiresOn": "2026-08-16", "quantity": 1 }
+  ],
+  "allergens": [],
+  "today": "2026-11-14"
+}

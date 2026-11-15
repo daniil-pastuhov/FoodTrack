@@ -1,0 +1,10 @@
+node_modules/
+lib/
+coverage/
+*.log
+# Local parameter / secret overrides for the emulator; never commit.
+.env.local
+.secret.local
+# Red-team runner output (model answers) and the owner's local cases (e.g. real slurs for item 21).
+test/redteam/results/
+test/redteam/cases.local.json

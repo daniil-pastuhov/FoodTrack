@@ -31,23 +31,53 @@ data class RecipePromptStrings(
     /** "(+%1$d more items not shown)" */
     val otherItemsOmitted: (count: Int) -> String,
     /** Renders "expires in 3 days" / "expired 2 days ago" for a day count. */
-    val daysRemainingLabel: (days: Int) -> String
+    val daysRemainingLabel: (days: Int) -> String,
+    /** Heads the list of what the recipe should keep to: "Please keep to this:". */
+    val preferencesIntro: String,
+    val difficulty: (RecipeDifficulty) -> String,
+    val detail: (RecipeDetail) -> String,
+    /** "For %1$d people" */
+    val servings: (Int) -> String,
+    /** "Ready in %1$d minutes or less": the time slider's upper bound, a limit. */
+    val maxMinutes: (Int) -> String,
+    /** "Ideally about %1$d minutes or more": its lower bound, a guide. */
+    val minMinutes: (Int) -> String,
+    /** "Meal: dinner", or for several "Suits any of: breakfast, lunch", given them in the form's
+     *  order. Never asked for none ("Any"), which adds no line. */
+    val mealTypes: (List<RecipeMealType>) -> String,
+    /** One line per diet ([promptDiets]: all of them hold), never [RecipeDiet.NONE]. */
+    val diet: (RecipeDiet) -> String,
+    /** "Nothing that contains: %1$s", given the allergens already joined. */
+    val allergens: (String) -> String,
+    /** "Write the recipes in %1$s", given a code from [RECIPE_LANGUAGES]. */
+    val language: (String) -> String,
+    /** One line under the item list when some of [buildRecipePrompt]'s items are past their date,
+     *  given how many (singular for exactly one): "Some of these are past their date. I have
+     *  chosen to use them anyway, so please don't leave them out." No names: each item's own
+     *  line already says it is past its date. Null leaves the line out. */
+    val pastDateNote: ((count: Int) -> String)? = null
 )
 
 /**
  * Builds a prompt asking an AI assistant for recipe ideas using [items], in whatever language
  * [strings] was populated with.
  *
- * [otherItems] is an optional list of additional pantry items (e.g. everything not explicitly
- * selected) offered to the AI as extra ingredients it could also use. Only names are listed —
- * their expiry dates aren't relevant to a "here's what else I have" aside — and the list is
- * silently truncated at [MAX_OTHER_ITEMS_CHARS]; see that constant's doc for why.
+ * [config] adds what the Recipe tab's form says (difficulty, detail, servings, time, meal, diet,
+ * and the language when it isn't the app's), and [allergens], from app Settings, are always
+ * excluded. With no [config] the prompt is the plain list, as the digest's share once sent.
+ *
+ * [otherItems] is the rest of the pantry with "Send all products" on: offered after the main
+ * list as items the recipe may use as well, each with how long it has left, soonest first, the
+ * same way as [items]. The section is cut at [MAX_OTHER_ITEMS_CHARS] (see that constant's doc for
+ * why), with a note of how many were left out.
  */
 fun buildRecipePrompt(
     strings: RecipePromptStrings,
     today: LocalDate,
     items: List<PantryItem>,
-    otherItems: List<PantryItem> = emptyList()
+    otherItems: List<PantryItem> = emptyList(),
+    config: RecipeConfig? = null,
+    allergens: Collection<String> = emptyList()
 ): String {
     val lines = items
         .sortedBy { it.daysRemaining(today) }
@@ -59,27 +89,74 @@ fun buildRecipePrompt(
         .append("\n\n")
         .append(lines)
 
+    // The cook chose to use these despite their date: said once, under the ticked items it is
+    // about (not the "other items", which the recipe may leave out), so the other AI doesn't drop them.
+    val pastDate = items.count { it.daysRemaining(today) < 0 }
+    if (pastDate > 0 && strings.pastDateNote != null) {
+        prompt.append("\n\n").append(strings.pastDateNote.invoke(pastDate))
+    }
+
     if (otherItems.isNotEmpty()) {
-        val names = otherItems.map { it.name }.sorted()
-        val otherNames = StringBuilder()
+        val section = StringBuilder()
         var includedCount = 0
-        for (name in names) {
-            val lengthIfAdded = otherNames.length + (if (otherNames.isEmpty()) 0 else 2) + name.length
+        for (item in otherItems.sortedBy { it.daysRemaining(today) }) {
+            val line = "- " + strings.itemFormat(item.name, strings.daysRemainingLabel(item.daysRemaining(today)))
+            val lengthIfAdded = section.length + (if (section.isEmpty()) 0 else 1) + line.length
             if (lengthIfAdded > MAX_OTHER_ITEMS_CHARS) break
-            if (otherNames.isNotEmpty()) otherNames.append(", ")
-            otherNames.append(name)
+            if (section.isNotEmpty()) section.append("\n")
+            section.append(line)
             includedCount++
         }
         if (includedCount > 0) {
             prompt.append("\n\n")
                 .append(strings.otherItemsIntro)
-                .append(" ")
-                .append(otherNames)
+                .append("\n")
+                .append(section)
             val omittedCount = otherItems.size - includedCount
             if (omittedCount > 0) {
-                prompt.append(" ").append(strings.otherItemsOmitted(omittedCount))
+                prompt.append("\n").append(strings.otherItemsOmitted(omittedCount))
             }
         }
     }
+
+    val preferences = preferenceLines(strings, config, allergens)
+    if (preferences.isNotEmpty()) {
+        prompt.append("\n\n")
+            .append(strings.preferencesIntro)
+            .append("\n")
+            .append(preferences.joinToString(separator = "\n") { "- $it" })
+    }
     return prompt.toString()
 }
+
+/** One line per thing the recipe has to keep to, in a fixed order. Allergens come last and
+ *  apply even without a [config]. */
+internal fun preferenceLines(
+    strings: RecipePromptStrings,
+    config: RecipeConfig?,
+    allergens: Collection<String>
+): List<String> {
+    val lines = mutableListOf<String>()
+    if (config != null) {
+        val normalized = config.normalized()
+        lines += strings.difficulty(normalized.difficulty)
+        lines += strings.detail(normalized.detail)
+        lines += strings.servings(normalized.servings)
+        normalized.maxMinutes?.let { lines += strings.maxMinutes(it) }
+        normalized.minMinutes?.let { lines += strings.minMinutes(it) }
+        if (normalized.mealTypes.isNotEmpty()) lines += strings.mealTypes(orderedMeals(normalized.mealTypes))
+        promptDiets(normalized.diets).forEach { lines += strings.diet(it) }
+        normalized.language?.let { lines += strings.language(it) }
+    }
+    val cleanAllergens = cleanAllergens(allergens)
+    if (cleanAllergens.isNotEmpty()) lines += strings.allergens(cleanAllergens.joinToString(", "))
+    return lines
+}
+
+/** Trimmed, blank ones dropped, duplicates (ignoring case) dropped, sorted, so the same
+ *  Settings give the same prompt. */
+fun cleanAllergens(allergens: Collection<String>): List<String> =
+    allergens.map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .distinctBy { it.lowercase() }
+        .sortedBy { it.lowercase() }

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application>
+    <!-- Plain HTTP to the Firebase emulators only (see the file). -->
+    <application android:networkSecurityConfig="@xml/debug_network_security">
         <!-- Exported so adb can start it. See the class for how. Debug builds only. -->
         <activity
             android:name=".ui.design.DesignGalleryActivity"

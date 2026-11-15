@@ -1,0 +1,35 @@
+BestBefore is an expiration date tracker and food inventory for your fridge, freezer and pantry: scan groceries, see what to use first, get a reminder before food goes bad, and turn what's about to expire into a recipe.
+
+ADD FOOD IN SECONDS
+• Scan a barcode and the product name and picture are filled in for you (via Open Food Facts)
+• Point the camera at the printed date and BestBefore reads the expiration date for you
+• Snap a photo of fruit or vegetables and it suggests what it is
+• Batch mode: scan a whole bag of groceries in one go
+• Read a store receipt to add several items at once
+
+NEVER MISS A DATE
+• Works with "best by" and "use by" dates
+• Reminders a few days before something expires, at the time you choose
+• "Expiring Soon" and "Expired" lists at a glance
+• Home Screen widgets for expiring items, your shopping list and a quick overview
+
+SHOP SMARTER
+• Essentials you use up go straight onto your shopping list
+• Share the list as text or a QR code
+• Optional: see your shopping list when you arrive at a store you've saved
+
+COOK WHAT'S EXPIRING
+• The Recipe tab picks the items closest to their date; change the selection, servings, time, diet and more
+• Free: copy or share a ready-made prompt to the AI app you already use
+• Free on iPhones with Apple Intelligence (iOS 26 or later): the recipe is written on the phone itself
+• Recipe packs (in-app purchase): recipes written by our server and saved in the app, and a 3-day meal plan ("Menu for 3 days") that uses what expires first
+
+YOUR DATA
+• No ads, no tracking
+• No subscription: the app is free, and recipe packs are optional one-time purchases
+• Your pantry is stored on your iPhone; export a backup whenever you like
+• No account needed, not even to buy a pack. Sign in with Apple or Google only if you want your recipes on other phones
+• A recipe from a pack sends the items you tick, your recipe settings and your allergens to our server. The free ways send nothing to us
+• Available in English, Russian and Norwegian
+
+Waste less food, save money and always know what you have at home.

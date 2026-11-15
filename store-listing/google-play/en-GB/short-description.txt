@@ -1,1 +1,1 @@
-Scan groceries, track expiry dates and stop throwing food away.
+Scan food, track expiry dates and cook what's about to go off with AI recipes.

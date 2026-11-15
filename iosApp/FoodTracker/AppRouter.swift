@@ -11,11 +11,16 @@ public enum AppRoute: Equatable {
     case scanner(IOSCameraMode)
     case categories
     case onboarding
+    /// The Recipe tab with these items ticked: Home's Get recipe ideas, and the summary
+    /// notification's Recipe ideas action.
+    case recipeIdeas(itemIds: [String])
 
-    /// The name a widget URL or a home-screen quick action gives for its target.
+    /// The name a widget URL, a home-screen quick action or a store link (the App Store's
+    /// in-app event opens `foodtracker://recipe`) gives for its target.
     init?(externalName: String) {
         switch externalName {
         case "home": self = .tab(.home)
+        case "recipe": self = .tab(.recipe)
         case "shopping-list": self = .tab(.shopping)
         case "scan": self = .scanner(.barcode)
         case "add-item": self = .addItem(.new)
@@ -85,18 +90,6 @@ public final class AppRouter: ObservableObject {
     /// delivered before any SwiftUI view exists to observe `route`, so it is stashed here and
     /// replayed once `RootTabView` appears.
     public var pendingLaunchRoute: AppRoute?
-
-    /// A recipe prompt waiting to be handed to the share sheet, set by the digest
-    /// notification's "Recipe ideas" action.
-    ///
-    /// Kept separate from `route` because it is not a navigation request: the share sheet goes
-    /// up over whichever tab the user is already on. `RootTabView` observes it and clears it
-    /// once presented, so the same tap can't be replayed on the next view update.
-    ///
-    /// Unlike `route` this needs no separate cold-launch stash: the notification response is
-    /// delivered to `UNUserNotificationCenterDelegate` only after the app is running, and
-    /// `RootTabView` is on screen by then.
-    @Published public var pendingRecipeShare: String?
 
     private init() {}
 

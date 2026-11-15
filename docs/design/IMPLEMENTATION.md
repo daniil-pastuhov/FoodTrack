@@ -10,15 +10,15 @@ Coordinator only, after wave 0: `ui/theme/`, `ui/design/`, `iosApp/FoodTracker/D
 If you need a change there, send the coordinator a message saying exactly what and why, and carry on with other work. Don't work around it locally. Generated files (`LarderTokens.kt`, `larder_colors.xml`, `Assets.xcassets/Larder/`, `LarderTokens.swift`) are never edited by hand.
 
 ## Names, the same on both platforms
-Components: `LarderButton` (primary, secondary, outline, text, danger, dangerText), `LarderTextField`, `LarderChip`, `LarderTick`, `LarderSwitch`, `LarderStepper`, `LarderSegmented`, `StatusChip`, `PantryRow`, `LarderGroup`, `SectionHeader`, `LarderCard`, `LarderCallout` (info, warning, error, success), `LarderSnackbar`, `LarderDialog`, `LarderSheet`, `EmptyState`, `ScreenError`, `LedeHeader`, `ScanFab`, `FloatingNav`, `LarderIcon`.
+Components: `LarderButton` (primary, secondary, outline, text, danger, dangerText), `LarderTextField`, `LarderChip` (single choice, or multi-choice with a check when on), `LarderRangeSlider` (two handles; Material 3 RangeSlider on Android, drawn by hand on iOS), `LarderTick`, `LarderSwitch`, `LarderStepper`, `LarderSegmented`, `StatusChip`, `PantryRow`, `LarderGroup`, `SectionHeader`, `LarderCard`, `LarderCallout` (info, warning, error, success), `LarderSnackbar`, `LarderDialog`, `LarderSheet`, `EmptyState`, `ScreenError`, `LedeHeader`, `ScanFab`, `FloatingNav`, `LarderIcon`.
 Android lives in `androidApp/.../ui/design/`, iOS in `iosApp/FoodTracker/DesignSystem/`. Tokens: `MaterialTheme` plus `LarderTheme.colors` on Android, `LarderColor` on iOS.
 Widths: `isExpanded` is true at 700dp/pt and up, read from window width. Two-pane layouts use it. There is no navigation rail or sidebar on any device.
 
 ## Routes
-Tabs: home, calendar, shopping, settings. Pushed or modal: productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, onboarding.
+Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), savedRecipes, recipeSettings, buyRecipes (sheet), productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, onboarding.
 
 ## State additions (Wave 0)
-- Lookup result: Found(product), NotFound, Offline.
+- Lookup result: Found(product), NotFound, Offline, and (2026-11-15) Busy for Open Food Facts' HTTP 429, drawn as the offline panel with a clock icon and its own title and message (scanner/barcode/busy).
 - `onboardingCompleted` in settings. Treated as done for people upgrading with items in the pantry.
 - `deleteItems(ids)` returns what's needed for one Undo, `restoreItems(...)` undoes it.
 - Home confirmation events: Saved(name, location), BatchAdded(count), OneMoreAdded(name, quantity).
@@ -37,8 +37,11 @@ Tabs: home, calendar, shopping, settings. Pushed or modal: productDetail(itemId)
 ## Verify before reporting
 `./gradlew :shared:testAndroidHostTest :androidApp:testDebugUnitTest :androidApp:assembleDebug` (JDK 17) and the `xcodebuild` simulator build in CLAUDE.md, as far as your platform is affected. In a fresh Gradle home set `GRADLE_RO_DEP_CACHE=$HOME/.gradle/caches`. Report real results and anything not verified.
 
+## Recipe tab action rule (2026-11-15)
+One rule, `RecipeUiState.actions` (iOS `RecipeViewModel.actions`), picks the pinned action and the buttons under the form; the full table is at the end of the Recipe page. Copy prompt exists only where the system share sheet has no Copy: Android 9 and older (`shareSheetCopies` false, from the API level), never on iOS. With Share prompt pinned alone, the form ends with the free line and then Buy recipes as an outline button; on Android 7–9 Copy prompt (outline) comes first and Buy drops to a text button (recipe/cook/copy-old-android). With Generate pinned, Share prompt is a text button under the form, with Copy prompt beside it on Android 7–9 only. Share prompt pinned alone is drawn to Scan's metrics (`PinnedAction(compact = true)` on Android, `RecipeGoButton(compact: true)` on iOS): 56 high, a 24 icon, 8 to the label, Scan's side padding and label style.
+
 ## Approved defaults
-`found` hides "In your pantry" at zero. Quantity limit 99 on both platforms. iOS Add item stays a modal with Cancel. Add item title is "Add item". Per-item notification channel gets a new id at default importance. Widget tick stays a ring with a check; in-app tick keeps its empty-ring off state. Blank Save and Import in Shopping stay disabled. A duplicate shopping name shows a T3 message. Scan is on Home and Calendar only. Later, not now: fixing Check date from the queue, validating restore files on pick, the T4 after declining location, shop-arrival actions.
+`found` hides "In your pantry" at zero. Quantity limit 99 on both platforms. iOS Add item stays a modal with Cancel. Add item title is "Add item". Per-item notification channel gets a new id at default importance. Widget tick stays a ring with a check; in-app tick keeps its empty-ring off state. Blank Save and Import in Shopping stay disabled. A duplicate shopping name shows a T3 message. Scan is on Home only; on Recipe the primary action (`RecipeUiState.actions`) takes its place above the pill: full width when it has a cost, a content-width pill at the trailing edge when Share prompt is pinned alone (level with the pill on wide windows where it fits). Later, not now: fixing Check date from the queue, validating restore files on pick, the T4 after declining location, shop-arrival actions.
 
 ## Wave 1 and 2 notes
 The foundation is merged. Read the source in `androidApp/.../ui/design/`, `ui/navigation/`, `iosApp/FoodTracker/DesignSystem/` and `AppRouter.swift` for component APIs before writing screens. Don't rebuild a component that exists.

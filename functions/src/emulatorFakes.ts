@@ -1,0 +1,159 @@
+/**
+ * Stand-ins for the stores and the LLM, for client development against the local emulator suite
+ * only. They are used when EMULATOR_FAKES=true AND the code runs inside the Functions emulator
+ * (FUNCTIONS_EMULATOR=true, set by the emulator itself) AND the project id starts with `demo-`
+ * (a demo project has no real resources), so a deployed function never uses them.
+ *
+ * - Play: any purchase token starting with "fake-" is a purchased recipes_10 (or the product named
+ *   after it, e.g. "fake-recipes_50-1"); other tokens are unknown.
+ * - App Store: the JWS payload is decoded WITHOUT verification, and Xcode/LocalTesting
+ *   transactions (StoreKit configuration files in Xcode) are treated as sandbox.
+ * - LLM: returns a canned recipe or menu, in the model's answer shape (pantry ids), which then goes
+ *   through the real output checks. An ingredient named "fail infra" or "fail content" makes the
+ *   call fail with that class, to exercise refunds. The judge always answers ok.
+ * - Sign in with Apple: any authorization code is exchanged for a random fake refresh token, and
+ *   revoking succeeds; the token is sealed with an in-memory key (LocalKeyWrapper), not Cloud KMS.
+ */
+import { randomBytes } from "node:crypto";
+import { coursesFor, menuDates, type GenerateRequest } from "./contract";
+import {
+  type AppleTokenRevoker,
+  GenerationError,
+  InvalidSignatureError,
+  type ConsumptionInfo,
+  type AppleNotification,
+  type AppleTransaction,
+  type AppStoreVerifier,
+  type GenerationResult,
+  type JudgeResult,
+  type OutputJudge,
+  type PlayPurchase,
+  type PlayVerifier,
+  type RecipeGenerator,
+  type VoidedPurchase,
+} from "./ports";
+
+export function emulatorFakesEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  const project = env.GCLOUD_PROJECT ?? env.GOOGLE_CLOUD_PROJECT ?? "";
+  return env.FUNCTIONS_EMULATOR === "true" && env.EMULATOR_FAKES === "true" && project.startsWith("demo-");
+}
+
+export class EmulatorPlay implements PlayVerifier {
+  async getPurchase(token: string): Promise<PlayPurchase | null> {
+    if (!token.startsWith("fake-")) return null;
+    const productId = /^fake-(recipes_(?:10|50|100))/.exec(token)?.[1] ?? "recipes_10";
+    return {
+      productId, quantity: 1, purchaseState: "PURCHASED", consumed: false, isTest: false, orderId: null,
+      refundableQuantity: 1, obfuscatedExternalAccountId: null,
+    };
+  }
+  async consume(): Promise<void> {}
+  async listVoided(): Promise<VoidedPurchase[]> {
+    return [];
+  }
+}
+
+function decode(jws: string): Record<string, unknown> {
+  try {
+    return JSON.parse(Buffer.from(jws.split(".")[1] ?? "", "base64url").toString("utf8")) as Record<string, unknown>;
+  } catch {
+    throw new InvalidSignatureError("malformed JWS");
+  }
+}
+
+function tx(p: Record<string, unknown>): AppleTransaction {
+  const id = String(p.transactionId ?? "");
+  if (!id) throw new InvalidSignatureError("no transactionId");
+  return {
+    transactionId: id,
+    originalTransactionId: String(p.originalTransactionId ?? id),
+    bundleId: String(p.bundleId ?? ""),
+    productId: String(p.productId ?? ""),
+    quantity: Number(p.quantity ?? 1),
+    type: String(p.type ?? ""),
+    environment: p.environment === "Production" ? "production" : "sandbox",
+    revocationDate: typeof p.revocationDate === "number" ? p.revocationDate : null,
+    revocationPercentage: typeof p.revocationPercentage === "number" ? p.revocationPercentage : null,
+    signedDate: Number(p.signedDate ?? Date.now()),
+    appAccountToken: typeof p.appAccountToken === "string" ? p.appAccountToken : null,
+    appTransactionId: typeof p.appTransactionId === "string" ? p.appTransactionId : null,
+  };
+}
+
+export class EmulatorAppStore implements AppStoreVerifier {
+  private readonly seen = new Map<string, AppleTransaction>();
+  async verifyTransaction(jws: string): Promise<AppleTransaction> {
+    const t = tx(decode(jws));
+    this.seen.set(t.transactionId, t);
+    return t;
+  }
+  async fetchTransaction(id: string): Promise<AppleTransaction | null> {
+    return this.seen.get(id) ?? null;
+  }
+  async sendConsumptionInformation(_id: string, _env: string, _info: ConsumptionInfo): Promise<void> {}
+  async verifyNotification(signedPayload: string): Promise<AppleNotification> {
+    const p = decode(signedPayload);
+    const data = (p.data ?? {}) as Record<string, unknown>;
+    const signedTx = typeof data.signedTransactionInfo === "string" ? data.signedTransactionInfo : null;
+    return {
+      notificationUUID: String(p.notificationUUID ?? ""),
+      notificationType: String(p.notificationType ?? ""),
+      subtype: p.subtype ? String(p.subtype) : null,
+      signedDate: Number(p.signedDate ?? Date.now()),
+      environment: data.environment === "Production" ? "production" : "sandbox",
+      transaction: signedTx ? tx(decode(signedTx)) : null,
+    };
+  }
+}
+
+function cannedRecipe(req: GenerateRequest, title: string) {
+  return {
+    title,
+    summary: `A test recipe from the emulator using ${req.ingredients.map((i) => i.name).join(", ")}.`,
+    minutes: req.config.maxMinutes ?? 30,
+    ingredients: req.ingredients.map((i, n) => ({ amount: "1", name: i.name, pantryId: `p${n + 1}` })),
+    steps: ["Prepare the ingredients.", "Cook them.", "Serve."],
+    tip: "Generated by the emulator fake, not a real model.",
+  };
+}
+
+export class EmulatorGenerator implements RecipeGenerator {
+  async generate(req: GenerateRequest): Promise<GenerationResult> {
+    const usage = {
+      inputTokens: 600,
+      outputTokens: req.kind === "menu" ? 9000 : 1200,
+      thinkingTokens: 300,
+      model: "emulator-fake",
+      finishReason: "STOP",
+    };
+    const names = req.ingredients.map((i) => i.name.toLowerCase());
+    if (names.includes("fail infra")) throw new GenerationError("infra", "emulator fake infra failure");
+    if (names.includes("fail content")) throw new GenerationError("content", "emulator fake content failure");
+    await new Promise((r) => setTimeout(r, 1500));
+    if (req.kind === "recipe") return { output: cannedRecipe(req, "Emulator pantry dish"), usage };
+    const output = {
+      days: menuDates(req.today).map((date, d) => ({
+        date,
+        uses: req.ingredients.slice(0, 2).map((_, n) => `p${n + 1}`),
+        courses: coursesFor(req.courses!).map((course) => ({ course, recipe: cannedRecipe(req, `Day ${d + 1} ${course}`) })),
+      })),
+    };
+    return { output, usage };
+  }
+}
+
+export class EmulatorJudge implements OutputJudge {
+  async judge(): Promise<JudgeResult> {
+    return { verdict: "ok", usage: { inputTokens: 500, outputTokens: 5, thinkingTokens: 0, model: "emulator-fake", finishReason: "STOP" } };
+  }
+}
+
+export class EmulatorAppleTokens implements AppleTokenRevoker {
+  async exchangeAuthorizationCode(): Promise<string> {
+    return `emulator-refresh-${randomBytes(12).toString("hex")}`;
+  }
+
+  async revokeRefreshToken(): Promise<void> {}
+
+  async revokeWithAuthorizationCode(): Promise<void> {}
+}

@@ -1,0 +1,14 @@
+{
+  "kind": "menu",
+  "courses": 2,
+  "config": { "difficulty": "easy", "detail": "standard", "servings": 2, "minMinutes": null, "maxMinutes": 35, "mealTypes": ["breakfast", "lunch"], "diets": ["pescatarian", "dairyFree"], "language": "nb" },
+  "ingredients": [
+    { "name": "Laks filet", "expiresOn": "2026-11-15", "quantity": 2 },
+    { "name": "Havregryn", "expiresOn": null, "quantity": 1 },
+    { "name": "Yoghurt Grekisk 10% 1kg Salakis", "expiresOn": "2026-11-13", "quantity": 1 },
+    { "name": "Epler", "expiresOn": "2026-11-21", "quantity": 4 },
+    { "name": "Kyllingfilet", "expiresOn": "2026-11-16", "quantity": 1 }
+  ],
+  "allergens": [],
+  "today": "2026-11-14"
+}

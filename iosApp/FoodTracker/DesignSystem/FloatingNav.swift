@@ -3,12 +3,12 @@ import SwiftUI
 /// The four main destinations. Scanning and adding an item aren't tabs: Scan is the `ScanFab`
 /// above the pill, and adding by hand is reached from the scanner.
 public enum RootTab: String, CaseIterable {
-    case home, calendar, shopping, settings
+    case home, recipe, shopping, settings
 
     var title: String {
         switch self {
         case .home: return L10n.navHome
-        case .calendar: return L10n.calendarButton
+        case .recipe: return L10n.recipeTab
         case .shopping: return L10n.navShopping
         case .settings: return L10n.settingsTitle
         }
@@ -17,14 +17,14 @@ public enum RootTab: String, CaseIterable {
     var icon: LarderIconName {
         switch self {
         case .home: return .house
-        case .calendar: return .calendarDays
+        case .recipe: return .chefHat
         case .shopping: return .shoppingBasket
         case .settings: return .settings
         }
     }
 
-    /// Scan only makes sense where food is listed by date.
-    var showsScan: Bool { self == .home || self == .calendar }
+    /// Scan is on Home only. On Recipe its place above the pill holds the tab's own primary action.
+    var showsScan: Bool { self == .home }
 }
 
 /// The floating pill, on every device: sized to its tabs, so the page shows at its sides, with

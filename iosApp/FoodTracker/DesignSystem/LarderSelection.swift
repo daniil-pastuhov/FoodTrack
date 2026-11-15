@@ -229,12 +229,20 @@ struct LarderStepper: View {
     @Binding private var value: Int
     private let range: ClosedRange<Int>
     private let outlined: Bool
+    private let label: String
 
     /// `outlined: false` is the compact form for dense rows: no border, a narrower count.
-    init(value: Binding<Int>, range: ClosedRange<Int> = 1...maxItemQuantity, outlined: Bool = true) {
+    /// `label` is what VoiceOver calls it, the quantity unless it counts something else.
+    init(
+        value: Binding<Int>,
+        range: ClosedRange<Int> = 1...maxItemQuantity,
+        outlined: Bool = true,
+        label: String = L10n.quantityLabel
+    ) {
         _value = value
         self.range = range
         self.outlined = outlined
+        self.label = label
     }
 
     var body: some View {
@@ -259,7 +267,7 @@ struct LarderStepper: View {
         .overlay { Capsule().strokeBorder(outlined ? LarderColor.outline : Color.clear, lineWidth: 1) }
         .animation(.easeInOut(duration: 0.15), value: value)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(L10n.quantityLabel)
+        .accessibilityLabel(label)
         .accessibilityValue("\(value)")
         .accessibilityAdjustableAction { direction in
             switch direction {

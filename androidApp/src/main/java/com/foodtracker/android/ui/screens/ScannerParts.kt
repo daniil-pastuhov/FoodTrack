@@ -143,7 +143,7 @@ internal fun scanPanelFor(mode: CameraScanMode, state: PantryUiState, hasCapture
         state.scannedProduct != null -> ScanPanel.Product
         state.productNotFoundBarcode != null -> when {
             mode == CameraScanMode.PHOTO -> ScanPanel.None
-            state.lookupResult is ProductLookupResult.Offline -> ScanPanel.Offline
+            state.lookupResult is ProductLookupResult.Offline || state.lookupResult is ProductLookupResult.Busy -> ScanPanel.Offline
             else -> ScanPanel.NotFound
         }
         state.detectedDate != null -> ScanPanel.Date
@@ -318,6 +318,7 @@ private fun AimArea(frame: Pair<Dp, Dp>?, hint: String?, modifier: Modifier = Mo
                     .weight(1f, fill = false)
                     .width(width)
                     .height(height)
+                    .scanDemoBackdrop()
                     .aimingFrame()
             )
         }
@@ -803,13 +804,15 @@ internal fun OfflinePanel(
     expanded: Boolean,
     barcode: String,
     onTryAgain: () -> Unit,
-    onContinueByHand: () -> Unit
+    onContinueByHand: () -> Unit,
+    /** Open Food Facts asked us to slow down (429): the same choices, without "you're offline". */
+    busy: Boolean = false
 ) = ResultPanel(expanded) {
     LarderCallout(
         kind = LarderCalloutKind.Warning,
-        icon = LarderIcons.WifiOff,
-        title = stringResource(R.string.scan_offline_title),
-        message = stringResource(R.string.scan_offline_message)
+        icon = if (busy) LarderIcons.Clock else LarderIcons.WifiOff,
+        title = stringResource(if (busy) R.string.scan_busy_title else R.string.scan_offline_title),
+        message = stringResource(if (busy) R.string.scan_busy_message else R.string.scan_offline_message)
     )
     ScanCode(stringResource(R.string.barcode_format, barcode))
     ScanActions {

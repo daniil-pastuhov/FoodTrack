@@ -94,9 +94,8 @@ class DigestNotificationReceiver : BroadcastReceiver(), KoinComponent {
             items.size
         )
 
-        // Opens the app and lets it raise the share sheet: a BroadcastReceiver can't show a
-        // chooser itself. MainActivity resolves the ids against its own live pantry state, so an
-        // item eaten between this firing and the tap simply drops out of the prompt.
+        // Opens the Recipe tab with these items ticked. The ids are resolved against the live
+        // pantry there, so an item eaten between this firing and the tap simply drops out.
         val recipeIntent = Intent(context, MainActivity::class.java).apply {
             putExtra(MainActivity.EXTRA_RECIPE_FOR_IDS, ArrayList(items.map { it.id }))
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or

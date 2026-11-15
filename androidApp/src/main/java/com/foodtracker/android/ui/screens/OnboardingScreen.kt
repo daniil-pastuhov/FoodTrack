@@ -386,7 +386,7 @@ private fun CameraStep(onAllow: () -> Unit, onSkip: () -> Unit) {
 }
 
 @Composable
-private fun OnboardingRow(icon: LarderIcons, title: String, supporting: String) {
+internal fun OnboardingRow(icon: LarderIcons, title: String, supporting: String) {
     LarderListItem(
         title = title,
         supporting = supporting,

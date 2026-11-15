@@ -6,7 +6,6 @@ import com.foodtracker.model.SortOption
 import com.foodtracker.model.resolveCategoryDisplayName
 import com.foodtracker.perf.PerfDataset
 import com.foodtracker.util.DateUtils
-import com.foodtracker.util.groupItemsByExpiryDate
 import com.foodtracker.viewmodel.FilterCriteria
 import com.foodtracker.viewmodel.PantryDerivation
 import com.foodtracker.viewmodel.StatusFilter
@@ -102,12 +101,9 @@ class DerivationAlgorithmPerfTest {
                 val filtered = Legacy.computeFiltered(
                     items, null, null, StatusFilter.ALL, "", today, 3, SortOption.EXPIRY_DATE, preferences
                 )
-                // The calendar's grouping is included on this side too. It lived in composition
-                // as `remember(state.items) { groupItemsByExpiryDate(...) }`, but that key means
-                // it also ran once per data change — leaving it out would flatter the legacy
-                // number by pricing work it genuinely did.
-                val grouped = groupItemsByExpiryDate(items)
-                counts.first + filtered.size + grouped.size
+                // The legacy side once also priced the Calendar's per-date grouping. The Calendar
+                // and its grouping are gone from both sides now, so neither includes it.
+                counts.first + filtered.size
             }
 
             PerfHarness.measure("algorithm.fullDerivation.current", size) {

@@ -1,0 +1,1 @@
+Scan groceries, track expiration dates and turn what's expiring into AI recipes.
