@@ -306,8 +306,9 @@ binding exist on the live project (created and read back 2026-11-14).
     content: in-app purchases.
   - Corrected 2026-11-15 against the code: on Play, crash logs, diagnostics and device IDs are
     for **Analytics** (Play's definition: "to diagnose and fix bugs or crashes"), not App
-    functionality; Health info (allergens) is **not** processed ephemerally (Vertex AI caches
-    inputs for up to 24 hours and may log prompts for abuse monitoring); Name is for Account
+    functionality; Health info (allergens) is **not** processed ephemerally (Vertex AI's 24-hour caching of
+    inputs was turned OFF for this project on 2026-11-15, see "Vertex AI data caching" below; Google may
+    still log prompts for abuse monitoring, which has no opt-out, so the answer stays "not ephemeral"); Name is for Account
     management only. On Apple, Other Diagnostic Data also has purpose Analytics (the Firebase
     SDKs' own manifests).
   - Judgement calls left to you: whether the barcode sent to Open Food Facts must be declared
@@ -376,3 +377,24 @@ functions for the apps"; `-PrecipeEmulatorHost=10.0.2.2` on Android, `-recipeEmu
 
 Nothing deploys the backend from CI; functions/README.md, "Deploying from CI", lists what a deploy
 job would need.
+
+### Vertex AI data caching **(off since 2026-11-15)**
+
+By default Google's Gemini models cache request inputs and outputs for up to 24 hours (in memory,
+and at rest when memory is full). That would make "used only for this request and not stored
+afterwards" in the allergen consent text and the privacy policy untrue, so caching is disabled for
+the whole project (the setting applies to every region):
+
+```bash
+TOKEN=$(gcloud auth print-access-token --account=<owner> )
+URL=https://us-central1-aiplatform.googleapis.com/v1/projects/bestbefore-f9ee1/cacheConfig
+curl -s -H "Authorization: Bearer $TOKEN" "$URL"            # read: expect "disableCache": true
+curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$URL" \
+  -d '{"name":"projects/bestbefore-f9ee1/cacheConfig","disableCache":true}'
+```
+
+Needs `roles/aiplatform.admin`. Source: <https://docs.cloud.google.com/vertex-ai/generative-ai/docs/data-governance>.
+Check it again after any change of project, and before relying on the "not stored" wording. What
+it does not cover: Google "may log prompts to detect potential abuse" under the Cloud terms, with
+no opt-out for Google's own models. Never turn on request-response logging, Grounding with Google
+Search or Maps, or session resumption for this project without revisiting the consent text.
