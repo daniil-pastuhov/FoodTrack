@@ -255,9 +255,11 @@ binding exist on the live project (created and read back 2026-11-14).
       --project bestbefore-f9ee1` (read-only, writes a local HTML board; functions/README.md, "The board").
 - [ ] Always-on board: create the private bucket `bestbefore-f9ee1-owner-board`, the
       `ownerBoardWriter` role and the two bucket bindings, deploy `redrawBoard`, open
-      <https://storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html>, and add
-      `board_redraw_failed` and `board_bucket_public` to the log alerts (functions/README.md,
-      "The board", "Always on", has the commands in order).
+      <https://storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html>
+      (functions/README.md, "The board", "Always on", has the commands in order).
+- [x] (Done 2026-11-15: a fifth policy, "Recipe: owner board", same email channel and one email
+      an hour at most.) Log-based alert on `board_redraw_failed` and `board_bucket_public`. It
+      does not notice a redraw that silently stops running; the board's own "Updated" line does.
 
 ### 10. Test
 
