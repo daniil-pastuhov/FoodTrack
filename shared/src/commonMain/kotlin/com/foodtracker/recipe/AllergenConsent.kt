@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
 
 /** The version of the consent wording (en/ru/nb `recipe_allergen_consent_*`). Raising it asks
  *  everyone again, whatever they answered before. */
-const val ALLERGEN_CONSENT_VERSION = 2
+const val ALLERGEN_CONSENT_VERSION = 3
 
 /** The person's answer: [agreed] or refused/withdrawn, when, and to which wording. */
 @Serializable
