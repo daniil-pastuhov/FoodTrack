@@ -43,7 +43,8 @@ Nothing here has been posted, submitted or uploaded to a store.
 - No storefront shows ratings, and neither app asked for one. That was the first priority; the
   rating prompt now exists.
 - The US storefront does not use the en-GB listing as an additional language, hence en-US
-  ("BestBefore: Expiration Tracker"). Apple documents which localisation is displayed per
+  ("BestBefore: Expiration Dates"; App Store Connect refused "BestBefore: Expiration Tracker" on
+  2026-11-15 as a name another developer already uses, and Play keeps it). Apple documents which localisation is displayed per
   storefront, not which keywords it searches; the keyword benefit is the usual assumption.
 - Established competitors sell Pro subscriptions; "no subscription, no account" is a real
   contrast. No strong Norwegian-language competitor was found (judgement, not data).
