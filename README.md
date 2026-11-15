@@ -131,6 +131,32 @@ python3 -m unittest discover -s scripts/tests     # the sync's tests, offline
 The App Store commands compare with the version in preparation; while none is (between a
 release's submission and the next merge), they compare with the newest version and say so.
 
+**Screenshot check**: `scripts/screenshot_check.py` takes every screenshot the store capture
+scripts take (`scripts/android_screenshots.sh`, `scripts/ios_screenshots.sh`) on each of their
+devices in turn, booting one, shooting every language, shutting it down before the next, and
+compares them with a local baseline through [reg-cli](https://github.com/reg-viz/reg-cli)
+(`npx reg-cli@0.18.16`). It refreshes nothing in `store-listing/`. One command, unattended:
+
+```sh
+scripts/screenshot_check.py                                   # every default device, all eight languages
+scripts/screenshot_check.py --platform ios --langs en,de      # a subset; --devices android-phone,ios-ipad-13
+scripts/screenshot_check.py --approve-last                    # the last run becomes the baseline (no capture)
+scripts/screenshot_check.py --approve                         # capture, compare, then make it the baseline
+```
+
+The tools' output goes to `build/screenshot-check/run.log`; the terminal gets the shots and time
+per device, then changed / new / deleted / unchanged with each changed file's share of differing
+pixels. The side-by-side report is `build/screenshot-check/report/index.html`, the same in JSON
+`build/screenshot-check/summary.json`. Exit code 0: no differences (or a baseline approved), 1:
+differences, 2: the run failed or there is no baseline yet. The baseline is local and
+git-ignored (`build/screenshot-check/expected/`, only framed store images are committed): make
+one on `main` (`--approve`), then run on your branch the same day, since the scan's pack date
+and the menu's days follow today's date (the summary says when the baseline is from another
+day). It refuses to start while another emulator or simulator is running (`--ignore-running`
+overrides). `--no-build` reuses the last build, `--no-capture` compares the last captures again,
+`--keep-device` leaves each device running. The iPhone Duo's inner display (`ios-duo-inner`)
+runs only when named, because unfolding it needs Xcode's Device Hub (`scripts/duo_pose.sh`).
+
 **Version**: `Version.xcconfig` holds the one version of both apps. Gradle reads it for Android's
 `versionName`, and it is the Xcode project's base configuration, so the app and the widget get it
 as `MARKETING_VERSION`. Don't set the version anywhere else.
