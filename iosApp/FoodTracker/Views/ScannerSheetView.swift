@@ -1390,6 +1390,9 @@ struct ScanDemoFeed {
     let image: UIImage
     let barcode: String
     let date: Date
+    /// Seconds to wait before the barcode and again before the date (`-demoScanPace`), so a
+    /// screen recording (scripts/ios_preview.sh) shows each being read; 0 for the screenshots.
+    var pace: Double = 0
 }
 
 /// The demo's stand-in for the camera: reads the barcode and then the printed date off the
@@ -1403,8 +1406,9 @@ private struct ScanDemoPicture: View {
     var body: some View {
         Color.clear
             .task {
+                try? await Task.sleep(for: .seconds(feed.pace))
                 onBarcodeFound(feed.barcode)
-                try? await Task.sleep(for: .milliseconds(300))
+                try? await Task.sleep(for: .seconds(max(feed.pace, 0.3)))
                 onDateFound(feed.date)
             }
     }

@@ -486,6 +486,7 @@ extension RootTabView {
     /// hands the scanner the barcode and then the date as if the camera had read them off it: the
     /// barcode is looked up as usual (the screenshots put it in the product cache) and the date
     /// lands on the product as Scan date's does. scripts/demo_scan_image.py draws the picture.
+    /// `-demoScanPace <seconds>` waits that long before each, for the preview video.
     func applyScreenshotLaunchArguments() {
         let arguments = UserDefaults.standard
         if let path = arguments.string(forKey: "demoBackup"),
@@ -530,7 +531,8 @@ extension RootTabView {
                let day = arguments.string(forKey: "demoScanDate"),
                case let parts = day.split(separator: "-").compactMap({ Int($0) }), parts.count == 3,
                let date = Calendar.current.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) {
-                ScannerSheetView.demoFeed = ScanDemoFeed(image: image, barcode: barcode, date: date)
+                ScannerSheetView.demoFeed = ScanDemoFeed(
+                    image: image, barcode: barcode, date: date, pace: arguments.double(forKey: "demoScanPace"))
                 scannerRequest = ScannerRequest(mode: .barcode)
             }
         case "buyRecipes":
