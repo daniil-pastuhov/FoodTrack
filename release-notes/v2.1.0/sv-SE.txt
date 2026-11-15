@@ -1,5 +1,5 @@
 • Nya fliken Recept ersätter Kalender: recept på det du behöver använda först.
-• Dela en prompt, skriv ett recept gratis på enheten där det stöds, eller köp ett receptpaket som också kan planera en meny för 3 dagar.
+• Dela en prompt, skriv ett recept gratis på enheten där det stöds, eller köp ett receptpaket som också kan planera en meny för 1–4 dagar.
 • Välj tid, måltid och kost, och spara recepten du gillar.
 • Lägg till ingredienserna som saknas i inköpslistan med ett tryck.
 • Tydliga varningar för varor som har gått ut, och rättningar för stor text.
