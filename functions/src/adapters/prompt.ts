@@ -21,7 +21,7 @@ import { LIMITS, STEP_BOUNDS, idNamesFor, optionalIdsFor, pantryIdsFor } from ".
 
 const LANGUAGE_NAMES: Record<string, string> = {
   en: "English", nb: "Norwegian Bokmål", ru: "Russian", de: "German", es: "Spanish",
-  fr: "French", it: "Italian", pl: "Polish", sv: "Swedish", uk: "Ukrainian",
+  fr: "French", it: "Italian", pl: "Polish", sv: "Swedish", uk: "Ukrainian", da: "Danish",
 };
 
 const DETAIL: Record<string, string> = {

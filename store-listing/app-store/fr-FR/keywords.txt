@@ -1,0 +1,1 @@
+dlc,ddm,congélateur,garde-manger,inventaire,courses,code-barres,scanner,rappel,gaspillage,restes

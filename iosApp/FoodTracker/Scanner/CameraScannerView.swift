@@ -300,7 +300,7 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
             let request = VNRecognizeTextRequest()
             request.recognitionLevel = .accurate
             // A receipt's own language, not the phone's — it is printed by the shop.
-            request.recognitionLanguages = ["en-US", "nb-NO", "ru-RU"]
+            request.recognitionLanguages = ["en-US", "nb-NO", "ru-RU", "es-ES", "de-DE", "fr-FR", "sv-SE", "da-DK"]
             request.usesLanguageCorrection = false
 
             let handler = VNImageRequestHandler(cgImage: cgImage, orientation: image.imageOrientation.cgOrientation, options: [:])
@@ -330,6 +330,9 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         let monthYearOnlyFormats: Set<String> = ["MM/yy", "MM/yyyy", "MM.yy", "MM.yyyy", "MM-yy", "MM-yyyy"]
 
         for line in lines {
+            // A month written as a word in any of the app's languages ("15 DÉC 2026", "15. MÄR 27",
+            // "15 ОКТ 2026"); DateFormatter's "MMM" below reads only English ones.
+            if let date = TextualMonthDate.parse(line) { return date }
             // Check for date pattern
             let datePatterns = [
                 "\\b(\\d{1,2})[\\.\\/\\-](\\d{1,2})[\\.\\/\\-](\\d{2,4})\\b",
@@ -438,5 +441,47 @@ extension CameraScannerViewController: AVCapturePhotoCaptureDelegate {
         }
 
         return thumbnail.jpegData(compressionQuality: 0.7)
+    }
+}
+
+/// A date whose month is a word in any of the app's languages, for `extractDate`.
+enum TextualMonthDate {
+    /// Month abbreviations and names by their first three letters, then whole: en, es, de, fr,
+    /// sv, da, nb, ru. The same table as `shared`'s `DateOcrParser.MONTH_NAMES`; change both.
+    static let monthNames: [String: Int] = [
+        "jan": 1, "ene": 1, "janv": 1, "янв": 1,
+        "feb": 2, "fev": 2, "fév": 2, "фев": 2,
+        "mar": 3, "mrz": 3, "mär": 3, "мар": 3,
+        "apr": 4, "avr": 4, "abr": 4, "апр": 4,
+        "may": 5, "mai": 5, "maj": 5, "мая": 5, "май": 5,
+        "jun": 6, "juin": 6, "июн": 6,
+        "jul": 7, "juil": 7, "juillet": 7, "июл": 7,
+        "aug": 8, "août": 8, "aout": 8, "aoû": 8, "ago": 8, "авг": 8,
+        "sep": 9, "sept": 9, "сен": 9,
+        "oct": 10, "okt": 10, "окт": 10,
+        "nov": 11, "ноя": 11,
+        "dec": 12, "dez": 12, "déc": 12, "dic": 12, "des": 12, "дек": 12,
+    ]
+
+    private static let regex = try? NSRegularExpression(
+        pattern: #"\b(\d{1,2})\.?\s+(\p{L}{3,10})\.?\s+(\d{2,4})\b"#)
+
+    /// "DD MMM YYYY" (or YY) with the month as a word in any of the app's languages.
+    static func parse(_ line: String) -> Date? {
+        guard let regex else { return nil }
+        let ns = line as NSString
+        for match in regex.matches(in: line, range: NSRange(location: 0, length: ns.length)) {
+            let word = ns.substring(with: match.range(at: 2)).lowercased()
+            guard let day = Int(ns.substring(with: match.range(at: 1))),
+                  let month = monthNames[String(word.prefix(3))] ?? monthNames[word],
+                  var year = Int(ns.substring(with: match.range(at: 3))) else { continue }
+            if year < 100 { year += 2000 } else if !(2000...2099).contains(year) { continue }
+            var components = DateComponents(year: year, month: month, day: day)
+            components.calendar = Calendar(identifier: .gregorian)
+            guard components.isValidDate, let date = components.date,
+                  ExpiryDatePlausibility.isPlausible(date) else { continue }
+            return date
+        }
+        return nil
     }
 }

@@ -8,7 +8,7 @@ import com.foodtracker.recognition.FoodLabelSuggestion
  * Maps a [FoodLabelSuggestion]'s stable key to its name in the device's language.
  *
  * The on-device classifier only speaks English, so its raw label can't be shown directly in an
- * app that ships in three languages. `FoodLabels` turns each label into a stable key instead,
+ * app that ships in eight languages. `FoodLabels` turns each label into a stable key instead,
  * and this is the Android half of resolving that key back into words.
  *
  * An explicit map rather than `Resources.getIdentifier`: that resolves by name at runtime, which

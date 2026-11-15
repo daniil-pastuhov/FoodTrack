@@ -102,6 +102,31 @@ let tidyCases: [(String, [String])] = [
     ("Gulrøtter, skrelt og i terninger", ["Gulrøtter"]),
     ("Salt og pepper etter smak", ["Salt og pepper"]),
     ("Rømme eller crème fraîche", ["Rømme eller crème fraîche"]),
+    ("Sal, pimienta, aceite de oliva", ["Sal", "Pimienta", "Aceite de oliva"]),
+    ("Cebolla, picada finamente", ["Cebolla"]),
+    ("Sal y pimienta al gusto", ["Sal y pimienta"]),
+    ("Ajo, 2 dientes", ["Ajo"]),
+    ("Nata o leche", ["Nata o leche"]),
+    ("Zwiebel, fein gehackt", ["Zwiebel"]),
+    ("Salz, Pfeffer, Olivenöl", ["Salz", "Pfeffer", "Olivenöl"]),
+    ("Salz und Pfeffer nach Geschmack", ["Salz und Pfeffer"]),
+    ("Karotten, geschält und gewürfelt", ["Karotten"]),
+    ("Oignon, émincé", ["Oignon"]),
+    ("Sel, poivre, huile d'olive", ["Sel", "Poivre", "Huile d'olive"]),
+    ("Sel et poivre au goût", ["Sel et poivre"]),
+    ("Ail, 2 gousses, haché", ["Ail"]),
+    ("Sel, petits pois", ["Sel", "Petits pois"]),
+    ("Lök, finhackad", ["Lök"]),
+    ("Salt, peppar, olivolja", ["Salt", "Peppar", "Olivolja"]),
+    ("Salt och peppar efter smak", ["Salt och peppar"]),
+    ("Morötter, skalade och tärnade", ["Morötter"]),
+    ("Løg, finthakket", ["Løg"]),
+    ("Salt, peber, olivenolie", ["Salt", "Peber", "Olivenolie"]),
+    ("Salt og peber efter smag", ["Salt og peber"]),
+    ("Gulerødder, skrællet og skåret i tern", ["Gulerødder"]),
+    ("Salz, Pfeffer oder rote Chiliflocken", ["Salz", "Pfeffer oder rote Chiliflocken"]),
+    ("Sal, pimienta si es necesario", ["Sal", "Pimienta"]),
+    ("Tomates, pelées", ["Tomates"]),
 ]
 for (raw, wanted) in tidyCases { expect(RecipeShopping.tidyNames(raw), wanted, "tidy \(raw)") }
 let listDish = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [
@@ -129,6 +154,93 @@ expect(rows.map(\.alreadyListed), [false, true, false, false], "already listed")
 expect(RecipeShopping.defaultSelection(rows), ["red onion", "olive oil", "salt"], "ticked by default")
 let unmarked = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [RecipeIngredient(amount: "1 l", name: "Water", fromPantry: false)], steps: ["Cook."], source: .device)
 expect(RecipeShopping.candidates([unmarked], listedNames: []).map(\.name), ["Water"], "without the mark water is listed")
+
+// Every entry of the word lists, each in a case whose result depends on that entry alone (the
+// same loops as Android's RecipeConfigChoicesTest.everyOrWord... / everyToTasteTail... /
+// everyNoteWordAndStem... / everyWaterWord...).
+for or in ["or", "или", "eller", "o", "u", "oder", "ou"] {
+    expect(RecipeShopping.tidyNames("Salt, chilli \(or) sweet paprika"), ["Salt", "Chilli \(or) sweet paprika"], "or word \(or)")
+}
+let tasteTails = [
+    "to taste", "as needed", "if needed", "optional", "по вкусу", "по желанию", "etter smak", "etter behov",
+    "valgfritt", "al gusto", "a gusto", "opcional", "si es necesario", "nach geschmack", "nach belieben",
+    "nach bedarf", "selon goût", "au goût", "à volonté", "facultatif", "si nécessaire", "efter smak",
+    "efter behov", "valfritt", "efter smag", "valgfrit"
+]
+for tail in tasteTails {
+    expect(RecipeShopping.tidyNames("Pepper \(tail)"), ["Pepper"], "tail \(tail)")
+    expect(RecipeShopping.tidyNames("Pepper \(tail.uppercased())"), ["Pepper"], "tail \(tail) upper case")
+}
+let noteWords = [
+    "sliced", "chopped", "minced", "diced", "peeled", "grated", "crushed", "cubed", "halved", "quartered",
+    "drained", "rinsed", "washed", "trimmed", "beaten", "melted", "softened", "shredded", "julienned",
+    "divided", "zest", "deseeded", "seeded", "pitted", "cored", "stemmed", "torn", "zested", "juiced",
+    "squeezed", "thinly", "finely", "roughly", "coarsely", "cut", "into", "taste", "optional", "needed",
+    "such", "like", "for", "to", "about", "plus", "at", "room", "temperature", "serving", "garnish",
+    "preferably", "boneless", "skinless", "ripe", "large", "small", "medium", "thick", "thin", "whole",
+    "cooked", "uncooked", "по", "для", "без", "очень", "кубиками", "ломтиками", "кольцами", "соломкой",
+    "полосками", "дольками", "i", "til", "etter", "uten", "hakket", "skivet", "skiver", "revet", "finrevet",
+    "skrelt", "presset", "knust", "smeltet", "delt", "terninger", "strimler", "båter", "smak", "fint",
+    "grovt", "tynt", "tynne", "store", "stor", "små", "liten", "moden", "modne", "romtemperert", "servering",
+    "pynt", "en", "para", "sin", "al", "gusto", "rodajas", "dados", "tiras", "trozos", "cubos", "finamente",
+    "fino", "fina", "grande", "grandes", "pequeño", "pequeña", "pequeños", "pequeñas", "mediano", "mediana",
+    "maduro", "madura", "maduros", "maduras", "temperatura", "ambiente", "servir", "decorar",
+    "aproximadamente", "opcional", "cocido", "cocida", "in", "für", "ohne", "zum", "zur", "fein", "grob",
+    "scheiben", "würfel", "würfeln", "streifen", "stücke", "stücken", "ringe", "ringen", "geschmack",
+    "belieben", "groß", "große", "großer", "klein", "kleine", "kleiner", "reif", "reife", "zimmertemperatur",
+    "servieren", "garnieren", "etwa", "ca", "gekocht", "gekochte", "pour", "sans", "dés", "tranches",
+    "rondelles", "lamelles", "morceaux", "finement", "grossièrement", "goût", "volonté", "facultatif", "mûr",
+    "mûre", "mûrs", "mûres", "température", "ambiante", "décorer", "environ", "cuit", "cuite", "till",
+    "efter", "utan", "hackad", "hackade", "skivad", "skivade", "skivor", "riven", "rivna", "skalad",
+    "skalade", "pressad", "pressade", "krossad", "krossade", "smält", "smälta", "delad", "delade", "tärnad",
+    "tärnade", "tärningar", "strimlor", "klyftor", "tunt", "tunna", "stora", "mogen", "mogna",
+    "rumstempererad", "rumstempererat", "garnering", "kokt", "kokta", "uden", "groft", "skrællet",
+    "skrællede", "tern", "både", "smag", "tyndt", "tynde", "lille", "stuetemperatur", "kogt", "kogte"
+]
+let noteStems = [
+    "нарез", "мелк", "крупн", "тонк", "очищ", "натер", "натёр", "тёрт", "терт", "измельч", "рублен",
+    "порублен", "нашинк", "размят", "растоп", "размягч", "охлажд", "комнатн", "вкус", "желани", "спел",
+    "отвар", "finhakk", "grovhakk", "valgfri", "picad", "cortad", "rallad", "pelad", "trocead", "escurrid",
+    "derretid", "machacad", "lavad", "deshuesad", "gehackt", "geschnitt", "gewürfelt", "gerieb", "geschält",
+    "halbiert", "geviertelt", "zerdrück", "geschmolz", "gepresst", "abgetropf", "gewaschen", "entkernt",
+    "zerlassen", "hach", "éminc", "coupé", "râpé", "éplu", "pelé", "écras", "égoutt", "fondu", "ciselé",
+    "épépin", "dénoyaut", "finhack", "grovhack", "finriv", "valfri", "finthakk", "grofthakk", "skåre"
+]
+// Also in the lists, but each starts with a stem above, which is what makes it a note.
+let coveredByAStem = ["finhakket", "grovhakket", "valfritt", "finthakket", "skåret", "valgfrit", "coupée"]
+for word in noteWords + noteStems + coveredByAStem {
+    expect(RecipeShopping.tidyNames("Salt, \(word) kale"), ["Salt"], "note word \(word)")
+}
+expect(RecipeShopping.tidyNames("Salt, curly kale"), ["Salt", "Curly kale"], "without a note word the part is an item")
+for water in ["water", "vann", "vannet", "wasser", "agua", "eau", "acqua", "woda", "wody", "wodę", "vatten", "вода", "воды", "воду", "води", "кипяток", "окріп", "vand", "vandet"] {
+    expect(RecipeShopping.isPlainWater("Cold \(water)"), true, "water \(water)")
+    let waterDish = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [RecipeIngredient(amount: "1 l", name: water, fromPantry: false, staple: true)], steps: ["Cook."], source: .server)
+    expect(RecipeShopping.candidates([waterDish], listedNames: []).map(\.name), [], "staple water \(water) is left out")
+}
+expect(RecipeShopping.isPlainWater("Cold milk"), false, "milk is not water")
+
+// The app's languages map to recipe languages; Danish among them (sent to the server only once it
+// says acceptsDanish, RecipeViewModel).
+for code in ["en", "ru", "es", "de", "fr", "sv", "da"] {
+    expect(RecipeLanguage.app(preferredLocalizations: [code]).rawValue, code, "app language \(code)")
+}
+expect(RecipeLanguage.app(preferredLocalizations: ["no"]), .nb, "Norwegian")
+expect(RecipeLanguage.app(preferredLocalizations: ["da-DK"]), .da, "Danish with a region")
+expect(RecipeLanguage.da.endonym, "Dansk", "Danish endonym")
+expect(RecipeLanguage.da.englishName, "Danish", "Danish in English")
+// The whole list, and every language's English name for the phone's model (Android's
+// recipeLanguageEnglishName); none falls back to English.
+expect(RecipeLanguage.allCases.map(\.rawValue), ["en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk", "da"], "recipe languages")
+expect(RecipeLanguage.allCases.map(\.englishName), ["English", "Norwegian Bokmål", "Russian", "German", "Spanish", "French", "Italian", "Polish", "Swedish", "Ukrainian", "Danish"], "English names")
+
+// The phone's own model follows the chosen recipe language (Android's RecipeStateHolderTest,
+// onDeviceRouteFollowsTheModelAndTheLanguage and friends).
+expect(OnDeviceRecipeAvailability.of(.ready, writesLanguage: true), .available, "ready in a language it writes")
+expect(OnDeviceRecipeAvailability.of(.ready, writesLanguage: false), .unsupportedLanguage, "ready, but not in this language")
+expect(OnDeviceRecipeAvailability.of(.preparing, writesLanguage: true), .preparing, "still downloading")
+expect(OnDeviceRecipeAvailability.of(.preparing, writesLanguage: false), .unsupportedLanguage, "downloading is not promised for a language it can't write")
+expect(OnDeviceRecipeAvailability.of(.none, writesLanguage: true), .unsupported, "no model")
+expect(OnDeviceRecipeAvailability.of(.none, writesLanguage: false), .unsupported, "no model says nothing about the language")
 
 if failures > 0 {
     print("\(failures) failed")

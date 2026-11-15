@@ -1,0 +1,5 @@
+/* Nombre en la pantalla de inicio y textos de las solicitudes de permiso. El nombre debe coincidir con app_name en androidApp/src/main/res/values-es/strings.xml. */
+"CFBundleDisplayName" = "BestBefore";
+"NSCameraUsageDescription" = "BestBefore usa la cámara para escanear códigos de barras, leer las fechas de caducidad impresas en los envases y hacer fotos de los alimentos. Las fotos se quedan en tu teléfono.";
+"NSLocationWhenInUseUsageDescription" = "BestBefore usa tu ubicación una sola vez, cuando tocas \"Guardar mi ubicación actual\", para recordar dónde está una tienda. La ubicación se guarda en tu teléfono, y BestBefore no nos la envía ni la comparte con nadie.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "BestBefore comprueba si estás en una de las tiendas que guardaste para mostrarte la lista de compras cuando llegues. Con la app cerrada, esto solo funciona si permites el acceso siempre. BestBefore no nos envía tu ubicación ni la comparte con nadie.";

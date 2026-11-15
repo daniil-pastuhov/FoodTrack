@@ -257,8 +257,129 @@ describe("allergens: an excluded allergen named as an ingredient is never return
     ["eggplant is not egg", ["egg"], "eggplant", "ok"],
     ["nutmeg is not a nut", ["nuts"], "nutmeg", "ok"],
     ["lactose-free milk is still milk", ["milk"], "lactose-free milk", "ALLERGEN"],
+    ["Danish: milk catches mælk", ["milk"], "sødmælk", "ALLERGEN"],
+    ["Danish: milk catches piskefløde", ["milk"], "piskefløde", "ALLERGEN"],
+    ["Danish: egg catches æg", ["egg"], "æg", "ALLERGEN"],
+    ["Danish: egg catches æggeblommer", ["egg"], "æggeblommer", "ALLERGEN"],
+    ["Danish: shellfish catches rejer", ["shellfish"], "rejer", "ALLERGEN"],
+    ["Danish: tree nuts catch hasselnødder", ["nuts"], "hasselnødder", "ALLERGEN"],
+    ["Danish: Danish allergen word nødder", ["nødder"], "valnødder", "ALLERGEN"],
+    ["Danish: gluten catches hvedemel", ["gluten"], "hvedemel", "ALLERGEN"],
+    ["Danish: free-from wording", ["gluten"], "glutenfrit brød", "ok"],
   ])("%s", (_label, allergens, name, expected) => {
-    expect(check(withAllergens(allergens), answer({}, [ing("pasta", "p1"), ing(name)]))).toBe(expected);
+    expect(check(withAllergens(allergens), answer({}, [ing("tomatoes", "p2"), ing(name)]))).toBe(expected);
+  });
+
+  // The allergen as a user of the app's own language would type it (the app's food labels and
+  // placeholder words among them), against the ingredient words and compounds a recipe in that
+  // language uses: each one is refused. "a; b" lists several allergens or names.
+  const split = (s: string) => s.split(";").map((x) => x.trim());
+  const typed: [string, string, string][] = [
+    // Danish
+    ["da shellfish", "Skaldyr; Krebsdyr; Bløddyr; Muslinger; Rejer", "rejer; 200 g rejer; hummer; jomfruhummer; hummerhaler; krabbe; taskekrabbe; krabbekød; blåmuslinger; muslinger; hjertemuslinger; kammuslinger; rejecocktail; kæmperejer; tigerreje; rejerne; østers; blæksprutte; calamari; skaldyr; skaldyrsfond; krebsehaler"],
+    ["da egg", "Æg; æggeblomme", "æg; spejlæg; røræg; spejlæggene; vagtelæg; hønseæg; pocheret æg; ægget; æggene; æggeblommer; æggehvider; æggesalat; mayonnaise; omelet"],
+    ["da milk", "Mælk; Laktose; Mælkeprodukter; Mejeriprodukter; Ost; Smør; Fløde", "sødmælk; letmælk; kærnemælk; tykmælk; mælkepulver; piskefløde; madlavningsfløde; flødeskum; flødeost; creme fraiche; ost; revet ost; osten; flødeosten; ostesauce; hytteost; rygeost; smør; smørret; skyr; yoghurt; frugtyoghurt; ymer; kvark; valle; havarti; danbo; mælkechokolade"],
+    ["da tree nuts", "Nødder; Nød; Mandler; Hasselnødder; Trænødder", "nødder; hasselnødder; hasselnødderne; valnødder; cashewnødder; macadamianød; pistacienødder; mandler; mandelmel; nøddeblanding; nøddemix; nøddesmør; nøddeolie; nøddekerner; marcipan; nougat; nugat"],
+    ["da peanut", "Jordnødder; Peanuts", "jordnødder; jordnøddesmør; jordnøddeolie; peanuts; saltede peanuts"],
+    ["da gluten", "Gluten; Hvede", "hvedemel; durumhvede; fuldkornshvedemel; spelt; semuljegryn; sigtemel; couscous; bulgur; pasta; brød; franskbrød; knækbrød; ristet brød; rasp; øl; nudler"],
+    ["da rye and barley", "Rug; Byg", "rugbrød; rugmel; rugkerner; perlebyg; byggryn; bygmel"],
+    ["da fish", "Fisk", "fisk; fiskefrikadeller; fiskefilet; fiskesauce; laks; røget laks; røgelaks; torsk; torskefilet; torskerogn; sild; kryddersild; makrel; tomatmakrel; tun; tunfisk; rødspætte; ørred; kuller; sej; ansjoser; sardiner; sardeller; kulmule; havtaske; pighvar; helleflynder; rogn; kaviar"],
+    ["da soy", "Soja", "sojasauce; sojasovs; sojabønner; tofu; edamame; miso; misopasta; tamari"],
+    ["da sesame", "Sesam", "sesamfrø; sesamolie; tahin"],
+    ["da celery", "Selleri", "selleri; bladselleri; knoldselleri; stangselleri; sellerisalt"],
+    ["da mustard", "Sennep", "sennep; dijonsennep; grov sennep; sennepsfrø; dijon"],
+    ["da lupin", "Lupin", "lupinmel"],
+    ["da sulphite", "Sulfitter; Svovldioxid", "sulfitter"],
+    // German
+    ["de egg", "Eier; Ei", "Spiegelei; Rührei; Hühnereier; Wachteleier; Eigelb; Eiernudeln"],
+    ["de shellfish", "Meeresfrüchte; Schalentiere; Krebstiere; Weichtiere", "Miesmuscheln; Jakobsmuscheln; Garnelen; Riesengarnelen; Krabben; Hummer; Kalmare; Flusskrebse; Austern; Tintenfisch"],
+    ["de nuts", "Nüsse", "Haselnussmus; Nussmischung; Walnüsse; Mandeln; Marzipan; Nougat"],
+    ["de milk", "Milch", "Schlagsahne; Kräuterbutter; Magerquark; Naturjoghurt; Schmand; Sauerrahm; Emmentaler"],
+    ["de gluten", "Gluten", "Vollkornbrot; Semmelbrösel; Nudeln; Brot"],
+    ["de celery", "Sellerie", "Staudensellerie; Knollensellerie"],
+    ["de mustard", "Senf", "Dijonsenf"],
+    // Swedish
+    ["sv egg", "Ägg", "stekt ägg; ägg; äggula; hönsägg"],
+    ["sv shellfish", "Skaldjur", "blåmusslor; kammusslor; räkor; kräftstjärtar; havskräftor"],
+    ["sv nuts", "Nötter", "nötmix; nötsmör; hasselnötter; marsipan"],
+    ["sv milk", "Mjölk", "vispgrädde; gräddfil; keso; kvarg; osten"],
+    ["sv gluten", "Gluten", "vetemjöl; rågbröd; knäckebröd; pasta"],
+    ["sv celery", "Selleri", "blekselleri; rotselleri"],
+    ["sv mustard", "Senap", "dijonsenap"],
+    // Spanish
+    ["es egg", "Huevos; Huevo", "huevos; huevos fritos; yema de huevo; mayonesa"],
+    ["es shellfish", "Marisco; Mariscos; Crustáceos; Moluscos", "mariscos; gambas; langostinos; mejillones; almejas; berberechos; vieiras; sepia; cigalas; bogavante"],
+    ["es nuts", "Frutos secos", "frutos secos; nueces; almendras; avellanas; mazapán; turrón"],
+    ["es peanut", "Cacahuetes", "cacahuetes; crema de cacahuete; maní"],
+    ["es milk", "Leche; Lácteos", "leche; leche fría; nata; queso; requesón"],
+    ["es gluten", "Gluten", "pan; pan rallado; cuscús; harina de trigo"],
+    ["es fish", "Pescado", "boquerones"],
+    ["es sesame", "Sésamo", "ajonjolí"],
+    ["es lupin", "Altramuces", "altramuces"],
+    // French
+    ["fr egg", "Œufs; Oeufs", "œufs; oeufs; jaune d'œuf; blancs d'oeufs; œuf frit; oeufs brouillés"],
+    ["fr shellfish", "Fruits de mer; Crustacés; Mollusques", "crevettes; moules; huîtres; calmars; homard; coquilles saint-jacques; noix de saint-jacques; seiche; écrevisses; bulots; palourdes"],
+    ["fr nuts", "Fruits à coque", "fruits à coque; noix; noisettes; amandes; pralin; massepain"],
+    ["fr peanut", "Arachides", "arachides; cacahuètes; beurre de cacahuète; huile d'arachide"],
+    ["fr milk", "Lait", "lait; babeurre; chantilly; gruyère; comté; crème fraîche"],
+    ["fr gluten", "Gluten", "pain; chapelure; farine de blé"],
+  ];
+  test.each(typed.flatMap(([label, allergens, names]) => split(allergens).flatMap((a) => split(names).map((n): [string, string, string] => [label, a, n]))))(
+    "%s: %s catches %s",
+    (_label, allergen, name) => {
+      expect(check(withAllergens([allergen]), answer({}, [ing("tomatoes", "p2"), ing(name)]))).toBe("ALLERGEN");
+    },
+  );
+
+  // Ordinary ingredients that share letters with an allergen word must not be taken for it.
+  test.each<[string, string]>([
+    ["Æg", "æbler; løg; rødløg; flæskesteg; grønkål"],
+    ["Mælk", "havremælk; kokosmælk; sojamælk; mandelmælk; toast; ristet rugbrød; rostbøf; jordnøddesmør; kakaosmør; æblemost"],
+    ["Nødder", "muskatnød; kokosnød; kokosmælk; nødvendig salt"],
+    ["Nötter", "nötkött; nötfärs; pinot noir"],
+    ["Skaldyr", "hummus; kanelsnegle; rødbeder"],
+    ["Gluten", "boghvede; boghvedemel; glutenfrit brød; glutenfri pasta; risnudler; havregryn; majsmel; rugola"],
+    ["Eier", "Kartoffelbrei; Haferbrei; Eierschwammerl"],
+    ["Milch", "Hafermilch; Hafersahne; Sojajoghurt; Erdnussbutter; Kakaobutter"],
+    ["Fruits à coque", "noix de coco; noix de muscade"],
+    ["Fisk", "rødvin; tomatsauce"],
+  ].flatMap(([a, names]) => split(names).map((n): [string, string] => [a, n])))("%s does not catch %s", (allergen, name) => {
+    expect(check(withAllergens([allergen]), answer({}, [ing("tomatoes", "p2"), ing(name)]))).toBe("ok");
+  });
+
+  // A word that means "free" in one language and "fried" or "cold" in another is not free-from
+  // wording: only the compound ("glutenfrit") and the plain "free"/"fri"/"frei" words are.
+  test.each<[string, string, "ok" | OutputRule]>([
+    ["fish", "poisson frit", "ALLERGEN"],
+    ["Fisk", "poisson frit", "ALLERGEN"],
+    ["egg", "oeuf frit", "ALLERGEN"],
+    ["egg", "uovo fritto", "ALLERGEN"],
+    ["egg", "frittata", "ALLERGEN"],
+    ["Æg", "huevo frito", "ALLERGEN"],
+    ["milk", "leche fría", "ALLERGEN"],
+    ["milk", "lait frit", "ALLERGEN"],
+    ["fish", "pescado frito", "ALLERGEN"],
+    ["fish", "fritto misto di pesce", "ALLERGEN"],
+    ["shellfish", "gambas fritas", "ALLERGEN"],
+    ["gluten", "glutenfri pasta", "ok"],
+    ["gluten", "glutenfrit brød", "ok"],
+    ["gluten", "glutenfritt bröd", "ok"],
+    ["gluten", "glutenfria pasta", "ok"],
+    ["gluten", "glutenfreie Nudeln", "ok"],
+    ["gluten", "gluten-free pasta", "ok"],
+    ["gluten", "pasta uden gluten", "ok"],
+    ["gluten", "pasta ohne Gluten", "ok"],
+    ["gluten", "pâtes sans gluten", "ok"],
+    ["gluten", "pasta gluten-frit", "ALLERGEN"],
+    ["milk", "laktosefri mælk", "ALLERGEN"],
+  ])("%s with %s", (allergen, name, expected) => {
+    expect(check(withAllergens([allergen]), answer({}, [ing("tomatoes", "p2"), ing(name)]))).toBe(expected);
+  });
+
+  test("a Danish recipe's ordinary steps are not taken for an allergen", () => {
+    const r = withAllergens(["nuts", "egg"], undefined, "da");
+    const steps = ["Læg pastaen i kogende vand, og rør, hvis det er nødvendigt.", "Steg tomaterne, og læg dem på et fad."];
+    expect(check(r, answer({ title: "Pasta med tomater", summary: "En hurtig ret.", steps }, [ing("pasta", "p1"), ing("tomater", "p2"), ing("salt")]))).toBe("ok");
   });
 
   test("a pantry item that matches an allergen may not be used, whatever the model calls it", () => {
@@ -294,6 +415,25 @@ describe("diet", () => {
     ["glutenFree", "rice noodles", "ok"],
     ["dairyFree", "parmesan", "DIET"],
     ["dairyFree", "coconut cream", "ok"],
+    ["vegetarian", "kalvefilet", "DIET"],
+    ["vegetarian", "lammekølle", "DIET"],
+    ["vegetarian", "hønsebouillon", "DIET"],
+    ["vegetarian", "leverpostej", "DIET"],
+    ["vegetarian", "andebryst", "DIET"],
+    ["vegetarian", "poulet frit", "DIET"],
+    ["vegetarian", "pollo frito", "DIET"],
+    ["vegetarian", "blåmuslinger", "DIET"],
+    ["vegetarian", "hønseæg", "ok"],
+    ["vegetarian", "grøntsagspostej", "ok"],
+    ["vegan", "spejlæg", "DIET"],
+    ["vegan", "flødeost", "DIET"],
+    ["glutenFree", "franskbrød", "DIET"],
+    ["glutenFree", "ristet brød", "DIET"],
+    ["glutenFree", "rasp", "DIET"],
+    ["glutenFree", "perlebyg", "DIET"],
+    ["glutenFree", "glutenfrit brød", "ok"],
+    ["glutenFree", "boghvedemel", "ok"],
+    ["glutenFree", "risnudler", "ok"],
   ])("%s with %s", (diet, name, expected) => {
     expect(check(req({}, { diet }), answer({}, [ing("tomatoes", "p2"), ing(name)]))).toBe(expected);
   });

@@ -200,6 +200,13 @@ fun RecipeScreen(
                     resources.getString(R.string.recipe_settings_action)
                 ) { navigator.navigate(LarderRoute.RecipeSettings) }
             }
+            RecipeEvent.LanguageNeedsServerUpdate -> {
+                stateHolder.consumeEvent()
+                snackbars.show(
+                    resources.getString(R.string.recipe_language_needs_update),
+                    resources.getString(R.string.recipe_settings_action)
+                ) { navigator.navigate(LarderRoute.RecipeSettings) }
+            }
             RecipeEvent.Failed -> {
                 stateHolder.consumeEvent()
                 snackbars.show(resources.getString(R.string.recipe_failed_phone), tryAgain) { stateHolder.generateOnDevice() }

@@ -2,7 +2,7 @@
 """Writes the recipe and the three-day menu the store screenshots show, in the JSON both apps keep
 a saved recipe in (shared/.../recipe/Recipe.kt, iOS Models/RecipeModels.swift):
 
-    scripts/demo_recipes.py <en|ru|nb> <recipe.json> <menu.json>
+    scripts/demo_recipes.py <en|ru|nb|es|de|fr|sv|da> <recipe.json> <menu.json>
 
 Used by scripts/ios_screenshots.sh and scripts/android_screenshots.sh, which hand the files to the
 debug-only `-demoRoute recipeResult|recipeMenu` (iOS) and `--es demoRoute recipeResult|recipeMenu`
@@ -54,6 +54,71 @@ RECIPES = {
                "Rist brødet, smør på yoghurt og legg spinat og laks i flak på toppen."],
         tip="Brød fra i går blir sprøere enn ferskt.",
     ),
+    "es": dict(
+        title="Tostas de masa madre con salmón, espinacas y yogur",
+        summary="Aprovecha el pan, las espinacas y el yogur antes de que se estropeen, junto con el salmón.",
+        minutes=20,
+        ingredients=[("4 rebanadas", "Pan de masa madre", True), ("100 g", "Espinacas baby", True),
+                     ("150 g", "Yogur griego", True), ("2", "Lomo de salmón", True), ("1", "Limón", False),
+                     ("", "Aceite de oliva, sal, pimienta", False)],
+        steps=["Salpimienta el salmón y márcalo por el lado de la piel 4 minutos; dale la vuelta y déjalo 2 más.",
+               "Saltea las espinacas en la misma sartén durante un minuto, hasta que se ablanden.",
+               "Mezcla el yogur con la ralladura del limón y un chorrito de su zumo.",
+               "Tuesta el pan, úntalo con el yogur y cúbrelo con las espinacas y el salmón desmigado."],
+        tip="El pan del día anterior se tuesta mejor que el recién hecho.",
+    ),
+    "de": dict(
+        title="Sauerteigtoast mit Lachs, Spinat und Joghurt",
+        summary="Verbraucht Brot, Spinat und Joghurt, bevor sie schlecht werden, zusammen mit dem Lachs.",
+        minutes=20,
+        ingredients=[("4 Scheiben", "Sauerteigbrot", True), ("100 g", "Babyspinat", True),
+                     ("150 g", "Griechischer Joghurt", True), ("2", "Lachsfilet", True), ("1", "Zitrone", False),
+                     ("", "Olivenöl, Salz, Pfeffer", False)],
+        steps=["Den Lachs würzen und auf der Hautseite 4 Minuten braten, dann wenden und 2 Minuten weiterbraten.",
+               "Den Spinat in derselben Pfanne eine Minute zusammenfallen lassen.",
+               "Abgeriebene Zitronenschale und einen Spritzer Saft unter den Joghurt rühren.",
+               "Das Brot rösten, mit dem Joghurt bestreichen und mit Spinat und zerzupftem Lachs belegen."],
+        tip="Brot vom Vortag wird knuspriger als frisches.",
+    ),
+    "fr": dict(
+        title="Tartines au levain, saumon, épinards et yaourt",
+        summary="Utilise le pain, les épinards et le yaourt avant qu'ils ne s'abîment, avec le saumon.",
+        minutes=20,
+        ingredients=[("4 tranches", "Pain au levain", True), ("100 g", "Pousses d'épinard", True),
+                     ("150 g", "Yaourt à la grecque", True), ("2", "Pavé de saumon", True), ("1", "Citron", False),
+                     ("", "Huile d'olive, sel, poivre", False)],
+        steps=["Assaisonnez le saumon et faites-le cuire côté peau 4 minutes, puis retournez-le pour 2 minutes de plus.",
+               "Faites tomber les épinards une minute dans la même poêle.",
+               "Mélangez au yaourt le zeste du citron et un filet de son jus.",
+               "Faites griller le pain, tartinez-le de yaourt et garnissez d'épinards et de saumon effeuillé."],
+        tip="Le pain de la veille grille mieux que le pain frais.",
+    ),
+    "sv": dict(
+        title="Surdegsmacka med lax, spenat och yoghurt",
+        summary="Tar vara på brödet, spenaten och yoghurten innan de blir dåliga, tillsammans med laxen.",
+        minutes=20,
+        ingredients=[("4 skivor", "Surdegsbröd", True), ("100 g", "Babyspenat", True),
+                     ("150 g", "Grekisk yoghurt", True), ("2", "Laxfilé", True), ("1", "Citron", False),
+                     ("", "Olivolja, salt, peppar", False)],
+        steps=["Krydda laxen och stek den med skinnsidan nedåt i 4 minuter, vänd och stek 2 minuter till.",
+               "Låt spenaten mjukna i samma panna i en minut.",
+               "Rör ner rivet citronskal och en skvätt citronsaft i yoghurten.",
+               "Rosta brödet, bred på yoghurten och toppa med spenat och laxflagor."],
+        tip="Gårdagens bröd blir krispigare än färskt.",
+    ),
+    "da": dict(
+        title="Rugbrød med laks, spinat og yoghurtcreme",
+        summary="Bruger rugbrødet, spinaten og yoghurten, før de bliver for gamle, sammen med laksen.",
+        minutes=20,
+        ingredients=[("4 skiver", "Rugbrød", True), ("100 g", "Babyspinat", True),
+                     ("150 g", "Græsk yoghurt", True), ("2", "Laksefilet", True), ("1", "Citron", False),
+                     ("", "Olivenolie, salt, peber", False)],
+        steps=["Krydr laksen, og steg den på skindsiden i 4 minutter; vend den, og steg den 2 minutter mere.",
+               "Lad spinaten falde sammen på samme pande i et minut.",
+               "Rør revet citronskal og et skvæt citronsaft i yoghurten.",
+               "Rist rugbrødet, smør yoghurtcremen på, og top med spinat og laks i flager."],
+        tip="Rugbrød fra i går bliver mere sprødt end friskt.",
+    ),
 }
 
 # Per day: the dated items it uses (pantry names) and its starter, main and dessert with minutes.
@@ -86,10 +151,60 @@ MENUS = {
         (["Laksefilet", "Jordbær"],
          [("Lakserillettes på grovbrød", 15), ("Stekt laks med spinat", 20), ("Jordbær med vaniljekrem", 10)]),
     ],
+    "es": [
+        (["Pan de masa madre", "Espinacas baby", "Yogur griego"],
+         [("Crema de espinacas con yogur", 20), ("Huevos a la plancha sobre tostada de masa madre", 15),
+          ("Yogur con miel y migas tostadas", 10)]),
+        (["Leche semidesnatada", "Queso manchego"],
+         [("Ensalada de pepino con yogur", 10), ("Macarrones gratinados con queso", 25), ("Natillas de vainilla", 20)]),
+        (["Lomo de salmón", "Fresas"],
+         [("Rillettes de salmón sobre tostada", 15), ("Salmón a la plancha con verduras", 20),
+          ("Fresas con crema de yogur", 10)]),
+    ],
+    "de": [
+        (["Sauerteigbrot", "Babyspinat", "Griechischer Joghurt"],
+         [("Spinatsuppe mit Joghurt", 20), ("Spiegeleier auf Knoblauch-Sauerteigtoast", 15),
+          ("Joghurt mit Honig und gerösteten Bröseln", 10)]),
+        (["Fettarme Milch", "Bergkäse"],
+         [("Gurkensalat mit Joghurt", 10), ("Käsemakkaroni", 25), ("Vanillepudding", 20)]),
+        (["Lachsfilet", "Erdbeeren"],
+         [("Lachsrillettes auf Toast", 15), ("Gebratener Lachs mit Blattspinat", 20),
+          ("Erdbeeren mit Joghurtcreme", 10)]),
+    ],
+    "fr": [
+        (["Pain au levain", "Pousses d'épinard", "Yaourt à la grecque"],
+         [("Velouté d'épinards au yaourt", 20), ("Œufs au plat sur tartine aillée", 15),
+          ("Yaourt au miel et chapelure grillée", 10)]),
+        (["Lait demi-écrémé", "Comté"],
+         [("Salade de concombre au yaourt", 10), ("Gratin de macaronis au comté", 25), ("Crème à la vanille", 20)]),
+        (["Pavé de saumon", "Fraises"],
+         [("Rillettes de saumon sur toast", 15), ("Saumon poêlé aux épinards", 20),
+          ("Fraises à la crème de yaourt", 10)]),
+    ],
+    "sv": [
+        (["Surdegsbröd", "Babyspenat", "Grekisk yoghurt"],
+         [("Spenatsoppa med yoghurt", 20), ("Stekt ägg på vitlöksrostat surdegsbröd", 15),
+          ("Yoghurt med honung och rostade brödsmulor", 10)]),
+        (["Mellanmjölk", "Prästost"],
+         [("Gurksallad med yoghurt", 10), ("Makaroner med ost", 25), ("Vaniljpudding", 20)]),
+        (["Laxfilé", "Jordgubbar"],
+         [("Laxrillette på rostat bröd", 15), ("Stekt lax med spenat", 20), ("Jordgubbar med yoghurtkräm", 10)]),
+    ],
+    "da": [
+        (["Rugbrød", "Babyspinat", "Græsk yoghurt"],
+         [("Spinatsuppe med yoghurt", 20), ("Spejlæg på ristet rugbrød", 15),
+          ("Yoghurt med honning og ristet rugbrødsdrys", 10)]),
+        (["Letmælk", "Danbo"],
+         [("Agurkesalat med yoghurt", 10), ("Makaroni med ost", 25), ("Vaniljebudding", 20)]),
+        (["Laksefilet", "Jordbær"],
+         [("Lakserillettes på rugbrød", 15), ("Stegt laks med spinat", 20), ("Jordbær med vaniljecreme", 10)]),
+    ],
 }
 # A dish's one line of method in the menu; the menu screen shows titles and times, a dish's own
 # screen this.
-PREPARE = {"en": "Prepare and serve.", "ru": "Приготовьте и подавайте.", "nb": "Lag til og server."}
+PREPARE = {"en": "Prepare and serve.", "ru": "Приготовьте и подавайте.", "nb": "Lag til og server.",
+           "es": "Prepara y sirve.", "de": "Zubereiten und servieren.", "fr": "Préparez et servez.",
+           "sv": "Tillaga och servera.", "da": "Tilbered og servér."}
 
 
 def recipe(lang):

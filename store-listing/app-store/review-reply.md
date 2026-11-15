@@ -33,7 +33,7 @@ No login, demo account or sample files are needed; the app is ready on first lau
 - There are no analytics or ads.
 
 5. REGIONAL DIFFERENCES
-The app works the same in all regions. It is available in English, Russian and Norwegian. Open Food Facts covers some countries' products better than others; when a barcode isn't found, the user types the name and everything else works the same. "Generate on this phone" appears only where Apple Intelligence is available on the device.
+The app works the same in all regions. It is available in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish. Open Food Facts covers some countries' products better than others; when a barcode isn't found, the user types the name and everything else works the same. "Generate on this phone" appears only where Apple Intelligence is available on the device.
 
 6. REGULATED INDUSTRY / THIRD-PARTY MATERIAL
 Not a regulated industry; the app gives no medical or dietary advice. Recipes are suggestions; the allergen list is passed on as an instruction to leave those ingredients out, and the app does not guarantee that a recipe is free of them. The only third-party material is product data and pictures from Open Food Facts, which are openly licensed for reuse: database under the Open Database License (ODbL), pictures under Creative Commons Attribution-ShareAlike. See https://world.openfoodfacts.org/terms-of-use

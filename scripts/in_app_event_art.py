@@ -138,6 +138,11 @@ def main():
         sys.exit(__doc__)
     for folder in LISTING_FOLDERS.values():
         source = ROOT / "store-listing" / "app-store" / folder / "screenshots"
+        if not source.is_dir():
+            # A language whose screenshots haven't been framed yet; es-MX and fr-CA take es-ES's
+            # and fr-FR's media (scripts/testflight.py, fallback).
+            print(f"{folder}: no screenshots yet, skipped")
+            continue
         phones = {}
         for label, name in SHOTS.items():
             if not (source / name).is_file():

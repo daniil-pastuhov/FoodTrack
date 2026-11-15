@@ -159,6 +159,9 @@ data class PaidUiState(
     val deletionWaitsForPurchase: Boolean get() = unconfirmedRecipes > 0 || paymentPending
 }
 
+/** Danish, which only a server that says `acceptsDanish` takes (functions/CONTRACT.md). */
+private const val DANISH = "da"
+
 /** How long a "paused" answer stands before the tab offers the server again. */
 private const val PAUSE_RECHECK_MILLIS = 5 * 60_000L
 
@@ -325,12 +328,13 @@ internal class RecipePaid(
     /** What a reply that carries a balance says besides it: the costs, the block, which is
      *  `true` or absent (never `false`), so absent lifts it, and whether the server reads optional
      *  items and the multi-choice config, likewise. */
-    private fun RecipePaidSnapshot.withTerms(costs: JsonElement?, blocked: JsonElement?, optional: JsonElement?, multiChoice: JsonElement?): RecipePaidSnapshot =
+    private fun RecipePaidSnapshot.withTerms(costs: JsonElement?, blocked: JsonElement?, optional: JsonElement?, multiChoice: JsonElement?, danish: JsonElement?): RecipePaidSnapshot =
         copy(
             costs = recipeCostsOf(costs) ?: this.costs,
             purchasesBlocked = purchasesBlockedOf(blocked),
             serverTakesOptional = acceptsOptionalIngredientsOf(optional),
-            serverTakesMultiChoice = acceptsMultiChoiceConfigOf(multiChoice)
+            serverTakesMultiChoice = acceptsMultiChoiceConfigOf(multiChoice),
+            serverTakesDanish = acceptsDanishOf(danish)
         )
 
     /** Whether the route is on screen: only once the store has shown it sells this build a
@@ -405,7 +409,7 @@ internal class RecipePaid(
         balanceAskedAt = nowMillis()
         return when (val result = backend.getBalance()) {
             is ServerResult.Ok -> {
-                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice) }
+                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish) }
                 updatePaid { if (it.issue == ServerIssue.BUSY && held() == null) it.copy(issue = null) else it }
                 updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                 true
@@ -683,7 +687,7 @@ internal class RecipePaid(
                             current.copy(
                                 unverified = if (settled) current.unverified.filterNot { it.token == purchase.token } else current.unverified,
                                 balance = reply.balance ?: current.balance
-                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig)
+                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish)
                         }
                         when (reply.status) {
                             VerifyStatus.GRANTED -> updatePaid { it.copy(event = PaidEvent.RecipesAdded(purchase.recipes)) }
@@ -782,7 +786,7 @@ internal class RecipePaid(
         when (val result = whileBusy(setOf(ServerError.OVERLOADED, ServerError.BUSY)) { account.completeMerge(merge) }) {
             is ServerResult.Ok -> {
                 val reply = result.value
-                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice) }
+                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish) }
                 val event = if (reply.moved != 0) PaidEvent.Merged(reply.moved) else null
                 updatePaid { it.copy(accountBusy = false, merge = null, event = event ?: it.event) }
             }
@@ -989,6 +993,8 @@ internal class RecipePaid(
         // recipe that ignores one could contain something the person excluded.
         val config = wireConfigFor(current.config, current.language, snapshot.serverTakesMultiChoice)
             ?: return Built.Blocked(RecipeEvent.DietsNeedServerUpdate)
+        // Danish only to a server that writes it; never another language in its place.
+        if (config.language == DANISH && !snapshot.serverTakesDanish) return Built.Blocked(RecipeEvent.LanguageNeedsServerUpdate)
         val menu = current.mode == RecipeMode.MENU
         val request = GenerateRequest(
             requestId = newRequestId(),
@@ -1183,12 +1189,12 @@ internal class RecipePaid(
                             if (saved == null) {
                                 // The contract promises the content with DONE; without it there is
                                 // nothing to show, and asking again with this id returns the same.
-                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig) }
+                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
                             savedRecipeRepository.save(saved)
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (interactive) {
                                 state.update { current ->
@@ -1209,7 +1215,7 @@ internal class RecipePaid(
                             failures = 0
                             // The balance it reports is held, not spent: the count waits for the
                             // result. The costs and the block stand as they are.
-                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig) }
+                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
                             if (nowMillis() >= deadline) {
                                 finish(interactive, null, ServerIssue.OFFLINE)
                                 return Sent.KEPT_OFFLINE
@@ -1217,7 +1223,7 @@ internal class RecipePaid(
                             pollDelay(if (nowMillis() - began < SLOW_POLL_AFTER_MILLIS) POLL_MILLIS else SLOW_POLL_MILLIS)
                         }
                         GenerateStatus.FAILED -> {
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (!interactive && reply.charged) updatePaid { it.copy(event = PaidEvent.EarlierRefused(cost)) }
                             finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(cost) else RecipeEvent.ServerFailed)
@@ -1361,8 +1367,9 @@ internal class RecipePaid(
                             null -> {
                                 // The multi-choice config sent to a server that was rolled back
                                 // to one that doesn't read it: the balance's capability flags
-                                // are asked again, so Try again sends the legacy values.
-                                if (request.config.isMultiChoice) refreshBalance()
+                                // are asked again, so Try again sends the legacy values. Likewise
+                                // Danish to a server that doesn't write it: the next try is held.
+                                if (request.config.isMultiChoice || request.config.language == DANISH) refreshBalance()
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }

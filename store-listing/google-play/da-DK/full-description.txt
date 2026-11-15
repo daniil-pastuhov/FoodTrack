@@ -1,0 +1,35 @@
+BestBefore holder styr på holdbarheden af maden i køleskabet, fryseren og skabet: scan dine madvarer, se hvad der skal bruges først, få en påmindelse, før maden bliver dårlig, og lav en opskrift af det, der snart udløber.
+
+<b>Tilføj mad på få sekunder</b>
+• Scan stregkoden, så udfyldes varenavn og billede for dig (via Open Food Facts)
+• Ret kameraet mod den trykte dato, så læser BestBefore holdbarhedsdatoen
+• Tag et billede af frugt eller grøntsager, så foreslår appen, hvad det er
+• Scan flere varer i træk, og tilføj hele indkøbsposen på én gang
+• Scan en kvittering, og tilføj flere varer på én gang
+
+<b>Gå aldrig glip af en dato</b>
+• Virker med både »bedst før« og »sidste anvendelsesdato«
+• Påmindelser et par dage før noget udløber, på det tidspunkt du vælger
+• Se »Udløber snart« og »Udløbet« med ét blik
+• Widgets på startskærmen til varer, der snart udløber, indkøbslisten og et hurtigt overblik
+
+<b>Handl smartere</b>
+• Basisvarer, du bruger op, kommer direkte på indkøbslisten
+• Del listen som tekst eller QR-kode
+• Valgfrit: få indkøbslisten frem, når du kommer til en butik, du har gemt
+
+<b>Lav mad af det, der snart udløber</b>
+• Fanen Opskrift vælger de varer, der er tættest på deres dato; ret udvalget, antal portioner, tid, kost og meget mere
+• Gratis: kopiér en færdig prompt, eller del den med den AI-app, du allerede bruger
+• Gratis på Android-telefoner, der understøtter det: opskriften skrives på selve telefonen af dens egen model
+• Opskriftspakker (køb i appen): opskrifter skrevet af vores server og gemt i appen, og en madplan for 3 dage (»Menu for 3 dage«), der bruger det, der udløber først
+
+<b>Dine data</b>
+• Ingen reklamer, ingen sporing
+• Intet abonnement: appen er gratis, og opskriftspakkerne er valgfrie engangskøb
+• Dit forråd gemmes på din telefon; tag en sikkerhedskopi, når du vil
+• Ingen konto nødvendig, heller ikke for at købe en pakke. Log kun ind med Google, hvis du vil bruge dine opskrifter på andre telefoner
+• En opskrift fra en pakke sender de varer, du sætter kryds ved, dine opskriftsindstillinger og dine allergener til vores server. De gratis muligheder sender intet til os
+• Fås på dansk, engelsk, russisk, norsk, spansk, tysk, fransk og svensk
+
+Smid mindre mad ud, spar penger, og vid altid, hvad du har derhjemme.

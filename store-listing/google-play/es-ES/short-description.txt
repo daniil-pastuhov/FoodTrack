@@ -1,0 +1,1 @@
+Escanea alimentos, controla su caducidad y cocina lo que caduca con recetas IA.

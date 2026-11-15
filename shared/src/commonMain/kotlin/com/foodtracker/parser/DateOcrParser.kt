@@ -12,23 +12,53 @@ data class DateOcrResult(
 
 object DateOcrParser {
 
+    /**
+     * Words printed beside an expiry date, in the app's languages and the usual abbreviations
+     * (en, es, de, fr, sv, da, nb, ru). Matched against the lower-cased line, never inside a
+     * longer word; a letter-aware boundary rather than `\b`, which treats "ø", "ä" or Cyrillic
+     * as non-letters on the JVM. iOS has no keyword step (`CameraScannerViewController.extractDate`).
+     */
     private val KEYWORD_PATTERN = Regex(
-        """(?i)\b(exp|bb|bbd|best\s*before|best\s*by|use\s*by|expires?|val|venc|a\s*cons(?:umer)?)\b"""
+        "(?<![\\p{L}\\p{N}])(" + listOf(
+            // en, and the codes printed in several languages
+            "exp", "bb", "bbd", "best\\s*before", "best\\s*by", "use\\s*by", "expires?", "val", "venc",
+            // es
+            "cad", "caducidad", "consumir\\s*(?:pref(?:erentemente)?\\.?\\s*)?antes", "fecha\\s*de\\s*caducidad",
+            // de
+            "mhd", "mindestens\\s*haltbar", "haltbar\\s*bis", "verbrauchen\\s*bis", "verbrauchsdatum",
+            // fr
+            "[àa]\\s*cons(?:ommer|umer)?", "dlc", "ddm", "dluo",
+            // sv
+            "b[äa]st\\s*f[öo]re", "f[öo]rbrukas\\s*f[öo]re", "sista\\s*f[öo]rbrukningsdag",
+            // da
+            "bedst\\s*f[øo]r", "mindst\\s*holdbar", "sidste\\s*anvendelsesdato", "anvendes\\s*inden",
+            // nb
+            "best\\s*f[øo]r", "siste\\s*forbruksdag",
+            // ru
+            "годен\\s*до", "годна\\s*до", "употребить\\s*до", "срок\\s*годности"
+        ).joinToString("|") + ")(?![\\p{L}\\p{N}])"
     )
 
+    private fun hasKeyword(line: String): Boolean = KEYWORD_PATTERN.containsMatchIn(line.lowercase())
+
+    /**
+     * Month abbreviations and names, looked up by their first three letters and then whole
+     * (`findMonth`): en, es, de, fr, sv, da, nb, ru. "juin" and "juil" share "jui", so both are
+     * listed whole.
+     */
     private val MONTH_NAMES = mapOf(
-        "jan" to 1, "ene" to 1, "janv" to 1,
-        "feb" to 2, "fev" to 2,
-        "mar" to 3, "mrz" to 3,
-        "apr" to 4, "avr" to 4,
-        "may" to 5, "mai" to 5,
-        "jun" to 6, "juin" to 6,
-        "jul" to 7, "juil" to 7,
-        "aug" to 8, "août" to 8, "aout" to 8,
-        "sep" to 9, "sept" to 9,
-        "oct" to 10, "okt" to 10,
-        "nov" to 11,
-        "dec" to 12, "dez" to 12, "déc" to 12
+        "jan" to 1, "ene" to 1, "janv" to 1, "янв" to 1,
+        "feb" to 2, "fev" to 2, "fév" to 2, "фев" to 2,
+        "mar" to 3, "mrz" to 3, "mär" to 3, "мар" to 3,
+        "apr" to 4, "avr" to 4, "abr" to 4, "апр" to 4,
+        "may" to 5, "mai" to 5, "maj" to 5, "мая" to 5, "май" to 5,
+        "jun" to 6, "juin" to 6, "июн" to 6,
+        "jul" to 7, "juil" to 7, "juillet" to 7, "июл" to 7,
+        "aug" to 8, "août" to 8, "aout" to 8, "aoû" to 8, "ago" to 8, "авг" to 8,
+        "sep" to 9, "sept" to 9, "сен" to 9,
+        "oct" to 10, "okt" to 10, "окт" to 10,
+        "nov" to 11, "ноя" to 11,
+        "dec" to 12, "dez" to 12, "déc" to 12, "dic" to 12, "des" to 12, "дек" to 12
     )
 
     /**
@@ -39,9 +69,9 @@ object DateOcrParser {
 
         for (lineIndex in lines.indices) {
             val line = lines[lineIndex]
-            val hasKeywordOnLine = KEYWORD_PATTERN.containsMatchIn(line)
+            val hasKeywordOnLine = hasKeyword(line)
             val hasKeywordNearby = hasKeywordOnLine ||
-                    (lineIndex > 0 && KEYWORD_PATTERN.containsMatchIn(lines[lineIndex - 1]))
+                    (lineIndex > 0 && hasKeyword(lines[lineIndex - 1]))
 
             // Try different matchers on line
             extractDatesFromText(line, hasKeywordNearby, referenceYear, candidates)
@@ -85,7 +115,9 @@ object DateOcrParser {
         }
 
         // Pattern 3: DD MMM YYYY or DD MMM YY (e.g. 15 NOV 2026 or 28 OCT 25)
-        val textualMonthRegex = Regex("""\b(\d{1,2})\s+([a-zA-Z]{3,4})\.?\s+(\d{2,4})\b""")
+        // Letters of any script, so "déc", "mär", "okt." and "октября" are read as well as
+        // "NOV" (a month is known by its first three letters, see findMonth).
+        val textualMonthRegex = Regex("""\b(\d{1,2})\.?\s+(\p{L}{3,10})\.?\s+(\d{2,4})\b""")
         for (match in textualMonthRegex.findAll(text)) {
             val d = match.groupValues[1].toIntOrNull() ?: continue
             val monthStr = match.groupValues[2].lowercase()
@@ -100,7 +132,7 @@ object DateOcrParser {
         }
 
         // Pattern 4: MMM DD YYYY (e.g. NOV 15 2026)
-        val monthFirstRegex = Regex("""\b([a-zA-Z]{3,4})\.?\s+(\d{1,2}),?\s+(\d{2,4})\b""")
+        val monthFirstRegex = Regex("""(?<![\p{L}\p{N}])(\p{L}{3,10})\.?\s+(\d{1,2}),?\s+(\d{2,4})\b""")
         for (match in monthFirstRegex.findAll(text)) {
             val monthStr = match.groupValues[1].lowercase()
             val m = findMonth(monthStr) ?: continue

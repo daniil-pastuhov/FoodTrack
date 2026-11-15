@@ -9,10 +9,13 @@ at most 100, promotional text at most 170, description at most 4000; the App Rev
 comma-separated with no space after a comma, and no keyword word repeats a word of the same
 locale's name or subtitle (or its English plural/singular), since Apple indexes those already.
 Another English App Store folder (en-AU, en-CA) may hold only some files: the rest are en-GB's,
-as scripts/testflight.py sends them, and the keyword rules check the name and subtitle it
+as scripts/testflight.py sends them (likewise es-MX takes es-ES's and fr-CA fr-FR's), and the keyword rules check the name and subtitle it
 inherits. en-AU's keywords also may not repeat en-GB's keywords, name or subtitle: Apple's
 localisation table lists English (U.K.) as an additional language of the Australian storefront,
 so both are assumed to be searched there and a repeat wastes en-AU's field.
+Every App Store folder has privacy_url.txt (or inherits it as above): its localization's privacy
+policy URL, the policy site's page for the folder's language (PRIVACY_PAGES), https, one line.
+Apple publishes no length limit for it.
 Google Play (store-listing/google-play/<locale>/): title at most 30, short description at most
 80, full description at most 4000; no "free", "best", "#1", "top" or emoji in the title.
 Every text: never call the paid unit a credit or token (CLAUDE.md, "Recipe").
@@ -33,15 +36,28 @@ REVIEW_NOTES = ("review-notes.txt", 4000)  # in store-listing/app-store/, not pe
 # An English App Store folder other than en-GB takes the en-GB file of every text it doesn't have
 # (scripts/testflight.py, listing_files). play_listing.py has no such fallback.
 FALLBACK_LOCALE = "en-GB"
+# Regional variants that take another language folder's files the same way (testflight.py's
+# REGIONAL_FALLBACKS).
+REGIONAL_FALLBACKS = {"es-MX": "es-ES", "fr-CA": "fr-FR"}
 # Locale -> the localization its storefront also offers (Apple's "App Store localizations" table:
 # Australia, default English (Australia), additional English (U.K.); Canada's additional language
 # is French (Canada), so en-CA has no entry). Its keywords may not repeat that one's keywords,
 # name or subtitle.
 ALSO_SHOWN_WITH = {"en-AU": "en-GB"}
+# The privacy policy site (testflight.py's PRIVACY_SITE): <PRIVACY_SITE><page>.html per language,
+# the language chooser at the root. App Store language code (a folder's name before any "-") ->
+# its page; Norwegian is "no" on the App Store and "nb" on the site.
+PRIVACY_FILE = "privacy_url.txt"
+PRIVACY_SITE = "https://daniil-pastuhov.github.io/bestbefore-privacy/"
+PRIVACY_PAGES = {"en": "en", "ru": "ru", "no": "nb", "es": "es", "de": "de", "fr": "fr",
+                 "sv": "sv", "da": "da"}
 # A locale folder's name (en-GB, ru, no, zh-Hans), which iap-review/ and in-app-event/ are not.
-LOCALE_FOLDER = re.compile(r"[a-z]{2,3}(-[A-Za-z]{2,4})?")
-PLAY_TITLE_WORDS = {"free", "best", "top", "#1", "gratis", "бесплатно", "лучший"}
-UNIT_WORDS = re.compile(r"\b(credits?|tokens?|кредит\w*|токен\w*|kreditt\w*)\b", re.IGNORECASE)
+LOCALE_FOLDER = re.compile(r"[a-z]{2,3}(-[A-Za-z0-9]{2,4})?")
+PLAY_TITLE_WORDS = {"free", "best", "top", "#1", "gratis", "бесплатно", "лучший", "gratuit", "gratuite",
+                    "kostenlos", "mejor", "meilleur", "meilleure", "beste", "besten", "bäst", "bästa",
+                    "bedst", "bedste", "gratuito", "gratuita"}
+UNIT_WORDS = re.compile(r"\b(credits?|tokens?|кредит\w*|токен\w*|kredit\w*|crédit\w*|cr[ée]dito\w*|"
+                        r"jetons?|guthaben)\b", re.IGNORECASE)
 
 problems = []
 
@@ -54,11 +70,20 @@ def read(path):
     return path.read_text(encoding="utf-8").strip()
 
 
+def fallback_name(locale):
+    """The folder a partial App Store folder inherits missing files from (en-GB for another English
+    one, es-ES for es-MX, fr-FR for fr-CA), or None."""
+    if locale in REGIONAL_FALLBACKS:
+        return REGIONAL_FALLBACKS[locale]
+    return FALLBACK_LOCALE if locale.startswith("en-") and locale != FALLBACK_LOCALE else None
+
+
 def fallback_folder(folder, store):
-    """The en-GB folder another English App Store folder inherits missing files from, or None."""
-    if store != "app-store" or not folder.name.startswith("en-") or folder.name == FALLBACK_LOCALE:
+    """The folder an App Store folder inherits missing files from, or None."""
+    name = fallback_name(folder.name)
+    if store != "app-store" or name is None:
         return None
-    return folder.parent / FALLBACK_LOCALE
+    return folder.parent / name
 
 
 def check_lengths(folder, limits, inherit_from=None):
@@ -112,6 +137,29 @@ def check_keywords(folder, texts):
                             "which the same storefront also searches")
 
 
+def check_privacy_url(folder, inherit_from=None):
+    """privacy_url.txt (its own, else inherited like the texts) is the policy site's page for the
+    folder's language."""
+    path = folder / PRIVACY_FILE
+    source = ""
+    if not path.exists() and inherit_from is not None and (inherit_from / PRIVACY_FILE).exists():
+        path, source = inherit_from / PRIVACY_FILE, f"  (from {inherit_from.name})"
+    where = (folder / PRIVACY_FILE).relative_to(ROOT)
+    if not path.exists():
+        problems.append(f"{where}: missing")
+        return
+    url = read(path)
+    print(f"  {PRIVACY_FILE:24} {url}{source}")
+    language = folder.name.split("-")[0]
+    page = PRIVACY_PAGES.get(language)
+    if page is None:
+        problems.append(f"{where}: the policy site has no page for '{language}' (PRIVACY_PAGES)")
+        return
+    wanted = f"{PRIVACY_SITE}{page}.html"
+    if url != wanted:
+        problems.append(f"{where}: {url!r} is not this language's policy page, {wanted}")
+
+
 def check_play_title(folder, texts):
     title = texts.get("title.txt", "")
     found = {w for w in re.findall(r"#1|[^\W_]+", title.casefold())} & PLAY_TITLE_WORDS
@@ -153,6 +201,7 @@ def check(stores=("app-store", "google-play")):
             texts = check_lengths(folder, limits, fallback_folder(folder, store))
             if store == "app-store":
                 check_keywords(folder, texts)
+                check_privacy_url(folder, fallback_folder(folder, store))
             else:
                 check_play_title(folder, texts)
         if store == "app-store":
@@ -175,7 +224,6 @@ EVENT_DIR = ROOT / "app-store" / "in-app-event"
 EVENT_CONFIG = "event.json"
 EVENT_LIMITS = {"name.txt": 30, "short_description.txt": 50, "long_description.txt": 120}
 EVENT_REFERENCE_LIMIT = 64
-EVENT_PRIMARY_FALLBACK = "en-GB"
 # The API's allowed values (developer.apple.com/documentation/appstoreconnectapi/appevent/
 # attributes-data.dictionary).
 EVENT_VALUES = {
@@ -191,7 +239,7 @@ EVENT_MAX_PUBLISH_DAYS_BEFORE = 14
 # file -> (aspect ratio, smallest size, largest size)
 EVENT_MEDIA = {"event-card.png": ((16, 9), (1920, 1080), (3840, 2160)),
                "event-details.png": ((9, 16), (1080, 1920), (2160, 3840))}
-PRICE = re.compile(r"[$€£¥₽]|\d\s*(kr|nok|usd|eur|gbp|руб|р\.)(?!\w)", re.IGNORECASE)
+PRICE = re.compile(r"[$€£¥₽]|\d\s*(kr|nok|sek|dkk|usd|eur|gbp|mxn|cad|руб|р\.)(?!\w)", re.IGNORECASE)
 
 
 def event_locales(root=EVENT_DIR):
@@ -200,11 +248,12 @@ def event_locales(root=EVENT_DIR):
 
 
 def event_media(root, locale):
-    """{file name: path} of the media a localization takes: its own, or en-GB's for another
-    English localization without them (the listing's rule for header art)."""
+    """{file name: path} of the media a localization takes: its own, or its fallback's (en-GB's
+    for another English localization, es-ES's for es-MX, fr-FR's for fr-CA) without them (the
+    listing's rule for header art)."""
     media = {}
     for name in EVENT_MEDIA:
-        for source in (locale, EVENT_PRIMARY_FALLBACK if locale.startswith("en-") else None):
+        for source in (locale, fallback_name(locale)):
             if source and (pathlib.Path(root) / source / name).is_file():
                 media[name] = pathlib.Path(root) / source / name
                 break

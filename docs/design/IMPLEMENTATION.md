@@ -29,7 +29,7 @@ Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), saved
 - Lucide icons through `LarderIcon`. Vollkorn for display, headline and title styles; system fonts elsewhere; both scale with system text size.
 - 48dp and 44pt minimum targets. Every status has an icon and words.
 - Reversible actions are immediate with Undo. Dialogs only for irreversible actions or real choices.
-- New strings go in en, ru and nb, in your feature's commented block, and use the design's ru copy where it exists. Your report lists every new ru and nb string.
+- New strings go in all eight languages (en, ru, nb, es, de, fr, sv, da), in your feature's commented block, and use the design's ru copy where it exists. Your report lists every new translated string.
 - `@Composable` previews per component state.
 - No Room or SwiftData schema change is expected. If you think one is needed, ask the coordinator first.
 - Never uninstall apps or reset data on existing simulators or emulators; use a new instance. Check the screen before tapping, and stay inside BestBefore.

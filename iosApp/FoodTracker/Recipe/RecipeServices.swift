@@ -6,16 +6,7 @@ import SwiftData
 
 // MARK: On-device model
 
-/// Whether the phone's own model can write a recipe in a given language right now.
-enum OnDeviceRecipeAvailability: Equatable, Sendable {
-    case available
-    /// The phone has a model, still downloading. The design's "Your phone is getting ready".
-    case preparing
-    /// The model doesn't know the language recipes are set to be written in.
-    case unsupportedLanguage
-    /// No model on this phone: too old, Apple Intelligence off, or iOS before 26.
-    case unsupported
-}
+// `OnDeviceRecipeAvailability` is in Models/RecipeModels.swift, with its pure rule.
 
 enum OnDeviceRecipeError: Error, Equatable {
     /// The model became unavailable, or doesn't take the language after all.

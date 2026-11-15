@@ -1,0 +1,1185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BestBefore</string>
+    <string name="app_subtitle">Despensa y fechas de caducidad</string>
+
+    <string name="scan_item">Escanear producto</string>
+    <string name="scan_content_description">Escanear</string>
+
+    <string name="nav_label_home">Inicio</string>
+    <string name="nav_label_recipe">Receta</string>
+    <string name="nav_label_shopping_list">Compras</string>
+    <string name="nav_label_settings">Ajustes</string>
+
+    <string name="metric_expired">Caducados</string>
+    <string name="metric_soon">Pronto</string>
+    <string name="metric_fresh">Frescos</string>
+
+    <string name="search_placeholder">Buscar productos o marcas</string>
+    <string name="clear_content_description">Borrar</string>
+
+    <string name="filter_all_locations">Todos los lugares</string>
+    <string name="filter_all_categories">Todas las categorías</string>
+    <string name="filter_content_description">Filtros</string>
+    <string name="filters_sheet_title">Filtros</string>
+
+    <string name="tab_all">Todos</string>
+    <string name="tab_expiring_soon">Caducan pronto</string>
+    <string name="tab_expired">Caducados</string>
+
+    <string name="sort_content_description">Ordenar</string>
+    <string name="sort_sheet_title">Ordenar por</string>
+    <string name="sort_option_expiry_date">Fecha de caducidad</string>
+    <string name="sort_option_name">Nombre</string>
+    <string name="sort_option_date_added">Fecha de alta</string>
+    <string name="sort_option_storage_location">Lugar</string>
+
+
+    <string name="back_content_description">Atrás</string>
+
+    <string name="edit_item_title">Editar producto</string>
+    <string name="add_item_title">Añadir producto</string>
+    <string name="barcode_format">Código de barras: %1$s</string>
+    <string name="new_item_placeholder">Producto nuevo</string>
+    <string name="photo_suggestions_title">Parece…</string>
+    <string name="photo_suggestions_analyzing">Identificando…</string>
+    <string name="food_label_apple">Manzana</string>
+    <string name="food_label_banana">Plátano</string>
+    <string name="food_label_orange">Naranja</string>
+    <string name="food_label_lemon">Limón</string>
+    <string name="food_label_strawberry">Fresa</string>
+    <string name="food_label_grape">Uvas</string>
+    <string name="food_label_watermelon">Sandía</string>
+    <string name="food_label_pineapple">Piña</string>
+    <string name="food_label_peach">Melocotón</string>
+    <string name="food_label_pear">Pera</string>
+    <string name="food_label_cherry">Cerezas</string>
+    <string name="food_label_avocado">Aguacate</string>
+    <string name="food_label_berry">Frutos rojos</string>
+    <string name="food_label_fruit">Fruta</string>
+    <string name="food_label_tomato">Tomate</string>
+    <string name="food_label_potato">Patata</string>
+    <string name="food_label_carrot">Zanahoria</string>
+    <string name="food_label_broccoli">Brócoli</string>
+    <string name="food_label_cucumber">Pepino</string>
+    <string name="food_label_onion">Cebolla</string>
+    <string name="food_label_pumpkin">Calabaza</string>
+    <string name="food_label_mushroom">Champiñones</string>
+    <string name="food_label_lettuce">Lechuga</string>
+    <string name="food_label_cabbage">Repollo</string>
+    <string name="food_label_salad">Ensalada</string>
+    <string name="food_label_vegetable">Verduras</string>
+    <string name="food_label_bread">Pan</string>
+    <string name="food_label_bun">Bollo</string>
+    <string name="food_label_croissant">Cruasán</string>
+    <string name="food_label_cake">Pastel</string>
+    <string name="food_label_cookie">Galletas</string>
+    <string name="food_label_pastry">Bollería</string>
+    <string name="food_label_doughnut">Dónut</string>
+    <string name="food_label_pie">Tarta</string>
+    <string name="food_label_waffle">Gofres</string>
+    <string name="food_label_pancake">Tortitas</string>
+    <string name="food_label_cheese">Queso</string>
+    <string name="food_label_milk">Leche</string>
+    <string name="food_label_yogurt">Yogur</string>
+    <string name="food_label_butter">Mantequilla</string>
+    <string name="food_label_egg">Huevos</string>
+    <string name="food_label_meat">Carne</string>
+    <string name="food_label_steak">Filete</string>
+    <string name="food_label_chicken">Pollo</string>
+    <string name="food_label_sausage">Salchicha</string>
+    <string name="food_label_bacon">Beicon</string>
+    <string name="food_label_fish">Pescado</string>
+    <string name="food_label_seafood">Marisco</string>
+    <string name="food_label_shrimp">Gambas</string>
+    <string name="food_label_juice">Zumo</string>
+    <string name="food_label_coffee">Café</string>
+    <string name="food_label_tea">Té</string>
+    <string name="food_label_beer">Cerveza</string>
+    <string name="food_label_wine">Vino</string>
+    <string name="food_label_drink">Bebida</string>
+    <string name="food_label_chocolate">Chocolate</string>
+    <string name="food_label_candy">Caramelos</string>
+    <string name="food_label_ice_cream">Helado</string>
+    <string name="food_label_dessert">Postre</string>
+    <string name="food_label_honey">Miel</string>
+    <string name="food_label_rice">Arroz</string>
+    <string name="food_label_pasta">Pasta</string>
+    <string name="food_label_bean">Alubias</string>
+    <string name="food_label_corn">Maíz</string>
+    <string name="food_label_nut">Frutos secos</string>
+    <string name="food_label_soup">Sopa</string>
+    <string name="food_label_pizza">Pizza</string>
+    <string name="food_label_sandwich">Sándwich</string>
+    <string name="food_label_food">Comida</string>
+    <string name="product_name_label">Nombre del producto *</string>
+    <string name="brand_label">Marca</string>
+    <string name="expiry_section_title">Consumo preferente</string>
+    <string name="expiry_suggestion_remembered">Igual que la última vez · %1$s</string>
+    <string name="expiry_suggestion_category">Por defecto en %1$s · %2$s</string>
+    <plurals name="expiry_suggestion_days">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <string name="expiry_date_implausible_warning">Esta fecha está a más de %1$d años. Revisa el año.</string>
+    <string name="quick_date_3_days">+3 días</string>
+    <string name="quick_date_1_week">+1 semana</string>
+    <string name="quick_date_2_weeks">+2 semanas</string>
+    <string name="quick_date_1_month">+1 mes</string>
+    <string name="storage_location_title">Lugar</string>
+    <string name="category_label">Categoría (opcional)</string>
+    <string name="quantity_label">Cantidad</string>
+    <string name="quantity_decrease_content_description">Reducir cantidad</string>
+    <string name="quantity_increase_content_description">Aumentar cantidad</string>
+    <string name="update_item_button">Actualizar producto</string>
+    <!-- %1$s is the selected storage location, e.g. "Fridge" -->
+    <string name="save_item_button">Guardar en %1$s</string>
+    <string name="date_picker_ok">Aceptar</string>
+    <string name="date_picker_cancel">Cancelar</string>
+
+    <string name="manual_entry_button">Escribirlo</string>
+    <string name="camera_off_title">La cámara está desactivada</string>
+    <string name="camera_off_body">BestBefore necesita la cámara para escanear. Puedes seguir añadiendo comida a mano.</string>
+    <string name="camera_off_open_settings">Abrir ajustes</string>
+    <string name="camera_off_allow">Permitir cámara</string>
+    <string name="camera_off_add_by_hand">Escribirlo</string>
+    <string name="scan_mode_batch">Varios</string>
+    <string name="reticle_hint_batch">Sigue escaneando. Todo va a la lista</string>
+    <string name="scan_mode_receipt">Ticket</string>
+    <string name="reticle_hint_receipt">Encuadra el ticket entero y toca para leerlo</string>
+    <string name="scan_receipt_button">Leer ticket</string>
+    <string name="receipt_nothing_found">No se han encontrado productos en ese ticket. Vuelve a intentarlo con el ticket entero en el encuadre</string>
+    <plurals name="receipt_lines_added">
+        <item quantity="one">Se ha añadido %1$d producto del ticket. Revísalo abajo</item>
+        <item quantity="many">Se han añadido %1$d productos del ticket. Revísalos abajo</item>
+        <item quantity="other">Se han añadido %1$d productos del ticket. Revísalos abajo</item>
+    </plurals>
+    <string name="batch_queue_empty">Escanea un producto para empezar la lista</string>
+    <string name="batch_queue_remove_content_description">Quitar de la lista: %1$s</string>
+    <string name="batch_queue_needs_date">Revisa la fecha</string>
+    <string name="batch_commit_button">Añadir todo</string>
+    <string name="batch_clear_button">Vaciar</string>
+    <plurals name="batch_queue_count">
+        <item quantity="one">%1$d producto en cola</item>
+        <item quantity="many">%1$d productos en cola</item>
+        <item quantity="other">%1$d productos en cola</item>
+    </plurals>
+    <plurals name="batch_added_snackbar">
+        <item quantity="one">%1$d producto añadido</item>
+        <item quantity="many">%1$d productos añadidos</item>
+        <item quantity="other">%1$d productos añadidos</item>
+    </plurals>
+    <string name="duplicate_dialog_title">Ya está en tu despensa</string>
+    <string name="duplicate_dialog_message">Ya tienes %1$s. ¿Sumas una unidad más o guardas este producto por separado?</string>
+    <string name="duplicate_dialog_add_one">Sumar uno</string>
+    <string name="duplicate_dialog_separate">Por separado</string>
+    <string name="duplicate_added_snackbar">%1$s: ahora %2$d</string>
+    <string name="in_pantry_count">En tu despensa: %1$d</string>
+    <string name="scan_mode_barcode">Código</string>
+    <string name="scan_mode_date_ocr">Fecha</string>
+    <string name="scan_mode_photo">Foto</string>
+    <string name="reticle_hint_barcode">Centra el código de barras en el marco</string>
+    <string name="reticle_hint_date_ocr">Apunta a la fecha impresa, p. ej. CAD 24.11.2026</string>
+    <string name="reticle_hint_photo">Pon el producto en el centro y haz la foto</string>
+    <string name="torch_toggle_content_description">Linterna</string>
+    <string name="expiry_date_found_format">Fecha encontrada: %1$s</string>
+    <string name="looking_up_product">Buscando este producto…</string>
+    <string name="scan_date_button">Escanear fecha</string>
+    <string name="continue_button">Continuar</string>
+
+    <string name="product_not_found_title">Producto no encontrado</string>
+    <string name="switch_to_photo_button">Modo foto</string>
+
+    <string name="take_photo_button">Hacer foto</string>
+    <string name="photo_captured_title">Foto hecha</string>
+    <string name="photo_captured_message">Usa esta foto para el producto o repítela.</string>
+    <string name="retake_photo_button">Repetir</string>
+
+    <string name="delete">Eliminar</string>
+    <string name="use_one_content_description">Usar uno</string>
+    <string name="quantity_format">×%1$d</string>
+
+    <string name="item_removed_snackbar">Se ha eliminado %1$s</string>
+    <string name="item_added_to_shopping_list_snackbar">Se ha añadido a la lista de compras: %1$s</string>
+    <string name="undo_action">Deshacer</string>
+
+    <string name="essential_item_label">Imprescindible</string>
+    <string name="essential_item_description">Se añade solo a tu lista de compras cuando lo quitas de la despensa</string>
+    <string name="item_notifications_label">Avisarme antes de que caduque</string>
+    <string name="item_notifications_description">Desactívalo para no recibir avisos de este producto</string>
+
+    <string name="shopping_list_title">Lista de compras</string>
+    <string name="shopping_list_content_description">Lista de compras</string>
+    <string name="shopping_list_add_placeholder">Añadir un producto…</string>
+    <string name="shopping_list_add_button">Añadir</string>
+    <string name="shopping_list_scan_content_description">Escanear producto</string>    <string name="shopping_list_share_content_description">Compartir o importar lista</string>
+    <string name="shopping_list_share_dialog_title">Compartir lista</string>
+    <string name="shopping_list_share_dialog_message">Envía tu lista a otra persona o importa una. Los productos importados se añaden a tu lista; no se sustituye nada.</string>
+    <string name="shopping_list_share_as_text">Compartir como texto</string>
+    <string name="shopping_list_share_as_qr">Mostrar código QR</string>
+    <string name="shopping_list_share_qr_content_description">Código QR con la lista de compras</string>
+    <string name="shopping_list_share_qr_hint">Escanéalo desde la lista de compras del otro teléfono.</string>
+    <string name="shopping_list_share_qr_too_large">Esta lista es demasiado larga para un código QR. Compártela como texto.</string>
+    <string name="shopping_list_import">Importar una lista</string>
+    <string name="shopping_list_import_message">Pega una lista que te hayan enviado o escanea su código QR con el escáner.</string>
+    <string name="shopping_list_import_placeholder">Leche\nPan (2)</string>
+    <string name="shopping_list_import_confirm">Importar</string>
+    <plurals name="shopping_list_import_added">
+        <item quantity="one">%1$d producto añadido</item>
+        <item quantity="many">%1$d productos añadidos</item>
+        <item quantity="other">%1$d productos añadidos</item>
+    </plurals>
+    <string name="shopping_list_import_all_present">Todo lo de esa lista ya está aquí</string>
+    <string name="shopping_list_import_nothing">No hay nada que importar</string>
+    <string name="shopping_list_empty_title">Tu lista de compras está vacía</string>
+    <string name="shopping_list_empty_subtitle">Aquí aparecerán los imprescindibles que quites de la despensa.</string>
+    <string name="shopping_list_uncategorized">Otros</string>
+    <string name="shopping_section_default">Lista de compras</string>
+    <string name="shopping_section_new">Nueva sección</string>
+    <string name="shopping_section_rename">Renombrar sección</string>
+    <string name="shopping_section_delete">Eliminar</string>
+    <string name="shopping_section_delete_title">¿Eliminar “%1$s”?</string>
+    <string name="shopping_section_save">Guardar</string>
+    <string name="shopping_section_name_placeholder">p. ej., Lácteos</string>
+    <string name="shopping_section_move_to">Mover a sección</string>
+    <string name="shopping_section_options">Opciones de %1$s</string>
+    <string name="shopping_section_drag_handle_content_description">Arrastra para reordenar la sección</string>
+    <string name="shopping_section_collapsed">Contraída</string>
+    <string name="shopping_section_expanded">Desplegada</string>
+    <string name="widget_shopping_list_more">%1$d más</string>
+    <string name="shopping_list_quantity_decrease_content_description">Reducir cantidad</string>
+    <string name="shopping_list_quantity_increase_content_description">Aumentar cantidad</string>
+    <string name="shopping_list_did_you_mean_title">¿Querías decir uno de estos?</string>
+    <string name="shopping_list_did_you_mean_none_of_these">Ninguno, añadir uno nuevo</string>
+    <string name="shopping_list_did_you_mean_cancel">Cancelar</string>
+    <string name="shopping_list_drag_handle_content_description">Arrastra para reordenar</string>
+
+    <string name="selection_count_format">%1$d seleccionados</string>
+    <string name="exit_selection_content_description">Salir de la selección</string>
+    <string name="action_get_recipe_ideas">Ideas de recetas</string>
+    <string name="recipe_prompt_intro">Tengo estos alimentos en casa y no quiero que se desperdicien. Sugiéreme una receta que pueda preparar, usando primero los que tienen la fecha más próxima:</string>
+    <string name="recipe_prompt_item_format">%1$s (%2$s)</string>
+    <string name="recipe_prompt_other_items_intro">También tengo en casa estos otros productos, por si alguno sirve:</string>
+    <string name="recipe_prompt_other_items_omitted">(+%1$d productos más que no se muestran)</string>
+    <string name="share_recipe_cancel_button">Cancelar</string>
+
+    <string name="expires_today">Caduca hoy</string>
+    <string name="expires_tomorrow">Caduca mañana</string>
+
+    <plurals name="expires_in_days">
+        <item quantity="one">En %d día</item>
+        <item quantity="many">En %d días</item>
+        <item quantity="other">En %d días</item>
+    </plurals>
+    <plurals name="expires_in_months">
+        <item quantity="one">En %d mes</item>
+        <item quantity="many">En %d meses</item>
+        <item quantity="other">En %d meses</item>
+    </plurals>
+    <plurals name="expires_in_years">
+        <item quantity="one">En %d año</item>
+        <item quantity="many">En %d años</item>
+        <item quantity="other">En %d años</item>
+    </plurals>
+    <plurals name="expired_days_ago">
+        <item quantity="one">Caducó hace %d día</item>
+        <item quantity="many">Caducó hace %d días</item>
+        <item quantity="other">Caducó hace %d días</item>
+    </plurals>
+    <plurals name="expired_months_ago">
+        <item quantity="one">Caducó hace %d mes</item>
+        <item quantity="many">Caducó hace %d meses</item>
+        <item quantity="other">Caducó hace %d meses</item>
+    </plurals>
+    <plurals name="expired_years_ago">
+        <item quantity="one">Caducó hace %d año</item>
+        <item quantity="many">Caducó hace %d años</item>
+        <item quantity="other">Caducó hace %d años</item>
+    </plurals>
+
+    <string name="notification_channel_name">Avisos por producto</string>
+    <string name="notification_channel_desc">Un aviso por producto, poco antes de que caduque</string>
+    <string name="notification_digest_channel_name">Resumen de caducidades</string>
+    <string name="notification_digest_channel_desc">Un aviso con lo que caduca en la próxima semana</string>
+    <string name="notif_title_today">Para usar hoy</string>
+    <string name="notif_title_soon">Para usar pronto</string>
+    <string name="notif_title_past">Échale un vistazo</string>
+    <string name="notif_body_today_format">%1$s llega hoy a su fecha.</string>
+    <string name="notif_body_tomorrow_format">%1$s llega mañana a su fecha.</string>
+    <plurals name="notif_body_soon_format">
+        <item quantity="one">%1$s llega a su fecha en %2$d día.</item>
+        <item quantity="many">%1$s llega a su fecha en %2$d días.</item>
+        <item quantity="other">%1$s llega a su fecha en %2$d días.</item>
+    </plurals>
+    <plurals name="notif_body_past_format">
+        <item quantity="one">%1$s pasó su fecha hace %2$d día.</item>
+        <item quantity="many">%1$s pasó su fecha hace %2$d días.</item>
+        <item quantity="other">%1$s pasó su fecha hace %2$d días.</item>
+    </plurals>
+    <string name="notif_fallback_title">Aviso de tu despensa</string>
+    <string name="notif_fallback_body">Algo de tu despensa llega pronto a su fecha.</string>
+    <string name="notif_action_used">Usado</string>
+    <string name="notif_action_snooze">Mañana</string>
+    <string name="shortcut_scan_barcode_short">Escanear</string>
+    <string name="shortcut_scan_barcode_long">Escanear un código de barras</string>
+    <string name="shortcut_add_item_short">Añadir</string>
+    <string name="shortcut_add_item_long">Añadir un producto a mano</string>
+    <string name="shortcut_shopping_list_short">Compras</string>
+    <string name="shortcut_shopping_list_long">Abrir la lista de compras</string>
+    <string name="notif_action_remove">Quitar</string>
+    <plurals name="notif_digest_title_format">
+        <item quantity="one">%1$d producto caduca esta semana</item>
+        <item quantity="many">%1$d productos caducan esta semana</item>
+        <item quantity="other">%1$d productos caducan esta semana</item>
+    </plurals>
+    <string name="notif_digest_item_format">%1$s — %2$s</string>
+    <plurals name="notif_digest_more_format">
+        <item quantity="one">%1$d más</item>
+        <item quantity="many">%1$d más</item>
+        <item quantity="other">%1$d más</item>
+    </plurals>
+    <string name="notif_action_recipe_ideas">Ideas de recetas</string>
+
+    <string name="settings_content_description">Ajustes</string>
+    <string name="settings_title">Ajustes</string>
+
+
+    <string name="settings_section_notifications">Notificaciones</string>
+    <string name="settings_notifications_enabled">Avisarme antes de que caduque la comida</string>
+    <string name="settings_lead_days_label">Avisarme</string>
+    <string name="settings_time_label">Hora</string>
+    <string name="settings_digest_frequency_label">Frecuencia</string>
+    <string name="settings_digest_daily">A diario</string>
+    <string name="settings_digest_weekly">Semanal</string>
+    <string name="settings_digest_weekday_label">Día de la semana</string>
+    <string name="settings_reminder_style_label">Cómo</string>
+    <string name="settings_reminder_style_each_item">Por producto</string>
+    <string name="settings_reminder_style_summary">Resumen</string>
+    <string name="settings_reminder_style_both">Ambos</string>
+    <plurals name="settings_lead_days_phrase">
+            <item quantity="one">%1$d día antes</item>
+            <item quantity="many">%1$d días antes</item>
+            <item quantity="other">%1$d días antes</item>
+    </plurals>
+    <string name="settings_reminder_preview_each_item">Un aviso por producto %1$s de que caduque, a las %2$s.</string>
+    <string name="settings_reminder_preview_summary_daily">Cada día a las %1$s, una lista de todo lo que caduca en los próximos 7 días.</string>
+    <string name="settings_reminder_preview_summary_weekly">Cada semana, el %1$s a las %2$s, una lista de todo lo que caduca en los próximos 7 días.</string>
+    <plurals name="settings_digest_every_days_chip">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <plurals name="settings_digest_every_days_phrase">
+        <item quantity="one">Cada %1$d día</item>
+        <item quantity="many">Cada %1$d días</item>
+        <item quantity="other">Cada %1$d días</item>
+    </plurals>
+    <string name="settings_reminder_preview_summary_every">%1$s a las %2$s, una lista de todo lo que caduca en los próximos 7 días.</string>
+    <string name="settings_reminder_preview_none">Elige cómo quieres que te avisemos. Ahora mismo no se enviará ningún aviso.</string>
+    <string name="settings_notifications_blocked">Las notificaciones de esta app están desactivadas en los ajustes del teléfono, así que no llegarán avisos.</string>
+    <string name="settings_notifications_open_settings">Abrir ajustes</string>
+
+    <string name="settings_section_expiring_soon">Margen de “Caducan pronto”</string>
+    <string name="settings_expiring_soon_desc">Los productos que caducan en estos días se marcan como “Caducan pronto”</string>
+
+    <string name="settings_section_locations">Lugares de almacenamiento</string>
+    <string name="settings_locations_desc">Toca la estrella para elegir el lugar por defecto de los productos nuevos</string>
+    <string name="settings_remember_last_location">Recordar el último lugar</string>
+    <string name="settings_remember_last_location_desc">Los productos que no habías añadido antes empiezan en el último lugar que elegiste</string>
+    <string name="settings_confirm_rename">Confirmar nombre</string>
+    <string name="settings_set_default_location">Usar por defecto</string>
+    <!-- Names for the built-in storage locations and categories, which are stored under fixed
+         English keys (DefaultStorageLocations, FoodLabels.CATEGORY_*) and shown translated. -->
+    <string name="storage_location_fridge">Nevera</string>
+    <string name="storage_location_freezer">Congelador</string>
+    <string name="storage_location_pantry">Despensa</string>
+    <string name="category_builtin_fruit">Fruta</string>
+    <string name="category_builtin_vegetables">Verduras</string>
+    <string name="category_builtin_bakery">Panadería</string>
+    <string name="category_builtin_dairy">Lácteos</string>
+    <string name="category_builtin_meat_fish">Carne y pescado</string>
+    <string name="category_builtin_drinks">Bebidas</string>
+    <string name="category_builtin_sweets">Dulces</string>
+    <string name="category_builtin_pantry">Despensa</string>
+    <string name="settings_rename_location">Renombrar</string>
+    <string name="settings_delete_location">Eliminar</string>
+    <string name="settings_add_location_placeholder">Nombre del lugar nuevo</string>
+    <string name="settings_add_location">Añadir lugar</string>
+
+    <string name="settings_section_categories">Categorías</string>
+    <string name="settings_categories_desc">Renombra, reordena u oculta las categorías detectadas en tus productos</string>
+    <string name="settings_manage_categories_button">Gestionar categorías</string>
+
+    <string name="category_settings_title">Categorías</string>
+    <string name="category_settings_description">Arrastra para reordenar. Toca el lápiz para renombrar una categoría o desactívala para ocultarla en toda la app.</string>
+    <string name="category_settings_toggle_all">Mostrar todas las categorías</string>
+    <string name="category_settings_empty">Las categorías aparecerán aquí cuando un producto escaneado o añadido tenga una</string>
+    <string name="category_settings_rename_title">Renombrar categoría</string>
+    <string name="category_settings_original_name_format">Originalmente \"%1$s\"</string>
+    <string name="category_settings_drag_handle_content_description">Arrastra para reordenar</string>
+    <string name="category_settings_shelf_life_none">Fijar vida útil</string>
+    <string name="category_settings_shelf_life_content_description">Fijar vida útil por defecto</string>
+    <string name="category_settings_shelf_life_dialog_title">Vida útil por defecto</string>
+    <string name="category_settings_shelf_life_dialog_message">Los productos nuevos de esta categoría empiezan con estos días hasta su fecha, salvo que el código de barras ya tenga una vida útil recordada o se haya leído una fecha del envase.</string>
+    <string name="category_settings_shelf_life_field_label">Días</string>
+    <string name="category_settings_shelf_life_clear">Borrar</string>
+    <plurals name="category_settings_shelf_life_days_format">
+        <item quantity="one">%1$d día</item>
+        <item quantity="many">%1$d días</item>
+        <item quantity="other">%1$d días</item>
+    </plurals>
+    <string name="category_settings_rename_content_description">Renombrar categoría</string>
+
+    <string name="product_detail_nutriscore">Nutri-Score</string>
+    <string name="product_detail_nova">NOVA</string>
+    <string name="product_detail_allergens">Alérgenos</string>
+    <string name="product_detail_ingredients">Ingredientes</string>
+    <string name="product_detail_content_description">Nutrición y alérgenos</string>
+    <string name="allergen_warning_format">Contiene: %1$s</string>
+    <string name="settings_section_allergens">Avisos de alérgenos</string>
+    <string name="settings_allergens_desc">Avísame cuando un producto escaneado incluya alguno de estos. La comparación es aproximada, así que puede marcar casos parecidos.</string>
+    <string name="settings_add_allergen_placeholder">p. ej., leche, gluten, frutos secos</string>
+    <string name="settings_add_allergen">Añadir</string>
+    <string name="settings_remove_allergen_content_description">Quitar alérgeno</string>
+    <string name="settings_section_appearance">Apariencia</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+
+    <string name="settings_section_data">Datos</string>
+    <string name="widget_expiry_label">Productos que caducan</string>
+    <string name="widget_expiry_description">Muestra lo que ha caducado o caduca pronto en tu despensa</string>
+    <string name="widget_expiry_title">Caducan</string>
+    <string name="widget_expiry_empty">Nada caduca pronto</string>
+
+    <string name="widget_shopping_list_label">Lista de compras</string>
+    <string name="widget_shopping_list_description">Muestra tu lista de compras actual</string>
+    <string name="widget_shopping_list_title">Lista de compras</string>
+    <string name="widget_shopping_list_empty">Tu lista de compras está vacía</string>
+    <string name="widget_action_used">Usar uno</string>
+    <string name="widget_action_used_item">Usar una unidad: %1$s</string>
+    <string name="widget_action_mark_bought">Tachar de la lista: %1$s</string>
+
+    <string name="widget_overview_label">Resumen de la despensa</string>
+    <string name="widget_overview_description">Muestra lo que ha caducado o caduca pronto y, después, tu lista de compras</string>
+
+    <string name="settings_backup_desc">Tu despensa solo está en este dispositivo. Exporta una copia de seguridad para no perderla o para pasarla a otro teléfono.</string>
+    <string name="settings_export_backup_button">Exportar copia</string>
+    <string name="settings_import_backup_button">Importar copia</string>
+    <string name="restore_mode_message">Las fotos que hiciste no van en el archivo, así que al restaurar en otro dispositivo esos productos aparecen sin imagen.</string>
+    <string name="restore_mode_merge_title">Añadir lo que falta</string>
+    <string name="restore_mode_merge_subtitle">Conserva todo lo que ya hay. Tus ajustes no cambian.</string>
+    <string name="restore_mode_replace_title">Sustituirlo todo</string>
+    <string name="restore_mode_replace_subtitle">Primero borra lo que hay en este dispositivo, ajustes incluidos.</string>
+    <string name="backup_export_success">Copia guardada</string>
+    <string name="backup_export_failed">No se ha podido guardar la copia</string>
+    <string name="backup_import_malformed">Ese archivo no es una copia de BestBefore. No se ha cambiado nada.</string>
+    <string name="backup_import_unsupported">Esa copia se hizo con una versión más reciente de la app</string>
+    <string name="backup_import_empty">Esa copia no tiene nada que restaurar</string>
+    <plurals name="backup_import_success">
+        <item quantity="one">%1$d producto restaurado</item>
+        <item quantity="many">%1$d productos restaurados</item>
+        <item quantity="other">%1$d productos restaurados</item>
+    </plurals>
+    <string name="settings_clear_data_button">Borrar todos los datos de la despensa</string>
+    <string name="clear_data_dialog_title">¿Borrar todos los datos de la despensa?</string>
+    <string name="clear_data_dialog_message">Se eliminarán todos los productos de tu despensa y se cancelarán los avisos pendientes. No se puede deshacer.</string>
+    <string name="clear_data_confirm">Borrar todo</string>
+    <string name="settings_section_stores">Avisos de compra</string>
+    <string name="settings_store_reminders_enabled">Avisarme cerca de una tienda</string>
+    <string name="settings_store_reminders_desc">Muestra tu lista de compras cuando pasas por una de tus tiendas guardadas. Usa tu ubicación en segundo plano; BestBefore no nos la envía ni la comparte con nadie.</string>
+    <string name="settings_add_store_placeholder">Nombre de la tienda</string>
+    <string name="settings_add_store">Guardar mi ubicación actual</string>
+    <string name="settings_remove_store_content_description">Quitar tienda</string>
+    <string name="settings_store_location_failed">No se ha podido obtener tu ubicación. Revisa el permiso de ubicación y vuelve a intentarlo al aire libre.</string>
+    <string name="background_location_disclosure_title">¿Usar tu ubicación en segundo plano?</string>
+    <string name="background_location_disclosure_message">BestBefore usa tu ubicación para mostrarte la lista de compras cuando llegas a una tienda que guardaste, incluso con la app cerrada o sin usarla.\n\nTu ubicación solo se usa en este teléfono: BestBefore no nos la envía ni la comparte con nadie.\n\nEn la pantalla siguiente, elige \"Permitir siempre\" (en algunos teléfonos, \"Permitir todo el tiempo\").</string>
+    <string name="background_location_disclosure_continue">Continuar</string>
+    <string name="background_location_disclosure_not_now">Ahora no</string>
+    <string name="store_reminder_channel_name">Avisos de compra</string>
+    <string name="store_reminder_channel_desc">Tu lista de compras, cuando estás en una tienda que guardaste</string>
+    <string name="store_reminder_title_named_format">Estás en %1$s</string>
+    <plurals name="store_reminder_title_format">
+        <item quantity="one">%1$d cosa que comprar</item>
+        <item quantity="many">%1$d cosas que comprar</item>
+        <item quantity="other">%1$d cosas que comprar</item>
+    </plurals>
+    <plurals name="store_reminder_more_format">
+        <item quantity="one">%1$d más</item>
+        <item quantity="many">%1$d más</item>
+        <item quantity="other">%1$d más</item>
+    </plurals>
+
+    <string name="date_captured_title">Fecha leída</string>
+    <string name="scan_again_button">Volver a escanear</string>
+    <string name="shopping_list_scan_unsupported">Abre el escáner desde tu despensa para importar una lista compartida</string>
+    <string name="batch_discard_title">¿Descartar los productos escaneados?</string>
+    <plurals name="batch_discard_message">
+        <item quantity="one">%1$d producto está en cola y aún no se ha añadido.</item>
+        <item quantity="many">%1$d productos están en cola y aún no se han añadido.</item>
+        <item quantity="other">%1$d productos están en cola y aún no se han añadido.</item>
+    </plurals>
+    <string name="batch_discard_confirm">Descartar</string>
+    <string name="batch_discard_keep">Seguir escaneando</string>
+
+    <!-- Larder foundation -->
+    <string name="loading_state_description">Cargando</string>
+    <string name="status_today">Hoy</string>
+    <string name="status_tomorrow">Mañana</string>
+    <plurals name="status_days_over">
+        <item quantity="one">Caducó hace %d día</item>
+        <item quantity="many">Caducó hace %d días</item>
+        <item quantity="other">Caducó hace %d días</item>
+    </plurals>
+    <plurals name="nav_tab_item_count">
+        <item quantity="one">%1$d producto</item>
+        <item quantity="many">%1$d productos</item>
+        <item quantity="other">%1$d productos</item>
+    </plurals>
+    <string name="item_saved_snackbar">Se ha guardado %1$s en %2$s</string>
+    <plurals name="items_deleted_snackbar">
+        <item quantity="one">%d producto eliminado</item>
+        <item quantity="many">%d productos eliminados</item>
+        <item quantity="other">%d productos eliminados</item>
+    </plurals>
+
+    <!-- Pantry -->
+    <string name="lede_next_up">Lo próximo: %1$s %2$s</string>
+    <string name="lede_nothing_this_week">Nada que usar esta semana</string>
+    <string name="home_section_use_first">Usar primero</string>
+    <string name="home_section_later_this_week">Más adelante esta semana</string>
+    <string name="home_section_later">Más adelante</string>
+    <string name="home_clear_filters">Quitar filtros</string>
+    <string name="home_search_description">Buscar</string>
+    <string name="home_filters_on_description">Filtros activados</string>
+    <string name="home_empty_title">Tus estantes están vacíos</string>
+    <string name="home_empty_message">Escanea tu primer producto y aparecerá aquí, con la fecha más próxima primero.</string>
+    <string name="home_empty_scan">Escanear un producto</string>
+    <string name="home_empty_add_by_hand">Añadir a mano</string>
+    <string name="home_no_results_title">Nada coincide con “%1$s”</string>
+    <string name="home_no_results_message">Revisa cómo está escrito o prueba con la marca.</string>
+    <string name="home_clear_search">Borrar búsqueda</string>
+    <string name="home_no_filter_results_title">Nada coincide con estos filtros</string>
+    <string name="home_no_filter_results_message">Prueba con otro lugar u otra categoría.</string>
+    <string name="home_reminders_off_title">Los avisos están desactivados</string>
+    <string name="home_reminders_off_message">Las notificaciones de BestBefore están desactivadas en los ajustes del teléfono.</string>
+    <string name="home_dismiss">Cerrar</string>
+    <string name="home_swipe_to_list">A la lista</string>
+    <string name="home_use_one_item">Usar una unidad: %1$s</string>
+    <string name="home_used_one_snackbar">%1$s: una unidad usada. Quedan %2$d.</string>
+    <string name="home_location_label">Lugar</string>
+    <string name="home_category_label">Categoría</string>
+    <string name="home_best_before_label">Consumo preferente</string>
+    <string name="home_notes_label">Notas</string>
+    <string name="home_done">Listo</string>
+    <string name="detail_close">Cerrar</string>
+    <string name="detail_edit">Editar</string>
+    <string name="detail_to_shopping_list">A la lista de compras</string>
+    <string name="detail_nutri_caption">Nutri-Score %1$s</string>
+    <string name="detail_nova_caption">NOVA %1$d · %2$s</string>
+    <string name="detail_nova_description">NOVA %1$d, %2$s</string>
+    <string name="detail_nova_1">Sin procesar</string>
+    <string name="detail_nova_2">Ingredientes culinarios</string>
+    <string name="detail_nova_3">Procesado</string>
+    <string name="detail_nova_4">Ultraprocesado</string>
+    <string name="detail_credit">Datos e imágenes de productos de Open Food Facts (openfoodfacts.org), con licencia Open Database License y CC BY-SA</string>
+    <string name="detail_allergen_note">Coincide con tu lista de alérgenos. La comparación es aproximada, así que revisa la etiqueta.</string>
+    <string name="detail_choose_item">Elige un producto para ver sus detalles.</string>
+    <plurals name="lede_use_by_tomorrow">
+        <item quantity="one">%1$s producto que usar a más tardar mañana</item>
+        <item quantity="many">%1$s productos que usar a más tardar mañana</item>
+        <item quantity="other">%1$s productos que usar a más tardar mañana</item>
+    </plurals>
+    <plurals name="lede_past_date">
+        <item quantity="one">%1$s producto ha pasado su fecha</item>
+        <item quantity="many">%1$s productos han pasado su fecha</item>
+        <item quantity="other">%1$s productos han pasado su fecha</item>
+    </plurals>
+    <plurals name="home_search_results">
+        <item quantity="one">%d resultado</item>
+        <item quantity="many">%d resultados</item>
+        <item quantity="other">%d resultados</item>
+    </plurals>
+    <plurals name="home_active_filter_count">
+        <item quantity="one">%1$d de %2$d producto</item>
+        <item quantity="many">%1$d de %2$d productos</item>
+        <item quantity="other">%1$d de %2$d productos</item>
+    </plurals>
+    <plurals name="home_show_items">
+        <item quantity="one">Mostrar %d producto</item>
+        <item quantity="many">Mostrar %d productos</item>
+        <item quantity="other">Mostrar %d productos</item>
+    </plurals>
+    <string-array name="lede_number_words">
+        <item>Un</item>
+        <item>Dos</item>
+        <item>Tres</item>
+        <item>Cuatro</item>
+        <item>Cinco</item>
+        <item>Seis</item>
+        <item>Siete</item>
+        <item>Ocho</item>
+        <item>Nueve</item>
+        <item>Diez</item>
+    </string-array>
+    <string-array name="lede_on_weekday">
+        <item>el lunes</item>
+        <item>el martes</item>
+        <item>el miércoles</item>
+        <item>el jueves</item>
+        <item>el viernes</item>
+        <item>el sábado</item>
+        <item>el domingo</item>
+    </string-array>
+    <!-- Scanner (Larder) -->
+    <string name="close_scanner_content_description">Cerrar escáner</string>
+    <string name="scan_torch_on">Sí</string>
+    <string name="scan_torch_off">No</string>
+    <string name="scan_idle_results_title">Los resultados aparecen aquí</string>
+    <string name="scan_idle_results_message">Escanea un código de barras y el producto aparecerá en este lado.</string>
+    <string name="scan_idle_date_title">La fecha aparece aquí</string>
+    <string name="scan_idle_date_message">Mantén la cámara quieta sobre la fecha impresa.</string>
+    <string name="scan_idle_photo_title">Tu foto aparece aquí</string>
+    <string name="scan_idle_photo_message">Haz una foto para recibir sugerencias de nombre.</string>
+    <string name="scan_allergen_note">Coincide con tu lista de alérgenos. La comparación es aproximada, así que revisa la etiqueta.</string>
+    <string name="scan_offline_title">No tienes conexión</string>
+    <string name="scan_offline_message">No se ha podido buscar este producto. Puedes seguir a mano y el código de barras se queda con el producto.</string>
+    <string name="scan_busy_title">Open Food Facts está saturado</string>
+    <string name="scan_busy_message">Ahora mismo no se puede buscar este producto. Vuelve a intentarlo en un minuto o sigue a mano; el código de barras se queda con el producto.</string>
+    <string name="scan_try_again">Reintentar</string>
+    <string name="scan_continue_by_hand">Seguir a mano</string>
+    <string name="scan_best_before_format">Consumo preferente: %1$s</string>
+    <string name="scan_date_from_barcode">Leída del código de barras</string>
+    <string name="scan_date_from_packaging">Leída del envase</string>
+    <string name="scan_use_this_date">Usar esta fecha</string>
+    <string name="scan_reading_receipt">Leyendo el ticket…</string>
+    <string name="receipt_queue_empty">Lee un ticket para empezar la lista</string>
+    <string name="scan_queue_cleared">Cola vaciada</string>
+    <string name="scan_capture_failed">No se ha podido hacer la foto. Vuelve a intentarlo.</string>
+    <string name="batch_queue_estimated_format">Estimada: %1$s</string>
+    <!-- Larder settings -->
+    <string name="settings_group_reminders">Avisos</string>
+    <string name="settings_group_kitchen">Tu cocina</string>
+    <string name="settings_notifications_blocked_title">Los avisos están desactivados</string>
+    <string name="settings_off">Desactivado</string>
+    <string name="settings_allergens_none">Ninguno todavía</string>
+    <string name="settings_add_allergen_label">Añadir un alérgeno</string>
+    <string name="settings_data_summary">Copia de seguridad y borrado</string>
+    <string name="settings_location_default">Por defecto</string>
+    <string name="settings_location_taken">Ya tienes un lugar llamado %1$s</string>
+    <string name="settings_rename_location_format">Renombrar: %1$s</string>
+    <string name="settings_delete_location_format">Eliminar: %1$s</string>
+    <string name="settings_set_default_location_format">Usar por defecto: %1$s</string>
+    <string name="settings_remove_format">Quitar: %1$s</string>
+    <string name="settings_try_again">Reintentar</string>
+    <string name="restore_mode_cancel">No importar</string>
+    <string name="clear_data_keep">Conservar mi despensa</string>
+    <string name="category_settings_empty_title">Aún no hay categorías</string>
+    <string name="category_settings_scan">Escanear un producto</string>
+    <string name="category_settings_move_up">Subir</string>
+    <string name="category_settings_move_down">Bajar</string>
+    <string name="category_settings_move_done">Listo</string>
+    <string name="category_settings_rename_field_label">Nombre de la categoría</string>
+    <string name="category_settings_rename_confirm">Renombrar</string>
+    <string name="category_settings_rename_format">Renombrar categoría: %1$s</string>
+    <string name="category_settings_drag_handle_format">Arrastra para reordenar: %1$s</string>
+    <string name="category_settings_show_format">Mostrar: %1$s</string>
+    <string name="category_settings_shelf_life_format">Fijar vida útil por defecto: %1$s, %2$s</string>
+    <string name="category_settings_shelf_life_title_format">Vida útil por defecto de %1$s</string>
+    <string name="category_settings_shelf_life_range">De 0 a 3650 días</string>
+    <string name="category_settings_shelf_life_error">Escribe un número de 0 a 3650, que son unos 10 años</string>
+    <string name="category_settings_shelf_life_save">Guardar</string>
+    <plurals name="clear_data_dialog_count">
+        <item quantity="one">Se eliminará %1$d producto y se cancelarán sus avisos. No se puede deshacer.</item>
+        <item quantity="many">Se eliminarán los %1$d productos y se cancelarán sus avisos. No se puede deshacer.</item>
+        <item quantity="other">Se eliminarán los %1$d productos y se cancelarán sus avisos. No se puede deshacer.</item>
+    </plurals>
+
+    <!-- Larder: Shopping -->
+    <string name="shopping_list_brand">Lista de compras</string>
+    <plurals name="shopping_list_lede">
+        <item quantity="one">%d cosa que comprar</item>
+        <item quantity="many">%d cosas que comprar</item>
+        <item quantity="other">%d cosas que comprar</item>
+    </plurals>
+    <string name="shopping_list_lede_empty">Nada que comprar</string>
+    <string name="shopping_list_already_listed">%1$s ya está en tu lista</string>
+    <string name="shopping_list_check_off">Tachar</string>
+    <string name="shopping_list_import_label">Tu lista</string>
+    <string name="shopping_list_close">Cerrar</string>
+    <string name="shopping_list_done">Listo</string>
+    <string name="shopping_sections_label">Secciones</string>
+    <string name="shopping_section_name_label">Nombre de la sección</string>
+    <string name="shopping_section_keep">Conservar sección</string>
+    <string name="shopping_section_delete_confirm">Eliminar sección</string>
+    <plurals name="shopping_section_delete_count">
+        <item quantity="one">Su %d producto pasa a la lista principal.</item>
+        <item quantity="many">Sus %d productos pasan a la lista principal.</item>
+        <item quantity="other">Sus %d productos pasan a la lista principal.</item>
+    </plurals>
+    <!-- Add item -->
+    <string name="add_name_missing">Ponle un nombre para encontrarlo después</string>
+    <string name="add_see_details">Ver detalles</string>
+    <string name="add_notes_placeholder">p. ej., abierto, cantidad, estante</string>
+    <string name="discard_changes_title">¿Descartar cambios?</string>
+    <string name="discard_changes_confirm">Descartar cambios</string>
+    <string name="discard_changes_keep">Seguir editando</string>
+    <string name="discard_new_message">Este producto no se ha guardado, así que no se añadirá a tu despensa.</string>
+    <string name="discard_edit_message">Los cambios en %1$s no se guardarán. El producto se queda como estaba.</string>
+
+
+    <!-- Larder: used from a row or the scanner -->
+    <string name="item_used_snackbar">Se ha usado %1$s</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_get_started">Empezar</string>
+    <string name="onboarding_welcome_title">Te avisa antes de que la comida se estropee, no después.</string>
+    <string name="onboarding_private_title">Sin cuenta</string>
+    <string name="onboarding_private_body">Sin anuncios. Tu despensa se guarda en este teléfono. Una receta de un paquete envía los productos que marques y tus alérgenos a nuestro servidor.</string>
+    <string name="onboarding_notifications_title">Un aviso discreto, el día antes</string>
+    <string name="onboarding_notifications_body">Te avisamos a las 09:00 del día anterior a una fecha. Puedes cambiar la hora o desactivar los avisos en Ajustes.</string>
+    <string name="onboarding_sample_source">%1$s · 09:00</string>
+    <string name="onboarding_sample_title">Mejor usarlo pronto</string>
+    <string name="onboarding_sample_body">El yogur griego llega mañana a su fecha.</string>
+    <string name="onboarding_sample_description">Ejemplo de aviso: %1$s. %2$s</string>
+    <string name="onboarding_notifications_allow">Activar avisos</string>
+    <string name="onboarding_not_now">Ahora no</string>
+    <string name="onboarding_camera_title">Escanea en vez de escribir</string>
+    <string name="onboarding_camera_body">Apunta la cámara a un producto y %1$s rellena los datos por ti. Las fotos se quedan en tu dispositivo.</string>
+    <string name="onboarding_camera_barcodes_title">Códigos de barras</string>
+    <string name="onboarding_camera_barcodes_body">Encuentra el producto y su nombre</string>
+    <string name="onboarding_camera_dates_title">Fechas impresas</string>
+    <string name="onboarding_camera_dates_body">Lee la fecha del envase</string>
+    <string name="onboarding_camera_allow">Permitir la cámara</string>
+    <string name="onboarding_ready_title">Listo para tu primer producto</string>
+    <string name="onboarding_ready_body">Saca algo de la nevera y escanéalo. Solo tardas unos segundos.</string>
+    <string name="onboarding_skip">Omitir por ahora</string>
+    <string name="onboarding_declined_title">Puedes empezar sin ellos</string>
+    <string name="onboarding_declined_body">Todo lo demás funciona. Puedes cambiar de opinión cuando quieras.</string>
+    <string name="onboarding_declined_reminders_title">Los avisos están desactivados</string>
+    <string name="onboarding_declined_reminders_body">Inicio mostrará una nota con la forma de activarlos</string>
+    <string name="onboarding_declined_camera_title">La cámara está desactivada</string>
+    <string name="onboarding_declined_camera_body">El escáner te mostrará cómo permitirla</string>
+    <string name="onboarding_add_by_hand">Añadir un producto a mano</string>
+
+    <!-- Recipe tab -->
+    <string name="recipe_lede">Qué cocinar</string>
+    <string name="recipe_saved_action">Recetas guardadas</string>
+    <string name="recipe_settings_action">Ajustes de recetas</string>
+    <string name="recipe_cook_with">Cocinar con</string>
+    <string name="recipe_add_other">Añadir otros productos</string>
+    <string name="recipe_difficulty">Dificultad</string>
+    <string name="recipe_difficulty_easy">Fácil</string>
+    <string name="recipe_difficulty_medium">Media</string>
+    <string name="recipe_difficulty_ambitious">Exigente</string>
+    <string name="recipe_servings">Raciones</string>
+    <string name="recipe_servings_fewer">Menos</string>
+    <string name="recipe_servings_more">Más</string>
+    <string name="recipe_time">Tiempo</string>
+    <string name="recipe_time_minutes">%1$d min</string>
+    <string name="recipe_time_hour">1 hora</string>
+    <string name="recipe_time_any">Cualquiera</string>
+    <string name="recipe_more_options">Más opciones</string>
+    <string name="recipe_detail_summary_brief">Detalle breve</string>
+    <string name="recipe_detail_summary_standard">Detalle normal</string>
+    <string name="recipe_detail_summary_step_by_step">Paso a paso</string>
+    <string name="recipe_meal_summary_any">Cualquier comida</string>
+    <string name="recipe_diet_summary_none">Sin dieta</string>
+    <!-- Time range slider, multi-choice meal and diet -->
+    <string name="recipe_time_range">%1$d–%2$d min</string>
+    <string name="recipe_time_up_to">hasta %1$d min</string>
+    <string name="recipe_time_at_least">al menos %1$d min</string>
+    <string name="recipe_time_shortest">Tiempo mínimo</string>
+    <string name="recipe_time_longest">Tiempo máximo</string>
+    <string name="recipe_time_no_minimum">Sin mínimo</string>
+    <string name="recipe_time_no_limit">Sin límite</string>
+    <plurals name="recipe_time_minutes_spoken">
+        <item quantity="one">%d minuto</item>
+        <item quantity="many">%d minutos</item>
+        <item quantity="other">%d minutos</item>
+    </plurals>
+    <string name="recipe_time_guide_hint">El tiempo máximo es un límite; el mínimo, solo orientativo.</string>
+    <string name="recipe_prompt_min_minutes">Idealmente unos %1$d minutos o más</string>
+    <string name="recipe_prompt_meals">Apta para cualquiera de estas comidas: %1$s</string>
+    <string name="recipe_not_enough_items">No queda suficiente para cocinar al excluir tu dieta y tus alérgenos. Marca algunos productos más. No se ha descontado ninguna receta.</string>
+    <string name="recipe_not_enough_items_menu">No hay suficiente para tres días. Marca algunos productos más o pide una sola receta. No se ha descontado ninguna receta.</string>
+    <string name="recipe_diets_need_update">Las recetas de paquetes aún no pueden combinar sin gluten con otra dieta. Deja solo una en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido. No se ha descontado ninguna receta.</string>
+    <string name="recipe_language_needs_update">Las recetas de paquetes aún no se pueden escribir en danés. Elige otro idioma de recetas en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido. No se ha descontado ninguna receta.</string>
+    <string name="recipe_not_from_pantry_hint">Los ingredientes sin la marca “En tu despensa” no son de tu despensa: son básicos o algunas cosas que quizá tengas que comprar.</string>
+    <!-- Add to shopping list -->
+    <string name="recipe_shopping_add">Añadir a la lista de compras</string>
+    <string name="recipe_shopping_title">Añadir a la lista de compras (%1$d)</string>
+    <string name="recipe_shopping_message">Desmarca lo que ya tienes.</string>
+    <plurals name="recipe_shopping_confirm">
+        <item quantity="one">Añadir %d producto</item>
+        <item quantity="many">Añadir %d productos</item>
+        <item quantity="other">Añadir %d productos</item>
+    </plurals>
+    <string name="recipe_shopping_already">Ya está en tu lista</string>
+    <plurals name="recipe_shopping_added">
+        <item quantity="one">%d añadido a tu lista de compras</item>
+        <item quantity="many">%d añadidos a tu lista de compras</item>
+        <item quantity="other">%d añadidos a tu lista de compras</item>
+    </plurals>
+    <plurals name="recipe_menu_meal_note">
+        <item quantity="one">%2$s solo se aplica a los platos principales.</item>
+        <item quantity="many">%2$s solo se aplican a los platos principales.</item>
+        <item quantity="other">%2$s solo se aplican a los platos principales.</item>
+    </plurals>
+    <string name="recipe_shopping_nothing_added">Todo está ya en tu lista de compras</string>
+    <string name="recipe_share_prompt">Compartir prompt</string>
+    <string name="recipe_copy_prompt">Copiar prompt</string>
+    <string name="recipe_prompt_copied">Prompt copiado</string>
+    <string name="recipe_prompt_clip_label">Prompt de receta</string>
+    <string name="recipe_generate_on_phone">Crear en este dispositivo</string>
+    <string name="recipe_cost_free">Gratis</string>
+    <string name="recipe_prompt_hint">Gratis: envía el prompt a la app de IA que ya usas.</string>
+    <string name="recipe_tick_hint">Marca al menos un producto para cocinar.</string>
+    <string name="recipe_writing_phone_title">Escribiendo en este dispositivo</string>
+    <string name="recipe_writing_phone_body">No se envía nada a ningún sitio. Puede tardar un minuto.</string>
+    <string name="recipe_stop">Detener</string>
+    <string name="recipe_failed_phone">No se ha podido escribir la receta en este dispositivo.</string>
+    <string name="recipe_try_again">Reintentar</string>
+    <string name="recipe_preparing_title">Tu dispositivo se está preparando</string>
+    <string name="recipe_preparing_body">Su propio modelo aún se está descargando. Mientras tanto, comparte el prompt.</string>
+    <string name="recipe_empty_title">Aún no hay nada con qué cocinar</string>
+    <string name="recipe_empty_body">Añade lo que tienes en casa y se elegirán por ti los productos con la fecha más próxima.</string>
+    <string name="recipe_done">Listo</string>
+    <string name="recipe_result_title">Receta</string>
+    <string name="recipe_share_recipe">Compartir receta</string>
+    <string name="recipe_duration_hours">%1$d h</string>
+    <string name="recipe_duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="recipe_ingredients">Ingredientes</string>
+    <string name="recipe_method">Preparación</string>
+    <string name="recipe_in_pantry">En tu despensa</string>
+    <string name="recipe_tip">Consejo</string>
+    <string name="recipe_source_phone">Escrita en este dispositivo · No se envió nada</string>
+    <string name="recipe_source_server">Escrita por nuestro servidor · Guardada en este dispositivo</string>
+    <string name="recipe_not_found">Esta receta ya no está guardada.</string>
+    <string name="recipe_saved_today">Hoy</string>
+    <string name="recipe_saved_yesterday">Ayer</string>
+    <string name="recipe_saved_from_phone">Escrita en este dispositivo</string>
+    <string name="recipe_saved_from_pack">De tu paquete</string>
+    <string name="recipe_saved_empty_title">Aún no hay recetas</string>
+    <string name="recipe_saved_empty_body">Aquí se guardan las recetas y los menús escritos en la app.</string>
+    <string name="recipe_deleted">Receta eliminada</string>
+    <string name="recipe_cooking">Cocina</string>
+    <string name="recipe_cooking_desc">Se usan en cada receta, prompt y menú hasta que los cambies.</string>
+    <string name="recipe_detail">Detalle</string>
+    <string name="recipe_detail_brief">Breve</string>
+    <string name="recipe_detail_standard">Normal</string>
+    <string name="recipe_detail_step_by_step">Paso a paso</string>
+    <string name="recipe_meal_and_diet">Comida y dieta</string>
+    <string name="recipe_meal">Comida</string>
+    <string name="recipe_meal_any">Cualquiera</string>
+    <string name="recipe_meal_breakfast">Desayuno</string>
+    <string name="recipe_meal_lunch">Almuerzo</string>
+    <string name="recipe_meal_dinner">Cena</string>
+    <string name="recipe_meal_snack">Tentempié</string>
+    <string name="recipe_meal_dessert">Postre</string>
+    <string name="recipe_diet">Dieta</string>
+    <string name="recipe_diet_none">Ninguna</string>
+    <string name="recipe_diet_vegetarian">Vegetariana</string>
+    <string name="recipe_diet_vegan">Vegana</string>
+    <string name="recipe_diet_pescatarian">Pescetariana</string>
+    <string name="recipe_diet_gluten_free">Sin gluten</string>
+    <string name="recipe_diet_dairy_free">Sin lácteos</string>
+    <string name="recipe_allergens_note">Tu lista de alérgenos de Ajustes se aplica siempre: %1$s.</string>
+    <string name="recipe_allergens_none">ninguno todavía</string>
+    <string name="recipe_language">Idioma</string>
+    <string name="recipe_write_in">Escribir recetas en</string>
+    <string name="recipe_on_device_language_note">El modelo de este dispositivo no puede escribir recetas en este idioma, así que “Crear en este dispositivo” no se ofrece para él.</string>
+    <string name="recipe_language_same_as_app">El de la app (%1$s)</string>
+    <string name="recipe_account">Cuenta</string>
+    <string name="recipe_account_none">Sin cuenta. Solo tienes que decidirlo cuando compres un paquete, y las opciones gratuitas nunca la usan.</string>
+    <string name="recipe_prompt_preferences_intro">Ten en cuenta lo siguiente:</string>
+    <string name="recipe_prompt_difficulty_easy">Fácil de hacer, para principiantes</string>
+    <string name="recipe_prompt_difficulty_medium">Dificultad media</string>
+    <string name="recipe_prompt_difficulty_ambitious">Exigente, para alguien a quien le encanta cocinar</string>
+    <string name="recipe_prompt_detail_brief">Una preparación corta, en pocos pasos</string>
+    <string name="recipe_prompt_detail_standard">Un nivel de detalle normal</string>
+    <string name="recipe_prompt_detail_step_by_step">Cada paso bien explicado</string>
+    <string name="recipe_prompt_servings">Raciones: %1$d</string>
+    <string name="recipe_prompt_max_minutes">Lista en %1$d minutos o menos</string>
+    <string name="recipe_prompt_meal">Comida: %1$s</string>
+    <string name="recipe_prompt_diet">Dieta: %1$s</string>
+    <string name="recipe_prompt_allergens">Nada que contenga: %1$s</string>
+    <string name="recipe_prompt_language">Escribe la receta en %1$s</string>
+    <plurals name="recipe_add_other_count">
+        <item quantity="one">%1$d más en tu despensa</item>
+        <item quantity="many">%1$d más en tu despensa</item>
+        <item quantity="other">%1$d más en tu despensa</item>
+    </plurals>
+    <plurals name="recipe_servings_count">
+        <item quantity="one">%1$d ración</item>
+        <item quantity="many">%1$d raciones</item>
+        <item quantity="other">%1$d raciones</item>
+    </plurals>
+
+    <!-- Recipe tab, paid route: packs, the server, the account. The unit is a "recipe", never a credit. -->
+    <string name="recipe_balance_description">Recetas restantes: %1$d. Comprar más</string>
+    <string name="recipe_balance_only_description">Recetas restantes: %1$d</string>
+    <string name="recipe_mode_label">Qué preparar</string>
+    <string name="recipe_mode_recipe">Receta</string>
+    <string name="recipe_mode_menu">Menú de 3 días</string>
+    <string name="recipe_courses">Platos al día</string>
+    <plurals name="recipe_courses_count">
+        <item quantity="one">%1$d plato</item>
+        <item quantity="many">%1$d platos</item>
+        <item quantity="other">%1$d platos</item>
+    </plurals>
+    <string name="recipe_generate">Crear receta</string>
+    <string name="recipe_generate_menu">Crear menú</string>
+    <plurals name="recipe_cost_recipes">
+        <item quantity="one">%1$d receta</item>
+        <item quantity="many">%1$d recetas</item>
+        <item quantity="other">%1$d recetas</item>
+    </plurals>
+    <string name="recipe_buy">Comprar recetas</string>
+    <string name="recipe_menu_hint">Un menú se escribe en nuestro servidor y descuenta %1$s de un paquete.</string>
+    <string name="recipe_menu_short_title">Un menú cuesta %1$s</string>
+    <plurals name="recipe_menu_short_body">
+        <item quantity="one">Te queda %1$d. Una sola receta sí es posible.</item>
+        <item quantity="many">Te quedan %1$d. Una sola receta sí es posible.</item>
+        <item quantity="other">Te quedan %1$d. Una sola receta sí es posible.</item>
+    </plurals>
+    <plurals name="recipe_balance_left">
+        <item quantity="one">Te queda %1$d receta</item>
+        <item quantity="many">Te quedan %1$d recetas</item>
+        <item quantity="other">Te quedan %1$d recetas</item>
+    </plurals>
+    <string name="recipe_menu_short_none">No te quedan recetas.</string>
+    <string name="recipe_writing_server_title">Escribiendo tu receta</string>
+    <string name="recipe_writing_server_body">Unos segundos. Puedes salir de esta pantalla; la receta estará en Recetas guardadas.</string>
+    <string name="recipe_writing_menu_title">Planificando tres días</string>
+    <string name="recipe_writing_menu_body">Puede tardar hasta dos minutos. Puedes salir de esta pantalla; el menú estará en Recetas guardadas.</string>
+    <string name="recipe_offline_title">Sin conexión</string>
+    <string name="recipe_offline_body">Las recetas de tu paquete necesitan internet. Las opciones gratuitas de abajo siguen funcionando.</string>
+    <string name="recipe_failed_server">No se ha podido escribir la receta. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_server_menu">No se ha podido escribir el menú. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_limit_today">Has llegado al límite de hoy. Vuelve a intentarlo mañana. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_trouble_today">Ahora mismo tenemos problemas para escribir recetas. Vuelve a intentarlo mañana. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_server_later">Ahora mismo no se ha podido escribir. Vuelve a intentarlo más tarde. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_server_busy">Todavía se está escribiendo otra receta. Vuelve a intentarlo en un minuto. No se ha descontado ninguna receta.</string>
+    <string name="recipe_failed_rate_limited">Demasiadas recetas en poco tiempo. Vuelve a intentarlo en un minuto. No se ha descontado ninguna receta.</string>
+    <string name="recipe_left_out">Se ha omitido “%1$s”: ese nombre no se pudo enviar.</string>
+    <string name="recipe_ingredient_not_sent">No se ha podido enviar “%1$s”. Desmarca ese producto o cámbiale el nombre y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
+    <string name="recipe_allergen_not_sent">No se ha podido enviar tu alérgeno “%1$s”, así que no se ha escrito nada: una receta sin él podría no ser segura. Cámbiale el nombre en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</string>
+    <plurals name="recipe_allergens_too_many">
+        <item quantity="one">No se ha escrito nada: una receta admite como máximo %1$d alérgeno y tienes más. Quita alguno en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</item>
+        <item quantity="many">No se ha escrito nada: una receta admite como máximo %1$d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</item>
+        <item quantity="other">No se ha escrito nada: una receta admite como máximo %1$d alérgenos y tienes más. Quita algunos en Avisos de alérgenos, en Ajustes, y vuelve a intentarlo. No se ha descontado ninguna receta.</item>
+    </plurals>
+    <plurals name="recipe_refused">
+        <item quantity="one">No se ha podido crear una receta con estos productos. Se ha descontado %1$d receta, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="many">No se ha podido crear una receta con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="other">No se ha podido crear una receta con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+    </plurals>
+    <plurals name="recipe_refused_menu">
+        <item quantity="one">No se ha podido crear un menú con estos productos. Se ha descontado %1$d receta, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="many">No se ha podido crear un menú con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+        <item quantity="other">No se ha podido crear un menú con estos productos. Se han descontado %1$d recetas, porque el intento nos costó igualmente. Prueba con menos productos o con otros.</item>
+    </plurals>
+    <string name="recipe_paused_title">Las recetas de paquetes están en pausa</string>
+    <plurals name="recipe_paused_body">
+        <item quantity="one">Tu %1$d receta está a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
+        <item quantity="many">Tus %1$d recetas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
+        <item quantity="other">Tus %1$d recetas están a salvo. Las opciones gratuitas de abajo siguen funcionando.</item>
+    </plurals>
+    <string name="recipe_paused_body_none">Las opciones gratuitas de abajo siguen funcionando.</string>
+    <plurals name="recipe_added">
+        <item quantity="one">%1$d receta añadida</item>
+        <item quantity="many">%1$d recetas añadidas</item>
+        <item quantity="other">%1$d recetas añadidas</item>
+    </plurals>
+    <plurals name="recipe_saved_left">
+        <item quantity="one">Guardada. Te queda %1$d receta</item>
+        <item quantity="many">Guardada. Te quedan %1$d recetas</item>
+        <item quantity="other">Guardada. Te quedan %1$d recetas</item>
+    </plurals>
+    <string name="recipe_unconfirmed_title">Estamos confirmando tu compra</string>
+    <plurals name="recipe_unconfirmed_body">
+        <item quantity="one">Has pagado %1$d receta y aún no se ha añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
+        <item quantity="many">Has pagado %1$d recetas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
+        <item quantity="other">Has pagado %1$d recetas y aún no se han añadido. Seguimos intentándolo; no hace falta que vuelvas a comprar.</item>
+    </plurals>
+    <string name="recipe_try_now">Intentar ahora</string>
+    <string name="recipe_pending_title">Esperando el pago</string>
+    <string name="recipe_pending_body">Tus recetas se añadirán cuando la tienda confirme el pago. Puede tardar un poco.</string>
+    <string name="recipe_packs_body">Una receta es un plato escrito por nuestro servidor. Un menú de 3 días cuesta %1$s con dos platos al día y %2$s con tres. Las recetas no caducan.</string>
+    <plurals name="recipe_pack_name">
+        <item quantity="one">%1$d receta</item>
+        <item quantity="many">%1$d recetas</item>
+        <item quantity="other">%1$d recetas</item>
+    </plurals>
+    <string name="recipe_pack_each">%1$s cada una</string>
+    <string name="recipe_cancel">Cancelar</string>
+    <string name="recipe_back">Atrás</string>
+    <string name="recipe_close">Cerrar</string>
+    <string name="recipe_ok">Aceptar</string>
+    <string name="recipe_choice_title">¿Dónde guardamos tus recetas?</string>
+    <string name="recipe_choice_body">Solo se elige una vez. Puedes iniciar sesión más tarde en Ajustes de recetas.</string>
+    <string name="recipe_choice_phone_title">En este dispositivo, sin cuenta</string>
+    <string name="recipe_choice_phone_body">No hay que iniciar sesión. Las recetas se quedan en esta instalación de la app: si borras la app o cambias de dispositivo, se pierden las que no hayas usado.</string>
+    <string name="recipe_choice_account_title">En una cuenta</string>
+    <string name="recipe_choice_account_body">Inicia sesión con Google. Tus recetas te siguen a un teléfono nuevo, Android o iPhone, donde inicies sesión con Google. Guardamos el ID de tu cuenta y tu correo electrónico.</string>
+    <string name="recipe_sign_in_google">Iniciar sesión con Google</string>
+    <string name="recipe_apple_on_iphone_hint">¿Iniciaste sesión con Apple en un iPhone? Añade allí el inicio de sesión con Google, en Ajustes de recetas, para usar tus recetas en este dispositivo.</string>
+    <string name="recipe_have_account_hint">¿Ya tienes recetas en una cuenta? Inicia sesión para usarlas aquí.</string>
+    <string name="recipe_store_error_title">No se puede conectar con la tienda</string>
+    <string name="recipe_store_error_body">Revisa tu conexión y vuelve a intentarlo. No se ha cobrado nada.</string>
+    <string name="recipe_rejected_title">No se ha podido añadir esta compra</string>
+    <string name="recipe_rejected_body">La tienda indica que se ha reembolsado o que ya se usó. Si te han cobrado y no tienes recetas, pide un reembolso a la tienda.</string>
+    <string name="recipe_your_recipes">Tus recetas</string>
+    <plurals name="recipe_on_phone_label">
+        <item quantity="one">receta en este dispositivo</item>
+        <item quantity="many">recetas en este dispositivo</item>
+        <item quantity="other">recetas en este dispositivo</item>
+    </plurals>
+    <string name="recipe_on_phone_body">Se quedan en esta instalación de la app. Si borras la app o cambias de dispositivo, se pierden las que no hayas usado. Inicia sesión para guardarlas en una cuenta; se pasan al momento.</string>
+    <plurals name="recipe_in_account_label">
+        <item quantity="one">receta en tu cuenta</item>
+        <item quantity="many">recetas en tu cuenta</item>
+        <item quantity="other">recetas en tu cuenta</item>
+    </plurals>
+    <string name="recipe_signed_in_with">Sesión iniciada con %1$s</string>
+    <string name="recipe_signed_in_add_google">El inicio de sesión con Apple solo funciona en la app de iPhone. Añade aquí el inicio de sesión con Google para seguir usándolas en Android.</string>
+    <string name="recipe_signed_in_google">Inicia sesión con Google en otro teléfono, Android o iPhone, para usarlas allí.</string>
+    <string name="recipe_signed_in_google_and_apple">Inicia sesión con Google en otro teléfono, Android o iPhone, o con Apple en un iPhone, para usarlas allí.</string>
+    <string name="recipe_add_sign_in">Añadir inicio de sesión con %1$s</string>
+    <string name="recipe_sign_out">Cerrar sesión</string>
+    <string name="recipe_delete_account">Eliminar cuenta</string>
+    <string name="recipe_sign_out_title">¿Cerrar sesión?</string>
+    <plurals name="recipe_sign_out_body">
+        <item quantity="one">Tu %1$d receta se queda en tu cuenta. Vuelve a iniciar sesión para usarla. Las recetas guardadas se quedan en este dispositivo.</item>
+        <item quantity="many">Tus %1$d recetas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este dispositivo.</item>
+        <item quantity="other">Tus %1$d recetas se quedan en tu cuenta. Vuelve a iniciar sesión para usarlas. Las recetas guardadas se quedan en este dispositivo.</item>
+    </plurals>
+    <string name="recipe_delete_title">¿Eliminar tu cuenta?</string>
+    <string name="recipe_apple_link_left_title">El vínculo con Apple no se ha quitado</string>
+    <string name="recipe_apple_link_left_body">Tu cuenta y sus recetas se han eliminado, pero tu cuenta de Apple sigue vinculada a esta app. Para quitar también el vínculo, desactiva Iniciar sesión con Apple para esta app en los ajustes de tu cuenta de Apple.</string>
+    <!-- The allergen consent step (ALLERGEN_CONSENT_VERSION in shared AllergenConsent.kt: raise it when this wording changes; iOS has the same text). -->
+    <string name="recipe_allergen_consent_title">¿Enviar tus alérgenos a nuestro servidor?</string>
+    <string name="recipe_allergen_consent_body">Para escribir esto, tu lista de alérgenos (%1$s) se envía junto con los productos marcados y tus preferencias a nuestro servidor y al modelo de IA de Google, para que la receta evite esos alimentos. Google puede tratarla fuera de la UE. La usamos solo para esta solicitud y no la conservamos después. Google la trata para escribir la receta y puede registrar las solicitudes para detectar abusos. Puedes retirar este consentimiento en Ajustes de recetas.\n\nLas opciones gratuitas, el modelo propio de este dispositivo y el prompt compartido, no nos la envían.</string>
+    <string name="recipe_allergen_consent_agree">Aceptar y continuar</string>
+    <string name="recipe_allergen_consent_agree_only">Aceptar</string>
+    <string name="recipe_allergen_consent_declined">Tus alérgenos no se envían a nuestro servidor, así que no puede escribir esto. Activa su envío en Ajustes de recetas, o usa el modelo de este dispositivo o el prompt compartido.</string>
+    <string name="recipe_allergen_consent_setting">Enviar mis alérgenos a nuestro servidor</string>
+    <string name="recipe_allergen_consent_setting_on">Lo aceptaste el %1$s. Desactívalo para retirar el consentimiento: nuestro servidor no escribirá recetas mientras tengas alérgenos configurados.</string>
+    <string name="recipe_allergen_consent_setting_off">Necesario para las recetas de nuestro servidor mientras tengas alérgenos configurados. Los usamos solo para la solicitud y no los conservamos.</string>
+    <plurals name="recipe_delete_body">
+        <item quantity="one">Tu %1$d receta sin usar se perderá y no se podrá reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="many">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="other">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. Tu inicio de sesión y tu correo electrónico se eliminan de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+    </plurals>
+    <!-- Deleting what our server holds for recipes kept on this device (an anonymous account). -->
+    <string name="recipe_delete_device_data">Eliminar mis datos de nuestro servidor</string>
+    <string name="recipe_delete_device_title">¿Eliminar tus datos de nuestro servidor?</string>
+    <plurals name="recipe_delete_device_body">
+        <item quantity="one">Tu %1$d receta sin usar se perderá y no se podrá reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="many">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+        <item quantity="other">Tus %1$d recetas sin usar se perderán y no se podrán reembolsar ni recuperar. El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de las compras, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</item>
+    </plurals>
+    <string name="recipe_delete_device_body_none">El inicio de sesión anónimo que usa este dispositivo se elimina de nuestro servidor; se conserva un registro de cualquier compra, ya sin vínculo contigo. Las recetas guardadas y tu despensa se quedan en este dispositivo.</string>
+    <string name="recipe_delete_device_confirm">Eliminar datos</string>
+    <string name="recipe_device_data_deleted">Tus datos se han eliminado de nuestro servidor</string>
+    <string name="recipe_delete_waits_for_purchase">Todavía se está completando una compra. Podrás hacerlo cuando termine.</string>
+    <string name="recipe_merge_title">¿Añadir a tu cuenta las recetas de este dispositivo?</string>
+    <string name="recipe_merge_body">Tu cuenta ya tiene %1$d recetas. Se le añadirán las %2$d de este dispositivo, y en total serán %3$d. No se puede deshacer.</string>
+    <string name="recipe_merge_body_unknown">Las %1$d recetas de este dispositivo se añadirán a tu cuenta. No se puede deshacer.</string>
+    <string name="recipe_merge_confirm">Añadir e iniciar sesión</string>
+    <string name="recipe_sign_in_failed">No se ha podido iniciar sesión. Tus recetas no han cambiado.</string>
+    <string name="recipe_sign_in_in_use">Ese inicio de sesión ya pertenece a otra cuenta. Tus recetas no han cambiado.</string>
+    <string name="recipe_account_deleted">Cuenta eliminada</string>
+    <string name="recipe_purchases_blocked">No se pueden comprar recetas con esta cuenta porque se reembolsaron compras anteriores después de usar las recetas.</string>
+    <string name="recipe_account_busy">Todavía se está escribiendo una receta. Vuelve a intentarlo en un momento.</string>
+    <string name="recipe_account_action_failed">No se ha podido conectar con nuestro servidor. No se ha cambiado nada.</string>
+    <string name="recipe_writing_busy_title">Nuestro servidor está saturado</string>
+    <string name="recipe_writing_busy_body">Lo volvemos a intentar en un momento. Puedes salir de esta pantalla; lo que llegue estará en Recetas guardadas.</string>
+    <string name="recipe_busy_title">Nuestro servidor está saturado</string>
+    <string name="recipe_busy_body">Tu solicitud se conserva y aún puede escribirse. Vuelve a intentarlo en un minuto para recibirla. Las opciones gratuitas de abajo siguen funcionando.</string>
+    <string name="recipe_elsewhere_title">Una compra pertenece a otra cuenta</string>
+    <plurals name="recipe_elsewhere_body">
+        <item quantity="one">%1$d receta de este dispositivo se compró con otra cuenta. Inicia sesión en la cuenta con la que la compraste para añadirla.</item>
+        <item quantity="many">%1$d recetas de este dispositivo se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</item>
+        <item quantity="other">%1$d recetas de este dispositivo se compraron con otra cuenta. Inicia sesión en la cuenta con la que las compraste para añadirlas.</item>
+    </plurals>
+    <string name="recipe_rejected_build_body">Esta copia de la app está configurada para otra tienda, así que no puede añadir compras de Google Play. La compra no se ha añadido a tus recetas. Normalmente, Google Play reembolsa una compra que no se añade en tres días. Para comprar recetas, instala la app desde Google Play.</string>
+    <plurals name="recipe_merged_moved">
+        <item quantity="one">%1$d receta pasada de este dispositivo a tu cuenta</item>
+        <item quantity="many">%1$d recetas pasadas de este dispositivo a tu cuenta</item>
+        <item quantity="other">%1$d recetas pasadas de este dispositivo a tu cuenta</item>
+    </plurals>
+    <plurals name="recipe_merged_debt">
+        <item quantity="one">Este dispositivo debía %1$d receta tras un reembolso de la tienda. Se ha descontado de tu cuenta.</item>
+        <item quantity="many">Este dispositivo debía %1$d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</item>
+        <item quantity="other">Este dispositivo debía %1$d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</item>
+    </plurals>
+    <string name="recipe_earlier_recipe_saved">Una receta que pediste antes ya está lista. Está en Recetas guardadas.</string>
+    <string name="recipe_earlier_menu_saved">Un menú que pediste antes ya está listo. Está en Recetas guardadas.</string>
+    <plurals name="recipe_earlier_refused">
+        <item quantity="one">No se ha podido crear una receta que pediste antes. Se ha descontado %1$d receta, porque el intento nos costó igualmente.</item>
+        <item quantity="many">No se ha podido crear una receta que pediste antes. Se han descontado %1$d recetas, porque el intento nos costó igualmente.</item>
+        <item quantity="other">No se ha podido crear una receta que pediste antes. Se han descontado %1$d recetas, porque el intento nos costó igualmente.</item>
+    </plurals>
+    <string name="recipe_menu_bar_title">Menú</string>
+    <string name="recipe_menu_title">Menú de tres días</string>
+    <string name="recipe_menu_summary">%1$d platos al día para %2$d, con lo que caduca antes.</string>
+    <string name="recipe_menu_today">Hoy, %1$s</string>
+    <string name="recipe_menu_uses">Usa %1$s</string>
+    <string name="recipe_course_starter">Entrante</string>
+    <string name="recipe_course_main">Principal</string>
+    <string name="recipe_course_dessert">Postre</string>
+    <string name="recipe_part_of_menu">Parte del Menú de tres días</string>
+    <plurals name="recipe_saved_dishes">
+        <item quantity="one">%1$d plato</item>
+        <item quantity="many">%1$d platos</item>
+        <item quantity="other">%1$d platos</item>
+    </plurals>
+
+    <!-- Recipe: Send all products, the introduction, and a purchase App Check refused. -->
+    <string name="recipe_ingredients_settings">Ingredientes</string>
+    <string name="recipe_send_all">Enviar todos los productos</string>
+    <string name="recipe_send_all_desc">Además de los productos marcados, el resto de tu despensa se ofrece como productos que la receta también puede usar. Con esta opción activada, una receta de un paquete envía a nuestro servidor los nombres, las fechas y las cantidades de todo lo que hay en tu despensa, y el prompt compartido también los incluye.</string>
+    <string name="recipe_intro_title">Cómo funcionan las recetas</string>
+    <string name="recipe_intro_body">Marca lo que quieres gastar, elige el tipo de plato y recibe una receta pensada con ello. Las recetas que recibes en la app se guardan en este dispositivo en cuanto llegan.</string>
+    <string name="recipe_intro_prompt_title">Gratis, con cualquier app de IA</string>
+    <string name="recipe_intro_prompt_body">Comparte o copia un prompt ya preparado en la app de IA que ya usas.</string>
+    <string name="recipe_intro_device_title">Gratis, en este dispositivo</string>
+    <string name="recipe_intro_device_body">Este dispositivo escribe la receta por sí mismo y no se envía nada a ningún sitio.</string>
+    <string name="recipe_intro_packs_title">Con un paquete de recetas</string>
+    <string name="recipe_intro_packs_body">Nuestro servidor escribe la receta y también puede planificar un menú de 3 días. Una receta descuenta %1$s de un paquete; un menú, %2$s con 2 platos al día o %3$s con 3.</string>
+    <string name="recipe_intro_packs_price">Paquetes desde %1$s.</string>
+    <string name="recipe_intro_free_stays">Las opciones gratuitas siguen ahí aunque tengas un paquete.</string>
+    <string name="recipe_intro_again">Puedes volver a abrir esto en Ajustes de recetas.</string>
+    <string name="recipe_intro_start">Entendido</string>
+    <string name="recipe_intro_packs_action">Ver paquetes de recetas</string>
+    <string name="recipe_intro_settings_supporting">Las formas de conseguir una receta</string>
+    <string name="recipe_not_available_title">Las recetas de paquetes no están disponibles en esta instalación</string>
+    <string name="recipe_not_available_body">No se ha cobrado nada. Las opciones gratuitas siguen funcionando: comparte el prompt con una app de IA o escribe la receta en este dispositivo, si es compatible.</string>
+    <string name="recipe_not_available_debug">Compilación de depuración: App Check ha rechazado esta compilación. Registra el token de depuración de App Check que muestra logcat (docs/recipe-setup.md, “Debug builds against the real project”).</string>
+    <plurals name="recipe_optional_count">
+        <item quantity="one">También se puede usar el otro producto de tu despensa</item>
+        <item quantity="many">También se pueden usar los otros %1$d productos de tu despensa</item>
+        <item quantity="other">También se pueden usar los otros %1$d productos de tu despensa</item>
+    </plurals>
+
+    <!-- Recipe: items past their date, ticked or used by a written recipe. -->
+    <string name="recipe_past_date_form_single">Un producto marcado pasó su fecha hace %1$s. Comprueba que aún se puede comer o desmárcalo.</string>
+    <string name="recipe_past_date_result_one">Con la fecha pasada: %1$s. Comprueba que aún se puede comer antes de cocinar.</string>
+    <string name="recipe_past_date_result_many">Con la fecha pasada: %1$s. Comprueba que aún se pueden comer antes de cocinar.</string>
+    <string name="recipe_past_date_item">%1$s (%2$s)</string>
+    <string name="recipe_prompt_past_date_one">Uno de estos ha pasado su fecha. He decidido usarlo de todos modos, así que no lo dejes fuera, por favor.</string>
+    <string name="recipe_prompt_past_date_many">Algunos de estos han pasado su fecha. He decidido usarlos de todos modos, así que no los dejes fuera, por favor.</string>
+    <plurals name="recipe_past_date_form">
+        <item quantity="one">%1$d productos marcados han pasado su fecha, uno hace %2$s. Comprueba que aún se pueden comer o desmárcalos.</item>
+        <item quantity="many">%1$d productos marcados han pasado su fecha, uno hace %2$s. Comprueba que aún se pueden comer o desmárcalos.</item>
+        <item quantity="other">%1$d productos marcados han pasado su fecha, uno hace %2$s. Comprueba que aún se pueden comer o desmárcalos.</item>
+    </plurals>
+    <plurals name="recipe_past_days">
+        <item quantity="one">%d día</item>
+        <item quantity="many">%d días</item>
+        <item quantity="other">%d días</item>
+    </plurals>
+</resources>

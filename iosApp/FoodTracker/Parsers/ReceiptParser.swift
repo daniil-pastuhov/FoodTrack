@@ -30,17 +30,24 @@ public enum ReceiptParser {
         // Totals
         "total", "subtotal", "sum", "totalt", "delsum", "å betale", "a betale",
         "итого", "итог", "сумма", "к оплате",
+        "importe", "a pagar", "summe", "zu zahlen", "à payer", "a payer", "att betala", "at betale", "i alt",
         // Tax
         "vat", "mva", "tax", "ндс", "налог",
+        "mwst", "tva", "moms", "i.v.a", "base imp",
         // Payment and change
         "cash", "card", "visa", "mastercard", "debit", "credit", "contactless",
         "kontant", "kort", "bankaxept", "vipps",
         "наличные", "карта", "оплата", "сдача", "change", "veksel",
+        "efectivo", "tarjeta", "cambio", "rückgeld", "kartenzahlung", "ec-karte", "espèces", "especes",
+        "carte bancaire", "monnaie rendue", "swish", "växel", "dankort", "mobilepay", "byttepenge",
         // Receipt furniture
         "receipt", "kvittering", "чек", "кассир", "cashier", "terminal", "till",
         "thank you", "takk for", "спасибо", "welcome", "velkommen",
+        "kassenbon", "kassierer", "ticket de caisse", "kvitto", "gracias", "vielen dank", "merci",
+        "bienvenue", "tack för", "välkommen", "tak for",
         "org.nr", "orgnr", "vat no", "инн", "ккт", "смена",
         "balance", "saldo", "bonus", "points", "poeng", "баллы",
+        "descuento", "puntos", "punkte", "remise", "fidélité", "fidelite", "poäng", "rabat",
         "discount", "rabatt", "скидка", "savings"
     ]
 

@@ -181,4 +181,50 @@ class ReceiptParserTest {
         val lines = listOf("TOTAL 12.00", "VISA 12.00", "VAT 2.00", "THANK YOU")
         assertEquals(emptyList(), ReceiptParser.parseLines(lines))
     }
+
+    // --- The other shop languages: totals, tax, payment and footer lines are dropped ---------
+
+    @Test
+    fun furnitureIsDroppedInEveryShopLanguage() {
+        val receipts = mapOf(
+            "de" to listOf("VOLLMILCH 3,5%           1,19", "SUMME EUR                1,19", "Kartenzahlung            1,19", "MwSt 7%                  0,08", "Vielen Dank für Ihren Einkauf"),
+            "es" to listOf("LECHE ENTERA              0,95", "IMPORTE                  0,95", "TARJETA                  0,95", "I.V.A. 4%                0,04", "Gracias por su visita"),
+            "fr" to listOf("LAIT DEMI-ECREME          1,05", "A PAYER                  1,05", "CARTE BANCAIRE           1,05", "TVA 5,5%                 0,06", "Merci de votre visite"),
+            "sv" to listOf("MELLANMJÖLK 1,5%         15,90", "ATT BETALA               15,90", "Kort                     15,90", "Moms 12%                  1,70", "Tack för ditt besök"),
+            "da" to listOf("SKUMMETMÆLK               11,95", "I ALT                    11,95", "Dankort                  11,95", "Moms 25%                  2,39", "Tak for besøget")
+        )
+        for ((language, lines) in receipts) {
+            assertEquals(listOf(lines.first().substringBefore("  ").trim()), ReceiptParser.parseLines(lines).map { it.name }, language)
+        }
+    }
+
+    /** Every furniture word added for es, de, fr, sv and da, alone on a line with a price, so the
+     *  word is the only thing that drops it: without it "<WORD>   1,99" would be a product (as
+     *  "QUESO 1,99" is). The same list is in iosApp/FoodTracker/Parsers/ReceiptParser.swift. */
+    @Test
+    fun everyNewShopLanguageFurnitureWordDropsItsLine() {
+        val words = listOf(
+            // totals
+            "importe", "a pagar", "zu zahlen", "à payer", "a payer", "att betala", "at betale", "i alt",
+            // tax
+            "mwst", "tva", "moms", "i.v.a", "base imp",
+            // payment and change
+            "efectivo", "tarjeta", "cambio", "rückgeld", "kartenzahlung", "ec-karte", "espèces", "especes",
+            "carte bancaire", "monnaie rendue", "swish", "växel", "mobilepay", "byttepenge",
+            // receipt furniture
+            "kassenbon", "kassierer", "ticket de caisse", "kvitto", "gracias", "vielen dank", "merci",
+            "bienvenue", "tack för", "välkommen", "tak for",
+            "descuento", "puntos", "punkte", "remise", "fidélité", "fidelite", "poäng", "rabat"
+        )
+        assertEquals(listOf("QUESO"), ReceiptParser.parseLines(listOf("QUESO   1,99")).map { it.name }, "the control: a priced word is a product")
+        for (word in words) {
+            assertEquals(emptyList(), ReceiptParser.parseLines(listOf("${word.uppercase()}   1,99")), word)
+            assertEquals(emptyList(), ReceiptParser.parseLines(listOf("$word   1,99")), word)
+        }
+        // Also in the list, but matched by substring, so a shorter entry already drops them:
+        // "summe" by "sum", "dankort" by "kort". Pinned here as lines, not as entries.
+        for (line in listOf("SUMME   1,99", "Dankort   1,99")) assertEquals(emptyList(), ReceiptParser.parseLines(listOf(line)), line)
+        // The ones the mutation run found, as they are printed.
+        for (line in listOf("EFECTIVO 10,00", "Rabat -5,00", "A PAGAR 0,95")) assertEquals(emptyList(), ReceiptParser.parseLines(listOf(line)), line)
+    }
 }

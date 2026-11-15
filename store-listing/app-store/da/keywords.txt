@@ -1,0 +1,1 @@
+madspild,udløbsdato,holdbarhedsdato,bedst før,stregkode,indkøbsliste,påmindelse,madplan,rester,scan

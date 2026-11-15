@@ -69,6 +69,12 @@ describe("prompt", () => {
 
   // Vertex AI answers 400 INVALID_ARGUMENT to a menu whose nested recipe arrays carry maxItems
   // (seen live on 2026-11-14); a single recipe keeps them.
+  test("a Danish request validates and its prompt asks for Danish", () => {
+    const req = validateGenerateRequest({ ...baseRequest, config: { ...baseRequest.config, language: "da" } }, Date.now());
+    expect(req.config.language).toBe("da");
+    expect(buildPrompt(req, "LRD-TEST").systemInstruction).toContain("Danish");
+  });
+
   test("a menu's nested recipes describe their upper bounds instead of using maxItems", () => {
     type Arr = { minItems?: number; maxItems?: number; description?: string };
     type RecipeSchema = { properties: { ingredients: Arr; steps: Arr } };

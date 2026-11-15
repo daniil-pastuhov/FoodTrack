@@ -34,8 +34,6 @@
     <string name="sort_option_date_added">Date added</string>
     <string name="sort_option_storage_location">Storage location</string>
 
-    <string name="empty_state_title">No items found</string>
-    <string name="empty_state_subtitle">Tap \'Scan Item\' to scan a barcode or add your groceries.</string>
 
     <string name="back_content_description">Back</string>
 
@@ -772,6 +770,7 @@
     <string name="recipe_not_enough_items">Not enough to cook with once your diet and allergens are left out. Tick a few more items. No recipe was taken.</string>
     <string name="recipe_not_enough_items_menu">Not enough for three days. Tick a few more items, or ask for a single recipe. No recipes were taken.</string>
     <string name="recipe_diets_need_update">Recipes from packs can\'t combine gluten-free with another diet yet. Keep one of them in Recipe settings, or use this device\'s model or the shared prompt. No recipes were taken.</string>
+    <string name="recipe_language_needs_update">Recipes from packs can\'t be written in Danish yet. Choose another recipe language in Recipe settings, or use this device\'s model or the shared prompt. No recipes were taken.</string>
     <string name="recipe_not_from_pantry_hint">Ingredients without the “In your pantry” mark aren\'t from your pantry: staples, or a few things you may need to buy.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Add to shopping list</string>
@@ -852,6 +851,7 @@
     <string name="recipe_allergens_none">none yet</string>
     <string name="recipe_language">Language</string>
     <string name="recipe_write_in">Write recipes in</string>
+    <string name="recipe_on_device_language_note">The model on this device can\'t write recipes in this language, so “Generate on this device” isn\'t offered for it.</string>
     <string name="recipe_language_same_as_app">Same as the app (%1$s)</string>
     <string name="recipe_account">Account</string>
     <string name="recipe_account_none">No account. You only need to decide when you buy a pack, and the free routes never use one.</string>

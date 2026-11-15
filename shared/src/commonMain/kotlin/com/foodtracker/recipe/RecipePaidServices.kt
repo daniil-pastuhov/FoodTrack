@@ -122,7 +122,9 @@ data class GenerateReply(
     val acceptsOptionalIngredients: JsonElement? = null
 ,
     /** Read with [acceptsMultiChoiceConfigOf]. */
-    val acceptsMultiChoiceConfig: JsonElement? = null
+    val acceptsMultiChoiceConfig: JsonElement? = null,
+    /** Read with [acceptsDanishOf]. */
+    val acceptsDanish: JsonElement? = null
 )
 
 @Serializable
@@ -140,7 +142,8 @@ data class VerifyReply(
     val costs: JsonElement? = null,
     val purchasesBlocked: JsonElement? = null,
     val acceptsOptionalIngredients: JsonElement? = null,
-    val acceptsMultiChoiceConfig: JsonElement? = null
+    val acceptsMultiChoiceConfig: JsonElement? = null,
+    val acceptsDanish: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -149,7 +152,8 @@ data class BalanceReply(
     val costs: RecipeCosts? = null,
     val purchasesBlocked: Boolean = false,
     val acceptsOptional: Boolean = false,
-    val acceptsMultiChoice: Boolean = false
+    val acceptsMultiChoice: Boolean = false,
+    val acceptsDanish: Boolean = false
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -160,7 +164,8 @@ data class MergeReply(
     val costs: RecipeCosts? = null,
     val purchasesBlocked: Boolean = false,
     val acceptsOptional: Boolean = false,
-    val acceptsMultiChoice: Boolean = false
+    val acceptsMultiChoice: Boolean = false,
+    val acceptsDanish: Boolean = false
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -175,6 +180,10 @@ fun acceptsOptionalIngredientsOf(json: JsonElement?): Boolean = purchasesBlocked
 /** A reply's `acceptsMultiChoiceConfig` (functions/CONTRACT.md): only a JSON `true` says the server
  *  reads the time range and the meal and diet lists; absent says it takes only the legacy config. */
 fun acceptsMultiChoiceConfigOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsDanish` (functions/CONTRACT.md): only a JSON `true` says the server writes
+ *  recipes in Danish (`language: "da"`); absent says it refuses `da`. */
+fun acceptsDanishOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 
 /** A failed call, by the contract's `details.reason`, plus the two the client sees itself. */
 enum class ServerError {
@@ -475,7 +484,9 @@ data class RecipePaidSnapshot(
     val serverTakesOptional: Boolean = false,
     /** The same for `acceptsMultiChoiceConfig`: only then is a config sent that the legacy
      *  values can't say exactly ([wireConfigFor]). */
-    val serverTakesMultiChoice: Boolean = false
+    val serverTakesMultiChoice: Boolean = false,
+    /** The same for `acceptsDanish`: only then is a request in Danish sent. */
+    val serverTakesDanish: Boolean = false
 )
 
 interface RecipePaidRepository {

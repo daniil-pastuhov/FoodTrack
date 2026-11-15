@@ -4,8 +4,13 @@
 # the App Store, Home, a scan that has read a product and its printed date, a written recipe, a
 # three-day menu, the shopping list and Settings.
 #
-#   ANDROID_SERIAL=emulator-5554 scripts/android_screenshots.sh [output-dir]   # default: build/android-screenshots
+#   ANDROID_SERIAL=<phone emulator> scripts/android_screenshots.sh [output-dir]   # default: build/android-screenshots
 #   scripts/frame_screenshots.py build/android-screenshots phone-screenshots
+#
+# Writes <output-dir>/<lang>/<n>-<shot>.png for every language on the one emulator: en ru nb es de
+# fr sv da, or only those in LANGS (LANGS="es de"). The language is set per app
+# (set-app-locales), the same setting the system's per-app language list writes; the app's
+# generated locale config (androidResources.generateLocaleConfig) lists all eight.
 #
 # The demo pantry (scripts/demo_backup.py) goes in through the debug-only demoBackup / demoTab /
 # demoRoute intent extras (see MainActivity.loadDemoFromIntent), so release builds are unaffected.
@@ -26,6 +31,10 @@ SETTLE=${SETTLE:-4}
 export ANDROID_SERIAL
 
 adb wait-for-device
+# Google Play's phone set: a tablet (a Pixel Tablet is 2560x1600) gives the wrong pictures.
+SIZE=$(adb shell wm size | tr -d '\r' | awk '/Physical size/ {print $3}')
+(( ${SIZE%x*} < ${SIZE#*x} && ${SIZE%x*} <= 1440 )) || {
+  echo "$ANDROID_SERIAL is ${SIZE:-of unknown size}: use a phone emulator (e.g. a Pixel 8 AVD, 1080x2400)" >&2; exit 1; }
 adb install -r "$APK" >/dev/null
 # Without it, Home and Settings show a "Reminders are off" banner on a new emulator.
 adb shell pm grant $PACKAGE android.permission.POST_NOTIFICATIONS
@@ -57,8 +66,12 @@ SCAN_DATE=$(python3 -c 'import datetime; print(datetime.date.today() + datetime.
 SCAN_BARCODE=$(cd "$ROOT/scripts" && python3 -c 'from demo_scan_image import BARCODE; print(BARCODE)')
 push() { adb shell run-as $PACKAGE sh -c "'cat > files/$2'" < "$1"; }
 
-typeset -A LOCALES=(en en-GB ru ru-RU nb nb-NO)
-for LANG_CODE in en ru nb; do
+typeset -A LOCALES=(en en-GB ru ru-RU nb nb-NO es es-ES de de-DE fr fr-FR sv sv-SE da da-DK)
+LANGS=(${=LANGS:-en ru nb es de fr sv da})
+for LANG_CODE in $LANGS; do
+  [[ -n ${LOCALES[$LANG_CODE]:-} ]] || { echo "unknown language $LANG_CODE (one of ${(k)LOCALES})"; exit 1; }
+done
+for LANG_CODE in $LANGS; do
   mkdir -p "$OUT/$LANG_CODE"
   rm -f "$OUT/$LANG_CODE"/*.png(N)
   adb shell cmd locale set-app-locales $PACKAGE --locales ${LOCALES[$LANG_CODE]}

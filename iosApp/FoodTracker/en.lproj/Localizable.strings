@@ -20,8 +20,6 @@
 "sort_option_date_added" = "Date added";
 "sort_option_storage_location" = "Storage location";
 
-"empty_state_title" = "No items found";
-"empty_state_subtitle" = "Scan a barcode or tap 'Add to Pantry' to track groceries.";
 
 "swipe_delete" = "Delete";
 "swipe_add_to_shopping_list" = "To shopping list";
@@ -544,7 +542,7 @@
 "onboarding_sample_source" = "%1$@ · 09:00";
 "onboarding_sample_title" = "Best used soon";
 "onboarding_sample_body" = "Greek yoghurt reaches its date tomorrow.";
-"onboarding_sample_description" = "Example reminder: %1$@. %2$s";
+"onboarding_sample_description" = "Example reminder: %1$@. %2$@";
 "onboarding_notifications_allow" = "Turn on reminders";
 "onboarding_not_now" = "Not now";
 "onboarding_camera_title" = "Scan it instead of typing";
@@ -649,6 +647,7 @@
 "recipe_allergens_none" = "none yet";
 "recipe_settings_language" = "Language";
 "recipe_write_in" = "Write recipes in";
+"recipe_on_device_language_note" = "The model on this {device} can't write recipes in this language, so “Generate on this {device}” isn't offered for it.";
 "recipe_language_same_as_app" = "Same as the app (%@)";
 "recipe_settings_account" = "Account";
 "recipe_settings_no_account" = "No account. You only need to decide when you buy a pack, and the free routes never use one.";
@@ -823,6 +822,7 @@
 "recipe_not_enough_items" = "Not enough to cook with once your diet and allergens are left out. Tick a few more items. No recipe was taken.";
 "recipe_not_enough_items_menu" = "Not enough for three days. Tick a few more items, or ask for a single recipe. No recipes were taken.";
 "recipe_diets_need_update" = "Recipes from packs can't combine gluten-free with another diet yet. Keep one of them in Recipe settings, or use the model on this {device} or the shared prompt. No recipes were taken.";
+"recipe_language_needs_update" = "Recipes from packs can't be written in Danish yet. Choose another recipe language in Recipe settings, or use the model on this {device} or the shared prompt. No recipes were taken.";
 "recipe_not_from_pantry_hint" = "Ingredients without the “In your pantry” mark aren't from your pantry: staples, or a few things you may need to buy.";
 "recipe_shopping_add" = "Add to shopping list";
 "recipe_shopping_title" = "Add to shopping list (%d)";

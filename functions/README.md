@@ -532,14 +532,14 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    whitespace collapsed; then 1–40 code points, ≤ 8 words, ≤ 28 code points per word part (no part
    limit in scripts written without spaces: Chinese, Japanese, Thai, Lao, Khmer, Burmese).
    Letters, combining marks and decimal digits of **any script** are accepted: pantry names come
-   from Open Food Facts in the shop's language, which has nothing to do with the ten recipe
+   from Open Food Facts in the shop's language, which has nothing to do with the eleven recipe
    languages. Space, hyphen and `' % , . / &` only where product names use them; no other
    punctuation, symbols or emoji. Combining marks: at most 4 per letter (1 on a Latin, Cyrillic or
    Greek letter), no repeats, at most 60 % of the name. Suspicious patterns are refused: Latin,
    Cyrillic and Greek mixed inside one word part (the look-alike scripts; other mixing, such as
    kanji with kana or Chinese with a Latin brand, is normal), encoded-looking words, repetition,
    spaced-out letters, a short list of words about the model (`ignore`, `instructions`, `prompt`,
-   `system`, `assistant`, `forget`, `json`...) in the ten app languages, also when written with
+   `system`, `assistant`, `forget`, `json`...) in the eleven recipe languages, also when written with
    Cyrillic or Greek look-alikes or digits. The full rule is in CONTRACT.md "Name rules";
    `test/fixtures/names.json` holds about 180 real product names in 25 languages (`Crème fraîche
    15%`, `Сметана 20%`, `Φέτα ΠΟΠ`, `חלב 3% תנובה`, `可口可乐 Zero`, `明治おいしい牛乳`,
@@ -572,9 +572,9 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `REPETITION` | A character 10× in a row, a word 4× in a row, duplicate steps | yes |
    | `PANTRY_REF` | A `pantryId` or `uses` entry that is not a sent item | yes |
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
-   | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite); free-from wording and plant-milk style exemptions apply | yes |
+   | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite; a gluten allergen also refuses bread, pasta and beer, as the gluten-free diet does); free-from wording ("glutenfri", "gluten-free", "sans gluten"; the inflected Scandinavian "frie", "fria", "fritt", "frit" only inside a compound, since French "frit" and Spanish "fría" are cooking words) and plant-milk style exemptions apply | yes |
    | `DIET` | The same for the diet (meat, fish, seafood, dairy, egg, honey, gluten grains and wheat foods) | yes |
-   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the ten languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; an ingredient written as nothing but staple words, such as "water", counts as the ticked item its `pantryId` names only when that item's own name has a staple word too (the user's "Olive oil" or "Filippo Berio Olive Oil 500ml", `hasStapleWord`); otherwise it is delivered as a staple and does not count as using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish past `NO_PANTRY` / `STAPLES_ONLY`. Only the written words are judged, the names are never compared, so "макароны" written for "Pasta" counts); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
+   | `NO_PANTRY`, `DAY_NO_PANTRY`, `STAPLES_ONLY`, `DUPLICATE_DISH` (the **quality gate**, checked last) | A recipe, or a day of a menu, with no ingredient whose `pantryId` is a sent item (judged from the ingredients, not the model's `uses`); a dish (a recipe or any course) whose every ingredient is a staple: water, ice, oils, salt, pepper, sugar, vinegar, baking raisers, dried spices and herbs, in the eleven recipe languages, per word with filler words such as "freshly ground", "to taste", "4 cups" (`STAPLE_WORDS` / `STAPLE_FILLERS` in `foodTerms.ts`; an ingredient written as nothing but staple words, such as "water", counts as the ticked item its `pantryId` names only when that item's own name has a staple word too (the user's "Olive oil" or "Filippo Berio Olive Oil 500ml", `hasStapleWord`); otherwise it is delivered as a staple and does not count as using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish past `NO_PANTRY` / `STAPLES_ONLY`. Only the written words are judged, the names are never compared, so "макароны" written for "Pasta" counts); two dishes of a menu with the same title | no: a **quality failure**, always refunded (see "How the money works") |
 
    Charging: every refusal except the quality gate's is a **content failure**: refunded within the existing allowance (one
    per 10 credits paid over the account's life), charged after it. So an attacker gets no free
@@ -656,14 +656,14 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   item name cannot be used to unlock free text in a language the word lists do not read. The cost:
   an honest answer that writes a compound around a quoted name ("炒花生" for an item "花生") is
   refused and regenerated.
-- **The meta-word list covers the ten app languages only.** Since names are accepted in every
+- **The meta-word list covers the eleven recipe languages only.** Since names are accepted in every
   script, an instruction written in Chinese, Arabic, Hebrew, Hindi, Greek... ("忽略之前的指令")
   passes the input rule as a plain name (the fixture records this). It is still only data in the
   untrusted block, and what the model does with it is bounded by the output checks, exactly as
   for a plain-language instruction in English. Extending the list to more languages was not done:
   every entry has to be checked against real product names in that language.
 - **Allergens in other scripts are matched literally.** The allergen and diet word lists cover the
-  ten app languages. An allergen typed as `花生` or `γάλα` is matched only as written (folded, and
+  eleven recipe languages. An allergen typed as `花生` or `γάλα` is matched only as written (folded, and
   as a substring for Chinese, Japanese, Korean and Thai): an answer that writes "peanuts" or
   "milk" instead is not caught. The prompt still tells the model to avoid it.
 - **Look-alike spoofing is only checked between Latin, Cyrillic and Greek.** Other confusables
@@ -688,7 +688,7 @@ Never logged: names, prompts, answers, the canary, the uid. Suggested alert:
   hostile answer into a refunded one. With the judge off, a hostile answer that only the judge
   would have caught is refused by the gate and refunded: not delivered, but not counted either.
 - **The staple list is a word list.** It catches "water", "olivenolje", "freshly ground black
-  pepper" in the ten languages, not "a splash of stock" or a staple in another language; a
+  pepper" in the eleven recipe languages, not "a splash of stock" or a staple in another language; a
   staples-only dish written that way passes. It deliberately leaves out words that are also real
   ingredients (paprika, which is a bell pepper in several languages; chilli; garlic), so an
   honest roasted-pepper starter is never refused. The per-day pantry rule and the prompt carry

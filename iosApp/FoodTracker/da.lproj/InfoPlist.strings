@@ -1,0 +1,5 @@
+/* Navn på hjemmeskærmen og tekster til anmodninger om tilladelse. Navnet skal svare til app_name i androidApp/src/main/res/values-da/strings.xml. */
+"CFBundleDisplayName" = "BestBefore";
+"NSCameraUsageDescription" = "BestBefore bruger kameraet til at scanne stregkoder, læse holdbarhedsdatoer på emballagen og tage billeder af madvarer. Billederne bliver på din telefon.";
+"NSLocationWhenInUseUsageDescription" = "BestBefore bruger din placering én gang, når du trykker på »Gem min nuværende placering«, for at huske, hvor en butik ligger. Placeringen gemmes på din telefon, og BestBefore sender den ikke til os og deler den ikke med nogen.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "BestBefore tjekker, om du er ved en af de butikker, du har gemt, så din indkøbsliste kan blive vist, når du kommer dertil. Når appen er lukket, virker det kun, hvis du tillader det altid. BestBefore sender ikke din placering til os og deler den ikke med nogen.";

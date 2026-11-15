@@ -19,6 +19,7 @@ the app's name and a line about it beside the Android home screen. Play may crop
 put its play button over the middle, so the text keeps clear of the left edge and the phone of
 the right one. Needs Pillow.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -28,14 +29,30 @@ from frame_screenshots import (BEZEL, FONT, FONT_BOLD_INDEX, LISTING_FOLDERS, PL
                                WHITE, gradient)
 
 FEATURE_SIZE = (1024, 500)
-# The feature graphic's name (Android's app_name in each language) and the line under it, the
-# Play short description in brief.
-APP_NAMES = {"en": "BestBefore", "ru": "Срокоед", "nb": "Matvakt"}
+# The feature graphic's name (Android's app_name in each language, app_name() below) and the
+# line under it, the Play short description in brief.
 TAGLINES = {
     "en": "Scan groceries. Track dates.\nWaste less food.",
     "ru": "Сканируйте продукты.\nСледите за сроками.\nВыбрасывайте меньше.",
     "nb": "Skann matvarer. Følg datoene.\nKast mindre mat.",
+    "es": "Escanea la compra.\nControla las fechas.\nTira menos comida.",
+    "de": "Lebensmittel scannen.\nDaten im Blick.\nWeniger wegwerfen.",
+    "fr": "Scannez vos courses.\nSuivez les dates.\nGaspillez moins.",
+    "sv": "Skanna maten.\nHåll koll på datumen.\nSläng mindre mat.",
+    "da": "Scan maden.\nHold øje med datoerne.\nSmid mindre mad ud.",
 }
+
+
+def app_name(lang):
+    """The app's name as Android shows it in [lang]: app_name in values(-<lang>)/strings.xml."""
+    res = ROOT / "androidApp" / "src" / "main" / "res"
+    for folder in ([f"values-{lang}"] if lang != "en" else []) + ["values"]:
+        path = res / folder / "strings.xml"
+        if path.is_file():
+            match = re.search(r'<string name="app_name">([^<]+)</string>', path.read_text(encoding="utf-8"))
+            if match:
+                return match.group(1).replace("\\'", "'")
+    return "BestBefore"
 PLAY_ICON = ROOT / "store-listing" / "google-play" / "icon-512.png"
 FONT_MEDIUM = str(ROOT / "androidApp" / "src" / "main" / "res" / "font" / "vollkorn_medium.ttf")
 
@@ -50,6 +67,11 @@ HEADLINES = {
     "en": "Eat it\nbefore it\ngoes off",
     "ru": "Успейте\nсъесть\nвовремя",
     "nb": "Spis maten\nfør den\ngår ut",
+    "es": "Cómetelo\nantes de\nque caduque",
+    "de": "Iss es,\nbevor es\nschlecht wird",
+    "fr": "Mangez-le\navant qu'il\nne se perde",
+    "sv": "Ät upp det\ninnan det\ngår ut",
+    "da": "Spis maden,\nfør den\nudløber",
 }
 
 
@@ -182,6 +204,9 @@ def main():
         sys.exit(__doc__)
     raw_dir = Path(sys.argv[1])
     for lang, folder in LISTING_FOLDERS.items():
+        if not (raw_dir / lang).is_dir():
+            print(f"{lang}: no screenshots in {raw_dir / lang}, skipped")
+            continue
         shots = {}
         for tab in ("home", "scan", "recipe"):
             matches = sorted((raw_dir / lang).glob(f"[0-9]-{tab}.png"))
@@ -194,10 +219,13 @@ def main():
     if len(sys.argv) == 3:
         android_dir = Path(sys.argv[2])
         for lang, folder in PLAY_FOLDERS.items():
+            if not (android_dir / lang).is_dir():
+                print(f"{lang}: no screenshots in {android_dir / lang}, skipped")
+                continue
             matches = sorted((android_dir / lang).glob("[0-9]-home.png"))
             if not matches:
                 sys.exit(f"no home screenshot in {android_dir / lang}")
-            feature_graphic(Image.open(matches[0]).convert("RGB"), APP_NAMES[lang], TAGLINES[lang],
+            feature_graphic(Image.open(matches[0]).convert("RGB"), app_name(lang), TAGLINES[lang],
                             ROOT / "store-listing" / "google-play" / folder / "feature-graphic.png")
 
 

@@ -82,6 +82,14 @@ struct RecipeSettingsView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    // Why "Generate on this iPhone" went away: this phone's model doesn't write
+                    // the chosen language. Only where the phone has a model at all.
+                    if model.onDeviceLanguageUnsupported {
+                        Text(L10n.recipeOnDeviceLanguageNote)
+                            .larderFont(.bodySm)
+                            .foregroundStyle(LarderColor.onSurfaceVariant)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 RecipeAccountCard(model: model)

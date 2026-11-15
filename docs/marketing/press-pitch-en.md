@@ -24,8 +24,8 @@ prefers English. The list of Norwegian outlets and their contact pages is in `pr
 > It needs no account, has no ads and no tracking, and the pantry is stored only on the phone. The
 > source code is open.
 >
-> In Norway, households threw away an average of 35 kg of food per inhabitant in 2023, according to
-> NORSUS's survey for Matvett, and Norwegian labels make the same distinction as elsewhere: "best
+> In Norway, households threw away an average of 35 kg of edible food per inhabitant in 2023,
+> according to NORSUS's waste-sorting analyses for Matvett, and Norwegian labels make the same distinction as elsewhere: "best
 > før" is about quality, while food marked "siste forbruksdag" should not be eaten after the date
 > (Mattilsynet, the Norwegian Food Safety Authority). BestBefore is made for that everyday
 > problem: knowing what is in the fridge, and when to use it.
@@ -80,14 +80,20 @@ A free app for keeping track of the dates on the food at home.
 **Background (sources)**
 
 - Norwegian households: 35.0 kg of food waste per inhabitant in 2023 (193,200 tonnes), down 18 %
-  per inhabitant from 42.6 kg in 2016. NORSUS for Matvett, "Faktaark om matsvinn i husholdningene
-  2023", report OR.16.24, 2024:
-  https://www.matvett.no/uploads/documents/OR.16.24-Faktaark-om-matsvinn-i-husholdningene.pdf
+  per inhabitant from 42.6 kg in 2016 (40.3 kg in 2020). "Food waste" (matsvinn) here is the
+  edible part only ("Matsvinnet er den nyttbare delen av matavfallet"); all household food waste,
+  inedible parts included, was 70.6 kg. Measured by waste-sorting analyses (plukkanalyser) from
+  municipalities covering 42 % of the population, scaled with Statistics Norway's waste and
+  population figures; not a questionnaire survey. NORSUS (author Aina Stensgård) for Matvett,
+  "Faktaark om matsvinn i husholdningene 2023", report OR.16.24, 2024 (checked 2026-11-15):
+  https://www.matvett.no/uploads/documents/Rapporter/OR.16.24-Faktaark-om-matsvinn-i-husholdningene.pdf
   (linked from https://www.matvett.no/rapporter); repeated as "35 kg mat per person i norske
   husholdninger i 2023" in Matvett's "Slik var matsvinnåret 2024":
   https://matvett.no/uploads/documents/Slik-var-matsvinnaret-2024.pdf
 - "Best før" and "siste forbruksdag": Mattilsynet, "Holdbarhetsmerking på matvarer", published
-  31 March 2022:
+  31 March 2022, checked 2026-11-15: "Du bør altså ikke spise varer merket med «siste
+  forbruksdag» etter utløpsdato" (you should not eat them after the date); "best før" is guidance
+  on how long the quality can be expected to last, and "«Best før» betyr ofte god etter":
   https://mattilsynet.no/mat-og-drikke/merking-av-mat/holdbarhetsmerking-pa-matvarer
 - Norway's target of halving food waste by 2030 (the industry agreement, bransjeavtalen):
   regjeringen.no, "Matsvinn":

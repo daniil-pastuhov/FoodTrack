@@ -30,6 +30,6 @@ BestBefore is an expiry date tracker and food inventory for your fridge, freezer
 • Your pantry is stored on your phone; export a backup whenever you like
 • No account needed, not even to buy a pack. Sign in with Google only if you want your recipes on other phones
 • A recipe from a pack sends the items you tick, your recipe settings and your allergens to our server. The free ways send nothing to us
-• Available in English, Russian and Norwegian
+• Available in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish
 
 Waste less food, save money and always know what you have at home.

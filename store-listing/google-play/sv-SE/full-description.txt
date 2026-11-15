@@ -1,0 +1,35 @@
+BestBefore håller koll på datumen för maten i kylskåpet, frysen och skafferiet: skanna dina matvaror, se vad som ska ätas först, få en påminnelse innan maten blir dålig och gör ett recept av det som snart går ut.
+
+<b>Lägg till mat på några sekunder</b>
+• Skanna streckkoden så fylls produktnamn och bild i åt dig (via Open Food Facts)
+• Rikta kameran mot det tryckta datumet så läser BestBefore av det åt dig
+• Ta en bild på frukt eller grönsaker så föreslår appen vad det är
+• Skanna flera varor i rad och lägg till hela matkassen på en gång
+• Läs av ett kvitto och lägg till flera varor samtidigt
+
+<b>Missa aldrig ett datum</b>
+• Fungerar med både ”bäst före” och ”sista förbrukningsdag”
+• Påminnelser några dagar innan något går ut, vid den tid du väljer
+• Se ”Går ut snart” och ”Utgångna” med en blick
+• Widgetar på hemskärmen för varor som snart går ut, inköpslistan och en snabb översikt
+
+<b>Handla smartare</b>
+• Basvaror som tar slut hamnar direkt på inköpslistan
+• Dela listan som text eller QR-kod
+• Valfritt: få upp inköpslistan när du kommer till en butik du har sparat
+
+<b>Laga mat av det som snart går ut</b>
+• Fliken Recept kryssar i varorna som är närmast sitt datum; ändra urvalet, antal portioner, tid, kost med mera
+• Gratis: kopiera eller dela en färdig prompt till AI-appen du redan använder
+• Gratis på Android-telefoner som stöder det: receptet skrivs på själva telefonen, av telefonens egen modell
+• Receptpaket (köp i appen): recept som skrivs av vår server och sparas i appen, och en måltidsplan för 3 dagar (”Meny för 3 dagar”) som använder det som går ut först
+
+<b>Dina data</b>
+• Ingen reklam, ingen spårning
+• Ingen prenumeration: appen är gratis, och receptpaketen är valfria engångsköp
+• Ditt skafferi sparas på din telefon; exportera en säkerhetskopia när du vill
+• Inget konto behövs, inte ens för att köpa ett paket. Logga in med Google bara om du vill ha dina recept på andra telefoner
+• Ett recept från ett paket skickar varorna du kryssar i, dina receptinställningar och dina allergener till vår server. De gratis sätten skickar inget till oss
+• Finns på svenska, engelska, ryska, norska, spanska, tyska, franska och danska
+
+Släng mindre mat, spara pengar och vet alltid vad du har hemma.

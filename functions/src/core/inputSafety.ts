@@ -10,7 +10,7 @@
  * (`15%`, `0,5`, `1.5`, `1/2`, `Jerry's`). On top of that, structural patterns that product names
  * do not have but injected text does (look-alike letters of Latin, Cyrillic and Greek mixed inside
  * one word, stacked marks, encoded payloads, repeated tokens, spaced-out letters) and a short list
- * of words about the model itself (prompt, instructions, ignore, system...; in the app's ten
+ * of words about the model itself (prompt, instructions, ignore, system...; in the eleven recipe
  * languages only) are refused as "suspicious". README "Prompt injection defences" explains why
  * this is a narrowing, not a proof: a plain-language instruction made of ordinary words can still
  * pass, which is why the output is checked on its own (core/outputSafety.ts).
@@ -151,8 +151,9 @@ function skeleton(word: string): string {
 }
 
 /**
- * Words about the model and the conversation rather than food, in the app's ten languages
- * (folded). A word is refused when it starts with one of STEMS or equals one of WORDS. Kept short
+ * Words about the model and the conversation rather than food, in the eleven recipe languages
+ * (folded; Danish, the eleventh, needs no entries of its own: "ignorér", "instruktion", "prompt",
+ * "system", "assistent" and "glem" are already caught by the Norwegian and Swedish ones). A word is refused when it starts with one of STEMS or equals one of WORDS. Kept short
  * and specific on purpose: every entry was checked against real product names, and a longer list
  * would refuse real food (Italian "ai", Spanish "cuenta", Swedish "system"-brands) while still
  * being easy to paraphrase around. It does not cover other languages (README, residual risks).

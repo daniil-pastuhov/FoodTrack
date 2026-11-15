@@ -84,6 +84,7 @@ export const LANGUAGE_WORDS: Readonly<Record<string, readonly string[]>> = {
   en: ["the", "and", "with", "until", "into", "for", "of", "add", "minutes", "or", "over", "then"],
   nb: ["og", "med", "til", "på", "av", "er", "det", "som", "minutter", "eller", "legg", "rør", "stek", "deretter"],
   sv: ["och", "med", "till", "på", "av", "är", "det", "som", "minuter", "eller", "lägg", "rör", "stek", "sedan"],
+  da: ["og", "med", "til", "på", "af", "er", "det", "som", "minutter", "eller", "læg", "rør", "steg", "derefter", "ikke"],
   de: ["und", "mit", "der", "die", "das", "den", "dem", "bis", "auf", "ein", "eine", "minuten", "oder", "für", "dann"],
   ru: ["и", "с", "в", "на", "минут", "добавьте", "или", "нарежьте", "обжарьте", "до", "по", "затем"],
   uk: ["і", "з", "в", "на", "хвилин", "додайте", "або", "наріжте", "обсмажте", "та", "до", "потім"],
