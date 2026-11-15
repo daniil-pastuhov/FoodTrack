@@ -34,7 +34,7 @@ has been posted, submitted or uploaded to a store.
 | README top with screenshots and store links | `README.md`, `docs/images/` | merged |
 | Product Hunt kit, community posts (en, nb, ru), press pitch (nb, en) | `docs/marketing/product-hunt.md`, `community-posts.md`, `press-pitch-no.md`, `press-pitch-en.md`, index in `docs/marketing/README.md` | drafts |
 | Landing page "About the app" | pull request `daniil-pastuhov/bestbefore-privacy#3`; URL after merge: `https://daniil-pastuhov.github.io/bestbefore-privacy/app.html` | open, not merged |
-| App Store preview video | scripts and output paths to be reported | an agent was still working on it when this file was written |
+| App Store preview video, 21 s, per language (en-GB, ru, no) | scripts `scripts/ios_preview.sh`, `scripts/ios_preview_assemble.py`; output `build/app-store-preview/<locale>/preview.mp4` and `poster.png` (git-ignored, 26 MB each; regenerate with the two scripts) | made and checked frame by frame; not uploaded |
 
 ## Findings worth keeping from the analysis
 
@@ -83,7 +83,13 @@ has been posted, submitted or uploaded to a store.
    URL into App Store Connect's Marketing URL.
 7. **Product Hunt, community posts, press**: after the Recipe version is live; Android-focused
    posts after Play is public. Read each community's self-promotion rules first.
-8. **Preview video**: review what the agent produced; upload is by hand in App Store Connect.
+8. **Preview video**: watch it, then decide the purchase disclosure. The last shot is the 3-day
+   menu, which needs a recipe pack, and Apple asks a preview that shows something needing a
+   purchase to say so. Either add a short line to the last caption (`SHOTS` in
+   `scripts/ios_preview_assemble.py`) or end on the recipe, which the phone writes for free.
+   Upload is by hand: version page > each language > iPhone > drag the file in, poster frame at
+   4.6 s. The videos were recorded before "Copy prompt" was removed and the pill resized; neither
+   appears in the footage.
 
 ## Not decided
 
