@@ -291,17 +291,38 @@ binding exist on the live project (created and read back 2026-11-14).
       account-deletion field.) Merge the privacy policy pull request
       (<https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1>) when the release goes out;
       see [privacy-policy-changes.md](privacy-policy-changes.md).
-- [ ] App Store Connect > App Privacy and Play Console > Data safety: the answers are in
-      `store-listing/app-store/README.md`, section 5. App Privacy has no API; Play's Data safety
-      can be uploaded as CSV through the Play Developer API **(agent)**. Play Console > App
-      content: in-app purchases, and account deletion (Recipe tab > Recipe settings > Account >
-      Delete account; for recipes bought without an account, Recipe settings > Your recipes >
-      Delete my data from our server, which deletes the anonymous account). **Check** whether
-      Play also wants a web page for deletion requests.
+- [ ] App Store Connect > App Privacy and Play Console > Data safety, when the release that
+      sells packs goes out (reasons in `store-listing/app-store/README.md`, section 5):
+  - App Privacy: by hand, following [app-privacy-apple.md](app-privacy-apple.md) (the public
+    App Store Connect API has no App Privacy resources; fastlane's action uses an Apple Account
+    web session, which we don't use).
+  - Data safety: the whole form is `store-listing/google-play/data-safety.csv` **(agent,
+    2026-11-15)**. `python3 scripts/play_data_safety.py` validates it and prints what it
+    declares; with `PLAY_SERVICE_ACCOUNT_JSON` set, `--apply` replaces the form on Play (the API
+    can't read it back, so compare in the Console first). Account deletion and data deletion
+    both point to https://daniil-pastuhov.github.io/bestbefore-privacy/delete.html (Play's
+    required web link; in the app: Recipe tab > Recipe settings > Account > Delete account, or
+    Your recipes > Delete my data from our server for the anonymous account). Also in App
+    content: in-app purchases.
+  - Corrected 2026-11-15 against the code: on Play, crash logs, diagnostics and device IDs are
+    for **Analytics** (Play's definition: "to diagnose and fix bugs or crashes"), not App
+    functionality; Health info (allergens) is **not** processed ephemerally (Vertex AI caches
+    inputs for up to 24 hours and may log prompts for abuse monitoring); Name is for Account
+    management only. On Apple, Other Diagnostic Data also has purpose Analytics (the Firebase
+    SDKs' own manifests).
+  - Judgement calls left to you: whether the barcode sent to Open Food Facts must be declared
+    (not declared: a product code without user or device ID, sent straight to Open Food Facts;
+    the strict reading would be App activity > In-app search history, collected, optional);
+    pantry names and recipe settings as Other user-generated content rather than Other actions;
+    Health info at all, given consent and no storage on our server (declared, since Google's
+    cache keeps it); the anonymous Firebase uid as User IDs (declared: Play counts
+    pseudonymous data); Apple's Device ID, Analytics and "not linked" for crash data
+    (app-privacy-apple.md, "Judgement calls").
 - [ ] "Send all products" (Recipe settings, off by default): with it on, a recipe from a pack
       also sends the names, dates and quantities of every other pantry item, as items the recipe
       may use. The store answers do not change (still User Content > Other User Content / App
-      activity > Other user-generated content, App Functionality, linked, not tracking; only the
+      activity > Other user-generated content, App Functionality, linked, not tracking, and in
+      data-safety.csv; only the
       description in store-listing/app-store/README.md section 5 grew), but the hosted privacy
       policy's sentence about what is sent must name it before the release that ships it
       (privacy-policy-changes.md). The server reads the new field only after the next backend

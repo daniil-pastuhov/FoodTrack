@@ -54,3 +54,22 @@ PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_listing.py --im
 - **Release notes**: written per language in `release-notes/vX.Y.Z/` (en-GB, ru-RU, no-NO) and
   set by `scripts/play_upload.py`. A language without notes of its own, such as en-US, shows the
   default language's.
+
+## Data safety
+
+`data-safety.csv` is the whole Data safety form (App content > Data safety) in Play Console's
+CSV format: every question and choice of a current export, answered for the version that sells
+recipe packs. What it declares, and why, is in [../app-store/README.md](../app-store/README.md),
+section 5 ("Google Play's Data safety form"). Nothing sends it automatically:
+
+```sh
+python3 scripts/play_data_safety.py            # offline: validates the file, prints what it declares
+PLAY_SERVICE_ACCOUNT_JSON="$(cat key.json)" python3 scripts/play_data_safety.py --apply
+```
+
+`--apply` posts it to the Play Developer API (`applications.dataSafety`), which replaces every
+answer, like "Import from CSV" in the Console. The API cannot read the form back, so the dry run
+can't show what Play has now: compare in the Console first. If Play changes the form (new
+questions), export it there (Export to CSV), bring the new rows into the file and into
+`GENERAL` / `DATA_TYPES` in the script, and run the dry run again. Send it when the release that
+sells packs goes to closed testing (Data safety applies to the closed track; docs/play-production.md).

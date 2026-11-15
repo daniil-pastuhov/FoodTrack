@@ -274,13 +274,18 @@ User ID, Email Address, Name, Other User Content, Health); the Firebase SDKs shi
 manifests for crash reporting. The
 privacy policy (URL above) has to say the same; it is updated in
 <https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1> (`docs/privacy-policy-changes.md`).
+App Privacy can't be set through the API; the click-by-click guide, with the reasons and the
+judgement calls, is [docs/app-privacy-apple.md](../../docs/app-privacy-apple.md). Play's form is
+the file `store-listing/google-play/data-safety.csv`, sent by `scripts/play_data_safety.py`
+([../google-play/README.md](../google-play/README.md), "Data safety").
 
 - **Data collection: "Yes, we collect data from this app."**
 - From everyone, release builds only: crash reports to Firebase Crashlytics. Each **not linked
   to the user**, **not used for tracking**, purpose **App Functionality**:
   - **Diagnostics > Crash Data**: the crash report itself.
   - **Diagnostics > Other Diagnostic Data**: device model, OS version, free disk and memory at
-    the time of the crash.
+    the time of the crash, and the Firebase SDKs' user agent; purposes App Functionality and
+    **Analytics**, as the FirebaseAuth and FirebaseInstallations manifests declare it.
   - **Identifiers > Device ID**: the Firebase installation ID Crashlytics groups crashes by.
 - Only from someone who starts a purchase of a recipe pack (nothing of this is sent by the free
   recipe routes or the rest of the app). Each **linked to the user** (it is stored under their
@@ -333,29 +338,54 @@ privacy policy (URL above) has to say the same; it is updated in
 - Barcode lookups go to Open Food Facts without any user or device identifier, and the shared
   prompt goes only to the app the user picks, so neither counts as collection by us.
 - **Tracking: No.**
-- Google Play's Data safety form needs the matching answers. Collected, not shared (Google acts
-  as our processor; Apple is not involved on Android), encrypted in transit:
-  - **Crash logs**, **Diagnostics**, **Device or other IDs**: not optional, **App functionality**
-    (unchanged); add **Fraud prevention, security and compliance** to Device or other IDs for
-    App Check (Play Integrity) and rate limiting.
+- Google Play's Data safety form needs the matching answers; they are in
+  `store-listing/google-play/data-safety.csv` (`scripts/play_data_safety.py` prints them).
+  Everything is collected, nothing shared: Google (Firebase, Vertex AI, Play) processes it on our
+  behalf as a service provider, which Play's form does not count as sharing ("Transferring user
+  data to a 'service provider' that processes it on behalf of the developer",
+  <https://support.google.com/googleplay/android-developer/answer/10787469>). Apple is not
+  involved on Android. All of it is encrypted in transit (HTTPS). None is processed ephemerally:
+  the server keeps the recipe for 7 days, and Google's model caches inputs for up to 24 hours
+  and may log prompts for abuse monitoring
+  (<https://docs.cloud.google.com/vertex-ai/generative-ai/docs/data-governance>), which is not
+  "only stored in memory".
+  - **Crash logs**, **Diagnostics**, **Device or other IDs** (the Firebase installation ID and
+    Crashlytics UUID, ML Kit's per-installation IDs, the Play Integrity token App Check sends):
+    required (every release build, no opt-out), **Analytics**, which Play defines as "to monitor
+    app health, to diagnose and fix bugs or crashes" (not App functionality, as an earlier version
+    of this list said); Device or other IDs also **Fraud prevention, security, and compliance**
+    (App Check). ML Kit (barcode, text, image labels, Gemini Nano) runs on the device but sends
+    Google diagnostics with per-installation IDs (<https://developers.google.com/ml-kit/android-data-disclosure>),
+    covered by the same two types.
   - **Purchase history**, **User IDs**: optional (only for buyers), **App functionality**,
-    **Account management**, **Fraud prevention, security and compliance** (the refund-after-use
-    record, under the user ID and a hash of the sign-in provider's user ID).
-  - **Email address**, **Name**: optional (only when signed in; the name only with Google),
-    **App functionality**, **Account management**.
-  - **Other user-generated content** (the ingredients and settings sent, the recipe returned):
-    optional, **App functionality**.
+    **Account management**, **Fraud prevention, security, and compliance** (the replay guard and
+    the refund-after-use record, under the user ID and a hash of the sign-in provider's user ID).
+  - **Email address**: optional (only when signed in), **App functionality**, **Account
+    management**. **Name**: optional (only with Google sign-in, kept in Firebase's Google
+    provider entry although the server clears the top-level name), **Account management** only:
+    nothing in the app uses it.
+  - **Other user-generated content** (the ticked items' names, dates and quantities, every pantry
+    item's with "Send all products" on, the recipe settings, the recipe returned): optional,
+    **App functionality**.
   - **Health and fitness > Health info** (the allergen list, "Information about a user's health,
-    such as medical records or symptoms"): collected, not shared, optional (only with allergens
-    set, and only after the consent step), **App functionality**; processed ephemerally ("Is
-    this data processed ephemerally?": **Yes**: it is used for the one request and not stored).
+    such as medical records or symptoms"): optional (only with allergens set, and only after the
+    consent step), **App functionality**; processed ephemerally: **No** (an earlier version said
+    Yes; our server keeps it only inside the request hash, but Google's model cache above keeps
+    it up to 24 hours).
+  - Not declared: Location (shop reminders are on-device geofences; nothing is sent), Photos (on
+    the device; image labelling is on-device ML Kit), App interactions and other usage (no
+    analytics SDK), In-app review (the Play Store's own flow under Play's terms), and the
+    barcode sent to Open Food Facts (a product code, without user or device ID; judgement call
+    in `docs/recipe-setup.md` step 11).
   - Data deletion: users can delete their account in the app (Recipe tab > Recipe settings >
     Account > Delete account), and someone who bought without signing in deletes the anonymous
     account the same way (Recipe settings > Your recipes > Delete my data from our server). The
     Auth user (email, name; or the anonymous user), the server's recipes, the usage counters and
     the stored Sign in with Apple token (revoked at Apple first) are deleted; purchase records
     (with the old user ID, not linked to a name or email), a closed account record with totals,
-    and any refund-after-use record stay. Give the policy URL.
+    and any refund-after-use record stay. Both deletion URLs (account, and data) are
+    https://daniil-pastuhov.github.io/bestbefore-privacy/delete.html, which also takes requests
+    without the app.
   - Account creation: "Users can create an account" with Google sign-in (OAuth), and the app
     works without one. The Android app has no Sign in with Apple (only the iPhone app offers it);
     an account made with Apple on an iPhone is used on Android through Google added to it, and

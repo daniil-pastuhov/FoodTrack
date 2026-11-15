@@ -14,7 +14,8 @@ before, and change it together with any change to what the backend stores, sends
 ## Store forms that must say the same
 
 The answers, ready to paste, are in [store-listing/app-store/README.md](../store-listing/app-store/README.md),
-section 5. In short, for someone who starts a purchase (nothing of this for anyone else), all
+section 5; App Privacy step by step in [app-privacy-apple.md](app-privacy-apple.md), Play's form as
+`store-listing/google-play/data-safety.csv`. In short, for someone who starts a purchase (nothing of this for anyone else), all
 linked to the user, none used for tracking, purpose App Functionality:
 
 | What | App Store App Privacy | Play Data safety |
@@ -23,12 +24,12 @@ linked to the user, none used for tracking, purpose App Functionality:
 | Firebase user id; buyer identifiers | Identifiers > User ID | Personal info > User IDs |
 | Email, when signed in | Contact Info > Email Address | Personal info > Email address |
 | Google account name (and photo link), Google sign-in only | Contact Info > Name | Personal info > Name |
-| Ticked items (all pantry items with "Send all products" on), settings, allergens, the recipe returned | User Content > Other User Content | App activity > Other user-generated content |
+| Ticked items (all pantry items with "Send all products" on), settings, the recipe returned | User Content > Other User Content | App activity > Other user-generated content |
+| Allergens, only after the consent step | Health & Fitness > Health | Health and fitness > Health info (not ephemeral) |
 | App Check, IP-based rate limiting, request logs | no extra type (**Check**): the server stores no device identifier or IP address; Google's request logs keep the IP for 30 days | Device or other IDs (already declared): add Fraud prevention, security and compliance |
-| Crash reports (everyone, release builds) | Diagnostics > Crash Data, Other Diagnostic Data; Identifiers > Device ID; not linked | Crash logs, Diagnostics, Device or other IDs |
+| Crash reports (everyone, release builds) | Diagnostics > Crash Data, Other Diagnostic Data; Identifiers > Device ID; not linked | Crash logs, Diagnostics, Device or other IDs; required, purpose Analytics |
 
 The apps ask Apple for the email only, and the server clears the name and photo Google supplies
 from the account's main record, but Firebase Authentication keeps a copy in the Google provider
 entry until the account is deleted, so the name is declared for Google sign-ins. The allergen
-list is declared as other user content, not health data; whether it should also be Health is still
-the owner's decision (store-listing/app-store/README.md, section 5).
+list is declared as health data on both stores (and in `iosApp/FoodTracker/PrivacyInfo.xcprivacy`).
