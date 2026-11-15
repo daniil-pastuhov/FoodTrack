@@ -16,7 +16,7 @@
  * - Nothing stored (earlier recipes, menus, failure reasons) is ever part of a prompt.
  */
 import { randomBytes } from "node:crypto";
-import { coursesFor, menuDates, type DietChoice, type GenerateRequest, type RecipeConfig } from "../contract";
+import { coursesFor, menuDates, menuDaysOf, type DietChoice, type GenerateRequest, type RecipeConfig } from "../contract";
 import { LIMITS, STEP_BOUNDS, idNamesFor, optionalIdsFor, pantryIdsFor } from "../core/outputSafety";
 
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -125,11 +125,23 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
   if (req.kind === "recipe") {
     lines.push("- Write one recipe.");
   } else {
-    const dates = menuDates(req.today);
+    // A 3-day menu of 2 or 3 courses (every menu before menu sets) gets exactly the lines it got then.
+    const days = menuDaysOf(req);
+    const dates = menuDates(req.today, days);
+    const courses = coursesFor(req.courses!);
+    const usesLine = `- In each day's "uses", list the ids of the ${optional ? "pantry and optional" : "pantry"} items that day uses.`;
     lines.push(
-      `- Write a menu for 3 days: ${dates.join(", ")}, in that order, with exactly these courses each day: ${coursesFor(req.courses!).join(", ")}.`,
-      "- Every course is a full recipe and a different dish. Every day uses at least one pantry item.",
-      `- In each day's "uses", list the ids of the ${optional ? "pantry and optional" : "pantry"} items that day uses. The meal type is for the main course only: ignore it for starters and desserts. The time and the diet hold for every course.`,
+      days === 1
+        ? `- Write a menu for 1 day: ${dates[0]}, with exactly these courses: ${courses.join(", ")}.`
+        : `- Write a menu for ${days} days: ${dates.join(", ")}, in that order, with exactly these courses each day: ${courses.join(", ")}.`,
+      days === 1 && courses.length === 1
+        ? "- The main course is a full recipe and uses at least one pantry item."
+        : days === 1
+          ? "- Every course is a full recipe and a different dish. The day uses at least one pantry item."
+          : "- Every course is a full recipe and a different dish. Every day uses at least one pantry item.",
+      courses.length === 1
+        ? `${usesLine} The meal type, the time and the diet hold for the main course.`
+        : `${usesLine} The meal type is for the main course only: ignore it for starters and desserts. The time and the diet hold for every course.`,
     );
   }
   // Which items are past their date is computed here, not left to the model's date arithmetic.
@@ -139,7 +151,7 @@ export function systemInstruction(req: GenerateRequest, canary: string): string 
     "DATES",
     `- Pantry items already past their date: ${past.length ? past.join(", ") : "none"}.`,
     "- The user chose these items to use them up. A date is never a reason to leave one out; only the diet, the allergens or an entry that is not food are.",
-    req.kind === "recipe"
+    req.kind === "recipe" || menuDaysOf(req) === 1
       ? "- Items already past their date are ordinary ingredients: use them first, then the items that expire soonest."
       : "- Items already past their date are ordinary ingredients used first: on the first day, and on the next days only when the first day cannot take them all. Any other item with a date: soonest-expiring first, never on a day after its expiresOn date.",
   );
@@ -238,17 +250,18 @@ function recipeSchema(req: GenerateRequest, inMenu = false): Record<string, unkn
 export function responseSchema(req: GenerateRequest): Record<string, unknown> {
   if (req.kind === "recipe") return recipeSchema(req);
   const courses = coursesFor(req.courses!);
+  const days = menuDaysOf(req);
   return {
     type: "object",
     properties: {
       days: {
         type: "array",
-        minItems: 3,
-        maxItems: 3,
+        minItems: days,
+        maxItems: days,
         items: {
           type: "object",
           properties: {
-            date: { type: "string", enum: menuDates(req.today) },
+            date: { type: "string", enum: menuDates(req.today, days) },
             uses: { type: "array", maxItems: itemIds(req).length, items: { type: "string", enum: itemIds(req) } },
             courses: {
               type: "array",

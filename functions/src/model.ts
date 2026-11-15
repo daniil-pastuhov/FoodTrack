@@ -4,14 +4,21 @@ import type { DocumentReference, Firestore, Timestamp, Transaction } from "fireb
 import { fail } from "./contract";
 import {
   CONFIG_CACHE_MS,
-  COST_KEYS,
   COST_MAX,
   DEFAULT_COSTS,
+  DEFAULT_MENU_DAYS,
+  DEFAULT_MENU_SETS,
   DEFAULT_PRICES,
+  MENU_COURSES,
+  MENU_DAYS,
   PURCHASE_TOKEN_NAMESPACE,
+  costsOf,
   type CostKey,
   type Costs,
   type GenerationKind,
+  type MenuCourses,
+  type MenuDays,
+  type MenuSetCosts,
 } from "./constants";
 import type { FailureClass, LlmUsage, Logger, SealedSecret } from "./ports";
 import type { Menu, Recipe } from "./contract";
@@ -152,7 +159,12 @@ export type GenerationState = "pending" | "done" | "failed";
 export interface GenerationDoc {
   state: GenerationState;
   kind: GenerationKind;
-  courses?: 2 | 3;
+  courses?: MenuCourses;
+  /**
+   * A menu's days, on every menu reserved since menu sets; absent on a recipe and on a menu from
+   * before them, which was a DEFAULT_MENU_DAYS (3-day) menu.
+   */
+  days?: MenuDays;
   /** Credits charged by the reservation; settle and refund use this, never the current table. */
   cost: number;
   /** sha256 of the validated request (inputHashOf): a requestId is bound to its inputs. */
@@ -272,16 +284,67 @@ const COUNT_FIELDS = [
 const isCount = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v) && v >= 0;
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** A costs override, or null when any part of it is invalid (then the whole default table applies). */
+const isCost = (n: unknown): n is number => typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= COST_MAX;
+
+/**
+ * A costs override, or null when any part of it is invalid (then the whole default table applies).
+ * `recipe`, `menu2` and `menu3` are required, as before menu sets: `menu2` / `menu3` are the
+ * 3-day 2- and 3-course prices and their only source. `menuSets` is optional; each row ("1" to
+ * "4" days) may give any of its cells ("1" to "3" courses), except that the 3-day row's "2" and
+ * "3" are accepted only when they repeat `menu2` / `menu3` exactly, so a stored table cannot say
+ * two prices for one menu. A missing cell keeps the default table's step from the 3-day row (one
+ * credit a day or a course), held within [recipe, COST_MAX]; so does the 3-day 1-course cell,
+ * from `menu2`. Whatever the source, more days or more courses are never cheaper, and no menu is
+ * cheaper than a recipe.
+ */
 export function validCosts(v: unknown): Costs | null {
   if (!isObj(v)) return null;
-  for (const k of COST_KEYS) {
-    const n = v[k];
-    if (typeof n !== "number" || !Number.isInteger(n) || n < 1 || n > COST_MAX) return null;
+  if (!isCost(v.recipe) || !isCost(v.menu2) || !isCost(v.menu3)) return null;
+  const recipe = v.recipe;
+  const sets = v.menuSets === undefined || v.menuSets === null ? {} : v.menuSets;
+  if (!isObj(sets)) return null;
+  const dayKeys = MENU_DAYS.map((d) => `${d}`);
+  const courseKeys = MENU_COURSES.map((c) => `${c}`);
+  if (Object.keys(sets).some((k) => !dayKeys.includes(k))) return null;
+  const given: Record<string, Record<string, number>> = {};
+  for (const d of dayKeys) {
+    const row = sets[d];
+    if (row === undefined || row === null) continue;
+    if (!isObj(row)) return null;
+    for (const [c, n] of Object.entries(row)) {
+      if (!courseKeys.includes(c)) return null;
+      if (n === undefined || n === null) continue;
+      if (!isCost(n)) return null;
+      (given[d] ??= {})[c] = n;
+    }
   }
-  const out = { recipe: v.recipe as number, menu2: v.menu2 as number, menu3: v.menu3 as number };
-  if (out.menu2 < out.recipe || out.menu3 < out.menu2) return null;
-  return out;
+  const base = `${DEFAULT_MENU_DAYS}` as const;
+  const derive = (from: number, d: `${MenuDays}`, c: `${MenuCourses}`, fromD: `${MenuDays}`, fromC: `${MenuCourses}`) =>
+    Math.min(COST_MAX, Math.max(recipe, from + DEFAULT_MENU_SETS[d][c] - DEFAULT_MENU_SETS[fromD][fromC]));
+  const g3 = given[base] ?? {};
+  if ((g3["2"] !== undefined && g3["2"] !== v.menu2) || (g3["3"] !== undefined && g3["3"] !== v.menu3)) return null;
+  const three: Record<`${MenuCourses}`, number> = {
+    "1": g3["1"] ?? derive(v.menu2, base, "1", base, "2"),
+    "2": v.menu2,
+    "3": v.menu3,
+  };
+  const menuSets = Object.fromEntries(MENU_DAYS.map((d) => {
+    const dk = `${d}` as `${MenuDays}`;
+    if (dk === base) return [dk, three];
+    return [dk, Object.fromEntries(MENU_COURSES.map((c) => {
+      const ck = `${c}` as `${MenuCourses}`;
+      return [ck, given[dk]?.[ck] ?? derive(three[ck], dk, ck, base, ck)];
+    }))];
+  })) as MenuSetCosts;
+  for (let i = 0; i < MENU_DAYS.length; i++) {
+    const row = menuSets[`${MENU_DAYS[i]}`];
+    for (let j = 0; j < MENU_COURSES.length; j++) {
+      const ck = `${MENU_COURSES[j]}` as `${MenuCourses}`;
+      if (row[ck] < (j === 0 ? recipe : row[`${MENU_COURSES[j - 1]}` as `${MenuCourses}`])) return null;
+      if (i > 0 && row[ck] < menuSets[`${MENU_DAYS[i - 1]}`][ck]) return null;
+    }
+  }
+  return costsOf(recipe, menuSets);
 }
 
 function validPrices(v: unknown): Prices | null {
@@ -417,9 +480,10 @@ export function uuidV5(namespace: string, name: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export function costKeyOf(kind: GenerationKind, courses?: 2 | 3): CostKey {
-  if (kind === "recipe") return "recipe";
-  return courses === 2 ? "menu2" : "menu3";
+/** The priced variant of a request (a menu without `days` or `courses` reads as 3 days, 3 courses). */
+export function costKeyOf(req: { kind: GenerationKind; courses?: MenuCourses; days?: MenuDays }): CostKey {
+  if (req.kind === "recipe") return "recipe";
+  return `menu${req.days ?? DEFAULT_MENU_DAYS}x${req.courses ?? 3}`;
 }
 
 /** Estimated cost in micro-USD, rounded up. Thinking tokens are billed as output. */

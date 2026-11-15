@@ -1,8 +1,9 @@
 # Recipe backend (Cloud Functions)
 
 Paid server-generated recipes: credits bought as consumables on Google Play and the App Store. By
-default one credit per recipe, four per 3-day 2-course menu, five per 3-day 3-course menu
-(`DEFAULT_COSTS`, overridable in `config/runtime.costs`). TypeScript, Cloud Functions 2nd gen, Node.js 24, Firebase
+default one credit per recipe and, for a menu set of 1 to 4 days and 1 to 3 courses, days +
+courses − 1 credits: four per 3-day 2-course menu, five per 3-day 3-course menu, up to six for 4
+days of 3 courses (`DEFAULT_COSTS`, overridable in `config/runtime.costs`; CONTRACT.md "Costs"). TypeScript, Cloud Functions 2nd gen, Node.js 24, Firebase
 project `bestbefore-f9ee1`, region `europe-west1`.
 
 Nothing here is used by anyone who never opens the paid path: the apps create no Auth user and make
@@ -102,8 +103,8 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
   `generation_not_enough_items`): no pantry item that the allergens and diet allow (by the same
   word lists as the answer check), or, for a menu, a day on which no allowed item may be planned
   (an item may be planned on any day when it has no date or was already past its date at request
-  time, otherwise up to its date). A thin but possible request (one undated item for a 3-day
-  menu) goes to the model, which completes dishes with a few bought extras.
+  time, otherwise up to its date; so a menu of more days needs items that last longer). A thin
+  but possible request (one undated item for a 3-day menu) goes to the model, which completes dishes with a few bought extras.
 - Refunds are state transitions on the purchase doc: `refundedCredits` moves to the store's value
   and the holder's balance moves by the difference, once. Events older than the last one applied
   are ignored. The balance may go negative. A refund for a purchase never submitted creates a
@@ -253,9 +254,20 @@ Every LLM call is priced before it is made and paid for by a credit:
   ceiling, and (`USER_DAILY_LIMIT`) when the user's spend window would exceed
   `perUserDailySpendMicroUsd`. Because worst cases are reserved inside the transaction, parallel
   calls cannot overshoot. The billing-budget kill switch stays as the slow backstop.
-- **Output caps** (`MAX_OUTPUT_TOKENS`): recipe 4,096; 2-course menu 14,000; 3-course menu 20,000.
+- **Output caps** (`MAX_OUTPUT_TOKENS`): recipe 4,096; 3-day menu 14,000 (2 courses) and 20,000
+  (3 courses), as before menu sets; the other menu sets about 1,800 a dish plus 1,000 a day:
+
+  | days | 1 course | 2 courses | 3 courses |
+  |---|---|---|---|
+  | 1 | 3,000 | 5,000 | 7,000 |
+  | 2 | 5,500 | 9,500 | 13,000 |
+  | 3 | 8,500 | 14,000 | 20,000 |
+  | 4 | 11,500 | 19,000 | 24,000 |
+
+  4 days of 3 courses (12 dishes) is held at 24,000 (600 a day for the wrappers instead of 1,000)
+  so that its worst case with the output judge on still fits the per-user ceiling below.
 - **Usage logs.** One `llm_call` log line per call: `uidHash` (sha256 of the uid with a fixed
-  prefix, not the uid), kind, courses, model, input / output / thinking tokens, finish reason,
+  prefix, not the uid), kind, courses, days (menus; 3 for one reserved before menu sets), model, input / output / thinking tokens, finish reason,
   duration, outcome, cost, charged / refunded, reserved and estimated micro-USD. Never ingredient
   names, prompts or outputs. In Logs Explorer: `jsonPayload.message="llm_call"`.
 
@@ -301,6 +313,26 @@ requests included. The largest requests are now:
 
 That is under USD 0.0005 a call; the per-user and global arithmetic below is unchanged (one
 3-course menu booked at its worst case, 0.323, still fits the 0.45 a day; a second does not).
+
+**Menu sets** (November 2026, CONTRACT.md "Capability `acceptsMenuDays`"): a menu of 1 to 4 days
+and 1 to 3 courses. The 3-day 2- and 3-course menus are exactly as before (same prompt, schema,
+caps and figures). Worst-case reservations of the largest request of each (everything at its
+maximum as above, fullest multi-choice config; `test/menuSets.test.ts` checks every one against
+the per-user ceiling with the judge off and on), in USD, judge off / on:
+
+| days | 1 course | 2 courses | 3 courses |
+|---|---|---|---|
+| 1 | 0.067 / 0.089 | 0.098 / 0.123 | 0.128 / 0.156 |
+| 2 | 0.105 / 0.131 | 0.165 / 0.198 | 0.218 / 0.256 |
+| 3 | 0.150 / 0.181 | 0.233 / 0.273 | 0.323 / 0.373 |
+| 4 | 0.195 / 0.231 | 0.308 / 0.356 | 0.383 / 0.439 |
+
+The input bound grows by about 80 bytes a day and 20 a course (the schema's date enum and course
+lists); the output cap dominates. The largest, 4 days of 3 courses at 0.383, fits the 0.45 once a
+day: after it settles at a typical ≈ USD 0.15 (12 dishes), a second (0.15 + 0.383) does not, but
+recipes and the smaller sets do. Every set's default price nets more than its worst case (1
+credit ≈ USD 0.12 net against 0.067 for 1 day of 1 course; 6 ≈ USD 0.72 against 0.383 for 4
+days of 3 courses).
 `test/configChoices.test.ts` checks that the fullest config adds under 400 bytes and USD 0.001.
 The response schema changes only in the value of `minutes.maximum` (any multiple of 5 from 10 to
 120 instead of 15, 30, 60 or 1,440); the lower bound is not in it.
@@ -313,7 +345,7 @@ checks the inequality for each kind.
   0.22 (0.22 + 0.32 > 0.45): **two 3-course menus**, then recipes still fit (0.22 + 0.08 ≤ 0.45).
   2-course menus: 0, 0.08, 0.16, 0.24 → refused at 0.32: four. Recipes: about 19. Even when every
   call is booked at the worst case (unknown usage) a user can do one 3-course menu, two 2-course
-  menus or six recipes.
+  menus or six recipes. The largest menu set (4 days, 3 courses) fits once a day.
 - **Global ceiling = min(max, base + fraction × net value of production credits granted in the
   last 7 UTC days)**:
   - `dailySpendBaseMicroUsd: 1200000` (USD 1.20/day without sales). That is 2.7 users at their
@@ -386,7 +418,8 @@ replaces it by the measured cost. At the base ceiling (USD 1.20, no sales that w
 3-course menus in flight hold 3 × 0.308 = 0.92, so a fourth (0.92 + 0.308 = 1.23 > 1.20) gets
 `GENERATION_DISABLED` until one of them settles (a typical menu then books ≈ 0.11). Five 2-course
 menus (5 × 0.218 = 1.09) or five recipes fit at the base; at the maximum ceiling (USD 2.00) five
-3-course menus (1.54) fit. This is the breaker working as intended, not a new limit.
+3-course menus (1.54) fit. Three 4-day 3-course menus (3 × 0.383 = 1.15) fit at the base, a
+fourth does not. This is the breaker working as intended, not a new limit.
 
 `getGeneration` stays at 1 instance with a 120-a-minute ceiling: five generations each polled
 every 3 s are 5 × 20 = 100 calls a minute, which leaves 20 a minute for launch recoveries (one
@@ -770,7 +803,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `perUserDailySpendMicroUsd` | integer ≥ 0 | `450000` | Estimated LLM spend per user per UTC day (USD 0.45). At it: `USER_DAILY_LIMIT`. |
 | `refundAbuseThreshold` | integer ≥ 1 | `2` | Refund-after-use events that block a buyer (`purchasesBlocked`). |
 | `consumptionSampleContentProvided` | bool | `true` | Sent to Apple as `sampleContentProvided` in consumption answers. |
-| `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` | Credits per request. All three keys, integers 1–100, `recipe ≤ menu2 ≤ menu3`; otherwise the whole default table is used. Sent to clients in every response with `balance`. |
+| `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
 | `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 
@@ -1036,6 +1069,7 @@ Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1
 | Estimated spend today against today's ceiling | `stats/{today}.spentMicroUsd + reservedMicroUsd` (what the breaker compares), against `dailySpendCeiling` from `src/model.ts` (the server's own function) over today's `config/runtime` and the `netCreditsGranted` of today and the 6 days before |
 | Recipes used today against the daily cap | `stats/{today}.generationUnits` against `dailyCap` |
 | Recipes sold today, purchases per day by pack and per store, refunds, net | `purchases/` with `grantedAt` in the period, `env: "production"` only; `credits`, `refundedCredits` (refunds of those purchases up to now). A deleted account's purchases (`uid: null`) count; a purchase refunded before it was granted (no `grantedAt`) does not |
+| Purchases by platform: per day (Android and iOS series), the split of packs, recipes granted, net recipes and each pack (counts and shares written out), and a table by platform and pack | the same purchases, by their `store`: `play` is Android, `appstore` is iOS (each store accepts purchases only from its own app); an unrecognised value is shown as "Other store" only when it has purchases. Refunds and sandbox are treated as above. No extra read: it comes from the purchases already read (`board.json` adds `sales.byStoreAndPack`) |
 | Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
 | Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
 | Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |

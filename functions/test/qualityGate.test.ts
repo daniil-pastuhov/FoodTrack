@@ -75,7 +75,7 @@ function liveAnswer(r: GenerateRequest) {
     ["Clear Salted Broth", "Robust Pepper Essence Emulsion"],
   ];
   return {
-    days: menuDates(r.today).map((date, d) => ({
+    days: menuDates(r.today, 3).map((date, d) => ({
       date,
       uses: d === 0 ? ["p5"] : [],
       courses: ["starter", "main"].map((course, c) => ({
@@ -107,7 +107,7 @@ function honestMenu(r: GenerateRequest, courses: 2 | 3 = 2) {
   ];
   const names = courses === 2 ? ["starter", "main"] : ["starter", "main", "dessert"];
   return {
-    days: menuDates(r.today).map((date, d) => ({
+    days: menuDates(r.today, 3).map((date, d) => ({
       date,
       uses: [],
       courses: names.map((course, c) => ({ course, recipe: dish(plan[d][c][0], plan[d][c][1]) })),

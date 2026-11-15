@@ -42,7 +42,7 @@ export function answerOf(parsed: unknown): unknown {
 
 /** The Vertex AI REST body the generator sends for this request and prompt. */
 export function vertexBody(req: GenerateRequest, prompt: Prompt, model: string, thinkingLevel: string, jailbreakFilter = false): Record<string, unknown> {
-  const maxOutputTokens = MAX_OUTPUT_TOKENS[costKeyOf(req.kind, req.courses)];
+  const maxOutputTokens = MAX_OUTPUT_TOKENS[costKeyOf(req)];
   return restBodyOf(generationParamsFor(prompt, maxOutputTokens, { model, thinkingLevel, jailbreakFilter }));
 }
 

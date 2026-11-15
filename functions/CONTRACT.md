@@ -35,14 +35,28 @@ Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generate
 `mergeBalance`) also carries the price table in force:
 
 ```json
-"costs": { "recipe": 1, "menu2": 4, "menu3": 5 }
+"costs": {
+  "recipe": 1, "menu2": 4, "menu3": 5,
+  "menuSets": {
+    "1": { "1": 1, "2": 2, "3": 3 },
+    "2": { "1": 2, "2": 3, "3": 4 },
+    "3": { "1": 3, "2": 4, "3": 5 },
+    "4": { "1": 4, "2": 5, "3": 6 }
+  }
+}
 ```
 
 | key | what | default |
 |---|---|---|
 | `recipe` | one recipe | 1 credit |
-| `menu2` | 3-day menu, 2 courses (`kind: "menu", courses: 2`) | 4 credits |
-| `menu3` | 3-day menu, 3 courses (`kind: "menu", courses: 3`) | 5 credits |
+| `menu2` | 3-day menu, 2 courses (`kind: "menu", courses: 2`, no `days` or `days: 3`) | 4 credits |
+| `menu3` | 3-day menu, 3 courses (`kind: "menu", courses: 3`, no `days` or `days: 3`) | 5 credits |
+| `menuSets` | a menu set: `menuSets["<days>"]["<courses>"]`, days `"1"` to `"4"`, courses `"1"` to `"3"`, as strings (see "Capability `acceptsMenuDays`") | days + courses − 1 credits |
+
+`menu2` and `menu3` are always exactly `menuSets["3"]["2"]` and `menuSets["3"]["3"]`: they stay for
+the clients from before menu sets, which read only them (there is no flat key for one course,
+which those clients never ask for). Every response carries the whole table, all 12 cells. More
+days or more courses never cost less, and no menu costs less than a recipe.
 
 The server alone decides the cost and may change the table without a client release. Clients must
 not hard-code prices: show the latest `costs` they received (cache it with the balance; with none
@@ -66,7 +80,7 @@ not on `message` (English, for logs).
 | `resource-exhausted` | `USER_DAILY_LIMIT` | This account reached its daily generation limit (number of generations, estimated usage, or too many requests refused today as prompt injection: see "Name rules"). Try again tomorrow (UTC); nothing was charged. |
 | `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
-| `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
+| `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, days, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
 | `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`). Retry; the SDK fetches a new limited-use token. |
 | `failed-precondition` | `RECENT_SIGN_IN_REQUIRED` | `deleteAccount` needs a sign-in in the last 5 minutes. Re-authenticate, retry. |
 | `failed-precondition` / `permission-denied` | `MERGE_NOT_ALLOWED` | `mergeBalance` refused (see below). |
@@ -74,7 +88,7 @@ not on `message` (English, for logs).
 | `permission-denied` | `STORE_MISMATCH` | `verifyPurchase`: `store: "play"` from an app other than the Android app, or `store: "appstore"` from an app other than the iOS app (decided by the App Check app id). A client bug; nothing was recorded. |
 | `failed-precondition` | `PURCHASE_ACCOUNT_MISMATCH` | `verifyPurchase`: the store reports a purchase account token (see "Purchase account token") that is neither this account's nor that of an account merged into it. Nothing was recorded: do **not** finish the transaction; it can still be redeemed by the account that bought it. |
 | `failed-precondition` | `ALLERGEN_CONSENT_REQUIRED` | `generateRecipe`: a non-empty `allergens` without `"allergenConsent": true` (see "Allergen consent"). Checked before anything else about the allergens; nothing was read, stored or charged. Show the consent step, then send a **new** request. |
-| `failed-precondition` | `NOT_ENOUGH_ITEMS` | `generateRecipe`: the ticked items cannot make what was asked, decided before anything is reserved; nothing was charged and no model was called. Either no item is left once the allergens and every selected diet are applied (recipe or menu), or, for a menu, some day of the 3 has no item that may be planned on it (an item may go on any day when it has no date or was already past its date on `today`; otherwise only up to its date). Show "Tick a few more items" (for a menu: "...or ask for a single recipe"), keep the form; a changed request needs a new `requestId`. Clients that do not know this reason show their generic "couldn't write it, nothing was taken" message. |
+| `failed-precondition` | `NOT_ENOUGH_ITEMS` | `generateRecipe`: the ticked items cannot make what was asked, decided before anything is reserved; nothing was charged and no model was called. Either no item is left once the allergens and every selected diet are applied (recipe or menu), or, for a menu, some day of the menu (1 to 4 days) has no item that may be planned on it (an item may go on any day when it has no date or was already past its date on `today`; otherwise only up to its date). Show "Tick a few more items" (for a menu: "...or ask for a single recipe"), keep the form; a changed request needs a new `requestId`. Clients that do not know this reason show their generic "couldn't write it, nothing was taken" message. |
 | `failed-precondition` | `APPLE_NOT_LINKED` | `registerAppleSignIn`: the account has no Sign in with Apple linked. Ignore. |
 | `failed-precondition` | `APPLE_CODE_REJECTED` | `registerAppleSignIn`: Apple refused the code (expired after five minutes, already used, or not from this app). Ignore; the next Apple sign-in tries again. |
 | `unavailable` | `APPLE_UNAVAILABLE` | `registerAppleSignIn`: Apple or the key service could not be reached; nothing was stored. Ignore; the next Apple sign-in tries again. |
@@ -136,6 +150,21 @@ clients send nothing and tell the person to choose another recipe language or us
 they never send another language in its place. After a `da` request refused as `INVALID_REQUEST`
 (a rolled-back server) they stop sending `da` until a response says `true` again. Old clients
 ignore the flag and never send `da`.
+
+## Capability `acceptsMenuDays`
+
+Menu sets (November 2026): a menu of **1 to 4 days** (`days`) and **1 to 3 courses** (`courses`;
+1 is the main course alone), priced from `costs.menuSets`. Every response that carries `balance`
+from a server that reads `days` and takes `courses: 1` carries `"acceptsMenuDays": true`. Clients
+send `days` only when the latest such response said `true`, and only when it is not 3 (a request
+without `days` is the 3-day menu, as from every client before menu sets: same price, same answer,
+the same `requestId` binding), and send `courses: 1` only after the flag too. A server from before
+it ignores `days` (unknown fields are ignored), so it would write a 3-day menu at the 3-day price:
+the flag keeps a new client from asking it for something else. It refuses `courses: 1`
+(`INVALID_REQUEST`, nothing charged). Without the flag the apps offer only the 3-day menu of 2 or
+3 courses, priced `costs.menu2` / `costs.menu3`; after a menu-set request refused as
+`INVALID_REQUEST` (a rolled-back server) they stop sending `days` and `courses: 1` until a
+response says `true` again. Old clients ignore the flag and `menuSets`.
 
 ## Types
 
@@ -359,10 +388,14 @@ still render every field as plain text (never as markdown or HTML).
 incomplete. To know exactly which items a dish uses, read the ingredients' `pantryIndex` and
 `optionalIndex`.
 
-Always exactly 3 days: `today`, `today + 1`, `today + 2`, in order. `courses: 2` gives
-`starter, main`; `courses: 3` gives `starter, main, dessert`, always in that order. A model
-answer with a missing day or course is never returned; it is a failed generation (refunded under
-the rule in "Failures and refunds").
+Always exactly the requested number of days (`days`, 3 when absent): `today`, `today + 1`, ...,
+`today + days − 1`, in order. `courses: 1` gives `main`; `courses: 2` gives `starter, main`;
+`courses: 3` gives `starter, main, dessert`, always in that order. A 1-day 1-course menu is a
+single dish, still sent as a `menu` with one day and one course. A model answer with a missing
+or extra day or course is never returned; it is a failed generation (refunded under the rule in
+"Failures and refunds"). For a menu of one course, the meal types (`mealTypes` / `mealType`)
+apply to that course, as they apply to the main course of any menu. Two dishes of one menu never
+have the same title (a 1-day 1-course menu has only one).
 
 ## Callables
 
@@ -375,6 +408,7 @@ Request:
   "requestId": "UUID (v1-v8), new per attempt, reused for retries of that attempt",
   "kind": "recipe | menu",
   "courses": 2,
+  "days": 4,
   "config": { "...RecipeConfig" },
   "ingredients": [{ "name": "Pasta", "expiresOn": "2026-11-20", "quantity": 1 }],
   "optionalIngredients": [{ "name": "Basil", "expiresOn": null, "quantity": 1 }],
@@ -387,17 +421,24 @@ Request:
 `allergenConsent` (boolean): **required, and `true`, whenever `allergens` is not empty**;
 absent, `null` or anything with an empty list otherwise. See "Allergen consent" below.
 
-`courses` is required for `menu` and must be absent or null for `recipe`. 1 to 30 ingredients.
+`courses` (1, 2 or 3; 1 only to a server that says `acceptsMenuDays`) is required for `menu` and
+must be absent or null for `recipe`. `days` (1, 2, 3 or 4, optional) is allowed only for `menu`:
+absent or null is 3, anything else, or `days` on a recipe, is `INVALID_REQUEST`; send it only to a
+server that says `acceptsMenuDays`, and only when it is not 3 (see that section). `days` is part
+of the inputs a `requestId` is bound to; `days: 3` binds exactly as no `days`. 1 to 30 ingredients.
 `optionalIngredients`: see "Optional ingredients"; send it only to a server that says
 `acceptsOptionalIngredients` (see that section).
-Cost: `costs.recipe`, `costs.menu2` or `costs.menu3` (see "Costs"; by default 1, 4, 5).
+Cost: `costs.recipe` for a recipe, `costs.menuSets["<days>"]["<courses>"]` for a menu (see
+"Costs"; by default 1 for a recipe and days + courses − 1 for a menu; a 3-day menu is
+`costs.menu2` / `costs.menu3`, 4 and 5).
 
 Response:
 
 ```json
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
-  "costs": { "recipe": 1, "menu2": 4, "menu3": 5 }, "acceptsOptionalIngredients": true,
-  "acceptsMultiChoiceConfig": true, "acceptsDanish": true }
+  "costs": { "recipe": 1, "menu2": 4, "menu3": 5, "menuSets": { "...": "see Costs" } },
+  "acceptsOptionalIngredients": true, "acceptsMultiChoiceConfig": true, "acceptsDanish": true,
+  "acceptsMenuDays": true }
 ```
 
 | status | meaning | `charged` | client action |
@@ -487,7 +528,8 @@ request's cost.) Do not promise refunds in the UI.
 
 Per account: at most one generation at a time (`BUSY`), 3 per minute (`RATE_LIMITED`), 40 per
 UTC day or about USD 0.45 of estimated model usage per UTC day (`USER_DAILY_LIMIT`; that is at
-least two 3-course menus, or four 2-course menus, or about 20 recipes a day). For the service as a
+least two 3-day 3-course menus, or four 3-day 2-course menus, or about 20 recipes a day; the
+largest set, 4 days of 3 courses, fits once a day, then smaller requests). For the service as a
 whole a daily spending ceiling pauses generation (`GENERATION_DISABLED`). The server can change
 every number; branch on the reason, not on counts.
 
@@ -522,7 +564,7 @@ resubmission withdraws it. Only the account that redeemed the purchase can set i
 Play purchases are accepted only from the Android app and App Store purchases only from the iOS
 app (`STORE_MISMATCH` otherwise).
 
-Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`, plus `"purchasesBlocked": true` when set.
+Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { ... } }` (the whole table, see "Costs"), plus `"purchasesBlocked": true` when set.
 
 | status | client action |
 |---|---|
@@ -565,7 +607,7 @@ every new purchase.
 
 ### `getBalance`
 
-Request `{}`. Response `{ "balance": 0, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`,
+Request `{}`. Response `{ "balance": 0, "costs": { ... } }` (the whole table, see "Costs"),
 plus `"purchasesBlocked": true` when set. A new, deleted or merged account reads 0. The balance can
 be negative after a store refund of already-spent credits.
 
@@ -576,7 +618,7 @@ anonymous user to the provider is not possible because the credential already ha
 
 Request `{ "sourceIdToken": "<ID token of the anonymous user, fetched before switching users>" }`,
 called **as the signed-in (non-anonymous) user**, with a limited-use App Check token. Response
-`{ "balance": 12, "moved": 7, "costs": { "recipe": 1, "menu2": 4, "menu3": 5 } }`, plus
+`{ "balance": 12, "moved": 7, "costs": { ... } }`, plus
 `"purchasesBlocked": true` when set (a block on the anonymous install's buyer follows the merge).
 `moved` can be negative when a store refund left the anonymous balance below zero: the debt moves
 too.
