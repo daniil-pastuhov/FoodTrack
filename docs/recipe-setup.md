@@ -251,6 +251,8 @@ binding exist on the live project (created and read back 2026-11-14).
       account's admins.) Add email alerts at 25 % and 50 % to the kill-switch budget (the topic only pauses
       generation; a flood of function calls can cost money on its own, see functions/README.md,
       "Worst-case daily bill").
+- To follow estimated model spend and pack sales: `cd functions && npm run admin -- board
+      --project bestbefore-f9ee1` (read-only, writes a local HTML board; functions/README.md, "The board").
 
 ### 10. Test
 

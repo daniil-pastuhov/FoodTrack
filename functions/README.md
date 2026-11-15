@@ -23,7 +23,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
-| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
+| `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board (`npm run admin -- board`, see "The board"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
 | `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption) and the prompt |
@@ -990,6 +990,69 @@ Apple only on the live project; on the emulators, `--play-order` searches the st
 - Log lines with `uidHash` only, for Cloud Logging's retention (30 days by default).
 - Google and Apple keep their own records of the purchase and the receipt; the person deals with
   them directly.
+
+## The board
+
+`npm run admin -- board` is the owner's read-only view of model spend and recipe-pack sales: one
+self-contained HTML file (inline CSS and SVG, light and dark, readable on a phone; it loads
+nothing from anywhere) plus a short text summary on stdout. It reads Firestore through the Admin
+SDK and writes nothing there; the file is written locally and uploaded nowhere. Like the
+deletion command it is run by hand and never deployed (`src/admin/board*.ts`, wired in `cli.ts`).
+
+```bash
+cd functions
+npm ci
+# Emulators (default; project demo-foodtracker on 127.0.0.1:8080, e.g. from `npm run serve`):
+npm run admin -- board
+npm run admin -- board --days 7 --out /tmp/board.html
+# Live project: only when --project says so, with the credentials below.
+npm run admin -- board --project bestbefore-f9ee1
+```
+
+`--days` is 1 to 90 (default 30, ending today, UTC). Without `--out` the file goes to
+`functions/board/board-<project>-<yyyymmdd-hhmm>.html` (git-ignored). To see a filled board
+without live data, the test that seeds 30 realistic days can copy its board out:
+`npx firebase emulators:exec --only auth,firestore --project demo-foodtracker 'BOARD_DEMO_OUT=/tmp/board.html npx vitest run test/board.test.ts'`.
+
+**Credentials (live).** The same procedure as "Deletion requests by email", "Credentials":
+Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1.iam.gserviceaccount.com`
+(`gcloud auth application-default login --impersonate-service-account=…`, then
+`gcloud auth application-default revoke` when done). The board needs only Firestore read access
+(`roles/datastore.viewer` would do); it reads no secret and calls neither store. It refuses a live
+`--project` while `FIRESTORE_EMULATOR_HOST` or `FIREBASE_AUTH_EMULATOR_HOST` is set.
+
+**What it shows, and where each number comes from** (days are UTC, as in `stats`):
+
+| on the board | source |
+|---|---|
+| Generation on / paused, sandbox on / off | `config/runtime.generationEnabled` (kill switch), `allowSandbox` |
+| Estimated spend today against today's ceiling | `stats/{today}.spentMicroUsd + reservedMicroUsd` (what the breaker compares), against `dailySpendCeiling` from `src/model.ts` (the server's own function) over today's `config/runtime` and the `netCreditsGranted` of today and the 6 days before |
+| Recipes used today against the daily cap | `stats/{today}.generationUnits` against `dailyCap` |
+| Recipes sold today, purchases per day by pack and per store, refunds, net | `purchases/` with `grantedAt` in the period, `env: "production"` only; `credits`, `refundedCredits` (refunds of those purchases up to now). A deleted account's purchases (`uid: null`) count; a purchase refunded before it was granted (no `grantedAt`) does not |
+| Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
+| Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
+| Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
+| Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |
+| Spend per day, ceiling line | `stats/{day}.spentMicroUsd + reservedMicroUsd`; each day's ceiling as above, with **today's** config (past configs are not kept) |
+| Month to date, month-end worst case | the month's `stats` days; worst case = month to date + what is left of today's ceiling + every remaining day at `dailySpendMaxMicroUsd` |
+| Answers per day | `succeeded`, `contentFailures`, `infraFailures`, `qualityFailures`; also `refundedCredits`, `unknownUsageCalls`, token counts, `generationUnits` |
+| Average cost | period spend / written answers, and / recipes kept (`generationUnits − refundedCredits`) |
+
+Spend is the server's own estimate from token counts and the price table ("Spend control"), not
+the Google Cloud bill: the bill and the budget are in the Cloud console
+(<https://console.cloud.google.com/billing>), Firestore and Functions usage on the Firebase
+usage page (<https://console.firebase.google.com/project/bestbefore-f9ee1/usage>); the board
+links to both. It shows aggregates only: no uid, email, purchase token, order or transaction id
+(the purchases query projects only `store`, `env`, `productId`, `credits`, `refundedCredits`,
+`grantedAt`). Lifetime totals per account (`purchasedCredits`, …) are left out on purpose: a
+merged-away account's tombstone keeps its counters, so a sum over `users` would count them twice.
+
+**Cost.** One run reads `config/runtime`, the `stats` docs of the period, the month and the 6 days
+before them plus `stats/ledger` (38 documents for 30 days), one document per purchase granted in
+the period (one read when there are none), and one aggregation (one read per 1,000 accounts with a
+balance): 40 reads plus the period's purchases, about 100 for a month with 60 sales. The purchases
+query is a single-field range on `grantedAt` and needs no composite index. The summary prints the
+exact count.
 
 ## Parameters and secrets
 
