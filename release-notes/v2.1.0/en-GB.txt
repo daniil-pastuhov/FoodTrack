@@ -1,0 +1,5 @@
+• New Recipe tab replaces Calendar: recipes from the items you need to use up first.
+• Share a prompt, write a recipe on your device for free where supported, or buy a recipe pack, which can also plan a 3-day menu.
+• Set time, meal type and diets, and save the recipes you like.
+• Add a recipe's missing ingredients to your shopping list in one tap.
+• Clear warnings for items past their date, plus fixes for large text.
