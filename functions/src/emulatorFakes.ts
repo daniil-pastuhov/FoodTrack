@@ -15,7 +15,7 @@
  *   revoking succeeds; the token is sealed with an in-memory key (LocalKeyWrapper), not Cloud KMS.
  */
 import { randomBytes } from "node:crypto";
-import { coursesFor, menuDates, type GenerateRequest } from "./contract";
+import { coursesFor, menuDates, menuDaysOf, type GenerateRequest } from "./contract";
 import {
   type AppleTokenRevoker,
   GenerationError,
@@ -132,7 +132,7 @@ export class EmulatorGenerator implements RecipeGenerator {
     await new Promise((r) => setTimeout(r, 1500));
     if (req.kind === "recipe") return { output: cannedRecipe(req, "Emulator pantry dish"), usage };
     const output = {
-      days: menuDates(req.today).map((date, d) => ({
+      days: menuDates(req.today, menuDaysOf(req)).map((date, d) => ({
         date,
         uses: req.ingredients.slice(0, 2).map((_, n) => `p${n + 1}`),
         courses: coursesFor(req.courses!).map((course) => ({ course, recipe: cannedRecipe(req, `Day ${d + 1} ${course}`) })),

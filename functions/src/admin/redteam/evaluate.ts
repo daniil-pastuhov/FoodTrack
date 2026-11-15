@@ -3,7 +3,7 @@
  * as assertions on the model's raw answer (before the server cleaned or refused it, so a refused
  * answer can still show what the model did), and the classification of an attempt. Pure.
  */
-import { menuDates, type GenerateRequest } from "../../contract";
+import { menuDates, menuDaysOf, type GenerateRequest } from "../../contract";
 import { idNamesFor, isStapleName, leakSourceOf, promptLeak } from "../../core/outputSafety";
 import type { Outcome } from "../../core/generation";
 import type { LlmUsage } from "../../ports";
@@ -202,7 +202,7 @@ export function evaluate(a: Assertion, ctx: EvalContext): Violation | null | "n/
     case "day1Uses":
     case "everyDayUses": {
       if (!isMenu) return "n/a";
-      const days = a.type === "day1Uses" ? [0] : [0, 1, 2];
+      const days = a.type === "day1Uses" ? [0] : Array.from({ length: menuDaysOf(ctx.req) }, (_, i) => i);
       const out: string[] = [];
       for (const day of days) {
         const used = new Set(dishes.filter((d) => d.day === day).flatMap((d) => ingredientsOf(d).map((i) => i.pantryId)));
@@ -214,7 +214,7 @@ export function evaluate(a: Assertion, ctx: EvalContext): Violation | null | "n/
     }
     case "datesRespected": {
       if (!isMenu) return "n/a";
-      const dates = menuDates(ctx.req.today);
+      const dates = menuDates(ctx.req.today, menuDaysOf(ctx.req));
       const items = [...ctx.req.ingredients.map((i, n) => [`p${n + 1}`, i] as const), ...ctx.req.optionalIngredients.map((i, n) => [`o${n + 1}`, i] as const)];
       const out: string[] = [];
       for (const d of dishes) {

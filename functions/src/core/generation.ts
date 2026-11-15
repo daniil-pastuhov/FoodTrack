@@ -12,6 +12,7 @@ import {
   fail,
   inputHashOf,
   isNameRejection,
+  menuDaysOf,
   isSuspiciousRejection,
   validateGenerateRequest,
   validateRequestId,
@@ -29,6 +30,7 @@ import {
   REVENUE_WINDOW_DAYS,
   THINKING_FACTOR,
   TIMINGS,
+  costOf,
   type CostKey,
   type Costs,
 } from "../constants";
@@ -100,13 +102,13 @@ export function judgeWorstCaseMicroUsd(config: RuntimeConfig, maxOutputTokens: n
 }
 
 export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
-  const costKey = costKeyOf(req.kind, req.courses);
+  const costKey = costKeyOf(req);
   const maxOutputTokens = MAX_OUTPUT_TOKENS[costKey];
   const hardTokenCeiling = THINKING_FACTOR * maxOutputTokens;
   const judge = config.outputJudge === "off" ? 0 : judgeWorstCaseMicroUsd(config, maxOutputTokens);
   return {
     costKey,
-    cost: config.costs[costKey],
+    cost: costOf(config.costs, costKey),
     limits: { maxOutputTokens, hardTokenCeiling },
     reservedMicroUsd: microUsd(config.prices, inputTokenBound(req), hardTokenCeiling) + judge,
     inputHash: inputHashOf(req),
@@ -116,7 +118,8 @@ export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
 const sameInputs = (doc: GenerationDoc, req: GenerateRequest, plan: Plan) =>
   doc.inputHash !== undefined
     ? doc.inputHash === plan.inputHash
-    : doc.kind === req.kind && (doc.courses ?? null) === (req.courses ?? null);
+    : doc.kind === req.kind && (doc.courses ?? null) === (req.courses ?? null)
+      && (doc.kind !== "menu" || (doc.days ?? 3) === menuDaysOf(req));
 
 type Reservation =
   | { reserved: true; balance: number }
@@ -203,6 +206,7 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
       state: "pending",
       kind: req.kind,
       ...(req.courses ? { courses: req.courses } : {}),
+      ...(req.kind === "menu" ? { days: menuDaysOf(req) } : {}),
       cost,
       inputHash: plan.inputHash,
       reservedMicroUsd,
@@ -534,7 +538,7 @@ async function recordInputRejection(deps: Deps, uid: string, details: { field: s
 export function logLlmCall(
   deps: Deps,
   uid: string,
-  gen: Pick<GenerationDoc, "kind" | "courses" | "cost" | "reservedMicroUsd">,
+  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd">,
   outcome: Outcome,
   settled: Settled,
   durationMs: number | null,
@@ -544,6 +548,7 @@ export function logLlmCall(
     uidHash: uidHash(uid),
     kind: gen.kind,
     courses: gen.courses ?? null,
+    days: gen.kind === "menu" ? (gen.days ?? 3) : null,
     model: u?.model ?? null,
     inputTokens: u?.inputTokens ?? null,
     outputTokens: u?.outputTokens ?? null,
@@ -583,7 +588,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   // A request the quality gate would refuse whatever the model wrote (no item it may use, or a
   // menu day with no item it may be planned on) is refused here, before anything is reserved.
   if (!hasEnoughItems(req)) {
-    deps.logger.info("generation_not_enough_items", { uidHash: uidHash(caller.uid), kind: req.kind, courses: req.courses ?? null, items: req.ingredients.length });
+    deps.logger.info("generation_not_enough_items", { uidHash: uidHash(caller.uid), kind: req.kind, courses: req.courses ?? null, days: req.kind === "menu" ? menuDaysOf(req) : null, items: req.ingredients.length });
     fail("failed-precondition", "NOT_ENOUGH_ITEMS", "The ticked items cannot make this request");
   }
   const config = await deps.config();
@@ -597,7 +602,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   logLlmCall(
     deps,
     caller.uid,
-    { kind: req.kind, courses: req.courses, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd },
+    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd },
     outcome,
     settled,
     durationMs,

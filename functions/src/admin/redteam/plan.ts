@@ -15,7 +15,7 @@
 import { readFileSync } from "node:fs";
 import { buildPrompt, inputTokenBound, newCanary } from "../../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../../adapters/gemini";
-import { MAX_OUTPUT_TOKENS, THINKING_FACTOR, type CostKey } from "../../constants";
+import { COST_KEYS, MAX_OUTPUT_TOKENS, THINKING_FACTOR, type CostKey } from "../../constants";
 import { isNameRejection, type GenerateRequest } from "../../contract";
 import { planFor } from "../../core/generation";
 import { hasEnoughItems } from "../../core/outputSafety";
@@ -34,17 +34,24 @@ export const OBSERVED = {
  * Expected output plus thinking tokens of one call, by kind: the larger observation of each
  * (recipe 384 + 259; 2-course menu 2,643 + 892), and for a 3-course menu the larger of what it
  * used (2,434 output, thinking not logged) and 1.5 x the 2-course figures (3 courses instead of 2),
- * i.e. 3,965 + 1,338. A stepByStep request (up to 15 steps instead of 4 to 8) is assumed to write
- * twice as much.
+ * i.e. 3,965 + 1,338. Those are 3-day menus (`menu3x2`, `menu3x3`); every other menu set, never
+ * observed yet, is the 3-day 2-course figures scaled by its number of dishes (days x courses over
+ * 6). A stepByStep request (up to 15 steps instead of 4 to 8) is assumed to write twice as much.
  */
-export const EXPECTED_OUTPUT: Readonly<Record<CostKey, { output: number; thinking: number }>> = {
-  recipe: { output: OBSERVED.recipe.outputTokens, thinking: OBSERVED.recipe.thinkingTokens },
-  menu2: { output: OBSERVED.menu2.outputTokens[1], thinking: OBSERVED.menu2.thinkingTokens[1] },
-  menu3: {
-    output: Math.max(OBSERVED.menu3.outputTokens, Math.ceil(OBSERVED.menu2.outputTokens[1] * 1.5)),
-    thinking: Math.ceil(OBSERVED.menu2.thinkingTokens[1] * 1.5),
-  },
-};
+export const EXPECTED_OUTPUT: Readonly<Record<CostKey, { output: number; thinking: number }>> = Object.fromEntries(
+  COST_KEYS.map((key) => {
+    if (key === "recipe") return [key, { output: OBSERVED.recipe.outputTokens, thinking: OBSERVED.recipe.thinkingTokens }];
+    if (key === "menu3x3") {
+      return [key, {
+        output: Math.max(OBSERVED.menu3.outputTokens, Math.ceil(OBSERVED.menu2.outputTokens[1] * 1.5)),
+        thinking: Math.ceil(OBSERVED.menu2.thinkingTokens[1] * 1.5),
+      }];
+    }
+    const [d, c] = key.slice(4).split("x").map(Number);
+    const scale = (d * c) / 6;
+    return [key, { output: Math.ceil(OBSERVED.menu2.outputTokens[1] * scale), thinking: Math.ceil(OBSERVED.menu2.thinkingTokens[1] * scale) }];
+  }),
+) as Record<CostKey, { output: number; thinking: number }>;
 export const STEP_BY_STEP_FACTOR = 2;
 /** The judge's answer is one enum value: 32 visible tokens at most, plus LOW thinking; assumed 300 together. */
 export const JUDGE_EXPECTED_OUTPUT = 300;
@@ -72,7 +79,7 @@ export function runtimeConfigFor(judge: "off" | "shadow" | "enforce", prices: Pr
 
 /** One call's three figures. */
 export function estimateCall(req: GenerateRequest, judge: "off" | "shadow" | "enforce", prices: Prices, bpt: number): CallEstimate {
-  const costKey = costKeyOf(req.kind, req.courses);
+  const costKey = costKeyOf(req);
   const inputBytes = inputTokenBound(req);
   const plan = planFor(req, runtimeConfigFor(judge, prices));
   const upperGeneratorMicroUsd = microUsd(prices, inputBytes, THINKING_FACTOR * MAX_OUTPUT_TOKENS[costKey]);
@@ -186,8 +193,7 @@ export interface PlanTotals {
 }
 
 export function totalsOf(planned: readonly PlannedCase[]): PlanTotals {
-  const keys: CostKey[] = ["recipe", "menu2", "menu3"];
-  const byKind = keys.map((costKey): KindTotal => {
+  const byKind = COST_KEYS.map((costKey): KindTotal => {
     const rows = planned.filter((p) => p.estimate?.costKey === costKey && p.attempts > 0);
     const uppers = rows.map((p) => p.estimate!.upperMicroUsd);
     const expected = rows.map((p) => p.estimate!.expectedMicroUsd);
@@ -224,7 +230,12 @@ export function defaultMaxMicroUsd(t: PlanTotals, concurrency: number): number {
 
 export const usd = (micro: number, digits = 4) => `USD ${(micro / 1e6).toFixed(digits)}`;
 
-const KIND_LABEL: Record<CostKey, string> = { recipe: "recipe", menu2: "2-course menu", menu3: "3-course menu" };
+/** "recipe", or "3-day 2-course menu"; `short` gives "3d2c" for the case table. */
+function kindLabel(key: CostKey, short = false): string {
+  if (key === "recipe") return "recipe";
+  const [d, c] = key.slice(4).split("x");
+  return short ? `${d}d${c}c` : `${d}-day ${c}-course menu`;
+}
 
 export interface PlanContext {
   project: string;
@@ -260,7 +271,7 @@ export function renderPlan(planned: readonly PlannedCase[], ctx: PlanContext): s
     " id   sec  kind    input verdict              calls  body B  bound B   upper/call  expected/call  judge",
   );
   for (const p of planned) {
-    const kind = p.c.mode === "manual" ? "-" : p.req ? KIND_LABEL[costKeyOf(p.req.kind, p.req.courses)].replace("-course menu", "c-menu") : "-";
+    const kind = p.c.mode === "manual" ? "-" : p.req ? kindLabel(costKeyOf(p.req), true) : "-";
     const verdict = p.c.mode === "manual" ? "manual" : p.inputAsExpected ? p.input : `${p.input} (EXPECTED ${p.c.expect.input})`;
     const e = p.estimate;
     lines.push(
@@ -278,7 +289,7 @@ export function renderPlan(planned: readonly PlannedCase[], ctx: PlanContext): s
     if (!k.calls) continue;
     const range = (r: [number, number]) => (r[0] === r[1] ? (r[0] / 1e6).toFixed(4) : `${(r[0] / 1e6).toFixed(4)}-${(r[1] / 1e6).toFixed(4)}`);
     lines.push(
-      `  ${pad(KIND_LABEL[k.costKey], 22)} ${padL(k.calls, 5)}   ${padL(range(k.upperPerCallMicroUsd), 20)}   ${padL(range(k.expectedPerCallMicroUsd), 17)}   ${padL((k.upperMicroUsd / 1e6).toFixed(4), 11)}   ${padL((k.expectedMicroUsd / 1e6).toFixed(4), 14)}`,
+      `  ${pad(kindLabel(k.costKey), 22)} ${padL(k.calls, 5)}   ${padL(range(k.upperPerCallMicroUsd), 20)}   ${padL(range(k.expectedPerCallMicroUsd), 17)}   ${padL((k.upperMicroUsd / 1e6).toFixed(4), 11)}   ${padL((k.expectedMicroUsd / 1e6).toFixed(4), 14)}`,
     );
   }
   lines.push(
@@ -298,10 +309,11 @@ export function renderPlan(planned: readonly PlannedCase[], ctx: PlanContext): s
     "Assumptions behind the expected figure:",
     `- Input tokens = the server's input bound (UTF-8 bytes of instruction, data and schema) / ${ctx.bytesPerToken.toFixed(3)} bytes per token,`,
     `  measured on the live 2-course menu of 2026-11-14 (${ctx.liveMenuBytes} bytes, logged at up to ${OBSERVED.menu2.inputTokens[1]} input tokens).`,
-    `- Output + thinking per call: recipe ${EXPECTED_OUTPUT.recipe.output} + ${EXPECTED_OUTPUT.recipe.thinking} (observed 384 / 259), 2-course menu ${EXPECTED_OUTPUT.menu2.output} + ${EXPECTED_OUTPUT.menu2.thinking}`,
-    `  (the larger of 1930-2643 / 0-892 observed), 3-course menu ${EXPECTED_OUTPUT.menu3.output} + ${EXPECTED_OUTPUT.menu3.thinking} (1.5 x the 2-course figures; 2434 output observed);`,
+    `- Output + thinking per call: recipe ${EXPECTED_OUTPUT.recipe.output} + ${EXPECTED_OUTPUT.recipe.thinking} (observed 384 / 259), 3-day 2-course menu ${EXPECTED_OUTPUT.menu3x2.output} + ${EXPECTED_OUTPUT.menu3x2.thinking}`,
+    `  (the larger of 1930-2643 / 0-892 observed), 3-course ${EXPECTED_OUTPUT.menu3x3.output} + ${EXPECTED_OUTPUT.menu3x3.thinking} (1.5 x the 2-course figures; 2434 output observed);`,
+    `  other menu sets: the 3-day 2-course figures x days x courses / 6 (not observed yet);`,
     `  x${STEP_BY_STEP_FACTOR} at stepByStep detail. Judge (when on): its instruction and the answer as input, ${JUDGE_EXPECTED_OUTPUT} output + thinking tokens.`,
-    `- Check: a 2-course menu at these figures is ${usd(microUsd(ctx.prices, OBSERVED.menu2.inputTokens[1], EXPECTED_OUTPUT.menu2.output + EXPECTED_OUTPUT.menu2.thinking))}; the live one was logged at ${usd(OBSERVED.menu2.estimatedMicroUsd)}.`,
+    `- Check: a 2-course menu at these figures is ${usd(microUsd(ctx.prices, OBSERVED.menu2.inputTokens[1], EXPECTED_OUTPUT.menu3x2.output + EXPECTED_OUTPUT.menu3x2.thinking))}; the live one was logged at ${usd(OBSERVED.menu2.estimatedMicroUsd)}.`,
     `- Prices are the list prices from 2027-01-01; until then Google's introductory price is half, so the real bill is about half these figures.`,
     "",
     "What this money is, and what it is not:",

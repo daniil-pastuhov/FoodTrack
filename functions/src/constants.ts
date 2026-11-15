@@ -40,17 +40,64 @@ export const PRODUCT_CREDITS: Readonly<Record<string, number>> = {
 
 export type GenerationKind = "recipe" | "menu";
 
-/** The priced variants of a request: a recipe, a 2-course menu, a 3-course menu. */
-export type CostKey = "recipe" | "menu2" | "menu3";
-export const COST_KEYS: readonly CostKey[] = ["recipe", "menu2", "menu3"];
-export type Costs = Readonly<Record<CostKey, number>>;
+/** Days of a menu set (`generateRecipe` `days`); a request without `days` is a DEFAULT_MENU_DAYS menu. */
+export const MENU_DAYS = [1, 2, 3, 4] as const;
+export type MenuDays = (typeof MENU_DAYS)[number];
+export const DEFAULT_MENU_DAYS: MenuDays = 3;
+/** Courses of a menu set (`generateRecipe` `courses`): 1 is the main course alone (coursesFor). */
+export const MENU_COURSES = [1, 2, 3] as const;
+export type MenuCourses = (typeof MENU_COURSES)[number];
+
+/**
+ * The priced variants of a request: a recipe, or a menu of D days and C courses (`menu3x2` is a
+ * 3-day 2-course menu, which the wire table also calls `menu2`): 4 x 3 = 12 menu variants.
+ */
+export type CostKey = "recipe" | `menu${MenuDays}x${MenuCourses}`;
+export const COST_KEYS: readonly CostKey[] = [
+  "recipe",
+  ...MENU_DAYS.flatMap((d) => MENU_COURSES.map((c): CostKey => `menu${d}x${c}`)),
+];
+
+/** Credits of a menu set, keyed by days, then courses, as strings (the wire's `costs.menuSets`). */
+export type MenuSetCosts = Readonly<Record<`${MenuDays}`, Readonly<Record<`${MenuCourses}`, number>>>>;
+
+/**
+ * The table in force, exactly as sent to clients (CONTRACT.md "Costs"). `menu2` and `menu3` are
+ * the 3-day row of `menuSets`, kept for clients from before menu sets; build a table with
+ * costsOf so they can never disagree.
+ */
+export interface Costs {
+  readonly recipe: number;
+  readonly menu2: number;
+  readonly menu3: number;
+  readonly menuSets: MenuSetCosts;
+}
+
+export function costsOf(recipe: number, menuSets: MenuSetCosts): Costs {
+  const row = menuSets[`${DEFAULT_MENU_DAYS}`];
+  return { recipe, menu2: row["2"], menu3: row["3"], menuSets };
+}
+
+/** Credits of a request's variant in a table. */
+export function costOf(costs: Costs, key: CostKey): number {
+  if (key === "recipe") return costs.recipe;
+  const [d, c] = key.slice(4).split("x") as [`${MenuDays}`, `${MenuCourses}`];
+  return costs.menuSets[d][c];
+}
 
 /**
  * Credits per request. The server is the only place that decides cost: `config/runtime.costs` may
  * override this table (validated in model.ts), every response that carries `balance` also carries
- * the table in force, and the reservation stores the cost it charged, which settle uses.
+ * the table in force, and the reservation stores the cost it charged, which settle uses. A menu
+ * set's default is days + courses - 1 credits (one credit more per day or course added).
  */
-export const DEFAULT_COSTS: Costs = { recipe: 1, menu2: 4, menu3: 5 };
+export const DEFAULT_MENU_SETS: MenuSetCosts = {
+  "1": { "1": 1, "2": 2, "3": 3 },
+  "2": { "1": 2, "2": 3, "3": 4 },
+  "3": { "1": 3, "2": 4, "3": 5 },
+  "4": { "1": 4, "2": 5, "3": 6 },
+};
+export const DEFAULT_COSTS: Costs = costsOf(1, DEFAULT_MENU_SETS);
 /** An override is refused (defaults used) unless every cost is an integer in [1, COST_MAX]. */
 export const COST_MAX = 100;
 
@@ -81,11 +128,35 @@ export const SWEEP_GRACE_MS = 60_000;
 /**
  * maxOutputTokens per request, sized from the schema and the validation limits: one dish at
  * "stepByStep" (up to 15 steps), 12 servings and a language that tokenises badly is about 1,800
- * output tokens of JSON; a recipe gets ~2x that. A menu is 3 days x courses dishes plus ~3,000 for
- * the day wrappers, `uses` lists and slack: 6 x 1,800 + 3,000 ~ 14,000 (2 courses) and
- * 9 x 1,800 + 3,000 ~ 20,000 (3 courses). Thinking may come on top (see THINKING_FACTOR).
+ * output tokens of JSON; a recipe gets ~2x that. A menu is days x courses dishes plus ~1,000 a day
+ * for the day wrappers, `uses` lists and slack, rounded up (the 3-day figures are those from
+ * before menu sets: 6 x 1,800 + 3,000 ~ 14,000 and 9 x 1,800 + 3,000 ~ 20,000). The exception is
+ * 4 days of 3 courses, 12 x 1,800 + 2,400 = 24,000 (600 a day): held there so that its worst case
+ * with the output judge on still fits the per-user daily spend ceiling (README "Spend
+ * ceilings"). Thinking may come on top (see THINKING_FACTOR).
+ *
+ * | days | 1 course | 2 courses | 3 courses |
+ * |---|---|---|---|
+ * | 1 | 3,000 | 5,000 | 7,000 |
+ * | 2 | 5,500 | 9,500 | 13,000 |
+ * | 3 | 8,500 | 14,000 | 20,000 |
+ * | 4 | 11,500 | 19,000 | 24,000 |
  */
-export const MAX_OUTPUT_TOKENS: Readonly<Record<CostKey, number>> = { recipe: 4096, menu2: 14_000, menu3: 20_000 };
+export const MAX_OUTPUT_TOKENS: Readonly<Record<CostKey, number>> = {
+  recipe: 4096,
+  menu1x1: 3_000,
+  menu1x2: 5_000,
+  menu1x3: 7_000,
+  menu2x1: 5_500,
+  menu2x2: 9_500,
+  menu2x3: 13_000,
+  menu3x1: 8_500,
+  menu3x2: 14_000,
+  menu3x3: 20_000,
+  menu4x1: 11_500,
+  menu4x2: 19_000,
+  menu4x3: 24_000,
+};
 
 /**
  * Thinking tokens are reported to be able to exceed maxOutputTokens, and Gemini 3+ offers no
