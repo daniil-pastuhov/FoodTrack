@@ -5,13 +5,15 @@
 #
 #   scripts/ios_preview.sh [output-dir]      # default: build/ios-preview
 #
-# Three clips per language, in <output-dir>/<en|ru|nb|es|de|fr|sv|da>/:
+# Four clips per language, in <output-dir>/<en|ru|nb|es|de|fr|sv|da>/:
 #   scan.mp4    the scanner opens on a pack, reads its barcode (the product card comes up) and then
 #               its printed date; Continue, Add item with the date filled in, Save; Home with
 #               "saved" and the list scrolled to the new item; then the Recipe tab, the items that
 #               expire first already ticked.
 #   recipe.mp4  a written recipe, scrolled from the dish down to the method.
-#   menu.mp4    the three-day menu, scrolled from today to the third day.
+#   menuset.mp4 the Recipe form in Menu set mode (4 days, 3 courses, a pack with recipes enough),
+#               scrolled from the Recipe / Menu set switch down to Days, Courses and Generate menu.
+#   menu.mp4    the four-day menu set, scrolled from today to the fourth day.
 # and timeline.json: for each clip, the seconds into the recording at which its moments happened
 # (the screen first drawn, each tap and swipe), which the assembly script cuts by, so a slow
 # machine doesn't shift the cuts.
@@ -175,6 +177,22 @@ pause() { print -- "- extendedWaitUntil:\n    visible: \"zz-never-shown\"\n    t
   print "# mark: swipe\n- swipe:\n    start: 50%, 72%\n    end: 50%, 40%\n    duration: 3000"
   pause 1500
 } > "$OUT/flows/scroll.yaml"
+# The Recipe form, from its top (the switch on Menu set) to its end (Days, Courses, Generate
+# menu): a long, slow drag, then a second for what is left.
+{
+  print "appId: $BUNDLE_ID\n---"
+  pause 1200
+  print "# mark: swipe\n- swipe:\n    start: 50%, 85%\n    end: 50%, 15%\n    duration: 2200"
+  print -- "- swipe:\n    start: 50%, 85%\n    end: 50%, 15%\n    duration: 1200"
+  pause 2000
+} > "$OUT/flows/form.yaml"
+# The menu, from today down to the fourth day's heading.
+{
+  print "appId: $BUNDLE_ID\n---"
+  pause 800
+  print "# mark: swipe\n- swipe:\n    start: 50%, 85%\n    end: 50%, 12%\n    duration: 4000"
+  pause 1500
+} > "$OUT/flows/menuscroll.yaml"
 
 typeset -A REGIONS=(en en_GB ru ru_RU nb nb_NO es es_ES de de_DE fr fr_FR sv sv_SE da da_DK)
 # The scan card's Continue button, by language ("continue_button" in *.lproj/Localizable.strings).
@@ -215,16 +233,23 @@ for LANG_CODE in $LANGS; do
   mark end
   stop_recording "$DIR/scan.mp4"
 
-  for CLIP in recipe menu; do
-    ROUTE=recipeResult; FILE=recipe.json
-    [[ $CLIP == menu ]] && ROUTE=recipeMenu FILE=menu.json
+  # The recipe; the Recipe form in Menu set mode (a pack with recipes enough, 4 days and 3
+  # courses chosen), scrolled from the Recipe / Menu set switch down to Days, Courses and
+  # Generate menu; the four-day menu, scrolled from today to the fourth day.
+  typeset -A CLIP_ARGS=(
+    recipe "-demoRoute recipeResult -demoRecipe $DATA/tmp/recipe.json"
+    menuset "-demoTab recipe -demoRecipeCredits 12 -demoRecipeMode menu -demoRecipeDays 4 -demoRecipeCourses 3"
+    menu "-demoRoute recipeMenu -demoRecipe $DATA/tmp/menu.json"
+  )
+  typeset -A CLIP_FLOWS=(recipe scroll menuset form menu menuscroll)
+  for CLIP in recipe menuset menu; do
     launch -demoTab home; wait_drawn
     start_recording "$DIR/$CLIP.mp4"
-    launch -demoRoute $ROUTE -demoRecipe "$DATA/tmp/$FILE"
+    launch ${=CLIP_ARGS[$CLIP]}
     mark launched
     wait_drawn
     mark drawn
-    flow scroll
+    flow ${CLIP_FLOWS[$CLIP]}
     mark end
     stop_recording "$DIR/$CLIP.mp4"
   done
