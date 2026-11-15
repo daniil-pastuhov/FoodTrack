@@ -145,10 +145,8 @@ extension L10n {
     static var recipeGenerateOnPhone: String { text("recipe_generate_on_phone") }
     static var recipeCostFree: String { text("recipe_cost_free") }
     static var recipeSharePrompt: String { text("recipe_share_prompt") }
-    static var recipeCopyPrompt: String { text("recipe_copy_prompt") }
     static var recipePromptOnlyHint: String { text("recipe_prompt_only_hint") }
     static var recipeNoneSelectedHint: String { text("recipe_none_selected_hint") }
-    static var recipePromptCopied: String { text("recipe_prompt_copied") }
 
     // States
     static var recipeWritingOnPhoneTitle: String { text("recipe_writing_on_phone_title") }

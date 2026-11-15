@@ -598,10 +598,8 @@
 "recipe_generate_on_phone" = "Составить на этом {device}";
 "recipe_cost_free" = "Бесплатно";
 "recipe_share_prompt" = "Поделиться запросом";
-"recipe_copy_prompt" = "Скопировать запрос";
 "recipe_prompt_only_hint" = "Бесплатно: отправьте запрос в ИИ-приложение, которым вы уже пользуетесь.";
 "recipe_none_selected_hint" = "Отметьте хотя бы один продукт.";
-"recipe_prompt_copied" = "Запрос скопирован";
 "recipe_writing_on_phone_title" = "Составляем на этом {device}";
 "recipe_writing_on_phone_message" = "Ничего никуда не отправляется. Это может занять минуту.";
 "recipe_stop" = "Остановить";

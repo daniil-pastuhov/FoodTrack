@@ -598,10 +598,8 @@
 "recipe_generate_on_phone" = "Generate on this {device}";
 "recipe_cost_free" = "Free";
 "recipe_share_prompt" = "Share prompt";
-"recipe_copy_prompt" = "Copy prompt";
 "recipe_prompt_only_hint" = "Free: send the prompt to an AI app you already use.";
 "recipe_none_selected_hint" = "Tick at least one item to cook with.";
-"recipe_prompt_copied" = "Prompt copied";
 "recipe_writing_on_phone_title" = "Writing on this {device}";
 "recipe_writing_on_phone_message" = "Nothing is sent anywhere. This can take a minute.";
 "recipe_stop" = "Stop";

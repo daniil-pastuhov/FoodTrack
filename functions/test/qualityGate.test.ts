@@ -141,6 +141,11 @@ describe("the live failure is refused; honest menus pass", () => {
     const r = req({ kind: "recipe", courses: null, ingredients: [{ name: "Olivenolje Extra Virgin", expiresOn: null, quantity: 1 }, { name: "Pasta", expiresOn: null, quantity: 1 }] });
     expect(recipeRule(r, dish("Oil soup", [{ amount: "2 tbsp", name: "olive oil", pantryId: "p1" }, ...water]))).toBe("STAPLES_ONLY");
     expect(recipeRule(r, dish("Aglio e olio", [{ amount: "2 tbsp", name: "olive oil", pantryId: "p1" }, { amount: "200 g", name: "spaghetti", pantryId: "p2" }]))).toBe("ok");
+    // A ticked staple with a brand or size in its name is still that item when written plainly.
+    const branded = req({ kind: "recipe", courses: null, ingredients: [{ name: "Filippo Berio Olive Oil 500ml", expiresOn: null, quantity: 1 }, { name: "Maldon Sea Salt", expiresOn: null, quantity: 1 }] });
+    const plain = checkRecipeOutput(dish("Aglio e olio", [{ amount: "2 tbsp", name: "olive oil", pantryId: "p1" }, { amount: "", name: "salt", pantryId: "p2" }, { amount: "200 g", name: "spaghetti", pantryId: "none" }]), { req: branded, canary: CANARY, systemInstruction: buildPrompt(branded, CANARY).systemInstruction });
+    expect(plain).toMatchObject({ ok: true });
+    if (plain.ok) expect(plain.value.ingredients.slice(0, 2).map((i) => i.pantryIndex)).toEqual([0, 1]);
     // The ticked oil counts as using the pantry on its own, beside bought pasta.
     expect(recipeRule(r, dish("Aglio e olio", [{ amount: "2 tbsp", name: "olive oil", pantryId: "p1" }, { amount: "200 g", name: "spaghetti", pantryId: "none" }]))).toBe("ok");
   });
@@ -153,7 +158,11 @@ describe("the live failure is refused; honest menus pass", () => {
       { amount: "1 tsp", name: "salt", pantryId: "p1" },
       { amount: "", name: "freshly ground black pepper", pantryId: "none" },
     ]);
-    expect(recipeRule(r, mislabelled)).toBe("NO_PANTRY");
+    // The salt may honestly be the first item (its name has "salt" in it), so the dish uses the
+    // pantry, but it is all staples: still refused.
+    expect(recipeRule(r, mislabelled)).toBe("STAPLES_ONLY");
+    const waterOnly = dish("Salted water", [{ amount: "1 l", name: "water", pantryId: "p2" }, { amount: "1 tsp", name: "salt", pantryId: "none" }]);
+    expect(recipeRule(r, waterOnly)).toBe("NO_PANTRY");
     // With a real pasta ingredient beside it the dish passes, and the mislabelled water is delivered as a staple.
     const honest = dish("Pasta with butter", [
       { amount: "200 g", name: "pasta", pantryId: "p2" },

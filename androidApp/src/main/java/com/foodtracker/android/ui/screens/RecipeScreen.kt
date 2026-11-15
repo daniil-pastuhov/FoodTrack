@@ -709,22 +709,26 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                         leadingIcon = LarderIcons.Smartphone
                     )
                 }
-                ShareAndCopy(actions)
+                ShareAndCopy(state, actions)
             }
             RecipePrimary.OnDevice -> {
                 BuyOrBlocked(paid, actions, LarderButtonStyle.Outline)
-                ShareAndCopy(actions)
+                ShareAndCopy(state, actions)
             }
             else -> {
-                LarderButton(
-                    text = stringResource(R.string.recipe_copy_prompt),
-                    onClick = actions.onCopy,
-                    modifier = Modifier.fillMaxWidth(),
-                    style = LarderButtonStyle.Outline,
-                    leadingIcon = LarderIcons.Copy
-                )
+                val copy = RecipeAction.COPY in state.actions.secondary
+                if (copy) {
+                    LarderButton(
+                        text = stringResource(R.string.recipe_copy_prompt),
+                        onClick = actions.onCopy,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = LarderButtonStyle.Outline,
+                        leadingIcon = LarderIcons.Copy
+                    )
+                }
                 RecipeHint(stringResource(R.string.recipe_prompt_hint))
-                BuyOrBlocked(paid, actions, LarderButtonStyle.Text)
+                // Without Copy, Buy is the one button under the pinned Share: outlined, not a link.
+                BuyOrBlocked(paid, actions, if (copy) LarderButtonStyle.Text else LarderButtonStyle.Outline)
             }
         }
     }
@@ -779,9 +783,11 @@ private fun BuyButton(actions: RecipeTabActions, style: LarderButtonStyle) {
     )
 }
 
-/** Side by side, and one under the other when large text leaves no room for both. */
+/** Share, and Copy where the share sheet can't copy (Android below 10): side by side, and one
+ *  under the other when large text leaves no room for both. */
 @Composable
-private fun ShareAndCopy(actions: RecipeTabActions) {
+private fun ShareAndCopy(state: RecipeUiState, actions: RecipeTabActions) {
+    val copy = RecipeAction.COPY in state.actions.secondary
     FlowRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.CenterHorizontally)
@@ -792,12 +798,14 @@ private fun ShareAndCopy(actions: RecipeTabActions) {
             style = LarderButtonStyle.Text,
             leadingIcon = LarderIcons.Share2
         )
-        LarderButton(
-            text = stringResource(R.string.recipe_copy_prompt),
-            onClick = actions.onCopy,
-            style = LarderButtonStyle.Text,
-            leadingIcon = LarderIcons.Copy
-        )
+        if (copy) {
+            LarderButton(
+                text = stringResource(R.string.recipe_copy_prompt),
+                onClick = actions.onCopy,
+                style = LarderButtonStyle.Text,
+                leadingIcon = LarderIcons.Copy
+            )
+        }
     }
 }
 

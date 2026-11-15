@@ -413,6 +413,15 @@ export function isStapleName(name: string): boolean {
   return staple;
 }
 
+/**
+ * Whether a name has a staple word anywhere ("Filippo Berio Olive Oil", "Maldon Sea Salt 250g"):
+ * a ticked item that may honestly be written as just that staple.
+ */
+export function hasStapleWord(name: string): boolean {
+  return foldText(name).words.flatMap((x) => x.split("'")).filter(Boolean)
+    .some((w) => matchesAny({ words: [w], flat: ` ${w} ` }, STAPLE_TERMS));
+}
+
 // --- Recipe and menu ---------------------------------------------------------------------------
 
 interface Checker {
@@ -443,12 +452,13 @@ function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
   if (names.some((n) => violates(n, ch.allergen))) bad("ALLERGEN");
   if (names.some((n) => violates(n, ch.diet))) bad("DIET");
   // An ingredient written as nothing but a staple ("water", "salt and pepper") is not the ticked
-  // item it is labelled with unless that item is a staple too (the user's own "Olive oil"): it is
-  // delivered as a staple and does not count as using the item, so "water" labelled as the
-  // user's "Pasta" cannot carry a staples-only dish past the quality gate. Judged from the written
-  // words only, never by comparing names, so "макароны" written for "Pasta" still counts.
+  // item it is labelled with unless that item's name has a staple word too (the user's own "Olive
+  // oil", "Filippo Berio Olive Oil 500ml"): it is delivered as a staple and does not count as
+  // using the item, so "water" labelled as the user's "Pasta" cannot carry a staples-only dish
+  // past the quality gate. Judged from the words only, never by comparing names, so "макароны"
+  // written for "Pasta" still counts.
   const staple = isStapleName(name);
-  const fromPantry = itemName !== undefined && !(staple && !isStapleName(itemName));
+  const fromPantry = itemName !== undefined && !(staple && !hasStapleWord(itemName));
   // A staple (water, oil, salt, pepper, sugar, spices) is marked, so a client can order its shopping
   // list and leave plain water out of it (CONTRACT.md "Recipe").
   if (!fromPantry) return { amount, name, fromPantry, ...(staple ? { staple: true as const } : {}) };

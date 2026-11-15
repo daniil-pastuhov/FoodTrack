@@ -148,7 +148,9 @@ val appModule = module {
             store = get(),
             account = get(),
             paidRepository = get(),
-            appLanguage = { Locale.getDefault().toLanguageTag() }
+            appLanguage = { Locale.getDefault().toLanguageTag() },
+            // Android 10's share sheet added its own Copy; below it the form keeps a Copy button.
+            shareSheetCopies = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q
         )
     }
 }

@@ -308,8 +308,9 @@ fun ScanFab(
  * A tab's one primary action, pinned where Scan sits on Home, above the pill: the Recipe tab's
  * Generate or Share. Full width on phones; the caller sizes it on expanded windows. [cost] is the
  * small pill at the end that says what the action takes ("Free"). [compact]: as wide as its
- * label, like Scan, for an action with no cost (the shared prompt alone); the label still wraps
- * when large text needs it.
+ * label, like Scan, for an action with no cost (the shared prompt alone), and drawn to Scan's
+ * metrics ([ScanFab]: 56dp high, 20dp side padding, a 24dp icon, 8dp to the label); the label
+ * still wraps when large text needs it.
  */
 @Composable
 fun PinnedAction(
@@ -333,10 +334,10 @@ fun PinnedAction(
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .heightIn(min = 56.dp)
             .padding(horizontal = LarderSpace.s5, vertical = LarderSpace.s2),
-        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) LarderSpace.s2 else LarderSpace.s3),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        LarderIcon(icon, contentDescription = null, tint = content)
+        LarderIcon(icon, contentDescription = null, tint = content, size = if (compact) LarderIconSize.Large else LarderIconSize.Default)
         Text(
             text = text,
             modifier = if (compact) Modifier.weight(1f, fill = false) else Modifier.weight(1f),

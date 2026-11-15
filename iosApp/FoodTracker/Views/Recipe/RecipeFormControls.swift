@@ -314,7 +314,8 @@ struct RecipeGoButton: View {
     let icon: LarderIconName
     var cost: String? = nil
     /// As wide as its label, like Scan on Home, for an action with no cost (the shared prompt
-    /// pinned alone); the label still wraps when large text needs it.
+    /// pinned alone), and drawn to Scan's metrics (`ScanFab`: 56pt high, 16pt side padding, the
+    /// large icon, 8pt to the label); the label still wraps when large text needs it.
     var compact = false
     let action: () -> Void
 
@@ -322,8 +323,8 @@ struct RecipeGoButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: LarderSpace.s3) {
-                LarderIcon(icon)
+            HStack(spacing: compact ? LarderSpace.s2 : LarderSpace.s3) {
+                LarderIcon(icon, size: compact ? .large : .medium)
                 Text(title)
                     .larderFont(.label)
                     .multilineTextAlignment(.leading)
@@ -340,8 +341,8 @@ struct RecipeGoButton: View {
             }
             .foregroundStyle(isEnabled ? LarderColor.onPrimary : LarderColor.onSurfaceVariant)
             .padding(.vertical, LarderSpace.s2)
-            .padding(.horizontal, LarderSpace.s5)
-            .frame(maxWidth: compact ? nil : .infinity, minHeight: 56)
+            .padding(.horizontal, compact ? LarderSpace.s4 : LarderSpace.s5)
+            .frame(maxWidth: compact ? nil : .infinity, minHeight: ScanFab.minHeight)
             .background(
                 isEnabled ? LarderColor.primary : LarderColor.surfaceContainerHigh,
                 in: RoundedRectangle(cornerRadius: LarderRadius.lg)
