@@ -26,9 +26,14 @@ FONT = str(ROOT / "iosApp" / "FoodTracker" / "Resources" / "Fonts" / "Vollkorn-S
 FONT_BOLD_INDEX = 0
 
 # Screenshot script language code -> store-listing/app-store folder
-LISTING_FOLDERS = {"en": "en-GB", "ru": "ru", "nb": "no"}
-# The same for store-listing/google-play
-PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO"}
+# (es-MX and fr-CA have no screenshots of their own: scripts/testflight.py places es-ES's and
+# fr-FR's there.)
+LISTING_FOLDERS = {"en": "en-GB", "ru": "ru", "nb": "no", "es": "es-ES", "de": "de-DE", "fr": "fr-FR",
+                   "sv": "sv", "da": "da"}
+# The same for store-listing/google-play (es-419 and fr-CA take es-ES's and fr-FR's images:
+# scripts/play_listing.py, IMAGE_FALLBACKS)
+PLAY_FOLDERS = {"en": "en-GB", "ru": "ru-RU", "nb": "no-NO", "es": "es-ES", "de": "de-DE",
+                "fr": "fr-FR", "sv": "sv-SE", "da": "da-DK"}
 PLAY_SET = "phone-screenshots"
 PLAY_SIZE = (1080, 1920)
 
@@ -44,6 +49,21 @@ CAPTIONS = {
            "Меню на три дня\nпод ваши продукты", "Закончилось —\nуже в списке", "Напоминания в\nудобное время"],
     "nb": ["Se hva som\nsnart går ut", "Skann pakken,\ndatoen leses av", "Lag mat av det\nsom må brukes først",
            "Meny for tre dager\nrundt det du har", "Brukt opp? Den\nstår på listen", "Påminnelser når\ndet passer deg"],
+    "es": ["Mira qué está\na punto de caducar", "Escanea el envase,\nla fecha se lee sola",
+           "Cocina primero\nlo que toca usar", "Un menú de tres días\ncon lo que tienes",
+           "¿Se acabó?\nYa está en tu lista", "Avisos cuando\nmejor te venga"],
+    "de": ["Sieh, was\nbald abläuft", "Packung scannen,\nDatum wird erkannt", "Koch zuerst,\nwas weg muss",
+           "Ein Menü für drei Tage\naus dem, was da ist", "Aufgebraucht?\nSteht auf der Liste",
+           "Erinnerungen,\nwann es dir passt"],
+    "fr": ["Voyez ce qui\narrive à date", "Scannez l'emballage,\nla date est lue",
+           "Cuisinez d'abord\nce qui presse", "Un menu de trois jours\navec ce que vous avez",
+           "Tout utilisé\u00a0?\nC'est sur votre liste", "Des rappels quand\nça vous arrange"],
+    "sv": ["Se vad som\nsnart går ut", "Skanna förpackningen,\ndatumet läses av",
+           "Laga mat av det\nsom ska ätas först", "En meny för tre dagar\nkring det du har",
+           "Slut? Den står\npå listan", "Påminnelser när\ndet passar dig"],
+    "da": ["Se, hvad der\nsnart udløber", "Scan pakken,\ndatoen aflæses", "Lav mad af det,\nder skal bruges først",
+           "En menu for tre dage\nud fra det, du har", "Brugt op? Den\nstår på listen",
+           "Påmindelser, når\ndet passer dig"],
 }
 # App Store Connect keeps the two iPhone Duo sets in one group of at most 10 images per language,
 # so each has five: the shots above without the last, Settings.
@@ -150,6 +170,10 @@ def main():
     play = set_name == PLAY_SET
     for lang, folder in (PLAY_FOLDERS if play else LISTING_FOLDERS).items():
         captions = CAPTIONS[lang]
+        if not (raw_dir / lang).is_dir():
+            # A capture run of some languages only (LANGS=...): the others' sets are left as they are.
+            print(f"{lang}: no screenshots in {raw_dir / lang}, skipped")
+            continue
         raws = sorted((raw_dir / lang).glob("[0-9]-*.png"))
         if len(raws) != len(captions):
             sys.exit(f"expected {len(captions)} screenshots in {raw_dir / lang}, found {len(raws)}")

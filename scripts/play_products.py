@@ -18,8 +18,8 @@ Idempotent: a product that already exists is not changed; if its purchase option
 active, --apply only activates it. Each new product is a consumable with one purchase option `buy`
 (legacy-compatible, so Play Billing's ProductDetails sees it; multi-quantity off), available in
 every region at Play's conversion of the USD base price (`convertRegionPrices`), and in regions
-Play adds later at the converted USD and EUR prices; listings in en-GB, ru-RU and no-NO. The pack
-sizes must match PRODUCT_CREDITS in functions/src/constants.ts, and the USD prices the App Store
+Play adds later at the converted USD and EUR prices; listings in every language of LISTINGS
+(the store listing's languages). The pack sizes must match PRODUCT_CREDITS in functions/src/constants.ts, and the USD prices the App Store
 base prices in store-listing/app-store/README.md.
 """
 import argparse
@@ -35,25 +35,51 @@ from googleapiclient.errors import HttpError  # noqa: E402
 
 PURCHASE_OPTION = "buy"
 
-# productId: (recipes, USD base price, the count spelt out in en / ru / nb).
+# productId: (recipes, USD base price, the count spelt out per language as the description starts).
 PRODUCTS = {
-    "recipes_10": (10, "3.99", "Ten", "Десять", "Ti"),
-    "recipes_50": (50, "10.99", "Fifty", "Пятьдесят", "Femti"),
-    "recipes_100": (100, "18.99", "A hundred", "Сто", "Hundre"),
+    "recipes_10": (10, "3.99", {"en": "Ten", "ru": "Десять", "nb": "Ti", "es": "Diez", "de": "Zehn",
+                                "fr": "Dix", "sv": "Tio", "da": "Ti"}),
+    "recipes_50": (50, "10.99", {"en": "Fifty", "ru": "Пятьдесят", "nb": "Femti", "es": "Cincuenta",
+                                 "de": "Fünfzig", "fr": "Cinquante", "sv": "Femtio", "da": "Halvtreds"}),
+    "recipes_100": (100, "18.99", {"en": "A hundred", "ru": "Сто", "nb": "Hundre", "es": "Cien",
+                                   "de": "Hundert", "fr": "Cent", "sv": "Hundra", "da": "Hundrede"}),
+}
+
+# Play language code -> (language of the count above, title with {n}, description with {count}).
+LISTINGS = {
+    "en-GB": ("en", "{n} recipes",
+              "{count} dishes written for you from what is about to expire. Unused recipes don't expire."),
+    "ru-RU": ("ru", "{n} рецептов",
+              "{count} блюд, составленных для вас из продуктов, у которых скоро выходит срок. "
+              "Неиспользованные рецепты не сгорают."),
+    "no-NO": ("nb", "{n} oppskrifter",
+              "{count} retter laget for deg av det som snart går ut på dato. Ubrukte oppskrifter utløper ikke."),
+    "es-ES": ("es", "{n} recetas",
+              "{count} platos pensados para ti con lo que está a punto de caducar. Las recetas sin usar no caducan."),
+    "es-419": ("es", "{n} recetas",
+               "{count} platillos pensados para ti con lo que está por caducar. Las recetas sin usar no vencen."),
+    "de-DE": ("de", "{n} Rezepte",
+              "{count} Gerichte, für dich zusammengestellt aus dem, was bald abläuft. "
+              "Unbenutzte Rezepte verfallen nicht."),
+    "fr-FR": ("fr", "{n} recettes",
+              "{count} plats imaginés pour vous avec ce qui arrive bientôt à date. "
+              "Les recettes non utilisées n'expirent pas."),
+    "fr-CA": ("fr", "{n} recettes",
+              "{count} plats pensés pour vous avec ce qui arrive bientôt à échéance. "
+              "Les recettes inutilisées n'expirent pas."),
+    "sv-SE": ("sv", "{n} recept",
+              "{count} rätter skapade åt dig av det som snart passerar bäst före-datum. "
+              "Oanvända recept går inte ut."),
+    "da-DK": ("da", "{n} opskrifter",
+              "{count} retter lavet til dig af det, der snart når sin dato. Ubrugte opskrifter udløber ikke."),
 }
 
 
 def listings(product_id):
-    n, _, en, ru, nb = PRODUCTS[product_id]
-    return [
-        {"languageCode": "en-GB", "title": f"{n} recipes",
-         "description": f"{en} dishes written for you from what is about to expire. Unused recipes don't expire."},
-        {"languageCode": "ru-RU", "title": f"{n} рецептов",
-         "description": f"{ru} блюд, составленных для вас из продуктов, у которых скоро выходит срок. "
-                        "Неиспользованные рецепты не сгорают."},
-        {"languageCode": "no-NO", "title": f"{n} oppskrifter",
-         "description": f"{nb} retter laget for deg av det som snart går ut på dato. Ubrukte oppskrifter utløper ikke."},
-    ]
+    n, _, counts = PRODUCTS[product_id]
+    return [{"languageCode": code, "title": title.format(n=n),
+             "description": description.format(count=counts[language])}
+            for code, (language, title, description) in LISTINGS.items()]
 
 
 def money(usd):

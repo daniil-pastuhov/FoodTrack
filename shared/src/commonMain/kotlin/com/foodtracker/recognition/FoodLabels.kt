@@ -13,7 +13,7 @@ data class RecognizedLabel(
  * A label that survived filtering, ready to offer as a name suggestion.
  *
  * [key] is a stable identifier each platform localizes (the classifier only speaks English, and
- * this app ships in three languages), and [category] is the coarse grocery category the label
+ * this app ships in eight languages), and [category] is the coarse grocery category the label
  * belongs to — which is what lets the per-category default shelf life from `ShelfLife` apply to a
  * photographed item that has no barcode to remember one against.
  */

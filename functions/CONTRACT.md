@@ -126,6 +126,17 @@ the legacy shape with the closest values (see "Legacy mapping"). A multi-choice 
 (`INVALID_REQUEST`, nothing charged) rather than reading part of it; the apps then stop sending it
 until a response says `true` again. Old clients ignore the flag.
 
+## Capability `acceptsDanish`
+
+The same pattern for `config.language: "da"` (Danish, added in November 2026 with the app's Danish
+translation): every response that carries `balance` from a server that writes Danish recipes
+carries `"acceptsDanish": true`. Clients send `da` only when the latest such response said `true`.
+A server from before it refuses `da` (`INVALID_REQUEST`, nothing charged), so without the flag the
+clients send nothing and tell the person to choose another recipe language or use a free route;
+they never send another language in its place. After a `da` request refused as `INVALID_REQUEST`
+(a rolled-back server) they stop sending `da` until a response says `true` again. Old clients
+ignore the flag and never send `da`.
+
 ## Types
 
 ### RecipeConfig
@@ -141,7 +152,7 @@ without `acceptsMultiChoiceConfig`):
 | `maxMinutes` | int or null | `15` \| `30` \| `60` \| `null` (no limit) |
 | `mealType` | string | `any` \| `breakfast` \| `lunch` \| `dinner` \| `snack` \| `dessert` |
 | `diet` | string | `none` \| `vegetarian` \| `vegan` \| `pescatarian` \| `glutenFree` \| `dairyFree` |
-| `language` | string | `en` \| `nb` \| `ru` \| `de` \| `es` \| `fr` \| `it` \| `pl` \| `sv` \| `uk` |
+| `language` | string | `en` \| `nb` \| `ru` \| `de` \| `es` \| `fr` \| `it` \| `pl` \| `sv` \| `uk` \| `da` (`da` only to a server that says `acceptsDanish`) |
 
 `minMinutes`, `mealTypes` and `diets` are absent or `null` there.
 
@@ -219,7 +230,7 @@ without them is bound exactly as before the field existed.
 
 Names are accepted in **any script**: products scanned from Open Food Facts come back with their
 local names (Greek, Hebrew, Arabic, Chinese, Japanese, Korean, Thai, Georgian, Devanagari...).
-The ten recipe languages are only the language the answer is written in.
+The eleven recipe languages are only the language the answer is written in.
 
 The server normalises every name and then checks it (`src/core/inputSafety.ts`). Normalisation:
 Unicode NFKC (fullwidth letters and digits become plain ones, `½` becomes `1/2`, ligatures split;
@@ -255,7 +266,7 @@ letters are ordinary letters: only the direction *controls* are removed. Then th
   character five times in a row, no four single letters in a row (`i g n o r e`; a single
   Chinese, Japanese, Korean or Thai character is a word, not a letter, and does not count); none
   of a short list of words about the model rather than food (`ignore`, `instructions`, `prompt`,
-  `system`, `assistant`, `json`, `forget`... in the ten app languages only, also when spelled with
+  `system`, `assistant`, `json`, `forget`... in the eleven recipe languages only, also when spelled with
   Cyrillic or Greek look-alike letters or digits).
 
 A refused name fails the whole request with `INVALID_REQUEST`, `details.field` and `details.rule`
@@ -284,7 +295,7 @@ that item out and retries with a **new** `requestId`, telling the user. An aller
 shortened or dropped: if cleaning would remove any letter or digit of it, or the server refuses
 it, the request is not sent and the user is told.
 
-Allergen enforcement in the answer (see "Failures and refunds") matches the ten app languages'
+Allergen enforcement in the answer (see "Failures and refunds") matches the recipe languages'
 word lists; an allergen written in another script can only be matched **literally** (on the
 folded, normalised text; as a substring for Chinese, Japanese, Korean and Thai), so a translation
 of it in the answer is not caught unless the word lists have it.
@@ -386,7 +397,7 @@ Response:
 ```json
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
   "costs": { "recipe": 1, "menu2": 4, "menu3": 5 }, "acceptsOptionalIngredients": true,
-  "acceptsMultiChoiceConfig": true }
+  "acceptsMultiChoiceConfig": true, "acceptsDanish": true }
 ```
 
 | status | meaning | `charged` | client action |

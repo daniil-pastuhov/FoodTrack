@@ -1,0 +1,35 @@
+BestBefore suit les dates « meilleur avant » et l'inventaire de votre frigo, de votre congélateur et de votre garde-manger : scannez votre épicerie, voyez quoi manger en premier, recevez un rappel avant qu'un aliment ne se gâte, et transformez ce qui approche de sa date en recette.
+
+AJOUTEZ VOS ALIMENTS EN QUELQUES SECONDES
+• Scannez un code-barres : le nom et la photo du produit sont remplis pour vous (grâce à Open Food Facts)
+• Pointez l'appareil photo vers la date imprimée et BestBefore la lit pour vous
+• Photographiez un fruit ou un légume et l'appli vous suggère ce que c'est
+• Mode série : scannez tout un sac d'épicerie d'un coup
+• Lisez un reçu de caisse pour ajouter plusieurs produits à la fois
+
+NE MANQUEZ PLUS AUCUNE DATE
+• Fonctionne avec les dates « meilleur avant » comme avec les dates limites de consommation
+• Des rappels quelques jours avant la date, à l'heure de votre choix
+• Les listes « Bientôt périmés » et « Périmés » en un coup d'œil
+• Des widgets pour l'écran d'accueil : produits à consommer, liste d'épicerie et aperçu rapide
+
+UNE ÉPICERIE PLUS FUTÉE
+• Les produits essentiels que vous finissez s'ajoutent directement à votre liste d'épicerie
+• Partagez la liste en texte ou par code QR
+• En option : votre liste d'épicerie s'affiche quand vous arrivez dans un magasin enregistré
+
+CUISINEZ CE QUI APPROCHE DE SA DATE
+• L'onglet Recette choisit les produits dont la date est la plus proche; changez la sélection, les portions, le temps, le régime alimentaire et plus encore
+• Gratuit : copiez ou partagez une requête (prompt) toute prête vers l'appli d'IA que vous utilisez déjà
+• Gratuit sur les iPhone compatibles avec Apple Intelligence (iOS 26 ou version ultérieure) : la recette est rédigée sur l'iPhone lui-même
+• Packs de recettes (achat intégré) : des recettes rédigées par notre serveur et enregistrées dans l'appli, et un plan de repas sur 3 jours (« Menu sur 3 jours ») qui utilise d'abord ce qui approche de sa date
+
+VOS DONNÉES
+• Aucune publicité, aucun pistage
+• Aucun abonnement : l'appli est gratuite, et les packs de recettes sont des achats uniques facultatifs
+• Votre garde-manger est stocké sur votre iPhone; exportez une sauvegarde quand vous le voulez
+• Aucun compte requis, pas même pour acheter un pack. Connectez-vous avec Apple ou Google seulement si vous voulez retrouver vos recettes sur d'autres téléphones
+• Une recette d'un pack envoie à notre serveur les produits que vous cochez, vos réglages de recette et vos allergènes. Les options gratuites ne nous envoient rien
+• Disponible en français, anglais, allemand, espagnol, danois, suédois, norvégien et russe
+
+Gaspillez moins, économisez et sachez toujours ce que vous avez à la maison.

@@ -3,20 +3,28 @@
 Everything App Store Connect asks for. The release flow applies the listing texts, the
 screenshots and the header art ("Changing the listing texts" below); the rest is ready to paste. One folder per
 listing language: `en-GB/` (English, U.K., the primary language), `en-US/` (English, U.S.), `ru/` (Russian),
-`no/` (Norwegian), and `en-AU/` (English, Australia) and `en-CA/` (English, Canada) with
-`keywords.txt` alone ("Australia and Canada" below). Each full folder has `name.txt`,
-`subtitle.txt`, `promotional_text.txt`, `keywords.txt` and `description.txt`; another English
-folder may leave any of them out and takes en-GB's. `scripts/check_store_listing.py` checks them
+`no/` (Norwegian), `es-ES/` (Spanish, Spain), `es-MX/` (Spanish, Mexico), `de-DE/` (German),
+`fr-FR/` (French), `fr-CA/` (French, Canada), `sv/` (Swedish), `da/` (Danish), and `en-AU/`
+(English, Australia) and `en-CA/` (English, Canada) with `keywords.txt` alone ("Australia and
+Canada" below). Each full folder has `name.txt`, `subtitle.txt`, `promotional_text.txt`,
+`keywords.txt`, `description.txt` and `privacy_url.txt` (the localization's privacy policy URL,
+"Privacy policy URL per language" below). A regional folder may leave any of them out and takes its
+parent language's file instead: another English folder en-GB's, `es-MX/` es-ES's and `fr-CA/`
+fr-FR's (`fallback()` in `scripts/testflight.py`, `fallback_name` in
+`scripts/check_store_listing.py`). No other language falls back. `scripts/check_store_listing.py` checks them
 (and the Google Play texts) against the limits: name and subtitle 30 characters, keywords 100
 (comma-separated, no spaces after commas, no word that the same language's name or subtitle
 already has, inherited ones included; en-AU also none of en-GB's keywords), promotional text 170,
-description 4000. Run it after every edit.
+description 4000, and that `privacy_url.txt` is the policy site's page for the folder's language.
+Run it after every edit.
 
-`en-US/`, `en-AU/` and `en-CA/` have texts only. Its screenshots and header art are en-GB's: App Store Connect shows the
+`en-US/`, `en-AU/` and `en-CA/` have texts only. Their screenshots and header art are en-GB's: App Store Connect shows the
 primary language's screenshots in a localization that has none, so nothing needs uploading
-there (the sync places en-GB's header art on it, see below), and the screenshot scripts only
-make the en-GB, ru and no sets. The en-GB, ru and no
-folders have these screenshot sets (up to 10 images each; the two iPhone Duo folders share one
+there (the sync places en-GB's header art on it, see below). `es-MX/` and `fr-CA/` have no
+screenshots either, but App Store Connect would show them the English ones, so the sync uploads
+es-ES's and fr-FR's sets, Duo sets and header art to them (`screenshot_folder` in
+`scripts/testflight.py`). The screenshot scripts make the en-GB, ru, no, es-ES, de-DE, fr-FR, sv
+and da sets, and those folders have these screenshot sets (up to 10 images each; the two iPhone Duo folders share one
 set of 10), in App Store Connect's media sections of the same name:
 
 | Folder | Size | App Store Connect display |
@@ -35,7 +43,9 @@ its printed date, 3 a written recipe, 4 a three-day menu, 5 the shopping list, 6
 reminders. The two iPhone Duo sets share one group of at most 10 images per language in App
 Store Connect, so they stop at 5 (`SHOT_LIMITS` in `scripts/frame_screenshots.py`). Retake them
 after UI changes: `scripts/ios_screenshots.sh <raw-dir>` captures a demo pantry
-(`scripts/demo_backup.py`) in every language, then `scripts/frame_screenshots.py <raw-dir>
+(`scripts/demo_backup.py`) in every language on one simulator (`LANGS="en de"` for some of
+them; `SKIP_BUILD=1` reuses the Debug build the previous device's run made, so a capture run is
+one device after another with every language on each), then `scripts/frame_screenshots.py <raw-dir>
 <folder>` adds the captions and device frame in Larder's colours (the captions live in that
 script). The Google Play set is made the same way: `ANDROID_SERIAL=<emulator>
 scripts/android_screenshots.sh <raw-dir>`, then `scripts/frame_screenshots.py <raw-dir>
@@ -48,10 +58,13 @@ simulator with `DEVICE_NAME`:
 - `screenshots/`: the default, iPhone 17 Pro Max.
 - `medium-screenshots/`: `DEVICE_NAME="iPhone 17 Pro"`. Not an iOS 27.0 simulator: there the app
   hangs on its launch screen, waiting on the notification service, so every capture is blank.
-- `duo-inner-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=3`, with the simulator unfolded.
-- `duo-outer-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=1`. A simulator booted without a
-  window comes up folded. The pose is set in Xcode's Device Hub (Xcode 27 has no Simulator app);
-  simctl can't change it. `xcrun simctl io <udid> enumerate` lists the screen IDs.
+- `duo-inner-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=3 KEEP_REGION=1`, with the
+  simulator unfolded (`scripts/duo_pose.sh Open`).
+- `duo-outer-screenshots/`: `DEVICE_NAME="iPhone Duo" SCREEN=1`. A simulator boots folded. The
+  pose is set in Xcode's Device Hub (Xcode 27 has no Simulator app), with the Closed / Partially
+  Open / Open buttons beside the device; simctl can't change it. `scripts/duo_pose.sh
+  Open|Closed` clicks them through System Events (Device Hub open on the simulator, Accessibility
+  access for the terminal). `xcrun simctl io <udid> enumerate` lists the screen IDs.
 - `ipad-screenshots/`: `DEVICE_NAME="iPad Pro 13-inch (M5)"`.
 
 Each folder also has the two images for the version page's "Header and Search Results" section,
@@ -72,7 +85,8 @@ symbol, other platforms or Apple awards.
 
 ## App preview video
 
-An optional app preview per language (en-GB, ru, no): about 21 seconds of the app itself, no
+An optional app preview per language (en-GB, ru, no, es-ES, de-DE, fr-FR, sv, da; upload
+es-ES's to es-MX and fr-FR's to fr-CA too, as previews aren't synced): about 21 seconds of the app itself, no
 device frame or hands, in the order of the screenshots' story: a scan reads a pack's barcode and
 then its printed date; Add item with the date filled in, saved; Home with "saved to Fridge" and
 the new item in the list; the Recipe tab with what expires first ticked; a recipe written from
@@ -106,11 +120,11 @@ Screenshots" → iPhone → drag `preview.mp4` in (or the Media Manager), then E
 pick the frame `poster.png` shows (4.6 s in: the scan card with the product and its date).
 Processing takes up to a day. Poster frames can't change after approval without a new preview.
 
-Before uploading, decide the disclosure: the menu shot shows a server-written menu ("Written by
-our server"), which needs recipe packs. Apple asks for that to be said in the footage or the end
-frame; the screenshots' captions don't, as they describe what the routes do rather than what they
-cost. Either add a short line to the last caption run in `ios_preview_assemble.py` or end on the
-recipe, which the phone's own model writes free ("Written on this iPhone").
+The disclosure: the menu shot shows a server-written menu ("Written by our server"), which needs
+recipe packs, and Apple asks for that to be said in the footage or the end frame. So the last
+caption run carries a smaller second line in every language ("Needs a recipe pack", `PACK_NOTES`
+in `ios_preview_assemble.py`); the screenshots' captions don't, as they describe what the routes
+do rather than what they cost.
 
 The API can take it too, if the sync should do it one day (not built): the classic route is
 `POST /v1/appPreviewSets` (`previewType` `IPHONE_67`, on the `appStoreVersionLocalization`), then
@@ -128,18 +142,21 @@ Edit the files here; the release PR's merge applies them. `scripts/testflight.py
 (run by CI's `release-app-store` job, with `--screenshots`) writes them to the new version
 before it submits it for review, and only what differs from App Store Connect:
 
-- **Name, subtitle** (`name.txt`, `subtitle.txt`) on the app info in preparation, and
-  **keywords, description, promotional text** on the version. App Store Connect lets the name,
-  subtitle, keywords and description change only with a new version, so they go live when that
-  version is approved. A localization the repo has and App Store Connect lacks is added (en-US
-  was added this way), with the support, marketing and privacy policy URLs copied from en-GB;
-  those URLs are otherwise never touched. An English folder without some of the files (en-AU,
-  en-CA) takes en-GB's for them, so a localization added from it has every field; the dry run
-  says per localization which fields come from its folder and which are inherited from en-GB.
+- **Name, subtitle, privacy policy URL** (`name.txt`, `subtitle.txt`, `privacy_url.txt`) on the
+  app info in preparation, and **keywords, description, promotional text** on the version. App
+  Store Connect lets the name, subtitle, privacy policy URL, keywords and description change only
+  with a new version, so they go live when that version is approved. The privacy policy URL is
+  set only once the page answers (below). A localization the repo has and App Store Connect lacks
+  is added (en-US was added this way) with its own privacy policy URL, and the support, marketing
+  and privacy choices URLs copied from en-GB; those are otherwise never touched. A regional folder without some of the files (en-AU,
+  en-CA: en-GB's; es-MX: es-ES's; fr-CA: fr-FR's) takes its parent's for them, so a
+  localization added from it has every field; the dry run says per localization which fields
+  come from its folder and which are inherited.
 - **Screenshots**: `screenshots/`, `medium-screenshots/` and `ipad-screenshots/` replace each
   localization's set of that display type, in file-number order. Unchanged images (same MD5)
   stay, changed or new ones are uploaded, and images no longer in the folder are deleted. At
-  most 10 per folder. A localization without these folders (en-US) shows en-GB's.
+  most 10 per folder. An English localization without these folders (en-US) shows en-GB's;
+  es-MX and fr-CA without their own get es-ES's and fr-FR's uploaded.
 - **iPhone Duo screenshots**: `duo-inner-screenshots/` and `duo-outer-screenshots/` go through
   the App Asset Library, as the set-based API has no Duo display type. Both displays share the
   version's one `IPHONE_DUO_PROFILE` group, at most 10 images in all, shown inner first and each
@@ -154,8 +171,9 @@ before it submits it for review, and only what differs from App Store Connect:
   `PRODUCT_PAGE_HEADER_ASSET` and `APP_STORE_SEARCH_RESULTS_ASSET` (one each per localization).
   The size is checked against the specs in Apple's reference data first (header 3840×1646,
   search result 3:2 from 1920×1280 to 3840×2560). Another English localization without the
-  files (en-US, en-AU, en-CA) gets en-GB's placed, reusing the same library image, as Apple
-  documents no fallback to the primary language for these. A localization whose folder has
+  files (en-US, en-AU, en-CA) gets en-GB's placed, and es-MX and fr-CA es-ES's and fr-FR's,
+  reusing the same library image, as Apple documents no fallback to the primary language for
+  these. A localization whose folder has
   neither file is left as it is.
 - **App Review notes** (`review-notes.txt`): written to the version's App Review notes; only
   the notes, never the contact or demo-account fields. A version without a review detail gets
@@ -174,7 +192,9 @@ before it submits it for review, and only what differs from App Store Connect:
 - If any of it fails (a text over a limit, a refused upload), the version is not submitted; fix
   it and re-run the job, which skips what is already applied.
 - **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by the same
-  command; every English localization gets the en-GB notes.
+  command (Play's locale codes; `ASC_LOCALES` in `scripts/testflight.py` maps es-419 to es-MX,
+  sv-SE to sv, da-DK to da); an English localization without notes of its own gets the en-GB
+  ones.
 
 Still by hand, as the sync doesn't write it:
 
@@ -196,6 +216,32 @@ Both compare with the version in preparation. While none is (after a release is 
 before the next merge), they say so and compare with the newest version, which is what the next
 version starts from.
 
+### Privacy policy URL per language
+
+The policy site has a page per language, `https://daniil-pastuhov.github.io/bestbefore-privacy/<page>.html`
+(en, ru, nb, es, de, fr, sv, da), and the language chooser at its root. App Store Connect keeps the
+privacy policy URL per localization (`privacyPolicyUrl` on the app info localization, changed only
+with a new version, like the name). `privacy_url.txt` holds it: en-GB `en.html` (en-US, en-AU and
+en-CA inherit it), ru `ru.html`, no `nb.html`, es-ES `es.html` (es-MX inherits it), de-DE
+`de.html`, fr-FR `fr.html` (fr-CA inherits it), sv `sv.html`, da `da.html`.
+`scripts/check_store_listing.py` refuses any other URL (another language's page, another host,
+http, the chooser); Apple publishes no length limit for it.
+
+A page is set only when it answers 200 at sync time (`live_privacy_url` in
+`scripts/testflight.py`). One that doesn't (not published yet) gets the language chooser instead,
+with a `::warning::` in the job's log; the next release sets the page once it is live. If the site
+doesn't answer at all, the URL is left as App Store Connect has it. So the dry run
+(`testflight.py listing`) shows the chooser for a page that isn't live yet.
+
+**Order of operations**: a language's page has to be live before the release PR whose job syncs
+the listing is merged; otherwise that localization keeps the chooser until the release after. All
+eight pages are live since 2026-11-15 (site pull request
+[daniil-pastuhov/bestbefore-privacy#3](https://github.com/daniil-pastuhov/bestbefore-privacy/pull/3),
+which also published the About page `app.html`).
+
+Google Play has one privacy policy URL for the whole app (Play Console > App content), which
+the Publishing API doesn't expose; it stays on the chooser root.
+
 ### Australia and Canada
 
 Apple's [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations)
@@ -212,7 +258,7 @@ folders follow the usual assumption that a storefront searches the localizations
   words again, with "expiration" beside the name's "expiry" and "best before", the Canadian
   date label.
 
-Everything else (name, subtitle, description, promotional text, What's New, screenshots, header
+Everything else (name, subtitle, description, promotional text, privacy policy URL, What's New, screenshots, header
 and search-result art) is en-GB's, so they need no upkeep beyond their keywords. To give one its
 own text, add that file to its folder. French (Canada) has no listing.
 
@@ -250,9 +296,9 @@ From CI, on every push to a `release/v*` branch (see "Releasing" in the top-leve
 
 | Field | Value |
 |---|---|
-| Privacy Policy URL | https://daniil-pastuhov.github.io/bestbefore-privacy/ |
+| Privacy Policy URL | Per localization, from `<locale>/privacy_url.txt`, set by the release flow ("Privacy policy URL per language"); the language chooser https://daniil-pastuhov.github.io/bestbefore-privacy/ until a language's page is live |
 | Support URL | https://daniil-pastuhov.github.io/bestbefore-privacy/support.html |
-| Marketing URL | leave empty |
+| Marketing URL | https://daniil-pastuhov.github.io/bestbefore-privacy/app.html (live since 2026-11-15); set by hand (the listing sync doesn't set it) |
 | Category | Primary: **Food & Drink**. Secondary: **Productivity** |
 | Copyright | `2026 Daniil Pastuhov` |
 | Content rights | Does not contain, show or access third-party content. (Product names and pictures come from Open Food Facts, an open database; if asked, answer yes and that you have the rights under its ODbL/CC BY-SA licences.) |
@@ -434,9 +480,17 @@ Store Connect Help, [Offer In-App Events](https://developer.apple.com/help/app-s
 and [media specifications](https://developer.apple.com/help/app-store-connect/reference/in-app-event-media-and-audio-specifications);
 [In-App Events](https://developer.apple.com/app-store/in-app-events/)). `scripts/in_app_event_art.py`
 redraws the images from the framed screenshots (`screenshots/` 2, 3 and 4: the scan, a recipe,
-the menu) after those change. Apple wants no text or logos in event media, so the only words are
-the app's own screens; it sets the event name and description over the bottom, which the layouts
-leave to the phones' lower halves and plain green.
+the menu) after those change. Apple's guidance on event media (In-App Events page, "Creating
+effective metadata", checked 2026-11-15) is a recommendation, not an App Review rule: "When
+possible, avoid using text or logos in your media, especially if they include your event name or
+app name.", with "Avoid using text or logos in your media." under Don't, and "Don't add borders
+or gradients to your media." It says nothing about screenshots, device frames or UI, so app
+screens in phones are not ruled out; the risk is low and lies in words that look like an overlay
+or repeat the event or app name. The images add no text of their own and show neither the app
+name nor an icon; the only words are the app's own screens. One to watch: the ru event name is
+«Новая вкладка «Рецепт»», and the recipe phone's title bar reads «Рецепт»; check the ru preview.
+App Store Connect sets the event name and description over the bottom, which the layouts leave
+to the phones' lower halves and plain green.
 
 - **Schedule**: the event starts on `releaseDay` (null until you set it, as `YYYY-MM-DD`) at
   `startTimeUtc`, runs `durationDays` (30) and is published `publishDaysBefore` (0) days before

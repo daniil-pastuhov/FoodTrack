@@ -2,7 +2,7 @@
 """Draws the still picture the scanner shows in its screenshot demo, in place of the camera, which
 simulators and emulators don't have:
 
-    scripts/demo_scan_image.py <en|ru|nb> <yyyy-mm-dd> <picture.png> <thumb.png>
+    scripts/demo_scan_image.py <en|ru|nb|es|de|fr|sv|da> <yyyy-mm-dd> <picture.png> <thumb.png>
 
 <picture.png> is a carton of yoghurt on a kitchen counter, seen as a phone camera would, with an
 EAN-13 barcode and a dot-printed best-before date; <thumb.png> is the carton's front, for the
@@ -27,10 +27,21 @@ SERIF = str(FONTS / "vollkorn_semibold.ttf")
 SANS = str(FONTS / "google_sans_medium.ttf")
 
 # The product's name on the pack and in the app (demo_backup.py's product cache uses the same).
-NAMES = {"en": "Natural yoghurt", "ru": "Йогурт натуральный", "nb": "Naturell yoghurt"}
-PACK_LINES = {"en": ["NATURAL", "YOGHURT"], "ru": ["ЙОГУРТ", "НАТУРАЛЬНЫЙ"], "nb": ["NATURELL", "YOGHURT"]}
-WEIGHT = {"en": "500 g · 3.5% fat", "ru": "500 г · жирность 3,5%", "nb": "500 g · 3,5 % fett"}
-BEST_BEFORE = {"en": "BEST BEFORE", "ru": "ГОДЕН ДО", "nb": "BEST FØR"}
+NAMES = {"en": "Natural yoghurt", "ru": "Йогурт натуральный", "nb": "Naturell yoghurt",
+         "es": "Yogur natural", "de": "Naturjoghurt", "fr": "Yaourt nature", "sv": "Naturell yoghurt",
+         "da": "Naturel yoghurt"}
+PACK_LINES = {"en": ["NATURAL", "YOGHURT"], "ru": ["ЙОГУРТ", "НАТУРАЛЬНЫЙ"], "nb": ["NATURELL", "YOGHURT"],
+              "es": ["YOGUR", "NATURAL"], "de": ["NATUR", "JOGHURT"], "fr": ["YAOURT", "NATURE"],
+              "sv": ["NATURELL", "YOGHURT"], "da": ["NATUREL", "YOGHURT"]}
+WEIGHT = {"en": "500 g · 3.5% fat", "ru": "500 г · жирность 3,5%", "nb": "500 g · 3,5 % fett",
+          "es": "500 g · 3,5 % materia grasa", "de": "500 g · 3,5 % Fett", "fr": "500 g · 3,5 % MG",
+          "sv": "500 g · 3,5 % fett", "da": "500 g · 3,5 % fedt"}
+# The words before the printed date, each one the app's date reader takes as a keyword
+# (DateOcrParser.KEYWORD_PATTERN), and the date as packs in that country print it.
+BEST_BEFORE = {"en": "BEST BEFORE", "ru": "ГОДЕН ДО", "nb": "BEST FØR", "es": "CONSUMIR PREF. ANTES DEL",
+               "de": "MINDESTENS HALTBAR BIS", "fr": "À CONSOMMER DE PRÉFÉRENCE AVANT LE",
+               "sv": "BÄST FÖRE", "da": "BEDST FØR"}
+DATE_FORMATS = {"es": "%d/%m/%Y", "fr": "%d/%m/%Y", "sv": "%Y-%m-%d"}  # others: dd.mm.yyyy
 
 # The picture is 3:4, with the barcode's bars and digits centred on it, BARCODE_WIDTH of its
 # width across. The scan demo centres the picture on the aiming frame, 4.5 times the frame's
@@ -137,7 +148,7 @@ def pack_front(lang, date, width, height):
 
 
 def best_before_text(lang, date):
-    return f"{BEST_BEFORE[lang]} {date.strftime('%d.%m.%Y')}"
+    return f"{BEST_BEFORE[lang]} {date.strftime(DATE_FORMATS.get(lang, '%d.%m.%Y'))}"
 
 
 def scene(lang, date):
@@ -208,8 +219,13 @@ def scene(lang, date):
     stamp = best_before_text(lang, date)
     stamp_h = round(module * 7.5)
     stamp_top = bar_top + bar_h + module * 26
-    width_needed = dot_text(Image.new("RGB", (10, 10)), stamp, 0, -100, stamp_h, (0, 0, 0))
-    dot_text(canvas, stamp, round(WIDTH / 2 - width_needed / 2), stamp_top, stamp_h, (40, 40, 52))
+    measure = lambda text: dot_text(Image.new("RGB", (10, 10)), text, 0, -100, stamp_h, (0, 0, 0))
+    # One line when it fits across the carton; a longer wording (fr, es) puts the date on a line
+    # of its own under the words, as date coders do.
+    lines = [stamp] if measure(stamp) <= face_w * 0.9 else stamp.rsplit(" ", 1)
+    for i, line in enumerate(lines):
+        dot_text(canvas, line, round(WIDTH / 2 - measure(line) / 2), stamp_top + i * stamp_h * 1.35,
+                 stamp_h, (40, 40, 52))
 
     # Light from the upper left, falling off across the picture, then a camera's softness and grain.
     light = Image.new("L", canvas.size, 0)

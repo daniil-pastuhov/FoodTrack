@@ -78,10 +78,18 @@ Source: "App testing requirements for new personal developer accounts",
   running your closed test. Reasons for required continued testing include having fewer than 12
   opted-in testers or insufficient tester engagement during the testing period."
 - **What resets the clock**: Google names only opting out ("the 14 days must be consecutive").
-  Nothing in the article says a new build, a paused track or a rejected application resets it.
-  **(unverified)** Third-party guides disagree on whether publishing a new closed-testing release
-  restarts anything; Google's wording ties the count to each tester's opt-in, not to releases,
-  so **(inferred)** promoting a new build to `alpha` during the 14 days does not reset it, as long
+  Checked again 2026-11-15 in this article and in "Set up an open, closed, or internal test"
+  (<https://support.google.com/googleplay/android-developer/answer/9845334>): **Google is silent**
+  on whether a new closed-testing release, a paused track or a rejected application resets it.
+  What Google does say points the other way: under "Are there additional testing best
+  practices?" the article says "Continue running closed tests while resolving user-reported
+  issues and bugs. Updating your app in closed testing before releasing to production helps
+  minimize low ratings and negative reviews.", and the application asks you to "Describe any
+  changes made to your app or game based on what you learned from your closed test." So updates
+  during the test are expected, and testers on the track get them automatically ("their app
+  automatically updates to the test version", answer 9845334). The third-party guides that say a
+  new build resets the count cite no Google source. It remains **(inferred, not stated by
+  Google)** that promoting a new build to `alpha` during the 14 days does not reset it, as long
   as nobody is removed from the tester list. Pausing the track ("Pause track", which ends a test)
   is the one action to avoid: Google describes it as how you "remove users from your app's test
   and end a testing track". Removing the Google Group or email list from the track would also

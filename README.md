@@ -20,7 +20,7 @@ Scan your groceries, see what to use first, get a reminder before food goes off,
 - Home screen widgets for expiring items, the shopping list and an overview.
 - Recipe tab: picks the items closest to their date and writes a recipe in one of three ways: a prompt to copy into an AI app you already use (free), the phone's own model where it has one (free), or the server, with optional one-off recipe packs (in-app purchase) that also make a 3-day menu.
 - The pantry stays on your device, and you don't need an account. Only a recipe from a pack sends anything to the project's server.
-- English, Russian and Norwegian. Open source under the Apache License 2.0.
+- English, Russian, Norwegian, Spanish, German, French, Swedish and Danish. Open source under the Apache License 2.0.
 
 **Built with** Kotlin Multiplatform and Jetpack Compose (Android), SwiftUI (iOS, a separate native app), and product data and pictures from [Open Food Facts](https://world.openfoodfacts.org/) (Open Database License; pictures CC BY-SA).
 
@@ -84,7 +84,8 @@ Merging to `main` publishes nothing; CI only tests and builds it (a merged pull 
 1. **Start it**: `scripts/release` (add `--dry-run` to try it without changing anything). It
    lists the commits on `origin/main` since the last `vX.Y.Z` tag and asks for a patch, minor or
    major bump. Then it has the Claude CLI write store release notes in every listing language
-   (en-GB, ru-RU, no-NO) for you to accept, edit or regenerate. It creates
+   (en-GB, ru-RU, no-NO, es-ES, es-419, de-DE, fr-FR, fr-CA, sv-SE, da-DK; Play's codes, which
+   `scripts/testflight.py` maps to App Store Connect's) for you to accept, edit or regenerate. It creates
    `release/vX.Y.Z` with the version bump in `Version.xcconfig` and
    `release-notes/vX.Y.Z/<locale>.txt`, pushes it and opens a PR.
 2. **Internal testing**: CI publishes every push to `release/v*` to the Google Play internal track

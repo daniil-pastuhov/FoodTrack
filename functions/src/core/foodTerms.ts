@@ -1,6 +1,6 @@
 /**
- * Word lists for the deterministic output checks (core/outputSafety.ts), in the app's ten
- * languages. Every term is folded (lower case, diacritics removed) when the module loads, so write
+ * Word lists for the deterministic output checks (core/outputSafety.ts), in the app's eleven
+ * recipe languages. Every term is folded (lower case, diacritics removed) when the module loads, so write
  * them in their normal spelling. `~word` matches a word that ends with it ("brunost").
  *
  * Term syntax: `word` matches a word that starts with it ("peanut" matches "peanuts"), `=word`
@@ -41,15 +41,15 @@ const DAIRY_EXEMPT = [
   "coconut", "kokos", "coco", "cocco", "кокос",
   "rice", "=ris", "reis", "arroz", "=riz", "=riso", "ryż", "рисов",
   "cashew", "anacard", "cajou", "кешью", "кеш'ю",
-  "peanut", "peanøtt", "jordnøtt", "erdnuss", "cacahuete", "cacahuète", "arachid", "jordnöt", "арахис", "арахіс",
-  "cocoa", "kakao", "cacao", "какао", "shea", "butternut", "tartar",
+  "peanut", "peanøtt", "jordnøtt", "jordnød", "erdnuss", "cacahuete", "cacahuète", "arachid", "jordnöt", "арахис", "арахіс",
+  "cocoa", "kakao", "cacao", "какао", "shea", "butternut", "tartar", "*æblemost",
 ];
 
 export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
   peanut: {
     terms: [
       "peanut", "groundnut", "peanøtt", "jordnøtt", "erdnuss", "cacahuete", "cacahuète", "=maní",
-      "arachide", "arachidi", "orzeszki ziemne", "orzech ziemny", "jordnöt", "арахис", "арахіс",
+      "arachide", "arachidi", "orzeszki ziemne", "orzech ziemny", "jordnöt", "jordnød", "арахис", "арахіс",
     ],
   },
   treeNuts: {
@@ -60,10 +60,14 @@ export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
       "noix", "amande", "noisette", "cajou", "pistache",
       "=noce", "=noci", "mandorl", "nocciol", "anacard", "pistacchi",
       "orzech", "migdał", "pistacj", "nerkowc",
-      "~nötter", "hasselnöt", "valnöt", "paranöt", "cashewnöt", "mandlar",
+      "=nød", "~nød", "*nødd", "hasselnød", "valnød", "cashewnød", "paranød", "pekannød", "pistacie", "mandl",
+      "~nötter", "nötmix", "nötsmör", "nötblandning", "nötkärn", "nötolja", "pekannöt", "macadamianöt", "hasselnöt", "valnöt", "paranöt", "cashewnöt", "mandlar",
+      "marcipan", "marsipan", "marzipan", "mazapán", "massepain", "marzapan", "nougat", "nugat", "turrón", "pralin", "nutella",
       "орех", "миндал", "фундук", "кешью", "фисташ", "горіх", "мигдал", "фісташ", "кеш'ю",
     ],
-    exempt: ["nutmeg", "muskat", "мускат", "coconut", "kokos", "coco", "cocco", "кокос", "nutrition"],
+    exempt: [
+      "nutmeg", "muskat", "muscade", "moscada", "moscat", "muszkat", "мускат", "coconut", "kokos", "coco", "cocco", "кокос", "nutrition",
+    ],
   },
   milk: {
     terms: [
@@ -71,12 +75,15 @@ export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
       "ghee", "paneer", "parmesan", "mozzarella", "feta", "ricotta", "mascarpone", "gouda", "cheddar",
       "halloumi", "=brie", "camembert", "curd", "kefir",
       "melk", "*melk", "=ost", "~ost", "oster", "smør", "*smør", "fløte", "rømme", "myse", "laktose", "kesam", "kremost",
-      "milch", "*milch", "käse", "*käse", "sahne", "joghurt", "quark", "molke", "laktos",
-      "leche", "queso", "mantequilla", "nata", "yogur", "lactosa",
-      "lait", "fromage", "beurre", "crème", "yaourt",
+      "milch", "*milch", "käse", "*käse", "sahne", "*sahne", "~butter", "joghurt", "~joghurt", "quark", "~quark", "molke", "laktos",
+      "~rahm", "schmand", "emmental",
+      "leche", "queso", "mantequilla", "nata", "yogur", "lactosa", "requesón", "cuajada",
+      "lait", "fromage", "beurre", "crème", "yaourt", "babeurre", "chantilly", "gruyère", "comté", "roquefort", "reblochon", "raclette",
       "latte", "formaggio", "burro", "burrata", "panna", "lattosio", "parmigian",
       "mleko", "=ser", "sery", "masło", "śmietan", "jogurt", "twaróg", "laktoz",
-      "mjölk", "*mjölk", "smör", "*smör", "grädde", "filmjölk",
+      "mjölk", "*mjölk", "smör", "*smör", "*grädd", "=keso", "kvarg",
+      "mælk", "*mælk", "fløde", "*fløde", "=valle", "laktos", "flødeost", "skyr", "~osten", "oste", "=ymer",
+      "kvark", "~yoghurt", "~yogurt", "havarti", "danbo", "pecorino", "gorgonzola", "manchego", "provolone",
       "молок", "молоч", "сыр", "сливк", "сливочн", "сметан", "творог", "кефир", "йогурт", "лактоз",
       "=сир", "сиру", "сирн", "сирок", "вершк", "вершков", "кефір", "сметан",
     ],
@@ -85,9 +92,11 @@ export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
   egg: {
     terms: [
       "egg", "~egg", "=ei", "=eier", "eigelb", "eiweiß", "eiweiss", "huevo", "œuf", "oeuf", "=uovo",
-      "=uova", "tuorl", "jajk", "jaj", "ägg", "~ägg", "яйц", "яєц", "яйк", "mayo", "majon", "майонез",
+      "=uova", "tuorl", "jajk", "jaj", "ägg", "~ägg", "=æg", "~æg", "~ægget", "~æggene", "*æggeblomme", "*æggehvide", "ægge",
+      "eier", "~eier", "*spiegelei", "*rührei", "*hühnerei", "*wachtelei", "*eigelb", "*eiweiß", "*eiweiss", "omelet", "frittat",
+      "яйц", "яєц", "яйк", "mayo", "majon", "майонез",
     ],
-    exempt: ["eggplant", ...PLANT_MARKERS],
+    exempt: ["eggplant", "eierschwamm", ...PLANT_MARKERS],
   },
   gluten: {
     terms: [
@@ -95,24 +104,26 @@ export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
       "durum", "kamut", "hvete", "=bygg", "=rug", "semulegryn", "weizen", "gerste", "roggen", "dinkel",
       "grieß", "griess", "trigo", "cebada", "centeno", "espelta", "sémola", "=blé", "=orge", "seigle",
       "épeautre", "semoule", "frumento", "segale", "semola", "pszen", "jęczm", "żyto", "orkisz",
-      "=vete", "=korn", "=råg", "пшени", "ячмен", "=рожь", "полба", "манн", "манк", "кускус",
+      "=vete", "*vetemjöl", "=korn", "=råg", "rågbröd", "rågmjöl", "*hvede", "byg", "~byg", "rug", "*rugbrød", "*rugmel", "semulje", "sigtemel", "пшени", "ячмен", "=рожь", "полба", "манн", "манк", "кускус",
       "пшениц", "ячмін", "=жито", "полб", "глютен",
     ],
-    exempt: ["buckwheat", "bokhvete", "buchweizen", "sarrasin", "grano saraceno", "gryka", "bovete", "гречк"],
+    exempt: ["buckwheat", "bokhvete", "boghvede", "buchweizen", "sarrasin", "grano saraceno", "gryka", "bovete", "rugola", "гречк"],
   },
   soy: {
-    terms: ["soy", "soya", "soja", "tofu", "tempeh", "edamame", "=miso", "соя", "соев", "сої", "соєв"],
+    terms: ["soy", "soya", "soja", "~soja", "tofu", "tempeh", "edamame", "miso", "tamari", "shoyu", "соя", "соев", "сої", "соєв"],
   },
   fish: {
     terms: [
       "fish", "salmon", "tuna", "=cod", "haddock", "trout", "mackerel", "herring", "sardine", "anchov",
-      "pollock", "halibut", "fisk", "*fisk", "laks", "torsk", "=sei", "makrell", "sild", "ørret",
-      "ansjos", "fisch", "*fisch", "lachs", "kabeljau", "forelle", "hering", "makrele", "sardelle",
-      "pescado", "salmón", "atún", "bacalao", "merluza", "sardina", "anchoa", "trucha",
+      "pollock", "halibut", "caviar", "fisk", "*fisk", "laks", "~laks", "torsk", "~torsk", "=sei", "*makrel", "sild", "~sild", "ørret",
+      "rogn", "~rogn", "kaviar",
+      "ansjos", "fisch", "*fisch", "lachs", "~lachs", "kabeljau", "forelle", "hering", "makrele", "sardelle",
+      "pescado", "salmón", "atún", "bacalao", "merluza", "sardina", "anchoa", "trucha", "boquer",
       "poisson", "saumon", "=thon", "cabillaud", "morue", "truite", "anchois", "maquereau",
       "pesce", "salmone", "tonno", "merluzz", "baccal", "acciug", "trota", "sgombro",
       "ryb", "łosoś", "tuńczyk", "dorsz", "śledź", "makrel", "pstrąg",
-      "=lax", "makrill", "tonfisk", "ansjovis",
+      "=lax", "~lax", "makrill", "tonfisk", "ansjovis", "=sill", "~sill",
+      "ørred", "=tun", "tunfisk", "kuller", "rødspætte", "=sej", "sardel", "kulmule", "havtaske", "pighvar", "helleflynder", "brisling",
       "рыб", "лосос", "семг", "тунец", "треск", "сельд", "скумбри", "форел", "анчоус",
       "риб", "тунц", "тріск", "оселед", "скумбрі",
     ],
@@ -120,31 +131,34 @@ export const ALLERGEN_GROUPS: Readonly<Record<string, TermGroup>> = {
   shellfish: {
     terms: [
       "shellfish", "shrimp", "prawn", "crab", "lobster", "crayfish", "scampi", "langoust", "mussel",
-      "clam", "oyster", "scallop", "squid", "octopus", "calamar", "=reke", "reker", "krabbe", "hummer",
-      "kreps", "skalldyr", "blåskjell", "østers", "kamskjell", "blekksprut", "garnele", "krebs",
-      "schalentier", "muschel", "auster", "tintenfisch", "gamba", "camarón", "langostino", "cangrejo",
-      "langosta", "marisco", "mejillon", "mejillón", "almeja", "ostra", "pulpo", "crevette", "crabe",
-      "homard", "crustac", "fruits de mer", "moule", "huître", "calmar", "poulpe", "gamber", "granchi",
+      "clam", "oyster", "scallop", "squid", "octopus", "calamar", "kalmar", "snail", "escargot", "=reke", "reker", "krabbe", "~krabbe", "hummer", "~hummer",
+      "kreps", "skalldyr", "blåskjell", "*østers", "kamskjell", "blekksprut", "garnele", "*garnele", "krebs", "~krebs", "~krebse",
+      "schalentier", "*muschel", "auster", "tintenfisch", "meeresfrücht", "gamba", "camarón", "langostino", "cangrejo",
+      "langosta", "marisco", "mejillon", "mejillón", "almeja", "ostra", "pulpo", "berberecho", "vieira", "=sepia", "sepias", "seppi",
+      "cigala", "bogavante", "centollo", "percebe", "chipir", "crevette", "crabe",
+      "homard", "crustac", "fruits de mer", "moule", "huître", "calmar", "poulpe", "saint jacques", "seiche", "écrevisse", "bulot",
+      "palourde", "=coques", "gamber", "granchi",
       "aragost", "frutti di mare", "cozze", "vongol", "ostrica", "polpo", "krewet", "=krab", "homar",
       "skorupiak", "owoce morza", "małż", "ostryg", "kałamarnic", "ośmiornic", "räk", "krabba",
-      "kräftor", "skaldjur", "musslor", "ostron", "bläckfisk", "кревет", "кальмар", "креветк", "краб",
+      "kräftor", "~kräftor", "=kräfta", "kräftstjärt", "~kräftstjärtar", "skaldjur", "*mussl", "ostron", "bläckfisk",
+      "skaldyr", "*reje", "*musling", "*blæksprut", "kammusling", "krebsdyr", "кревет", "кальмар", "креветк", "краб",
       "омар", "лангуст", "морепродукт", "мидии", "устриц", "осьмин", "мідії", "восьмин",
     ],
   },
-  sesame: { terms: ["sesam", "sesame", "tahini", "tahin", "sésamo", "sésame", "sezam", "кунжут", "сезам"] },
-  celery: { terms: ["celery", "celeriac", "selleri", "sellerie", "=apio", "céleri", "sedano", "seler", "сельдер", "селер"] },
-  mustard: { terms: ["mustard", "sennep", "senf", "mostaza", "moutarde", "senape", "musztard", "senap", "горчиц", "гірчиц"] },
-  lupin: { terms: ["lupin", "lupine", "lupino", "łubin", "люпин"] },
+  sesame: { terms: ["sesam", "~sesam", "sesame", "tahini", "tahin", "sésamo", "ajonjolí", "sésame", "sezam", "кунжут", "сезам"] },
+  celery: { terms: ["celery", "celeriac", "*selleri", "=apio", "céleri", "sedano", "seler", "сельдер", "селер"] },
+  mustard: { terms: ["mustard", "dijon", "*sennep", "senf", "~senf", "mostaza", "moutarde", "senape", "musztard", "senap", "~senap", "горчиц", "гірчиц"] },
+  lupin: { terms: ["lupin", "lupine", "lupino", "altramuz", "altramuces", "łubin", "люпин"] },
   sulphite: { terms: ["sulphite", "sulfite", "sulfitt", "sulfit", "sulfito", "сульфит", "сульфіт"] },
 };
 
 /** Words a user might type for a group that are not themselves ingredient names. */
 export const ALLERGEN_ALIASES: Readonly<Record<string, readonly string[]>> = {
-  treeNuts: ["tree nut", "nøtter", "nüsse", "nuts", "frutos secos", "fruits à coque", "frutta a guscio", "orzechy", "nötter", "орехи", "горіхи"],
-  milk: ["dairy", "meieri", "laktose", "lactose", "milchprodukte", "lácteos", "lácteo", "laitier", "latticini", "nabiał", "mejeri", "молочн", "лактоз"],
+  treeNuts: ["tree nut", "nøtter", "nüsse", "nuts", "frutos secos", "fruits à coque", "frutta a guscio", "orzechy", "nötter", "nødder", "орехи", "горіхи"],
+  milk: ["dairy", "meieri", "laktose", "lactose", "milchprodukte", "lácteos", "lácteo", "laitier", "latticini", "nabiał", "mejeri", "mælkeprodukt", "mælkeprotein", "молочн", "лактоз"],
   gluten: ["gluten", "glutén", "глютен", "клейковин"],
-  shellfish: ["crustacean", "mollus", "skalldyr", "krepsdyr", "bløtdyr", "krebstiere", "weichtiere", "crustáceos", "moluscos", "crustacés", "mollusques", "crostacei", "molluschi", "skorupiaki", "mięczaki", "kräftdjur", "blötdjur", "ракообраз", "моллюск", "молюск"],
-  sulphite: ["sulphur", "sulfur", "svovel", "schwefel", "azufre", "soufre", "zolfo", "siarka", "svavel"],
+  shellfish: ["crustacean", "mollus", "skalldyr", "krepsdyr", "bløtdyr", "krebstiere", "weichtiere", "crustáceos", "moluscos", "crustacés", "mollusques", "crostacei", "molluschi", "skorupiaki", "mięczaki", "kräftdjur", "blötdjur", "bløddyr", "skaldyr", "krebsdyr", "meeresfrücht", "ракообраз", "моллюск", "молюск"],
+  sulphite: ["sulphur", "sulfur", "svovel", "schwefel", "azufre", "soufre", "zolfo", "siarka", "svavel", "svovl"],
 };
 
 const MEAT: readonly string[] = [
@@ -157,18 +171,32 @@ const MEAT: readonly string[] = [
   "boeuf", "=porc", "poulet", "dinde", "agneau", "lardon", "jambon", "saucisse", "gélatine", "manzo",
   "maiale", "tacchino", "agnello", "salsiccia", "guanciale", "wołow", "wieprz", "kurczak",
   "indyk", "jagnię", "boczek", "szynk", "kiełbas", "żelatyn", "*kött", "fläsk", "kyckling", "kalkon",
-  "skinka", "=korv", "*korv", "mięso", "mięsa", "mięsn", "mięsem", "mielon", "мяс", "говядин", "свинин", "куриц", "курин", "индейк", "баранин",
+  "skinka", "=korv", "*korv", "*kød", "okse", "*flæsk", "medister", "frikadelle", "kalv", "lamme", "hønse", "leverpostej", "~leverpostej", "andebryst",
+  "andelår", "andefedt", "kanin", "mięso", "mięsa", "mięsn", "mięsem", "mielon", "мяс", "говядин", "свинин", "куриц", "курин", "индейк", "баранин",
   "бекон", "ветчин", "колбас", "сосиск", "фарш", "желатин", "м'яс", "яловичин", "=курка", "курятин",
   "куряч", "індич", "шинк", "ковбас",
 ];
-const MEAT_EXEMPT = [...PLANT_MARKERS, "soy", "soja", "soya", "tofu", "seitan", "quorn", "tempeh", "meatless", "jackfruit", "hühnerei"];
+const MEAT_EXEMPT = [...PLANT_MARKERS, "soy", "soja", "soya", "tofu", "seitan", "quorn", "tempeh", "meatless", "jackfruit", "hühnerei", "hønseæg"];
 
 const HONEY: readonly string[] = ["honey", "honning", "honig", "=miel", "miele", "miód", "honung", "мёд", "мед", "медов"];
 
 const GLUTEN_FOODS: readonly string[] = [
-  "bread", "=pasta", "pastan", "spaghetti", "couscous", "beer", "brød", "=øl", "brot", "=pan", "=pain", "=pane",
+  "bread", "=pasta", "pastan", "spaghetti", "couscous", "cuscús", "beer", "brød", "*brød", "=øl", "=rasp", "brot", "~brot", "noodle", "nudel", "~nudeln", "nudler", "~nudler",
+  "semmelbrösel", "paniermehl", "=pan", "pan rallado", "=pain", "chapelure", "=pane", "pangrattato", "~bröd",
   "chleb", "bröd", "хлеб", "хліб", "макарон", "пиво", "=bier", "cerveza", "bière", "birra", "piwo",
 ];
+
+/**
+ * Foods made from wheat, barley or rye that are also sold free of gluten ("glutenfri pasta"): the
+ * glutenFree diet and a gluten allergen both use it, with the free-from wording exempt.
+ */
+export const GLUTEN_FOODS_GROUP: TermGroup = {
+  terms: GLUTEN_FOODS,
+  exempt: [
+    "rice", "=ris", "risnud", "risbr", "rispasta", "rispapir", "reis", "arroz", "riz", "riso", "рисов", "buckwheat", "bokhvete", "boghvede",
+  ],
+  freeStems: ["gluten", "глютен"],
+};
 
 export type DietKey = "vegetarian" | "vegan" | "pescatarian" | "glutenFree" | "dairyFree";
 
@@ -188,10 +216,7 @@ export const DIET_RULES: Readonly<Record<DietKey, readonly TermGroup[]>> = {
     ALLERGEN_GROUPS.egg,
     { terms: HONEY, exempt: PLANT_MARKERS },
   ],
-  glutenFree: [
-    ALLERGEN_GROUPS.gluten,
-    { terms: GLUTEN_FOODS, exempt: ["rice", "ris", "reis", "arroz", "riz", "riso", "рисов", "buckwheat", "bokhvete"], freeStems: ["gluten", "глютен"] },
-  ],
+  glutenFree: [ALLERGEN_GROUPS.gluten, GLUTEN_FOODS_GROUP],
   dairyFree: [ALLERGEN_GROUPS.milk],
 };
 
@@ -200,7 +225,7 @@ export const NON_FOOD: readonly string[] = [
   "bleach", "ammonia", "detergent", "antifreeze", "gasoline", "petrol", "kerosene", "drain cleaner",
   "rat poison", "cyanide", "arsenic", "strychnine", "pesticide", "insecticide", "herbicide",
   "methanol", "ethylene glycol", "hydrochloric acid", "sulfuric acid", "sulphuric acid", "battery acid",
-  "lighter fluid", "turpentine", "white spirit", "paint thinner", "blekemiddel", "=klorin", "frostvæske",
+  "lighter fluid", "turpentine", "white spirit", "paint thinner", "blekemiddel", "blegemiddel", "=klorin", "frostvæske",
   "rottegift", "bleichmittel", "frostschutz", "=benzin", "rattengift", "zyankali", "=cyanid", "=arsen",
   "lejía", "anticongelante", "gasolina", "raticida", "cianuro", "arsénico", "eau de javel", "=javel",
   "antigel", "mort-aux-rats", "cyanure", "candeggina", "antigelo", "veleno per topi", "cianuro",
@@ -213,12 +238,12 @@ export const NON_FOOD: readonly string[] = [
 
 /** Text asking the reader to do something outside the kitchen: accounts, payments, apps, messengers. */
 export const SOLICITATION: readonly string[] = [
-  "password", "passord", "passwort", "contraseña", "mot de passe", "hasło", "lösenord", "пароль",
+  "password", "passord", "adgangskode", "kodeord", "passwort", "contraseña", "mot de passe", "hasło", "lösenord", "пароль",
   "credit card", "kredittkort", "kreditkarte", "tarjeta de crédito", "carte bancaire", "carte de crédit",
   "carta di credito", "karta kredytowa", "kreditkort", "кредитн", "банківськ", "app store",
   "google play", "apple id", "bankid", "=iban", "bitcoin", "crypto", "paypal", "=vipps", "telegram",
   "whatsapp", "discord", "promo code", "промокод", "download", "herunterladen", "télécharg",
-  "pobierz", "ladda ner", "скачать", "скачай", "завантаж", "sign in", "log in", "login", "logg inn",
+  "pobierz", "ladda ner", "скачать", "скачай", "завантаж", "sign in", "log in", "login", "logg inn", "log ind",
   "anmelden", "войдите", "увійдіть",
 ];
 
@@ -233,25 +258,25 @@ export const SOLICITATION: readonly string[] = [
 export const STAPLE_WORDS: readonly string[] = [
   // water, ice
   "=water", "=vann", "=vannet", "=wasser", "=agua", "=eau", "=acqua", "=woda", "=wody", "=wodę", "=vatten",
-  "=вода", "=воды", "=воду", "=води", "=кипяток", "=окріп", "=ice", "=isbiter", "=hielo", 
-  "=glaçons", "=ghiaccio", "=lód", "=лёд", "=лед", "=лід",
+  "=vand", "=vandet", "=вода", "=воды", "=воду", "=води", "=кипяток", "=окріп", "=ice", "=isbiter", "=hielo", 
+  "=glaçons", "=isterninger", "=ghiaccio", "=lód", "=лёд", "=лед", "=лід",
   // oils
   "=oil", "=oils", "~olje", "~oljen", "=öl", "olivenöl", "rapsöl", "sonnenblumenöl", "pflanzenöl", "speiseöl",
-  "~olja", "~oljan", "aceite", "huile", "=olio", "=olej", "=oleju", "=oliwa", "=oliwy", "=масло", "=масла",
+  "~olja", "~oljan", "~olie", "~olien", "aceite", "huile", "=olio", "=olej", "=oleju", "=oliwa", "=oliwy", "=масло", "=масла",
   "=олія", "=олії", "=олію",
   // salt, pepper, sugar, vinegar, raisers
   "~salt", "~salz", "=sal", "=sel", "=sale", "=sól", "=soli", "=соль", "=соли", "=сіль", "=солі",
-  "=pepper", "~peppar", "peppercorn", "=pfeffer", "pfefferkörner", "pimienta", "poivre", "=pepe", "pieprz", "=перец", "=перца",
+  "=pepper", "~peppar", "~peber", "peberkorn", "peppercorn", "=pfeffer", "pfefferkörner", "pimienta", "poivre", "=pepe", "pieprz", "=перец", "=перца",
   "=перець", "=перцю", "=sugar", "=sugars", "~sukker", "~socker", "~zucker", "azúcar", "sucre", "zucchero", "cukier",
-  "cukru", "сахар", "цукор", "цукру", "=melis", "vinegar", "~eddik", "~essig", "vinagre", "vinaigre", "aceto",
-  "=ocet", "=octu", "ättika", "уксус", "оцет", "natron", "bakepulver", "backpulver", "bakpulver",
+  "cukru", "сахар", "цукор", "цукру", "=melis", "~melis", "=farin", "vinegar", "~eddik", "~essig", "vinagre", "vinaigre", "aceto",
+  "=ocet", "=octu", "ättika", "~eddike", "уксус", "оцет", "natron", "bakepulver", "backpulver", "bakpulver", "bagepulver",
   // spices and dried herbs
   "spice", "seasoning", "krydd", "=gewürz", "=gewürze", "gewürzmischung", "especia", "épice", "spezie", "przypraw", "специ", "приправ",
   "спеці", "herb", "=urter", "=kräuter", "hierba", "herbes", "=erbe", "zioł", "=травы", "=трави", 
-  "cumin", "spisskummen", "kummin", "kreuzkümmel", "comino", "cumino", "=kmin", "кумин", "зира", "cinnamon",
-  "=kanel", "zimt", "canela", "cannelle", "cannella", "cynamon", "кориц", "nutmeg", "=muskat", "muskatnuss", "=muskatnøtt", "moscada",
+  "cumin", "spisskummen", "kummin", "spidskommen", "kreuzkümmel", "comino", "cumino", "=kmin", "кумин", "зира", "cinnamon",
+  "=kanel", "zimt", "canela", "cannelle", "cannella", "cynamon", "кориц", "nutmeg", "=muskat", "muskatnuss", "=muskatnøtt", "=muskatnød", "moscada",
   "muscade", "moscata", "muszkat", "cayenne", "kajenn", "curry", "карри", "каррі",
-  "turmeric", "gurkemeie", "gurkmeja", "kurkuma", "cúrcuma", "curcuma", "куркум", "oregano", "орегано", "thyme",
+  "turmeric", "gurkemeie", "gurkmeja", "gurkemeje", "kurkuma", "cúrcuma", "curcuma", "куркум", "oregano", "орегано", "thyme",
   "timian", "thymian", "tomillo", "=thym", "=timo", "tymian", "тимьян", "чабрец", "чебрец", "=bay", "laurbær",
   "lorbeer", "=laurel", "laurier", "alloro", "laurow", "лавров", "=clove", "=cloves", "nellik", "nelken",
   "=clavo", "=clavos", "girofle", "goździk", "гвоздик", "cardamom", "kardemomme", "kardamom", "cardamome",
@@ -274,6 +299,10 @@ export const STAPLE_FILLERS: readonly string[] = [
   "kvernet", "grovt", "fint", "kaldt", "varmt", "kokende", "lunkent", "nøytral", "tørket", "knust", "røkt",
   "hel", "blad", "pulver", "frø", "till", "efter", "lite", "ett", "och", "vit", "mald", "nymald", "kallt",
   "kokande", "ljummet", "torkad", "torkade", "krossad", "rökt", "frön", "flingsalt",
+  // da
+  "af", "efter", "smag", "lidt", "hvid", "stødt", "friskkværnet", "kværnet", "groft", "koldt", "kogende",
+  "tørret", "tørrede", "røget", "hele", "blade", "knivspids", "drys", "neutral", "tsk", "spsk", "knsp", "evt", "eventuelt",
+  "behov", "frisk", "kold", "varm", "lunkent", "brun", "hvidt",
   // de
   "von", "zum", "nach", "geschmack", "etwas", "ein", "eine", "und", "oder", "schwarzer", "schwarz", "weißer",
   "weiß", "gemahlen", "gemahlener", "frisch", "grob", "fein", "kaltes", "kalt", "warmes",
@@ -329,12 +358,17 @@ export function foldText(s: string): FoldedText {
   return { words: flat.length ? flat.split(" ") : [], flat: ` ${flat} ` };
 }
 
+/** A Latin word with an elided article or preposition ("d'oeuf", "l'arachide", "dell'uovo"). */
+const ELIDED = /^\p{Script=Latin}{1,5}'(?=\p{L})/u;
+
 export function matchesAny(text: FoldedText, terms: readonly CompiledTerm[]): boolean {
+  // The word after an elision is matched as well, so "jaune d'oeuf" is egg.
+  const words = text.words.flatMap((w) => (ELIDED.test(w) ? [w, w.replace(ELIDED, "")] : [w]));
   for (const t of terms) {
     if (t.kind === "substring" && text.flat.includes(t.text)) return true;
-    if (t.kind === "suffix" && text.words.some((w) => w.endsWith(t.text))) return true;
-    if (t.kind === "exact" && text.words.includes(t.text)) return true;
-    if (t.kind === "prefix" && text.words.some((w) => w.startsWith(t.text))) return true;
+    if (t.kind === "suffix" && words.some((w) => w.endsWith(t.text))) return true;
+    if (t.kind === "exact" && words.includes(t.text)) return true;
+    if (t.kind === "prefix" && words.some((w) => w.startsWith(t.text))) return true;
   }
   return false;
 }

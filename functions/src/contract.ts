@@ -155,10 +155,17 @@ export interface BlockFlag {
    * a response said so; to any other server it sends the legacy single values.
    */
   acceptsMultiChoiceConfig?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that writes recipes in
+   * Danish (`config.language: "da"`). A client sends `da` only after a response said so; a server
+   * from before it refuses `da` as INVALID_REQUEST, so the client asks for another language instead
+   * of sending a different one.
+   */
+  acceptsDanish?: true;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
-export const CAPABILITIES = { acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true } as const;
+export const CAPABILITIES = { acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true } as const;
 
 /** generateRecipe and getGeneration. */
 export interface GenerateResponse extends BlockFlag {

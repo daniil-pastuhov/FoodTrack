@@ -454,6 +454,10 @@ struct RecipeView: View {
             showSnackbar(L10n.recipeDietsNeedUpdate, actionTitle: L10n.recipeSettingsButton) {
                 model.path.append(.settings)
             }
+        case .languageNeedsServerUpdate:
+            showSnackbar(L10n.recipeLanguageNeedsUpdate, actionTitle: L10n.recipeSettingsButton) {
+                model.path.append(.settings)
+            }
         }
     }
 

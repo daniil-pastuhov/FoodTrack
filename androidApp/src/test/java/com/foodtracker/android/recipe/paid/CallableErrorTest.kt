@@ -79,12 +79,16 @@ class CallableErrorTest {
             mapOf(
                 "balance" to JsonPrimitive(4),
                 "acceptsOptionalIngredients" to JsonPrimitive(true),
-                "acceptsMultiChoiceConfig" to JsonPrimitive(true)
+                "acceptsMultiChoiceConfig" to JsonPrimitive(true),
+                "acceptsDanish" to JsonPrimitive(true)
             )
         )
         assertEquals(true, balanceReplyOf(reply)?.acceptsMultiChoice, "getBalance")
         assertEquals(true, balanceReplyOf(reply)?.acceptsOptional, "getBalance, optional items")
         assertEquals(true, mergeReplyOf(reply)?.acceptsMultiChoice, "mergeBalance")
+        assertEquals(true, balanceReplyOf(reply)?.acceptsDanish, "getBalance, Danish")
+        assertEquals(true, mergeReplyOf(reply)?.acceptsDanish, "mergeBalance, Danish")
+        assertEquals(false, balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(4))))?.acceptsDanish, "a server from before Danish")
         assertEquals(false, balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(4))))?.acceptsMultiChoice, "a server from before it")
         assertEquals(false, balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(4), "acceptsMultiChoiceConfig" to JsonPrimitive("true"))))?.acceptsMultiChoice, "only a JSON true")
     }

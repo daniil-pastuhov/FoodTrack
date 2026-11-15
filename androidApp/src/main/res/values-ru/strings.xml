@@ -33,8 +33,6 @@
     <string name="sort_option_date_added">Дате добавления</string>
     <string name="sort_option_storage_location">Месту хранения</string>
 
-    <string name="empty_state_title">Ничего не найдено</string>
-    <string name="empty_state_subtitle">Нажмите «Сканировать», чтобы отсканировать штрихкод, или добавьте продукты вручную.</string>
 
     <string name="back_content_description">Назад</string>
 
@@ -838,6 +836,7 @@
     <string name="recipe_not_enough_items">С учётом диеты и аллергенов готовить почти не из чего. Отметьте ещё несколько продуктов. Рецепт не списан.</string>
     <string name="recipe_not_enough_items_menu">На три дня продуктов не хватает. Отметьте ещё несколько или попросите один рецепт. Рецепты не списаны.</string>
     <string name="recipe_diets_need_update">Рецепты из пакетов пока не сочетают безглютеновую диету с другой. Оставьте одну из них в настройках рецептов или воспользуйтесь моделью на этом устройстве или общим запросом. Рецепты не списаны.</string>
+    <string name="recipe_language_needs_update">Рецепты из пакетов пока нельзя получить на датском. Выберите другой язык рецептов в настройках рецептов или воспользуйтесь моделью на этом устройстве или общим запросом. Рецепты не списаны.</string>
     <string name="recipe_not_from_pantry_hint">Продукты без пометки «Есть дома» — не из ваших запасов: базовые продукты или то, что, возможно, придётся купить.</string>
     <!-- Add to shopping list -->
     <string name="recipe_shopping_add">Добавить в список покупок</string>
@@ -924,6 +923,7 @@
     <string name="recipe_allergens_none">пока пуст</string>
     <string name="recipe_language">Язык</string>
     <string name="recipe_write_in">Язык рецептов</string>
+    <string name="recipe_on_device_language_note">Модель на этом устройстве не умеет писать рецепты на этом языке, поэтому кнопки «Составить на этом устройстве» для него нет.</string>
     <string name="recipe_language_same_as_app">Как в приложении (%1$s)</string>
     <string name="recipe_account">Аккаунт</string>
     <string name="recipe_account_none">Аккаунта нет. Решать нужно только при покупке пакета, а бесплатные способы его никогда не используют.</string>

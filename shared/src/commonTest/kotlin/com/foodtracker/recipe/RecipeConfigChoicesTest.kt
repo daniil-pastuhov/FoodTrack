@@ -181,7 +181,29 @@ class RecipeConfigChoicesTest {
             "Hvitløk, presset" to listOf("Hvitløk"),
             "Gulrøtter, skrelt og i terninger" to listOf("Gulrøtter"),
             "Salt og pepper etter smak" to listOf("Salt og pepper"),
-            "Rømme eller crème fraîche" to listOf("Rømme eller crème fraîche")
+            "Rømme eller crème fraîche" to listOf("Rømme eller crème fraîche"),
+            "Sal, pimienta, aceite de oliva" to listOf("Sal", "Pimienta", "Aceite de oliva"),
+            "Cebolla, picada finamente" to listOf("Cebolla"),
+            "Sal y pimienta al gusto" to listOf("Sal y pimienta"),
+            "Ajo, 2 dientes" to listOf("Ajo"),
+            "Nata o leche" to listOf("Nata o leche"),
+            "Zwiebel, fein gehackt" to listOf("Zwiebel"),
+            "Salz, Pfeffer, Olivenöl" to listOf("Salz", "Pfeffer", "Olivenöl"),
+            "Salz und Pfeffer nach Geschmack" to listOf("Salz und Pfeffer"),
+            "Karotten, geschält und gewürfelt" to listOf("Karotten"),
+            "Oignon, émincé" to listOf("Oignon"),
+            "Sel, poivre, huile d'olive" to listOf("Sel", "Poivre", "Huile d'olive"),
+            "Sel et poivre au goût" to listOf("Sel et poivre"),
+            "Ail, 2 gousses, haché" to listOf("Ail"),
+            "Sel, petits pois" to listOf("Sel", "Petits pois"),
+            "Lök, finhackad" to listOf("Lök"),
+            "Salt, peppar, olivolja" to listOf("Salt", "Peppar", "Olivolja"),
+            "Salt och peppar efter smak" to listOf("Salt och peppar"),
+            "Morötter, skalade och tärnade" to listOf("Morötter"),
+            "Løg, finthakket" to listOf("Løg"),
+            "Salt, peber, olivenolie" to listOf("Salt", "Peber", "Olivenolie"),
+            "Salt og peber efter smag" to listOf("Salt og peber"),
+            "Gulerødder, skrællet og skåret i tern" to listOf("Gulerødder")
         )
         for ((raw, expected) in cases) assertEquals(expected, tidyShoppingNames(raw), raw)
     }
@@ -229,6 +251,6 @@ class RecipeConfigChoicesTest {
     fun withoutTheStapleMarkEveryNonPantryIngredientIsListed() {
         val rows = shoppingCandidates(listOf(dish(RecipeIngredient("1 l", "Water"), RecipeIngredient("", "salt"))), emptyList())
         assertEquals(listOf("Water", "Salt"), rows.map { it.name })
-        assertTrue(isPlainWater("Тёплая вода") && isPlainWater("Kaltes Wasser") && !isPlainWater("Watercress"))
+        assertTrue(isPlainWater("Тёплая вода") && isPlainWater("Kaltes Wasser") && isPlainWater("Koldt vand") && !isPlainWater("Watercress"))
     }
 }

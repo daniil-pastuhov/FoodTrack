@@ -45,7 +45,7 @@ BestBefore is an expiry-date tracker for the fridge, freezer and pantry. This up
 
 The tab ticks the items that expire first; people can change the selection, servings, time, diet and more. There are three ways to get the recipe. Free: the app writes a ready-made prompt to copy or share to any AI app. Free and private: on supported iPhones with Apple Intelligence it is written on the device with the Foundation Models framework, and nothing leaves the phone. Optional recipe packs (consumable in-app purchases) have our server write recipes and a 3-day menu.
 
-The rest stays as it was: scanning a barcode, reading the printed date with Vision, reminders and Home Screen widgets. No account, ads or tracking; the pantry stays on the iPhone. An in-app event will announce it. It ships in English, Russian and Norwegian.
+The rest stays as it was: scanning a barcode, reading the printed date with Vision, reminders and Home Screen widgets. No account, ads or tracking; the pantry stays on the iPhone. An in-app event will announce it. It ships in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
 ```
 
 **Publish date**: a custom range, `[YYYY-MM-DD]` to `[YYYY-MM-DD]`: the week the version is
@@ -63,7 +63,8 @@ device's time zone.
 ID]`); Apple recommends attaching it "as early as possible".
 
 **Localizations**: leave Apple's preselection; it should show English (U.K.), English (U.S.),
-Russian and Norwegian.
+English (Australia), English (Canada), Russian, Norwegian, Spanish (Spain), Spanish (Mexico),
+German, French, French (Canada), Swedish and Danish.
 
 **Supplemental materials** (up to 5 URLs):
 
@@ -79,7 +80,7 @@ Add a public TestFlight link here if you open one for the release build.
 **Helpful details** (paste as is; 497 of 500 characters):
 
 ```text
-One developer, open source (Apache-2.0), so anyone can check what the app sends. A new app with few ratings, built Apple-first: Foundation Models on device, Vision for reading dates, WidgetKit, layouts for iPhone Duo and iPad, App Attest for the recipe server, Sign in with Apple. The free routes need no account and send nothing to us; a pack recipe sends the ticked items (all items only if the person turns that on) and allergens only after consent. Localised in English, Russian and Norwegian.
+One developer, open source (Apache-2.0), so anyone can check what the app sends. A new app with few ratings, built Apple-first: Foundation Models on device, Vision for reading dates, WidgetKit, layouts for iPhone Duo and iPad, App Attest for the recipe server, Sign in with Apple. The free routes need no account and send nothing to us; a pack recipe sends the ticked items (all items only if the person turns that on) and allergens only after consent. Localised in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
 ```
 
 ## Before you submit, check

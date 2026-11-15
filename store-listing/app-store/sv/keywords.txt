@@ -1,0 +1,1 @@
+matsvinn,bäst före,förbrukningsdag,datum,frys,inköpslista,påminnelse,streckkod,skanna,rester,meny

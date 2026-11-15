@@ -1,0 +1,1 @@
+ablaufdatum,verfallsdatum,lebensmittel,einkaufsliste,barcode,scanner,erinnerung,gefrierschrank,reste

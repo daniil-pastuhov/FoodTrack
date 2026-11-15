@@ -78,6 +78,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balanceOptional = false
     /** Whether getBalance says the server reads the multi-choice config. */
     var balanceMultiChoice = false
+    var balanceDanish = false
     var balanceCalls = 0
     val deleteReplies = ArrayDeque<ServerResult<DeleteReply>>()
     var deleteCalls = 0
@@ -111,7 +112,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish))
             is ServerResult.Err -> current
         }
     }
@@ -2387,6 +2388,56 @@ class RecipePaidTest {
         holder.consumeEvent()
         holder.generateOnServer()
         assertEquals(RecipeEvent.DietsNeedServerUpdate, holder.uiState.value.event, "the next try knows the server can't take both")
+        assertEquals(1, backend.generated.size)
+    }
+
+    // --- Danish, only to a server that says acceptsDanish ---------------------------------------
+
+    private fun withDanishServer(balance: Int, takes: Boolean) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(
+            RecipePaidSnapshot(allergenConsent = agreed, balance = balance, serverTakesDanish = takes)
+        )
+        backend.balanceDanish = takes
+    }
+
+    @Test
+    fun danishIsNeverSentToAServerThatDoesntWriteIt() = runUnconfined {
+        withDanishServer(5, takes = false)
+        val holder = holder()
+        holder.updateConfig { it.copy(language = "da") }
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.LanguageNeedsServerUpdate, holder.uiState.value.event)
+        assertTrue(backend.generated.isEmpty(), "never another language in its place")
+        assertEquals(5, holder.uiState.value.paid.balance)
+    }
+
+    @Test
+    fun aServerThatSaysSoGetsDanish() = runUnconfined {
+        withDanishServer(5, takes = true)
+        val holder = holder()
+        holder.updateConfig { it.copy(language = "da") }
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals("da", backend.generated.single().config.language)
+    }
+
+    @Test
+    fun aDanishRequestRefusedAsInvalidAsksForTheServersFlagsAgain() = runUnconfined {
+        withDanishServer(5, takes = true)
+        val holder = holder()
+        holder.updateConfig { it.copy(language = "da") }
+        // A server rolled back to one from before Danish.
+        backend.balanceDanish = false
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        val before = backend.balanceCalls
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals(before + 1, backend.balanceCalls)
+        assertFalse(paidRepository.get().serverTakesDanish)
+        holder.consumeEvent()
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.LanguageNeedsServerUpdate, holder.uiState.value.event, "the next try knows the server doesn't write Danish")
         assertEquals(1, backend.generated.size)
     }
 

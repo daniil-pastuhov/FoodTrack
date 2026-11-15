@@ -20,8 +20,6 @@
 "sort_option_date_added" = "Dato lagt til";
 "sort_option_storage_location" = "Oppbevaringssted";
 
-"empty_state_title" = "Ingen varer funnet";
-"empty_state_subtitle" = "Skann en strekkode eller trykk på «Legg til i matskapet» for å registrere varer.";
 
 "swipe_delete" = "Slett";
 "swipe_add_to_shopping_list" = "Til handleliste";
@@ -544,7 +542,7 @@
 "onboarding_sample_source" = "%1$@ · 09:00";
 "onboarding_sample_title" = "Bør brukes snart";
 "onboarding_sample_body" = "Gresk yoghurt når datoen sin i morgen.";
-"onboarding_sample_description" = "Eksempel på påminnelse: %1$@. %2$s";
+"onboarding_sample_description" = "Eksempel på påminnelse: %1$@. %2$@";
 "onboarding_notifications_allow" = "Slå på påminnelser";
 "onboarding_not_now" = "Ikke nå";
 "onboarding_camera_title" = "Skann i stedet for å skrive";
@@ -649,6 +647,7 @@
 "recipe_allergens_none" = "ingen ennå";
 "recipe_settings_language" = "Språk";
 "recipe_write_in" = "Skriv oppskrifter på";
+"recipe_on_device_language_note" = "Modellen på denne {the_device} kan ikke skrive oppskrifter på dette språket, så «Lag på denne {the_device}» vises ikke for det.";
 "recipe_language_same_as_app" = "Samme som appen (%@)";
 "recipe_settings_account" = "Konto";
 "recipe_settings_no_account" = "Ingen konto. Du trenger bare å bestemme deg når du kjøper en pakke, og de gratis måtene bruker aldri en konto.";
@@ -823,6 +822,7 @@
 "recipe_not_enough_items" = "Det er for lite å lage mat av når dietten og allergenene er tatt hensyn til. Kryss av for noen flere varer. Ingen oppskrift ble trukket.";
 "recipe_not_enough_items_menu" = "Det er ikke nok til tre dager. Kryss av for noen flere varer, eller be om én oppskrift. Ingen oppskrifter ble trukket.";
 "recipe_diets_need_update" = "Oppskrifter fra pakker kan ennå ikke kombinere glutenfri med en annen diett. Behold én av dem i oppskriftsinnstillingene, eller bruk modellen på denne {the_device} eller den delte ledeteksten. Ingen oppskrifter ble trukket.";
+"recipe_language_needs_update" = "Oppskrifter fra pakker kan ennå ikke skrives på dansk. Velg et annet oppskriftsspråk i oppskriftsinnstillingene, eller bruk modellen på denne {the_device} eller den delte ledeteksten. Ingen oppskrifter ble trukket.";
 "recipe_not_from_pantry_hint" = "Ingredienser uten «I matskapet»-merket er ikke fra matskapet ditt: basisvarer, eller noe du kanskje må kjøpe.";
 "recipe_shopping_add" = "Legg til på handlelisten";
 "recipe_shopping_title" = "Legg til på handlelisten (%d)";

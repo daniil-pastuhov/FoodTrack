@@ -393,6 +393,26 @@ class CheckEventTests(EventTestCase):
         self.assertIn("en-GB/event-card.png: missing", found)
         self.assertIn("en-US/event-card.png: missing", found)
 
+    def test_regional_variant_takes_its_languages_media(self):
+        texts = {"es-ES": ("Recetas", "Cocina lo que caduca antes", "La nueva pestaña Receta."),
+                 "es-MX": ("Recetas", "Cocina lo que caduca primero", "La nueva pestaña Receta.")}
+        write_event(self.root, texts=texts, media=("es-ES",))
+        self.assertEqual({n: p.parent.name for n, p in
+                          check_store_listing.event_media(self.root, "es-MX").items()},
+                         {"event-card.png": "es-ES", "event-details.png": "es-ES"})
+        self.assertEqual(check_store_listing.event_media(self.root, "sv"), {})
+        event = testflight.read_event(self.root)
+        self.assertEqual(event["media"]["es-MX"]["EVENT_CARD_ASSET"]["label"],
+                         "in-app-event/es-ES/event-card.png")
+        self.assertEqual(self.check(), [])
+
+    def test_unit_words_in_the_new_languages(self):
+        for locale, text in (("ru", "10 créditos"), ("en-GB", "Guthaben aufladen"), ("en-US", "des jetons")):
+            (self.root / locale / "long_description.txt").write_text(text, encoding="utf-8")
+        found = "\n".join(self.check())
+        for locale in ("ru", "en-GB", "en-US"):
+            self.assertIn(f"{locale}/long_description.txt: calls the paid unit a credit or token", found)
+
     def test_the_repo_event_passes(self):
         self.assertEqual(quiet(check_store_listing.check_in_app_event)[0], [])
 

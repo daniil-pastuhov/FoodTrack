@@ -20,6 +20,7 @@ import {
   ALLERGEN_ALIASES,
   ALLERGEN_GROUPS,
   DIET_RULES,
+  GLUTEN_FOODS_GROUP,
   NON_FOOD,
   SOLICITATION,
   STAPLE_FILLERS,
@@ -223,7 +224,7 @@ const SCRIPT_FAMILIES: ReadonlyArray<readonly string[]> = [
 ];
 
 /**
- * The scripts an answer may use: Latin and Cyrillic (the scripts of the ten recipe languages; a
+ * The scripts an answer may use: Latin and Cyrillic (the scripts of the recipe languages; a
  * Norwegian user can own "Сметана", a Russian recipe can say "°C"), plus every script a letter of
  * the request's own item and allergen names is in, so a Greek or Chinese item name can be quoted
  * in an English recipe. Japanese and Korean bring the scripts written alongside them. An answer in
@@ -299,10 +300,16 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 
 // --- Allergens and diet --------------------------------------------------------------------------
 
-/** Free-from wording ("gluten-free", "glutenfri", "sans lactose") is removed before matching. */
-const FREE_SUFFIX = /^\S{3,}(?:fri|frei|freie|freier|frie|fria|fritt|free)$/u;
-const FREE_WORD = new Set(["free", "fri", "frei", "freie", "frie", "fria", "fritt"]);
-const WITHOUT = new Set(["sin", "sans", "senza", "bez", "без", "utan", "uten", "ohne", "without", "no"]);
+/**
+ * Free-from wording ("gluten-free", "glutenfri", "sans lactose") is removed before matching. The
+ * inflected Scandinavian forms (frie, fria, fritt, frit) count only inside a compound
+ * ("glutenfrit"), never as a word of their own: standalone they are cooking words in another
+ * recipe language (French "poisson frit" is fried fish, Spanish "leche fría" cold milk), and
+ * reading them as "free of" would drop the food word before them.
+ */
+const FREE_SUFFIX = /^\S{3,}(?:fri|frei|freie|freier|frie|fria|fritt|frit|free)$/u;
+const FREE_WORD = new Set(["free", "fri", "frei", "freie"]);
+const WITHOUT = new Set(["sin", "sans", "senza", "bez", "без", "utan", "uten", "uden", "ohne", "without", "no"]);
 
 export function withoutFreeFrom(t: FoldedText): FoldedText & { freeOf: string[] } {
   const words: string[] = [];
@@ -351,6 +358,7 @@ const GROUP_TERMS = Object.fromEntries(
   Object.entries(ALLERGEN_GROUPS).map(([k, g]) => [k, { terms: compileTerms(g.terms), exempt: compileTerms(g.exempt ?? []) }]),
 ) as Record<string, Guard>;
 const ALIAS_TERMS = Object.fromEntries(Object.entries(ALLERGEN_ALIASES).map(([k, a]) => [k, compileTerms(a)])) as Record<string, CompiledTerm[]>;
+const GLUTEN_FOODS_GUARD = guardOf(GLUTEN_FOODS_GROUP.terms, GLUTEN_FOODS_GROUP.exempt, GLUTEN_FOODS_GROUP.freeStems);
 const DIET_GUARDS = Object.fromEntries(
   Object.entries(DIET_RULES).map(([k, groups]) => [k, groups.map((g) => guardOf(g.terms, g.exempt, g.freeStems))]),
 ) as Record<DietKey, Guard[]>;
@@ -371,8 +379,9 @@ const DENSE = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Ha
 /**
  * The guards for a user's allergen list: each name itself (every word of 3+ letters, as a word
  * start, and the whole name), plus every group of the table whose terms or aliases the name
- * matches, so "nøtter" also catches "walnuts" and "milk" also catches "smør". The table covers
- * the ten recipe languages only: an allergen in another script ("花生", "γάλα") is matched
+ * matches, so "nøtter" also catches "walnuts" and "milk" also catches "smør" (and "gluten" the
+ * foods of GLUTEN_FOODS_GROUP, "pasta" and "brød", unless free of it). The table covers
+ * the recipe languages only: an allergen in another script ("花生", "γάλα") is matched
  * literally, on the folded text (a word of a script written without spaces, or of Hangul, as a
  * substring of any length, since such a word is one or two characters and sits inside compounds).
  */
@@ -389,6 +398,8 @@ export function allergenGuards(allergens: readonly string[]): Guard[] {
     const exempt = groups.flatMap((k) => GROUP_TERMS[k].exempt);
     if (literal.length) guards.push({ terms: compileTerms(literal), exempt });
     for (const k of groups) guards.push(GROUP_TERMS[k]);
+    // Bread, pasta and beer are gluten unless sold free of it, as for the glutenFree diet.
+    if (groups.includes("gluten")) guards.push(GLUTEN_FOODS_GUARD);
   }
   return guards;
 }

@@ -1,0 +1,1030 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>expires_in_days_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>In %d Tag</string>
+            <key>other</key>
+            <string>In %d Tagen</string>
+        </dict>
+    </dict>
+    <key>expired_days_ago_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Seit %d Tag abgelaufen</string>
+            <key>other</key>
+            <string>Seit %d Tagen abgelaufen</string>
+        </dict>
+    </dict>
+    <key>notif_body_past_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>Das Datum von %1$@ ist seit %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%2$d Tag überschritten.</string>
+            <key>other</key>
+            <string>%2$d Tagen überschritten.</string>
+        </dict>
+    </dict>
+    <key>notif_body_soon_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%1$@ erreicht das Datum in %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%2$d Tag.</string>
+            <key>other</key>
+            <string>%2$d Tagen.</string>
+        </dict>
+    </dict>
+    <key>receipt_lines_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel vom Kassenbon hinzugefügt. Prüfe ihn unten</string>
+            <key>other</key>
+            <string>%d Artikel vom Kassenbon hinzugefügt. Prüfe sie unten</string>
+        </dict>
+    </dict>
+    <key>store_reminder_title_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Sache zu kaufen</string>
+            <key>other</key>
+            <string>%d Sachen zu kaufen</string>
+        </dict>
+    </dict>
+    <key>store_reminder_more_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>+%d weitere</string>
+            <key>other</key>
+            <string>+%d weitere</string>
+        </dict>
+    </dict>
+    <key>notif_digest_title_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel läuft diese Woche ab</string>
+            <key>other</key>
+            <string>%d Artikel laufen diese Woche ab</string>
+        </dict>
+    </dict>
+    <key>notif_digest_more_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>+%d weiterer</string>
+            <key>other</key>
+            <string>+%d weitere</string>
+        </dict>
+    </dict>
+    <key>expiry_suggestion_remembered_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Wie beim letzten Mal · %d Tag</string>
+            <key>other</key>
+            <string>Wie beim letzten Mal · %d Tage</string>
+        </dict>
+    </dict>
+    <key>expiry_suggestion_category_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>Standard für %1$@ · %2$#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Tag</string>
+            <key>other</key>
+            <string>%d Tage</string>
+        </dict>
+    </dict>
+    <key>category_settings_shelf_life_days_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Tag</string>
+            <key>other</key>
+            <string>%d Tage</string>
+        </dict>
+    </dict>
+    <key>shopping_list_import_added_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel hinzugefügt</string>
+            <key>other</key>
+            <string>%d Artikel hinzugefügt</string>
+        </dict>
+    </dict>
+    <key>backup_import_success_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel wiederhergestellt</string>
+            <key>other</key>
+            <string>%d Artikel wiederhergestellt</string>
+        </dict>
+    </dict>
+    <key>notif_action_still_good_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Noch gut +%d T.</string>
+            <key>other</key>
+            <string>Noch gut +%d T.</string>
+        </dict>
+    </dict>
+    <key>batch_queue_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel in der Liste</string>
+            <key>other</key>
+            <string>%d Artikel in der Liste</string>
+        </dict>
+    </dict>
+    <key>batch_added_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel hinzugefügt</string>
+            <key>other</key>
+            <string>%d Artikel hinzugefügt</string>
+        </dict>
+    </dict>
+    <key>batch_discard_message_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel wartet und wurde noch nicht hinzugefügt.</string>
+            <key>other</key>
+            <string>%d Artikel warten und wurden noch nicht hinzugefügt.</string>
+        </dict>
+    </dict>
+    <key>settings_lead_days_phrase</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Tag vorher</string>
+            <key>other</key>
+            <string>%d Tage vorher</string>
+        </dict>
+    </dict>
+    <key>settings_digest_every_days_chip</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Tag</string>
+            <key>other</key>
+            <string>%d Tage</string>
+        </dict>
+    </dict>
+    <key>settings_digest_every_days_phrase</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@days@</string>
+        <key>days</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Jeden Tag</string>
+            <key>other</key>
+            <string>Alle %d Tage</string>
+        </dict>
+    </dict>
+    <key>items_deleted_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel gelöscht</string>
+            <key>other</key>
+            <string>%d Artikel gelöscht</string>
+        </dict>
+    </dict>
+    <key>status_days_over_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Seit %d Tag abgelaufen</string>
+            <key>other</key>
+            <string>Seit %d Tagen abgelaufen</string>
+        </dict>
+    </dict>
+    <key>clear_data_dialog_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@items@</string>
+        <key>items</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dadurch wird %d Artikel entfernt und seine Erinnerungen werden abgebrochen. Das lässt sich nicht rückgängig machen.</string>
+            <key>other</key>
+            <string>Dadurch werden alle %d Artikel entfernt und ihre Erinnerungen abgebrochen. Das lässt sich nicht rückgängig machen.</string>
+        </dict>
+    </dict>
+    <key>shopping_list_lede_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Sache zu kaufen</string>
+            <key>other</key>
+            <string>%d Sachen zu kaufen</string>
+        </dict>
+    </dict>
+    <key>shopping_section_delete_count_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Sein %d Artikel kommt in die Hauptliste.</string>
+            <key>other</key>
+            <string>Seine %d Artikel kommen in die Hauptliste.</string>
+        </dict>
+    </dict>
+    <key>lede_use_by_tomorrow</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} Artikel bis morgen verbrauchen</string>
+            <key>other</key>
+            <string>{n} Artikel bis morgen verbrauchen</string>
+        </dict>
+    </dict>
+    <key>lede_past_date</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} Artikel ist abgelaufen</string>
+            <key>other</key>
+            <string>{n} Artikel sind abgelaufen</string>
+        </dict>
+    </dict>
+    <key>home_search_results</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Treffer</string>
+            <key>other</key>
+            <string>%d Treffer</string>
+        </dict>
+    </dict>
+    <key>home_active_filter_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>{n} von %d Artikel</string>
+            <key>other</key>
+            <string>{n} von %d Artikeln</string>
+        </dict>
+    </dict>
+    <key>home_show_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel zeigen</string>
+            <key>other</key>
+            <string>%d Artikel zeigen</string>
+        </dict>
+    </dict>
+    <key>expires_in_months_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>In %d Monat</string>
+            <key>other</key>
+            <string>In %d Monaten</string>
+        </dict>
+    </dict>
+    <key>expires_in_years_format</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>In %d Jahr</string>
+            <key>other</key>
+            <string>In %d Jahren</string>
+        </dict>
+    </dict>
+    <key>recipe_more_in_pantry</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d weiterer im Vorrat</string>
+            <key>other</key>
+            <string>%d weitere im Vorrat</string>
+        </dict>
+    </dict>
+    <key>recipe_servings_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Portion</string>
+            <key>other</key>
+            <string>%d Portionen</string>
+        </dict>
+    </dict>
+    <key>recipe_cost_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Rezept</string>
+            <key>other</key>
+            <string>%d Rezepte</string>
+        </dict>
+    </dict>
+    <key>recipe_courses_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Gang</string>
+            <key>other</key>
+            <string>%d Gänge</string>
+        </dict>
+    </dict>
+    <key>recipe_dishes_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Gericht</string>
+            <key>other</key>
+            <string>%d Gerichte</string>
+        </dict>
+    </dict>
+    <key>recipe_balance_left</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Noch %d Rezept</string>
+            <key>other</key>
+            <string>Noch %d Rezepte</string>
+        </dict>
+    </dict>
+    <key>recipe_earlier_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurde %d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</string>
+            <key>other</key>
+            <string>Ein Rezept, das du vorhin angefragt hast, ließ sich nicht erstellen. Dafür wurden %d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat.</string>
+        </dict>
+    </dict>
+    <key>recipe_other_account_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Rezept auf diesem {device} wurde mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du es gekauft hast, um es hinzuzufügen.</string>
+            <key>other</key>
+            <string>%d Rezepte auf diesem {device} wurden mit einem anderen Konto gekauft. Melde dich mit dem Konto an, mit dem du sie gekauft hast, um sie hinzuzufügen.</string>
+        </dict>
+    </dict>
+    <key>recipe_menu_short_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Du hast noch %d. Ein einzelnes Rezept geht trotzdem.</string>
+            <key>other</key>
+            <string>Du hast noch %d. Ein einzelnes Rezept geht trotzdem.</string>
+        </dict>
+    </dict>
+    <key>recipe_arrived</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Gespeichert. Noch %d Rezept</string>
+            <key>other</key>
+            <string>Gespeichert. Noch %d Rezepte</string>
+        </dict>
+    </dict>
+    <key>recipe_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Rezept hinzugefügt</string>
+            <key>other</key>
+            <string>%d Rezepte hinzugefügt</string>
+        </dict>
+    </dict>
+    <key>recipe_paused_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dein %d Rezept bleibt erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</string>
+            <key>other</key>
+            <string>Deine %d Rezepte bleiben erhalten. Die kostenlosen Wege unten funktionieren weiterhin.</string>
+        </dict>
+    </dict>
+    <key>recipe_unconfirmed_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Du hast %d Rezept bezahlt, es wurde aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</string>
+            <key>other</key>
+            <string>Du hast %d Rezepte bezahlt, sie wurden aber noch nicht hinzugefügt. Wir versuchen es weiter; du musst nicht noch einmal kaufen.</string>
+        </dict>
+    </dict>
+    <key>recipe_on_phone_label</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Rezept auf diesem {device}</string>
+            <key>other</key>
+            <string>Rezepte auf diesem {device}</string>
+        </dict>
+    </dict>
+    <key>recipe_in_account_label</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Rezept in deinem Konto</string>
+            <key>other</key>
+            <string>Rezepte in deinem Konto</string>
+        </dict>
+    </dict>
+    <key>recipe_sign_out_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dein %d Rezept bleibt in deinem Konto. Melde dich wieder an, um es zu nutzen. Gespeicherte Rezepte bleiben auf diesem {device}.</string>
+            <key>other</key>
+            <string>Deine %d Rezepte bleiben in deinem Konto. Melde dich wieder an, um sie zu nutzen. Gespeicherte Rezepte bleiben auf diesem {device}.</string>
+        </dict>
+    </dict>
+    <key>recipe_delete_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dein %d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+            <key>other</key>
+            <string>Deine %d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Deine Anmeldung und E-Mail-Adresse werden von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+        </dict>
+    </dict>
+    <key>recipe_delete_device_message</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dein %d nicht verwendetes Rezept geht verloren und kann weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+            <key>other</key>
+            <string>Deine %d nicht verwendeten Rezepte gehen verloren und können weder erstattet noch wiederhergestellt werden. Die anonyme Anmeldung, die dieses {device} nutzt, wird von unserem Server gelöscht; ein Nachweis der Käufe bleibt erhalten, aber nicht mehr mit dir verknüpft. Gespeicherte Rezepte und dein Vorrat bleiben auf diesem {device}.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurde %d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+            <key>other</key>
+            <string>Aus diesen Artikeln ließ sich kein Rezept machen. Dafür wurden %d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_refused_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurde %d Rezept verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+            <key>other</key>
+            <string>Aus diesen Artikeln ließ sich kein Menü machen. Dafür wurden %d Rezepte verbraucht, weil der Versuch uns trotzdem etwas gekostet hat. Versuch es mit weniger oder anderen Artikeln.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Das Rezept konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezept wurde abgezogen.</string>
+            <key>other</key>
+            <string>Das Rezept konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezepte wurden abgezogen.</string>
+        </dict>
+    </dict>
+    <key>recipe_server_unknown_taken_menu</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Das Menü konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezept wurde abgezogen.</string>
+            <key>other</key>
+            <string>Das Menü konnte gerade nicht erstellt werden. Versuch es später noch einmal. %d Rezepte wurden abgezogen.</string>
+        </dict>
+    </dict>
+    <key>recipe_allergens_too_many</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Es wurde nichts erstellt: Ein Rezept kann höchstens %d Allergen berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</string>
+            <key>other</key>
+            <string>Es wurde nichts erstellt: Ein Rezept kann höchstens %d Allergene berücksichtigen, und es sind mehr festgelegt. Entferne einige in den Einstellungen unter „Allergen-Warnungen“ und versuch es dann noch einmal. Es wurden keine Rezepte abgezogen.</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_moved</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Rezept von diesem {device} in dein Konto übertragen</string>
+            <key>other</key>
+            <string>%d Rezepte von diesem {device} in dein Konto übertragen</string>
+        </dict>
+    </dict>
+    <key>recipe_merged_debt</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Dieses {device} schuldete nach einer Store-Erstattung %d Rezept. Es wurde von deinem Konto abgezogen.</string>
+            <key>other</key>
+            <string>Dieses {device} schuldete nach einer Store-Erstattung %d Rezepte. Sie wurden von deinem Konto abgezogen.</string>
+        </dict>
+    </dict>
+    <key>recipe_optional_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Der andere Artikel in deinem Vorrat darf auch verwendet werden</string>
+            <key>other</key>
+            <string>Die anderen %d Artikel in deinem Vorrat dürfen auch verwendet werden</string>
+        </dict>
+    </dict>
+    <key>recipe_past_date_form</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%1$d ausgewählte Artikel sind abgelaufen, einer seit %2$@. Prüfe, ob sie noch genießbar sind, oder wähle sie ab.</string>
+            <key>other</key>
+            <string>%1$d ausgewählte Artikel sind abgelaufen, einer seit %2$@. Prüfe, ob sie noch genießbar sind, oder wähle sie ab.</string>
+        </dict>
+    </dict>
+    <key>recipe_past_days</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Tag</string>
+            <key>other</key>
+            <string>%d Tagen</string>
+        </dict>
+    </dict>
+    <key>recipe_time_minutes_spoken</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Minute</string>
+            <key>other</key>
+            <string>%d Minuten</string>
+        </dict>
+    </dict>
+    <key>recipe_shopping_confirm</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Artikel hinzufügen</string>
+            <key>other</key>
+            <string>%d Artikel hinzufügen</string>
+        </dict>
+    </dict>
+    <key>recipe_shopping_added</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d zur Einkaufsliste hinzugefügt</string>
+            <key>other</key>
+            <string>%d zur Einkaufsliste hinzugefügt</string>
+        </dict>
+    </dict>
+</dict>
+</plist>

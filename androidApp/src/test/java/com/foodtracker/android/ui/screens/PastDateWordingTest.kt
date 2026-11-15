@@ -87,12 +87,12 @@ class PastDateWordingTest {
 
     @Test
     fun noCreditsOrTokensInAnyLanguage() {
-        for (language in listOf("en", "ru", "nb")) {
+        for (language in listOf("en", "ru", "nb", "es", "de", "fr", "sv", "da")) {
             val r = context.createConfigurationContext(
                 android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
             ).resources
             for (text in listOfNotNull(pastDateWarning(r, items), pastDateFormWarning(r, items), pastDateFormWarning(r, items.take(1)))) {
-                assertFalse("$language: $text", Regex("(?i)credit|token|кредит|токен|kreditt").containsMatchIn(text))
+                assertFalse("$language: $text", Regex("(?i)credit|token|crédit|kredit|jeton|кредит|токен").containsMatchIn(text))
             }
         }
     }

@@ -106,4 +106,23 @@ class NotificationCopyTest {
         assertEquals("Bread er 1 dag over datoen.", copy(-1).second)
         assertEquals("Bread er 2 dager over datoen.", copy(-2).second)
     }
+
+    /** The languages added after en, ru and nb: each day gets its own translated wording, with
+     *  the item and the count in it. Their exact wording is the translation's; this catches a
+     *  missing or English string and a dropped placeholder. */
+    @Test
+    fun `every app language has its own wording each side of the date`() {
+        for (language in listOf("es", "de", "fr", "sv", "da")) {
+            val configuration = android.content.res.Configuration(context.resources.configuration).apply { setLocale(java.util.Locale.forLanguageTag(language)) }
+            val localized = context.createConfigurationContext(configuration)
+            for (days in listOf(-3, -1, 0, 1, 3)) {
+                val (title, body) = NotificationHelper.notificationCopy(localized, "Bread", "Acme", days)
+                val english = copy(days, "Acme")
+                org.junit.Assert.assertNotEquals("$language $days", english.first, title)
+                org.junit.Assert.assertNotEquals("$language $days", english.second, body)
+                org.junit.Assert.assertTrue("$language $days: $body", "Bread" in body && "Acme" in body)
+                if (days == -3 || days == 3) org.junit.Assert.assertTrue("$language $days: $body", "3" in body)
+            }
+        }
+    }
 }

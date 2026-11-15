@@ -5,16 +5,29 @@ import FoundationModels
 /// The app still runs from iOS 17, so every use sits behind `#available(iOS 26.0, *)` and the
 /// model's own availability check; the framework is weakly linked as a result.
 struct FoundationModelsRecipeModel: OnDeviceRecipeModel {
+    /// Asked afresh on every call (the tab appearing, the app coming to the front, the recipe
+    /// language changing), so nothing stale is kept.
     func availability(for language: RecipeLanguage) -> OnDeviceRecipeAvailability {
         guard #available(iOS 26.0, *) else { return .unsupported }
         let model = SystemLanguageModel.default
+        let state: OnDeviceRecipeAvailability.ModelState
         switch model.availability {
         case .available:
-            return model.supportsLocale(Locale(identifier: language.rawValue)) ? .available : .unsupportedLanguage
+            state = .ready
         case .unavailable(let reason):
             // Downloading, or waiting for the phone to be idle and charging: it will come.
-            return reason == .modelNotReady ? .preparing : .unsupported
+            state = reason == .modelNotReady ? .preparing : .none
         }
+        guard state != .none else { return .unsupported }
+        return .of(state, writesLanguage: model.supportsLocale(Self.locale(for: language)))
+    }
+
+    /// The locale `supportsLocale` is asked about: the bare language code, which it matches with
+    /// its fallbacks ("nb" to the model's nb-NO; checked on macOS 27, where "nb", "no" and
+    /// "nb-NO" all match and "ru", "pl" and "uk" don't). Which languages pass depends on the OS:
+    /// Norwegian, Swedish and Danish came with iOS 26.1.
+    static func locale(for language: RecipeLanguage) -> Locale {
+        Locale(identifier: language.rawValue)
     }
 
     func write(_ request: RecipeRequest) async throws -> Recipe {

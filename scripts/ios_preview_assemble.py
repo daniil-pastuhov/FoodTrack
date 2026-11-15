@@ -5,7 +5,8 @@ listing language:
     scripts/ios_preview_assemble.py [raw-dir] [out-dir] [--no-captions]
         # defaults: build/ios-preview, build/app-store-preview
 
-Writes <out-dir>/<en-GB|ru|no>/preview.mp4 and poster.png. The video follows App Store Connect's
+Writes <out-dir>/<listing folder>/preview.mp4 and poster.png (en-GB, ru, no, es-ES, de-DE, fr-FR,
+sv, da; es-MX and fr-CA take the es-ES and fr-FR files, uploaded by hand like the rest). The video follows App Store Connect's
 "App preview specifications" (developer.apple.com/help/app-store-connect/reference/
 app-preview-specifications) for the iPhone 6.9" size (Dynamic Island, large display), which the
 smaller iPhones scale down from: 886x1920 portrait, 30 fps, H.264 High Profile level 4.0,
@@ -18,7 +19,8 @@ saved and lands in the list; the Recipe tab with the items that expire first tic
 written from them; the three-day menu. Each shot is cut from its clip between two of the moments
 ios_preview.sh wrote to timeline.json, and the shots are joined with short dissolves (Apple asks
 for simple transitions). The captions are the screenshots' own (scripts/frame_screenshots.py's
-CAPTIONS), in Vollkorn SemiBold, warm white on a Larder green band across the top, over the status
+CAPTIONS; the menu's, last, adds a smaller line saying it needs a recipe pack, PACK_NOTES),
+in Vollkorn SemiBold, warm white on a Larder green band across the top, over the status
 bar, so no app content and nothing at the bottom of the frame, where the App Store puts its
 controls, is covered. poster.png is the frame at POSTER_AT; App Store Connect uses the frame 5
 seconds in unless it is told otherwise (Media Manager, Edit Poster Frame). Needs ffmpeg and
@@ -58,6 +60,18 @@ SHOTS = [
     ("recipe", ("swipe", -1.0), ("swipe", 3.0), 2),   # the recipe, down to the method
     ("menu", ("swipe", -1.0), ("swipe", 3.6), 3),     # the menu, down to the third day
 ]
+# The last shot, the three-day menu, is written only from a recipe pack, and Apple asks a preview
+# that shows something needing a purchase to say so: its caption gets this smaller line under it.
+PACK_NOTES = {
+    "en": "Needs a recipe pack",
+    "ru": "Нужен пакет рецептов",
+    "nb": "Krever en oppskriftspakke",
+    "es": "Requiere un paquete de recetas",
+    "de": "Erfordert ein Rezeptpaket",
+    "fr": "Nécessite un pack de recettes",
+    "sv": "Kräver ett receptpaket",
+    "da": "Kræver en opskriftspakke",
+}
 POSTER_AT = 4.6  # seconds into the preview: the scan card with the product and its date
 
 
@@ -71,21 +85,35 @@ def band_png(path):
     Image.new("RGBA", (WIDTH, BAND), GREEN + (255,)).save(path)
 
 
-def caption_png(text, path):
-    """The caption's lines, centred on a transparent image the size of the band."""
+def caption_png(text, path, note=None):
+    """The caption's lines, centred on a transparent image the size of the band, with [note] in
+    a smaller size under them."""
     size = 56
     font = ImageFont.truetype(FONT, size, index=FONT_BOLD_INDEX)
     lines = text.split("\n")
     while max(font.getlength(line) for line in lines) > 0.88 * WIDTH:
         size -= 2
         font = ImageFont.truetype(FONT, size, index=FONT_BOLD_INDEX)
+    if note:
+        # Two caption lines and the note must fit the band.
+        size = min(size, 50)
+        font = ImageFont.truetype(FONT, size, index=FONT_BOLD_INDEX)
     pitch = round(1.16 * size)
+    note_size = round(0.62 * size)
+    note_font = ImageFont.truetype(FONT, note_size, index=FONT_BOLD_INDEX) if note else None
+    while note and note_font.getlength(note) > 0.88 * WIDTH:
+        note_size -= 1
+        note_font = ImageFont.truetype(FONT, note_size, index=FONT_BOLD_INDEX)
     image = Image.new("RGBA", (WIDTH, BAND), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
+    height = pitch * (len(lines) - 1) + size + (round(0.35 * size) + note_size if note else 0)
     # Vertically centred on the band, a little below its middle, under the rounded screen corners.
-    top = (BAND - (pitch * (len(lines) - 1) + size)) / 2 + 0.06 * size
+    top = (BAND - height) / 2 + 0.06 * size
     for i, line in enumerate(lines):
         draw.text((WIDTH / 2, top + i * pitch), line, font=font, fill=WHITE, anchor="mt")
+    if note:
+        draw.text((WIDTH / 2, top + (len(lines) - 1) * pitch + size + round(0.35 * size)), note,
+                  font=note_font, fill=WHITE + (225,), anchor="mt")
     image.save(path)
 
 
@@ -149,7 +177,9 @@ def assemble(lang, raw, out, captions):
                     runs.append([shot[3], n, n])
             for r, (caption, first, last) in enumerate(runs):
                 png = tmp / f"caption{r}.png"
-                caption_png(CAPTIONS[lang][caption], png)
+                # The run that ends the preview is the menu's: it carries the purchase note.
+                caption_png(CAPTIONS[lang][caption], png,
+                            PACK_NOTES[lang] if last == len(SHOTS) - 1 else None)
                 shown = starts[first] if first else 0.0
                 hidden = starts[last] + lengths[last] if last < len(SHOTS) - 1 else duration
                 inputs += ["-loop", "1", "-framerate", str(FPS), "-t", f"{duration:.3f}", "-i", str(png)]

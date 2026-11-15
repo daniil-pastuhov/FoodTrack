@@ -67,7 +67,8 @@ API_ROOT = "https://api.appstoreconnect.apple.com"
 API = API_ROOT + "/v1"
 # Release notes are stored under Play's locale codes; App Store Connect names the same
 # languages as in store-listing/app-store/.
-ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no"}
+ASC_LOCALES = {"en-GB": "en-GB", "ru-RU": "ru", "no-NO": "no", "es-ES": "es-ES", "es-419": "es-MX",
+               "de-DE": "de-DE", "fr-FR": "fr-FR", "fr-CA": "fr-CA", "sv-SE": "sv", "da-DK": "da"}
 # One folder per App Store Connect locale, holding promotional_text.txt among others.
 LISTING_DIR = pathlib.Path(__file__).resolve().parent.parent / "store-listing" / "app-store"
 # The other English localizations (en-US, en-AU, en-CA) take the en-GB release notes, as the notes
@@ -75,9 +76,16 @@ LISTING_DIR = pathlib.Path(__file__).resolve().parent.parent / "store-listing" /
 # (all of them without a folder; en-AU and en-CA hold only keywords.txt). Apple asks for What's
 # New in every localization of an update.
 FALLBACK_LOCALE = "en-GB"
+# Regional variants of another language take that language's folder the same way: every text,
+# screenshot set, Duo set and header/search-result art their own folder lacks. Unlike en-GB,
+# es-ES and fr-FR are not the primary language, so App Store Connect would show en-GB's
+# screenshots there; sync_screenshots places the fallback's instead.
+REGIONAL_FALLBACKS = {"es-MX": "es-ES", "fr-CA": "fr-FR"}
 
 
 def fallback(locale):
+    if locale in REGIONAL_FALLBACKS:
+        return REGIONAL_FALLBACKS[locale]
     return FALLBACK_LOCALE if locale.startswith("en-") and locale != FALLBACK_LOCALE else None
 # "What to Test" is limited to 4000 characters; the notes are much shorter (Play allows 500).
 WHATS_NEW_LIMIT = 4000
@@ -497,11 +505,13 @@ def cmd_iaps(args):
 # --- Store listing: store-listing/app-store/<locale>/ onto the version in preparation ----------
 #
 # Each locale folder's texts go to two resources: the version's localization (keywords,
-# description, promotional text) and the app info's (name, subtitle), which App Store Connect
-# only lets change while a version is in preparation. A field is written only when its file
-# exists (in the locale's folder, or for another English localization in en-GB's, which fills in
-# what a partial folder such as en-AU/ leaves out) and differs from what App Store Connect has,
-# so the URLs and anything else the repo has no file for are never touched.
+# description, promotional text) and the app info's (name, subtitle, privacy policy URL), which
+# App Store Connect only lets change while a version is in preparation (Apple's "Required,
+# localizable, and editable properties": the privacy policy URL is localized and not editable
+# between versions). A field is written only when its file exists (in the locale's folder, or for
+# another English localization in en-GB's, which fills in what a partial folder such as en-AU/
+# leaves out) and differs from what App Store Connect has, so the support and marketing URLs and
+# anything else the repo has no file for are never touched.
 
 class ListingError(Exception):
     """The repo's listing can't be applied as it is (a limit, a missing resource)."""
@@ -515,12 +525,20 @@ LISTING_FIELDS = {
     "keywords.txt": ("version", "keywords"),
     "promotional_text.txt": ("version", "promotionalText"),
     "description.txt": ("version", "description"),
+    "privacy_url.txt": ("info", "privacyPolicyUrl"),
 }
 # Copied from the primary language's localization when a localization is created, so a new one
-# (en-US) is not left without them: App Review needs a support URL in every localization.
+# (en-US) is not left without them: App Review needs a support URL in every localization. A field
+# the localization's own files give (privacyPolicyUrl from privacy_url.txt) is not copied.
 COPIED_ON_CREATE = {"version": ("supportUrl", "marketingUrl"),
                     "info": ("privacyPolicyUrl", "privacyChoicesUrl")}
 RESOURCE_TYPES = {"version": "appStoreVersionLocalizations", "info": "appInfoLocalizations"}
+# The privacy policy site: a page per language (privacy_url.txt names it; check_store_listing.py's
+# PRIVACY_SITE is the same) and the language chooser at the root. A page that doesn't answer 200
+# when the listing is synced (one not yet published) is never set: the chooser is set instead,
+# and the next sync, once the page is live, sets the page.
+PRIVACY_SITE = "https://daniil-pastuhov.github.io/bestbefore-privacy/"
+PRIVACY_ATTRIBUTE = "privacyPolicyUrl"
 # The App Review notes (the version's appStoreReviewDetail.notes), one text for all languages.
 REVIEW_NOTES_FILE = "review-notes.txt"
 
@@ -561,7 +579,7 @@ SCREENSHOT_WAIT_SECONDS = 600
 
 # A locale folder's name: an App Store Connect locale code (en-GB, ru, no, zh-Hans), which
 # iap-review/ and in-app-event/ are not.
-LOCALE_FOLDER = re.compile(r"[a-z]{2,3}(-[A-Za-z]{2,4})?")
+LOCALE_FOLDER = re.compile(r"[a-z]{2,3}(-[A-Za-z0-9]{2,4})?")
 
 
 def listing_locales(root=LISTING_DIR):
@@ -660,6 +678,39 @@ def check_listing_texts():
                            "store-listing/app-store/:\n" + "\n".join(f"- {p}" for p in problems))
 
 
+def url_status(url, timeout=20):
+    """The HTTP status a GET of url ends with (redirects followed), or None when it can't be
+    reached at all."""
+    request = urllib.request.Request(url, headers={"User-Agent": "BestBefore-release-script"})
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.status
+    except urllib.error.HTTPError as error:
+        error.close()
+        return error.code
+    except (urllib.error.URLError, OSError, ValueError):
+        return None
+
+
+def live_privacy_url(locale, url, status_of):
+    """The privacy policy URL to set for a localization: url when it answers 200; otherwise the
+    language chooser (PRIVACY_SITE) when that does, so a listing never points at a page that isn't
+    published yet; None (leave App Store Connect's as it is) when neither answers."""
+    status = status_of(url)
+    if status == 200:
+        return url
+    said = f"HTTP {status}" if status else "no answer"
+    if url != PRIVACY_SITE and status_of(PRIVACY_SITE) == 200:
+        print(f"::warning::{locale}: the privacy policy page {url} isn't live ({said}); "
+              f"using the language chooser {PRIVACY_SITE} until it is. Publish the page and "
+              "sync the listing again (the next release does)")
+        return PRIVACY_SITE
+    print(f"::warning::{locale}: neither the privacy policy page {url} ({said}) nor the "
+          f"language chooser {PRIVACY_SITE} answers; {PRIVACY_ATTRIBUTE} left as App Store "
+          "Connect has it")
+    return None
+
+
 def localizations_by_locale(asc, path):
     return {loc["attributes"]["locale"]: loc
             for loc in asc.call("GET", path, {"limit": 50}).get("data", [])}
@@ -674,7 +725,8 @@ def sync_resource(asc, resource, locale, existing, wanted, parent, primary, appl
         if resource == "info" and "name" not in wanted:
             raise ListingError(f"{locale}: no name.txt, and App Store Connect needs a name to add "
                                "the localization")
-        copied = {k: (primary or {}).get("attributes", {}).get(k) for k in COPIED_ON_CREATE[resource]}
+        copied = {k: (primary or {}).get("attributes", {}).get(k) for k in COPIED_ON_CREATE[resource]
+                  if k not in wanted}
         copied = {k: v for k, v in copied.items() if v}
         print(f"  {label} localization {locale}: {'creating' if apply else 'would create'}")
         for attribute, text in wanted.items():
@@ -702,10 +754,18 @@ def sync_resource(asc, resource, locale, existing, wanted, parent, primary, appl
     return existing["id"], True
 
 
-def sync_listing(asc, version_id, app_info_id, apply, root=LISTING_DIR):
+def sync_listing(asc, version_id, app_info_id, apply, root=LISTING_DIR, status_of=None):
     """Brings the version's and the app info's localizations in line with root's locale
     folders. Returns {locale: version localization id} as App Store Connect has them after it,
-    and whether anything differed."""
+    and whether anything differed. status_of(url) -> HTTP status or None (url_status by default)
+    checks each privacy policy page before it is set (live_privacy_url)."""
+    checked = {}
+
+    def status(url):
+        if url not in checked:
+            checked[url] = (status_of or url_status)(url)
+        return checked[url]
+
     folders = listing_locales(root)
     if not folders:
         raise ListingError(f"No locale folders in {root}")
@@ -722,6 +782,12 @@ def sync_listing(asc, version_id, app_info_id, apply, root=LISTING_DIR):
     for locale in locales:
         sources = listing_files(root, locale, folders)
         texts = read_listing_files(root, sources)
+        if PRIVACY_ATTRIBUTE in texts["info"]:
+            url = live_privacy_url(locale, texts["info"][PRIVACY_ATTRIBUTE], status)
+            if url is None:
+                del texts["info"][PRIVACY_ATTRIBUTE]
+            else:
+                texts["info"][PRIVACY_ATTRIBUTE] = url
         line = describe_sources(locale, sources)
         if line:
             print(line)
@@ -1116,6 +1182,22 @@ def local_duo(folder):
     return shots
 
 
+def has_screenshots(folder):
+    return any((pathlib.Path(folder) / name).is_dir() for name in (*SCREENSHOT_SETS, *DUO_FOLDERS))
+
+
+def screenshot_folder(root, locale):
+    """The folder whose screenshot sets a localization gets: its own, or for a regional variant
+    without any (es-MX, fr-CA) its language's (es-ES, fr-FR), which App Store Connect would not
+    show there by itself. Another English localization keeps its own (empty) folder: App Store
+    Connect shows the primary language's, en-GB's, without anything placed."""
+    own = pathlib.Path(root) / locale
+    regional = REGIONAL_FALLBACKS.get(locale)
+    if not has_screenshots(own) and regional and has_screenshots(pathlib.Path(root) / regional):
+        return pathlib.Path(root) / regional
+    return own
+
+
 def store_art(root, locale):
     """{placement type: local image} for the header and search-result art a localization takes:
     its own folder's files, or en-GB's for another English localization without them (as the
@@ -1331,10 +1413,12 @@ def sync_screenshots(asc, localizations, apply, root=LISTING_DIR, app_id=None):
     library = None
     locales = sorted(set(listing_locales(root)) | {l for l in localizations if fallback(l)})
     for locale in locales:
-        folder = pathlib.Path(root) / locale
+        folder = screenshot_folder(root, locale)
         present = {name: folder / name for name in SCREENSHOT_SETS if (folder / name).is_dir()}
         duo = [name for name in DUO_FOLDERS if (folder / name).is_dir()]
         art = store_art(root, locale)
+        if folder.name != locale and (present or duo):
+            print(f"  {locale}: no screenshot folders of its own; takes {folder.name}'s")
         if not present and not duo:
             print(f"  {locale}: no screenshot folders; App Store Connect shows the "
                   f"{FALLBACK_LOCALE} ones")

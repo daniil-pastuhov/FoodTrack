@@ -1,0 +1,1 @@
+consumo,preferente,alimentos,congelador,frigorífico,lista,compra,escáner,código,barras,desperdicio

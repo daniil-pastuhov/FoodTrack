@@ -23,8 +23,6 @@ public enum L10n {
     public static var sortOptionDateAdded: String { NSLocalizedString("sort_option_date_added", comment: "") }
     public static var sortOptionStorageLocation: String { NSLocalizedString("sort_option_storage_location", comment: "") }
 
-    public static var emptyStateTitle: String { NSLocalizedString("empty_state_title", comment: "") }
-    public static var emptyStateSubtitle: String { NSLocalizedString("empty_state_subtitle", comment: "") }
 
     public static var swipeDelete: String { NSLocalizedString("swipe_delete", comment: "") }
     public static var swipeAddToShoppingList: String { NSLocalizedString("swipe_add_to_shopping_list", comment: "") }

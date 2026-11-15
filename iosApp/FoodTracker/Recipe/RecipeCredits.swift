@@ -80,6 +80,7 @@ struct RecipeCreditsStorage {
         static let allergenConsent = "com.foodtracker.recipe.allergen_consent"
         static let serverTakesOptional = "com.foodtracker.recipe.server_takes_optional"
         static let serverTakesMultiChoice = "com.foodtracker.recipe.server_takes_multi_choice"
+        static let serverTakesDanish = "com.foodtracker.recipe.server_takes_danish"
     }
 
     /// The server's last answer that carried a balance said `acceptsOptionalIngredients`: only
@@ -94,6 +95,12 @@ struct RecipeCreditsStorage {
     var serverTakesMultiChoice: Bool {
         get { defaults.bool(forKey: Key.serverTakesMultiChoice) }
         nonmutating set { defaults.set(newValue, forKey: Key.serverTakesMultiChoice) }
+    }
+
+    /// The same for `acceptsDanish`: only then is a request in Danish sent.
+    var serverTakesDanish: Bool {
+        get { defaults.bool(forKey: Key.serverTakesDanish) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesDanish) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -402,6 +409,7 @@ final class RecipeCredits: ObservableObject {
         // Absent from a server that predates the field, or after a rollback: then nothing extra goes.
         storage.serverTakesOptional = response.acceptsOptionalIngredients?.value ?? false
         storage.serverTakesMultiChoice = response.acceptsMultiChoiceConfig?.value ?? false
+        storage.serverTakesDanish = response.acceptsDanish?.value ?? false
     }
 
     /// The cheapest pack as the store formats its price, once the store has answered (the tab

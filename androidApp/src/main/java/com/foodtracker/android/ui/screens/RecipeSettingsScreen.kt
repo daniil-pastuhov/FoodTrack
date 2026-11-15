@@ -74,6 +74,7 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit) {
             appLanguage = state.appLanguage,
             allergens = state.allergens,
             onChange = stateHolder::updateConfig,
+            onDeviceLanguageUnsupported = state.onDeviceLanguageUnsupported,
             modifier = Modifier.padding(padding),
             paid = state.paid,
             accountActions = AccountActions(
@@ -106,7 +107,9 @@ private fun RecipeSettingsContent(
     onAllergenConsent: (Boolean) -> Unit = {},
     options: RecipeOptions = RecipeOptions(),
     onSendAllItems: (Boolean) -> Unit = {},
-    onHowItWorks: () -> Unit = {}
+    onHowItWorks: () -> Unit = {},
+    /** See [com.foodtracker.recipe.RecipeUiState.onDeviceLanguageUnsupported]. */
+    onDeviceLanguageUnsupported: Boolean = false
 ) {
     val resources = LocalContext.current.resources
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -171,6 +174,11 @@ private fun RecipeSettingsContent(
                     trailing = { LarderIcon(LarderIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                     onClick = { pickingLanguage = true }
                 )
+                // Why "Generate on this device" went away: this phone's model doesn't write the
+                // chosen language. Only where the phone has a model at all.
+                if (onDeviceLanguageUnsupported) {
+                    SettingsDescription(stringResource(R.string.recipe_on_device_language_note))
+                }
             }
 
             // Builds without the paid route have no account to speak of.
@@ -290,7 +298,8 @@ internal fun RecipeSettingsChosenPreview() = LarderTheme {
             RecipeConfig(minMinutes = 20, maxMinutes = 45, mealTypes = setOf(RecipeMealType.LUNCH, RecipeMealType.DINNER), diets = setOf(RecipeDiet.VEGETARIAN, RecipeDiet.GLUTEN_FREE), language = "de"),
             appLanguage = "en",
             allergens = listOf("celery", "peanuts"),
-            onChange = {}
+            onChange = {},
+            onDeviceLanguageUnsupported = true
         )
     }
 }

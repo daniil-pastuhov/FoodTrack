@@ -291,6 +291,17 @@ binding exist on the live project (created and read back 2026-11-14).
       account-deletion field.) Merge the privacy policy pull request
       (<https://github.com/daniil-pastuhov/bestbefore-privacy/pull/1>) when the release goes out;
       see [privacy-policy-changes.md](privacy-policy-changes.md).
+- [x] The policy site's pull request
+      [daniil-pastuhov/bestbefore-privacy#3](https://github.com/daniil-pastuhov/bestbefore-privacy/pull/3)
+      was merged on 2026-11-15: the policy in eight languages, support and delete in eight
+      languages and the About page `app.html` are live, so the release's listing sync sets each
+      App Store localization's privacy policy URL to its language's page
+      (`store-listing/app-store/<locale>/privacy_url.txt`, `store-listing/app-store/README.md`
+      "Privacy policy URL per language"). Google Play keeps the one app-wide URL (Play Console >
+      App content), the chooser root https://daniil-pastuhov.github.io/bestbefore-privacy/, which
+      needs no change.
+- [ ] Put https://daniil-pastuhov.github.io/bestbefore-privacy/app.html into App Store Connect's
+      Marketing URL by hand (the listing sync doesn't set it).
 - [ ] App Store Connect > App Privacy and Play Console > Data safety, when the release that
       sells packs goes out (reasons in `store-listing/app-store/README.md`, section 5):
   - App Privacy: by hand, following [app-privacy-apple.md](app-privacy-apple.md) (the public

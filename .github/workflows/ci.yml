@@ -92,6 +92,10 @@ jobs:
             scripts:
               - 'scripts/**'
               - 'store-listing/**'
+              # scripts/tests/test_translations.py checks both apps' translations.
+              - 'androidApp/src/main/res/values*/strings.xml'
+              - 'iosApp/FoodTracker/*.lproj/**'
+              - 'iosApp/FoodTracker.xcodeproj/project.pbxproj'
               - '.github/workflows/ci.yml'
       - name: Decide
         id: decide

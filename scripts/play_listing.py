@@ -22,7 +22,9 @@ For each locale folder (a folder with title.txt; Play's language codes, e.g. en-
   the shared icon-512.png goes to the default language. Images are compared by the SHA-256 that
   Play returns, so unchanged ones are not uploaded again. Play has no call to reorder images:
   the screenshots after the first one that differs are deleted and uploaded again in order. A
-  locale without image files is left as it is, and Play shows the default language's.
+  regional variant without image files of its own takes its language's (es-419 es-ES's, fr-CA
+  fr-FR's; IMAGE_FALLBACKS), so it doesn't show English ones; another locale without image files
+  is left as it is, and Play shows the default language's. Texts have no such fallback.
 
 scripts/check_store_listing.py runs first; text over a limit stops the run before Play is
 contacted. Authenticates exactly like scripts/play_upload.py (its `publisher()`).
@@ -42,6 +44,8 @@ TEXT_FIELDS = {"title.txt": "title", "short-description.txt": "shortDescription"
 PHONE_SCREENSHOT_LIMIT = 8
 IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg")
 ICON_FILE = "icon-512.png"
+# Regional variant -> the folder whose images it takes when it has none of a kind itself.
+IMAGE_FALLBACKS = {"es-419": "es-ES", "fr-CA": "fr-FR"}
 
 
 class ListingError(Exception):
@@ -118,13 +122,19 @@ def image_targets(root, locales, default_language):
     """[(language, imageType, [local images])] for every image the repo has."""
     targets = []
     for locale in locales:
-        folder = pathlib.Path(root) / locale
-        if (folder / "phone-screenshots").is_dir():
-            shots = local_screenshots(folder / "phone-screenshots")
+        folders = [pathlib.Path(root) / locale]
+        if locale in IMAGE_FALLBACKS:
+            folders.append(pathlib.Path(root) / IMAGE_FALLBACKS[locale])
+        for folder in folders:
+            shots = local_screenshots(folder / "phone-screenshots") \
+                if (folder / "phone-screenshots").is_dir() else []
             if shots:
                 targets.append((locale, "phoneScreenshots", shots))
-        if (folder / "feature-graphic.png").is_file():
-            targets.append((locale, "featureGraphic", [local_image(folder / "feature-graphic.png")]))
+                break
+        for folder in folders:
+            if (folder / "feature-graphic.png").is_file():
+                targets.append((locale, "featureGraphic", [local_image(folder / "feature-graphic.png")]))
+                break
     if (pathlib.Path(root) / ICON_FILE).is_file() and default_language:
         targets.append((default_language, "icon", [local_image(pathlib.Path(root) / ICON_FILE)]))
     return targets

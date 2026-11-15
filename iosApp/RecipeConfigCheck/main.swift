@@ -102,6 +102,28 @@ let tidyCases: [(String, [String])] = [
     ("Gulrøtter, skrelt og i terninger", ["Gulrøtter"]),
     ("Salt og pepper etter smak", ["Salt og pepper"]),
     ("Rømme eller crème fraîche", ["Rømme eller crème fraîche"]),
+    ("Sal, pimienta, aceite de oliva", ["Sal", "Pimienta", "Aceite de oliva"]),
+    ("Cebolla, picada finamente", ["Cebolla"]),
+    ("Sal y pimienta al gusto", ["Sal y pimienta"]),
+    ("Ajo, 2 dientes", ["Ajo"]),
+    ("Nata o leche", ["Nata o leche"]),
+    ("Zwiebel, fein gehackt", ["Zwiebel"]),
+    ("Salz, Pfeffer, Olivenöl", ["Salz", "Pfeffer", "Olivenöl"]),
+    ("Salz und Pfeffer nach Geschmack", ["Salz und Pfeffer"]),
+    ("Karotten, geschält und gewürfelt", ["Karotten"]),
+    ("Oignon, émincé", ["Oignon"]),
+    ("Sel, poivre, huile d'olive", ["Sel", "Poivre", "Huile d'olive"]),
+    ("Sel et poivre au goût", ["Sel et poivre"]),
+    ("Ail, 2 gousses, haché", ["Ail"]),
+    ("Sel, petits pois", ["Sel", "Petits pois"]),
+    ("Lök, finhackad", ["Lök"]),
+    ("Salt, peppar, olivolja", ["Salt", "Peppar", "Olivolja"]),
+    ("Salt och peppar efter smak", ["Salt och peppar"]),
+    ("Morötter, skalade och tärnade", ["Morötter"]),
+    ("Løg, finthakket", ["Løg"]),
+    ("Salt, peber, olivenolie", ["Salt", "Peber", "Olivenolie"]),
+    ("Salt og peber efter smag", ["Salt og peber"]),
+    ("Gulerødder, skrællet og skåret i tern", ["Gulerødder"]),
 ]
 for (raw, wanted) in tidyCases { expect(RecipeShopping.tidyNames(raw), wanted, "tidy \(raw)") }
 let listDish = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [
@@ -129,6 +151,25 @@ expect(rows.map(\.alreadyListed), [false, true, false, false], "already listed")
 expect(RecipeShopping.defaultSelection(rows), ["red onion", "olive oil", "salt"], "ticked by default")
 let unmarked = Recipe(title: "D", summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [RecipeIngredient(amount: "1 l", name: "Water", fromPantry: false)], steps: ["Cook."], source: .device)
 expect(RecipeShopping.candidates([unmarked], listedNames: []).map(\.name), ["Water"], "without the mark water is listed")
+
+// The app's languages map to recipe languages; Danish among them (sent to the server only once it
+// says acceptsDanish, RecipeViewModel).
+for code in ["en", "ru", "es", "de", "fr", "sv", "da"] {
+    expect(RecipeLanguage.app(preferredLocalizations: [code]).rawValue, code, "app language \(code)")
+}
+expect(RecipeLanguage.app(preferredLocalizations: ["no"]), .nb, "Norwegian")
+expect(RecipeLanguage.app(preferredLocalizations: ["da-DK"]), .da, "Danish with a region")
+expect(RecipeLanguage.da.endonym, "Dansk", "Danish endonym")
+expect(RecipeLanguage.da.englishName, "Danish", "Danish in English")
+
+// The phone's own model follows the chosen recipe language (Android's RecipeStateHolderTest,
+// onDeviceRouteFollowsTheModelAndTheLanguage and friends).
+expect(OnDeviceRecipeAvailability.of(.ready, writesLanguage: true), .available, "ready in a language it writes")
+expect(OnDeviceRecipeAvailability.of(.ready, writesLanguage: false), .unsupportedLanguage, "ready, but not in this language")
+expect(OnDeviceRecipeAvailability.of(.preparing, writesLanguage: true), .preparing, "still downloading")
+expect(OnDeviceRecipeAvailability.of(.preparing, writesLanguage: false), .unsupportedLanguage, "downloading is not promised for a language it can't write")
+expect(OnDeviceRecipeAvailability.of(.none, writesLanguage: true), .unsupported, "no model")
+expect(OnDeviceRecipeAvailability.of(.none, writesLanguage: false), .unsupported, "no model says nothing about the language")
 
 if failures > 0 {
     print("\(failures) failed")

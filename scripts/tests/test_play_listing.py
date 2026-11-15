@@ -194,6 +194,22 @@ class ImageSyncTests(unittest.TestCase):
                           ("en-GB", "icon", 1)])
         self.assertEqual([t[1] for t in play_listing.image_targets(self.root, ["en-US"], None)], [])
 
+    def test_regional_variant_takes_its_languages_images(self):
+        es = self.root / "es-ES" / "phone-screenshots"
+        es.mkdir(parents=True)
+        for i in (1, 2, 3):
+            (es / f"{i}.png").write_bytes(b"es%d" % i)
+        (self.root / "es-ES" / "feature-graphic.png").write_bytes(b"es feature")
+        write(self.root / "es-419", "title.txt", "T")
+        own = self.root / "es-419" / "feature-graphic.png"
+        own.write_bytes(b"latam feature")
+        targets = play_listing.image_targets(self.root, ["es-419", "fr-CA"], None)
+        self.assertEqual([(lang, kind, [f["name"] for f in files]) for lang, kind, files in targets],
+                         [("es-419", "phoneScreenshots", ["1.png", "2.png", "3.png"]),
+                          ("es-419", "featureGraphic", ["feature-graphic.png"])])
+        self.assertEqual(targets[0][2][0]["path"], es / "1.png")
+        self.assertEqual(targets[1][2][0]["path"], own, "its own image wins over the fallback")
+
     def test_apply_deletes_then_uploads_in_order(self):
         edits = FakeEdits(images={
             ("en-GB", "phoneScreenshots"): [{"id": "p1", "sha256": sha(b"shot1")},
@@ -234,6 +250,20 @@ class GateTests(unittest.TestCase):
         message = str(caught.exception)
         self.assertIn("81 characters (limit 80)", message)
         self.assertIn("best", message)
+
+    def test_numeric_region_folder_is_checked(self):
+        """es-419 (Latin America) has digits in its region; the gate must not skip it."""
+        import check_store_listing
+        with tempfile.TemporaryDirectory() as root:
+            folder = pathlib.Path(root) / "google-play" / "es-419"
+            write(folder, "title.txt", "Despensa")
+            write(folder, "short-description.txt", "S" * 81)
+            write(folder, "full-description.txt", "F")
+            with mock.patch.object(check_store_listing, "ROOT", pathlib.Path(root)):
+                problems = quiet(check_store_listing.check, ("google-play",))[0]
+        self.assertTrue(any("es-419" in p and "limit 80" in p for p in problems), problems)
+        self.assertTrue(check_store_listing.LOCALE_FOLDER.fullmatch("es-419"))
+        self.assertIn("es-419", play_listing.listing_locales())
 
     def test_repo_listing_passes(self):
         play_listing.check_listing_texts()

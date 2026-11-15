@@ -135,6 +135,49 @@ class LocaleTests(unittest.TestCase):
             self.assertIsNone(testflight.describe_sources(
                 "en-GB", testflight.listing_files(root, "en-GB", folders)))
 
+    def test_regional_variant_inherits_from_its_language(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_listing(root, "en-GB", name="N", subtitle="S", keywords="k", promotional_text="P",
+                          description="D")
+            write_listing(root, "es-ES", name="NE", subtitle="SE", keywords="ke",
+                          promotional_text="PE", description="DE")
+            write_listing(root, "es-MX", keywords="mx")
+            write_listing(root, "fr-FR", name="NF")
+            folders = testflight.listing_locales(root)
+            self.assertEqual(testflight.listing_files(root, "es-MX", folders), {
+                "name.txt": "es-ES", "subtitle.txt": "es-ES", "keywords.txt": "es-MX",
+                "promotional_text.txt": "es-ES", "description.txt": "es-ES"})
+            # fr-CA without a folder takes fr-FR's, never en-GB's.
+            self.assertEqual(testflight.listing_files(root, "fr-CA", folders), {"name.txt": "fr-FR"})
+            self.assertEqual(testflight.listing_source("fr-CA", folders), "fr-FR")
+            self.assertEqual(testflight.listing_files(root, "es-ES", folders)["keywords.txt"], "es-ES")
+            self.assertIsNone(testflight.fallback("es-ES"))
+            self.assertIsNone(testflight.fallback("sv"))
+            self.assertEqual(testflight.fallback("en-US"), "en-GB")
+
+    def test_regional_variant_takes_its_languages_screenshots(self):
+        with tempfile.TemporaryDirectory() as root:
+            root = pathlib.Path(root)
+            (root / "es-ES" / "screenshots").mkdir(parents=True)
+            (root / "es-MX").mkdir()
+            (root / "en-US").mkdir()
+            (root / "en-GB" / "screenshots").mkdir(parents=True)
+            self.assertEqual(testflight.screenshot_folder(root, "es-MX"), root / "es-ES")
+            self.assertEqual(testflight.screenshot_folder(root, "es-ES"), root / "es-ES")
+            # Another English one is left to App Store Connect's own fallback to the primary.
+            self.assertEqual(testflight.screenshot_folder(root, "en-US"), root / "en-US")
+            # fr-FR has none either: fr-CA keeps its own (empty) folder.
+            self.assertEqual(testflight.screenshot_folder(root, "fr-CA"), root / "fr-CA")
+            (root / "es-MX" / "ipad-screenshots").mkdir()
+            self.assertEqual(testflight.screenshot_folder(root, "es-MX"), root / "es-MX",
+                             "a folder with sets of its own keeps them")
+
+    def test_release_notes_map_every_play_locale(self):
+        self.assertEqual(testflight.ASC_LOCALES["es-419"], "es-MX")
+        self.assertEqual(testflight.ASC_LOCALES["sv-SE"], "sv")
+        self.assertEqual(testflight.ASC_LOCALES["da-DK"], "da")
+        self.assertEqual(testflight.ASC_LOCALES["fr-CA"], "fr-CA")
+
     def test_english_without_a_folder_takes_en_gb(self):
         folders = ["en-GB", "en-US", "ru"]
         self.assertEqual(testflight.listing_source("en-US", folders), "en-US")
@@ -289,7 +332,8 @@ class GateTests(unittest.TestCase):
                 return quiet(check_store_listing.check, stores=("app-store",))
 
     EN_GB = {"name": "BestBefore: Expiry Tracker", "subtitle": "Fridge, pantry & AI recipes",
-             "keywords": "expiration,date", "promotional_text": "P", "description": "D"}
+             "keywords": "expiration,date", "promotional_text": "P", "description": "D",
+             "privacy_url": "https://daniil-pastuhov.github.io/bestbefore-privacy/en.html"}
 
     def test_partial_english_folder_passes_with_inherited_files(self):
         problems, out = self.checked(en_GB=self.EN_GB, en_CA={"keywords": "best,before"})

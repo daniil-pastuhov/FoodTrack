@@ -13,9 +13,10 @@ here.
 | [`press-pitch-en.md`](press-pitch-en.md) | The same pitch and fact sheet in English |
 
 The about page itself (`app.html`, trilingual, with screenshots) lives on the GitHub Pages site in
-the `daniil-pastuhov/bestbefore-privacy` repository, as a pull request from the `landing-page`
-branch. Once merged it is at <https://daniil-pastuhov.github.io/bestbefore-privacy/app.html> and
-linked from the site's index; the drafts here link to it.
+the `daniil-pastuhov/bestbefore-privacy` repository. Its pull request was merged on 2026-11-15
+together with the per-language policy pages, so it is live at
+<https://daniil-pastuhov.github.io/bestbefore-privacy/app.html> and linked from the site's index;
+the drafts here link to it.
 
 ## Must be true before anything is used
 
@@ -32,7 +33,7 @@ Day 0 is the day the Recipe version is live on the App Store.
 
 | When | What | Also needs |
 | --- | --- | --- |
-| Day 0 | Merge the `landing-page` pull request in `bestbefore-privacy`; check `app.html`, `index.html`, `en.html`, `support.html` and `delete.html` load | Recipe version live |
+| Any time (the site's pull request was merged on 2026-11-15 and every page loads) | Put the `app.html` URL into App Store Connect's Marketing URL by hand | Nothing else; the About page is live ahead of the Recipe version by the owner's choice |
 | Day 0 to 2 | Norwegian post (`community-posts.md` §4) in one or two Norwegian groups; Russian post (§5) in one or two Russian-speaking groups | Each community's rules read; Russian: no promise of packs where purchases do not work |
 | Day 1 to 7 | Norwegian press pitch (`press-pitch-no.md`), Tuesday to Thursday morning; start with Matvett, Framtiden i våre hender, Tek.no and Kode24, then the national papers, one email each | `app.html` live; figures and links rechecked |
 | Week 1 to 2 | English zero-waste (§1) and meal-prep (§2) posts, one community each, a few days apart | iOS-only is fine; say Android is in testing |

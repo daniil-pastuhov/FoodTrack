@@ -106,6 +106,14 @@ android {
         buildConfig = true
     }
 
+    // The system's per-app language setting (Android 13+) offers the languages listed in the
+    // generated locale config: the app's own values-<lang> folders plus the unqualified one,
+    // which src/main/res/resources.properties declares as en-GB. A new language therefore
+    // needs only its values-<lang>/strings.xml.
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17

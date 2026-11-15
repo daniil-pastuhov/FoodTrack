@@ -10,7 +10,8 @@ set -euo pipefail
 
 VERSION=${1:?usage: $0 X.Y.Z}
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-LOCALES=(en-GB ru-RU no-NO)
+# As scripts/release writes them.
+LOCALES=(en-GB ru-RU no-NO es-ES es-419 de-DE fr-FR fr-CA sv-SE da-DK)
 fail() { echo "::error::$1"; exit 1; }
 
 [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "'$VERSION' is not a X.Y.Z version"

@@ -1,0 +1,35 @@
+BestBefore controla las fechas de caducidad y el inventario de tu nevera, congelador y despensa: escanea la compra, mira qué conviene usar primero, recibe un aviso antes de que la comida se estropee y convierte lo que está a punto de caducar en una receta.
+
+AÑADE COMIDA EN SEGUNDOS
+• Escanea el código de barras y el nombre y la foto del producto se rellenan solos (con Open Food Facts)
+• Apunta la cámara a la fecha impresa y BestBefore la lee por ti
+• Haz una foto a la fruta o la verdura y la app te sugiere qué es
+• Modo de varios productos: escanea una bolsa de la compra entera de una vez
+• Lee el ticket de la compra para añadir varios productos a la vez
+
+NO SE TE PASARÁ NINGUNA FECHA
+• Funciona con "consumir preferentemente antes del" y con la fecha de caducidad
+• Avisos unos días antes de que algo caduque, a la hora que elijas
+• Listas de "Caducan pronto" y "Caducados" de un vistazo
+• Widgets en la pantalla de inicio con lo que caduca, tu lista de la compra y un resumen
+
+COMPRA CON CABEZA
+• Los imprescindibles que se te acaban pasan directamente a la lista de la compra
+• Comparte la lista como texto o como código QR
+• Opcional: ve tu lista de la compra al llegar a una tienda que hayas guardado
+
+COCINA LO QUE ESTÁ A PUNTO DE CADUCAR
+• La pestaña Receta elige los productos con la fecha más próxima; cambia la selección, las raciones, el tiempo, la dieta y más
+• Gratis: copia o comparte un prompt ya preparado con la app de IA que ya usas
+• Gratis en iPhone con Apple Intelligence (iOS 26 o posterior): la receta se escribe en el propio teléfono
+• Paquetes de recetas (compra dentro de la app): recetas escritas por nuestro servidor y guardadas en la app, y un plan de comidas de 3 días ("Menú de 3 días") que usa primero lo que caduca antes
+
+TUS DATOS
+• Sin anuncios ni seguimiento
+• Sin suscripción: la app es gratis y los paquetes de recetas son compras únicas opcionales
+• Tu despensa se guarda en tu iPhone; exporta una copia de seguridad cuando quieras
+• No necesitas cuenta, ni siquiera para comprar un paquete. Inicia sesión con Apple o Google solo si quieres tus recetas en otros teléfonos
+• Una receta de un paquete envía a nuestro servidor los productos que marques, tus ajustes de recetas y tus alérgenos. Las opciones gratuitas no nos envían nada
+• Disponible en español, inglés, ruso, noruego, alemán, francés, sueco y danés
+
+Desperdicia menos comida, ahorra dinero y sabe siempre qué tienes en casa.
