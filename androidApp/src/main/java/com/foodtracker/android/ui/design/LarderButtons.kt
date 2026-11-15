@@ -46,6 +46,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
@@ -167,7 +168,9 @@ private fun LarderButtonImpl(
             } else {
                 null
             },
-            contentPadding = PaddingValues(horizontal = horizontalPadding),
+            // The vertical padding keeps a wrapped label clear of the capsule's curve; at the usual
+            // sizes it stays inside the minimum height, so those keep their height.
+            contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = LarderSpace.s2),
             interactionSource = source
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -181,7 +184,9 @@ private fun LarderButtonImpl(
                         text = text,
                         style = MaterialTheme.typography.labelLarge,
                         maxLines = maxLines,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        // Centred when a label too long for the whole width wraps between words.
+                        textAlign = TextAlign.Center
                     )
                 }
                 if (loading) {

@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -47,7 +46,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -72,7 +73,6 @@ import com.foodtracker.android.ui.design.LarderThumb
 import com.foodtracker.android.ui.design.LarderThumbSize
 import com.foodtracker.android.ui.design.StatusChip
 import com.foodtracker.android.ui.design.categoryIcon
-import com.foodtracker.android.ui.design.isExpanded
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
@@ -529,9 +529,7 @@ private fun BodyText(text: String) {
     Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
 }
 
-/** Use one leads, and the rest wrap under it when the labels run long, as Russian ones do. The
- *  intrinsic width stops FlowRow fitting each button to its longest word before it grows them. */
-@OptIn(ExperimentalLayoutApi::class)
+/** Use one leads, the one filled button; Delete stays a quiet text button below the rest. */
 @Composable
 private fun ProductDetailButtons(
     modifier: Modifier,
@@ -540,48 +538,93 @@ private fun ProductDetailButtons(
     onMoveToShoppingList: () -> Unit,
     onDelete: () -> Unit
 ) {
-    // On a tablet the pane is wide: Use one takes the spare width and the rest keep their
-    // labels' own width, so "To shopping list" stays whole on one line instead of getting a
-    // fifth of the row. A button that doesn't fit moves down a row. Phones share the row by
-    // weight and let a label wrap, so a large font size never cuts one short.
-    val expanded = isExpanded()
-    val labelLines = if (expanded) 1 else Int.MAX_VALUE
-    FlowRow(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
-        verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)
+        verticalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LarderButton(
-            text = stringResource(R.string.use_one_content_description),
-            onClick = onUseOne,
-            modifier = Modifier.weight(2f).width(IntrinsicSize.Max),
-            leadingIcon = LarderIcons.CircleMinus,
-            maxLines = labelLines
-        )
-        LarderButton(
-            text = stringResource(R.string.detail_edit),
-            onClick = onEdit,
-            modifier = (if (expanded) Modifier else Modifier.weight(1f)).width(IntrinsicSize.Max),
-            style = LarderButtonStyle.Outline,
-            leadingIcon = LarderIcons.Pencil,
-            maxLines = labelLines
-        )
-        LarderButton(
-            text = stringResource(R.string.detail_to_shopping_list),
-            onClick = onMoveToShoppingList,
-            modifier = (if (expanded) Modifier else Modifier.weight(1f)).width(IntrinsicSize.Max),
-            style = LarderButtonStyle.Outline,
-            leadingIcon = LarderIcons.ShoppingBasket,
-            maxLines = labelLines
-        )
+        DetailActionRows {
+            LarderButton(
+                text = stringResource(R.string.use_one_content_description),
+                onClick = onUseOne,
+                leadingIcon = LarderIcons.CircleMinus
+            )
+            LarderButton(
+                text = stringResource(R.string.detail_edit),
+                onClick = onEdit,
+                style = LarderButtonStyle.Outline,
+                leadingIcon = LarderIcons.Pencil
+            )
+            LarderButton(
+                text = stringResource(R.string.detail_to_shopping_list),
+                onClick = onMoveToShoppingList,
+                style = LarderButtonStyle.Outline,
+                leadingIcon = LarderIcons.ShoppingBasket
+            )
+        }
         LarderButton(
             text = stringResource(R.string.delete),
             onClick = onDelete,
-            modifier = (if (expanded) Modifier else Modifier.weight(1f)).width(IntrinsicSize.Max),
             style = LarderButtonStyle.DangerText,
-            leadingIcon = LarderIcons.Trash2,
-            maxLines = labelLines
+            leadingIcon = LarderIcons.Trash2
         )
+    }
+}
+
+/**
+ * Use one, Edit and To shopping list, laid out so that no label wraps inside a word or is cut
+ * short: one row when all three fit at their natural width (Use one taking the spare width);
+ * otherwise Use one alone above Edit and To shopping list sharing a row (equal halves when both
+ * fit in one); otherwise Use one and Edit above To shopping list; otherwise one per row, where a
+ * label still too long for the whole width (the largest font sizes) wraps between its words. A
+ * shared row only ever gets labels that fit on one line. The same rule as iOS's
+ * `DetailActionRows` in ProductDetailView.swift.
+ */
+@Composable
+private fun DetailActionRows(content: @Composable () -> Unit) {
+    Layout(content = content, modifier = Modifier.fillMaxWidth()) { measurables, constraints ->
+        require(measurables.size == 3)
+        val gap = LarderSpace.s2.roundToPx()
+        val natural = measurables.map { it.maxIntrinsicWidth(Constraints.Infinity) }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else natural.sum() + 2 * gap
+        // Each row: the indexes in it and the width each gets.
+        val rows: List<List<Pair<Int, Int>>> = when {
+            natural.sum() + 2 * gap <= width -> listOf(
+                listOf(0 to width - natural[1] - natural[2] - 2 * gap, 1 to natural[1], 2 to natural[2])
+            )
+            natural[0] <= width && natural[1] + natural[2] + gap <= width -> {
+                val half = (width - gap) / 2
+                val spare = width - natural[1] - natural[2] - gap
+                val pair = if (maxOf(natural[1], natural[2]) <= half) {
+                    listOf(1 to half, 2 to width - gap - half)
+                } else {
+                    listOf(1 to natural[1] + spare / 2, 2 to natural[2] + spare - spare / 2)
+                }
+                listOf(listOf(0 to width), pair)
+            }
+            // The pair is too wide for one row, but Use one and Edit fit together: two rows
+            // rather than three, which a small phone needs to keep some of the sheet in view.
+            natural[0] + natural[1] + gap <= width && natural[2] <= width -> listOf(
+                listOf(0 to width - natural[1] - gap, 1 to natural[1]),
+                listOf(2 to width)
+            )
+            else -> listOf(listOf(0 to width), listOf(1 to width), listOf(2 to width))
+        }
+        val placeables = rows.map { row ->
+            row.map { (index, itsWidth) -> measurables[index].measure(Constraints.fixedWidth(itsWidth)) }
+        }
+        val rowHeights = placeables.map { row -> row.maxOf { it.height } }
+        layout(width, rowHeights.sum() + gap * (rows.size - 1)) {
+            var y = 0
+            placeables.forEachIndexed { r, row ->
+                var x = 0
+                row.forEach { placeable ->
+                    placeable.placeRelative(x, y)
+                    x += placeable.width + gap
+                }
+                y += rowHeights[r] + gap
+            }
+        }
     }
 }
 
