@@ -253,6 +253,11 @@ binding exist on the live project (created and read back 2026-11-14).
       "Worst-case daily bill").
 - To follow estimated model spend and pack sales: `cd functions && npm run admin -- board
       --project bestbefore-f9ee1` (read-only, writes a local HTML board; functions/README.md, "The board").
+- [ ] Always-on board: create the private bucket `bestbefore-f9ee1-owner-board`, the
+      `ownerBoardWriter` role and the two bucket bindings, deploy `redrawBoard`, open
+      <https://storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html>, and add
+      `board_redraw_failed` and `board_bucket_public` to the log alerts (functions/README.md,
+      "The board", "Always on", has the commands in order).
 
 ### 10. Test
 
