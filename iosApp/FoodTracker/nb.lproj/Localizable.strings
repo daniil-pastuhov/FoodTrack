@@ -785,6 +785,8 @@
 "recipe_intro_prompt_message" = "Del eller kopier en ferdig ledetekst til KI-appen du allerede bruker.";
 "recipe_intro_device_title" = "Gratis, på denne {the_device}";
 "recipe_intro_device_message" = "Oppskriften lages på selve {the_device}, og ingenting sendes noe sted.";
+"recipe_on_device_weak" = "Modellen på denne {the_device} er fortsatt svak på matlaging, så sjekk at oppskriften gir mening.";
+"recipe_on_device_upsides" = "Det er gratis, og ingenting forlater {the_device}.";
 "recipe_intro_packs_title" = "Fra en oppskriftspakke";
 "recipe_intro_packs_price" = "Pakker fra %@.";
 "recipe_intro_free_stays" = "De gratis måtene er der fortsatt når du har en pakke.";

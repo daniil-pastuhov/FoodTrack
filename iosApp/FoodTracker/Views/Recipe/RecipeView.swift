@@ -626,9 +626,11 @@ struct RecipeView: View {
                         }
                         .disabled(nothingTicked)
                         .accessibilityLabel("\(L10n.recipeGenerateOnPhone), \(L10n.recipeCostFree)")
+                        hint(L10n.recipeOnDeviceNote)
                     }
                     shareButton
                 case .onDevice:
+                    hint(L10n.recipeOnDeviceNote)
                     buyOrBlocked
                     shareButton
                 default:
@@ -649,6 +651,10 @@ struct RecipeView: View {
     @ViewBuilder
     private var menuActions: some View {
         if model.serverCanWriteMenu {
+            // Few items for many dishes: said, never stopped; live with the ticks and choices.
+            if let few = model.menuItemsHint(for: pantry.items) {
+                LarderCallout(.info, icon: .shoppingBasket, message: L10n.recipeMenuFewItems(few))
+            }
             RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(model.menuCost)) {
                 model.writeOnServer(from: pantry.items)
             }

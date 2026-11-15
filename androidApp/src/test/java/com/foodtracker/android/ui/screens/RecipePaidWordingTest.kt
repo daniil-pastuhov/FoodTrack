@@ -12,6 +12,7 @@ import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.MenuCourse
 import com.foodtracker.recipe.MenuCourseKind
 import com.foodtracker.recipe.MenuDay
+import com.foodtracker.recipe.MenuItemsHint
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.android.R
 import com.foodtracker.recipe.RecipeConfig
@@ -335,5 +336,33 @@ class RecipePaidWordingTest {
         assertEquals(RecipeCosts(1, 4, 6), read.costs)
         assertEquals(listOf(UnverifiedPurchase("tok", 50)), read.unverified)
         assertEquals(true, read.paymentPending)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun theFewItemsHintAndThePhoneModelNoteReadAsWritten() {
+        val r = context.resources
+        assertEquals(
+            "Only 1 item for 3 dishes. Most of this menu will need shopping.",
+            recipeMenuFewItems(r, MenuItemsHint(1, 3))
+        )
+        assertEquals(
+            "Only 5 items for 12 dishes. Most of this menu will need shopping.",
+            recipeMenuFewItems(r, MenuItemsHint(5, 12))
+        )
+        assertEquals(
+            "The model on this device is still weak at cooking, so check the recipe makes sense. " +
+                "It's free, and nothing leaves this device.",
+            recipeOnDeviceNote(r)
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun theRussianFewItemsHintAgreesWithItsCount() {
+        val r = context.resources
+        assert(recipeMenuFewItems(r, MenuItemsHint(1, 3)).startsWith("Только 1 продукт для 3 блюд."))
+        assert(recipeMenuFewItems(r, MenuItemsHint(2, 6)).startsWith("Только 2 продукта для 6 блюд."))
+        assert(recipeMenuFewItems(r, MenuItemsHint(5, 12)).startsWith("Только 5 продуктов для 12 блюд."))
     }
 }

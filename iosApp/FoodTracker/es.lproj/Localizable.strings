@@ -785,6 +785,8 @@
 "recipe_intro_prompt_message" = "Comparte o copia un prompt ya preparado en la app de IA que ya usas.";
 "recipe_intro_device_title" = "Gratis, en este {device}";
 "recipe_intro_device_message" = "Este {device} escribe la receta por sí mismo y no se envía nada a ningún sitio.";
+"recipe_on_device_weak" = "El modelo de este {device} aún flojea en la cocina, así que comprueba que la receta tenga sentido.";
+"recipe_on_device_upsides" = "Es gratis y nada sale de este {device}.";
 "recipe_intro_packs_title" = "Con un paquete de recetas";
 "recipe_intro_packs_price" = "Paquetes desde %@.";
 "recipe_intro_free_stays" = "Las opciones gratuitas siguen ahí aunque tengas un paquete.";

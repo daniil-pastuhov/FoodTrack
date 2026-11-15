@@ -910,6 +910,12 @@
     </plurals>
     <string name="recipe_buy">Kjøp oppskrifter</string>
     <string name="recipe_menu_hint">En meny skrives på serveren vår og bruker %1$s fra en pakke.</string>
+    <string name="recipe_on_device_weak">Modellen på denne enheten er fortsatt svak på matlaging, så sjekk at oppskriften gir mening.</string>
+    <string name="recipe_on_device_upsides">Det er gratis, og ingenting forlater enheten.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Bare %1$d vare til %2$d retter. Det meste til denne menyen må kjøpes inn.</item>
+        <item quantity="other">Bare %1$d varer til %2$d retter. Det meste til denne menyen må kjøpes inn.</item>
+    </plurals>
     <string name="recipe_menu_short_title">En meny bruker %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Du har %1$d igjen. Én oppskrift går fortsatt.</item>

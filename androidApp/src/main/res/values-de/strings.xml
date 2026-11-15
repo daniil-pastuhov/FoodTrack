@@ -914,6 +914,12 @@
     </plurals>
     <string name="recipe_buy">Rezepte kaufen</string>
     <string name="recipe_menu_hint">Ein Menü wird auf unserem Server erstellt und kostet %1$s aus einem Paket.</string>
+    <string name="recipe_on_device_weak">Das Modell auf diesem Gerät kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.</string>
+    <string name="recipe_on_device_upsides">Es ist kostenlos, und nichts verlässt das Gerät.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
+        <item quantity="other">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
+    </plurals>
     <string name="recipe_menu_short_title">Ein Menü kostet %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Du hast noch %1$d. Ein einzelnes Rezept geht trotzdem.</item>

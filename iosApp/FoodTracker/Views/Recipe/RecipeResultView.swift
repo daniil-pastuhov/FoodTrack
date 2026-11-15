@@ -136,6 +136,8 @@ struct RecipeDocument: View {
             if recipe.minutes > 0 { fact(.timer, L10n.recipeMinutes(recipe.minutes)) }
             if recipe.servings > 0 { fact(.users, L10n.recipeServings(recipe.servings)) }
             fact(.gauge, L10n.recipeDifficultyName(recipe.difficulty))
+            // Never mistaken for one from our server: the phone's model is the weaker writer.
+            if recipe.source == .device, footer == nil { fact(.smartphone, L10n.recipeSavedOrigin(.device)) }
         }
     }
 

@@ -914,6 +914,12 @@
     </plurals>
     <string name="recipe_buy">Buy recipes</string>
     <string name="recipe_menu_hint">A menu is written on our server and takes %1$s from a pack.</string>
+    <string name="recipe_on_device_weak">The model on this device is still weak at cooking, so check the recipe makes sense.</string>
+    <string name="recipe_on_device_upsides">It\'s free, and nothing leaves this device.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Only %1$d item for %2$d dishes. Most of this menu will need shopping.</item>
+        <item quantity="other">Only %1$d items for %2$d dishes. Most of this menu will need shopping.</item>
+    </plurals>
     <string name="recipe_menu_short_title">A menu takes %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">You have %1$d left. A single recipe still works.</item>

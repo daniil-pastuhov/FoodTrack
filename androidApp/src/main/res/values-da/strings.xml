@@ -915,6 +915,12 @@
     </plurals>
     <string name="recipe_buy">Køb opskrifter</string>
     <string name="recipe_menu_hint">En menu skrives på vores server og bruger %1$s fra en pakke.</string>
+    <string name="recipe_on_device_weak">Modellen på denne enhed er stadig svag til madlavning, så tjek, at opskriften giver mening.</string>
+    <string name="recipe_on_device_upsides">Det er gratis, og intet forlader enheden.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Kun %1$d vare til %2$d retter. Det meste til denne menu skal købes ind.</item>
+        <item quantity="other">Kun %1$d varer til %2$d retter. Det meste til denne menu skal købes ind.</item>
+    </plurals>
     <string name="recipe_menu_short_title">En menu bruger %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Du har %1$d tilbage. En enkelt opskrift kan stadig laves.</item>

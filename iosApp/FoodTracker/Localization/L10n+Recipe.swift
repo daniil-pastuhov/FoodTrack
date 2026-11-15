@@ -156,7 +156,7 @@ extension L10n {
 
     // States
     static var recipeWritingOnPhoneTitle: String { text("recipe_writing_on_phone_title") }
-    static var recipeWritingOnPhoneMessage: String { text("recipe_writing_on_phone_message") }
+    static var recipeWritingOnPhoneMessage: String { text("recipe_writing_on_phone_message") + " " + text("recipe_on_device_weak") }
     static var recipeStop: String { text("recipe_stop") }
     static var recipePreparingTitle: String { text("recipe_preparing_title") }
     static var recipePreparingMessage: String { text("recipe_preparing_message") }
@@ -436,7 +436,17 @@ extension L10n {
     static var recipeIntroPromptTitle: String { paid("recipe_intro_prompt_title") }
     static var recipeIntroPromptMessage: String { paid("recipe_intro_prompt_message") }
     static var recipeIntroDeviceTitle: String { paid("recipe_intro_device_title") }
-    static var recipeIntroDeviceMessage: String { paid("recipe_intro_device_message") }
+    /// The intro's entry for the phone's model: what it does, then that it is still weak.
+    static var recipeIntroDeviceMessage: String { paid("recipe_intro_device_message") + " " + recipeOnDeviceWeak }
+    /// "The model on this iPhone is still weak at cooking, so check the recipe makes sense."
+    static var recipeOnDeviceWeak: String { paid("recipe_on_device_weak") }
+    /// The one line under "Generate on this iPhone", wherever it is offered: the weak point, then
+    /// why it is still worth it. Android: `recipeOnDeviceNote`.
+    static var recipeOnDeviceNote: String { recipeOnDeviceWeak + " " + paid("recipe_on_device_upsides") }
+    /// "Only 2 items for 12 dishes. Most of this menu will need shopping." Android: `recipeMenuFewItems`.
+    static func recipeMenuFewItems(_ hint: MenuItemsHint) -> String {
+        plural("recipe_menu_few_items", hint.items, ["dishes": "\(hint.dishes)"])
+    }
     static var recipeIntroPacksTitle: String { paid("recipe_intro_packs_title") }
     /// What a recipe and a menu take, from the server's costs (the fallback before any), then the
     /// cheapest pack's store price when the store has answered, then that the free ways stay.

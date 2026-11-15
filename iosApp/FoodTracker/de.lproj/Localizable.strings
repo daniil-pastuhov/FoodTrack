@@ -785,6 +785,8 @@
 "recipe_intro_prompt_message" = "Teile oder kopiere einen fertigen Prompt in die KI-App, die du schon nutzt.";
 "recipe_intro_device_title" = "Kostenlos, auf diesem {device}";
 "recipe_intro_device_message" = "Dieses {device} erstellt das Rezept selbst, und es wird nichts gesendet.";
+"recipe_on_device_weak" = "Das Modell auf diesem {device} kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.";
+"recipe_on_device_upsides" = "Es ist kostenlos, und nichts verlässt dein {device}.";
 "recipe_intro_packs_title" = "Aus einem Rezeptpaket";
 "recipe_intro_packs_price" = "Pakete ab %@.";
 "recipe_intro_free_stays" = "Die kostenlosen Wege bleiben, auch wenn du ein Paket hast.";

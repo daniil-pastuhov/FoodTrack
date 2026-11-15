@@ -785,6 +785,8 @@
 "recipe_intro_prompt_message" = "Dela eller kopiera en färdig prompt till AI-appen som du redan använder.";
 "recipe_intro_device_title" = "Gratis, på din {device}";
 "recipe_intro_device_message" = "Din {device} skriver receptet själv, och inget skickas någonstans.";
+"recipe_on_device_weak" = "Modellen på din {device} är fortfarande svag på matlagning, så kontrollera att receptet verkar rimligt.";
+"recipe_on_device_upsides" = "Det är gratis, och inget lämnar din {device}.";
 "recipe_intro_packs_title" = "Från ett receptpaket";
 "recipe_intro_packs_price" = "Paket från %@.";
 "recipe_intro_free_stays" = "De gratis sätten finns kvar när du har ett paket.";

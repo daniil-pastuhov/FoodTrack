@@ -1002,6 +1002,14 @@
     </plurals>
     <string name="recipe_buy">Купить рецепты</string>
     <string name="recipe_menu_hint">Меню составляется на нашем сервере и стоит %1$s из пакета.</string>
+    <string name="recipe_on_device_weak">Модель на этом устройстве пока слабо разбирается в кулинарии, так что проверьте, что рецепт имеет смысл.</string>
+    <string name="recipe_on_device_upsides">Это бесплатно, и ничего не покидает устройство.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Только %1$d продукт для %2$d блюд. Почти всё для этого меню придётся докупить.</item>
+        <item quantity="few">Только %1$d продукта для %2$d блюд. Почти всё для этого меню придётся докупить.</item>
+        <item quantity="many">Только %1$d продуктов для %2$d блюд. Почти всё для этого меню придётся докупить.</item>
+        <item quantity="other">Только %1$d продукта для %2$d блюд. Почти всё для этого меню придётся докупить.</item>
+    </plurals>
     <string name="recipe_menu_short_title">Для меню нужно %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">У вас остался %1$d. Отдельный рецепт составить можно.</item>

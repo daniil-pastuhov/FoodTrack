@@ -133,6 +133,9 @@ data class PaidUiState(
     /** The server said `acceptsMenuDays`: the menu set's Days choice and one course a day are
      *  offered, priced from [RecipeCosts.menuSets]. */
     val menuSets: Boolean = false,
+    /** The server said `acceptsOptionalIngredients`: "Send all products" sends the other items
+     *  to it (and the menu form counts them as usable). */
+    val serverTakesOptional: Boolean = false,
     /** The days of the menu being written ([writing] MENU), for the writing screen's title. */
     val writingDays: Int = DEFAULT_MENU_DAYS,
     /** The server won't sell to this account (earlier purchases refunded after use). */
@@ -340,7 +343,8 @@ internal class RecipePaid(
                 elsewhereRecipes = kept.unverified.filter { purchase -> purchase.isElsewhere(key) }.sumOf { purchase -> purchase.recipes },
                 paymentPending = kept.paymentPending,
                 allergenConsent = kept.allergenConsent,
-                menuSets = kept.serverTakesMenuDays
+                menuSets = kept.serverTakesMenuDays,
+                serverTakesOptional = kept.serverTakesOptional
             )
         }
     }

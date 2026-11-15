@@ -785,6 +785,8 @@
 "recipe_intro_prompt_message" = "Поделитесь готовым запросом или скопируйте его в ИИ-приложение, которым вы уже пользуетесь.";
 "recipe_intro_device_title" = "Бесплатно — на этом {device}";
 "recipe_intro_device_message" = "Рецепт составляет сам {device}, и ничего никуда не отправляется.";
+"recipe_on_device_weak" = "Модель на этом {device} пока слабо разбирается в кулинарии, так что проверьте, что рецепт имеет смысл.";
+"recipe_on_device_upsides" = "Это бесплатно, и ничего не покидает {device}.";
 "recipe_intro_packs_title" = "Из пакета рецептов";
 "recipe_intro_packs_price" = "Пакеты — от %@.";
 "recipe_intro_free_stays" = "Бесплатные способы остаются и тогда, когда у вас есть пакет.";

@@ -785,6 +785,8 @@
 "recipe_intro_prompt_message" = "Share or copy a ready-made prompt to the AI app you already use.";
 "recipe_intro_device_title" = "Free, on this {device}";
 "recipe_intro_device_message" = "This {device} writes the recipe itself, and nothing is sent anywhere.";
+"recipe_on_device_weak" = "The model on this {device} is still weak at cooking, so check the recipe makes sense.";
+"recipe_on_device_upsides" = "It's free, and nothing leaves this {device}.";
 "recipe_intro_packs_title" = "From a recipe pack";
 "recipe_intro_packs_price" = "Packs from %@.";
 "recipe_intro_free_stays" = "The free ways stay there when you have a pack.";

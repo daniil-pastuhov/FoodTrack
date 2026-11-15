@@ -960,6 +960,13 @@
     </plurals>
     <string name="recipe_buy">Comprar recetas</string>
     <string name="recipe_menu_hint">Un menú se escribe en nuestro servidor y descuenta %1$s de un paquete.</string>
+    <string name="recipe_on_device_weak">El modelo de este dispositivo aún flojea en la cocina, así que comprueba que la receta tenga sentido.</string>
+    <string name="recipe_on_device_upsides">Es gratis y nada sale de este dispositivo.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Solo %1$d producto para %2$d platos. Habrá que comprar casi todo para este menú.</item>
+        <item quantity="many">Solo %1$d productos para %2$d platos. Habrá que comprar casi todo para este menú.</item>
+        <item quantity="other">Solo %1$d productos para %2$d platos. Habrá que comprar casi todo para este menú.</item>
+    </plurals>
     <string name="recipe_menu_short_title">Un menú cuesta %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Te queda %1$d. Una sola receta sí es posible.</item>

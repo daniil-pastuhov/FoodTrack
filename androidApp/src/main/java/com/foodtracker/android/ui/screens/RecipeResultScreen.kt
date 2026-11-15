@@ -394,6 +394,10 @@ internal fun RecipeDocument(
                     pluralStringResource(R.plurals.recipe_servings_count, recipe.servings, recipe.servings)
                 )
                 RecipeFact(LarderIcons.Gauge, recipeDifficultyLabel(resources, recipe.difficulty))
+                // Never mistaken for one from our server: the phone's model is the weaker writer.
+                if (recipe.source == RecipeSource.DEVICE && !partOfMenu) {
+                    RecipeFact(LarderIcons.Smartphone, stringResource(R.string.recipe_saved_from_phone))
+                }
             }
             // Above the ingredients, never in a footer: seen as the recipe opens.
             PastDateCallout(recipe.pastDate, Modifier.padding(top = LarderSpace.s4))

@@ -361,7 +361,7 @@ internal fun RecipeTabContent(
                 )
                 state.isWriting -> Writing(
                     title = stringResource(R.string.recipe_writing_phone_title),
-                    body = stringResource(R.string.recipe_writing_phone_body),
+                    body = stringResource(R.string.recipe_writing_phone_body) + " " + stringResource(R.string.recipe_on_device_weak),
                     bottom = bottomOverlayClearance,
                     onStop = actions.onStop
                 )
@@ -743,6 +743,7 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
         }
         val primary = recipePrimary(state)
         PrimaryAction(state, primary, actions, enabled = !nothingTicked)
+        if (primary == RecipePrimary.OnDevice) OnDeviceNote()
         if (nothingTicked) return@Column
         when (primary) {
             RecipePrimary.Server -> {
@@ -754,6 +755,7 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                         style = LarderButtonStyle.Outline,
                         leadingIcon = LarderIcons.Smartphone
                     )
+                    OnDeviceNote()
                 }
                 ShareAndCopy(state, actions)
             }
@@ -835,6 +837,14 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled
             BuyOrBlocked(paid, actions, LarderButtonStyle.Primary)
         }
         else -> {
+            // Few items for many dishes: said, never stopped; live with the ticks and choices.
+            state.menuItemsHint?.let { hint ->
+                LarderCallout(
+                    kind = LarderCalloutKind.Info,
+                    icon = LarderIcons.ShoppingBasket,
+                    message = recipeMenuFewItems(resources, hint)
+                )
+            }
             PrimaryAction(state, recipePrimary(state), actions, enabled)
             if (enabled) RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
         }
@@ -886,6 +896,19 @@ private fun ShareAndCopy(state: RecipeUiState, actions: RecipeTabActions) {
             )
         }
     }
+}
+
+/** Helper text directly under "Generate on this device", wherever it is offered: the phone's
+ *  model is weaker than the server, and free and private. Small, so the group stays tight. */
+@Composable
+private fun OnDeviceNote() {
+    Text(
+        text = recipeOnDeviceNote(LocalContext.current.resources),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = LarderSpace.s2),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
 }
 
 @Composable

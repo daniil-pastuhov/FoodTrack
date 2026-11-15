@@ -914,6 +914,12 @@
     </plurals>
     <string name="recipe_buy">Köp recept</string>
     <string name="recipe_menu_hint">En meny skrivs på vår server och drar %1$s från ett paket.</string>
+    <string name="recipe_on_device_weak">Modellen på den här enheten är fortfarande svag på matlagning, så kontrollera att receptet verkar rimligt.</string>
+    <string name="recipe_on_device_upsides">Det är gratis, och inget lämnar enheten.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Bara %1$d vara till %2$d rätter. Det mesta till den här menyn behöver handlas.</item>
+        <item quantity="other">Bara %1$d varor till %2$d rätter. Det mesta till den här menyn behöver handlas.</item>
+    </plurals>
     <string name="recipe_menu_short_title">En meny kräver %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Du har %1$d kvar. Ett enskilt recept fungerar fortfarande.</item>
