@@ -858,13 +858,11 @@
     <string name="recipe_method">Preparación</string>
     <string name="recipe_in_pantry">En tu despensa</string>
     <string name="recipe_tip">Consejo</string>
-    <string name="recipe_source_phone">Escrita en este dispositivo · No se envió nada</string>
-    <string name="recipe_source_server">Escrita por nuestro servidor · Guardada en este dispositivo</string>
+    <string name="recipe_source_phone">No se envió nada</string>
     <string name="recipe_not_found">Esta receta ya no está guardada.</string>
     <string name="recipe_saved_today">Hoy</string>
     <string name="recipe_saved_yesterday">Ayer</string>
     <string name="recipe_saved_from_phone">Escrita en este dispositivo</string>
-    <string name="recipe_saved_from_pack">De tu paquete</string>
     <string name="recipe_saved_empty_title">Aún no hay recetas</string>
     <string name="recipe_saved_empty_body">Aquí se guardan las recetas y los menús escritos en la app.</string>
     <string name="recipe_deleted">Receta eliminada</string>

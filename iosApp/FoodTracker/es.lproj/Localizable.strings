@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Consejo";
 "recipe_in_your_pantry" = "En tu despensa";
 "recipe_share_recipe" = "Compartir receta";
-"recipe_source_device" = "Escrita en este {device} · No se envió nada";
-"recipe_source_server" = "Escrita por nuestro servidor · Guardada en este {device}";
+"recipe_source_device" = "No se envió nada";
 "recipe_saved_empty_title" = "Aún no hay recetas";
 "recipe_saved_empty_message" = "Aquí se guardan las recetas y los menús escritos en la app.";
 "recipe_saved_deleted" = "Receta eliminada";
 "recipe_saved_today" = "Hoy";
 "recipe_saved_yesterday" = "Ayer";
 "recipe_saved_from_phone" = "Escrita en este {device}";
-"recipe_saved_from_pack" = "De tu paquete";
 "recipe_settings_cooking" = "Cocina";
 "recipe_settings_cooking_desc" = "Se usan en cada receta, prompt y menú hasta que los cambies.";
 "recipe_label_detail" = "Detalle";

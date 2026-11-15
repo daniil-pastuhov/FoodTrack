@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Tips";
 "recipe_in_your_pantry" = "I matskapet";
 "recipe_share_recipe" = "Del oppskriften";
-"recipe_source_device" = "Laget på denne {the_device} · Ingenting ble sendt";
-"recipe_source_server" = "Laget av serveren vår · Lagret på denne {the_device}";
+"recipe_source_device" = "Ingenting ble sendt";
 "recipe_saved_empty_title" = "Ingen oppskrifter ennå";
 "recipe_saved_empty_message" = "Oppskrifter og menyer laget i appen lagres her.";
 "recipe_saved_deleted" = "Oppskriften er slettet";
 "recipe_saved_today" = "I dag";
 "recipe_saved_yesterday" = "I går";
 "recipe_saved_from_phone" = "Laget på denne {the_device}";
-"recipe_saved_from_pack" = "Fra pakken din";
 "recipe_settings_cooking" = "Matlaging";
 "recipe_settings_cooking_desc" = "Brukes for hver oppskrift, ledetekst og meny til du endrer dem.";
 "recipe_label_detail" = "Detaljnivå";

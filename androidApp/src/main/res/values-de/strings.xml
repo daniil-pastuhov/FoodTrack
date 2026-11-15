@@ -819,13 +819,11 @@
     <string name="recipe_method">Zubereitung</string>
     <string name="recipe_in_pantry">Im Vorrat</string>
     <string name="recipe_tip">Tipp</string>
-    <string name="recipe_source_phone">Auf diesem Gerät erstellt · Es wurde nichts gesendet</string>
-    <string name="recipe_source_server">Von unserem Server erstellt · Auf diesem Gerät gespeichert</string>
+    <string name="recipe_source_phone">Es wurde nichts gesendet</string>
     <string name="recipe_not_found">Dieses Rezept ist nicht mehr gespeichert.</string>
     <string name="recipe_saved_today">Heute</string>
     <string name="recipe_saved_yesterday">Gestern</string>
     <string name="recipe_saved_from_phone">Auf diesem Gerät erstellt</string>
-    <string name="recipe_saved_from_pack">Aus deinem Paket</string>
     <string name="recipe_saved_empty_title">Noch keine Rezepte</string>
     <string name="recipe_saved_empty_body">Rezepte und Menüs, die in der App erstellt werden, findest du hier.</string>
     <string name="recipe_deleted">Rezept gelöscht</string>

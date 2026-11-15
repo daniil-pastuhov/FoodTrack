@@ -120,7 +120,7 @@ Screenshots" → iPhone → drag `preview.mp4` in (or the Media Manager), then E
 pick the frame `poster.png` shows (4.6 s in: the scan card with the product and its date).
 Processing takes up to a day. Poster frames can't change after approval without a new preview.
 
-The disclosure: the menu shot shows a server-written menu ("Written by our server"), which needs
+The disclosure: the menu shot shows a server-written menu, which needs
 recipe packs, and Apple asks for that to be said in the footage or the end frame. So the last
 caption run carries a smaller second line in every language ("Needs a recipe pack", `PACK_NOTES`
 in `ios_preview_assemble.py`); the screenshots' captions don't, as they describe what the routes

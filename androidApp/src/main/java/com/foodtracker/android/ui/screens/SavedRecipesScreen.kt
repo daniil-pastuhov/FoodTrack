@@ -73,17 +73,15 @@ internal fun menuTitle(resources: Resources, menu: Menu): String = menuTitle(res
 
 internal fun menuTitle(resources: Resources, days: Int): String = resources.getQuantityString(R.plurals.recipe_menu_title, days, days)
 
-/** "15 min · Written on this phone", or "9 dishes · From your pack" for a menu, after the day;
- *  the day itself is formatted by the caller. */
+/** "15 min · Written on this device", or "9 dishes" for a menu, after the day; only the phone's
+ *  model's recipes say where they were written. The day itself is formatted by the caller. */
 internal fun savedRecipeDetails(resources: Resources, saved: SavedRecipe): List<String> = listOfNotNull(
     if (saved.kind == SavedRecipeKind.MENU) {
         resources.getQuantityString(R.plurals.recipe_saved_dishes, saved.dishCount, saved.dishCount)
     } else {
         saved.recipe?.minutes?.takeIf { it > 0 }?.let { recipeDurationLabel(resources, it) }
     },
-    resources.getString(
-        if (saved.source == RecipeSource.DEVICE) R.string.recipe_saved_from_phone else R.string.recipe_saved_from_pack
-    )
+    resources.getString(R.string.recipe_saved_from_phone).takeIf { saved.source == RecipeSource.DEVICE }
 )
 
 /** Everything written in the app, newest first, on this phone only. Swipe a row left to delete

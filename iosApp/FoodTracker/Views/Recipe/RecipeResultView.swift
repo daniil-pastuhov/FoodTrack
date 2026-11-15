@@ -114,14 +114,18 @@ struct RecipeDocument: View {
                         .padding(.top, LarderSpace.s4)
                 }
 
-                HStack(alignment: .top, spacing: LarderSpace.s2) {
-                    LarderIcon(recipe.source == .device ? .smartphone : .cloud, size: .custom(16))
-                    Text(footer ?? L10n.recipeSource(recipe.source))
-                        .larderFont(.caption)
-                        .fixedSize(horizontal: false, vertical: true)
+                // A dish says which menu it is part of; a recipe from the phone's model, under its
+                // chip, that nothing was sent. A server-written recipe has no source line.
+                if let line = footer ?? (recipe.source == .device ? L10n.recipeSourceDevice : nil) {
+                    HStack(alignment: .top, spacing: LarderSpace.s2) {
+                        LarderIcon(footer == nil ? .smartphone : .utensils, size: .custom(16))
+                        Text(line)
+                            .larderFont(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .padding(.top, LarderSpace.s6)
                 }
-                .foregroundStyle(LarderColor.onSurfaceVariant)
-                .padding(.top, LarderSpace.s6)
             }
             .padding(.horizontal, LarderSpace.s4)
             .padding(.top, LarderSpace.s2)
@@ -137,7 +141,7 @@ struct RecipeDocument: View {
             if recipe.servings > 0 { fact(.users, L10n.recipeServings(recipe.servings)) }
             fact(.gauge, L10n.recipeDifficultyName(recipe.difficulty))
             // Never mistaken for one from our server: the phone's model is the weaker writer.
-            if recipe.source == .device, footer == nil { fact(.smartphone, L10n.recipeSavedOrigin(.device)) }
+            if recipe.source == .device, footer == nil { fact(.smartphone, L10n.recipeSavedFromPhone) }
         }
     }
 

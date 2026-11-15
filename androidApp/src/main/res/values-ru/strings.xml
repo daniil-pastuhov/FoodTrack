@@ -893,13 +893,11 @@
     <string name="recipe_method">Приготовление</string>
     <string name="recipe_in_pantry">Есть дома</string>
     <string name="recipe_tip">Совет</string>
-    <string name="recipe_source_phone">Составлено на этом устройстве · Ничего не отправлялось</string>
-    <string name="recipe_source_server">Составлено нашим сервером · Сохранено на этом устройстве</string>
+    <string name="recipe_source_phone">Ничего не отправлялось</string>
     <string name="recipe_not_found">Этот рецепт больше не сохранён.</string>
     <string name="recipe_saved_today">Сегодня</string>
     <string name="recipe_saved_yesterday">Вчера</string>
     <string name="recipe_saved_from_phone">Составлено на этом устройстве</string>
-    <string name="recipe_saved_from_pack">Из вашего пакета</string>
     <string name="recipe_saved_empty_title">Пока нет рецептов</string>
     <string name="recipe_saved_empty_body">Здесь хранятся рецепты и меню, составленные в приложении.</string>
     <string name="recipe_deleted">Рецепт удалён</string>

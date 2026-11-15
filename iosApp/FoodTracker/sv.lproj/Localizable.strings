@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Tips";
 "recipe_in_your_pantry" = "I ditt skafferi";
 "recipe_share_recipe" = "Dela recept";
-"recipe_source_device" = "Skrivet på din {device} · Inget skickades någonstans";
-"recipe_source_server" = "Skrivet av vår server · Sparat på din {device}";
+"recipe_source_device" = "Inget skickades någonstans";
 "recipe_saved_empty_title" = "Inga recept än";
 "recipe_saved_empty_message" = "Recept och menyer som skrivs i appen sparas här.";
 "recipe_saved_deleted" = "Receptet raderades";
 "recipe_saved_today" = "I dag";
 "recipe_saved_yesterday" = "I går";
 "recipe_saved_from_phone" = "Skrivet på din {device}";
-"recipe_saved_from_pack" = "Från ditt paket";
 "recipe_settings_cooking" = "Matlagning";
 "recipe_settings_cooking_desc" = "Används för alla recept, promptar och menyer tills du ändrar dem.";
 "recipe_label_detail" = "Detaljnivå";

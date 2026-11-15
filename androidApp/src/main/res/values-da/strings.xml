@@ -820,13 +820,11 @@
     <string name="recipe_method">Fremgangsmåde</string>
     <string name="recipe_in_pantry">I dit forråd</string>
     <string name="recipe_tip">Tip</string>
-    <string name="recipe_source_phone">Skrevet på denne enhed · Intet blev sendt nogen steder hen</string>
-    <string name="recipe_source_server">Skrevet af vores server · Gemt på denne enhed</string>
+    <string name="recipe_source_phone">Intet blev sendt nogen steder hen</string>
     <string name="recipe_not_found">Opskriften er ikke længere gemt.</string>
     <string name="recipe_saved_today">I dag</string>
     <string name="recipe_saved_yesterday">I går</string>
     <string name="recipe_saved_from_phone">Skrevet på denne enhed</string>
-    <string name="recipe_saved_from_pack">Fra din pakke</string>
     <string name="recipe_saved_empty_title">Ingen opskrifter endnu</string>
     <string name="recipe_saved_empty_body">Opskrifter og menuer, der er skrevet i appen, gemmes her.</string>
     <string name="recipe_deleted">Opskriften er slettet</string>

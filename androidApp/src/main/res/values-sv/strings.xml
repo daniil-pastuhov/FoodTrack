@@ -819,13 +819,11 @@
     <string name="recipe_method">Gör så här</string>
     <string name="recipe_in_pantry">I ditt skafferi</string>
     <string name="recipe_tip">Tips</string>
-    <string name="recipe_source_phone">Skrivet på den här enheten · Inget skickades någonstans</string>
-    <string name="recipe_source_server">Skrivet av vår server · Sparat på den här enheten</string>
+    <string name="recipe_source_phone">Inget skickades någonstans</string>
     <string name="recipe_not_found">Receptet är inte längre sparat.</string>
     <string name="recipe_saved_today">I dag</string>
     <string name="recipe_saved_yesterday">I går</string>
     <string name="recipe_saved_from_phone">Skrivet på den här enheten</string>
-    <string name="recipe_saved_from_pack">Från ditt paket</string>
     <string name="recipe_saved_empty_title">Inga recept än</string>
     <string name="recipe_saved_empty_body">Recept och menyer som skrivs i appen sparas här.</string>
     <string name="recipe_deleted">Receptet raderades</string>

@@ -172,12 +172,9 @@ extension L10n {
     static var recipeTipTitle: String { text("recipe_tip_title") }
     static var recipeInYourPantry: String { text("recipe_in_your_pantry") }
     static var recipeShareRecipe: String { text("recipe_share_recipe") }
-    static func recipeSource(_ source: RecipeSource) -> String {
-        switch source {
-        case .device: return text("recipe_source_device")
-        case .server: return text("recipe_source_server")
-        }
-    }
+    /// The footer of a recipe from the phone's model, under its chip: "Nothing was sent anywhere".
+    /// A server-written recipe has none.
+    static var recipeSourceDevice: String { text("recipe_source_device") }
 
     // Saved recipes
     static var recipeSavedEmptyTitle: String { text("recipe_saved_empty_title") }
@@ -185,12 +182,9 @@ extension L10n {
     static var recipeSavedDeleted: String { text("recipe_saved_deleted") }
     static var recipeSavedToday: String { text("recipe_saved_today") }
     static var recipeSavedYesterday: String { text("recipe_saved_yesterday") }
-    static func recipeSavedOrigin(_ source: RecipeSource) -> String {
-        switch source {
-        case .device: return text("recipe_saved_from_phone")
-        case .server: return text("recipe_saved_from_pack")
-        }
-    }
+    /// "Written on this iPhone": the label of a recipe from the phone's model (its chip, and its
+    /// Saved row). Server-written ones carry no source label.
+    static var recipeSavedFromPhone: String { text("recipe_saved_from_phone") }
 
     // Recipe settings
     static var recipeSettingsCooking: String { text("recipe_settings_cooking") }

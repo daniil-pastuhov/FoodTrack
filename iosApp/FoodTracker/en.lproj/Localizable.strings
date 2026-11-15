@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Tip";
 "recipe_in_your_pantry" = "In your pantry";
 "recipe_share_recipe" = "Share recipe";
-"recipe_source_device" = "Written on this {device} · Nothing was sent anywhere";
-"recipe_source_server" = "Written by our server · Saved on this {device}";
+"recipe_source_device" = "Nothing was sent anywhere";
 "recipe_saved_empty_title" = "No recipes yet";
 "recipe_saved_empty_message" = "Recipes and menus written in the app are kept here.";
 "recipe_saved_deleted" = "Recipe deleted";
 "recipe_saved_today" = "Today";
 "recipe_saved_yesterday" = "Yesterday";
 "recipe_saved_from_phone" = "Written on this {device}";
-"recipe_saved_from_pack" = "From your pack";
 "recipe_settings_cooking" = "Cooking";
 "recipe_settings_cooking_desc" = "Used for every recipe, prompt and menu until you change them.";
 "recipe_label_detail" = "Detail";
