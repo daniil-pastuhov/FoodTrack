@@ -71,8 +71,12 @@ struct LarderButton: View {
         } label: {
             HStack(spacing: LarderSpace.s2) {
                 if let icon { LarderIcon(icon) }
-                Text(title).larderFont(.label)
+                // Centred when a label too long for the whole width wraps between its words.
+                Text(title).larderFont(.label).multilineTextAlignment(.center)
             }
+            // Clear of the capsule's curve when the text is large; inside the minimum height
+            // at the usual sizes, so those keep their height.
+            .padding(.vertical, LarderSpace.s2)
             // Hidden rather than removed, so loading keeps the button's width.
             .opacity(isLoading ? 0 : 1)
             .frame(maxWidth: fullWidth ? .infinity : nil)

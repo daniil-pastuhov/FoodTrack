@@ -9,7 +9,8 @@ struct ProductDetailActions {
 }
 
 /// The product detail route: a sheet on phones, the right-hand pane on expanded Home. The actions
-/// stay put while the content scrolls, because long ingredients are never cut short.
+/// stay put while the content scrolls, because long ingredients are never cut short; at the
+/// accessibility text sizes they scroll with it instead, where pinned they would fill the sheet.
 struct PantryProductDetail: View {
     let item: PantryItem
     let categoryName: String?
@@ -21,7 +22,10 @@ struct PantryProductDetail: View {
     /// Nil in the pane, which has no close button.
     var onClose: (() -> Void)? = nil
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     private var isPane: Bool { onClose == nil }
+    private var actionsScroll: Bool { dynamicTypeSize.isAccessibilitySize }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -46,15 +50,20 @@ struct PantryProductDetail: View {
                                 .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                         }
                     }
+                    if actionsScroll {
+                        buttons.padding(.top, LarderSpace.s2)
+                    }
                 }
                 .padding(LarderSpace.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            LarderDivider()
-            buttons
-                .padding(.horizontal, LarderSpace.s4)
-                .padding(.top, LarderSpace.s3)
-                .padding(.bottom, isPane ? 0 : LarderSpace.s4)
+            if !actionsScroll {
+                LarderDivider()
+                buttons
+                    .padding(.horizontal, LarderSpace.s4)
+                    .padding(.top, LarderSpace.s3)
+                    .padding(.bottom, isPane ? 0 : LarderSpace.s4)
+            }
         }
     }
 
@@ -134,70 +143,115 @@ struct PantryProductDetail: View {
         }
     }
 
-    /// Use one leads, and each pair stacks when its labels run long, as Russian ones do.
+    /// The icons go at the three largest text sizes, where one beside a label leaves a long word
+    /// (Russian "Использовать") too little room to stay whole.
+    private func icon(_ name: LarderIconName) -> LarderIconName? {
+        dynamicTypeSize >= .accessibility3 ? nil : name
+    }
+
+    /// Use one leads, the one filled button; Delete stays a quiet text button below the rest.
     private var buttons: some View {
         VStack(spacing: LarderSpace.s2) {
-            ButtonPair {
-                LarderButton(L10n.useOneButton, icon: .circleMinus, fullWidth: true, action: actions.useOne)
-                LarderButton(L10n.detailEdit, icon: .pencil, variant: .outline, action: actions.edit)
-            }
-            ButtonPair {
+            DetailActionRows {
+                LarderButton(L10n.useOneButton, icon: icon(.circleMinus), fullWidth: true, action: actions.useOne)
+                LarderButton(
+                    L10n.detailEdit,
+                    icon: icon(.pencil),
+                    variant: .outline,
+                    fullWidth: true,
+                    action: actions.edit
+                )
                 LarderButton(
                     L10n.detailToShoppingList,
-                    icon: .shoppingBasket,
+                    icon: icon(.shoppingBasket),
                     variant: .outline,
                     fullWidth: true,
                     action: actions.moveToShoppingList
                 )
-                LarderButton(L10n.swipeDelete, icon: .trash2, variant: .dangerText, action: actions.delete)
             }
+            LarderButton(L10n.swipeDelete, icon: icon(.trash2), variant: .dangerText, action: actions.delete)
         }
     }
 }
 
-/// Two buttons side by side, the first taking the spare width, or stacked when they don't fit.
-/// Never wider than it is offered: `ViewThatFits` reported more when neither option fitted, which
-/// widened the whole sheet.
-private struct ButtonPair: Layout {
+/// Use one, Edit and To shopping list, laid out so that no label wraps inside a word or is cut
+/// short: one row when all three fit at their natural width (Use one taking the spare width);
+/// otherwise Use one alone above Edit and To shopping list sharing a row (equal halves when both
+/// fit in one); otherwise Use one and Edit above To shopping list; otherwise one per row, where
+/// a label still too long for the whole width (the largest text sizes) wraps between its words. A shared row only ever gets labels that fit on
+/// one line. Never wider than it is offered: `ViewThatFits` reported more when no option fitted,
+/// which widened the whole sheet.
+private struct DetailActionRows: Layout {
     private let gap = LarderSpace.s2
 
-    private func arrangement(_ subviews: Subviews, width: CGFloat) -> (stacked: Bool, sizes: [CGSize]) {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        return (sizes.map(\.width).reduce(gap, +) > width, sizes)
+    private func frames(_ subviews: Subviews, width proposed: CGFloat?) -> [CGRect] {
+        guard subviews.count == 3 else { return [] }
+        let natural = subviews.map { $0.sizeThatFits(.unspecified) }
+        let widths = natural.map(\.width)
+        let width = proposed ?? (widths.reduce(0, +) + 2 * gap)
+        func height(_ index: Int, _ itsWidth: CGFloat) -> CGFloat {
+            subviews[index].sizeThatFits(ProposedViewSize(width: itsWidth, height: nil)).height
+        }
+
+        if widths.reduce(0, +) + 2 * gap <= width {
+            let lead = width - widths[1] - widths[2] - 2 * gap
+            let rowHeight = natural.map(\.height).max() ?? 0
+            return [
+                CGRect(x: 0, y: 0, width: lead, height: rowHeight),
+                CGRect(x: lead + gap, y: 0, width: widths[1], height: rowHeight),
+                CGRect(x: lead + gap + widths[1] + gap, y: 0, width: widths[2], height: rowHeight)
+            ]
+        }
+
+        let leadHeight = height(0, width)
+        let pairSpare = width - widths[1] - widths[2] - gap
+        if widths[0] <= width, pairSpare >= 0 {
+            let half = (width - gap) / 2
+            let pair: (CGFloat, CGFloat) = max(widths[1], widths[2]) <= half
+                ? (half, half)
+                : (widths[1] + pairSpare / 2, widths[2] + pairSpare / 2)
+            let y = leadHeight + gap
+            let rowHeight = max(height(1, pair.0), height(2, pair.1))
+            return [
+                CGRect(x: 0, y: 0, width: width, height: leadHeight),
+                CGRect(x: 0, y: y, width: pair.0, height: rowHeight),
+                CGRect(x: pair.0 + gap, y: y, width: pair.1, height: rowHeight)
+            ]
+        }
+
+        // The pair is too wide for one row, but Use one and Edit fit together: two rows rather
+        // than three, which a small phone needs to keep some of the sheet in view.
+        if widths[0] + widths[1] + gap <= width, widths[2] <= width {
+            let lead = width - widths[1] - gap
+            let rowHeight = max(natural[0].height, natural[1].height)
+            return [
+                CGRect(x: 0, y: 0, width: lead, height: rowHeight),
+                CGRect(x: lead + gap, y: 0, width: widths[1], height: rowHeight),
+                CGRect(x: 0, y: rowHeight + gap, width: width, height: height(2, width))
+            ]
+        }
+
+        var y: CGFloat = 0
+        return (0..<3).map { index in
+            let rowHeight = index == 0 ? leadHeight : height(index, width)
+            defer { y += rowHeight + gap }
+            return CGRect(x: 0, y: y, width: width, height: rowHeight)
+        }
     }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let (stacked, sizes) = arrangement(subviews, width: proposal.width ?? .infinity)
-        let width = proposal.width ?? sizes.map(\.width).reduce(gap, +)
-        let heights = sizes.map(\.height)
+        let frames = frames(subviews, width: proposal.width)
         return CGSize(
-            width: width,
-            height: stacked ? heights.reduce(gap, +) : heights.max() ?? 0
+            width: proposal.width ?? frames.map(\.maxX).max() ?? 0,
+            height: frames.map(\.maxY).max() ?? 0
         )
     }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        guard subviews.count == 2 else { return }
-        let (stacked, sizes) = arrangement(subviews, width: bounds.width)
-        if stacked {
-            subviews[0].place(
-                at: bounds.origin,
-                proposal: ProposedViewSize(width: bounds.width, height: sizes[0].height)
-            )
-            subviews[1].place(
-                at: CGPoint(x: bounds.midX, y: bounds.minY + sizes[0].height + gap),
-                anchor: .top,
-                proposal: ProposedViewSize(sizes[1])
-            )
-        } else {
-            subviews[0].place(
-                at: bounds.origin,
-                proposal: ProposedViewSize(width: bounds.width - sizes[1].width - gap, height: sizes[0].height)
-            )
-            subviews[1].place(
-                at: CGPoint(x: bounds.maxX, y: bounds.minY),
-                anchor: .topTrailing,
-                proposal: ProposedViewSize(sizes[1])
+        for (subview, frame) in zip(subviews, frames(subviews, width: bounds.width)) {
+            subview.place(
+                at: CGPoint(x: bounds.minX + frame.minX, y: bounds.minY + frame.minY),
+                proposal: ProposedViewSize(width: frame.width, height: frame.height)
             )
         }
     }
