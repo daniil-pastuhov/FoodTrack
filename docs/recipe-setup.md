@@ -253,10 +253,11 @@ binding exist on the live project (created and read back 2026-11-14).
       "Worst-case daily bill").
 - To follow estimated model spend and pack sales: `cd functions && npm run admin -- board
       --project bestbefore-f9ee1` (read-only, writes a local HTML board; functions/README.md, "The board").
-- [ ] Always-on board: create the private bucket `bestbefore-f9ee1-owner-board`, the
-      `ownerBoardWriter` role and the two bucket bindings, deploy `redrawBoard`, open
-      <https://storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html>
-      (functions/README.md, "The board", "Always on", has the commands in order).
+- [x] (Done 2026-11-15: bucket `bestbefore-f9ee1-owner-board` with public access prevention and
+      uniform access, the `ownerBoardWriter` role, both bucket bindings, `redrawBoard` deployed;
+      first redraw at 13:08 UTC, the page opens for the owner and an anonymous read answers 403.)
+      Always-on board at <https://storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html>
+      (functions/README.md, "The board", "Always on").
 - [x] (Done 2026-11-15: a fifth policy, "Recipe: owner board", same email channel and one email
       an hour at most.) Log-based alert on `board_redraw_failed` and `board_bucket_public`. It
       does not notice a redraw that silently stops running; the board's own "Updated" line does.
