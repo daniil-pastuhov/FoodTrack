@@ -549,7 +549,9 @@ extension RootTabView {
                     claimed: arguments.bool(forKey: "demoWelcomeClaimed"),
                     claiming: arguments.bool(forKey: "demoWelcomeClaiming"),
                     outcome: arguments.string(forKey: "demoWelcomeOutcome"),
-                    showOutcome: arguments.bool(forKey: "demoWelcomeShowOutcome")
+                    showOutcome: arguments.bool(forKey: "demoWelcomeShowOutcome"),
+                    // `-demoWelcomeOutcomeDelay <s>`: when it is delivered (1.5 s by default).
+                    outcomeDelay: arguments.object(forKey: "demoWelcomeOutcomeDelay") == nil ? 1.5 : arguments.double(forKey: "demoWelcomeOutcomeDelay")
                 )
             }
         }

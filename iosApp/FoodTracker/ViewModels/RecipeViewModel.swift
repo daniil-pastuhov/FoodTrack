@@ -644,6 +644,11 @@ final class RecipeViewModel: ObservableObject {
         afterSheetCloses { $0.takeWelcomeOffer() }
     }
 
+    /// The "already had them" dialog, once a closing sheet has gone.
+    func showWelcomeAlreadyAfterSheet() {
+        afterSheetCloses { $0.credits.welcomeAlready = true }
+    }
+
     /// "See recipe packs" from the "already had them" dialog.
     func welcomeToPacks() {
         credits.welcomeAlready = false

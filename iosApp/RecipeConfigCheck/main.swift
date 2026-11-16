@@ -637,10 +637,14 @@ expect(String(decoding: try! JSONEncoder().encode(RecipeConfig()), as: UTF8.self
 // Free recipes for signing in (WelcomeRecipes), as Android's WelcomeRecipesTest.
 let wNow = Date(timeIntervalSince1970: 1_800_000_000)
 func wAnswer(_ n: Int, ageHours: Double) -> WelcomeOfferAnswer { WelcomeOfferAnswer(recipes: n, receivedAt: wNow.addingTimeInterval(-ageHours * 3600)) }
+func wSituation(_ account: WelcomeAccount = .none, offer: Int? = 3, accountRecipes: Int? = nil, claimed: Bool = false,
+                paid: Bool = true, packs: Bool = true, paused: Bool = false, blocked: Bool = false) -> WelcomeSituation {
+    WelcomeSituation(paidRouteAvailable: paid, packsOffered: packs, buyingPaused: paused, purchasesBlocked: blocked,
+                     account: account, claimed: claimed, offer: offer, accountRecipes: accountRecipes)
+}
 func wSit(_ account: WelcomeAccount = .none, offer: Int? = 3, accountRecipes: Int? = nil, claimed: Bool = false,
-          paid: Bool = true, paused: Bool = false, blocked: Bool = false) -> WelcomeHint? {
-    WelcomeRecipes.hint(WelcomeSituation(paidRouteAvailable: paid, buyingPaused: paused, purchasesBlocked: blocked,
-                                         account: account, claimed: claimed, offer: offer, accountRecipes: accountRecipes))
+          paid: Bool = true, packs: Bool = true, paused: Bool = false, blocked: Bool = false) -> WelcomeHint? {
+    WelcomeRecipes.hint(wSituation(account, offer: offer, accountRecipes: accountRecipes, claimed: claimed, paid: paid, packs: packs, paused: paused, blocked: blocked))
 }
 // The cached answer and its age.
 expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: 1), now: wNow), 3, "an answer from an hour ago is shown at once")
@@ -649,16 +653,38 @@ expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: 24), now: wNow), nil, "a day ol
 expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: -2), now: wNow), nil, "from the future (clock change): none")
 expect(WelcomeRecipes.fresh(nil, now: wNow), nil, "no answer yet: none")
 // Refreshing: on showing the tab at most every 15 minutes, always before the sign-in sheet.
-expect(WelcomeRecipes.shouldAsk(lastAsked: nil, now: wNow, beforeSignIn: false), true, "never asked: ask")
-expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(-14 * 60), now: wNow, beforeSignIn: false), false, "asked 14 minutes ago: not yet")
-expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(-15 * 60), now: wNow, beforeSignIn: false), true, "15 minutes: ask again")
-expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(60), now: wNow, beforeSignIn: false), true, "asked in the future: ask")
-expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(-60), now: wNow, beforeSignIn: true), true, "before the sign-in sheet: always")
-expect(WelcomeRecipes.asks(paidRouteAvailable: false, account: .none, claimed: false), false, "an install that can't buy never asks")
-expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .none, claimed: false), true, "signed out: asks")
-expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .device, claimed: false), true, "recipes on this device: asks")
-expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .signedIn, claimed: false), true, "signed in, not claimed: asks")
-expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .signedIn, claimed: true), false, "claimed: never asks")
+func ask(_ lastAsked: Date?, _ answer: WelcomeOfferAnswer? = nil, at now: Date = wNow, before: Bool = false) -> Bool {
+    WelcomeRecipes.shouldAsk(lastAsked: lastAsked, answer: answer, now: now, beforeSignIn: before)
+}
+expect(ask(nil), true, "never asked, nothing answered: ask")
+expect(ask(wNow.addingTimeInterval(-14 * 60)), false, "asked 14 minutes ago: not yet")
+expect(ask(wNow.addingTimeInterval(-15 * 60)), true, "15 minutes: ask again")
+expect(ask(wNow.addingTimeInterval(-60), before: true), true, "before the sign-in sheet: always")
+expect(ask(nil, wAnswer(3, ageHours: 0.1)), false, "no ask recorded, answered 6 minutes ago: not yet")
+expect(ask(nil, wAnswer(3, ageHours: 0.3)), true, "no ask recorded, answered 18 minutes ago: ask")
+expect(ask(wNow.addingTimeInterval(-5 * 60), wAnswer(3, ageHours: 5)), false, "a cold start 5 minutes after a failed ask: no ask (the last ask counts, not the old answer)")
+// An answer dated in the future (a clock moved back after it): ignored, so it can't cause asks on every showing.
+expect(ask(nil, wAnswer(3, ageHours: -2)), true, "an answer from the future and no ask: ask once")
+expect(ask(wNow.addingTimeInterval(-60), wAnswer(3, ageHours: -2)), false, "then the ask's own time rules: not again for 15 minutes")
+// The clock moved back with failing calls: asked once, then the new ask's time takes over.
+let movedBack = wNow.addingTimeInterval(-3600)
+expect(ask(wNow, at: movedBack), true, "last ask in the future (clock moved back): ask once")
+expect(ask(movedBack, at: movedBack.addingTimeInterval(60)), false, "that failed ask was recorded: waits")
+expect(ask(movedBack, at: movedBack.addingTimeInterval(15 * 60)), true, "15 minutes after it: ask again")
+expect(WelcomeRecipes.offerAskable(wSituation(paid: false)), false, "an install that can't buy never asks")
+expect(WelcomeRecipes.offerAskable(wSituation(packs: false)), false, "the store offered no packs (restricted, unreachable, none sold): never asks")
+expect(WelcomeRecipes.offerAskable(wSituation(paused: true)), false, "paused: doesn't ask")
+expect(WelcomeRecipes.offerAskable(wSituation(.none)), true, "signed out: asks")
+expect(WelcomeRecipes.offerAskable(wSituation(.device)), true, "recipes on this device: asks")
+expect(WelcomeRecipes.offerAskable(wSituation(.signedIn)), false, "signed in: never asks (the number comes beside the balance)")
+expect(wSit(packs: false), nil, "no packs offered by the store: no hint")
+expect(wSit(.device, offer: 0, accountRecipes: 3), nil, "recipes on this device: the account's number never overrides the offer's 0")
+expect(wSit(.device, offer: 2, accountRecipes: 3), WelcomeHint(recipes: 2, needsSignIn: true), "recipes on this device: the offer's number")
+expect(wSit(.none, offer: nil, accountRecipes: 3), nil, "no account: only the offer counts")
+// The account's number is kept with its time: shown under a day old, then the day's offer stands in.
+expect(wSit(.signedIn, offer: 2, accountRecipes: WelcomeRecipes.fresh(wAnswer(3, ageHours: 23), now: wNow)), WelcomeHint(recipes: 3, needsSignIn: false), "the account's number from 23 hours ago")
+expect(wSit(.signedIn, offer: 2, accountRecipes: WelcomeRecipes.fresh(wAnswer(3, ageHours: 25), now: wNow)), WelcomeHint(recipes: 2, needsSignIn: false), "a day old: the cached offer stands in")
+expect(wSit(.signedIn, offer: nil, accountRecipes: WelcomeRecipes.fresh(wAnswer(3, ageHours: 25), now: wNow)), nil, "neither fresh: nothing")
 // Failures are silent: the last answer stays (until a day old); an old server reads as 0.
 let wCached = wAnswer(3, ageHours: 2)
 expect(WelcomeRecipes.answer(afterFailure: .offline, cached: wCached, now: wNow), wCached, "offline keeps the last answer")
@@ -706,11 +732,18 @@ expect(wClaim(#"{"status":"OFF","granted":0,"balance":0}"#), .off, "OFF")
 expect(wClaim(#"{"status":"LATER","balance":0}"#), .notReached, "an unknown status: not understood, Try again")
 expect(WelcomeRecipes.outcome(of: .offline), .notReached, "claim not reached: Try again")
 expect(WelcomeRecipes.outcome(of: .signInRequired), .notReached, "SIGN_IN_REQUIRED: nothing granted")
+expect(WelcomeRecipes.outcome(of: .callableMissing), .off, "an old server: OFF, no Try again")
+expect(WelcomeRecipes.outcome(of: .accountClosed), .notReached, "ACCOUNT_CLOSED: not reached")
 expect(RecipeServerError.from(code: "failed-precondition", reason: "SIGN_IN_REQUIRED"), .signInRequired, "SIGN_IN_REQUIRED read")
-expect(WelcomeRecipes.marksClaimed(.granted(3)), true, "GRANTED: never again")
-expect(WelcomeRecipes.marksClaimed(.already), true, "ALREADY: never again")
-expect(WelcomeRecipes.marksClaimed(.off), false, "OFF: may claim later")
-expect(WelcomeRecipes.marksClaimed(.notReached), false, "not reached: retry (idempotent)")
+expect(WelcomeRecipes.claimSettled(.granted(3)), true, "GRANTED: never again")
+expect(WelcomeRecipes.announces(.already, quiet: false), true, "ALREADY said after an ordinary sign-in")
+expect(WelcomeRecipes.announces(.granted(3), quiet: true), true, "beside a purchase: a grant is said")
+expect(WelcomeRecipes.announces(.already, quiet: true), false, "beside a purchase: ALREADY is not")
+expect(WelcomeRecipes.announces(.off, quiet: true), false, "beside a purchase: OFF is not")
+expect(WelcomeRecipes.announces(.notReached, quiet: true), false, "beside a purchase: not reached is not")
+expect(WelcomeRecipes.claimSettled(.already), true, "ALREADY: never again")
+expect(WelcomeRecipes.claimSettled(.off), false, "OFF: may claim later")
+expect(WelcomeRecipes.claimSettled(.notReached), false, "not reached: retry (idempotent)")
 // The menu line, from the costs table.
 let wSets = RecipeCosts(recipe: 1, menu2: 4, menu3: 5, menuSets: ["1": ["1": 1, "2": 2, "3": 3], "3": ["2": 4, "3": 5]])
 expect(WelcomeRecipes.menuCover(recipes: 3, balance: 0, menuCost: 3, costs: wSets, takesMenuDays: true), .enough, "3 cover a 1-day menu of 3 courses")

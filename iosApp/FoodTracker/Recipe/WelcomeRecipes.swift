@@ -72,8 +72,10 @@ enum WelcomeAccount: Equatable, Sendable {
 
 /// Everything the offer depends on, read from the paid route's state at one moment.
 struct WelcomeSituation: Equatable, Sendable {
-    /// The paid route can exist here (the same gate as buying: App Check, packs offered).
+    /// The paid route can exist here (App Check, `RecipeCredits.isPaidRouteAvailable`).
     var paidRouteAvailable: Bool
+    /// The store has actually offered packs: not unreachable, restricted, or selling none.
+    var packsOffered = true
     /// Recipes from packs are paused (`GENERATION_DISABLED`): no offer, as no Buy.
     var buyingPaused = false
     /// The account may not buy (`purchasesBlocked`): no offer, as no Buy.
@@ -83,8 +85,9 @@ struct WelcomeSituation: Equatable, Sendable {
     var claimed = false
     /// The last `getWelcomeOffer` answer if it is under a day old (`WelcomeRecipes.fresh`).
     var offer: Int?
-    /// `welcomeRecipes` from the last answer with a balance (0 from a server without
-    /// `acceptsWelcome`); nil until one came this run.
+    /// `welcomeRecipes` from the last answer with a balance for this account (0 from a server
+    /// without `acceptsWelcome`), if under a day old (`fresh`); nil otherwise. Read only when
+    /// signed in with Apple or Google.
     var accountRecipes: Int?
 }
 
@@ -152,19 +155,29 @@ enum WelcomeRecipes {
     }
 
     /// Whether this install asks `getWelcomeOffer` at all: only where the paid route can exist,
-    /// and only while signed out (no account, or recipes on this device) or signed in without
-    /// having claimed.
-    static func asks(paidRouteAvailable: Bool, account: WelcomeAccount, claimed: Bool) -> Bool {
-        guard paidRouteAvailable else { return false }
-        return account != .signedIn || !claimed
+    /// and only while signed out (no account, or recipes on this device). Signed in, the number
+    /// comes beside the balance with no extra call. Android: `welcomeOfferAskable`.
+    static func offerAskable(_ s: WelcomeSituation) -> Bool {
+        gate(s) && s.account != .signedIn
     }
 
-    /// Whether to ask now. When the tab is shown: never asked, or the last ask is 15 minutes old
-    /// (or in the future). Right before the sign-in sheet opens: always, so its number is current.
-    static func shouldAsk(lastAsked: Date?, now: Date, beforeSignIn: Bool) -> Bool {
+    /// Whether free recipes could be offered at all, whatever the number: where Buy would be (the
+    /// paid route, packs actually offered, not paused, not blocked). Android: `welcomeGate`.
+    static func gate(_ s: WelcomeSituation) -> Bool {
+        s.paidRouteAvailable && s.packsOffered && !s.buyingPaused && !s.purchasesBlocked
+    }
+
+    /// Whether to ask now. Right before the sign-in sheet opens: always, so its number is current.
+    /// When the tab is shown: when nothing was asked or answered in the last 15 minutes, measured
+    /// from the last ask (`lastAsked`, kept across launches and set on every ask, failed ones too,
+    /// so a failing server isn't asked on every showing or cold start); without one, from the
+    /// answer's time unless that lies in the future. A clock moved back before the last ask counts
+    /// as time passed once: that ask is made, and its own time takes over. Android:
+    /// `shouldAskWelcomeOffer`.
+    static func shouldAsk(lastAsked: Date?, answer: WelcomeOfferAnswer?, now: Date, beforeSignIn: Bool) -> Bool {
         if beforeSignIn { return true }
-        guard let lastAsked else { return true }
-        let since = now.timeIntervalSince(lastAsked)
+        guard let last = lastAsked ?? answer.map(\.receivedAt).flatMap({ $0 <= now ? $0 : nil }) else { return true }
+        let since = now.timeIntervalSince(last)
         return since < 0 || since >= refreshInterval
     }
 
@@ -179,9 +192,12 @@ enum WelcomeRecipes {
     /// (no paid route, paused, blocked), never to an account that has claimed. Signed in, the
     /// number beside the balance comes first; the day's answer stands in until one arrives.
     static func hint(_ s: WelcomeSituation) -> WelcomeHint? {
-        guard s.paidRouteAvailable, !s.buyingPaused, !s.purchasesBlocked else { return nil }
+        guard gate(s) else { return nil }
         if s.account == .signedIn, s.claimed { return nil }
-        guard let recipes = s.accountRecipes ?? s.offer, recipes > 0 else { return nil }
+        // The account's own number only for an Apple or Google sign-in; signed out (no account,
+        // or recipes on this device) the offer's answer is the only source.
+        let number = s.account == .signedIn ? (s.accountRecipes ?? s.offer) : s.offer
+        guard let recipes = number, recipes > 0 else { return nil }
         return WelcomeHint(recipes: recipes, needsSignIn: s.account != .signedIn)
     }
 
@@ -201,16 +217,28 @@ enum WelcomeRecipes {
         }
     }
 
-    /// A claim that failed. `SIGN_IN_REQUIRED` can't happen from a signed-in account; like every
-    /// other failure it leaves the offer as "Get 3 free recipes" with Try again.
-    static func outcome(of error: RecipeServerError) -> WelcomeClaimOutcome { .notReached }
+    /// A claim that failed. A server without `claimWelcome` (not-found / unimplemented) has no
+    /// grant: OFF, with no Try again, which could only spend a limited-use token for nothing.
+    /// Anything else (`SIGN_IN_REQUIRED` included, which a signed-in account can't get) leaves the
+    /// offer as "Get 3 free recipes" with Try again. Android: `welcomeOutcomeOf`.
+    static func outcome(of error: RecipeServerError) -> WelcomeClaimOutcome {
+        error == .callableMissing ? .off : .notReached
+    }
 
     /// After GRANTED or ALREADY the account is never offered (or claimed for) again on this phone.
-    static func marksClaimed(_ outcome: WelcomeClaimOutcome) -> Bool {
+    static func claimSettled(_ outcome: WelcomeClaimOutcome) -> Bool {
         switch outcome {
         case .granted, .already: return true
         case .off, .notReached: return false
         }
+    }
+
+    /// Whether an outcome is said. Always, except for a claim made beside the first purchase
+    /// (`quiet`), where only a grant is: no dialog over the store's payment sheet.
+    static func announces(_ outcome: WelcomeClaimOutcome, quiet: Bool) -> Bool {
+        guard quiet else { return true }
+        if case .granted = outcome { return true }
+        return false
     }
 
     /// `welcomeRecipes` as an answer with a balance gives it: the number from a server that says

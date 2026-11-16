@@ -136,7 +136,8 @@ struct RecipeView: View {
         // ALREADY: the person signed in for nothing, so it is said plainly, with the way on.
         .larderDialog(
             L10n.welcomeAlreadyTitle,
-            isPresented: Binding(get: { credits.welcomeAlready }, set: { credits.welcomeAlready = $0 }),
+            // The sign-in sheet shows its own while it is up.
+            isPresented: Binding(get: { credits.welcomeAlready && model.welcomeSheet == nil && !model.showsBuySheet }, set: { credits.welcomeAlready = $0 }),
             message: L10n.welcomeAlreadyMessage,
             actions: credits.canBuy
                 ? [.cancel(L10n.recipeClose), .init(L10n.recipeIntroPacksAction) { model.welcomeToPacks() }]

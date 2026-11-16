@@ -91,7 +91,13 @@ struct BuyRecipesSheet: View {
                             // Signed in: claims here; the sheet closes on the answer.
                             Task {
                                 await credits.claimWelcome()
-                                if credits.welcomeClaimedHere { onClose() }
+                                if credits.welcomeClaimedHere {
+                                    // ALREADY's dialog shows on the form once this sheet has gone.
+                                    let already = credits.welcomeAlready
+                                    credits.welcomeAlready = false
+                                    onClose()
+                                    if already { model.showWelcomeAlreadyAfterSheet() }
+                                }
                             }
                         }
                     }
@@ -239,7 +245,9 @@ private struct RecipePurchaseChoice: View {
                 title: L10n.recipeChoiceAccountTitle,
                 message: L10n.recipeChoiceAccountMessage(googleAvailable: GoogleSignInSupport.isConfigured)
             ) {
-                RecipeSignInButtons(credits: model.credits) { signedIn in
+                // A sign-in here claims the free recipes quietly while an offer shows: only a
+                // grant is said, never a dialog over the payment.
+                RecipeSignInButtons(credits: model.credits, quietClaim: true) { signedIn in
                     if signedIn {
                         model.credits.chosePurchaseLocation()
                         onChosen()
@@ -289,6 +297,10 @@ struct RecipeSignInButtons: View {
     var only: RecipeSignInProvider? = nil
     /// A cancelled sign-in says nothing (the free recipes' sheet stays as it was).
     var quietCancel = false
+    /// The first purchase's account choice: the free recipes' claim runs beside it, quietly.
+    var quietClaim = false
+    /// Whether a sign-in here claims (nil: while an offer shows).
+    var claims: Bool? = nil
     let onFinished: (Bool) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -302,7 +314,7 @@ struct RecipeSignInButtons: View {
                 } onCompletion: { result in
                     let request = appleRequest
                     Task {
-                        let signedIn = await credits.signIn(quietCancel: quietCancel) { try request.credential(from: result) }
+                        let signedIn = await credits.signIn(quietCancel: quietCancel, quietClaim: quietClaim, claims: claims) { try request.credential(from: result) }
                         onFinished(signedIn)
                     }
                 }
@@ -324,7 +336,7 @@ struct RecipeSignInButtons: View {
 
     private func signInWithGoogle() {
         Task {
-            let signedIn = await credits.signIn(quietCancel: quietCancel) { try await GoogleSignInSupport.signIn() }
+            let signedIn = await credits.signIn(quietCancel: quietCancel, quietClaim: quietClaim, claims: claims) { try await GoogleSignInSupport.signIn() }
             onFinished(signedIn)
         }
     }

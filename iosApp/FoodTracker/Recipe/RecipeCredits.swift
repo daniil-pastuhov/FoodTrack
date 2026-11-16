@@ -97,6 +97,23 @@ struct RecipeCreditsStorage {
         static let welcomeOffer = "com.foodtracker.recipe.welcome_offer"
         static let welcomeOfferAskedAt = "com.foodtracker.recipe.welcome_offer_asked_at"
         static let welcomeClaimed = "com.foodtracker.recipe.welcome_claimed"
+        static let welcomeAccount = "com.foodtracker.recipe.welcome_account"
+    }
+
+    private struct StoredWelcomeAccount: Codable {
+        var uid: String
+        var answer: WelcomeOfferAnswer
+    }
+
+    /// `welcomeRecipes` as the last answer with a balance gave it, with its time, for `uid` only
+    /// (`WelcomeRecipes.fresh` decides whether it still counts). Android: `welcomeAccount`.
+    func welcomeAccount(for uid: String) -> WelcomeOfferAnswer? {
+        guard let stored = decode(StoredWelcomeAccount.self, Key.welcomeAccount), stored.uid == uid else { return nil }
+        return stored.answer
+    }
+
+    func cacheWelcomeAccount(_ answer: WelcomeOfferAnswer, for uid: String) {
+        encode(StoredWelcomeAccount(uid: uid, answer: answer), Key.welcomeAccount)
     }
 
     /// The last answer of `getWelcomeOffer` and when it came (`WelcomeRecipes.fresh` decides
@@ -275,7 +292,13 @@ final class RecipeCredits: ObservableObject {
     /// The taste quiz's version as the last reply with a balance named it (`tasteQuizVersion`):
     /// when it isn't the cached one, the definition is fetched quietly (`RecipeViewModel`).
     @Published private(set) var serverTasteQuizVersion: String?
-    @Published private(set) var account: RecipeAccountState = .none
+    /// Whatever sets it (the Auth listener, sign-in, merge, `ensureUser`, sign-out, deletion), a new
+    /// uid reads its own stored `welcomeRecipes`, never the previous account's.
+    @Published private(set) var account: RecipeAccountState = .none {
+        didSet {
+            if account.uid != oldValue.uid { welcomeAccountAnswer = account.uid.flatMap(storage.welcomeAccount(for:)) }
+        }
+    }
     @Published private(set) var packs: RecipePacksState = .idle { didSet { if packs == .unreachable { Self.noteReviewProblem() } } }
     @Published private(set) var unconfirmed: [UnconfirmedPurchase] = []
     @Published private(set) var paymentPending = false
@@ -302,9 +325,9 @@ final class RecipeCredits: ObservableObject {
     @Published var pendingMerge: RecipePendingMerge?
     /// The last `getWelcomeOffer` answer, shown at once while under a day old.
     @Published private(set) var welcomeOffer: WelcomeOfferAnswer?
-    /// `welcomeRecipes` from this run's last answer with a balance, for the account signed in now;
-    /// nil until one came.
-    @Published private(set) var accountWelcomeRecipes: Int?
+    /// `welcomeRecipes` from the last answer with a balance for the account signed in now, with
+    /// its time (kept across runs, `RecipeCreditsStorage.welcomeAccount`); nil until one came.
+    @Published private(set) var welcomeAccountAnswer: WelcomeOfferAnswer?
     /// The accounts that claimed on this phone (`RecipeCreditsStorage.welcomeClaimed`).
     @Published private(set) var welcomeClaimed: Set<String>
     /// `claimWelcome` is on its way: "Getting your free recipes…" / "Adding your free recipes…".
@@ -313,7 +336,8 @@ final class RecipeCredits: ObservableObject {
     @Published var welcomeAlready = false
     /// A sign-in made while the offer showed, waiting on the merge question: claims once it ends.
     private var mergeClaimsWelcome = false
-    private var askingWelcomeOffer = false
+    /// The `getWelcomeOffer` request on its way, which the ask before the sign-in sheet awaits.
+    private var welcomeOfferTask: Task<Void, Never>?
     /// The account was deleted but the server said Apple's link stayed (`appleLinkRemoved:
     /// false`): a dialog says how to remove it, until dismissed.
     @Published var appleLinkLeft = false
@@ -448,7 +472,6 @@ final class RecipeCredits: ObservableObject {
         #endif
         let previous = account.uid
         account = RecipeAccount.state(of: user)
-        if account.uid != previous { accountWelcomeRecipes = nil }
         balance = account.uid.map { storage.cachedBalance(for: $0) ?? 0 }
         purchasesBlocked = account.uid.map { storage.cachedPurchasesBlocked(for: $0) } ?? false
         let uid = account.uid
@@ -513,9 +536,7 @@ final class RecipeCredits: ObservableObject {
         let welcome = WelcomeRecipes.accountRecipes(
             acceptsWelcome: response.acceptsWelcome?.value ?? false, welcomeRecipes: response.welcomeRecipes?.value
         )
-        if accountWelcomeRecipes != welcome {
-            withAnimation(Self.welcomeMotion) { accountWelcomeRecipes = welcome }
-        }
+        setWelcomeAccount(welcome)
     }
 
     /// Kept, and republished so the form's choices follow at once. Cleared too when a request
@@ -802,8 +823,12 @@ final class RecipeCredits: ObservableObject {
     /// (`WelcomeRecipes.afterSignIn`). `quietCancel`: a cancelled sign-in says nothing (the
     /// sign-in sheet of the offer); otherwise it is "Couldn't sign in", as before.
     @discardableResult
-    func signIn(quietCancel: Bool = false, _ obtain: () async throws -> RecipeSignInCredential) async -> Bool {
-        let offerShowing = welcomeHint?.needsSignIn == true
+    /// `quietClaim`: the first purchase's account choice; the claim runs beside the purchase and
+    /// only a grant is said.
+    /// `claims`: whether it claims, when the caller decides (the sign-in sheet, by the number it
+    /// opened with: a plain sheet never claims); nil: by the offer showing now.
+    func signIn(quietCancel: Bool = false, quietClaim: Bool = false, claims: Bool? = nil, _ obtain: () async throws -> RecipeSignInCredential) async -> Bool {
+        let offerShowing = claims ?? (welcomeHint?.needsSignIn == true)
         isSigningIn = true
         defer { isSigningIn = false }
         do {
@@ -824,7 +849,9 @@ final class RecipeCredits: ObservableObject {
                 callSucceeded()
                 registerAppleSignIn(credential.appleAuthorizationCode)
                 if offerShowing {
-                    await claimAfterSignIn()
+                    // On the purchase path (`quietClaim`) the claim finishes before the purchase
+                    // starts, so its balance can never land after the purchase's and hide it.
+                    await claimAfterSignIn(quiet: quietClaim, balanceKnown: linkBalance != nil || merged != nil)
                 } else if linkBalance == nil {
                     await refreshBalance()
                 }
@@ -862,7 +889,7 @@ final class RecipeCredits: ObservableObject {
             registerAppleSignIn(merge.appleAuthorizationCode)
             if mergeClaimsWelcome {
                 mergeClaimsWelcome = false
-                await claimAfterSignIn()
+                await claimAfterSignIn(balanceKnown: true)
             }
         } catch {
             mergeClaimsWelcome = false
@@ -907,17 +934,29 @@ final class RecipeCredits: ObservableObject {
     }
 
     /// The offer as it shows now, with the server's number; nil shows nothing anywhere.
-    var welcomeHint: WelcomeHint? {
-        WelcomeRecipes.hint(WelcomeSituation(
+    var welcomeHint: WelcomeHint? { WelcomeRecipes.hint(welcomeSituation) }
+
+    /// The store has actually offered packs (not unreachable, not restricted, not selling none).
+    private var packsOffered: Bool {
+        #if DEBUG
+        if demoMode { return true }
+        #endif
+        if case .loaded(let offered) = packs { return !offered.isEmpty }
+        return false
+    }
+
+    private var welcomeSituation: WelcomeSituation {
+        WelcomeSituation(
             paidRouteAvailable: isPaidRouteAvailable,
+            packsOffered: packsOffered,
             buyingPaused: serverPaused,
             // A build the server takes no App Store purchases from (STORE_MISMATCH) hides it too, as Buy.
             purchasesBlocked: purchasesBlocked || storeMismatch,
             account: welcomeAccount,
             claimed: welcomeClaimedHere,
             offer: WelcomeRecipes.fresh(welcomeOffer, now: Date()),
-            accountRecipes: account.uid == nil ? nil : accountWelcomeRecipes
-        ))
+            accountRecipes: WelcomeRecipes.fresh(welcomeAccountAnswer, now: Date())
+        )
     }
 
     /// Asks `getWelcomeOffer` when the Recipe tab is shown (at most every 15 minutes) and right
@@ -928,13 +967,23 @@ final class RecipeCredits: ObservableObject {
         #if DEBUG
         if demoMode { return }
         #endif
+        // One already on its way: the ask before the sign-in sheet waits for its answer (within
+        // the sheet's 4 s) rather than opening with an older number.
+        if let running = welcomeOfferTask {
+            if beforeSignIn { await running.value }
+            return
+        }
         let now = Date()
-        guard !askingWelcomeOffer,
-              WelcomeRecipes.asks(paidRouteAvailable: isPaidRouteAvailable, account: welcomeAccount, claimed: welcomeClaimedHere),
-              WelcomeRecipes.shouldAsk(lastAsked: storage.welcomeOfferAskedAt, now: now, beforeSignIn: beforeSignIn) else { return }
-        askingWelcomeOffer = true
-        defer { askingWelcomeOffer = false }
+        guard WelcomeRecipes.offerAskable(welcomeSituation),
+              WelcomeRecipes.shouldAsk(lastAsked: storage.welcomeOfferAskedAt, answer: welcomeOffer, now: now, beforeSignIn: beforeSignIn) else { return }
         storage.welcomeOfferAskedAt = now
+        let task = Task { await self.askWelcomeOffer() }
+        welcomeOfferTask = task
+        await task.value
+        welcomeOfferTask = nil
+    }
+
+    private func askWelcomeOffer() async {
         let answer: WelcomeOfferAnswer?
         do {
             let response = try await backend.welcomeOffer()
@@ -944,6 +993,23 @@ final class RecipeCredits: ObservableObject {
         }
         storage.welcomeOffer = answer
         setWelcomeOffer(answer)
+    }
+
+    /// The account's number from an answer with a balance, kept with its time for this uid; the
+    /// offer moves (animated) only when what it shows changes.
+    private func setWelcomeAccount(_ recipes: Int) {
+        guard let uid = account.uid else { return }
+        let answer = WelcomeOfferAnswer(recipes: recipes, receivedAt: Date())
+        #if DEBUG
+        if !demoMode { storage.cacheWelcomeAccount(answer, for: uid) }
+        #else
+        storage.cacheWelcomeAccount(answer, for: uid)
+        #endif
+        if WelcomeRecipes.fresh(welcomeAccountAnswer, now: Date()) == recipes {
+            welcomeAccountAnswer = answer
+        } else {
+            withAnimation(Self.welcomeMotion) { welcomeAccountAnswer = answer }
+        }
     }
 
     private func setWelcomeOffer(_ answer: WelcomeOfferAnswer?) {
@@ -960,56 +1026,70 @@ final class RecipeCredits: ObservableObject {
     /// After a sign-in made while the offer showed: claim once, or, for an account that claimed on
     /// this phone before, say so without calling (the contract never calls again after GRANTED or
     /// ALREADY).
-    private func claimAfterSignIn() async {
+    /// `balanceKnown`: the sign-in already applied a balance (a link's `getBalance`, a merge).
+    /// Otherwise, and whenever the claim brought none (not reached, an old server), the balance is
+    /// asked as after any sign-in, so an account's recipes show at once.
+    private func claimAfterSignIn(quiet: Bool = false, balanceKnown: Bool = false) async {
         guard let uid = account.uid else { return }
         switch WelcomeRecipes.afterSignIn(offerShowing: true, claimedHere: welcomeClaimed.contains(uid)) {
         case .claim:
-            await claimWelcome(justSignedIn: true)
+            let broughtBalance = await claimWelcome(justSignedIn: true, quiet: quiet)
+            if !broughtBalance && !balanceKnown { await refreshBalance() }
         case .alreadyClaimed:
-            welcomeAlready = true
-            await refreshBalance()
+            if !quiet { welcomeAlready = true }
+            if !balanceKnown { await refreshBalance() }
         case .nothing:
-            await refreshBalance()
+            if !balanceKnown { await refreshBalance() }
         }
     }
 
     /// `claimWelcome` for the account signed in now: "Get 3 free recipes" (one tap), Try again
     /// after a claim that didn't reach our server, and every sign-in made while the offer showed.
     /// Safe to repeat: the server grants once per Apple or Google account.
-    func claimWelcome(justSignedIn: Bool = false) async {
-        guard !isClaimingWelcome, case .signedIn(let uid, _, _) = account else { return }
+    /// `quiet`: a sign-in from the first purchase's account choice, while the store's payment
+    /// sheet follows: only a grant is said (no dialog over the payment), as on Android.
+    /// Returns whether its answer carried a balance (and so was applied).
+    @discardableResult
+    func claimWelcome(justSignedIn: Bool = false, quiet: Bool = false) async -> Bool {
+        guard !isClaimingWelcome, case .signedIn(let uid, _, _) = account else { return false }
         isClaimingWelcome = true
         defer { isClaimingWelcome = false }
         let outcome: WelcomeClaimOutcome
+        var broughtBalance = false
         #if DEBUG
         if demoMode {
             try? await Task.sleep(for: .seconds(1.5))
             applyDemoClaim()
-            finishClaim(demoClaimOutcome, uid: uid, justSignedIn: justSignedIn)
-            return
+            finishClaim(demoClaimOutcome, uid: uid, justSignedIn: justSignedIn, quiet: quiet)
+            return true
         }
         #endif
         do {
             let response = try await backend.claimWelcome()
             callSucceeded()
             apply(response)
+            broughtBalance = true
             outcome = WelcomeRecipes.outcome(of: response)
         } catch {
             note(error)
+            // A server without `claimWelcome`: no grant there.
+            if (error as? RecipeServerError) == .callableMissing { setWelcomeAccount(0) }
             outcome = WelcomeRecipes.outcome(of: error as? RecipeServerError ?? .server)
         }
-        finishClaim(outcome, uid: uid, justSignedIn: justSignedIn)
+        finishClaim(outcome, uid: uid, justSignedIn: justSignedIn, quiet: quiet)
+        return broughtBalance
     }
 
-    private func finishClaim(_ outcome: WelcomeClaimOutcome, uid: String, justSignedIn: Bool) {
-        if WelcomeRecipes.marksClaimed(outcome) {
+    private func finishClaim(_ outcome: WelcomeClaimOutcome, uid: String, justSignedIn: Bool, quiet: Bool = false) {
+        if WelcomeRecipes.claimSettled(outcome) {
             withAnimation(Self.welcomeMotion) { welcomeClaimed.insert(uid) }
             #if DEBUG
-            if demoMode { return showClaimOutcome(outcome, justSignedIn: justSignedIn) }
-            #endif
+            if !demoMode { storage.welcomeClaimed = welcomeClaimed }
+            #else
             storage.welcomeClaimed = welcomeClaimed
+            #endif
         }
-        showClaimOutcome(outcome, justSignedIn: justSignedIn)
+        if WelcomeRecipes.announces(outcome, quiet: quiet) { showClaimOutcome(outcome, justSignedIn: justSignedIn) }
     }
 
     private func showClaimOutcome(_ outcome: WelcomeClaimOutcome, justSignedIn: Bool) {
@@ -1072,7 +1152,7 @@ final class RecipeCredits: ObservableObject {
     /// YES`): a claim stays on its way. `outcome` (`-demoWelcomeOutcome granted|already|off|
     /// notReached`): what a claim answers, and, with `showOutcome`, delivered once 1.5 s after
     /// launch as if a sign-in's claim had just finished.
-    func showWelcomeDemo(offer: Int?, delay: Double, claimed: Bool, claiming: Bool, outcome: String?, showOutcome: Bool) {
+    func showWelcomeDemo(offer: Int?, delay: Double, claimed: Bool, claiming: Bool, outcome: String?, showOutcome: Bool, outcomeDelay: Double = 1.5) {
         let recipes = offer ?? 0
         switch outcome {
         case "already": demoClaimOutcome = .already
@@ -1085,7 +1165,7 @@ final class RecipeCredits: ObservableObject {
         let deliver = { [weak self] in
             guard let self, let offer else { return }
             self.welcomeOffer = WelcomeOfferAnswer(recipes: offer, receivedAt: Date())
-            if case .signedIn = self.account { self.accountWelcomeRecipes = offer }
+            if case .signedIn = self.account { self.welcomeAccountAnswer = WelcomeOfferAnswer(recipes: offer, receivedAt: Date()) }
         }
         if delay > 0 {
             Task { @MainActor in
@@ -1097,7 +1177,7 @@ final class RecipeCredits: ObservableObject {
         }
         if showOutcome {
             Task { @MainActor [weak self] in
-                try? await Task.sleep(for: .seconds(1.5))
+                try? await Task.sleep(for: .seconds(outcomeDelay))
                 guard let self else { return }
                 if self.account.uid == nil || self.account == .anonymous(uid: "demo") {
                     self.account = .signedIn(uid: "demo", providers: [.apple], email: "k7x2m9@privaterelay.appleid.com")
@@ -1113,7 +1193,7 @@ final class RecipeCredits: ObservableObject {
     private func applyDemoClaim() {
         switch demoClaimOutcome {
         case .granted(let count): balance = (balance ?? 0) + count
-        case .off: withAnimation(Self.welcomeMotion) { accountWelcomeRecipes = 0 }
+        case .off: withAnimation(Self.welcomeMotion) { welcomeAccountAnswer = WelcomeOfferAnswer(recipes: 0, receivedAt: Date()) }
         case .already, .notReached: break
         }
     }

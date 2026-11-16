@@ -172,12 +172,30 @@ struct WelcomeSignInSheet: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityAddTraits(.updatesFrequently)
                 } else {
-                    RecipeSignInButtons(credits: credits, quietCancel: true) { signedIn in
-                        if signedIn { onClose() }
+                    // Claims by the number the sheet opened with: a plain sign-in (0) never claims.
+                    RecipeSignInButtons(credits: credits, quietCancel: true, claims: recipes > 0) { signedIn in
+                        // ALREADY (from the server, or an account that claimed here before, with
+                        // no call): the dialog shows over this sheet, which closes with it.
+                        if signedIn && !credits.welcomeAlready { onClose() }
                     }
                 }
             }
             .padding(.top, LarderSpace.s2)
+            // Here rather than on the form, which can't present it while this sheet is up.
+            .larderDialog(
+                L10n.welcomeAlreadyTitle,
+                isPresented: Binding(get: { credits.welcomeAlready }, set: { credits.welcomeAlready = $0 }),
+                message: L10n.welcomeAlreadyMessage,
+                actions: credits.canBuy
+                    ? [
+                        .cancel(L10n.recipeClose) { onClose() },
+                        .init(L10n.recipeIntroPacksAction) {
+                            onClose()
+                            model.welcomeToPacks()
+                        },
+                    ]
+                    : [.cancel(L10n.recipeClose) { onClose() }]
+            )
             LarderButton(L10n.welcomeNotNow, variant: .text, fullWidth: true, action: onClose)
                 .disabled(credits.isClaimingWelcome)
         }
