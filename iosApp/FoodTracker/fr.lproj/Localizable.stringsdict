@@ -1350,5 +1350,259 @@
         </dict>
     </dict>
     <!-- /Taste profile -->
+    <!-- Free recipes for signing in: copied from Android's strings.xml -->
+    <key>welcome_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Connectez-vous et recevez %d recette gratuite</string>
+            <key>many</key>
+            <string>Connectez-vous et recevez %d recettes gratuites</string>
+            <key>other</key>
+            <string>Connectez-vous et recevez %d recettes gratuites</string>
+        </dict>
+    </dict>
+    <key>welcome_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Recevoir %d recette gratuite</string>
+            <key>many</key>
+            <string>Recevoir %d recettes gratuites</string>
+            <key>other</key>
+            <string>Recevoir %d recettes gratuites</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_enough</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d recette gratuite suffit pour ce menu.</string>
+            <key>many</key>
+            <string>%d recettes gratuites suffisent pour ce menu.</string>
+            <key>other</key>
+            <string>%d recettes gratuites suffisent pour ce menu.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_smaller</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d recette gratuite suffit pour une recette seule ou un menu plus petit, pas pour celui-ci.</string>
+            <key>many</key>
+            <string>%d recettes gratuites suffisent pour des recettes seules ou un menu plus petit, pas pour celui-ci.</string>
+            <key>other</key>
+            <string>%d recettes gratuites suffisent pour des recettes seules ou un menu plus petit, pas pour celui-ci.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_single</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d recette gratuite suffit pour une recette seule, pas pour un menu.</string>
+            <key>many</key>
+            <string>%d recettes gratuites suffisent pour des recettes seules, pas pour un menu.</string>
+            <key>other</key>
+            <string>%d recettes gratuites suffisent pour des recettes seules, pas pour un menu.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Connectez-vous pour recevoir %d recette gratuite et essayer.</string>
+            <key>many</key>
+            <string>Connectez-vous pour recevoir %d recettes gratuites et essayer.</string>
+            <key>other</key>
+            <string>Connectez-vous pour recevoir %d recettes gratuites et essayer.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ce compte peut recevoir %d recette gratuite pour essayer.</string>
+            <key>many</key>
+            <string>Ce compte peut recevoir %d recettes gratuites pour essayer.</string>
+            <key>other</key>
+            <string>Ce compte peut recevoir %d recettes gratuites pour essayer.</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ou connectez-vous et recevez %d recette gratuite</string>
+            <key>many</key>
+            <string>Ou connectez-vous et recevez %d recettes gratuites</string>
+            <key>other</key>
+            <string>Ou connectez-vous et recevez %d recettes gratuites</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ou recevez %d recette gratuite</string>
+            <key>many</key>
+            <string>Ou recevez %d recettes gratuites</string>
+            <key>other</key>
+            <string>Ou recevez %d recettes gratuites</string>
+        </dict>
+    </dict>
+    <key>welcome_sheet_lede</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Connectez-vous, et notre serveur ajoute %d recette gratuite à votre compte, pour essayer ce qu'offre un pack.</string>
+            <key>many</key>
+            <string>Connectez-vous, et notre serveur ajoute %d recettes gratuites à votre compte, pour essayer ce qu'offre un pack.</string>
+            <key>other</key>
+            <string>Connectez-vous, et notre serveur ajoute %d recettes gratuites à votre compte, pour essayer ce qu'offre un pack.</string>
+        </dict>
+    </dict>
+    <key>welcome_granted</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d recette gratuite ajoutée</string>
+            <key>many</key>
+            <string>%d recettes gratuites ajoutées</string>
+            <key>other</key>
+            <string>%d recettes gratuites ajoutées</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Connectez-vous et recevez %d recette gratuite de notre serveur, une fois par compte Apple ou Google.</string>
+            <key>many</key>
+            <string>Connectez-vous et recevez %d recettes gratuites de notre serveur, une fois par compte Apple ou Google.</string>
+            <key>other</key>
+            <string>Connectez-vous et recevez %d recettes gratuites de notre serveur, une fois par compte Apple ou Google.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Ce compte peut recevoir %d recette gratuite de notre serveur.</string>
+            <key>many</key>
+            <string>Ce compte peut recevoir %d recettes gratuites de notre serveur.</string>
+            <key>other</key>
+            <string>Ce compte peut recevoir %d recettes gratuites de notre serveur.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_on_phone</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>En vous connectant, vous recevez aussi %d recette gratuite.</string>
+            <key>many</key>
+            <string>En vous connectant, vous recevez aussi %d recettes gratuites.</string>
+            <key>other</key>
+            <string>En vous connectant, vous recevez aussi %d recettes gratuites.</string>
+        </dict>
+    </dict>
+    <!-- /Free recipes -->
 </dict>
 </plist>

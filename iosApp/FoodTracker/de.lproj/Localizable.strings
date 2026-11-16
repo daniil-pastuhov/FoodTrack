@@ -870,3 +870,34 @@
 "taste_promo_taste_body" = "Unser Server richtet sich nach deinen Vorlieben und lässt weg, was du lieber nicht isst. Deine Vorräte, Allergene und deine Ernährungsweise haben weiterhin Vorrang.";
 "taste_promo_device_title" = "Bleibt auf diesem Gerät";
 "taste_promo_device_body" = "Es wird nur mit Anfragen nach Rezepten aus einem Paket gesendet.";
+
+/* Recipe: free recipes for signing in; copied from Android's strings.xml, Apple or Google on iOS. */
+"welcome_sign_in_one" = "Melde dich an und erhalte ein kostenloses Rezept";
+"welcome_get_one" = "Ein kostenloses Rezept holen";
+"welcome_claiming" = "Deine kostenlosen Rezepte werden geholt…";
+"welcome_menu_enough_one" = "Ein kostenloses Rezept reicht für dieses Menü.";
+"welcome_menu_smaller_one" = "Ein kostenloses Rezept reicht für ein einzelnes Rezept oder ein kleineres Menü, nicht für dieses.";
+"welcome_menu_single_one" = "Ein kostenloses Rezept reicht für ein einzelnes Rezept, nicht für ein Menü.";
+"welcome_intro_sign_in_one" = "Melde dich an, um ein kostenloses Rezept zu bekommen und es auszuprobieren.";
+"welcome_intro_account_one" = "Dieses Konto kann ein kostenloses Rezept bekommen, um es auszuprobieren.";
+"welcome_buy_sign_in_one" = "Oder melde dich an und erhalte ein kostenloses Rezept";
+"welcome_buy_get_one" = "Oder hol dir ein kostenloses Rezept";
+"welcome_sheet_lede_one" = "Melde dich an, und unser Server fügt deinem Konto ein kostenloses Rezept hinzu, damit du ausprobieren kannst, was ein Paket bietet.";
+"welcome_sheet_server_title" = "Von unserem Server geschrieben";
+"welcome_sheet_server_body" = "Sie funktionieren wie Rezepte aus einem Paket: ein einzelnes Rezept oder ein Menü, wenn es genug sind.";
+"welcome_sheet_account_title" = "In deinem Konto gespeichert";
+"welcome_sheet_account_body" = "Sie und alle Rezepte, die du später kaufst, ziehen mit auf ein neues Handy, wo immer du dich anmeldest.";
+"welcome_sheet_privacy_title" = "Ein Konto auf unserem Server";
+"welcome_sheet_privacy_body" = "Wir speichern deine Konto-ID und deine E-Mail-Adresse. Die Anmeldung sendet nichts aus deinem Vorrat, und du kannst das Konto in den Rezepteinstellungen löschen.";
+"welcome_once" = "Kostenlose Rezepte gibt es einmal pro Apple- oder Google-Konto.";
+"welcome_not_now" = "Nicht jetzt";
+"welcome_adding" = "Deine kostenlosen Rezepte werden hinzugefügt…";
+"welcome_already_title" = "Dieses Konto hatte seine kostenlosen Rezepte schon";
+"welcome_already_body" = "Kostenlose Rezepte gibt es einmal pro Apple- oder Google-Konto. Du bist angemeldet, und Rezepte, die du kaufst, bleiben in diesem Konto.";
+"welcome_off_signed_in_now" = "Kostenlose Rezepte sind gerade nicht verfügbar. Du bist angemeldet; sonst hat sich nichts geändert.";
+"welcome_off" = "Kostenlose Rezepte sind gerade nicht verfügbar. Es hat sich nichts geändert.";
+"welcome_claim_failed" = "Angemeldet, aber deine kostenlosen Rezepte konnten noch nicht hinzugefügt werden.";
+"welcome_settings_sign_in_one" = "Melde dich an und erhalte ein kostenloses Rezept von unserem Server, einmal pro Apple- oder Google-Konto.";
+"welcome_settings_account_one" = "Dieses Konto kann ein kostenloses Rezept von unserem Server bekommen.";
+"welcome_settings_on_phone_one" = "Mit der Anmeldung bekommst du außerdem ein kostenloses Rezept.";
+"welcome_delete_note" = "Wenn du dich später wieder anmeldest, gibt es die kostenlosen Rezepte nicht noch einmal.";

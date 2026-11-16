@@ -1202,4 +1202,91 @@
     <string name="taste_promo_taste_body">Vår server lutar åt det du gillar och utelämnar det du helst vill slippa. Ditt skafferi, dina allergener och din kost går fortfarande först.</string>
     <string name="taste_promo_device_title">Stannar på den här enheten</string>
     <string name="taste_promo_device_body">Den skickas bara med förfrågningar om recept från ett paket.</string>
+    <!-- Free recipes for signing in (the welcome grant): one with no numeral in an offer (_one), a numeral in a confirmation. -->
+    <string name="welcome_sign_in_one">Logga in och få ett gratis recept</string>
+    <string name="welcome_get_one">Få ett gratis recept</string>
+    <string name="welcome_claiming">Hämtar dina gratis recept…</string>
+    <string name="welcome_menu_enough_one">Ett gratis recept räcker till den här menyn.</string>
+    <string name="welcome_menu_smaller_one">Ett gratis recept räcker till ett enskilt recept eller en mindre meny, inte den här.</string>
+    <string name="welcome_menu_single_one">Ett gratis recept räcker till ett enskilt recept, inte en meny.</string>
+    <string name="welcome_intro_sign_in_one">Logga in för att få ett gratis recept och prova.</string>
+    <string name="welcome_intro_account_one">Det här kontot kan få ett gratis recept att prova med.</string>
+    <string name="welcome_buy_sign_in_one">Eller logga in och få ett gratis recept</string>
+    <string name="welcome_buy_get_one">Eller få ett gratis recept</string>
+    <string name="welcome_sheet_lede_one">Logga in, så lägger vår server till ett gratis recept i ditt konto, så att du kan prova vad ett paket ger.</string>
+    <string name="welcome_sheet_server_title">Skrivna av vår server</string>
+    <string name="welcome_sheet_server_body">De fungerar som recept från ett paket: ett enskilt recept, eller en meny om de räcker.</string>
+    <string name="welcome_sheet_account_title">Sparade i ditt konto</string>
+    <string name="welcome_sheet_account_body">De, och alla recept du köper senare, följer med till en ny telefon var du än loggar in med Google.</string>
+    <string name="welcome_sheet_privacy_title">Ett konto på vår server</string>
+    <string name="welcome_sheet_privacy_body">Vi sparar ditt konto-id och din e-postadress. Inloggningen skickar inget från ditt skafferi, och du kan radera kontot i Receptinställningar.</string>
+    <string name="welcome_once">Gratis recept ges en gång per Google-konto.</string>
+    <string name="welcome_not_now">Inte nu</string>
+    <string name="welcome_adding">Lägger till dina gratis recept…</string>
+    <string name="welcome_already_title">Det här kontot har redan fått sina gratis recept</string>
+    <string name="welcome_already_body">Gratis recept ges en gång per Apple- eller Google-konto. Du är inloggad, och recept du köper sparas i det här kontot.</string>
+    <string name="welcome_off_signed_in_now">Gratis recept är inte tillgängliga just nu. Du är inloggad; inget annat har ändrats.</string>
+    <string name="welcome_off">Gratis recept är inte tillgängliga just nu. Inget har ändrats.</string>
+    <string name="welcome_claim_failed">Inloggad, men dina gratis recept kunde inte läggas till än.</string>
+    <string name="welcome_settings_sign_in_one">Logga in och få ett gratis recept från vår server, en gång per Google-konto.</string>
+    <string name="welcome_settings_account_one">Det här kontot kan få ett gratis recept från vår server.</string>
+    <string name="welcome_settings_on_phone_one">När du loggar in får du också ett gratis recept.</string>
+    <string name="welcome_delete_note">Loggar du in igen senare får du inte gratis recept på nytt.</string>
+    <plurals name="welcome_sign_in">
+        <item quantity="one">Logga in och få %1$d gratis recept</item>
+        <item quantity="other">Logga in och få %1$d gratis recept</item>
+    </plurals>
+    <plurals name="welcome_get">
+        <item quantity="one">Få %1$d gratis recept</item>
+        <item quantity="other">Få %1$d gratis recept</item>
+    </plurals>
+    <plurals name="welcome_menu_enough">
+        <item quantity="one">%1$d gratis recept räcker till den här menyn.</item>
+        <item quantity="other">%1$d gratis recept räcker till den här menyn.</item>
+    </plurals>
+    <plurals name="welcome_menu_smaller">
+        <item quantity="one">%1$d gratis recept räcker till ett enskilt recept eller en mindre meny, inte den här.</item>
+        <item quantity="other">%1$d gratis recept räcker till enskilda recept eller en mindre meny, inte den här.</item>
+    </plurals>
+    <plurals name="welcome_menu_single">
+        <item quantity="one">%1$d gratis recept räcker till ett enskilt recept, inte en meny.</item>
+        <item quantity="other">%1$d gratis recept räcker till enskilda recept, inte en meny.</item>
+    </plurals>
+    <plurals name="welcome_intro_sign_in">
+        <item quantity="one">Logga in för att få %1$d gratis recept och prova.</item>
+        <item quantity="other">Logga in för att få %1$d gratis recept och prova.</item>
+    </plurals>
+    <plurals name="welcome_intro_account">
+        <item quantity="one">Det här kontot kan få %1$d gratis recept att prova med.</item>
+        <item quantity="other">Det här kontot kan få %1$d gratis recept att prova med.</item>
+    </plurals>
+    <plurals name="welcome_buy_sign_in">
+        <item quantity="one">Eller logga in och få %1$d gratis recept</item>
+        <item quantity="other">Eller logga in och få %1$d gratis recept</item>
+    </plurals>
+    <plurals name="welcome_buy_get">
+        <item quantity="one">Eller få %1$d gratis recept</item>
+        <item quantity="other">Eller få %1$d gratis recept</item>
+    </plurals>
+    <plurals name="welcome_sheet_lede">
+        <item quantity="one">Logga in, så lägger vår server till %1$d gratis recept i ditt konto, så att du kan prova vad ett paket ger.</item>
+        <item quantity="other">Logga in, så lägger vår server till %1$d gratis recept i ditt konto, så att du kan prova vad ett paket ger.</item>
+    </plurals>
+    <plurals name="welcome_granted">
+        <item quantity="one">%1$d gratis recept tillagt</item>
+        <item quantity="other">%1$d gratis recept tillagda</item>
+    </plurals>
+    <plurals name="welcome_settings_sign_in">
+        <item quantity="one">Logga in och få %1$d gratis recept från vår server, en gång per Google-konto.</item>
+        <item quantity="other">Logga in och få %1$d gratis recept från vår server, en gång per Google-konto.</item>
+    </plurals>
+    <plurals name="welcome_settings_account">
+        <item quantity="one">Det här kontot kan få %1$d gratis recept från vår server.</item>
+        <item quantity="other">Det här kontot kan få %1$d gratis recept från vår server.</item>
+    </plurals>
+    <plurals name="welcome_settings_on_phone">
+        <item quantity="one">När du loggar in får du också %1$d gratis recept.</item>
+        <item quantity="other">När du loggar in får du också %1$d gratis recept.</item>
+    </plurals>
+    <!-- /Free recipes for signing in -->
 </resources>

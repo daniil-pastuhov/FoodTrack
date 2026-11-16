@@ -634,6 +634,113 @@ expect(mentionsTaste(freeRequest), false, "no taste in a RecipeRequest")
 expect(mentionsTaste(RecipeConfig()), false, "no taste in RecipeConfig")
 expect(String(decoding: try! JSONEncoder().encode(RecipeConfig()), as: UTF8.self).contains("taste"), false, "nor in a oldAnswers config")
 
+// Free recipes for signing in (WelcomeRecipes), as Android's WelcomeRecipesTest.
+let wNow = Date(timeIntervalSince1970: 1_800_000_000)
+func wAnswer(_ n: Int, ageHours: Double) -> WelcomeOfferAnswer { WelcomeOfferAnswer(recipes: n, receivedAt: wNow.addingTimeInterval(-ageHours * 3600)) }
+func wSit(_ account: WelcomeAccount = .none, offer: Int? = 3, accountRecipes: Int? = nil, claimed: Bool = false,
+          paid: Bool = true, paused: Bool = false, blocked: Bool = false) -> WelcomeHint? {
+    WelcomeRecipes.hint(WelcomeSituation(paidRouteAvailable: paid, buyingPaused: paused, purchasesBlocked: blocked,
+                                         account: account, claimed: claimed, offer: offer, accountRecipes: accountRecipes))
+}
+// The cached answer and its age.
+expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: 1), now: wNow), 3, "an answer from an hour ago is shown at once")
+expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: 23.9), now: wNow), 3, "under a day old: shown")
+expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: 24), now: wNow), nil, "a day old counts as none")
+expect(WelcomeRecipes.fresh(wAnswer(3, ageHours: -2), now: wNow), nil, "from the future (clock change): none")
+expect(WelcomeRecipes.fresh(nil, now: wNow), nil, "no answer yet: none")
+// Refreshing: on showing the tab at most every 15 minutes, always before the sign-in sheet.
+expect(WelcomeRecipes.shouldAsk(lastAsked: nil, now: wNow, beforeSignIn: false), true, "never asked: ask")
+expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(-14 * 60), now: wNow, beforeSignIn: false), false, "asked 14 minutes ago: not yet")
+expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(-15 * 60), now: wNow, beforeSignIn: false), true, "15 minutes: ask again")
+expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(60), now: wNow, beforeSignIn: false), true, "asked in the future: ask")
+expect(WelcomeRecipes.shouldAsk(lastAsked: wNow.addingTimeInterval(-60), now: wNow, beforeSignIn: true), true, "before the sign-in sheet: always")
+expect(WelcomeRecipes.asks(paidRouteAvailable: false, account: .none, claimed: false), false, "an install that can't buy never asks")
+expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .none, claimed: false), true, "signed out: asks")
+expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .device, claimed: false), true, "recipes on this device: asks")
+expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .signedIn, claimed: false), true, "signed in, not claimed: asks")
+expect(WelcomeRecipes.asks(paidRouteAvailable: true, account: .signedIn, claimed: true), false, "claimed: never asks")
+// Failures are silent: the last answer stays (until a day old); an old server reads as 0.
+let wCached = wAnswer(3, ageHours: 2)
+expect(WelcomeRecipes.answer(afterFailure: .offline, cached: wCached, now: wNow), wCached, "offline keeps the last answer")
+expect(WelcomeRecipes.answer(afterFailure: .unauthenticated, cached: wCached, now: wNow), wCached, "App Check keeps it too")
+expect(WelcomeRecipes.answer(afterFailure: .callableMissing, cached: wCached, now: wNow), WelcomeOfferAnswer(recipes: 0, receivedAt: wNow), "an old server: 0")
+expect(WelcomeRecipes.answer(afterFailure: .offline, cached: nil, now: wNow), nil, "nothing cached: still nothing")
+// The answer, read leniently.
+func wOffer(_ json: String) -> Int { try! JSONDecoder().decode(WelcomeOfferResponse.self, from: Data(json.utf8)).recipes }
+expect(wOffer(#"{"recipes":3}"#), 3, "the offer's number")
+expect(wOffer(#"{"recipes":0}"#), 0, "off")
+expect(wOffer(#"{"recipes":"3"}"#), 0, "not a number: none")
+expect(wOffer(#"{"recipes":-1}"#), 0, "negative: none")
+expect(wOffer(#"{"recipes":21}"#), 0, "above the server's limit: not believed")
+expect(wOffer(#"{}"#), 0, "absent: none")
+// What is shown where.
+expect(wSit(), WelcomeHint(recipes: 3, needsSignIn: true), "signed out with an offer of 3: Sign in and get 3")
+expect(wSit(offer: 1), WelcomeHint(recipes: 1, needsSignIn: true), "an offer of 1")
+expect(wSit(offer: 0), nil, "0: no hint, no placeholder")
+expect(wSit(offer: nil), nil, "no answer (yet, failed, or a day old): no hint")
+expect(wSit(paid: false), nil, "no paid route: never")
+expect(wSit(paused: true), nil, "buying paused: hidden as Buy is")
+expect(wSit(blocked: true), nil, "purchases blocked: hidden as Buy is")
+expect(wSit(.device), WelcomeHint(recipes: 3, needsSignIn: true), "recipes on this device: signing in also gets them")
+expect(wSit(.signedIn, offer: nil, accountRecipes: 3), WelcomeHint(recipes: 3, needsSignIn: false), "signed in, not claimed: Get 3 free recipes, from beside the balance")
+expect(wSit(.signedIn, offer: 3, accountRecipes: 0), nil, "signed in, the server says 0: nothing")
+expect(wSit(.signedIn, offer: 3, accountRecipes: nil), WelcomeHint(recipes: 3, needsSignIn: false), "signed in, no balance yet: the day's answer")
+expect(wSit(.signedIn, offer: 3, accountRecipes: 3, claimed: true), nil, "claimed: never again for this account")
+expect(wSit(.none, offer: 3, claimed: true), WelcomeHint(recipes: 3, needsSignIn: true), "signed out after a claim: the signed-out hint is back")
+expect(WelcomeRecipes.accountRecipes(acceptsWelcome: true, welcomeRecipes: 3), 3, "welcomeRecipes read")
+expect(WelcomeRecipes.accountRecipes(acceptsWelcome: false, welcomeRecipes: 3), 0, "without acceptsWelcome: no grant")
+expect(WelcomeRecipes.accountRecipes(acceptsWelcome: true, welcomeRecipes: nil), 0, "absent: 0")
+let wBalance = try! JSONDecoder().decode(BalanceResponse.self, from: Data(#"{"balance":0,"acceptsWelcome":true,"welcomeRecipes":3}"#.utf8))
+expect(wBalance.acceptsWelcome?.value, true, "acceptsWelcome on getBalance")
+expect(wBalance.welcomeRecipes?.value, 3, "welcomeRecipes on getBalance")
+expect(try! JSONDecoder().decode(GenerateResponse.self, from: Data(#"{"status":"DONE","balance":3,"charged":true,"welcomeRecipes":2,"acceptsWelcome":true}"#.utf8)).welcomeRecipes?.value, 2, "on generateRecipe")
+// Any sign-in while an offer shows claims; an account that claimed here isn't claimed for again.
+expect(WelcomeRecipes.afterSignIn(offerShowing: false, claimedHere: false), .nothing, "no offer: an ordinary sign-in")
+expect(WelcomeRecipes.afterSignIn(offerShowing: true, claimedHere: false), .claim, "an offer: claim once")
+expect(WelcomeRecipes.afterSignIn(offerShowing: true, claimedHere: true), .alreadyClaimed, "claimed here before: ALREADY without a call")
+// The claim's outcomes.
+func wClaim(_ json: String) -> WelcomeClaimOutcome { WelcomeRecipes.outcome(of: try! JSONDecoder().decode(ClaimWelcomeResponse.self, from: Data(json.utf8))) }
+expect(wClaim(#"{"status":"GRANTED","granted":3,"balance":3,"acceptsWelcome":true,"welcomeRecipes":3}"#), .granted(3), "GRANTED")
+expect(wClaim(#"{"status":"ALREADY","granted":0,"balance":7}"#), .already, "ALREADY")
+expect(wClaim(#"{"status":"OFF","granted":0,"balance":0}"#), .off, "OFF")
+expect(wClaim(#"{"status":"LATER","balance":0}"#), .notReached, "an unknown status: not understood, Try again")
+expect(WelcomeRecipes.outcome(of: .offline), .notReached, "claim not reached: Try again")
+expect(WelcomeRecipes.outcome(of: .signInRequired), .notReached, "SIGN_IN_REQUIRED: nothing granted")
+expect(RecipeServerError.from(code: "failed-precondition", reason: "SIGN_IN_REQUIRED"), .signInRequired, "SIGN_IN_REQUIRED read")
+expect(WelcomeRecipes.marksClaimed(.granted(3)), true, "GRANTED: never again")
+expect(WelcomeRecipes.marksClaimed(.already), true, "ALREADY: never again")
+expect(WelcomeRecipes.marksClaimed(.off), false, "OFF: may claim later")
+expect(WelcomeRecipes.marksClaimed(.notReached), false, "not reached: retry (idempotent)")
+// The menu line, from the costs table.
+let wSets = RecipeCosts(recipe: 1, menu2: 4, menu3: 5, menuSets: ["1": ["1": 1, "2": 2, "3": 3], "3": ["2": 4, "3": 5]])
+expect(WelcomeRecipes.menuCover(recipes: 3, balance: 0, menuCost: 3, costs: wSets, takesMenuDays: true), .enough, "3 cover a 1-day menu of 3 courses")
+expect(WelcomeRecipes.menuCover(recipes: 3, balance: 0, menuCost: 5, costs: wSets, takesMenuDays: true), .smallerMenu, "3 don't cover 5, a smaller set fits")
+expect(WelcomeRecipes.menuCover(recipes: 3, balance: 0, menuCost: 5, costs: .fallback, takesMenuDays: false), .singleOnly, "no set fits 3: single recipes only")
+expect(WelcomeRecipes.menuCover(recipes: 3, balance: 1, menuCost: 4, costs: .fallback, takesMenuDays: false), .enough, "with the pack's 1 they cover 4")
+expect(WelcomeRecipes.menuCover(recipes: 1, balance: -2, menuCost: 3, costs: wSets, takesMenuDays: true), .smallerMenu, "a debt doesn't count against them")
+expect(WelcomeRecipes.menuCover(recipes: 1, balance: 0, menuCost: 4, costs: .fallback, takesMenuDays: false), .singleOnly, "1 free recipe: single recipes only")
+
+// A linked sign-in: the token refreshed, then exactly one balance call; a failure is silent.
+final class LinkCalls { var tokens = 0; var balances = 0 }
+struct LinkFailure: Error {}
+func linked(tokenFails: Bool = false, balanceFails: Bool = false) async -> (Int?, LinkCalls) {
+    let calls = LinkCalls()
+    let answer: Int? = await WelcomeRecipes.recordLinkedSignIn(
+        refreshToken: { calls.tokens += 1; if tokenFails { throw LinkFailure() } },
+        balance: { calls.balances += 1; if balanceFails { throw LinkFailure() }; return 7 }
+    )
+    return (answer, calls)
+}
+let linkOK = await linked()
+expect(linkOK.0, 7, "a link is followed by the balance")
+expect([linkOK.1.tokens, linkOK.1.balances], [1, 1], "one token refresh, exactly one balance call")
+let linkBalanceFails = await linked(balanceFails: true)
+expect(linkBalanceFails.0, nil, "a failed balance call is silent (nil, nothing thrown)")
+expect(linkBalanceFails.1.balances, 1, "and not retried there")
+let linkTokenFails = await linked(tokenFails: true)
+expect(linkTokenFails.0, nil, "a failed token refresh is silent")
+expect(linkTokenFails.1.balances, 0, "no balance call with a stale token")
+
 if failures > 0 {
     print("\(failures) failed")
     exit(1)

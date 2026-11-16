@@ -1504,5 +1504,287 @@
         </dict>
     </dict>
     <!-- /Taste profile -->
+    <!-- Free recipes for signing in: copied from Android's strings.xml -->
+    <key>welcome_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Войдите и получите %d бесплатный рецепт</string>
+            <key>few</key>
+            <string>Войдите и получите %d бесплатных рецепта</string>
+            <key>many</key>
+            <string>Войдите и получите %d бесплатных рецептов</string>
+            <key>other</key>
+            <string>Войдите и получите %d бесплатного рецепта</string>
+        </dict>
+    </dict>
+    <key>welcome_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Получить %d бесплатный рецепт</string>
+            <key>few</key>
+            <string>Получить %d бесплатных рецепта</string>
+            <key>many</key>
+            <string>Получить %d бесплатных рецептов</string>
+            <key>other</key>
+            <string>Получить %d бесплатного рецепта</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_enough</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d бесплатного рецепта хватит на это меню.</string>
+            <key>few</key>
+            <string>%d бесплатных рецептов хватит на это меню.</string>
+            <key>many</key>
+            <string>%d бесплатных рецептов хватит на это меню.</string>
+            <key>other</key>
+            <string>%d бесплатного рецепта хватит на это меню.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_smaller</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.</string>
+            <key>few</key>
+            <string>%d бесплатных рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</string>
+            <key>many</key>
+            <string>%d бесплатных рецептов подойдут для отдельных рецептов или меню поменьше, но не для этого.</string>
+            <key>other</key>
+            <string>%d бесплатного рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_single</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.</string>
+            <key>few</key>
+            <string>%d бесплатных рецепта подойдут для отдельных рецептов, но не для меню.</string>
+            <key>many</key>
+            <string>%d бесплатных рецептов подойдут для отдельных рецептов, но не для меню.</string>
+            <key>other</key>
+            <string>%d бесплатного рецепта подойдут для отдельных рецептов, но не для меню.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Войдите, чтобы получить %d бесплатный рецепт и попробовать.</string>
+            <key>few</key>
+            <string>Войдите, чтобы получить %d бесплатных рецепта и попробовать.</string>
+            <key>many</key>
+            <string>Войдите, чтобы получить %d бесплатных рецептов и попробовать.</string>
+            <key>other</key>
+            <string>Войдите, чтобы получить %d бесплатного рецепта и попробовать.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Этот аккаунт может получить %d бесплатный рецепт, чтобы попробовать.</string>
+            <key>few</key>
+            <string>Этот аккаунт может получить %d бесплатных рецепта, чтобы попробовать.</string>
+            <key>many</key>
+            <string>Этот аккаунт может получить %d бесплатных рецептов, чтобы попробовать.</string>
+            <key>other</key>
+            <string>Этот аккаунт может получить %d бесплатного рецепта, чтобы попробовать.</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Или войдите и получите %d бесплатный рецепт</string>
+            <key>few</key>
+            <string>Или войдите и получите %d бесплатных рецепта</string>
+            <key>many</key>
+            <string>Или войдите и получите %d бесплатных рецептов</string>
+            <key>other</key>
+            <string>Или войдите и получите %d бесплатного рецепта</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Или получите %d бесплатный рецепт</string>
+            <key>few</key>
+            <string>Или получите %d бесплатных рецепта</string>
+            <key>many</key>
+            <string>Или получите %d бесплатных рецептов</string>
+            <key>other</key>
+            <string>Или получите %d бесплатного рецепта</string>
+        </dict>
+    </dict>
+    <key>welcome_sheet_lede</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Войдите, и наш сервер добавит в ваш аккаунт %d бесплатный рецепт, чтобы вы попробовали, что даёт пакет.</string>
+            <key>few</key>
+            <string>Войдите, и наш сервер добавит в ваш аккаунт %d бесплатных рецепта, чтобы вы попробовали, что даёт пакет.</string>
+            <key>many</key>
+            <string>Войдите, и наш сервер добавит в ваш аккаунт %d бесплатных рецептов, чтобы вы попробовали, что даёт пакет.</string>
+            <key>other</key>
+            <string>Войдите, и наш сервер добавит в ваш аккаунт %d бесплатного рецепта, чтобы вы попробовали, что даёт пакет.</string>
+        </dict>
+    </dict>
+    <key>welcome_granted</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Добавлен %d бесплатный рецепт</string>
+            <key>few</key>
+            <string>Добавлено %d бесплатных рецепта</string>
+            <key>many</key>
+            <string>Добавлено %d бесплатных рецептов</string>
+            <key>other</key>
+            <string>Добавлено %d бесплатного рецепта</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Войдите и получите %d бесплатный рецепт от нашего сервера, один раз на аккаунт Apple или Google.</string>
+            <key>few</key>
+            <string>Войдите и получите %d бесплатных рецепта от нашего сервера, один раз на аккаунт Apple или Google.</string>
+            <key>many</key>
+            <string>Войдите и получите %d бесплатных рецептов от нашего сервера, один раз на аккаунт Apple или Google.</string>
+            <key>other</key>
+            <string>Войдите и получите %d бесплатного рецепта от нашего сервера, один раз на аккаунт Apple или Google.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Этот аккаунт может получить %d бесплатный рецепт от нашего сервера.</string>
+            <key>few</key>
+            <string>Этот аккаунт может получить %d бесплатных рецепта от нашего сервера.</string>
+            <key>many</key>
+            <string>Этот аккаунт может получить %d бесплатных рецептов от нашего сервера.</string>
+            <key>other</key>
+            <string>Этот аккаунт может получить %d бесплатного рецепта от нашего сервера.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_on_phone</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>После входа вы также получите %d бесплатный рецепт.</string>
+            <key>few</key>
+            <string>После входа вы также получите %d бесплатных рецепта.</string>
+            <key>many</key>
+            <string>После входа вы также получите %d бесплатных рецептов.</string>
+            <key>other</key>
+            <string>После входа вы также получите %d бесплатного рецепта.</string>
+        </dict>
+    </dict>
+    <!-- /Free recipes -->
 </dict>
 </plist>

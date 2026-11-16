@@ -2,6 +2,7 @@ package com.foodtracker.review
 
 import com.foodtracker.recipe.BuySheet
 import com.foodtracker.recipe.PaidEvent
+import com.foodtracker.recipe.WelcomeOutcome
 import com.foodtracker.recipe.PaidUiState
 import com.foodtracker.recipe.RecipeEvent
 import kotlin.time.Clock
@@ -135,6 +136,10 @@ class ReviewPrompter(
             PaidEvent.SignInFailed, PaidEvent.SignInInUse, PaidEvent.AccountActionFailed, is PaidEvent.EarlierRefused,
             PaidEvent.AccountDeleted, PaidEvent.DeviceDataDeleted, PaidEvent.AccountBusy, PaidEvent.DeletionWaitsForPurchase -> true
             is PaidEvent.RecipesAdded, is PaidEvent.Merged, is PaidEvent.EarlierSaved -> false
+            // Free recipes for signing in are neutral: a grant, "already had them" or "not
+            // available right now" neither arms nor rules out the request; a claim that couldn't
+            // reach our server is an account problem like a failed sign-in.
+            is PaidEvent.Welcome -> event.outcome == WelcomeOutcome.NotReached
         }
 
         fun isProblem(state: PaidUiState): Boolean =

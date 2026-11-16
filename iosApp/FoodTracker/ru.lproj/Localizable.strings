@@ -588,8 +588,8 @@
 "recipe_time_one_hour" = "1 час";
 "recipe_time_any" = "Любое";
 "recipe_more_options" = "Другие параметры";
-"recipe_detail_summary_brief" = "Краткая подробность";
-"recipe_detail_summary_standard" = "Обычная подробность";
+"recipe_detail_summary_brief" = "Краткая детализация";
+"recipe_detail_summary_standard" = "Стандартная детализация";
 "recipe_detail_summary_step_by_step" = "Пошагово";
 "recipe_meal_summary_any" = "Любой приём пищи";
 "recipe_diet_summary_none" = "Без диеты";
@@ -622,9 +622,9 @@
 "recipe_saved_from_phone" = "Составлено на этом {device}";
 "recipe_settings_cooking" = "Готовка";
 "recipe_settings_cooking_desc" = "Применяются ко всем рецептам, запросам и меню, пока вы их не измените.";
-"recipe_label_detail" = "Подробность";
+"recipe_label_detail" = "Детализация";
 "recipe_detail_brief" = "Кратко";
-"recipe_detail_standard" = "Обычно";
+"recipe_detail_standard" = "Стандартно";
 "recipe_detail_step_by_step" = "Пошагово";
 "recipe_settings_meal_diet" = "Приём пищи и диета";
 "recipe_label_meal" = "Приём пищи";
@@ -766,7 +766,7 @@
 "recipe_prompt_difficulty_medium" = "Средней сложности";
 "recipe_prompt_difficulty_ambitious" = "Посложнее, для увлечённого повара";
 "recipe_prompt_detail_brief" = "Коротко, в несколько шагов";
-"recipe_prompt_detail_standard" = "Обычная подробность";
+"recipe_prompt_detail_standard" = "Стандартная детализация";
 "recipe_prompt_detail_step_by_step" = "Подробно, каждый шаг";
 "recipe_prompt_servings" = "Порций: %d";
 "recipe_prompt_max_minutes" = "Не дольше %d минут";
@@ -870,3 +870,34 @@
 "taste_promo_taste_body" = "Наш сервер учитывает, что вы любите, и обходится без того, что вы не хотите. Продукты из кладовой, аллергены и диета по-прежнему важнее.";
 "taste_promo_device_title" = "Хранится на этом устройстве";
 "taste_promo_device_body" = "Отправляется только с запросами рецептов из пакета.";
+
+/* Recipe: free recipes for signing in; copied from Android's strings.xml, Apple or Google on iOS. */
+"welcome_sign_in_one" = "Войдите и получите бесплатный рецепт";
+"welcome_get_one" = "Получить бесплатный рецепт";
+"welcome_claiming" = "Получаем бесплатные рецепты…";
+"welcome_menu_enough_one" = "Бесплатного рецепта хватит на это меню.";
+"welcome_menu_smaller_one" = "Бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.";
+"welcome_menu_single_one" = "Бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.";
+"welcome_intro_sign_in_one" = "Войдите, чтобы получить бесплатный рецепт и попробовать.";
+"welcome_intro_account_one" = "Этот аккаунт может получить бесплатный рецепт, чтобы попробовать.";
+"welcome_buy_sign_in_one" = "Или войдите и получите бесплатный рецепт";
+"welcome_buy_get_one" = "Или получите бесплатный рецепт";
+"welcome_sheet_lede_one" = "Войдите, и наш сервер добавит в ваш аккаунт бесплатный рецепт, чтобы вы попробовали, что даёт пакет.";
+"welcome_sheet_server_title" = "Пишет наш сервер";
+"welcome_sheet_server_body" = "Они работают как рецепты из пакета: отдельный рецепт или меню, если их хватает.";
+"welcome_sheet_account_title" = "Хранятся в вашем аккаунте";
+"welcome_sheet_account_body" = "Они и любые рецепты, которые вы купите позже, переедут с вами на новый телефон: везде, где вы войдёте.";
+"welcome_sheet_privacy_title" = "Аккаунт на нашем сервере";
+"welcome_sheet_privacy_body" = "Мы храним идентификатор аккаунта и адрес почты. При входе ничего не отправляется из ваших запасов, а удалить аккаунт можно в настройках рецептов.";
+"welcome_once" = "Бесплатные рецепты даются один раз на аккаунт Apple или Google.";
+"welcome_not_now" = "Не сейчас";
+"welcome_adding" = "Добавляем бесплатные рецепты…";
+"welcome_already_title" = "Этот аккаунт уже получал бесплатные рецепты";
+"welcome_already_body" = "Бесплатные рецепты даются один раз на аккаунт Apple или Google. Вы вошли, и рецепты, которые вы купите, хранятся в этом аккаунте.";
+"welcome_off_signed_in_now" = "Бесплатные рецепты сейчас недоступны. Вы вошли в аккаунт, больше ничего не изменилось.";
+"welcome_off" = "Бесплатные рецепты сейчас недоступны. Ничего не изменилось.";
+"welcome_claim_failed" = "Вы вошли, но бесплатные рецепты пока не удалось добавить.";
+"welcome_settings_sign_in_one" = "Войдите и получите бесплатный рецепт от нашего сервера, один раз на аккаунт Apple или Google.";
+"welcome_settings_account_one" = "Этот аккаунт может получить бесплатный рецепт от нашего сервера.";
+"welcome_settings_on_phone_one" = "После входа вы также получите бесплатный рецепт.";
+"welcome_delete_note" = "Если войти снова позже, бесплатные рецепты не вернутся.";

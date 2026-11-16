@@ -110,7 +110,9 @@ val appModule = module {
     }
     // The paid route. Release builds that can't pass App Check (forks, sideloads) get the
     // stand-ins, so the tab shows only the free routes and nothing here is ever created. Where
-    // it is allowed, nothing reaches our server before a purchase starts either.
+    // it is allowed, the one call before a purchase or a sign-in is getWelcomeOffer (how many free
+    // recipes a sign-in gets), when the Recipe tab is shown: App Check only, no account, nothing
+    // about the person.
     single { RecipeFirebase(androidContext()) }
     single<RecipePaidRepository> { AndroidRecipePaidRepository(androidContext()) }
     single<RecipeBackend> {

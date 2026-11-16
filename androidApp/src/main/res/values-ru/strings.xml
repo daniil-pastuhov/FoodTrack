@@ -811,8 +811,8 @@
     <string name="recipe_time_hour">1 час</string>
     <string name="recipe_time_any">Любое</string>
     <string name="recipe_more_options">Другие параметры</string>
-    <string name="recipe_detail_summary_brief">Краткая подробность</string>
-    <string name="recipe_detail_summary_standard">Обычная подробность</string>
+    <string name="recipe_detail_summary_brief">Краткая детализация</string>
+    <string name="recipe_detail_summary_standard">Стандартная детализация</string>
     <string name="recipe_detail_summary_step_by_step">Пошагово</string>
     <string name="recipe_meal_summary_any">Любой приём пищи</string>
     <string name="recipe_diet_summary_none">Без диеты</string>
@@ -903,9 +903,9 @@
     <string name="recipe_deleted">Рецепт удалён</string>
     <string name="recipe_cooking">Готовка</string>
     <string name="recipe_cooking_desc">Применяются ко всем рецептам, запросам и меню, пока вы их не измените.</string>
-    <string name="recipe_detail">Подробность</string>
+    <string name="recipe_detail">Детализация</string>
     <string name="recipe_detail_brief">Кратко</string>
-    <string name="recipe_detail_standard">Обычно</string>
+    <string name="recipe_detail_standard">Стандартно</string>
     <string name="recipe_detail_step_by_step">Пошагово</string>
     <string name="recipe_meal_and_diet">Приём пищи и диета</string>
     <string name="recipe_meal">Приём пищи</string>
@@ -935,7 +935,7 @@
     <string name="recipe_prompt_difficulty_medium">Средней сложности</string>
     <string name="recipe_prompt_difficulty_ambitious">Посложнее, для увлечённого повара</string>
     <string name="recipe_prompt_detail_brief">Коротко, в несколько шагов</string>
-    <string name="recipe_prompt_detail_standard">Обычная подробность</string>
+    <string name="recipe_prompt_detail_standard">Стандартная детализация</string>
     <string name="recipe_prompt_detail_step_by_step">Подробно, каждый шаг</string>
     <string name="recipe_prompt_servings">Порций: %1$d</string>
     <string name="recipe_prompt_max_minutes">Не дольше %1$d минут</string>
@@ -1348,4 +1348,119 @@
     <string name="taste_promo_taste_body">Наш сервер учитывает, что вы любите, и обходится без того, что вы не хотите. Продукты из кладовой, аллергены и диета по-прежнему важнее.</string>
     <string name="taste_promo_device_title">Хранится на этом устройстве</string>
     <string name="taste_promo_device_body">Отправляется только с запросами рецептов из пакета.</string>
+    <!-- Free recipes for signing in (the welcome grant): one with no numeral in an offer (_one), a numeral in a confirmation. -->
+    <string name="welcome_sign_in_one">Войдите и получите бесплатный рецепт</string>
+    <string name="welcome_get_one">Получить бесплатный рецепт</string>
+    <string name="welcome_claiming">Получаем бесплатные рецепты…</string>
+    <string name="welcome_menu_enough_one">Бесплатного рецепта хватит на это меню.</string>
+    <string name="welcome_menu_smaller_one">Бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.</string>
+    <string name="welcome_menu_single_one">Бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.</string>
+    <string name="welcome_intro_sign_in_one">Войдите, чтобы получить бесплатный рецепт и попробовать.</string>
+    <string name="welcome_intro_account_one">Этот аккаунт может получить бесплатный рецепт, чтобы попробовать.</string>
+    <string name="welcome_buy_sign_in_one">Или войдите и получите бесплатный рецепт</string>
+    <string name="welcome_buy_get_one">Или получите бесплатный рецепт</string>
+    <string name="welcome_sheet_lede_one">Войдите, и наш сервер добавит в ваш аккаунт бесплатный рецепт, чтобы вы попробовали, что даёт пакет.</string>
+    <string name="welcome_sheet_server_title">Пишет наш сервер</string>
+    <string name="welcome_sheet_server_body">Они работают как рецепты из пакета: отдельный рецепт или меню, если их хватает.</string>
+    <string name="welcome_sheet_account_title">Хранятся в вашем аккаунте</string>
+    <string name="welcome_sheet_account_body">Они и любые рецепты, которые вы купите позже, переедут с вами на новый телефон: везде, где вы войдёте через Google.</string>
+    <string name="welcome_sheet_privacy_title">Аккаунт на нашем сервере</string>
+    <string name="welcome_sheet_privacy_body">Мы храним идентификатор аккаунта и адрес почты. При входе ничего не отправляется из ваших запасов, а удалить аккаунт можно в настройках рецептов.</string>
+    <string name="welcome_once">Бесплатные рецепты даются один раз на аккаунт Google.</string>
+    <string name="welcome_not_now">Не сейчас</string>
+    <string name="welcome_adding">Добавляем бесплатные рецепты…</string>
+    <string name="welcome_already_title">Этот аккаунт уже получал бесплатные рецепты</string>
+    <string name="welcome_already_body">Бесплатные рецепты даются один раз на аккаунт Apple или Google. Вы вошли, и рецепты, которые вы купите, хранятся в этом аккаунте.</string>
+    <string name="welcome_off_signed_in_now">Бесплатные рецепты сейчас недоступны. Вы вошли в аккаунт, больше ничего не изменилось.</string>
+    <string name="welcome_off">Бесплатные рецепты сейчас недоступны. Ничего не изменилось.</string>
+    <string name="welcome_claim_failed">Вы вошли, но бесплатные рецепты пока не удалось добавить.</string>
+    <string name="welcome_settings_sign_in_one">Войдите и получите бесплатный рецепт от нашего сервера, один раз на аккаунт Google.</string>
+    <string name="welcome_settings_account_one">Этот аккаунт может получить бесплатный рецепт от нашего сервера.</string>
+    <string name="welcome_settings_on_phone_one">После входа вы также получите бесплатный рецепт.</string>
+    <string name="welcome_delete_note">Если войти снова позже, бесплатные рецепты не вернутся.</string>
+    <plurals name="welcome_sign_in">
+        <item quantity="one">Войдите и получите %1$d бесплатный рецепт</item>
+        <item quantity="few">Войдите и получите %1$d бесплатных рецепта</item>
+        <item quantity="many">Войдите и получите %1$d бесплатных рецептов</item>
+        <item quantity="other">Войдите и получите %1$d бесплатного рецепта</item>
+    </plurals>
+    <plurals name="welcome_get">
+        <item quantity="one">Получить %1$d бесплатный рецепт</item>
+        <item quantity="few">Получить %1$d бесплатных рецепта</item>
+        <item quantity="many">Получить %1$d бесплатных рецептов</item>
+        <item quantity="other">Получить %1$d бесплатного рецепта</item>
+    </plurals>
+    <plurals name="welcome_menu_enough">
+        <item quantity="one">%1$d бесплатного рецепта хватит на это меню.</item>
+        <item quantity="few">%1$d бесплатных рецептов хватит на это меню.</item>
+        <item quantity="many">%1$d бесплатных рецептов хватит на это меню.</item>
+        <item quantity="other">%1$d бесплатного рецепта хватит на это меню.</item>
+    </plurals>
+    <plurals name="welcome_menu_smaller">
+        <item quantity="one">%1$d бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.</item>
+        <item quantity="few">%1$d бесплатных рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</item>
+        <item quantity="many">%1$d бесплатных рецептов подойдут для отдельных рецептов или меню поменьше, но не для этого.</item>
+        <item quantity="other">%1$d бесплатного рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</item>
+    </plurals>
+    <plurals name="welcome_menu_single">
+        <item quantity="one">%1$d бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.</item>
+        <item quantity="few">%1$d бесплатных рецепта подойдут для отдельных рецептов, но не для меню.</item>
+        <item quantity="many">%1$d бесплатных рецептов подойдут для отдельных рецептов, но не для меню.</item>
+        <item quantity="other">%1$d бесплатного рецепта подойдут для отдельных рецептов, но не для меню.</item>
+    </plurals>
+    <plurals name="welcome_intro_sign_in">
+        <item quantity="one">Войдите, чтобы получить %1$d бесплатный рецепт и попробовать.</item>
+        <item quantity="few">Войдите, чтобы получить %1$d бесплатных рецепта и попробовать.</item>
+        <item quantity="many">Войдите, чтобы получить %1$d бесплатных рецептов и попробовать.</item>
+        <item quantity="other">Войдите, чтобы получить %1$d бесплатного рецепта и попробовать.</item>
+    </plurals>
+    <plurals name="welcome_intro_account">
+        <item quantity="one">Этот аккаунт может получить %1$d бесплатный рецепт, чтобы попробовать.</item>
+        <item quantity="few">Этот аккаунт может получить %1$d бесплатных рецепта, чтобы попробовать.</item>
+        <item quantity="many">Этот аккаунт может получить %1$d бесплатных рецептов, чтобы попробовать.</item>
+        <item quantity="other">Этот аккаунт может получить %1$d бесплатного рецепта, чтобы попробовать.</item>
+    </plurals>
+    <plurals name="welcome_buy_sign_in">
+        <item quantity="one">Или войдите и получите %1$d бесплатный рецепт</item>
+        <item quantity="few">Или войдите и получите %1$d бесплатных рецепта</item>
+        <item quantity="many">Или войдите и получите %1$d бесплатных рецептов</item>
+        <item quantity="other">Или войдите и получите %1$d бесплатного рецепта</item>
+    </plurals>
+    <plurals name="welcome_buy_get">
+        <item quantity="one">Или получите %1$d бесплатный рецепт</item>
+        <item quantity="few">Или получите %1$d бесплатных рецепта</item>
+        <item quantity="many">Или получите %1$d бесплатных рецептов</item>
+        <item quantity="other">Или получите %1$d бесплатного рецепта</item>
+    </plurals>
+    <plurals name="welcome_sheet_lede">
+        <item quantity="one">Войдите, и наш сервер добавит в ваш аккаунт %1$d бесплатный рецепт, чтобы вы попробовали, что даёт пакет.</item>
+        <item quantity="few">Войдите, и наш сервер добавит в ваш аккаунт %1$d бесплатных рецепта, чтобы вы попробовали, что даёт пакет.</item>
+        <item quantity="many">Войдите, и наш сервер добавит в ваш аккаунт %1$d бесплатных рецептов, чтобы вы попробовали, что даёт пакет.</item>
+        <item quantity="other">Войдите, и наш сервер добавит в ваш аккаунт %1$d бесплатного рецепта, чтобы вы попробовали, что даёт пакет.</item>
+    </plurals>
+    <plurals name="welcome_granted">
+        <item quantity="one">Добавлен %1$d бесплатный рецепт</item>
+        <item quantity="few">Добавлено %1$d бесплатных рецепта</item>
+        <item quantity="many">Добавлено %1$d бесплатных рецептов</item>
+        <item quantity="other">Добавлено %1$d бесплатного рецепта</item>
+    </plurals>
+    <plurals name="welcome_settings_sign_in">
+        <item quantity="one">Войдите и получите %1$d бесплатный рецепт от нашего сервера, один раз на аккаунт Google.</item>
+        <item quantity="few">Войдите и получите %1$d бесплатных рецепта от нашего сервера, один раз на аккаунт Google.</item>
+        <item quantity="many">Войдите и получите %1$d бесплатных рецептов от нашего сервера, один раз на аккаунт Google.</item>
+        <item quantity="other">Войдите и получите %1$d бесплатного рецепта от нашего сервера, один раз на аккаунт Google.</item>
+    </plurals>
+    <plurals name="welcome_settings_account">
+        <item quantity="one">Этот аккаунт может получить %1$d бесплатный рецепт от нашего сервера.</item>
+        <item quantity="few">Этот аккаунт может получить %1$d бесплатных рецепта от нашего сервера.</item>
+        <item quantity="many">Этот аккаунт может получить %1$d бесплатных рецептов от нашего сервера.</item>
+        <item quantity="other">Этот аккаунт может получить %1$d бесплатного рецепта от нашего сервера.</item>
+    </plurals>
+    <plurals name="welcome_settings_on_phone">
+        <item quantity="one">После входа вы также получите %1$d бесплатный рецепт.</item>
+        <item quantity="few">После входа вы также получите %1$d бесплатных рецепта.</item>
+        <item quantity="many">После входа вы также получите %1$d бесплатных рецептов.</item>
+        <item quantity="other">После входа вы также получите %1$d бесплатного рецепта.</item>
+    </plurals>
+    <!-- /Free recipes for signing in -->
 </resources>

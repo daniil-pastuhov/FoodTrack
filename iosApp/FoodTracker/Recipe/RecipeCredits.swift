@@ -5,6 +5,8 @@ import FirebaseCore
 import Foundation
 import Network
 import StoreKit
+import SwiftUI
+import UIKit
 
 /// What a purchase came to, for the pack sheet.
 enum RecipePurchaseOutcome: Equatable {
@@ -43,15 +45,23 @@ enum RecipeCreditsNotice: Equatable {
     /// A join of this install into an account moved recipes (`moved` > 0) or, after a store
     /// refund, a debt (`moved` < 0). As Android's `PaidEvent.Merged`.
     case merged(moved: Int)
+    /// Free recipes for signing in (`claimWelcome`): GRANTED, "3 free recipes added".
+    case welcomeGranted(Int)
+    /// OFF: not available right now. `justSignedIn`: the person signed in for them, which the
+    /// message says too; nothing else changed.
+    case welcomeOff(justSignedIn: Bool)
+    /// The claim didn't reach our server (or wasn't understood): Try again claims once more.
+    case welcomeNotReached
 
     /// The failures, and a deletion whatever came of it, rule the rating prompt out for the
     /// session, as Android's `ReviewPrompter.isProblem(PaidEvent)`.
     var blocksReviewPrompt: Bool {
         switch self {
         case .signInFailed, .providerInUse, .accountActionFailed, .accountDeleted, .deviceDataDeleted, .accountBusy,
-             .deletionWaitsForPurchase:
+             .deletionWaitsForPurchase, .welcomeNotReached:
             return true
-        case .added, .merged: return false
+        // A grant is neutral for the rating prompt, and so is an answer that there is none now.
+        case .added, .merged, .welcomeGranted, .welcomeOff: return false
         }
     }
 }
@@ -84,6 +94,28 @@ struct RecipeCreditsStorage {
         static let serverTakesDanish = "com.foodtracker.recipe.server_takes_danish"
         static let serverTakesMenuDays = "com.foodtracker.recipe.server_takes_menu_days"
         static let serverTakesTaste = "com.foodtracker.recipe.server_takes_taste"
+        static let welcomeOffer = "com.foodtracker.recipe.welcome_offer"
+        static let welcomeOfferAskedAt = "com.foodtracker.recipe.welcome_offer_asked_at"
+        static let welcomeClaimed = "com.foodtracker.recipe.welcome_claimed"
+    }
+
+    /// The last answer of `getWelcomeOffer` and when it came (`WelcomeRecipes.fresh` decides
+    /// whether it still counts). Android: `welcome_offer` in `RecipePaidStore`.
+    var welcomeOffer: WelcomeOfferAnswer? {
+        get { decode(WelcomeOfferAnswer.self, Key.welcomeOffer) }
+        nonmutating set { encode(newValue, Key.welcomeOffer) }
+    }
+
+    /// When `getWelcomeOffer` was last asked, answered or not: at most every 15 minutes.
+    var welcomeOfferAskedAt: Date? {
+        get { defaults.object(forKey: Key.welcomeOfferAskedAt) as? Date }
+        nonmutating set { defaults.set(newValue, forKey: Key.welcomeOfferAskedAt) }
+    }
+
+    /// The accounts (uids) that claimed on this phone, GRANTED or ALREADY: never offered again.
+    var welcomeClaimed: Set<String> {
+        get { Set(defaults.stringArray(forKey: Key.welcomeClaimed) ?? []) }
+        nonmutating set { defaults.set(newValue.sorted(), forKey: Key.welcomeClaimed) }
     }
 
     /// The server's last answer that carried a balance said `acceptsOptionalIngredients`: only
@@ -268,6 +300,20 @@ final class RecipeCredits: ObservableObject {
     @Published var rejectedByBuild = false { didSet { if rejectedByBuild { Self.noteReviewProblem() } } }
     /// "Add this phone's recipes to your account?"
     @Published var pendingMerge: RecipePendingMerge?
+    /// The last `getWelcomeOffer` answer, shown at once while under a day old.
+    @Published private(set) var welcomeOffer: WelcomeOfferAnswer?
+    /// `welcomeRecipes` from this run's last answer with a balance, for the account signed in now;
+    /// nil until one came.
+    @Published private(set) var accountWelcomeRecipes: Int?
+    /// The accounts that claimed on this phone (`RecipeCreditsStorage.welcomeClaimed`).
+    @Published private(set) var welcomeClaimed: Set<String>
+    /// `claimWelcome` is on its way: "Getting your free recipes…" / "Adding your free recipes…".
+    @Published private(set) var isClaimingWelcome = false
+    /// ALREADY: "This account has already had its free recipes", a dialog with See recipe packs.
+    @Published var welcomeAlready = false
+    /// A sign-in made while the offer showed, waiting on the merge question: claims once it ends.
+    private var mergeClaimsWelcome = false
+    private var askingWelcomeOffer = false
     /// The account was deleted but the server said Apple's link stayed (`appleLinkRemoved:
     /// false`): a dialog says how to remove it, until dismissed.
     @Published var appleLinkLeft = false
@@ -300,6 +346,8 @@ final class RecipeCredits: ObservableObject {
         serverTakesMenuDays = storage.serverTakesMenuDays
         unconfirmed = storage.unconfirmed
         paymentPending = Self.isPending(since: storage.paymentPendingSince, now: Date())
+        welcomeOffer = storage.welcomeOffer
+        welcomeClaimed = storage.welcomeClaimed
     }
 
     // MARK: What the screen shows
@@ -308,6 +356,9 @@ final class RecipeCredits: ObservableObject {
     /// it (or it already holds recipes). Otherwise only the free routes show.
     var isPaidRouteAvailable: Bool {
         guard FirebaseBootstrap.canAttest, !attestationFailed else { return false }
+        #if DEBUG
+        if demoMode { return true }
+        #endif
         switch packs {
         case .loaded, .unreachable: return true
         case .idle, .loading, .notOffered: return balance != nil
@@ -384,7 +435,7 @@ final class RecipeCredits: ObservableObject {
         }
         pathMonitor.start(queue: DispatchQueue(label: "com.foodtracker.recipe.path"))
         updatesTask = Task { [weak self] in
-            for await result in Transaction.updates {
+            for await result in StoreKit.Transaction.updates {
                 await self?.handle(result)
             }
         }
@@ -395,7 +446,9 @@ final class RecipeCredits: ObservableObject {
         #if DEBUG
         if demoMode { return }
         #endif
+        let previous = account.uid
         account = RecipeAccount.state(of: user)
+        if account.uid != previous { accountWelcomeRecipes = nil }
         balance = account.uid.map { storage.cachedBalance(for: $0) ?? 0 }
         purchasesBlocked = account.uid.map { storage.cachedPurchasesBlocked(for: $0) } ?? false
         let uid = account.uid
@@ -457,6 +510,12 @@ final class RecipeCredits: ObservableObject {
         storage.serverTakesTaste = response.acceptsTaste?.value ?? false
         let quizVersion = response.tasteQuizVersion?.value
         if serverTasteQuizVersion != quizVersion { serverTasteQuizVersion = quizVersion }
+        let welcome = WelcomeRecipes.accountRecipes(
+            acceptsWelcome: response.acceptsWelcome?.value ?? false, welcomeRecipes: response.welcomeRecipes?.value
+        )
+        if accountWelcomeRecipes != welcome {
+            withAnimation(Self.welcomeMotion) { accountWelcomeRecipes = welcome }
+        }
     }
 
     /// Kept, and republished so the form's choices follow at once. Cleared too when a request
@@ -589,7 +648,7 @@ final class RecipeCredits: ObservableObject {
     /// Sends one transaction to the server and finishes it only on the answers the contract
     /// says to: GRANTED, ALREADY_GRANTED, REJECTED_PERMANENT.
     @discardableResult
-    private func handle(_ verification: VerificationResult<Transaction>) async -> RecipePurchaseOutcome {
+    private func handle(_ verification: VerificationResult<StoreKit.Transaction>) async -> RecipePurchaseOutcome {
         let transaction = verification.unsafePayloadValue
         guard RecipeStoreKit.isRecipePack(transaction) else { return .cancelled }
         // An approved Ask to Buy, or any purchase of ours, ends the wait.
@@ -703,8 +762,8 @@ final class RecipeCredits: ObservableObject {
         if demoMode { return }
         #endif
         var stillUnfinished = Set<UInt64>()
-        var pending: [VerificationResult<Transaction>] = []
-        for await result in Transaction.unfinished {
+        var pending: [VerificationResult<StoreKit.Transaction>] = []
+        for await result in StoreKit.Transaction.unfinished {
             let transaction = result.unsafePayloadValue
             guard RecipeStoreKit.isRecipePack(transaction) else { continue }
             stillUnfinished.insert(transaction.id)
@@ -739,8 +798,12 @@ final class RecipeCredits: ObservableObject {
 
     /// Signs in from the purchase choice or Recipe settings. Returns whether the person ends up
     /// signed in; an account that already has recipes waits on `pendingMerge`.
+    /// Any sign-in made while the offer of free recipes shows claims them once it succeeds
+    /// (`WelcomeRecipes.afterSignIn`). `quietCancel`: a cancelled sign-in says nothing (the
+    /// sign-in sheet of the offer); otherwise it is "Couldn't sign in", as before.
     @discardableResult
-    func signIn(_ obtain: () async throws -> RecipeSignInCredential) async -> Bool {
+    func signIn(quietCancel: Bool = false, _ obtain: () async throws -> RecipeSignInCredential) async -> Bool {
+        let offerShowing = welcomeHint?.needsSignIn == true
         isSigningIn = true
         defer { isSigningIn = false }
         do {
@@ -755,17 +818,25 @@ final class RecipeCredits: ObservableObject {
                     apply(merged)
                     if merged.moved != 0 { notice = .merged(moved: merged.moved) }
                 }
+                // A link was followed at once by one `getBalance` (see `RecipeAccount`): its answer.
+                let linkBalance = accountService.takeLinkBalance()
+                if let linkBalance { apply(linkBalance) }
                 callSucceeded()
                 registerAppleSignIn(credential.appleAuthorizationCode)
-                await refreshBalance()
+                if offerShowing {
+                    await claimAfterSignIn()
+                } else if linkBalance == nil {
+                    await refreshBalance()
+                }
                 return true
             case .needsMerge(var merge):
                 merge.appleAuthorizationCode = credential.appleAuthorizationCode
+                mergeClaimsWelcome = offerShowing
                 pendingMerge = merge
                 return false
             }
         } catch RecipeAccountError.cancelled {
-            notice = .signInFailed
+            if !quietCancel { notice = .signInFailed }
             return false
         } catch RecipeAccountError.providerInUse {
             notice = .providerInUse
@@ -789,7 +860,12 @@ final class RecipeCredits: ObservableObject {
             if response.moved != 0 { notice = .merged(moved: response.moved) }
             callSucceeded()
             registerAppleSignIn(merge.appleAuthorizationCode)
+            if mergeClaimsWelcome {
+                mergeClaimsWelcome = false
+                await claimAfterSignIn()
+            }
         } catch {
+            mergeClaimsWelcome = false
             await accountService.cancelMerge()
             note(error)
             notice = Self.accountNotice(for: error, otherwise: .signInFailed)
@@ -798,6 +874,7 @@ final class RecipeCredits: ObservableObject {
 
     func cancelMerge() async {
         pendingMerge = nil
+        mergeClaimsWelcome = false
         await accountService.cancelMerge()
     }
 
@@ -805,6 +882,143 @@ final class RecipeCredits: ObservableObject {
         accountService.signOut()
         account = .none
         balance = nil
+    }
+
+    // MARK: Free recipes for signing in
+
+    /// How the offer comes and goes on screen when an answer arrives or changes: the row grows
+    /// while it fades in (the views pick a plain cross-fade under Reduce Motion), about 280 ms.
+    static var welcomeMotion: Animation {
+        UIAccessibility.isReduceMotionEnabled ? .easeInOut(duration: 0.2) : .easeInOut(duration: 0.28)
+    }
+
+    private var welcomeAccount: WelcomeAccount {
+        switch account {
+        case .none: return .none
+        case .anonymous: return .device
+        case .signedIn: return .signedIn
+        }
+    }
+
+    /// The account signed in now has claimed on this phone (GRANTED or ALREADY).
+    var welcomeClaimedHere: Bool {
+        guard case .signedIn(let uid, _, _) = account else { return false }
+        return welcomeClaimed.contains(uid)
+    }
+
+    /// The offer as it shows now, with the server's number; nil shows nothing anywhere.
+    var welcomeHint: WelcomeHint? {
+        WelcomeRecipes.hint(WelcomeSituation(
+            paidRouteAvailable: isPaidRouteAvailable,
+            buyingPaused: serverPaused,
+            // A build the server takes no App Store purchases from (STORE_MISMATCH) hides it too, as Buy.
+            purchasesBlocked: purchasesBlocked || storeMismatch,
+            account: welcomeAccount,
+            claimed: welcomeClaimedHere,
+            offer: WelcomeRecipes.fresh(welcomeOffer, now: Date()),
+            accountRecipes: account.uid == nil ? nil : accountWelcomeRecipes
+        ))
+    }
+
+    /// Asks `getWelcomeOffer` when the Recipe tab is shown (at most every 15 minutes) and right
+    /// before the sign-in sheet opens (`beforeSignIn`). Only where the paid route can be available
+    /// and while signed out or not claimed; sends nothing about the person and creates no account
+    /// (the callable needs App Check only). A failure is silent and keeps the last answer.
+    func refreshWelcomeOffer(beforeSignIn: Bool = false) async {
+        #if DEBUG
+        if demoMode { return }
+        #endif
+        let now = Date()
+        guard !askingWelcomeOffer,
+              WelcomeRecipes.asks(paidRouteAvailable: isPaidRouteAvailable, account: welcomeAccount, claimed: welcomeClaimedHere),
+              WelcomeRecipes.shouldAsk(lastAsked: storage.welcomeOfferAskedAt, now: now, beforeSignIn: beforeSignIn) else { return }
+        askingWelcomeOffer = true
+        defer { askingWelcomeOffer = false }
+        storage.welcomeOfferAskedAt = now
+        let answer: WelcomeOfferAnswer?
+        do {
+            let response = try await backend.welcomeOffer()
+            answer = WelcomeOfferAnswer(recipes: response.recipes, receivedAt: Date())
+        } catch {
+            answer = WelcomeRecipes.answer(afterFailure: error as? RecipeServerError ?? .server, cached: welcomeOffer, now: Date())
+        }
+        storage.welcomeOffer = answer
+        setWelcomeOffer(answer)
+    }
+
+    private func setWelcomeOffer(_ answer: WelcomeOfferAnswer?) {
+        guard answer != welcomeOffer else { return }
+        let before = WelcomeRecipes.fresh(welcomeOffer, now: Date())
+        let after = WelcomeRecipes.fresh(answer, now: Date())
+        if before == after {
+            welcomeOffer = answer
+        } else {
+            withAnimation(Self.welcomeMotion) { welcomeOffer = answer }
+        }
+    }
+
+    /// After a sign-in made while the offer showed: claim once, or, for an account that claimed on
+    /// this phone before, say so without calling (the contract never calls again after GRANTED or
+    /// ALREADY).
+    private func claimAfterSignIn() async {
+        guard let uid = account.uid else { return }
+        switch WelcomeRecipes.afterSignIn(offerShowing: true, claimedHere: welcomeClaimed.contains(uid)) {
+        case .claim:
+            await claimWelcome(justSignedIn: true)
+        case .alreadyClaimed:
+            welcomeAlready = true
+            await refreshBalance()
+        case .nothing:
+            await refreshBalance()
+        }
+    }
+
+    /// `claimWelcome` for the account signed in now: "Get 3 free recipes" (one tap), Try again
+    /// after a claim that didn't reach our server, and every sign-in made while the offer showed.
+    /// Safe to repeat: the server grants once per Apple or Google account.
+    func claimWelcome(justSignedIn: Bool = false) async {
+        guard !isClaimingWelcome, case .signedIn(let uid, _, _) = account else { return }
+        isClaimingWelcome = true
+        defer { isClaimingWelcome = false }
+        let outcome: WelcomeClaimOutcome
+        #if DEBUG
+        if demoMode {
+            try? await Task.sleep(for: .seconds(1.5))
+            applyDemoClaim()
+            finishClaim(demoClaimOutcome, uid: uid, justSignedIn: justSignedIn)
+            return
+        }
+        #endif
+        do {
+            let response = try await backend.claimWelcome()
+            callSucceeded()
+            apply(response)
+            outcome = WelcomeRecipes.outcome(of: response)
+        } catch {
+            note(error)
+            outcome = WelcomeRecipes.outcome(of: error as? RecipeServerError ?? .server)
+        }
+        finishClaim(outcome, uid: uid, justSignedIn: justSignedIn)
+    }
+
+    private func finishClaim(_ outcome: WelcomeClaimOutcome, uid: String, justSignedIn: Bool) {
+        if WelcomeRecipes.marksClaimed(outcome) {
+            withAnimation(Self.welcomeMotion) { welcomeClaimed.insert(uid) }
+            #if DEBUG
+            if demoMode { return showClaimOutcome(outcome, justSignedIn: justSignedIn) }
+            #endif
+            storage.welcomeClaimed = welcomeClaimed
+        }
+        showClaimOutcome(outcome, justSignedIn: justSignedIn)
+    }
+
+    private func showClaimOutcome(_ outcome: WelcomeClaimOutcome, justSignedIn: Bool) {
+        switch outcome {
+        case .granted(let count): notice = .welcomeGranted(count)
+        case .already: welcomeAlready = true
+        case .off: notice = .welcomeOff(justSignedIn: justSignedIn)
+        case .notReached: notice = .welcomeNotReached
+        }
     }
 
     #if DEBUG
@@ -826,9 +1040,14 @@ final class RecipeCredits: ObservableObject {
             serverTakesMenuDays = false
             costs = .fallback
         }
-        account = state == "account"
-            ? .signedIn(uid: "demo", providers: [.apple], email: "k7x2m9@privaterelay.appleid.com")
-            : .anonymous(uid: "demo")
+        switch state {
+        case "account": account = .signedIn(uid: "demo", providers: [.apple], email: "k7x2m9@privaterelay.appleid.com")
+        // No account at all, as anyone who never bought or signed in.
+        case "none":
+            account = .none
+            self.balance = nil
+        default: account = .anonymous(uid: "demo")
+        }
         switch state {
         case "unconfirmed": unconfirmed = [UnconfirmedPurchase(transactionID: 1, productID: "recipes_50", credits: 50)]
         case "pending": paymentPending = true
@@ -842,6 +1061,63 @@ final class RecipeCredits: ObservableObject {
     }
 
     private(set) var demoMode = false
+    /// What a claim answers in a demo (`-demoWelcomeOutcome`); GRANTED with the demo's number
+    /// unless told otherwise.
+    private var demoClaimOutcome: WelcomeClaimOutcome = .granted(3)
+
+    /// `-demoWelcomeOffer <n>` (with `-demoRecipeCredits`): the offer as from our server, nothing
+    /// asked or stored. `delay` > 0 (`-demoWelcomeDelay <s>`): it arrives that long after launch,
+    /// with the motion. Signed in, `n` is also what the balance carries. `claimed`
+    /// (`-demoWelcomeClaimed YES`): this account claimed here. `claiming` (`-demoWelcomeClaiming
+    /// YES`): a claim stays on its way. `outcome` (`-demoWelcomeOutcome granted|already|off|
+    /// notReached`): what a claim answers, and, with `showOutcome`, delivered once 1.5 s after
+    /// launch as if a sign-in's claim had just finished.
+    func showWelcomeDemo(offer: Int?, delay: Double, claimed: Bool, claiming: Bool, outcome: String?, showOutcome: Bool) {
+        let recipes = offer ?? 0
+        switch outcome {
+        case "already": demoClaimOutcome = .already
+        case "off": demoClaimOutcome = .off
+        case "notReached": demoClaimOutcome = .notReached
+        default: demoClaimOutcome = .granted(recipes > 0 ? recipes : 3)
+        }
+        if claimed, let uid = account.uid { welcomeClaimed.insert(uid) }
+        isClaimingWelcome = claiming
+        let deliver = { [weak self] in
+            guard let self, let offer else { return }
+            self.welcomeOffer = WelcomeOfferAnswer(recipes: offer, receivedAt: Date())
+            if case .signedIn = self.account { self.accountWelcomeRecipes = offer }
+        }
+        if delay > 0 {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(delay))
+                withAnimation(Self.welcomeMotion) { deliver() }
+            }
+        } else {
+            deliver()
+        }
+        if showOutcome {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(1.5))
+                guard let self else { return }
+                if self.account.uid == nil || self.account == .anonymous(uid: "demo") {
+                    self.account = .signedIn(uid: "demo", providers: [.apple], email: "k7x2m9@privaterelay.appleid.com")
+                    self.balance = self.balance ?? 0
+                }
+                self.applyDemoClaim()
+                self.finishClaim(self.demoClaimOutcome, uid: "demo", justSignedIn: true)
+            }
+        }
+    }
+
+    /// What the demo's claim does to the count and the account's number, as the server's answer would.
+    private func applyDemoClaim() {
+        switch demoClaimOutcome {
+        case .granted(let count): balance = (balance ?? 0) + count
+        case .off: withAnimation(Self.welcomeMotion) { accountWelcomeRecipes = 0 }
+        case .already, .notReached: break
+        }
+    }
+
     #endif
 
     /// Deletes the account from our server: a signed-in one after a fresh sign-in with its own

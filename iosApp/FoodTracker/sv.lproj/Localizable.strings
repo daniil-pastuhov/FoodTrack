@@ -870,3 +870,34 @@
 "taste_promo_taste_body" = "Vår server lutar åt det du gillar och utelämnar det du helst vill slippa. Ditt skafferi, dina allergener och din kost går fortfarande först.";
 "taste_promo_device_title" = "Stannar på den här enheten";
 "taste_promo_device_body" = "Den skickas bara med förfrågningar om recept från ett paket.";
+
+/* Recipe: free recipes for signing in; copied from Android's strings.xml, Apple or Google on iOS. */
+"welcome_sign_in_one" = "Logga in och få ett gratis recept";
+"welcome_get_one" = "Få ett gratis recept";
+"welcome_claiming" = "Hämtar dina gratis recept…";
+"welcome_menu_enough_one" = "Ett gratis recept räcker till den här menyn.";
+"welcome_menu_smaller_one" = "Ett gratis recept räcker till ett enskilt recept eller en mindre meny, inte den här.";
+"welcome_menu_single_one" = "Ett gratis recept räcker till ett enskilt recept, inte en meny.";
+"welcome_intro_sign_in_one" = "Logga in för att få ett gratis recept och prova.";
+"welcome_intro_account_one" = "Det här kontot kan få ett gratis recept att prova med.";
+"welcome_buy_sign_in_one" = "Eller logga in och få ett gratis recept";
+"welcome_buy_get_one" = "Eller få ett gratis recept";
+"welcome_sheet_lede_one" = "Logga in, så lägger vår server till ett gratis recept i ditt konto, så att du kan prova vad ett paket ger.";
+"welcome_sheet_server_title" = "Skrivna av vår server";
+"welcome_sheet_server_body" = "De fungerar som recept från ett paket: ett enskilt recept, eller en meny om de räcker.";
+"welcome_sheet_account_title" = "Sparade i ditt konto";
+"welcome_sheet_account_body" = "De, och alla recept du köper senare, följer med till en ny telefon var du än loggar in.";
+"welcome_sheet_privacy_title" = "Ett konto på vår server";
+"welcome_sheet_privacy_body" = "Vi sparar ditt konto-id och din e-postadress. Inloggningen skickar inget från ditt skafferi, och du kan radera kontot i Receptinställningar.";
+"welcome_once" = "Gratis recept ges en gång per Apple- eller Google-konto.";
+"welcome_not_now" = "Inte nu";
+"welcome_adding" = "Lägger till dina gratis recept…";
+"welcome_already_title" = "Det här kontot har redan fått sina gratis recept";
+"welcome_already_body" = "Gratis recept ges en gång per Apple- eller Google-konto. Du är inloggad, och recept du köper sparas i det här kontot.";
+"welcome_off_signed_in_now" = "Gratis recept är inte tillgängliga just nu. Du är inloggad; inget annat har ändrats.";
+"welcome_off" = "Gratis recept är inte tillgängliga just nu. Inget har ändrats.";
+"welcome_claim_failed" = "Inloggad, men dina gratis recept kunde inte läggas till än.";
+"welcome_settings_sign_in_one" = "Logga in och få ett gratis recept från vår server, en gång per Apple- eller Google-konto.";
+"welcome_settings_account_one" = "Det här kontot kan få ett gratis recept från vår server.";
+"welcome_settings_on_phone_one" = "När du loggar in får du också ett gratis recept.";
+"welcome_delete_note" = "Loggar du in igen senare får du inte gratis recept på nytt.";

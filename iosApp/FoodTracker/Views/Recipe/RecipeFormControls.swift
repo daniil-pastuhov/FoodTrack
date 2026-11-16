@@ -368,6 +368,13 @@ struct RecipeIntroSheet: View {
     private var credits: RecipeCredits { model.credits }
     /// The phone's model is there, ready or still downloading.
     private var onDevice: Bool { model.routes.onDevice || model.routes.onDevicePreparing }
+    /// The free recipes' offer as it was when the sheet opened: it doesn't change while open.
+    @State private var welcomeHint: WelcomeHint?
+
+    init(model: RecipeViewModel) {
+        self.model = model
+        _welcomeHint = State(initialValue: model.credits.welcomeHint)
+    }
 
     var body: some View {
         LarderSheet(L10n.recipeIntroTitle) {
@@ -381,11 +388,22 @@ struct RecipeIntroSheet: View {
                     OnboardingRow(.smartphone, title: L10n.recipeIntroDeviceTitle, supporting: L10n.recipeIntroDeviceMessage)
                 }
                 if credits.isPaidRouteAvailable {
-                    OnboardingRow(
-                        .sparkles,
-                        title: L10n.recipeIntroPacksTitle,
-                        supporting: L10n.recipeIntroPacksMessage(credits.costs, menuSets: credits.serverTakesMenuDays, lowestPrice: credits.lowestPackPrice)
-                    )
+                    if let welcomeHint {
+                        WelcomeIntroPacksRow(
+                            title: L10n.recipeIntroPacksTitle,
+                            message: L10n.recipeIntroPacksMessage(
+                                credits.costs, menuSets: credits.serverTakesMenuDays, lowestPrice: credits.lowestPackPrice, freeStays: false
+                            ),
+                            offer: L10n.welcomeIntro(welcomeHint),
+                            freeStays: L10n.recipeIntroFreeStays
+                        )
+                    } else {
+                        OnboardingRow(
+                            .sparkles,
+                            title: L10n.recipeIntroPacksTitle,
+                            supporting: L10n.recipeIntroPacksMessage(credits.costs, menuSets: credits.serverTakesMenuDays, lowestPrice: credits.lowestPackPrice)
+                        )
+                    }
                 }
             }
             Text(L10n.recipeIntroAgain)
@@ -394,7 +412,13 @@ struct RecipeIntroSheet: View {
                 .fixedSize(horizontal: false, vertical: true)
             VStack(spacing: LarderSpace.s1) {
                 LarderButton(L10n.recipeIntroStart, fullWidth: true) { model.dismissIntro() }
-                if credits.canBuy {
+                // With an offer, the second action is the offer: the packs stay one tap away from
+                // the count and Buy recipes.
+                if let welcomeHint {
+                    LarderButton(L10n.welcomeOffer(welcomeHint), icon: .gift, variant: .text, fullWidth: true) {
+                        model.introToWelcome()
+                    }
+                } else if credits.canBuy {
                     LarderButton(L10n.recipeIntroPacksAction, variant: .text, fullWidth: true) { model.introToPacks() }
                 }
             }

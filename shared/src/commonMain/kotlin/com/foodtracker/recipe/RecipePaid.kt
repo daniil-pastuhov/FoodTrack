@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.datetime.LocalDate
@@ -94,6 +95,10 @@ sealed interface PaidEvent {
 
     /** A request sent earlier failed on the server and was counted: [taken] recipes. */
     data class EarlierRefused(val taken: Int) : PaidEvent
+
+    /** How a claim of the free recipes for signing in ended ([WelcomeOutcome]); ALREADY is
+     *  [PaidUiState.welcomeAlready] instead, a dialog. */
+    data class Welcome(val outcome: WelcomeOutcome) : PaidEvent
 }
 
 data class PaidUiState(
@@ -156,8 +161,24 @@ data class PaidUiState(
     val deletionTried: Boolean = false,
     /** The cheapest pack as the store formats its price, once the store has been asked (which
      *  the tab does anyway, to know whether to offer packs); null before, and when it couldn't. */
-    val lowestPrice: String? = null
+    val lowestPrice: String? = null,
+    /** The cached `getWelcomeOffer` answer while it is under a day old, else 0 ([welcomeRecipesOf]). */
+    val welcomeOffer: Int = 0,
+    /** The `welcomeRecipes` beside this account's balance while under a day old; null when none
+     *  arrived in the last day. */
+    val welcomeAccount: Int? = null,
+    /** This account's claim settled on this device: no hint for it again. */
+    val welcomeClaimed: Boolean = false,
+    /** A one-tap claim (signed in) is running: its button spins. */
+    val welcomeClaiming: Boolean = false,
+    /** The sign-in sheet before a claim; null when not shown. */
+    val welcomeSheet: WelcomeSheet? = null,
+    /** The claim answered ALREADY: the dialog, until closed. */
+    val welcomeAlready: Boolean = false
 ) {
+    /** Free recipes for signing in, as the hint shows them; null for none ([welcomeHint]). */
+    val welcome: WelcomeHint? get() = welcomeHint(this)
+
     /** Buying is offered: only once the store has shown it has packs, so there is never a Buy
      *  that leads nowhere; hidden while the server is paused, and while a payment is waiting or
      *  unconfirmed, so nobody pays twice. */
@@ -343,8 +364,12 @@ internal class RecipePaid(
     private fun publish(kept: RecipePaidSnapshot) {
         if (demo) return
         val key = account.state.value.purchaseKey
+        val now = nowMillis()
         updatePaid {
             it.copy(
+                welcomeOffer = welcomeRecipesOf(kept.welcomeOffer, now),
+                welcomeAccount = kept.welcomeAccount?.takeIf { answer -> isWelcomeAnswerFresh(answer, now) }?.recipes,
+                welcomeClaimed = key != null && key in kept.welcomeClaimed,
                 available = shown(it.packsOffered),
                 balance = kept.balance,
                 // The menu set's table only while the server says it writes them.
@@ -380,7 +405,9 @@ internal class RecipePaid(
         danish: JsonElement?,
         menuDays: JsonElement?,
         taste: JsonElement?,
-        tasteVersion: JsonElement?
+        tasteVersion: JsonElement?,
+        welcomeAccepted: JsonElement?,
+        welcomeRecipes: JsonElement?
     ): RecipePaidSnapshot =
         also { termsArrived = true }.copy(
             costs = recipeCostsOf(costs) ?: this.costs,
@@ -390,7 +417,8 @@ internal class RecipePaid(
             serverTakesDanish = acceptsDanishOf(danish),
             serverTakesMenuDays = acceptsMenuDaysOf(menuDays),
             serverTakesTaste = acceptsTasteOf(taste),
-            tasteQuizVersion = tasteQuizVersionOf(tasteVersion) ?: tasteQuizVersion
+            tasteQuizVersion = tasteQuizVersionOf(tasteVersion) ?: tasteQuizVersion,
+            welcomeAccount = welcomeAccountAnswerOf(acceptsWelcomeOf(welcomeAccepted), welcomeRecipesFieldOf(welcomeRecipes), nowMillis())
         )
 
     /** Whether the route is on screen: only once the store has shown it sells this build a
@@ -466,7 +494,7 @@ internal class RecipePaid(
         balanceAskedAt = nowMillis()
         return when (val result = backend.getBalance()) {
             is ServerResult.Ok -> {
-                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish, serverTakesMenuDays = result.value.acceptsMenuDays, serverTakesTaste = result.value.acceptsTaste, tasteQuizVersion = result.value.tasteQuizVersion ?: it.tasteQuizVersion).also { termsArrived = true } }
+                persist { it.copy(balance = result.value.balance, costs = result.value.costs ?: it.costs, purchasesBlocked = result.value.purchasesBlocked, serverTakesOptional = result.value.acceptsOptional, serverTakesMultiChoice = result.value.acceptsMultiChoice, serverTakesDanish = result.value.acceptsDanish, serverTakesMenuDays = result.value.acceptsMenuDays, serverTakesTaste = result.value.acceptsTaste, tasteQuizVersion = result.value.tasteQuizVersion ?: it.tasteQuizVersion).withBalanceWelcome(result.value).also { termsArrived = true } }
                 updatePaid { if (it.issue == ServerIssue.BUSY && held() == null) it.copy(issue = null) else it }
                 updatePaid { if (it.issue == ServerIssue.OFFLINE) it.copy(issue = null) else it }
                 true
@@ -519,6 +547,8 @@ internal class RecipePaid(
     private fun noteOffered(offered: Boolean) {
         updatePaid { it.copy(packsOffered = offered, available = shown(offered)) }
         if (!offered && holdsNothing()) markUnavailable()
+        // The tab asked for the offer before the store had said whether it sells packs here.
+        if (offered && welcomeWanted) scope.launch { askWelcome(force = false) }
     }
 
     private fun holdsNothing(): Boolean =
@@ -617,11 +647,21 @@ internal class RecipePaid(
     fun buyWithAccount(provider: SignInProvider) {
         val sheet = state.value.paid.sheet as? BuySheet.Choice ?: return
         if (sheet.signingIn != null) return
+        // A sign-in made here while the offer shows claims it too; quietly, since the person is
+        // buying: only a grant is said.
+        val claims = state.value.paid.welcome?.kind == WelcomeKind.SIGN_IN
         updatePaid { it.copy(sheet = sheet.copy(signingIn = provider)) }
         scope.launch {
             when (val result = account.signIn(provider)) {
                 SignInResult.SignedIn -> {
-                    refreshBalance()
+                    if (claims) {
+                        scope.launch {
+                            val outcome = claim(signedInNow = true)
+                            if (outcome is WelcomeOutcome.Granted) updatePaid { it.copy(event = PaidEvent.Welcome(outcome)) }
+                        }
+                    } else {
+                        refreshBalance()
+                    }
                     launchStore(sheet.packs, sheet.selected)
                 }
                 is SignInResult.NeedsMerge -> {
@@ -744,7 +784,7 @@ internal class RecipePaid(
                             current.copy(
                                 unverified = if (settled) current.unverified.filterNot { it.token == purchase.token } else current.unverified,
                                 balance = reply.balance ?: current.balance
-                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion)
+                            ).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes)
                         }
                         when (reply.status) {
                             VerifyStatus.GRANTED -> updatePaid { it.copy(event = PaidEvent.RecipesAdded(purchase.recipes)) }
@@ -799,14 +839,19 @@ internal class RecipePaid(
 
     fun signIn(provider: SignInProvider) {
         if (state.value.paid.accountBusy) return
+        // Any sign-in made while the offer shows claims it, with the same outcomes as its sheet.
+        val claims = state.value.paid.welcome?.kind == WelcomeKind.SIGN_IN
         updatePaid { it.copy(accountBusy = true) }
         scope.launch {
             when (val result = account.signIn(provider)) {
                 SignInResult.SignedIn -> {
                     updatePaid { it.copy(accountBusy = false) }
-                    refreshBalance()
+                    if (claims) claimAfterSigningIn() else refreshBalance()
                 }
-                is SignInResult.NeedsMerge -> offerMerge(result.merge)
+                is SignInResult.NeedsMerge -> {
+                    claimAfterMerge = claims
+                    offerMerge(result.merge)
+                }
                 SignInResult.InUse -> updatePaid { it.copy(accountBusy = false, event = PaidEvent.SignInInUse) }
                 SignInResult.Cancelled -> updatePaid { it.copy(accountBusy = false) }
                 SignInResult.Failed -> updatePaid { it.copy(accountBusy = false, event = PaidEvent.SignInFailed) }
@@ -843,11 +888,16 @@ internal class RecipePaid(
         when (val result = whileBusy(setOf(ServerError.OVERLOADED, ServerError.BUSY)) { account.completeMerge(merge) }) {
             is ServerResult.Ok -> {
                 val reply = result.value
-                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish, serverTakesMenuDays = reply.acceptsMenuDays, serverTakesTaste = reply.acceptsTaste, tasteQuizVersion = reply.tasteQuizVersion ?: it.tasteQuizVersion).also { termsArrived = true } }
+                persist { it.copy(balance = reply.balance, costs = reply.costs ?: it.costs, purchasesBlocked = reply.purchasesBlocked, serverTakesOptional = reply.acceptsOptional, serverTakesMultiChoice = reply.acceptsMultiChoice, serverTakesDanish = reply.acceptsDanish, serverTakesMenuDays = reply.acceptsMenuDays, serverTakesTaste = reply.acceptsTaste, tasteQuizVersion = reply.tasteQuizVersion ?: it.tasteQuizVersion, welcomeAccount = welcomeAccountAnswerOf(reply.acceptsWelcome, reply.welcomeRecipes, nowMillis())).also { termsArrived = true } }
                 val event = if (reply.moved != 0) PaidEvent.Merged(reply.moved) else null
                 updatePaid { it.copy(accountBusy = false, merge = null, event = event ?: it.event) }
+                if (claimAfterMerge) {
+                    claimAfterMerge = false
+                    claimAfterSigningIn()
+                }
             }
             is ServerResult.Err -> {
+                claimAfterMerge = false
                 runCatching { account.cancelMerge(merge) }
                 handleCommonError(result.error)
                 updatePaid { it.copy(accountBusy = false, merge = null, event = PaidEvent.SignInFailed) }
@@ -870,6 +920,7 @@ internal class RecipePaid(
     fun cancelMerge() {
         val merge = pendingMerge ?: return
         pendingMerge = null
+        claimAfterMerge = false
         updatePaid { it.copy(merge = null, accountBusy = false) }
         scope.launch { account.cancelMerge(merge) }
     }
@@ -951,6 +1002,193 @@ internal class RecipePaid(
     fun dismissAppleLinkNotice() {
         updatePaid { it.copy(appleLinkLeft = false) }
     }
+
+    // --- Free recipes for signing in (WelcomeRecipes.kt) --------------------------------------
+
+    /** When `getWelcomeOffer` was last asked in this run, answered or not. */
+    private var welcomeAskedAt: Long? = null
+    private var welcomeAsking = false
+
+    /** The tab was shown: ask for the offer as soon as the store says it sells packs here. */
+    private var welcomeWanted = false
+
+    /** A sign-in made while the offer showed needed its account joined first: claim after. */
+    private var claimAfterMerge = false
+    private val claimLock = Mutex()
+
+    /**
+     * The Recipe tab was shown: the cached answer is shown at once (as long as it is under a day
+     * old), and asked again when the last ask is 15 minutes old ([shouldAskWelcomeOffer]). Only on
+     * installs that can buy, and only while signed out ([welcomeOfferAskable]). Failures are silent.
+     */
+    fun onTabShown() {
+        if (!available || demo) return
+        welcomeWanted = true
+        publish(snapshot)
+        scope.launch { askWelcome(force = false) }
+    }
+
+    private suspend fun askWelcome(force: Boolean) {
+        if (demo) return
+        val now = nowMillis()
+        if (!shouldAskWelcomeOffer(welcomeOfferAskable(state.value.paid), snapshot.welcomeOffer, welcomeAskedAt, now, force)) return
+        if (welcomeAsking && !force) return
+        welcomeAsking = true
+        welcomeAskedAt = now
+        try {
+            val result = try {
+                backend.getWelcomeOffer()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ServerResult.Err(ServerError.OFFLINE)
+            }
+            when {
+                result is ServerResult.Ok -> persist { it.copy(welcomeOffer = WelcomeAnswer(result.value.coerceIn(0, WELCOME_MAX_RECIPES), nowMillis())) }
+                // An older server has no free recipes: an answer of 0.
+                result is ServerResult.Err && result.error == ServerError.CALLABLE_MISSING -> persist { it.copy(welcomeOffer = WelcomeAnswer(0, nowMillis())) }
+                // The last answer stands until it is a day old; nothing is said.
+                else -> publish(snapshot)
+            }
+        } finally {
+            welcomeAsking = false
+        }
+    }
+
+    /**
+     * The hint was tapped (form, How recipes work, Buy sheet, Recipe settings). Signed in, it claims
+     * at once. Signed out, the offer is asked once more, so the sheet's number is current, and the
+     * sign-in sheet opens (a plain one, no promise, if that answer was 0); an open pack sheet closes.
+     */
+    fun openWelcome() {
+        val paid = state.value.paid
+        val hint = paid.welcome ?: return
+        if (hint.kind == WelcomeKind.CLAIM) {
+            updatePaid { it.copy(sheet = null) }
+            claimWelcome()
+            return
+        }
+        if (paid.welcomeSheet != null || paid.accountBusy) return
+        scope.launch {
+            withTimeoutOrNull(WELCOME_SHEET_WAIT_MILLIS) { askWelcome(force = true) }
+            updatePaid { it.copy(sheet = null, welcomeSheet = WelcomeSheet(it.welcomeOffer)) }
+        }
+    }
+
+    /** The sign-in sheet's button: signs in, then claims once (only when the sheet named a number). */
+    fun welcomeSignIn(provider: SignInProvider) {
+        val sheet = state.value.paid.welcomeSheet ?: return
+        if (sheet.signingIn || sheet.adding || state.value.paid.accountBusy) return
+        updatePaid { it.copy(welcomeSheet = sheet.copy(signingIn = true, signInFailed = false)) }
+        scope.launch {
+            when (val result = account.signIn(provider)) {
+                SignInResult.SignedIn -> {
+                    if (sheet.recipes > 0) {
+                        updatePaid { current -> current.copy(welcomeSheet = current.welcomeSheet?.copy(signingIn = false, adding = true)) }
+                        claimAfterSigningIn()
+                    } else {
+                        updatePaid { it.copy(welcomeSheet = null) }
+                        refreshBalance()
+                    }
+                }
+                is SignInResult.NeedsMerge -> {
+                    // This device's recipes and the account are joined first (asked when there are
+                    // some), then the claim.
+                    updatePaid { it.copy(welcomeSheet = null) }
+                    claimAfterMerge = sheet.recipes > 0
+                    offerMerge(result.merge)
+                }
+                // Nothing at all: the sheet stays as it was.
+                SignInResult.Cancelled -> updatePaid { current -> current.copy(welcomeSheet = current.welcomeSheet?.copy(signingIn = false)) }
+                SignInResult.InUse, SignInResult.Failed ->
+                    updatePaid { current -> current.copy(welcomeSheet = current.welcomeSheet?.copy(signingIn = false, signInFailed = true), event = PaidEvent.SignInFailed) }
+            }
+        }
+    }
+
+    /** "Not now", or the sheet swiped away. A sign-in or claim under way carries on, and its
+     *  outcome shows where the person is. */
+    fun dismissWelcomeSheet() {
+        updatePaid { it.copy(welcomeSheet = null) }
+    }
+
+    /** Signed in without having claimed: one tap claims, with no sheet. Also the Try again of a
+     *  claim that didn't reach our server (safe: it answers ALREADY the second time). */
+    fun claimWelcome() {
+        val paid = state.value.paid
+        if (paid.welcomeClaiming || paid.welcomeClaimed || account.state.value.kind != AccountKind.SIGNED_IN) return
+        updatePaid { it.copy(welcomeClaiming = true) }
+        scope.launch {
+            val outcome = claim(signedInNow = false)
+            updatePaid { it.copy(welcomeClaiming = false) }
+            outcome?.let(::report)
+        }
+    }
+
+    fun dismissWelcomeAlready() {
+        updatePaid { it.copy(welcomeAlready = false) }
+    }
+
+    /** Claims for the account just signed in to and says how it went; the sheet closes after. */
+    private suspend fun claimAfterSigningIn() {
+        updatePaid { it.copy(welcomeClaiming = true) }
+        val outcome = claim(signedInNow = true)
+        updatePaid { it.copy(welcomeClaiming = false, welcomeSheet = null) }
+        if (outcome == null || outcome == WelcomeOutcome.NotReached) refreshBalance()
+        outcome?.let(::report)
+    }
+
+    private fun report(outcome: WelcomeOutcome) {
+        updatePaid { if (outcome == WelcomeOutcome.Already) it.copy(welcomeAlready = true) else it.copy(event = PaidEvent.Welcome(outcome)) }
+    }
+
+    /**
+     * `claimWelcome` once for the signed-in account, unless it settled on this device already. The
+     * reply's balance and terms are kept as from any reply that carries a balance; GRANTED and
+     * ALREADY mark this account as claimed here. Null when there was nothing to claim.
+     */
+    private suspend fun claim(signedInNow: Boolean): WelcomeOutcome? = claimLock.withLock {
+        val current = account.state.value
+        val key = current.purchaseKey
+        if (current.kind != AccountKind.SIGNED_IN || (key != null && key in snapshot.welcomeClaimed)) return@withLock null
+        val result = try {
+            whileBusy(setOf(ServerError.OVERLOADED)) { backend.claimWelcome() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            ServerResult.Err(ServerError.OFFLINE)
+        }
+        val outcome = welcomeOutcomeOf(result, signedInNow)
+        when (result) {
+            is ServerResult.Ok -> {
+                val reply = result.value.balance
+                persist {
+                    it.copy(
+                        balance = reply.balance,
+                        costs = reply.costs ?: it.costs,
+                        purchasesBlocked = reply.purchasesBlocked,
+                        serverTakesOptional = reply.acceptsOptional,
+                        serverTakesMultiChoice = reply.acceptsMultiChoice,
+                        serverTakesDanish = reply.acceptsDanish,
+                        serverTakesMenuDays = reply.acceptsMenuDays,
+                        serverTakesTaste = reply.acceptsTaste,
+                        tasteQuizVersion = reply.tasteQuizVersion ?: it.tasteQuizVersion
+                    ).withBalanceWelcome(reply).also { termsArrived = true }
+                }
+                balanceAskedAt = nowMillis()
+            }
+            is ServerResult.Err -> when (result.error) {
+                ServerError.CALLABLE_MISSING -> persist { it.copy(welcomeAccount = WelcomeAnswer(0, nowMillis())) }
+                ServerError.ACCOUNT_CLOSED -> handleCommonError(result.error)
+                else -> Unit
+            }
+        }
+        if (welcomeClaimSettled(outcome) && key != null) persist { it.copy(welcomeClaimed = (it.welcomeClaimed + key).distinct()) }
+        outcome
+    }
+
+    private fun RecipePaidSnapshot.withBalanceWelcome(reply: BalanceReply): RecipePaidSnapshot =
+        copy(welcomeAccount = welcomeAccountAnswerOf(reply.acceptsWelcome, reply.welcomeRecipes, nowMillis()))
 
     // --- Allergen consent (AllergenConsent.kt) -----------------------------------------------
 
@@ -1251,7 +1489,7 @@ internal class RecipePaid(
                             if (saved == null) {
                                 // The contract promises the content with DONE; without it there is
                                 // nothing to show, and asking again with this id returns the same.
-                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion) }
+                                persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes) }
                                 finish(interactive, RecipeEvent.ServerFailed)
                                 return Sent.SETTLED
                             }
@@ -1261,7 +1499,7 @@ internal class RecipePaid(
                             // recipes as unread.
                             val shown = interactive && isOnScreen()
                             if (!shown) markUnread(saved.id)
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (shown) {
                                 state.update { current ->
@@ -1290,7 +1528,7 @@ internal class RecipePaid(
                             failures = 0
                             // The balance it reports is held, not spent: the count waits for the
                             // result. The costs and the block stand as they are.
-                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion) }
+                            persist { it.withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes) }
                             if (nowMillis() >= deadline) {
                                 finish(interactive, null, ServerIssue.OFFLINE)
                                 return Sent.KEPT_OFFLINE
@@ -1298,7 +1536,7 @@ internal class RecipePaid(
                             pollDelay(if (nowMillis() - began < SLOW_POLL_AFTER_MILLIS) POLL_MILLIS else SLOW_POLL_MILLIS)
                         }
                         GenerateStatus.FAILED -> {
-                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion) }
+                            persist { it.copy(pendingGeneration = null, balance = reply.balance).withTerms(reply.costs, reply.purchasesBlocked, reply.acceptsOptionalIngredients, reply.acceptsMultiChoiceConfig, reply.acceptsDanish, reply.acceptsMenuDays, reply.acceptsTaste, reply.tasteQuizVersion, reply.acceptsWelcome, reply.welcomeRecipes) }
                             updatePaid { if (it.issue == ServerIssue.OFFLINE || it.issue == ServerIssue.BUSY) it.copy(issue = null) else it }
                             if (!interactive && reply.charged) updatePaid { it.copy(event = PaidEvent.EarlierRefused(cost)) }
                             finish(interactive, if (reply.charged) RecipeEvent.ServerRefused(cost) else RecipeEvent.ServerFailed)
@@ -1543,5 +1781,8 @@ internal class RecipePaid(
     private companion object {
         /** The pack the sheet selects first, as the design has it. */
         const val DEFAULT_PACK = "recipes_50"
+
+        /** How long opening the sign-in sheet waits for the offer to be asked again. */
+        const val WELCOME_SHEET_WAIT_MILLIS = 4_000L
     }
 }

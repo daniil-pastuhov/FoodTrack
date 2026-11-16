@@ -1350,5 +1350,259 @@
         </dict>
     </dict>
     <!-- /Taste profile -->
+    <!-- Free recipes for signing in: copied from Android's strings.xml -->
+    <key>welcome_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Inicia sesión y consigue %d receta gratis</string>
+            <key>many</key>
+            <string>Inicia sesión y consigue %d recetas gratis</string>
+            <key>other</key>
+            <string>Inicia sesión y consigue %d recetas gratis</string>
+        </dict>
+    </dict>
+    <key>welcome_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Conseguir %d receta gratis</string>
+            <key>many</key>
+            <string>Conseguir %d recetas gratis</string>
+            <key>other</key>
+            <string>Conseguir %d recetas gratis</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_enough</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d receta gratis es suficiente para este menú.</string>
+            <key>many</key>
+            <string>%d recetas gratis son suficientes para este menú.</string>
+            <key>other</key>
+            <string>%d recetas gratis son suficientes para este menú.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_smaller</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d receta gratis sirve para una receta suelta o un menú más pequeño, no para este.</string>
+            <key>many</key>
+            <string>%d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</string>
+            <key>other</key>
+            <string>%d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_single</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d receta gratis sirve para una receta suelta, no para un menú.</string>
+            <key>many</key>
+            <string>%d recetas gratis sirven para recetas sueltas, no para un menú.</string>
+            <key>other</key>
+            <string>%d recetas gratis sirven para recetas sueltas, no para un menú.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Inicia sesión para conseguir %d receta gratis y probarlo.</string>
+            <key>many</key>
+            <string>Inicia sesión para conseguir %d recetas gratis y probarlo.</string>
+            <key>other</key>
+            <string>Inicia sesión para conseguir %d recetas gratis y probarlo.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Esta cuenta puede conseguir %d receta gratis para probarlo.</string>
+            <key>many</key>
+            <string>Esta cuenta puede conseguir %d recetas gratis para probarlo.</string>
+            <key>other</key>
+            <string>Esta cuenta puede conseguir %d recetas gratis para probarlo.</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>O inicia sesión y consigue %d receta gratis</string>
+            <key>many</key>
+            <string>O inicia sesión y consigue %d recetas gratis</string>
+            <key>other</key>
+            <string>O inicia sesión y consigue %d recetas gratis</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>O consigue %d receta gratis</string>
+            <key>many</key>
+            <string>O consigue %d recetas gratis</string>
+            <key>other</key>
+            <string>O consigue %d recetas gratis</string>
+        </dict>
+    </dict>
+    <key>welcome_sheet_lede</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Inicia sesión y nuestro servidor añade %d receta gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+            <key>many</key>
+            <string>Inicia sesión y nuestro servidor añade %d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+            <key>other</key>
+            <string>Inicia sesión y nuestro servidor añade %d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+        </dict>
+    </dict>
+    <key>welcome_granted</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d receta gratis añadida</string>
+            <key>many</key>
+            <string>%d recetas gratis añadidas</string>
+            <key>other</key>
+            <string>%d recetas gratis añadidas</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Inicia sesión y consigue %d receta gratis de nuestro servidor, una vez por cuenta de Apple o Google.</string>
+            <key>many</key>
+            <string>Inicia sesión y consigue %d recetas gratis de nuestro servidor, una vez por cuenta de Apple o Google.</string>
+            <key>other</key>
+            <string>Inicia sesión y consigue %d recetas gratis de nuestro servidor, una vez por cuenta de Apple o Google.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Esta cuenta puede conseguir %d receta gratis de nuestro servidor.</string>
+            <key>many</key>
+            <string>Esta cuenta puede conseguir %d recetas gratis de nuestro servidor.</string>
+            <key>other</key>
+            <string>Esta cuenta puede conseguir %d recetas gratis de nuestro servidor.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_on_phone</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Al iniciar sesión también consigues %d receta gratis.</string>
+            <key>many</key>
+            <string>Al iniciar sesión también consigues %d recetas gratis.</string>
+            <key>other</key>
+            <string>Al iniciar sesión también consigues %d recetas gratis.</string>
+        </dict>
+    </dict>
+    <!-- /Free recipes -->
 </dict>
 </plist>

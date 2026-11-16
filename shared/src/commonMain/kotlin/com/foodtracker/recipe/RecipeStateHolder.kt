@@ -536,6 +536,8 @@ class RecipeStateHolder(
             downloadIfNeeded()
         }
         paid.resume()
+        // The tab is shown: the free recipes' offer, from its cache, and asked again when due.
+        paid.onTabShown()
     }
 
     /**
@@ -809,6 +811,25 @@ class RecipeStateHolder(
     fun signOut() = paid.signOut()
     fun deleteAccount() = paid.deleteAccount()
     fun consumePaidEvent() = paid.consumeEvent()
+
+    // --- Free recipes for signing in (WelcomeRecipes.kt) ----------------------------------------
+
+    /** The hint was tapped: the sign-in sheet (signed out), or the claim itself (signed in). */
+    fun openWelcome() = paid.openWelcome()
+
+    /** The sign-in sheet's sign-in button. */
+    fun welcomeSignIn(provider: SignInProvider) = paid.welcomeSignIn(provider)
+    fun dismissWelcomeSheet() = paid.dismissWelcomeSheet()
+
+    /** Signed in, not claimed: claims with one tap; also Try again after a claim not reached. */
+    fun claimWelcome() = paid.claimWelcome()
+    fun dismissWelcomeAlready() = paid.dismissWelcomeAlready()
+
+    /** "How recipes work"'s offer action: closed, then as [openWelcome]. */
+    fun introToWelcome() {
+        dismissIntro()
+        paid.openWelcome()
+    }
     fun dismissAppleLinkNotice() = paid.dismissAppleLinkNotice()
 
     // --- Allergen consent --------------------------------------------------------------------

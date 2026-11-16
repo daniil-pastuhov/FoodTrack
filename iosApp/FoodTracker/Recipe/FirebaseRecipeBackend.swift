@@ -2,7 +2,7 @@ import FirebaseCore
 import FirebaseFunctions
 import Foundation
 
-/// The seven callables in `functions/`, region europe-west1, every one with App Check. Errors come
+/// The callables in `functions/`, region europe-west1, every one with App Check. Errors come
 /// out as `RecipeServerError`.
 struct FirebaseRecipeBackend: RecipeBackend {
     /// The app whose Auth user makes the calls: the default one, or a second one while signing
@@ -35,6 +35,17 @@ struct FirebaseRecipeBackend: RecipeBackend {
         let quiz: TasteQuiz = try await call("getTasteQuiz", TasteQuizRequest(language: language), limitedUseToken: false)
         guard quiz.isUsable else { throw RecipeServerError.server }
         return quiz
+    }
+
+    /// Not consumed either: an ordinary token. Needs no Auth user: with none, the call carries
+    /// only App Check, and nothing here creates one.
+    func welcomeOffer() async throws -> WelcomeOfferResponse {
+        try await call("getWelcomeOffer", EmptyRequest(), limitedUseToken: false)
+    }
+
+    /// Consumes a limited-use App Check token, as the server consumes it.
+    func claimWelcome() async throws -> ClaimWelcomeResponse {
+        try await call("claimWelcome", EmptyRequest())
     }
 
     func verifyPurchase(signedTransaction: String, consumptionConsent: Bool) async throws -> VerifyPurchaseResponse {
@@ -72,10 +83,10 @@ struct FirebaseRecipeBackend: RecipeBackend {
             throw RecipeServerError.unauthenticated
         }
         // A limited-use App Check token for `generateRecipe`, `verifyPurchase`, `mergeBalance`,
-        // `deleteAccount` and `registerAppleSignIn`, which consume theirs (CONTRACT.md, "Calling"), so none may be
+        // `deleteAccount`, `registerAppleSignIn` and `claimWelcome`, which consume theirs (CONTRACT.md, "Calling"), so none may be
         // reused: the SDK asks App Check for a new one on every `call`, which covers each
         // fallback to `generateRecipe` and each purchase resubmission, and nothing here keeps a
-        // token. `getGeneration`, `getBalance` and `getTasteQuiz` take an ordinary one.
+        // token. `getGeneration`, `getBalance`, `getTasteQuiz` and `getWelcomeOffer` take an ordinary one.
         var callable = FirebaseBootstrap.functions(app: app).httpsCallable(
             name,
             options: HTTPSCallableOptions(requireLimitedUseAppCheckTokens: limitedUseToken),

@@ -81,7 +81,8 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit, onO
                 onSignIn = stateHolder::signIn,
                 onBuy = stateHolder::openPacks,
                 onSignOut = stateHolder::signOut,
-                onDelete = stateHolder::deleteAccount
+                onDelete = stateHolder::deleteAccount,
+                onWelcome = stateHolder::claimWelcome
             ),
             onAllergenConsent = stateHolder::setAllergenConsent,
             options = state.options,
@@ -92,7 +93,7 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit, onO
     }
     RecipePaidOverlays(state, stateHolder)
     if (state.intro == RecipeIntro.FROM_SETTINGS) {
-        RecipeIntroSheet(state, onDismiss = stateHolder::dismissIntro, onPacks = stateHolder::introToPacks)
+        RecipeIntroSheet(state, onDismiss = stateHolder::dismissIntro, onPacks = stateHolder::introToPacks, onWelcome = stateHolder::introToWelcome)
     }
 }
 

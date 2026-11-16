@@ -446,7 +446,7 @@ extension L10n {
     /// cheapest pack's store price when the store has answered, then that the free ways stay.
     /// With a menu-set table, the range of what a menu set takes (Android's
     /// `recipe_intro_packs_body_sets`); otherwise the 3-day menu's two prices.
-    static func recipeIntroPacksMessage(_ costs: RecipeCosts, menuSets: Bool, lowestPrice: String?) -> String {
+    static func recipeIntroPacksMessage(_ costs: RecipeCosts, menuSets: Bool, lowestPrice: String?, freeStays: Bool = true) -> String {
         var text: String
         if menuSets, let range = costs.menuSetRange {
             text = String(format: paid("recipe_intro_packs_body_sets"), recipeCost(costs.recipe), range.lowerBound, range.upperBound)
@@ -454,8 +454,10 @@ extension L10n {
             text = String(format: paid("recipe_intro_packs_message"), recipeCost(costs.recipe), recipeCost(costs.menu2), recipeCost(costs.menu3))
         }
         if let lowestPrice { text += " " + String(format: paid("recipe_intro_packs_price"), lowestPrice) }
-        return text + " " + paid("recipe_intro_free_stays")
+        return freeStays ? text + " " + recipeIntroFreeStays : text
     }
+    /// "The free ways stay there when you have a pack."
+    static var recipeIntroFreeStays: String { paid("recipe_intro_free_stays") }
     static var recipeIntroAgain: String { paid("recipe_intro_again") }
     static var recipeIntroStart: String { paid("recipe_intro_start") }
     static var recipeIntroPacksAction: String { paid("recipe_intro_packs_action") }
@@ -517,6 +519,63 @@ extension L10n {
     static var recipeSignInFailed: String { paid("recipe_sign_in_failed") }
     static var recipeProviderInUse: String { paid("recipe_provider_in_use") }
     static var recipeAccountDeleted: String { paid("recipe_account_deleted") }
+    // Free recipes for signing in (Android: the welcome_* strings, copied as they are, with the
+    // Apple-or-Google wording on iOS). An offer names no numeral for one ("Sign in and get a free
+    // recipe": the `_one` string, as on Android); other counts take the plural.
+    private static func welcomeCount(_ key: String, _ count: Int) -> String {
+        count == 1 ? paid(key + "_one") : plural(key, count)
+    }
+    static func welcomeOfferSignIn(_ count: Int) -> String { welcomeCount("welcome_sign_in", count) }
+    static func welcomeOfferGet(_ count: Int) -> String { welcomeCount("welcome_get", count) }
+    /// The offer's label as it stands: "Sign in and get 3 free recipes" or "Get 3 free recipes".
+    static func welcomeOffer(_ hint: WelcomeHint) -> String {
+        hint.needsSignIn ? welcomeOfferSignIn(hint.recipes) : welcomeOfferGet(hint.recipes)
+    }
+    /// The confirmation, with the numeral even for one ("1 free recipe added").
+    static func welcomeAdded(_ count: Int) -> String { plural("welcome_granted", count) }
+    static func welcomeMenuCover(_ line: WelcomeMenuCover, recipes: Int) -> String {
+        switch line {
+        case .enough: return welcomeCount("welcome_menu_enough", recipes)
+        case .smallerMenu: return welcomeCount("welcome_menu_smaller", recipes)
+        case .singleOnly: return welcomeCount("welcome_menu_single", recipes)
+        }
+    }
+    /// "How recipes work"'s packs row: the sentence set in the label weight.
+    static func welcomeIntro(_ hint: WelcomeHint) -> String {
+        welcomeCount(hint.needsSignIn ? "welcome_intro_sign_in" : "welcome_intro_account", hint.recipes)
+    }
+    /// The Buy sheet's quiet alternative to paying.
+    static func welcomeBuy(_ hint: WelcomeHint) -> String {
+        welcomeCount(hint.needsSignIn ? "welcome_buy_sign_in" : "welcome_buy_get", hint.recipes)
+    }
+    static func welcomeSheetMessage(_ count: Int) -> String { welcomeCount("welcome_sheet_lede", count) }
+    static func welcomeSettingsSignIn(_ count: Int) -> String { welcomeCount("welcome_settings_sign_in", count) }
+    static func welcomeSettingsAccount(_ count: Int) -> String { welcomeCount("welcome_settings_account", count) }
+    static func welcomeSettingsDevice(_ count: Int) -> String { welcomeCount("welcome_settings_on_phone", count) }
+    static var welcomeClaiming: String { paid("welcome_claiming") }
+    static var welcomeAdding: String { paid("welcome_adding") }
+    static var welcomeSheetServerTitle: String { paid("welcome_sheet_server_title") }
+    static var welcomeSheetServerBody: String { paid("welcome_sheet_server_body") }
+    static var welcomeSheetAccountTitle: String { paid("welcome_sheet_account_title") }
+    static var welcomeSheetAccountBody: String { paid("welcome_sheet_account_body") }
+    static var welcomeSheetPrivacyTitle: String { paid("welcome_sheet_privacy_title") }
+    static var welcomeSheetPrivacyBody: String { paid("welcome_sheet_privacy_body") }
+    static var welcomeOnce: String { paid("welcome_once") }
+    static var welcomeNotNow: String { paid("welcome_not_now") }
+    static var welcomeAlreadyTitle: String { paid("welcome_already_title") }
+    static var welcomeAlreadyMessage: String { paid("welcome_already_body") }
+    static func welcomeOff(justSignedIn: Bool) -> String { paid(justSignedIn ? "welcome_off_signed_in_now" : "welcome_off") }
+    static var welcomeNotReached: String { paid("welcome_claim_failed") }
+    /// The Delete account dialog's message, for an account that had its free recipes: the added
+    /// sentence goes after the first one (what is lost), as the design has it.
+    static func recipeDeleteMessage(_ balance: Int, hadFreeRecipes: Bool) -> String {
+        let message = recipeDeleteMessage(balance)
+        guard hadFreeRecipes else { return message }
+        let note = paid("welcome_delete_note")
+        guard let end = message.range(of: ". ") else { return message + " " + note }
+        return String(message[..<end.lowerBound]) + ". " + note + " " + String(message[end.upperBound...])
+    }
+
     static var recipeAppleLinkLeftTitle: String { paid("recipe_apple_link_left_title") }
     static var recipeAppleLinkLeftMessage: String { paid("recipe_apple_link_left_message") }
 

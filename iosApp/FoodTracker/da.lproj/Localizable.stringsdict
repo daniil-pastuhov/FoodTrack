@@ -1204,5 +1204,231 @@
         </dict>
     </dict>
     <!-- /Taste profile -->
+    <!-- Free recipes for signing in: copied from Android's strings.xml -->
+    <key>welcome_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Log ind og få %d gratis opskrift</string>
+            <key>other</key>
+            <string>Log ind og få %d gratis opskrifter</string>
+        </dict>
+    </dict>
+    <key>welcome_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Få %d gratis opskrift</string>
+            <key>other</key>
+            <string>Få %d gratis opskrifter</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_enough</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d gratis opskrift er nok til denne menu.</string>
+            <key>other</key>
+            <string>%d gratis opskrifter er nok til denne menu.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_smaller</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d gratis opskrift rækker til en enkelt opskrift eller en mindre menu, ikke denne.</string>
+            <key>other</key>
+            <string>%d gratis opskrifter rækker til enkelte opskrifter eller en mindre menu, ikke denne.</string>
+        </dict>
+    </dict>
+    <key>welcome_menu_single</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d gratis opskrift rækker til en enkelt opskrift, ikke en menu.</string>
+            <key>other</key>
+            <string>%d gratis opskrifter rækker til enkelte opskrifter, ikke en menu.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Log ind for at få %d gratis opskrift og prøve det.</string>
+            <key>other</key>
+            <string>Log ind for at få %d gratis opskrifter og prøve det.</string>
+        </dict>
+    </dict>
+    <key>welcome_intro_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Denne konto kan få %d gratis opskrift til at prøve det.</string>
+            <key>other</key>
+            <string>Denne konto kan få %d gratis opskrifter til at prøve det.</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Eller log ind og få %d gratis opskrift</string>
+            <key>other</key>
+            <string>Eller log ind og få %d gratis opskrifter</string>
+        </dict>
+    </dict>
+    <key>welcome_buy_get</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Eller få %d gratis opskrift</string>
+            <key>other</key>
+            <string>Eller få %d gratis opskrifter</string>
+        </dict>
+    </dict>
+    <key>welcome_sheet_lede</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Log ind, så lægger vores server %d gratis opskrift på din konto, så du kan prøve, hvad en pakke giver.</string>
+            <key>other</key>
+            <string>Log ind, så lægger vores server %d gratis opskrifter på din konto, så du kan prøve, hvad en pakke giver.</string>
+        </dict>
+    </dict>
+    <key>welcome_granted</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d gratis opskrift tilføjet</string>
+            <key>other</key>
+            <string>%d gratis opskrifter tilføjet</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_sign_in</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Log ind og få %d gratis opskrift fra vores server, én gang pr. Apple- eller Google-konto.</string>
+            <key>other</key>
+            <string>Log ind og få %d gratis opskrifter fra vores server, én gang pr. Apple- eller Google-konto.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_account</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Denne konto kan få %d gratis opskrift fra vores server.</string>
+            <key>other</key>
+            <string>Denne konto kan få %d gratis opskrifter fra vores server.</string>
+        </dict>
+    </dict>
+    <key>welcome_settings_on_phone</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Når du logger ind, får du også %d gratis opskrift.</string>
+            <key>other</key>
+            <string>Når du logger ind, får du også %d gratis opskrifter.</string>
+        </dict>
+    </dict>
+    <!-- /Free recipes -->
 </dict>
 </plist>
