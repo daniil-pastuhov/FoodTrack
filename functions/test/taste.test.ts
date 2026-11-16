@@ -466,10 +466,10 @@ describe("generateRecipe (emulators)", () => {
   const genDoc = async (id: string) => (await db.collection("users").doc(UID).collection("generations").doc(id).get()).data()!;
 
   test("says it reads taste profiles beside every balance", async () => {
-    expect(CAPABILITIES).toMatchObject({ acceptsTaste: true });
-    expect(await getBalance(deps, caller)).toMatchObject({ balance: 5, acceptsTaste: true });
-    expect(await generateRecipe(deps, caller, raw())).toMatchObject({ status: "DONE", acceptsTaste: true });
-    expect(await generateRecipe(deps, caller, raw({ taste: FULL }))).toMatchObject({ status: "DONE", acceptsTaste: true });
+    expect(CAPABILITIES).toMatchObject({ acceptsTaste: true, acceptsWelcome: true });
+    expect(await getBalance(deps, caller)).toMatchObject({ balance: 5, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
+    expect(await generateRecipe(deps, caller, raw())).toMatchObject({ status: "DONE", acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
+    expect(await generateRecipe(deps, caller, raw({ taste: FULL }))).toMatchObject({ status: "DONE", acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
   });
 
   test("the profile reaches the prompt, costs nothing extra, is not stored, and only a boolean is logged", async () => {
@@ -509,7 +509,7 @@ describe("generateRecipe (emulators)", () => {
     expect(await generateRecipe(deps, caller, body)).toMatchObject({ status: "DONE", balance: 4 });
     const gen = await genDoc(body.requestId);
     expect(gen.inputHash).toBe("be2f7ebbe669b57d91eea39759e6a307d9114c1b002bc3dd8dd2e042d68ed742");
-    expect(await getGeneration(deps, caller, { requestId: body.requestId })).toMatchObject({ status: "DONE", balance: 4, acceptsTaste: true });
+    expect(await getGeneration(deps, caller, { requestId: body.requestId })).toMatchObject({ status: "DONE", balance: 4, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
     for (const taste of [undefined, null, {}, { avoid: [] }]) {
       expect(await generateRecipe(deps, caller, { ...body, taste })).toMatchObject({ status: "DONE", balance: 4 });
     }
@@ -533,13 +533,13 @@ describe("generateRecipe (emulators)", () => {
     // Everything hidden: no profile, the plain prompt, and still nothing refused.
     await setConfig({ tasteQuiz: { hidden: ["heat", "cuisines", "avoid"] } });
     const plain = await generateRecipe(deps, caller, { ...req, requestId: randomUUID() });
-    expect(plain).toMatchObject({ status: "DONE", acceptsTaste: true });
+    expect(plain).toMatchObject({ status: "DONE", acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
     expect(deps.generator.prompts.at(-1)!.systemInstruction).not.toContain("TASTE");
   });
 
   test("answers to steps and options the quiz no longer has are dropped, never refused", async () => {
     const res = await generateRecipe(deps, caller, raw({ taste: { retired_step: ["x"], cuisines: ["atlantean", "thai"], heat: "volcanic" } }));
-    expect(res).toMatchObject({ status: "DONE", acceptsTaste: true });
+    expect(res).toMatchObject({ status: "DONE", acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
     expect(deps.generator.prompts.at(-1)!.systemInstruction).toContain("- Cuisines they like: Thai.");
   });
 

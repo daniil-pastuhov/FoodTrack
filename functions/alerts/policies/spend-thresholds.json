@@ -1,0 +1,28 @@
+{
+  "displayName": "Recipe: model spend at 50 % or 80 % of the daily ceiling",
+  "documentation": {
+    "content": "Today's estimated model spend (settled plus the worst cases of calls in flight, what the breaker compares) passed 50 % or 80 % of today's ceiling (`spend_threshold`: `percent`, `spentMicroUsd`, `ceilingMicroUsd`, `day`). Each threshold is logged at most once per UTC day. Nothing is refused yet. If it is not sales, look at `welcome_granted` (free recipes being farmed) and the owner board's \"Model spend per day\". See functions/README.md, \"Alerts\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"spend_threshold\" AND jsonPayload.percent=(50 OR 80)",
+        "labelExtractors": {
+          "percent": "EXTRACT(jsonPayload.percent)",
+          "day": "EXTRACT(jsonPayload.day)"
+        }
+      },
+      "displayName": "Recipe: model spend at 50 % or 80 % of the daily ceiling"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}

@@ -319,8 +319,8 @@ describe("generateRecipe (emulators)", () => {
   });
 
   test("says it reads the multi-choice config beside every balance", async () => {
-    expect(await getBalance(deps, caller)).toMatchObject({ balance: 5, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true });
-    expect(await generateRecipe(deps, caller, raw(LEGACY))).toMatchObject({ status: "DONE", acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true });
+    expect(await getBalance(deps, caller)).toMatchObject({ balance: 5, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
+    expect(await generateRecipe(deps, caller, raw(LEGACY))).toMatchObject({ status: "DONE", acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3 });
   });
 
   test("a multi-choice request is written at the same price, with its settings in the prompt", async () => {

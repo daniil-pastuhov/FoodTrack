@@ -265,6 +265,19 @@ binding exist on the live project (created and read back 2026-11-14).
       an hour at most.) Log-based alert on `board_redraw_failed` and `board_bucket_public`. It
       does not notice a redraw that silently stops running; the board's own "Updated" line does.
 
+- [ ] Alerts as code (functions/README.md, "Alerts"): the five policies above plus four new ones
+      (model spend at 50 % / 80 % of the daily ceiling, ceiling or daily cap reached, the welcome
+      grant's day limit, a spike of per-account limit refusals) and the log-based metric
+      `recipe_generation_refused`, all in `functions/alerts/`, on the existing email channel
+      "Recipe backend alerts (owner)". Deploy the functions first (the new log lines come with
+      them), then from the repository root:
+      `python3 functions/alerts/alerts.py --project bestbefore-f9ee1` (dry run: it should plan 1
+      metric and 4 policies to create and the 5 existing policies unchanged), then the same with
+      `--apply`, then the dry run again (everything "unchanged"). Needs Monitoring Editor and Logs
+      Configuration Writer; no address is ever typed into a file. Before release, also set
+      `config/runtime.welcome.perDay` to the recommended launch value (functions/README.md,
+      "Welcome grant").
+
 ### 10. Test
 
 - [x] Smoke test with `allowSandbox: true`: a licence tester on Android and a sandbox account on

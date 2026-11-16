@@ -70,6 +70,11 @@ interface ChartSpec {
   days: string[];
   series: Series[];
   line?: { label: string; values: number[] };
+  /**
+   * Days to flag above the plot with a ▲ and a text row in the readout (e.g. "Ceiling reached"),
+   * named in the legend, so the flag does not depend on colour.
+   */
+  marks?: { label: string; on: boolean[] };
   axis(v: number): string;
   value(v: number): string;
   /** Integer quantities get whole-number ticks. */
@@ -109,7 +114,8 @@ function columnSvg(spec: ChartSpec, width: number, height: number): string {
   const tickLabels: string[] = [];
   for (let v = 0; v <= scale.max + 1e-9; v += scale.step) tickLabels.push(spec.axis(v));
   const left = Math.max(...tickLabels.map((l) => l.length)) * 7 + 12;
-  const top = 26;
+  // Room above the plot for the ▲ marks, clear of the data labels.
+  const top = spec.marks?.on.some(Boolean) ? 40 : 26;
   const bottom = 24;
   const right = 22;
   const plotW = width - left - right;
@@ -153,6 +159,7 @@ function columnSvg(spec: ChartSpec, width: number, height: number): string {
     });
     const rows: [string, string, string][] = spec.series.map((s) => [s.cls, spec.value(s.values[i]), s.label]);
     if (spec.line) rows.push(["ref", spec.value(spec.line.values[i]), spec.line.label]);
+    if (spec.marks?.on[i]) rows.push(["mark", "yes", spec.marks.label]);
     out.push(`<rect class="hit" x="${f1(x0)}" y="${top}" width="${f1(band)}" height="${plotH}" tabindex="0" ${tipAttr(shortDay(spec.days[i]), rows)}/>`);
     out.push(`</g>`);
   }
@@ -164,6 +171,13 @@ function columnSvg(spec: ChartSpec, width: number, height: number): string {
       d += `${i === 0 ? "M" : "L"}${f1(x0)},${f1(y(v[i]))}H${f1(x0 + band)}`;
     }
     out.push(`<path class="refline" d="${d}"/>`);
+  }
+  if (spec.marks) {
+    for (let i = 0; i < n; i++) {
+      if (!spec.marks.on[i]) continue;
+      const cx = left + band * (i + 0.5);
+      out.push(`<text class="mark" x="${f1(cx)}" y="${top - 24}" text-anchor="middle" aria-hidden="true">▲</text>`);
+    }
   }
   // Selective direct labels: the highest day, and today when it is not right beside it.
   if (dataMax > 0 && spec.series.length) {
@@ -186,6 +200,7 @@ function columnSvg(spec: ChartSpec, width: number, height: number): string {
 function legend(spec: ChartSpec): string {
   const items = spec.series.map((s) => `<li><span class="key box ${s.cls}"></span>${esc(s.label)}</li>`);
   if (spec.line) items.push(`<li><span class="key line"></span>${esc(spec.line.label)}</li>`);
+  if (spec.marks?.on.some(Boolean)) items.push(`<li><span class="key mark" aria-hidden="true">▲</span>${esc(spec.marks.label)}</li>`);
   return items.length > 1 ? `<ul class="legend">${items.join("")}</ul>` : "";
 }
 
@@ -337,6 +352,8 @@ figcaption{font-weight:600;margin:0 0 6px}
 .chart-svg .empty{fill:var(--muted);font-size:13px;paint-order:stroke;stroke:var(--surface);stroke-width:6px;stroke-linejoin:round}
 .chart-svg .grid{stroke:var(--grid);stroke-width:1}
 .chart-svg .baseline{stroke:var(--axis);stroke-width:1}
+.chart-svg .mark{fill:var(--crit);font-size:11px}
+.key.mark{color:var(--crit);font-size:11px;line-height:1}
 .chart-svg .refline{fill:none;stroke:var(--ink-2);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
 .bar.s1{fill:var(--s1)}.bar.s2{fill:var(--s2)}.bar.s3{fill:var(--s3)}.bar.s4{fill:var(--s4)}.bar.other{fill:var(--other)}
 .hit{fill:transparent;outline:none}
@@ -445,6 +462,12 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
       esc(int(t.salesCredits)),
       `${esc(int(t.salesCount))} ${t.salesCount === 1 ? "pack" : "packs"}, production only` +
         (t.sandboxPurchases > 0 ? `; plus ${esc(int(t.sandboxPurchases))} sandbox` : "")),
+    tile("Free recipes (welcome grant)",
+      esc(int(t.welcomeGrants)),
+      `${t.welcomeGrants === 1 ? "grant" : "grants"} today (${esc(int(t.welcomeCredits))} recipes) of at most ${esc(int(b.welcome.perDay))} a day; ` +
+        `${esc(int(b.period.welcomeGrants))} in the period (${esc(int(b.period.welcomeCredits))} recipes). ` +
+        (b.welcome.recipes > 0 ? `${esc(int(b.welcome.recipes))} per sign-in. Not sales.` : "Off (<code>welcome.recipes</code> is 0)."),
+      meter(t.welcomeGrants, b.welcome.perDay, "Welcome grants today against the daily limit")),
     tile("Unspent recipes",
       esc(int(b.holders.recipes)),
       `held by ${esc(int(b.holders.accounts))} ${b.holders.accounts === 1 ? "account" : "accounts"} (positive balances now)`),
@@ -453,15 +476,36 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
       `recipes owed after refunds of used recipes; ${b.ledger.checkedAtMs ? `last summed by the sweeper ${esc(utcTime(b.ledger.checkedAtMs))}` : "not summed yet by the sweeper"}`),
   ].join("");
 
+  const ceilingNote = b.days.some((d) => d.ceilingSource === "recorded")
+    ? "past days: the ceiling their reservations were checked against; days without one, and today, from today's config"
+    : "from today's config (the ceiling a day was checked against is recorded from now on)";
   const spendChart = chart({
-    title: "Estimated model spend per day",
+    title: "Model spend per day",
     unit: "USD",
     days: dayList,
-    series: [{ label: "Estimated spend", cls: "s1", values: b.days.map((d) => d.spentMicroUsd + d.reservedMicroUsd) }],
+    series: [
+      { label: "Spent (settled)", cls: "s1", values: b.days.map((d) => d.spentMicroUsd) },
+      { label: "Reserved for calls in flight", cls: "s4", values: b.days.map((d) => d.reservedMicroUsd) },
+    ],
     line: { label: "Daily ceiling", values: b.days.map((d) => d.ceilingMicroUsd) },
+    marks: { label: "Ceiling reached: generation refused", on: b.days.map((d) => d.ceilingReached) },
     axis: (v) => usd(v),
     value: (v) => usd(v),
   });
+  const welcomeChart = chart({
+    title: "Free recipes: welcome grants per day",
+    unit: "grants",
+    days: dayList,
+    series: [{ label: "Welcome grants", cls: "s3", values: b.days.map((d) => d.welcomeGrants) }],
+    line: { label: `Daily limit now (welcome.perDay ${int(b.welcome.perDay)})`, values: b.days.map(() => b.welcome.perDay) },
+    marks: { label: "Day's limit reached", on: b.days.map((d) => b.welcome.perDay > 0 && d.welcomeGrants >= b.welcome.perDay) },
+    axis: (v) => int(v),
+    value: (v) => int(v),
+    integer: true,
+    empty: "No welcome grants in this period",
+  });
+  const reachedDays = b.days.filter((d) => d.ceilingReached).map((d) => shortDay(d.day));
+  const capDays = b.days.filter((d) => d.dailyCapReached).map((d) => shortDay(d.day));
 
   const salesChart = chart({
     title: "Packs sold per day (production)",
@@ -539,7 +583,11 @@ ${hosted ? `<p class="sub" id="updated">Updated ${esc(utcTime(b.generatedAtMs))}
 <section aria-labelledby="h-today"><h2 id="h-today">Today at a glance (${esc(b.today)}, UTC)</h2><div class="tiles">${glance}</div></section>
 
 <section aria-labelledby="h-spend"><h2 id="h-spend">Model spend</h2>
-${spendChart}
+<div class="pair"><div>${spendChart}</div><div>${welcomeChart}</div></div>
+<p class="note">Ceiling reached (a reservation refused at the spend ceiling, <code>GENERATION_DISABLED</code>): ${reachedDays.length ? esc(reachedDays.join(", ")) : "no day in this period"}.
+Daily recipe cap (<code>dailyCap</code>) reached: ${capDays.length ? esc(capDays.join(", ")) : "no day in this period"}.
+Daily ceiling: ${esc(ceilingNote)}. Today's bar includes ${esc(usd(t.reservedMicroUsd))} still reserved at the worst case for calls in flight;
+settling replaces it by the measured cost. Free recipes are not sales and do not raise the ceiling.</p>
 <div class="stats">
 ${stat(`${b.month.label} to date`, esc(usd(b.month.toDateMicroUsd)))}
 ${stat(`At most by month end, if every remaining day (${b.month.remainingDays}) reached the ${usd(b.dailySpendMaxMicroUsd)} maximum`, esc(usd(b.month.worstCaseMicroUsd)))}
@@ -549,7 +597,9 @@ ${stat("This period", esc(usd(periodSpend)))}
 (${esc(usd(b.prices.inputUsdPerMTok * 1e6))} in / ${esc(usd(b.prices.outputUsdPerMTok * 1e6))} out per 1M tokens), booked on the day each call was reserved.
 They are not the Google Cloud bill. The real bill and the budget are in the <a href="${BILLING_URL}">Cloud billing console</a>,
 and Firestore and Functions usage on the <a href="${esc(usage)}">Firebase usage page</a>.
-Each day's ceiling is computed with today's <code>config/runtime</code>: ${esc(usd(b.dailySpendBaseMicroUsd))} plus a share of the last 7 days' net recipes sold, at most ${esc(usd(b.dailySpendMaxMicroUsd))}.</p>
+The ceiling is ${esc(usd(b.dailySpendBaseMicroUsd))} plus a share of the last 7 days' net recipes sold, at most ${esc(usd(b.dailySpendMaxMicroUsd))}
+(today's <code>config/runtime</code>); a past day shows the ceiling its reservations were checked against when the server recorded it
+(<code>stats/{day}.ceilingMicroUsd</code>), otherwise the same formula with today's config.</p>
 </section>
 
 <section aria-labelledby="h-sales"><h2 id="h-sales">Purchases</h2>
@@ -611,12 +661,17 @@ export function boardSummary(b: Board): string[] {
     `Today: estimated spend ${usd(b.todayBookedMicroUsd)} of a ${usd(t.ceilingMicroUsd)} ceiling (${pct(b.todayBookedMicroUsd, t.ceilingMicroUsd)} %); ` +
       `${int(t.generationUnits)} of ${int(b.dailyCap)} recipes used; ${int(t.salesCount)} packs sold (${int(t.salesCredits)} recipes).`,
     `Unspent recipes: ${int(b.holders.recipes)} on ${int(b.holders.accounts)} accounts. Negative balances: ${int(b.ledger.negativeBalanceTotal)}.`,
+    `Spend per day against the ceiling: ${b.days.filter((d) => d.ceilingReached).length} days reached the ceiling` +
+      (b.days.some((d) => d.ceilingReached) ? ` (${b.days.filter((d) => d.ceilingReached).map((d) => d.day).join(", ")})` : "") +
+      `; ${b.days.filter((d) => d.dailyCapReached).length} days reached dailyCap; highest day ${usd(Math.max(0, ...b.days.map((d) => d.spentMicroUsd + d.reservedMicroUsd)))}.`,
     `Spend (server estimate, not the Cloud bill): period ${usd(p.spentMicroUsd + p.reservedMicroUsd)}; ${b.month.label} to date ${usd(b.month.toDateMicroUsd)}, ` +
       `at most ${usd(b.month.worstCaseMicroUsd)} by month end.`,
     `Sales (production): ${int(s.total.purchases)} packs, ${int(s.total.credits)} recipes granted, ${int(s.total.refunded)} refunded, ${int(s.total.net)} net; ` +
       `estimated net revenue ${usd(s.estimatedNetMicroUsd)} (config estimate, not the store payout). ` +
       `iOS (App Store) ${int(s.byStore.appstore.purchases)} packs, ${int(s.byStore.appstore.credits)} recipes; ` +
       `Android (Google Play) ${int(s.byStore.play.purchases)} packs, ${int(s.byStore.play.credits)} recipes. Sandbox: ${int(s.sandbox.purchases)} purchases, ${int(s.sandbox.credits)} recipes.`,
+    `Free recipes (welcome grant, not sales): ${int(t.welcomeGrants)} grants today (${int(t.welcomeCredits)} recipes) of at most ${int(b.welcome.perDay)}; ` +
+      `${int(p.welcomeGrants)} in the period (${int(p.welcomeCredits)} recipes); ${b.welcome.recipes > 0 ? `${int(b.welcome.recipes)} per sign-in` : "off"}.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
     ...(b.purchasesCapped
@@ -652,8 +707,27 @@ export function boardJson(b: Board): Record<string, unknown> {
       recipesSold: t.salesCredits,
       sandboxPurchases: t.sandboxPurchases,
     },
+    welcome: {
+      recipesPerClaim: b.welcome.recipes,
+      perDay: b.welcome.perDay,
+      grantsToday: t.welcomeGrants,
+      recipesToday: t.welcomeCredits,
+      grantsInPeriod: p.welcomeGrants,
+      recipesInPeriod: p.welcomeCredits,
+    },
     unspentRecipes: { recipes: b.holders.recipes, accounts: b.holders.accounts },
     negativeBalanceTotal: b.ledger.negativeBalanceTotal,
+    spendPerDay: b.days.map((d) => ({
+      day: d.day,
+      spentMicroUsd: d.spentMicroUsd,
+      reservedMicroUsd: d.reservedMicroUsd,
+      ceilingMicroUsd: d.ceilingMicroUsd,
+      ceilingSource: d.ceilingSource,
+      ceilingReached: d.ceilingReached,
+      thresholdsLogged: d.spendThresholds,
+      dailyCapReached: d.dailyCapReached,
+      welcomeGrants: d.welcomeGrants,
+    })),
     spend: {
       periodMicroUsd: p.spentMicroUsd + p.reservedMicroUsd,
       month: b.month.label,

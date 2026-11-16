@@ -1,0 +1,39 @@
+/* Free recipes for signing in (2026-11-16): the offer in the Recipe form's action group, the sign-in sheet,
+   the notes in Recipe settings. Scoped under .recipe. Tokens only. */
+
+/* The form's filled primary, as LarderPrimaryAction (56 high) */
+.recipe .r-actions .btn.block.wl-primary { min-height: 56px; border-radius: var(--radius-lg); }
+/* The offer: an outline button with a gift, centred like the other secondary buttons; the label wraps */
+.recipe .r-actions .btn.block.wl-offer { justify-content: center; text-align: center; }
+.recipe .r-actions .btn.block.wl-offer > span:not(.spinner) { flex: 0 1 auto; }
+.recipe .btn.wl-offer > svg.lucide { color: var(--color-primary); }
+.recipe .btn.wl-offer[disabled] { background: transparent; box-shadow: inset 0 0 0 1px var(--color-outline-variant); color: var(--color-on-surface-variant); cursor: progress; }
+.recipe .wl-spin { flex: none; width: 18px; height: 18px; border-width: 2px; }
+
+/* Sign-in sheet */
+.recipe .wl-emblem { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: var(--space-3); border-radius: var(--radius-lg); background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.recipe .wl-emblem svg.lucide { width: 28px; height: 28px; }
+.recipe .wl-sheet h2 { margin-bottom: var(--space-2); }
+.recipe .wl-sheet .r-intro { margin-bottom: var(--space-3); }
+.recipe .wl-once { margin: 0 0 var(--space-4); font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.recipe .wl-apple { margin: var(--space-3) 0 0; }
+.recipe .wl-after { margin-top: var(--space-2); }
+.recipe .wl-after .btn[disabled] { background: transparent; }
+.recipe .wl-busy { display: flex; align-items: center; justify-content: center; gap: var(--space-3); min-height: var(--size-control); font: var(--type-label); color: var(--color-on-surface); }
+.recipe .wl-strong { font-weight: 600; color: var(--color-on-surface); }
+
+/* Buy sheet: the quieter alternative under the packs */
+.recipe .wl-alt { display: flex; justify-content: center; margin: var(--space-3) 0 var(--space-1); }
+.recipe .wl-alt .btn svg.lucide { color: var(--color-primary); }
+
+/* Recipe settings: the note in the account card */
+.recipe .wl-note svg.lucide { color: var(--color-primary); }
+
+/* A snackbar over an open sheet */
+.recipe .snackbar-host.wl-over, .recipe.has-nav .snackbar-host.wl-over { z-index: 50; bottom: var(--space-4); }
+
+/* Design-only: the form scrolled to its actions, and Recipe settings scrolled to the account card, on phones */
+@container (max-width: 699px) {
+  .v-frame .app.wl-off .scroll > :first-child { margin-top: var(--wl-off); }
+  .v-frame .app.wl-at .scroll > .col { margin-top: var(--wl-off); }
+}

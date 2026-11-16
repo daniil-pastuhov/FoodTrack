@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: refunds, blocked buyers, stuck purchases",
+  "documentation": {
+    "content": "A money or abuse event in the recipe backend. See functions/README.md, \"Logs to alert on\", for what each message means and its fields.",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=(\"refund_after_use\" OR \"buyer_blocked\" OR \"negative_balance_total_grew\" OR \"play_consume_gave_up\" OR \"apple_consumption_answer_expired\")"
+      },
+      "displayName": "Recipe: refunds, blocked buyers, stuck purchases"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

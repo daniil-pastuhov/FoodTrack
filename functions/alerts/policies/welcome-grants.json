@@ -1,0 +1,28 @@
+{
+  "displayName": "Recipe: free recipes (welcome grant) day limit",
+  "documentation": {
+    "content": "Today's welcome grants reached half of `config/runtime.welcome.perDay` (`welcome_threshold`, `percent` 50) or all of it (`welcome_day_limit`, `event` reached: new sign-ins get no free recipes until 00:00 UTC). Each fires once per UTC day. Check `welcome_granted` for farming (many grants, little revenue) and the owner board. See functions/README.md, \"Welcome grant\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND (jsonPayload.message=\"welcome_threshold\" OR (jsonPayload.message=\"welcome_day_limit\" AND jsonPayload.event=\"reached\"))",
+        "labelExtractors": {
+          "message": "EXTRACT(jsonPayload.message)",
+          "day": "EXTRACT(jsonPayload.day)"
+        }
+      },
+      "displayName": "Recipe: free recipes (welcome grant) day limit"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}

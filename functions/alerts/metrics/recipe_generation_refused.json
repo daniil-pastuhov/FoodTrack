@@ -1,0 +1,20 @@
+{
+  "name": "recipe_generation_refused",
+  "description": "generateRecipe refusals for an account's daily limits (generation_refused lines), by reason. Source of the alert \"Recipe: spike of per-account limit refusals\" (functions/README.md, \"Alerts\").",
+  "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"generation_refused\"",
+  "labelExtractors": {
+    "reason": "EXTRACT(jsonPayload.reason)"
+  },
+  "metricDescriptor": {
+    "metricKind": "DELTA",
+    "valueType": "INT64",
+    "unit": "1",
+    "labels": [
+      {
+        "key": "reason",
+        "valueType": "STRING",
+        "description": "USER_DAILY_LIMIT or INFRA_FAILURE_LIMIT"
+      }
+    ]
+  }
+}

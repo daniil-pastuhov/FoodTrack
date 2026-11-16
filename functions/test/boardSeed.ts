@@ -132,6 +132,12 @@ export async function seedBoardData(db: Firestore, nowMs: number, days = 30): Pr
       unknownUsageCalls: unknown,
       netCreditsGranted: net.get(day) ?? 0,
       ...(s ? { sandboxGrants: s.grants, sandboxCredits: s.credits } : {}),
+      // What the server records since the ceiling history and the welcome grant: the ceiling the
+      // day's reservations were checked against (today's is always recomputed), the thresholds
+      // logged, a busy day (4 days ago) that reached the ceiling, and free recipes granted.
+      ...(i > 0 ? { ceilingMicroUsd: i > 20 ? 1_200_000 : 1_200_000 + Math.min(800_000, (days - i) * 30_000) } : {}),
+      ...(i === 4 ? { spendAlerts: { "50": today - i * DAY + 9 * 3_600_000, "80": today - i * DAY + 13 * 3_600_000, "100": today - i * DAY + 18 * 3_600_000 } } : {}),
+      ...(i < 10 ? { welcomeGrants: i === 4 ? 200 : 5 + Math.floor(rnd() * 40), welcomeCredits: 3 * (i === 4 ? 200 : 20) } : {}),
     });
     if (i < days) statsDays++;
   }

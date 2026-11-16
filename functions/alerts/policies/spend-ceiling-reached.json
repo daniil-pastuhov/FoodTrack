@@ -1,0 +1,28 @@
+{
+  "displayName": "Recipe: daily spend ceiling or daily cap reached",
+  "documentation": {
+    "content": "A reservation was refused today at the daily model-spend ceiling (`spend_threshold` with `percent` 100: `GENERATION_DISABLED` for new recipes until worst cases in flight settle or the UTC day ends) or at the daily recipe cap (`daily_cap_reached`: `DAILY_CAP` until the UTC day ends). Each is logged once per UTC day. Buyers cannot generate meanwhile. If free recipes are being farmed, lower `config/runtime.welcome.perDay` or set `welcome.recipes` to 0. See functions/README.md, \"Alerts\" and \"Welcome grant\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND (jsonPayload.message=\"daily_cap_reached\" OR (jsonPayload.message=\"spend_threshold\" AND jsonPayload.percent=100))",
+        "labelExtractors": {
+          "message": "EXTRACT(jsonPayload.message)",
+          "day": "EXTRACT(jsonPayload.day)"
+        }
+      },
+      "displayName": "Recipe: daily spend ceiling or daily cap reached"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}

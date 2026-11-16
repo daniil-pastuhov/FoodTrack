@@ -54,6 +54,12 @@ import {
 } from "./core/account";
 import { sweep } from "./core/sweeper";
 import { getTasteQuiz as tasteQuizCore } from "./taste/quiz";
+import {
+  WelcomeDayCounter,
+  claimWelcome as claimWelcomeCore,
+  getWelcomeOffer as welcomeOfferCore,
+  readDayGrants,
+} from "./core/welcome";
 import { CallThrottle, LogSampler, assertFreshAppCheck, clientIp } from "./core/guard";
 import {
   APPLE_SIGNED_PAYLOAD_MAX,
@@ -134,6 +140,12 @@ function appleClient(): AppleSignInRevoker {
   });
 }
 
+/** Today's welcome grant count, cached per instance (the `welcomeRecipes` field beside `balance`). */
+function welcomeCounter(): (day: string) => Promise<number> {
+  const counter = new WelcomeDayCounter((day) => readDayGrants({ db: getFirestore() }, day), () => Date.now());
+  return (day) => counter.grants(day);
+}
+
 function getDeps(): Deps {
   if (!deps && emulatorFakesEnabled()) {
     logger.warn("EMULATOR_FAKES: fake stores and LLM in use (emulator only)");
@@ -149,6 +161,7 @@ function getDeps(): Deps {
       now: () => Date.now(),
       logger,
       config: configSource(),
+      welcomeDayGrants: welcomeCounter(),
     };
   }
   deps ??= {
@@ -192,6 +205,7 @@ function getDeps(): Deps {
     now: () => Date.now(),
     logger,
     config: configSource(),
+    welcomeDayGrants: welcomeCounter(),
   };
   return deps;
 }
@@ -265,6 +279,8 @@ const LIMITS = {
   getGeneration: { maxInstances: 1, perMinute: 120 },
   getBalance: { maxInstances: 1, perMinute: 120 },
   getTasteQuiz: { maxInstances: 1, perMinute: 120 },
+  getWelcomeOffer: { maxInstances: 1, perMinute: 120 },
+  claimWelcome: { maxInstances: 1, perMinute: 10 },
   verifyPurchase: { maxInstances: 1, perMinute: 30 },
   mergeBalance: { maxInstances: 1, perMinute: 10 },
   deleteAccount: { maxInstances: 1, perMinute: 10 },
@@ -276,6 +292,8 @@ const throttles = {
   getGeneration: new CallThrottle(LIMITS.getGeneration.perMinute),
   getBalance: new CallThrottle(LIMITS.getBalance.perMinute),
   getTasteQuiz: new CallThrottle(LIMITS.getTasteQuiz.perMinute),
+  getWelcomeOffer: new CallThrottle(LIMITS.getWelcomeOffer.perMinute),
+  claimWelcome: new CallThrottle(LIMITS.claimWelcome.perMinute),
   verifyPurchase: new CallThrottle(LIMITS.verifyPurchase.perMinute),
   mergeBalance: new CallThrottle(LIMITS.mergeBalance.perMinute),
   deleteAccount: new CallThrottle(LIMITS.deleteAccount.perMinute),
@@ -338,6 +356,37 @@ export const getTasteQuiz = onCall(
   { ...callable, timeoutSeconds: 10, maxInstances: LIMITS.getTasteQuiz.maxInstances, concurrency: 1 },
   (request) =>
     guarded("getTasteQuiz", () => withCaller(callerOf(request, throttles.getTasteQuiz, false), (d) => tasteQuizCore(d, request.data))),
+);
+
+// The welcome grant's offer (CONTRACT.md `getWelcomeOffer`): the one call the apps make before any
+// sign-in or purchase. App Check enforced with an ordinary token (not consumed) and NO sign-in;
+// throttled by client address and the instance ceiling; takes no input, reads only config/runtime
+// and today's grant count (both cached per instance), and ignores and stores nothing about the
+// caller (any auth it carries is not looked at).
+export const getWelcomeOffer = onCall(
+  { ...callable, timeoutSeconds: 10, maxInstances: LIMITS.getWelcomeOffer.maxInstances, concurrency: 1 },
+  (request) =>
+    guarded("getWelcomeOffer", () => {
+      if (!request.app) throw new HttpsError("unauthenticated", "App Check required");
+      const raw = request.rawRequest;
+      throttles.getWelcomeOffer.admitAddress(clientIp(raw.headers, raw.socket?.remoteAddress), Date.now());
+      return welcomeOfferCore(getDeps());
+    }),
+);
+
+// The welcome grant itself: raises a balance without a store receipt, so App Check is enforced
+// AND consumed (limited-use tokens, replays refused), like verifyPurchase.
+export const claimWelcome = onCall(
+  {
+    ...callable,
+    consumeAppCheckToken: CONSUME_APP_CHECK_TOKENS,
+    timeoutSeconds: 30,
+    maxInstances: LIMITS.claimWelcome.maxInstances,
+    concurrency: 1,
+  },
+  (request) =>
+    guarded("claimWelcome", () =>
+      withCaller(callerOf(request, throttles.claimWelcome, CONSUME_APP_CHECK_TOKENS), (d, c) => claimWelcomeCore(d, c))),
 );
 
 export const mergeBalance = onCall(

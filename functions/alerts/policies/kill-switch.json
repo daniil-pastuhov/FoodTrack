@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: budget kill switch paused generation",
+  "documentation": {
+    "content": "The budget alert set config/runtime.generationEnabled to false. Paid recipes are paused until it is set back to true. Check spend first (functions/README.md, \"Worst-case daily bill\").",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND (jsonPayload.message=\"Budget kill switch flipped: generation disabled\" OR textPayload:\"Budget kill switch flipped: generation disabled\")"
+      },
+      "displayName": "Recipe: budget kill switch paused generation"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

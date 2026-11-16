@@ -214,6 +214,9 @@ describe("3. getGeneration", () => {
     const req = request();
     const done = await generateRecipe(deps, callerFor("g1"), req);
     const s = spy(deps);
+    // As in production: `welcomeRecipes` takes today's welcome count from the per-instance cache
+    // (index.ts welcomeCounter, at most one read per 30 s), not from a read per poll.
+    s.deps.welcomeDayGrants = async () => 0;
     const polled = await getGeneration(s.deps, callerFor("g1"), { requestId: req.requestId.toUpperCase() });
     expect(polled).toEqual(done);
     expect(s.collections).not.toContain("stats");
@@ -534,5 +537,5 @@ describe("11. emulator fakes", () => {
 
 test("getBalance carries no purchasesBlocked for an ordinary buyer", async () => {
   await verifyPurchase(deps, callerFor("ord"), { store: "play", purchaseToken: deps.play.add(playToken()) });
-  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
 });

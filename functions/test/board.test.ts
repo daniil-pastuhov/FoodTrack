@@ -77,6 +77,57 @@ describe("aggregation", () => {
     expect(b.period.spentMicroUsd).toBe(90_000);
   });
 
+  test("welcome grants: today and the period, apart from sales, with the config's setting", () => {
+    const b = buildBoard(input({ statsByDay: {
+      "2026-11-15": { welcomeGrants: 4, welcomeCredits: 12 },
+      "2026-11-10": { welcomeGrants: 1, welcomeCredits: 3 },
+    } }));
+    expect(b.todayRow).toMatchObject({ welcomeGrants: 4, welcomeCredits: 12, salesCount: 0, salesCredits: 0 });
+    expect(b.period).toMatchObject({ welcomeGrants: 5, welcomeCredits: 15, netCreditsGranted: 0 });
+    expect(b.sales.total.credits).toBe(0);
+    expect(b.welcome).toEqual({ recipes: 3, perDay: 200 });
+    expect(boardSummary(b).join("\n")).toContain("Free recipes (welcome grant, not sales): 4 grants today (12 recipes) of at most 200; 5 in the period (15 recipes); 3 per sign-in.");
+    expect(boardJson(b).welcome).toEqual({ recipesPerClaim: 3, perDay: 200, grantsToday: 4, recipesToday: 12, grantsInPeriod: 5, recipesInPeriod: 15 });
+    expect(renderBoardHtml(b)).toContain("Free recipes (welcome grant)");
+  });
+
+  test("spend per day: settled and reserved apart, the recorded ceiling for past days, marks for days that reached it", () => {
+    const b = buildBoard(input({ statsByDay: {
+      "2026-11-12": { spentMicroUsd: 1_150_000, reservedMicroUsd: 0, ceilingMicroUsd: 1_230_000, spendAlerts: { "50": 1, "80": 2, "100": 3 }, dailyCapReachedAt: 4 },
+      "2026-11-13": { spentMicroUsd: 700_000, ceilingMicroUsd: 1_500_000, spendAlerts: { "50": 1 } },
+      "2026-11-15": { spentMicroUsd: 300_000, reservedMicroUsd: 82_000, ceilingMicroUsd: 999 },
+    } }));
+    const day = (d: string) => b.days.find((x) => x.day === d)!;
+    expect(day("2026-11-12")).toMatchObject({ ceilingMicroUsd: 1_230_000, ceilingSource: "recorded", ceilingReached: true, spendThresholds: [50, 80], dailyCapReached: true });
+    expect(day("2026-11-13")).toMatchObject({ ceilingMicroUsd: 1_500_000, ceilingReached: false, spendThresholds: [50], dailyCapReached: false });
+    // No record: today's config (1.20 base, no sales). Today is always recomputed, never the record.
+    expect(day("2026-11-14")).toMatchObject({ ceilingMicroUsd: 1_200_000, ceilingSource: "computed", ceilingReached: false });
+    expect(b.todayRow).toMatchObject({ ceilingMicroUsd: 1_200_000, ceilingSource: "computed", spentMicroUsd: 300_000, reservedMicroUsd: 82_000 });
+
+    const html = renderBoardHtml(b);
+    expect(html).toContain("<figcaption>Model spend per day</figcaption>");
+    expect(html).toContain("Reserved for calls in flight");
+    expect(html).toContain("Ceiling reached: generation refused");
+    expect((html.match(/class="mark"/g) ?? []).length).toBe(3); // one day, three widths
+    expect(html).toContain("Ceiling reached (a reservation refused at the spend ceiling, <code>GENERATION_DISABLED</code>): 12 Nov.");
+    expect(html).toContain("Daily recipe cap (<code>dailyCap</code>) reached: 12 Nov.");
+    expect(html).toContain("<figcaption>Free recipes: welcome grants per day</figcaption>");
+    expect(boardSummary(b).join("\n")).toContain("Spend per day against the ceiling: 1 days reached the ceiling (2026-11-12); 1 days reached dailyCap; highest day $1.15.");
+    const json = boardJson(b) as { spendPerDay: Record<string, unknown>[] };
+    expect(json.spendPerDay).toHaveLength(30);
+    expect(json.spendPerDay.find((d) => d.day === "2026-11-12")).toEqual({
+      day: "2026-11-12", spentMicroUsd: 1_150_000, reservedMicroUsd: 0, ceilingMicroUsd: 1_230_000, ceilingSource: "recorded",
+      ceilingReached: true, thresholdsLogged: [50, 80], dailyCapReached: true, welcomeGrants: 0,
+    });
+  });
+
+  test("the welcome chart marks days at the limit", () => {
+    const b = buildBoard(input({ config: { ...DEFAULT_RUNTIME_CONFIG, welcome: { recipes: 3, perDay: 10 } }, statsByDay: { "2026-11-14": { welcomeGrants: 10 }, "2026-11-15": { welcomeGrants: 4 } } }));
+    const html = renderBoardHtml(b);
+    expect(html).toContain("Daily limit now (welcome.perDay 10)");
+    expect(html).toContain("Day&#39;s limit reached");
+  });
+
   test("the stats read covers the period, the month to date and the revenue window before both", () => {
     const days = boardStatsDays(NOW, 30);
     expect(days[0]).toBe("2026-10-11");
