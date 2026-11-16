@@ -327,8 +327,10 @@ struct LarderSegmented<Option: Hashable>: View {
 }
 
 /// Lays segments out at their ideal widths. With `fill`, the spare width is shared equally;
-/// when there isn't enough, each shrinks in proportion to its ideal width.
-private struct SegmentRow: Layout {
+/// when there isn't enough, each shrinks in proportion to its ideal width. Used by
+/// `LarderSegmented` and the scanner's mode bar; give the labels `lineLimit(1)` and a
+/// `minimumScaleFactor` so a squeezed one shrinks a little instead of wrapping mid-word.
+struct SegmentRow: Layout {
     let fill: Bool
 
     private func widths(for proposal: ProposedViewSize, subviews: Subviews) -> [CGFloat] {

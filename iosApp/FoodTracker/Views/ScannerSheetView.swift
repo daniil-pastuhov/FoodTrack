@@ -985,7 +985,9 @@ private struct ScanModeBar: View {
     let onSelect: (IOSCameraMode) -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
+        // Each slot gets its label's width plus an equal share of the rest, as the app's other
+        // segments do, so a long label such as "Datoskanning" isn't squeezed into a fifth.
+        SegmentRow(fill: true) {
             ForEach(modes, id: \.self) { mode in
                 ScanModeSlot(
                     mode: mode,
@@ -1025,7 +1027,10 @@ private struct ScanModeSlot: View {
                     .larderFont(.caption)
                     .foregroundStyle(selected ? LarderColor.onSurface : LarderColor.onSurfaceVariant)
                     .multilineTextAlignment(.center)
-                    .lineLimit(2)
+                    // One line at every width: shrinks a little before it would wrap mid-word.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 2)
             }
             .frame(maxWidth: .infinity, minHeight: ScanMetrics.modeSlotMinHeight, alignment: .top)
             .contentShape(Rectangle())
@@ -1105,7 +1110,8 @@ private struct ScanResultPanel<Content: View>: View {
     var body: some View {
         ViewThatFits(in: .vertical) {
             stack
-            ScrollView { stack }
+            // Beside the camera on wide windows the panel starts at the top of the screen.
+            ScrollView { stack }.clipsBelowStatusBar()
         }
     }
 }
@@ -1345,6 +1351,7 @@ private struct CameraOffView: View {
                 }
             }
             .defaultScrollAnchor(.center)
+            .clipsBelowStatusBar()
 
             ScanControls(onClose: onClose, torchAvailable: false, torchOn: false, onToggleTorch: {}, onTypeItIn: nil)
         }

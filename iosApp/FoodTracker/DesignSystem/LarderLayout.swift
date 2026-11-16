@@ -31,6 +31,26 @@ extension View {
     }
 }
 
+extension View {
+    /// For a scroll view that starts at the top of the safe area with no bar above it, such as a
+    /// tab whose header scrolls away with its content: SwiftUI lets such a scroll view's content
+    /// run on under the status bar, where the clock would sit on top of the rows. This clips it
+    /// at the top of its frame, so the status bar keeps the page background behind it. Only the
+    /// top and sides: the bottom stays open, so content still scrolls on under Scan and the pill.
+    ///
+    ///     ScrollView { header; rows }.clipsBelowStatusBar()
+    func clipsBelowStatusBar() -> some View {
+        clipShape(TopEdgeClip())
+    }
+}
+
+/// Clips at the top edge (and the sides), leaving the bottom free to run under the floating chrome.
+private struct TopEdgeClip: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path(CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height + 10_000))
+    }
+}
+
 /// Lets a screen ask the shell's floating parts to step aside, without touching `RootTabView`.
 /// Requests are counted, so two screens crossing in a transition can't undo one another. Use
 /// `.shellChromeEffect(hideNav:hideScan:)`.

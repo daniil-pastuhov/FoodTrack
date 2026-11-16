@@ -195,6 +195,7 @@ private struct OnboardingPage<Actions: View, Content: View>: View {
                         .frame(maxWidth: .infinity, minHeight: proxy.size.height)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .clipsBelowStatusBar()
             }
             VStack(spacing: LarderSpace.s1) { actions }
                 .frame(maxWidth: onboardingColumnWidth)
