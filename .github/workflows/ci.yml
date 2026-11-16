@@ -214,6 +214,12 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ui-base"
           cp "$RUNNER_TEMP/base-src/androidApp/src/test/snapshots/images/"*.png "$RUNNER_TEMP/ui-base/"
           git worktree remove --force "$RUNNER_TEMP/base-src"
+      - name: "Probe: keep the base images"
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-base-${{ steps.base.outputs.image }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ui-base
+          retention-days: 3
       - name: Render the head and compare
         id: compare
         env:
