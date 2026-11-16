@@ -116,6 +116,9 @@ class CommentTest(unittest.TestCase):
         self.assertIn("No differences", none)
         no_base = ud.comment_body({"base": BASE, "head": HEAD, "has_base": False})
         self.assertIn("has no UI screenshot check", no_base)
+        no_android = {"head": HEAD, "android": False}
+        self.assertEqual(ud.status(no_android), "no-android")
+        self.assertIn("no longer changes the Android app", ud.comment_body(no_android))
 
 
 if __name__ == "__main__":

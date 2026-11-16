@@ -262,10 +262,17 @@ jobs:
   # A fork's pull request has a read-only token, so it gets the artifact and the job summary only.
   # A push made with this token starts no workflow run, and this workflow's push trigger doesn't
   # cover screenshot-diffs anyway.
+  # It also runs when a push leaves the pull request without Android changes (the diff job is then
+  # skipped), so that a comment from an earlier push doesn't stay up.
   ui-screenshots-comment:
     name: UI screenshot diff comment
-    needs: ui-screenshots
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    needs: [changes, ui-screenshots]
+    if: >-
+      always() && github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      needs.changes.result == 'success' &&
+      (needs.ui-screenshots.result == 'success' ||
+       (needs.ui-screenshots.result == 'skipped' && needs.changes.outputs.android != 'true'))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -278,6 +285,7 @@ jobs:
           sparse-checkout-cone-mode: false
           persist-credentials: false
       - uses: actions/download-artifact@v7
+        if: needs.ui-screenshots.result == 'success'
         with:
           name: ui-screenshot-diff
           path: ${{ runner.temp }}/ui-diff
@@ -285,11 +293,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DIFFED: ${{ needs.ui-screenshots.result == 'success' }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           ARTIFACT_URL: ${{ needs.ui-screenshots.outputs.artifact-url }}
         run: |
-          python3 scripts/ui_diff.py publish --manifest "$RUNNER_TEMP/ui-diff/manifest.json" \
-            --repo "$GITHUB_REPOSITORY" --pr "$PR" --run-url "$RUN_URL" --artifact-url "$ARTIFACT_URL"
+          if [ "$DIFFED" = true ]; then
+            WHAT=(--manifest "$RUNNER_TEMP/ui-diff/manifest.json" --artifact-url "$ARTIFACT_URL")
+          else
+            WHAT=(--no-android --head "$HEAD_SHA")
+          fi
+          python3 scripts/ui_diff.py publish "${WHAT[@]}" \
+            --repo "$GITHUB_REPOSITORY" --pr "$PR" --run-url "$RUN_URL"
 
   # A closed pull request's images leave the screenshot-diffs branch (its history keeps them, so
   # the comment's pinned links still load). Plain git, no checkout of the pull request's code.

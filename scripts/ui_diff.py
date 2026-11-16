@@ -11,7 +11,7 @@ head in Roborazzi's compare mode against the base's images. This script does the
                                --base SHA --head SHA [--gradle-status N]
     scripts/ui_diff.py no-base --out DIR --base SHA --head SHA
     scripts/ui_diff.py summary --manifest FILE [--artifact-url URL]
-    scripts/ui_diff.py publish --manifest FILE --repo OWNER/NAME --pr N
+    scripts/ui_diff.py publish (--manifest FILE | --no-android --head SHA) --repo OWNER/NAME --pr N
                                [--run-url URL] [--artifact-url URL]
 
 collect reads Roborazzi's results-summary.json and the JUnit XML of the head run and writes
@@ -23,7 +23,8 @@ publish keeps one comment per pull request, found by MARKER: with differences it
 INLINE_LIMIT images to the companion branch IMAGE_BRANCH (pr-<n>/<head sha>/, the PR's older
 pushes and closed PRs' directories removed) and writes the comment with them inline, pinned to
 the branch commit; without, it rewrites a comment left from an earlier push to say so, and posts
-nothing when there never was one. It needs GH_TOKEN with pull-requests: write and contents: write.
+nothing when there never was one; --no-android does the same for a push after which the pull
+request no longer touches Android (the diff job then doesn't run). It needs GH_TOKEN with pull-requests: write and contents: write.
 """
 import argparse
 import base64
@@ -109,6 +110,8 @@ def image_file(kind, name):
 
 
 def status(manifest):
+    if manifest.get("android") is False:
+        return "no-android"
     if not manifest.get("has_base"):
         return "no-base"
     return "differences" if differences(manifest) else "none"
@@ -141,6 +144,10 @@ def comment_body(manifest, image_url=None, run_url=None, artifact_url=None):
     image_url(kind, name) gives an image's URL, or None for one not uploaded."""
     lines = [MARKER, "### UI screenshot diff", ""]
     state = status(manifest)
+    if state == "no-android":
+        lines.append(f"No differences: as of `{manifest['head'][:7]}` this pull request no longer changes the "
+                     f"Android app, so its screenshots are the base's.")
+        return "\n".join(lines) + "\n"
     if state == "no-base":
         lines.append(f"The base `{manifest['base'][:7]}` has no UI screenshot check, so there is nothing "
                      f"to compare this pull request's screenshots with.")
@@ -362,12 +369,15 @@ def cmd_summary(a):
 
 
 def cmd_publish(a):
-    manifest = json.loads(Path(a.manifest).read_text())
+    if a.no_android:
+        manifest, manifest_dir = {"head": a.head, "android": False}, Path(".")
+    else:
+        manifest, manifest_dir = json.loads(Path(a.manifest).read_text()), Path(a.manifest).parent
     token = os.environ.get("GH_TOKEN")
     if not token:
         print("GH_TOKEN is not set", file=sys.stderr)
         return 2
-    print(publish(manifest, Path(a.manifest).parent, a.repo, a.pr, token, a.run_url, a.artifact_url))
+    print(publish(manifest, manifest_dir, a.repo, a.pr, token, a.run_url, a.artifact_url))
     return 0
 
 
@@ -393,7 +403,11 @@ def parse_args(argv):
     s.add_argument("--artifact-url")
     s.set_defaults(func=cmd_summary)
     u = sub.add_parser("publish")
-    u.add_argument("--manifest", required=True)
+    which = u.add_mutually_exclusive_group(required=True)
+    which.add_argument("--manifest")
+    which.add_argument("--no-android", action="store_true",
+                       help="the pull request no longer touches Android: clear a comment left from before")
+    u.add_argument("--head", help="with --no-android: the pull request's head commit")
     u.add_argument("--repo", required=True)
     u.add_argument("--pr", type=int, required=True)
     u.add_argument("--run-url")
