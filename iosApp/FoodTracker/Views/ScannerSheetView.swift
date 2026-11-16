@@ -166,6 +166,14 @@ public struct ScannerSheetView: View {
         }
     }
 
+    /// Barcode mode's held scan already has its date, so the camera reads none (Scan date still
+    /// does, in Date mode).
+    private var pausesAutomaticDates: Bool {
+        mode == .barcode && BatchDateRead.pausesSingleScanDates(
+            holdingScan: viewModel.isHoldingBarcodeResult, hasDate: viewModel.detectedDate != nil
+        )
+    }
+
     /// duplicateOf is looked up alongside the product, not after it, so it is checked against
     /// this product's barcode rather than trusted to be about the same scan.
     private var inPantry: PantryItem? {
@@ -184,6 +192,8 @@ public struct ScannerSheetView: View {
 
     private func clearResults() {
         dateReadOffPack = false
+        // A date read before Scan again belongs to the product let go.
+        viewModel.forgetRecentDate()
         viewModel.clearScanResults()
     }
 
@@ -198,6 +208,7 @@ public struct ScannerSheetView: View {
         discardCapturedPhoto()
         photoHandedOff = false
         clearResults()
+        viewModel.closeBatchDateWindow()
         mode = target
     }
 
@@ -399,10 +410,28 @@ public struct ScannerSheetView: View {
             if !photoHandedOff, let url = capturedPhotoURL {
                 try? FileManager.default.removeItem(at: url)
             }
+            viewModel.endScanDateSession()
+        }
+        // A date read before the scanner opened, or under another mode, belongs to no scan here.
+        .onAppear { viewModel.endScanDateSession() }
+        .onChange(of: mode) { _, _ in viewModel.endScanDateSession() }
+        // A held single scan with a date reads no more dates until it is let go.
+        .onChange(of: pausesAutomaticDates) { _, paused in
+            cameraController?.pausesAutomaticDates = paused
         }
         // In Add/Edit's sheet a swipe-down would otherwise close this without going through the
         // prompt below, taking the queue out of view but not out of state.
         .interactiveDismissDisabled(!viewModel.batchQueue.isEmpty)
+        // Batch mode reads printed dates only while a scan's window is open (BatchDateRead).
+        .onChange(of: viewModel.batchDateWindow) { _, window in
+            cameraController?.readsBatchDatesUntil = window?.closesAt
+        }
+        // A window that runs out unused closes, so a rescan's marked row and hint go with it.
+        .task(id: viewModel.batchDateWindow) {
+            guard let window = viewModel.batchDateWindow else { return }
+            try? await Task.sleep(for: .seconds(max(window.closesAt.timeIntervalSinceNow, 0)))
+            if !Task.isCancelled { viewModel.closeBatchDateWindow(ifStill: window) }
+        }
         .larderDialog(
             L10n.batchDiscardTitle,
             isPresented: Binding(
@@ -507,6 +536,8 @@ public struct ScannerSheetView: View {
             onBarcodeFound: barcodeFound,
             onDateFound: dateFound,
             onControllerReady: { controller in
+                controller.readsBatchDatesUntil = viewModel.batchDateWindow?.closesAt
+                controller.pausesAutomaticDates = pausesAutomaticDates
                 cameraController = controller
             }
         )
@@ -528,7 +559,7 @@ public struct ScannerSheetView: View {
             return
         }
         guard mode != .batch else {
-            viewModel.enqueueBatchScan(barcode)
+            if let entry = viewModel.enqueueBatchScan(barcode) { confirmBatchDate(on: entry) }
             return
         }
         // The camera keeps reading barcodes while a result is on screen, so without this,
@@ -537,6 +568,12 @@ public struct ScannerSheetView: View {
         guard !viewModel.isHoldingBarcodeResult else { return }
         if let gs1Date = GS1BarcodeParser.extractExpiryDate(from: barcode) {
             viewModel.detectedDate = gs1Date
+            // The same pack's printed date, read next, must not wait for the next barcode.
+            viewModel.noteDateLanded(gs1Date)
+        } else if let recent = viewModel.takeRecentDate() {
+            // The printed date was read just before the barcode: as if Scan date had read it.
+            viewModel.detectedDate = recent
+            dateReadOffPack = true
         }
         viewModel.lookupBarcode(barcode)
         // Only where the host offers it, and only outside batch: batch collapses repeats into
@@ -548,7 +585,11 @@ public struct ScannerSheetView: View {
     }
 
     private func dateFound(_ date: Date) {
-        if viewModel.scannedProduct != nil {
+        if mode == .batch {
+            batchDateFound(date)
+        } else if mode == .barcode {
+            barcodeModeDateFound(date)
+        } else if viewModel.scannedProduct != nil {
             // Scan date: the date lands on the product, which comes back to show it.
             viewModel.detectedDate = date
             dateReadOffPack = true
@@ -557,6 +598,37 @@ public struct ScannerSheetView: View {
             // Held like a barcode result, so the date being confirmed can't change under the
             // thumb as the camera keeps reading. Scan again lets it go.
             viewModel.detectedDate = date
+        }
+    }
+
+    /// A printed date read in Batch mode goes on the last scan's row, if that row may take it;
+    /// anything else is ignored without a word.
+    private func batchDateFound(_ date: Date) {
+        guard let entry = viewModel.applyBatchDateRead(date) else { return }
+        confirmBatchDate(on: entry)
+    }
+
+    private func confirmBatchDate(on entry: BatchScanEntry) {
+        CameraScannerViewController.confirmDateRead()
+        snackbar = LarderSnackbarContent(
+            message: L10n.batchDateRead(ScanDates.full(entry.expiryDate)),
+            actionTitle: L10n.undoAction,
+            action: { viewModel.undoBatchDateRead(entry.id) }
+        )
+    }
+
+    /// Barcode mode reads dates beside barcodes. While a scan is held with no date yet, a date
+    /// read goes on it, as Scan date's would (which still replaces it); otherwise it waits a
+    /// moment for the next barcode. It never becomes a result of its own here, as in Date mode.
+    private func barcodeModeDateFound(_ date: Date) {
+        if viewModel.isHoldingBarcodeResult {
+            guard viewModel.detectedDate == nil else { return }
+            viewModel.detectedDate = date
+            dateReadOffPack = true
+            viewModel.noteDateLanded(date)
+            CameraScannerViewController.confirmDateRead()
+        } else {
+            viewModel.noteRecentDate(date)
         }
     }
 
@@ -646,7 +718,10 @@ public struct ScannerSheetView: View {
                     expanded: expanded,
                     entries: viewModel.batchQueue,
                     emptyTitle: mode == .receipt ? L10n.receiptQueueEmpty : L10n.batchQueueEmpty,
+                    rescanningId: viewModel.batchDateWindow.flatMap { $0.rescan ? $0.entryId : nil },
                     onRemove: { removeQueueRow($0) },
+                    // Only Batch reads dates; Receipt shows the same queue with the camera idle.
+                    onRescan: mode == .batch ? { viewModel.rescanBatchDate($0.id) } : nil,
                     onClear: { clearQueue() },
                     onCommit: {
                         let added = viewModel.commitBatchQueue()
@@ -881,7 +956,9 @@ public struct ScannerSheetView: View {
 
     private var guideText: String {
         switch mode {
-        case .batch: return L10n.reticleHintBatch
+        case .batch:
+            // Tapping a row's date reads it again, so the hint is Date mode's meanwhile.
+            return viewModel.batchDateWindow?.rescan == true ? L10n.reticleHintDateOcr : L10n.reticleHintBatch
         case .receipt: return L10n.reticleHintReceipt
         case .barcode: return L10n.reticleHintBarcode
         case .dateOcr: return L10n.reticleHintDateOcr
@@ -1216,16 +1293,30 @@ private struct ScanQueuePanel: View {
     let expanded: Bool
     let entries: [BatchScanEntry]
     let emptyTitle: String
+    /// The row whose date is being read again, marked as selected.
+    let rescanningId: String?
     let onRemove: (BatchScanEntry) -> Void
+    /// Tapping a row's date reads it again; nil where the camera reads no dates.
+    let onRescan: ((BatchScanEntry) -> Void)?
     let onClear: () -> Void
     let onCommit: () -> Void
 
     private var inset: CGFloat { expanded ? LarderSpace.s5 : LarderSpace.s4 }
 
+    private func row(_ entry: BatchScanEntry) -> some View {
+        ScanQueueRow(
+            entry: entry,
+            inset: inset,
+            rescanning: entry.id == rescanningId,
+            onRemove: { onRemove(entry) },
+            onRescan: onRescan.map { rescan in { rescan(entry) } }
+        )
+    }
+
     private var rows: some View {
         LazyVStack(spacing: 0) {
             ForEach(entries) { entry in
-                ScanQueueRow(entry: entry, inset: inset, onRemove: { onRemove(entry) })
+                row(entry)
             }
         }
     }
@@ -1252,7 +1343,7 @@ private struct ScanQueuePanel: View {
                     ViewThatFits(in: .vertical) {
                         VStack(spacing: 0) {
                             ForEach(entries) { entry in
-                                ScanQueueRow(entry: entry, inset: inset, onRemove: { onRemove(entry) })
+                                row(entry)
                             }
                         }
                         ScrollView { rows }
@@ -1272,7 +1363,10 @@ private struct ScanQueuePanel: View {
 private struct ScanQueueRow: View {
     let entry: BatchScanEntry
     let inset: CGFloat
+    /// Its date is being read again (a rescan window is open on it).
+    var rescanning = false
     let onRemove: () -> Void
+    var onRescan: (() -> Void)? = nil
 
     private var meta: String {
         if entry.isLookingUp { return L10n.lookingUpProduct }
@@ -1282,25 +1376,41 @@ private struct ScanQueueRow: View {
         return "\(date) · \(L10n.storageLocationName(entry.storageLocation))"
     }
 
+    /// The date reads again on a tap, never for a receipt row nor while the row is looked up.
+    private var rescan: (() -> Void)? {
+        BatchDateRead.mayRescan(entry) ? onRescan : nil
+    }
+
+    private var metaLine: some View {
+        HStack(spacing: LarderSpace.s2) {
+            if entry.isLookingUp {
+                LarderSpinner(size: 14, lineWidth: 2)
+            }
+            if entry.showsCheckDate {
+                CheckDateMark()
+            }
+            Text(meta)
+                .larderFont(.caption)
+                .foregroundStyle(rescanning ? LarderColor.onPrimaryContainer : LarderColor.onSurfaceVariant)
+                .lineLimit(1)
+        }
+    }
+
     var body: some View {
         HStack(spacing: LarderSpace.s3) {
             LarderThumb(imageReference: entry.imageUrl, placeholderIcon: .forCategory(entry.category))
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.quantity > 1 ? "\(entry.name) ×\(entry.quantity)" : entry.name)
                     .larderFont(.titleSm)
-                    .foregroundStyle(LarderColor.onSurface)
+                    .foregroundStyle(rescanning ? LarderColor.onPrimaryContainer : LarderColor.onSurface)
                     .lineLimit(1)
-                HStack(spacing: LarderSpace.s2) {
-                    if entry.isLookingUp {
-                        LarderSpinner(size: 14, lineWidth: 2)
-                    }
-                    if entry.showsCheckDate {
-                        CheckDateMark()
-                    }
-                    Text(meta)
-                        .larderFont(.caption)
-                        .foregroundStyle(LarderColor.onSurfaceVariant)
-                        .lineLimit(1)
+                if let rescan {
+                    Button(action: rescan) { metaLine.contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityHint(L10n.batchDateRescan)
+                } else {
+                    metaLine
                 }
             }
             Spacer(minLength: 0)
@@ -1309,6 +1419,8 @@ private struct ScanQueueRow: View {
         .frame(minHeight: ScanMetrics.queueRowMinHeight)
         .padding(.leading, inset)
         .padding(.trailing, LarderSpace.s1)
+        .background(rescanning ? LarderColor.primaryContainer : Color.clear)
+        .accessibilityAddTraits(rescanning ? .isSelected : [])
     }
 }
 
@@ -1378,7 +1490,9 @@ private struct CameraOffView: View {
             BatchScanEntry(id: "3", name: "5012345678917", expiryDate: Date(), storageLocation: "Fridge", expirySource: .fallback, isLookingUp: true)
         ],
         emptyTitle: "",
+        rescanningId: nil,
         onRemove: { _ in },
+        onRescan: { _ in },
         onClear: {},
         onCommit: {}
     )

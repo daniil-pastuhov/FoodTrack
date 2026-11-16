@@ -442,6 +442,10 @@ public enum L10n {
     public static var reticleHintPhoto: String { NSLocalizedString("reticle_hint_photo", comment: "") }
     public static var scanModeBatch: String { NSLocalizedString("scan_mode_batch", comment: "") }
     public static var reticleHintBatch: String { NSLocalizedString("reticle_hint_batch", comment: "") }
+    public static var batchDateRescan: String { NSLocalizedString("batch_date_rescan", comment: "") }
+    public static func batchDateRead(_ date: String) -> String {
+        String(format: NSLocalizedString("batch_date_read_format", comment: ""), date)
+    }
     public static var scanModeReceipt: String { NSLocalizedString("scan_mode_receipt", comment: "") }
     public static var reticleHintReceipt: String { NSLocalizedString("reticle_hint_receipt", comment: "") }
     public static var scanReceiptButton: String { NSLocalizedString("scan_receipt_button", comment: "") }

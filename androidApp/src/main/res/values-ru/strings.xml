@@ -144,7 +144,9 @@
     <string name="camera_off_allow">Разрешить камеру</string>
     <string name="camera_off_add_by_hand">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
-    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список</string>
+    <string name="reticle_hint_batch">Отсканируйте штрихкод, затем покажите дату</string>
+    <string name="batch_date_rescan">Считать дату заново</string>
+    <string name="batch_date_read">Дата считана: %1$s</string>
     <string name="scan_mode_receipt">Чек</string>
     <string name="reticle_hint_receipt">Поместите чек целиком в кадр и нажмите, чтобы считать</string>
     <string name="scan_receipt_button">Считать чек</string>

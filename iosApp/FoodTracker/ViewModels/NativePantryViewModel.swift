@@ -145,6 +145,15 @@ public class NativePantryViewModel: ObservableObject {
     @Published public var isLabelingPhoto: Bool = false
     /// Products scanned in batch mode and waiting to be reviewed and committed together.
     @Published public var batchQueue: [BatchScanEntry] = []
+    /// The row the last batch scan made or bumped, while the camera may still read its printed
+    /// date (`BatchDateRead`). Nil once a date has landed, or nothing was scanned.
+    @Published public private(set) var batchDateWindow: BatchDateWindow?
+    /// The latest date the camera read in Barcode or Batch mode that has not landed on anything,
+    /// for the next barcode scan (`RecentDateRead`). Not published: nothing shows it.
+    private var recentDate: RecentDateRead?
+    /// The date that last landed on a product in this scanner session, which is never kept as
+    /// the recent date (`BatchDateRead.keepRecent`). Undo leaves it; it goes with the session.
+    private var lastLandedDate: Date?
     /// Set when a scanned barcode is already in the pantry, so the UI can offer to add a unit
     /// to that item rather than create a second row for the same product.
     @Published public var duplicateOf: PantryItem?
@@ -779,7 +788,84 @@ public class NativePantryViewModel: ObservableObject {
     ///
     /// The row is published immediately, before the product lookup finishes, so the queue
     /// visibly responds to each scan rather than lagging behind the network.
-    public func enqueueBatchScan(_ barcode: String) {
+    ///
+    /// Either way the row takes a date read just before the scan, or becomes the one a printed
+    /// date read in the next few seconds goes on. Returns the row when a date landed on it.
+    @discardableResult
+    public func enqueueBatchScan(_ barcode: String, at now: Date = Date()) -> BatchScanEntry? {
+        queueBatchScan(barcode)
+        let id = batchQueue.first(where: { $0.barcode == barcode })?.id ?? barcode
+        guard let index = BatchDateRead.afterScan(
+            of: id, gs1Date: GS1BarcodeParser.extractExpiryDate(from: barcode),
+            queue: &batchQueue, window: &batchDateWindow, recent: &recentDate,
+            lastLanded: &lastLandedDate, at: now
+        ) else { return nil }
+        return batchQueue[index]
+    }
+
+    /// Puts a date the camera read in Batch mode on the last scan's row, and returns that row,
+    /// or nil when it didn't land there (see `BatchDateRead.dateRead`; with no window open it
+    /// may then be kept for the next scan).
+    public func applyBatchDateRead(_ date: Date, at now: Date = Date()) -> BatchScanEntry? {
+        guard let index = BatchDateRead.dateRead(
+            date, queue: &batchQueue, window: &batchDateWindow, recent: &recentDate,
+            lastLanded: &lastLandedDate, at: now
+        ) else { return nil }
+        return batchQueue[index]
+    }
+
+    /// Tapping a queued row's date: the next different date the camera reads replaces it.
+    public func rescanBatchDate(_ id: String, at now: Date = Date()) {
+        guard let entry = batchQueue.first(where: { $0.id == id }),
+              let window = BatchDateRead.window(forRescanOf: entry, at: now) else { return }
+        batchDateWindow = window
+    }
+
+    /// Keeps a date read in Barcode mode with no product to put it on, for the next scan.
+    public func noteRecentDate(_ date: Date, at now: Date = Date()) {
+        BatchDateRead.keepRecent(date, recent: &recentDate, lastLanded: lastLandedDate, at: now)
+    }
+
+    /// The date read just before a barcode scan, if it still counts; it is then forgotten.
+    public func takeRecentDate(at now: Date = Date()) -> Date? {
+        guard let date = BatchDateRead.takeRecent(&recentDate, at: now) else { return nil }
+        lastLandedDate = date
+        return date
+    }
+
+    /// A date landed on a held single scan: one the camera read, or one in the barcode itself.
+    public func noteDateLanded(_ date: Date) {
+        lastLandedDate = date
+    }
+
+    /// Scan again: a date read before it belongs to the product let go. The date that last
+    /// landed stays, since that pack is likely still in view.
+    public func forgetRecentDate() {
+        recentDate = nil
+    }
+
+    /// On a mode change, a commit, and when the scanner opens or closes: no window, recent date
+    /// or landed date carries over.
+    public func endScanDateSession() {
+        BatchDateRead.endSession(window: &batchDateWindow, recent: &recentDate, lastLanded: &lastLandedDate)
+    }
+
+    /// Undo on "Date read": the row's previous date and source, without reopening the window.
+    public func undoBatchDateRead(_ id: String) {
+        BatchDateRead.undo(entryId: id, in: &batchQueue)
+    }
+
+    public func closeBatchDateWindow() {
+        batchDateWindow = nil
+    }
+
+    /// Closes `window` once it has run out, unless a later scan or tap has replaced it.
+    public func closeBatchDateWindow(ifStill window: BatchDateWindow) {
+        if batchDateWindow == window { batchDateWindow = nil }
+    }
+
+    /// `enqueueBatchScan` without the date window, for a row coming back on Undo, which is no scan.
+    private func queueBatchScan(_ barcode: String) {
         if let index = batchQueue.firstIndex(where: { $0.barcode == barcode }) {
             batchQueue[index].quantity = min(batchQueue[index].quantity + 1, maxItemQuantity)
             return
@@ -822,8 +908,7 @@ public class NativePantryViewModel: ObservableObject {
             batchQueue[index].brand = product?.brand
             batchQueue[index].imageUrl = product?.imageUrl
             batchQueue[index].category = product?.category
-            batchQueue[index].expiryDate = suggestion.date
-            batchQueue[index].expirySource = suggestion.source
+            BatchDateRead.mergeLookup(suggestion, into: &batchQueue[index])
             // Only replace the placeholder's location if the user hasn't already picked
             // another one for this row.
             if let known = knownStorageLocation(for: barcode),
@@ -836,10 +921,12 @@ public class NativePantryViewModel: ObservableObject {
 
     public func removeBatchEntry(_ id: String) {
         batchQueue.removeAll { $0.id == id }
+        BatchDateRead.rowRemoved(id, window: &batchDateWindow)
     }
 
     public func clearBatchQueue() {
         batchQueue = []
+        batchDateWindow = nil
     }
 
     // MARK: - Scanner: queue Undo and lookup retry
@@ -865,7 +952,7 @@ public class NativePantryViewModel: ObservableObject {
         if entry.isLookingUp, let barcode = entry.barcode {
             // The lookup found no row to fill in when it finished, so this one would stay
             // "looking up" for good. Enqueuing starts a new one.
-            enqueueBatchScan(barcode)
+            queueBatchScan(barcode)
             guard let queued = batchQueue.firstIndex(where: { $0.id == entry.id }) else { return }
             var row = batchQueue.remove(at: queued)
             row.quantity = entry.quantity
@@ -912,6 +999,7 @@ public class NativePantryViewModel: ObservableObject {
             )
         }
         clearBatchQueue()
+        endScanDateSession()
         return queue.count
     }
 

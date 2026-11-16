@@ -143,6 +143,9 @@ data class PantryUiState(
     /** How the current scan's lookup ended. Null while there is no finished lookup. */
     val lookupResult: ProductLookupResult? = null,
     val detectedDate: LocalDate? = null,
+    /** True when [detectedDate] was read off the printed pack (date OCR) rather than a GS1
+     *  barcode, for the caption under it. */
+    val detectedDateReadOffPack: Boolean = false,
     /** Expiry date to pre-fill on the item this scan produces, and where it came from - a
      *  date read off the packaging, the shelf life this barcode was given last time, or its
      *  category's configured default. See [ShelfLife.suggest]. */
@@ -212,7 +215,10 @@ class PantryStateHolder(
     private val computationContext: CoroutineContext = Dispatchers.Default,
     /** Source of the current date. Injectable so a test can move the day on without waiting
      *  for midnight. */
-    private val todayProvider: () -> LocalDate = DateUtils::today
+    private val todayProvider: () -> LocalDate = DateUtils::today,
+    /** A clock that only moves forward, in milliseconds, for Batch mode's date window (see
+     *  [BatchDateWindow]). Injectable so a test can let the window run out without waiting. */
+    private val nowMillis: () -> Long = ::monotonicMillis
 ) {
     // Read once. getSettings() is a synchronous SharedPreferences read plus a JSON decode, and
     // it happens while the DI graph is being built — i.e. on the main thread during startup.
@@ -637,10 +643,17 @@ class PantryStateHolder(
             return false
         }
         val gs1Date = GS1BarcodeParser.extractExpiryDate(barcode)
+        // A printed date read just before (or on the same frame as) the barcode is this scan's
+        // date, as if Scan date had read it afterwards. A GS1 date still wins.
+        val readDate = if (gs1Date == null) recentDateOrNull() else null
+        if (readDate != null) dateLanded(readDate)
+        // A GS1 date is the pack's date: the printed one read next is not kept for another scan.
+        if (gs1Date != null) lastLandedDate = gs1Date
         _uiState.update {
             it.copy(
                 isLookingUpBarcode = true,
-                detectedDate = gs1Date ?: it.detectedDate,
+                detectedDate = gs1Date ?: readDate ?: it.detectedDate,
+                detectedDateReadOffPack = if (gs1Date != null) false else readDate != null || it.detectedDateReadOffPack,
                 scanMessage = if (gs1Date != null) "Extracted date from barcode: $gs1Date" else null
             )
         }
@@ -666,7 +679,11 @@ class PantryStateHolder(
                     scannedProduct = product,
                     productNotFoundBarcode = if (product == null) barcode else null,
                     lookupResult = lookup,
-                    suggestedExpiry = suggestion,
+                    // A date read off the pack while the lookup ran outranks its guess.
+                    suggestedExpiry = it.detectedDate
+                        ?.takeIf { suggestion.source != ShelfLifeSource.DETECTED }
+                        ?.let { date -> ShelfLife.suggest(today = DateUtils.today(), detectedDate = date) }
+                        ?: suggestion,
                     allergenWarnings = warnings,
                     isLookingUpBarcode = false,
                     scanMessage = if (product != null) "Found ${product.name}" else "Product not in database - enter name"
@@ -729,11 +746,18 @@ class PantryStateHolder(
      * The row is published immediately, before the product lookup finishes, so the queue
      * visibly responds to each scan rather than lagging behind the network.
      */
-    fun enqueueBatchScan(barcode: String) {
+    fun enqueueBatchScan(barcode: String): BatchScanEntry? = queueBatchScan(barcode, opensDateWindow = true)
+
+    /**
+     * [opensDateWindow] is false for a row Undo brings back, which is not a new scan. Returns
+     * the row when a [RecentDate] landed on it at once, for "Date read" and its Undo; no window
+     * opens then.
+     */
+    private fun queueBatchScan(barcode: String, opensDateWindow: Boolean): BatchScanEntry? {
         val existing = _uiState.value.batchQueue.find { it.barcode == barcode }
         if (existing != null) {
             updateBatchEntry(existing.copy(quantity = (existing.quantity + 1).coerceAtMost(MAX_ITEM_QUANTITY)))
-            return
+            return if (opensDateWindow) startBatchDateRead(existing.id) else null
         }
 
         val settings = _uiState.value.settings
@@ -750,6 +774,7 @@ class PantryStateHolder(
             isLookingUp = true
         )
         _uiState.update { it.copy(batchQueue = it.batchQueue + placeholder) }
+        val read = if (opensDateWindow) startBatchDateRead(placeholder.id) else null
 
         coroutineScope.launch {
             val product = lookUp(barcode).productOrNull
@@ -764,14 +789,13 @@ class PantryStateHolder(
                     batchQueue = state.batchQueue.map { entry ->
                         // Re-read from state rather than closing over `placeholder`: the user
                         // may have edited or removed this row while the lookup was in flight.
+                        // A date the camera read meanwhile stays (see BatchDateRead).
                         if (entry.id != barcode || !entry.isLookingUp) entry
-                        else entry.copy(
+                        else BatchDateRead.withLookupSuggestion(entry, suggestion).copy(
                             name = product?.name ?: entry.name,
                             brand = product?.brand,
                             imageUrl = product?.imageUrl,
                             category = product?.category,
-                            expiryDate = suggestion.date,
-                            expirySource = suggestion.source,
                             // Only replace the placeholder's location if the user hasn't
                             // already picked another one for this row.
                             storageLocation = if (knownLocation != null && entry.storageLocation == placeholder.storageLocation) {
@@ -785,6 +809,7 @@ class PantryStateHolder(
                 )
             }
         }
+        return read
     }
 
     /**
@@ -876,9 +901,18 @@ class PantryStateHolder(
     private fun newReceiptRowId(): String =
         "receipt_${Clock.System.now().toEpochMilliseconds()}_${Random.nextInt()}"
 
+    /** Replaces the queued row with [entry]'s id. A changed date counts as set by hand, so a
+     *  date the camera reads later leaves it alone, and the last read can no longer be undone. */
     fun updateBatchEntry(entry: BatchScanEntry) {
         _uiState.update { state ->
-            state.copy(batchQueue = state.batchQueue.map { if (it.id == entry.id) entry else it })
+            state.copy(batchQueue = state.batchQueue.map { queued ->
+                when {
+                    queued.id != entry.id -> queued
+                    entry.expiryDate != queued.expiryDate || entry.expirySource != queued.expirySource ->
+                        entry.copy(dateSetByHand = true, dateBeforeRead = null)
+                    else -> entry
+                }
+            })
         }
     }
 
@@ -886,10 +920,168 @@ class PantryStateHolder(
         _uiState.update { state ->
             state.copy(batchQueue = state.batchQueue.filterNot { it.id == id })
         }
+        if (batchDateWindow.value?.rowId == id) batchDateWindow.value = null
     }
 
     fun clearBatchQueue() {
         _uiState.update { it.copy(batchQueue = emptyList()) }
+        batchDateWindow.value = null
+    }
+
+    // ---- Batch scan: the printed date after a barcode ----------------------------------
+
+    /** Open from a Batch scan, or a tap on a row's date, until a date lands or
+     *  [BATCH_DATE_WINDOW_MILLIS] pass. Read from the camera's analyzer thread through
+     *  [dateReadIntervalMillis], hence a StateFlow. */
+    private val batchDateWindow = MutableStateFlow<BatchDateWindow?>(null)
+
+    /** The window as last opened or closed; one that has run out stays here until replaced,
+     *  so check it with [BatchDateWindow.isOpen] (the scanner marks a rescan's row with it). */
+    val batchDateWindowState: StateFlow<BatchDateWindow?> = batchDateWindow.asStateFlow()
+
+    /** The [RecentDate], and the date that last landed on a product (see
+     *  [BatchDateRead.keepsAsRecent]). Main thread only, like the camera's results. */
+    private var recentDate: RecentDate? = null
+    private var lastLandedDate: LocalDate? = null
+
+    private fun recentDateOrNull(): LocalDate? = recentDate?.takeIf { it.isRecent(nowMillis()) }?.date
+
+    private fun rememberRecentDate(date: LocalDate) {
+        if (!BatchDateRead.keepsAsRecent(date, lastLandedDate)) return
+        recentDate = RecentDate(date, nowMillis())
+    }
+
+    /** A read date has landed on a product: it is used up, and becomes the one that last
+     *  landed (Undo leaves that as it is). */
+    private fun dateLanded(date: LocalDate) {
+        recentDate = null
+        lastLandedDate = date
+    }
+
+    /** Forgets the recent date alone, for Scan again in Barcode mode: the date that last landed
+     *  is still kept out, since that pack is likely still in view. */
+    fun forgetRecentDate() {
+        recentDate = null
+    }
+
+    /** Forgets the recent date and the one that last landed, and closes any window, for a mode
+     *  change and for the scanner opening or closing. */
+    fun forgetScanDates() {
+        recentDate = null
+        lastLandedDate = null
+        batchDateWindow.value = null
+    }
+
+    /** A Batch scan of [rowId]: a recent date the row may take lands on it at once, else the
+     *  window opens. */
+    private fun startBatchDateRead(rowId: String): BatchScanEntry? {
+        // A scan uses the recent date up whether it lands or not: a row that can't take it
+        // must not leave it for the next product.
+        val date = recentDateOrNull()
+        recentDate = null
+        val target = _uiState.value.batchQueue.find { it.id == rowId }
+        // A date in the barcode itself is the pack's date too, so the printed one read next
+        // must not be kept for the next product.
+        target?.barcode?.let(GS1BarcodeParser::extractExpiryDate)?.let { lastLandedDate = it }
+        if (!BatchDateRead.mayTake(target)) {
+            // Nothing to read for this row: the camera goes back to its idle rate.
+            batchDateWindow.value = null
+            return null
+        }
+        if (date != null) {
+            batchDateWindow.value = null
+            dateLanded(date)
+            return applyBatchDate(target!!, date)
+        }
+        batchDateWindow.value = BatchDateWindow(rowId, nowMillis())
+        return null
+    }
+
+    private fun applyBatchDate(target: BatchScanEntry, date: LocalDate): BatchScanEntry {
+        val updated = BatchDateRead.applied(target, date)
+        _uiState.update { state ->
+            state.copy(batchQueue = state.batchQueue.map { if (it.id == updated.id) updated else it })
+        }
+        return updated
+    }
+
+    /** Whether a Batch date window is open right now. Safe to call from any thread. */
+    fun readsBatchDate(): Boolean = batchDateWindow.value?.isOpen(nowMillis()) == true
+
+    /** How long the camera should leave between date reads in Barcode and Batch mode, or null
+     *  for none at all (see [BatchDateRead.readIntervalMillis]). Safe to call from any thread. */
+    fun dateReadIntervalMillis(): Long? {
+        val held = _uiState.value
+        val heldScanHasDate = held.detectedDate != null &&
+            (held.isLookingUpBarcode || held.scannedProduct != null || held.productNotFoundBarcode != null)
+        return BatchDateRead.readIntervalMillis(readsBatchDate(), heldScanHasDate)
+    }
+
+    /** Milliseconds left in the open window, 0 when none is open. */
+    fun batchDateWindowRemainingMillis(): Long {
+        val window = batchDateWindow.value?.takeIf { it.isOpen(nowMillis()) } ?: return 0
+        return BATCH_DATE_WINDOW_MILLIS - (nowMillis() - window.openedAtMillis)
+    }
+
+    /**
+     * Tapping a queued row's date: the next date read that differs from it replaces it, within
+     * a fresh window. Returns false for a row that can't be rescanned (see
+     * [BatchDateRead.mayRescan]).
+     */
+    fun startBatchDateRescan(rowId: String): Boolean {
+        val target = _uiState.value.batchQueue.find { it.id == rowId }
+        if (!BatchDateRead.mayRescan(target)) return false
+        batchDateWindow.value = BatchDateWindow(rowId, nowMillis(), rescan = true)
+        return true
+    }
+
+    /**
+     * A date the camera read in Batch mode. With a window open it goes on the window's row when
+     * that row may take it ([BatchDateRead.mayTake], or [BatchDateRead.mayTakeRescan] for a
+     * rescan), and the window closes: one date per scan. Returns the updated row, for "Date
+     * read" and its Undo, or null when it is ignored. A date read inside a window is never kept
+     * as the recent date; one read with no window open is (see [RecentDate]).
+     */
+    fun onBatchDateRead(date: LocalDate): BatchScanEntry? {
+        val window = batchDateWindow.value?.takeIf { it.isOpen(nowMillis()) }
+        if (window == null) {
+            rememberRecentDate(date)
+            return null
+        }
+        val target = _uiState.value.batchQueue.find { it.id == window.rowId }
+        val takes = if (window.rescan) BatchDateRead.mayTakeRescan(target, date) else BatchDateRead.mayTake(target)
+        if (!takes) return null
+        batchDateWindow.value = null
+        dateLanded(date)
+        return applyBatchDate(target!!, date)
+    }
+
+    /**
+     * A date the camera read in Barcode mode. While a scan is held (looking up, found or not
+     * found) with no date yet, it becomes that scan's date, as Scan date would make it; with no
+     * scan held it is kept as the recent date for the next barcode. Returns whether it landed.
+     */
+    fun onScanDateRead(date: LocalDate): Boolean {
+        val held = _uiState.value
+        val holdsScan = held.isLookingUpBarcode || held.scannedProduct != null || held.productNotFoundBarcode != null
+        if (!holdsScan) {
+            rememberRecentDate(date)
+            return false
+        }
+        if (held.detectedDate != null) return false
+        onDateOcrDetected(date)
+        dateLanded(date)
+        return true
+    }
+
+    /** Undo for [onBatchDateRead]: the row's date and source go back to what they were. The
+     *  window stays closed. Does nothing once the row has gone or its date was set by hand. */
+    fun undoBatchDateRead(rowId: String) {
+        _uiState.update { state ->
+            state.copy(batchQueue = state.batchQueue.map { entry ->
+                if (entry.id == rowId) BatchDateRead.undone(entry) ?: entry else entry
+            })
+        }
     }
 
     // ---- Scanner: queue Undo and lookup retry ------------------------------------------
@@ -917,7 +1109,7 @@ class PantryStateHolder(
         if (entry.isLookingUp && barcode != null) {
             // The lookup found no row to fill in when it finished, so this one would stay
             // "looking up" for good. Enqueuing starts a new one.
-            enqueueBatchScan(barcode)
+            queueBatchScan(barcode, opensDateWindow = false)
             _uiState.update { state ->
                 val queued = state.batchQueue.find { it.id == entry.id } ?: return@update state
                 val others = state.batchQueue.filterNot { it.id == entry.id }
@@ -972,6 +1164,8 @@ class PantryStateHolder(
             )
         }
         clearBatchQueue()
+        // The shop is in: no window, recent date or landed date outlives it.
+        forgetScanDates()
         confirm(HomeConfirmation.BatchAdded(queue.size))
         onComplete(queue.size)
     }
@@ -1046,6 +1240,7 @@ class PantryStateHolder(
         _uiState.update {
             it.copy(
                 detectedDate = date,
+                detectedDateReadOffPack = true,
                 // A date read off the packaging outranks any remembered/category guess already
                 // published by an earlier barcode scan in the same session, so replace it
                 // rather than letting the stale suggestion win at pre-fill time.
@@ -1693,6 +1888,7 @@ class PantryStateHolder(
                 productNotFoundBarcode = null,
                 lookupResult = null,
                 detectedDate = null,
+                detectedDateReadOffPack = false,
                 suggestedExpiry = null,
                 photoLabelSuggestions = emptyList(),
                 isLabelingPhoto = false,

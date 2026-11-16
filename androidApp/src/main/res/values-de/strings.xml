@@ -144,7 +144,9 @@
     <string name="camera_off_allow">Kamera erlauben</string>
     <string name="camera_off_add_by_hand">Eintippen</string>
     <string name="scan_mode_batch">Serie</string>
-    <string name="reticle_hint_batch">Scanne einfach weiter. Alles landet in der Liste</string>
+    <string name="reticle_hint_batch">Barcode scannen, dann das Datum zeigen</string>
+    <string name="batch_date_rescan">Datum erneut scannen</string>
+    <string name="batch_date_read">Datum gelesen: %1$s</string>
     <string name="scan_mode_receipt">Kassenbon</string>
     <string name="reticle_hint_receipt">Bring den ganzen Kassenbon ins Bild und tippe dann, um ihn zu lesen</string>
     <string name="scan_receipt_button">Bon lesen</string>

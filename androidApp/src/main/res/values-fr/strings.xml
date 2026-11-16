@@ -145,7 +145,9 @@
     <string name="camera_off_allow">Autoriser l\'appareil photo</string>
     <string name="camera_off_add_by_hand">Saisir à la main</string>
     <string name="scan_mode_batch">En série</string>
-    <string name="reticle_hint_batch">Continuez à scanner. Tout s\'ajoute à la liste</string>
+    <string name="reticle_hint_batch">Scannez un code-barres, puis montrez la date</string>
+    <string name="batch_date_rescan">Scanner la date à nouveau</string>
+    <string name="batch_date_read">Date lue : %1$s</string>
     <string name="scan_mode_receipt">Reçu</string>
     <string name="reticle_hint_receipt">Cadrez tout le reçu, puis touchez pour le lire</string>
     <string name="scan_receipt_button">Lire le reçu</string>

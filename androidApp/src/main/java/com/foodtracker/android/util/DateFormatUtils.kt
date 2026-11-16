@@ -8,6 +8,11 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toJavaLocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
+
+/** [formatLocalDate] outside composition, for text built in a callback (a snackbar's). */
+fun formatLocalDate(date: LocalDate, locale: Locale, style: FormatStyle = FormatStyle.MEDIUM): String =
+    date.toJavaLocalDate().format(DateTimeFormatter.ofLocalizedDate(style).withLocale(locale))
 
 /** Renders [date] using the device's locale date order/format (e.g. DD/MM/YYYY vs MM/DD/YYYY), never a fixed one. */
 @Composable
