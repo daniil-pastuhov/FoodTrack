@@ -779,6 +779,7 @@ internal class RecipePaid(
                 when (result) {
                     is ServerResult.Ok -> {
                         val reply = result.value
+                        purchasesApplied++
                         val settled = reply.status != VerifyStatus.RETRY
                         persist { current ->
                             current.copy(
@@ -1005,21 +1006,27 @@ internal class RecipePaid(
 
     // --- Free recipes for signing in (WelcomeRecipes.kt) --------------------------------------
 
-    /** When `getWelcomeOffer` was last asked in this run, answered or not. */
-    private var welcomeAskedAt: Long? = null
     private var welcomeAsking = false
 
-    /** The tab was shown: ask for the offer as soon as the store says it sells packs here. */
+    /** The Recipe tab has been shown in this run (only then is the offer asked, never at launch):
+     *  ask as soon as the store says it sells packs here. */
     private var welcomeWanted = false
 
     /** A sign-in made while the offer showed needed its account joined first: claim after. */
     private var claimAfterMerge = false
     private val claimLock = Mutex()
 
+    /** Purchase checks whose balance was applied in this run: a claim answered after one of them
+     *  doesn't apply its own, older balance. */
+    @kotlin.concurrent.Volatile
+    private var purchasesApplied = 0
+
     /**
      * The Recipe tab was shown: the cached answer is shown at once (as long as it is under a day
      * old), and asked again when the last ask is 15 minutes old ([shouldAskWelcomeOffer]). Only on
      * installs that can buy, and only while signed out ([welcomeOfferAskable]). Failures are silent.
+     * Called only when the Recipe tab itself is shown ([RecipeStateHolder.onRecipeTabShown]): this
+     * is the one call made before a sign-in or a purchase, and never at launch.
      */
     fun onTabShown() {
         if (!available || demo) return
@@ -1031,10 +1038,12 @@ internal class RecipePaid(
     private suspend fun askWelcome(force: Boolean) {
         if (demo) return
         val now = nowMillis()
-        if (!shouldAskWelcomeOffer(welcomeOfferAskable(state.value.paid), snapshot.welcomeOffer, welcomeAskedAt, now, force)) return
+        if (!welcomeWanted && !force) return
+        if (!shouldAskWelcomeOffer(welcomeOfferAskable(state.value.paid), snapshot.welcomeOffer, snapshot.welcomeAskedAtMillis, now, force)) return
         if (welcomeAsking && !force) return
         welcomeAsking = true
-        welcomeAskedAt = now
+        // Kept with the snapshot, so a failing server isn't asked again on every cold start.
+        persist { it.copy(welcomeAskedAtMillis = now) }
         try {
             val result = try {
                 backend.getWelcomeOffer()
@@ -1150,7 +1159,11 @@ internal class RecipePaid(
     private suspend fun claim(signedInNow: Boolean): WelcomeOutcome? = claimLock.withLock {
         val current = account.state.value
         val key = current.purchaseKey
-        if (current.kind != AccountKind.SIGNED_IN || (key != null && key in snapshot.welcomeClaimed)) return@withLock null
+        if (current.kind != AccountKind.SIGNED_IN) return@withLock null
+        // Settled for this account on this device already (signed out and in again, say): no call,
+        // but the person, promised free recipes, is told plainly that it has had them.
+        if (key != null && key in snapshot.welcomeClaimed) return@withLock WelcomeOutcome.Already
+        val purchasesBefore = purchasesApplied
         val result = try {
             whileBusy(setOf(ServerError.OVERLOADED)) { backend.claimWelcome() }
         } catch (e: CancellationException) {
@@ -1162,9 +1175,13 @@ internal class RecipePaid(
         when (result) {
             is ServerResult.Ok -> {
                 val reply = result.value.balance
+                // A purchase confirmed while the claim was out (the first purchase's account choice
+                // claims alongside it) carries the later, larger balance: the claim's, worked out
+                // before it, must not overwrite it. The count is asked for again instead.
+                val purchaseMeanwhile = purchasesApplied != purchasesBefore
                 persist {
                     it.copy(
-                        balance = reply.balance,
+                        balance = if (purchaseMeanwhile) it.balance else reply.balance,
                         costs = reply.costs ?: it.costs,
                         purchasesBlocked = reply.purchasesBlocked,
                         serverTakesOptional = reply.acceptsOptional,
@@ -1176,6 +1193,7 @@ internal class RecipePaid(
                     ).withBalanceWelcome(reply).also { termsArrived = true }
                 }
                 balanceAskedAt = nowMillis()
+                if (purchaseMeanwhile) refreshBalance()
             }
             is ServerResult.Err -> when (result.error) {
                 ServerError.CALLABLE_MISSING -> persist { it.copy(welcomeAccount = WelcomeAnswer(0, nowMillis())) }

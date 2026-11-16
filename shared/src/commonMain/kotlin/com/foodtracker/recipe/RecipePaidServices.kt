@@ -625,7 +625,10 @@ data class RecipePaidSnapshot(
     val welcomeAccount: WelcomeAnswer? = null,
     /** The accounts ([AccountState.purchaseKey]) whose claim settled on this device (GRANTED or
      *  ALREADY): the hint never shows for them again here. */
-    val welcomeClaimed: List<String> = emptyList()
+    val welcomeClaimed: List<String> = emptyList(),
+    /** When `getWelcomeOffer` was last asked, answered or not (this phone's clock): the 15 minutes
+     *  between asks hold across launches ([shouldAskWelcomeOffer]). */
+    val welcomeAskedAtMillis: Long? = null
 )
 
 interface RecipePaidRepository {

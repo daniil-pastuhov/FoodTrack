@@ -130,6 +130,8 @@ fun RecipeScreen(
     // in Saved recipes as unread.
     LifecycleResumeEffect(stateHolder) {
         stateHolder.refresh()
+        // Only here, where the tab itself shows: the free recipes' offer is never asked at launch.
+        stateHolder.onRecipeTabShown()
         stateHolder.setOnScreen(true)
         onPauseOrDispose { stateHolder.setOnScreen(false) }
     }

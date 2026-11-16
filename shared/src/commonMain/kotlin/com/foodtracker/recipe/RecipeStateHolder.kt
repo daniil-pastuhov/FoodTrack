@@ -536,9 +536,15 @@ class RecipeStateHolder(
             downloadIfNeeded()
         }
         paid.resume()
-        // The tab is shown: the free recipes' offer, from its cache, and asked again when due.
-        paid.onTabShown()
     }
+
+    /**
+     * The Recipe tab itself came on screen (its resume): the free recipes' offer, from its cache,
+     * and asked again when due. Never from [refresh] at construction or from the app's resume:
+     * `getWelcomeOffer` is the one call before a sign-in or a purchase, made only when the tab is
+     * shown.
+     */
+    fun onRecipeTabShown() = paid.onTabShown()
 
     /**
      * Downloads the phone's model when it is missing, but only while the recipe language is one

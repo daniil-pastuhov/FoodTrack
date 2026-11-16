@@ -66,8 +66,19 @@ class WelcomeRecipesTest {
     }
 
     @Test
-    fun aClockMovedBackAllowsAskingAgain() {
+    fun aClockMovedBackAllowsAskingAgainOnceFromTheLastAsk() {
         assertTrue(shouldAskWelcomeOffer(true, WelcomeAnswer(3, now), now, now - 1))
+        // That ask's own time then takes over: not again for 15 minutes.
+        assertFalse(shouldAskWelcomeOffer(true, WelcomeAnswer(3, now), now - 1, now))
+    }
+
+    @Test
+    fun anAnswerDatedInTheFutureIsIgnoredForTheFifteenMinutes() {
+        val future = WelcomeAnswer(3, now + day)
+        assertTrue(shouldAskWelcomeOffer(true, future, null, now))
+        // Measured from the last ask, not from the future answer.
+        assertFalse(shouldAskWelcomeOffer(true, future, now, now + 60_000))
+        assertTrue(shouldAskWelcomeOffer(true, future, now, now + WELCOME_REFRESH_MILLIS))
     }
 
     // --- Reading the server -------------------------------------------------------------------

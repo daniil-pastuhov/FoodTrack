@@ -65,12 +65,21 @@ class WelcomePaidTest {
             offerCalls++
             return offer
         }
+        /** Holds the claim's answer until completed, to order it against a purchase's. */
+        var claimGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
         override suspend fun claimWelcome(): ServerResult<WelcomeClaimReply> {
             claimCalls++
-            return claims.removeFirst()
+            val reply = claims.removeFirst()
+            claimGate?.await()
+            return reply
         }
         override suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply> = error("not here")
-        override suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply> = error("not here")
+        var verifyBalance = 0
+        var verifyGate: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+        override suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply> {
+            verifyGate?.await()
+            return ServerResult.Ok(VerifyReply(VerifyStatus.GRANTED, balance = verifyBalance))
+        }
         override suspend fun getBalance(): ServerResult<BalanceReply> {
             balanceCalls++
             return ServerResult.Ok(balance)
@@ -169,12 +178,65 @@ class WelcomePaidTest {
 
     private val RecipeStateHolder.paid: PaidUiState get() = uiState.value.paid
 
+    /** The Recipe tab shown, as RecipeScreen's resume does it. */
+    private fun RecipeStateHolder.showTab() {
+        refresh()
+        onRecipeTabShown()
+    }
+
+    // --- Only when the Recipe tab is shown ---------------------------------------------------
+
+    @Test
+    fun launchingAndResumingTheAppNeverAsksForTheOffer() = runUnconfined {
+        val holder = holder()
+        // What a launch does without the tab: the holder's own refresh, the app's resume.
+        holder.refresh()
+        holder.onAppResume()
+        now += WELCOME_REFRESH_MILLIS
+        holder.onAppResume()
+        assertEquals(0, backend.offerCalls)
+        assertNull(repository.get().welcomeAskedAtMillis)
+        holder.showTab()
+        assertEquals(1, backend.offerCalls)
+    }
+
+    @Test
+    fun aColdStartWithinFifteenMinutesOfAFailedAskDoesntAsk() = runUnconfined {
+        backend.offer = ServerResult.Err(ServerError.INTERNAL)
+        holder().showTab()
+        assertEquals(1, backend.offerCalls)
+        assertEquals(now, repository.get().welcomeAskedAtMillis)
+        // A new launch with what was kept.
+        now += WELCOME_REFRESH_MILLIS - 1
+        holder().showTab()
+        assertEquals(1, backend.offerCalls)
+        now += 1
+        holder().showTab()
+        assertEquals(2, backend.offerCalls)
+    }
+
+    @Test
+    fun aClockMovedBackWithFailingCallsAsksOnceThenWaits() = runUnconfined {
+        // An answer dated in the future (the clock was set back since), and a server that fails.
+        repository = InMemoryRecipePaidRepository(RecipePaidSnapshot(welcomeOffer = WelcomeAnswer(3, now + WELCOME_ANSWER_MAX_AGE_MILLIS)))
+        backend.offer = ServerResult.Err(ServerError.INTERNAL)
+        val holder = holder()
+        holder.showTab()
+        assertEquals(1, backend.offerCalls)
+        now += 60_000
+        holder.showTab()
+        assertEquals(1, backend.offerCalls)
+        now += WELCOME_REFRESH_MILLIS
+        holder.showTab()
+        assertEquals(2, backend.offerCalls)
+    }
+
     // --- Asking for the offer ----------------------------------------------------------------
 
     @Test
     fun theTabBeingShownAsksForTheOfferAndTheHintNamesIt() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertEquals(1, backend.offerCalls)
         assertEquals(WelcomeHint(3, WelcomeKind.SIGN_IN), holder.paid.welcome)
         assertEquals(WelcomeAnswer(3, now), repository.get().welcomeOffer)
@@ -186,12 +248,12 @@ class WelcomePaidTest {
     @Test
     fun notMoreOftenThanEveryFifteenMinutes() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         now += WELCOME_REFRESH_MILLIS - 1
-        holder.refresh()
+        holder.showTab()
         assertEquals(1, backend.offerCalls)
         now += 1
-        holder.refresh()
+        holder.showTab()
         assertEquals(2, backend.offerCalls)
     }
 
@@ -200,21 +262,21 @@ class WelcomePaidTest {
         repository = InMemoryRecipePaidRepository(RecipePaidSnapshot(welcomeOffer = WelcomeAnswer(4, now - 60_000)))
         backend.offer = ServerResult.Err(ServerError.OFFLINE)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertEquals(4, holder.paid.welcome?.recipes)
         // A day after it was given, with the server unreachable: no hint at all.
         now += WELCOME_ANSWER_MAX_AGE_MILLIS
-        holder.refresh()
+        holder.showTab()
         assertNull(holder.paid.welcome)
     }
 
     @Test
     fun aFailedCallKeepsTheLastAnswerAndSaysNothing() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         backend.offer = ServerResult.Err(ServerError.INTERNAL)
         now += WELCOME_REFRESH_MILLIS
-        holder.refresh()
+        holder.showTab()
         assertEquals(2, backend.offerCalls)
         assertEquals(3, holder.paid.welcome?.recipes)
         assertNull(holder.paid.event)
@@ -225,7 +287,7 @@ class WelcomePaidTest {
     fun anOlderServerWithoutTheCallReadsAsZero() = runUnconfined {
         backend.offer = ServerResult.Err(ServerError.CALLABLE_MISSING)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertNull(holder.paid.welcome)
         assertEquals(0, repository.get().welcomeOffer?.recipes)
     }
@@ -234,7 +296,7 @@ class WelcomePaidTest {
     fun anInstallThatCantBuyNeverAsks() = runUnconfined {
         store.packs = emptyList()
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertEquals(0, backend.offerCalls)
         assertNull(holder.paid.welcome)
     }
@@ -244,7 +306,7 @@ class WelcomePaidTest {
         account = Account(AccountKind.SIGNED_IN)
         backend.balance = BalanceReply(0, acceptsWelcome = true, welcomeRecipes = 3)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertEquals(0, backend.offerCalls)
         assertEquals(WelcomeHint(3, WelcomeKind.CLAIM), holder.paid.welcome)
     }
@@ -254,7 +316,7 @@ class WelcomePaidTest {
         account = Account(AccountKind.SIGNED_IN)
         backend.balance = BalanceReply(0)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertNull(holder.paid.welcome)
     }
 
@@ -263,7 +325,7 @@ class WelcomePaidTest {
         account = Account(AccountKind.SIGNED_IN)
         backend.balance = BalanceReply(0, purchasesBlocked = true, acceptsWelcome = true, welcomeRecipes = 3)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         assertNull(holder.paid.welcome)
     }
 
@@ -272,7 +334,7 @@ class WelcomePaidTest {
     @Test
     fun theSheetAsksAgainFirstSoItsNumberIsCurrent() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         backend.offer = ServerResult.Ok(5)
         holder.openWelcome()
         assertEquals(2, backend.offerCalls)
@@ -282,7 +344,7 @@ class WelcomePaidTest {
     @Test
     fun aSheetWhoseRefreshSaysZeroIsAPlainSignInThatClaimsNothing() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         backend.offer = ServerResult.Ok(0)
         holder.openWelcome()
         assertEquals(WelcomeSheet(0), holder.paid.welcomeSheet)
@@ -295,7 +357,7 @@ class WelcomePaidTest {
     @Test
     fun grantedAddsTheRecipesSaysSoAndTheHintGoes() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.SignedIn
         backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3)
@@ -314,7 +376,7 @@ class WelcomePaidTest {
     @Test
     fun alreadyOpensTheDialogAndTheHintNeverComesBackForThisAccount() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.SignedIn
         backend.claims += claimed(WelcomeStatus.ALREADY)
@@ -332,7 +394,7 @@ class WelcomePaidTest {
     @Test
     fun offSaysSoAndThatThePersonIsSignedIn() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.SignedIn
         backend.claims += claimed(WelcomeStatus.OFF, welcome = 0)
@@ -347,7 +409,7 @@ class WelcomePaidTest {
     fun aClaimNotReachedOffersTryAgainWhichNeverGrantsTwice() = runUnconfined {
         backend.balance = BalanceReply(0, acceptsWelcome = true, welcomeRecipes = 3)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.SignedIn
         backend.claims += ServerResult.Err(ServerError.OFFLINE)
@@ -365,7 +427,7 @@ class WelcomePaidTest {
     @Test
     fun aCancelledSignInChangesNothingAndAFailedOneSaysSo() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.Cancelled
         holder.welcomeSignIn(SignInProvider.GOOGLE)
@@ -383,7 +445,7 @@ class WelcomePaidTest {
         account = Account(AccountKind.ANONYMOUS)
         repository = InMemoryRecipePaidRepository(RecipePaidSnapshot(balance = 0))
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.NeedsMerge(PendingAccount(2))
         backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3, balance = 8)
@@ -398,7 +460,7 @@ class WelcomePaidTest {
     @Test
     fun aSignInFromRecipeSettingsWhileTheOfferShowsClaims() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         account.signInResults += SignInResult.SignedIn
         backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3)
         holder.signIn(SignInProvider.GOOGLE)
@@ -410,7 +472,7 @@ class WelcomePaidTest {
     fun aSignInWithoutAnOfferClaimsNothing() = runUnconfined {
         backend.offer = ServerResult.Ok(0)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         account.signInResults += SignInResult.SignedIn
         holder.signIn(SignInProvider.GOOGLE)
         assertEquals(0, backend.claimCalls)
@@ -419,7 +481,7 @@ class WelcomePaidTest {
     @Test
     fun theFirstPurchasesSignInClaimsQuietlyAndTheStoreStillOpens() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openPacks()
         holder.continuePurchase()
         account.signInResults += SignInResult.SignedIn
@@ -432,6 +494,74 @@ class WelcomePaidTest {
         assertTrue(holder.paid.welcomeClaimed)
     }
 
+    @Test
+    fun signingInAgainWithAnAccountThatHadThemSaysSo() = runUnconfined {
+        val holder = holder()
+        holder.showTab()
+        holder.openWelcome()
+        account.signInResults += SignInResult.SignedIn
+        backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3)
+        holder.welcomeSignIn(SignInProvider.GOOGLE)
+        holder.consumePaidEvent()
+        holder.signOut()
+        // The offer shows again signed out; the same account signs in from it.
+        holder.openWelcome()
+        account.signInResults += SignInResult.SignedIn
+        holder.welcomeSignIn(SignInProvider.GOOGLE)
+        assertEquals(1, backend.claimCalls)
+        assertTrue(holder.paid.welcomeAlready)
+        assertNull(holder.paid.welcomeSheet)
+    }
+
+    @Test
+    fun aRecipeSettingsSignInWithAnAccountThatHadThemSaysSoToo() = runUnconfined {
+        repository = InMemoryRecipePaidRepository(RecipePaidSnapshot(welcomeClaimed = listOf("key-signed-in")))
+        val holder = holder()
+        holder.showTab()
+        account.signInResults += SignInResult.SignedIn
+        holder.signIn(SignInProvider.GOOGLE)
+        assertEquals(0, backend.claimCalls)
+        assertTrue(holder.paid.welcomeAlready)
+    }
+
+    @Test
+    fun aClaimAnsweredAfterThePurchaseNeverLowersTheCount() = runUnconfined {
+        val holder = holder()
+        holder.showTab()
+        holder.openPacks()
+        holder.continuePurchase()
+        account.signInResults += SignInResult.SignedIn
+        // The claim's balance was worked out before the purchase; it arrives last.
+        backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3, balance = 3)
+        backend.claimGate = kotlinx.coroutines.CompletableDeferred()
+        backend.verifyBalance = 13
+        backend.balance = BalanceReply(13, acceptsWelcome = true, welcomeRecipes = 3)
+        holder.buyWithAccount(SignInProvider.GOOGLE)
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("t1", listOf("recipes_10"), 1, pending = false))))
+        assertEquals(13, holder.paid.balance)
+        backend.claimGate!!.complete(Unit)
+        assertEquals(13, holder.paid.balance)
+        // Still quiet beside a purchase except for the grant itself.
+        assertEquals(PaidEvent.Welcome(WelcomeOutcome.Granted(3)), holder.paid.event)
+    }
+
+    @Test
+    fun aClaimAnsweredBeforeThePurchaseIsOverwrittenByIt() = runUnconfined {
+        val holder = holder()
+        holder.showTab()
+        holder.openPacks()
+        holder.continuePurchase()
+        account.signInResults += SignInResult.SignedIn
+        backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3, balance = 3)
+        backend.verifyBalance = 13
+        backend.verifyGate = kotlinx.coroutines.CompletableDeferred()
+        holder.buyWithAccount(SignInProvider.GOOGLE)
+        assertEquals(3, holder.paid.balance)
+        store.updates.emit(StoreUpdate.Purchases(listOf(StorePurchase("t1", listOf("recipes_10"), 1, pending = false))))
+        backend.verifyGate!!.complete(Unit)
+        assertEquals(13, holder.paid.balance)
+    }
+
     // --- Signed in, one tap -------------------------------------------------------------------
 
     @Test
@@ -439,7 +569,7 @@ class WelcomePaidTest {
         account = Account(AccountKind.SIGNED_IN)
         backend.balance = BalanceReply(0, acceptsWelcome = true, welcomeRecipes = 3)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3)
         holder.openWelcome()
         assertNull(holder.paid.welcomeSheet)
@@ -454,7 +584,7 @@ class WelcomePaidTest {
         account = Account(AccountKind.SIGNED_IN)
         backend.balance = BalanceReply(0, acceptsWelcome = true, welcomeRecipes = 3)
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         backend.claims += claimed(WelcomeStatus.OFF, welcome = 0)
         holder.claimWelcome()
         assertEquals(PaidEvent.Welcome(WelcomeOutcome.Off(signedInNow = false)), holder.paid.event)
@@ -463,7 +593,7 @@ class WelcomePaidTest {
     @Test
     fun signingOutBringsBackTheSignedOutHintWhileTheOfferStands() = runUnconfined {
         val holder = holder()
-        holder.refresh()
+        holder.showTab()
         holder.openWelcome()
         account.signInResults += SignInResult.SignedIn
         backend.claims += claimed(WelcomeStatus.GRANTED, granted = 3)

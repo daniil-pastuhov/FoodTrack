@@ -43,13 +43,15 @@ fun isWelcomeAnswerFresh(answer: WelcomeAnswer?, nowMillis: Long): Boolean =
 /**
  * Whether to ask `getWelcomeOffer` now: only while [askable] ([welcomeOfferAskable]); [force] (right
  * before the sign-in sheet opens) whenever it is; otherwise when nothing was asked or answered in the
- * last [WELCOME_REFRESH_MILLIS] ([lastAskedMillis] counts failed calls too, so a failing server isn't
- * asked on every showing). A clock moved back counts as time passed.
+ * last [WELCOME_REFRESH_MILLIS]. Measured from the last ask ([lastAskedMillis], kept across launches,
+ * failed calls too, so a failing server isn't asked on every showing or every cold start); without
+ * one, from the answer's time unless that lies in the future. A clock moved back before the last ask
+ * counts as time passed once: that ask is then made, and its own time takes over.
  */
 fun shouldAskWelcomeOffer(askable: Boolean, answer: WelcomeAnswer?, lastAskedMillis: Long?, nowMillis: Long, force: Boolean = false): Boolean {
     if (!askable) return false
     if (force) return true
-    val last = listOfNotNull(answer?.atMillis, lastAskedMillis).maxOrNull() ?: return true
+    val last = lastAskedMillis ?: answer?.atMillis?.takeIf { it <= nowMillis } ?: return true
     val since = nowMillis - last
     return since < 0 || since >= WELCOME_REFRESH_MILLIS
 }
