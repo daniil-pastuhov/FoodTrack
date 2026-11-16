@@ -142,7 +142,9 @@
     <string name="camera_off_allow">Tillat kamera</string>
     <string name="camera_off_add_by_hand">Skriv det inn</string>
     <string name="scan_mode_batch">Flere</string>
-    <string name="reticle_hint_batch">Fortsett å skanne — alt havner i listen</string>
+    <string name="reticle_hint_batch">Skann en strekkode, og vis deretter datoen</string>
+    <string name="batch_date_rescan">Skann datoen på nytt</string>
+    <string name="batch_date_read">Dato lest: %1$s</string>
     <string name="scan_mode_receipt">Kvittering</string>
     <string name="reticle_hint_receipt">Få hele kvitteringen i bildet, og trykk for å lese den</string>
     <string name="scan_receipt_button">Les kvittering</string>
@@ -1279,4 +1281,39 @@
         <item quantity="other">Når du logger inn, får du også %1$d gratis oppskrifter.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Basisvarer</string>
+    <string name="staples_intro">Basisvarer du alltid har hjemme, som salt og olje. De har ingen dato, og oppskrifter kan bruke dem.</string>
+    <string name="staples_common_header">Vanlige basisvarer</string>
+    <string name="staples_own_header">Dine egne</string>
+    <string name="staples_add_placeholder">Legg til en basisvare</string>
+    <string name="staples_add">Legg til</string>
+    <string name="staples_ran_out">Gått tom</string>
+    <string name="staples_ran_out_desc">Gått tom for %1$s: legg til på handlelisten</string>
+    <string name="staples_on_list">På handlelisten</string>
+    <string name="staples_remove">Fjern %1$s</string>
+    <string name="staples_removed">%1$s fjernet fra basisvarer</string>
+    <string name="staples_added_to_list">%1$s lagt til på handlelisten</string>
+    <string name="staples_already">%1$s er allerede en basisvare</string>
+    <string name="staples_full">Du kan ha opptil %1$d basisvarer. Fjern én for å legge til en annen.</string>
+    <string name="staples_settings_desc">Basisvarer du alltid har, som salt og olje. Oppskrifter kan bruke dem.</string>
+    <string name="staples_manage">Administrer basisvarer</string>
+    <string name="staples_none">Ingen ennå</string>
+    <string name="staples_open">Åpne basisvarer</string>
+    <string name="recipe_your_staple">Basisvare</string>
+    <string name="recipe_prompt_staples_intro">Jeg har alltid disse basisvarene hjemme også. Bruk hvilke som helst av dem hvis oppskriften trenger dem; ingen av dem må brukes:</string>
+    <string name="staples_note">Navnene på basisvarene dine sendes med hver forespørsel om oppskrift: til serveren vår for en oppskrift fra en pakke, og i en ledetekst du deler. Mens en basisvare står på handlelisten, sendes den ikke.</string>
+    <string name="onboarding_staples_title">Hva har du alltid hjemme?</string>
+    <string name="onboarding_staples_later">Du kan hoppe over dette og gjøre det senere i Innstillinger › Basisvarer.</string>
+    <string name="onboarding_staples_continue">Fortsett</string>
+    <string name="onboarding_staples_skip">Hopp over</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d basisvare</item>
+        <item quantity="other">%1$d basisvarer</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Basisvaren din kan også brukes</item>
+        <item quantity="other">De %1$d basisvarene dine kan også brukes</item>
+    </plurals>
 </resources>

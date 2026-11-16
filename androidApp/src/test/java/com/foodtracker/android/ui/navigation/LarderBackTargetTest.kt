@@ -6,8 +6,12 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 
 class LarderBackTargetTest {
-    private fun target(route: LarderRoute, scanReturn: LarderRoute = LarderRoute.Home, recipeReturn: LarderRoute = LarderRoute.Recipe) =
-        larderBackTarget(route, scanReturn, recipeReturn)
+    private fun target(
+        route: LarderRoute,
+        scanReturn: LarderRoute = LarderRoute.Home,
+        recipeReturn: LarderRoute = LarderRoute.Recipe,
+        staplesReturn: LarderRoute = LarderRoute.Settings
+    ) = larderBackTarget(route, scanReturn, recipeReturn, staplesReturn)
 
     @Test
     fun rootsLeaveBackToTheSystem() {
@@ -34,6 +38,8 @@ class LarderBackTargetTest {
     @Test
     fun pushedScreensGoToTheirParent() {
         assertEquals(LarderRoute.Settings, target(LarderRoute.Categories))
+        assertEquals(LarderRoute.Settings, target(LarderRoute.Staples))
+        assertEquals(LarderRoute.Recipe, target(LarderRoute.Staples, staplesReturn = LarderRoute.Recipe))
         assertEquals(LarderRoute.Recipe, target(LarderRoute.SavedRecipes))
         assertEquals(LarderRoute.Recipe, target(LarderRoute.RecipeSettings))
         assertEquals(LarderRoute.RecipeSettings, target(LarderRoute.TasteProfile))

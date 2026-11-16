@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -70,6 +71,10 @@ import com.foodtracker.android.ui.design.LarderThumb
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.ui.theme.LarderTheme
+import com.foodtracker.model.Staple
+import com.foodtracker.recipe.appRecipeLanguage
+import com.foodtracker.staples.StaplePresets
+import com.foodtracker.staples.stapleLanguage
 
 /** `.ob-col`: one centred column on every width, so tablets don't stretch it. */
 private val OnboardingColumnWidth = 480.dp
@@ -101,9 +106,22 @@ private fun onboardingAsks(context: Context) = OnboardingAsks(
  * over through the system's own record, so the scanner never asks a second time.
  */
 @Composable
-fun OnboardingScreen(onFinished: (OnboardingExit) -> Unit, modifier: Modifier = Modifier) {
+fun OnboardingScreen(
+    onFinished: (OnboardingExit) -> Unit,
+    modifier: Modifier = Modifier,
+    /** The person's staples now (a restored backup may hold some): the staples step's first ticks. */
+    staples: List<Staple> = emptyList(),
+    /** Continue on the staples step with something changed: the presets to add and the staples to
+     *  remove, through the ordinary staple calls. */
+    onApplyStaples: (changes: OnboardingStapleChanges, language: String) -> Unit = { _, _ -> }
+) {
     val context = LocalContext.current
     var flow by rememberSaveable(stateSaver = OnboardingFlowSaver) { mutableStateOf(OnboardingFlow()) }
+    // The staples step's ticks, held here only (null until changed: the staples there are). Back
+    // keeps them for when the person returns; nothing is saved until Continue.
+    var stapleTicks by rememberSaveable { mutableStateOf<String?>(null) }
+    val ticked = stapleTicks?.split(',')?.filter { it.isNotEmpty() }?.toSet() ?: tickedPresets(staples)
+    val language = stapleLanguage(appRecipeLanguage(LocalConfiguration.current.locales[0].toLanguageTag()))
     // A second request while one is up gets cancelled, and that answer would move the flow on
     // from under the prompt.
     var asking by rememberSaveable { mutableStateOf(false) }
@@ -144,7 +162,19 @@ fun OnboardingScreen(onFinished: (OnboardingExit) -> Unit, modifier: Modifier = 
                 }
             },
             onSkipCamera = { flow = flow.cameraAnswered(null) },
-            onFinished = onFinished
+            onFinished = onFinished,
+            staplesStep = StaplesStepState(
+                language = language,
+                ticked = ticked,
+                full = onboardingStaplesFull(staples, ticked),
+                onToggle = { id, on -> stapleTicks = (if (on) ticked + id else ticked - id).joinToString(",") },
+                onContinue = {
+                    val changes = onboardingStapleChanges(staples, ticked)
+                    if (!changes.isEmpty) onApplyStaples(changes, language)
+                    flow = flow.staplesDone()
+                },
+                onSkip = { flow = flow.staplesDone() }
+            )
         )
     }
 }
@@ -158,12 +188,14 @@ private fun OnboardingStepContent(
     onSkipNotifications: () -> Unit,
     onAllowCamera: () -> Unit,
     onSkipCamera: () -> Unit,
-    onFinished: (OnboardingExit) -> Unit
+    onFinished: (OnboardingExit) -> Unit,
+    staplesStep: StaplesStepState = StaplesStepState()
 ) {
     when (step) {
         OnboardingStep.Welcome -> WelcomeStep(onStart)
         OnboardingStep.Notifications -> NotificationsStep(onAllowNotifications, onSkipNotifications)
         OnboardingStep.Camera -> CameraStep(onAllowCamera, onSkipCamera)
+        OnboardingStep.Staples -> StaplesStep(staplesStep)
         OnboardingStep.Ready -> ReadyStep(onFinished)
         OnboardingStep.Declined -> DeclinedStep(flow, onFinished)
     }
@@ -385,6 +417,57 @@ private fun CameraStep(onAllow: () -> Unit, onSkip: () -> Unit) {
     }
 }
 
+/** The staples step's state and actions; the defaults show nothing ticked and do nothing. */
+internal data class StaplesStepState(
+    val language: String = "en",
+    /** Ticked preset ids. */
+    val ticked: Set<String> = emptySet(),
+    /** At the 20 cap: unticked rows are off. */
+    val full: Boolean = false,
+    val onToggle: (presetId: String, on: Boolean) -> Unit = { _, _ -> },
+    val onContinue: () -> Unit = {},
+    val onSkip: () -> Unit = {}
+)
+
+/** What the person always has at home: the presets to tick, what staples are and how they are
+ *  used, and that it can wait for Settings › Staples. Continue saves the ticks; Skip saves nothing. */
+@Composable
+private fun StaplesStep(state: StaplesStepState) {
+    OnboardingPage(
+        actions = {
+            OnboardingPrimary(stringResource(R.string.onboarding_staples_continue), state.onContinue)
+            OnboardingSecondary(stringResource(R.string.onboarding_staples_skip), state.onSkip)
+        }
+    ) {
+        OnboardingTitle(stringResource(R.string.onboarding_staples_title))
+        OnboardingBody(stringResource(R.string.staples_intro))
+        LarderGroup {
+            StaplePresets.all.forEachIndexed { index, preset ->
+                if (index > 0) LarderDivider()
+                val on = preset.id in state.ticked
+                PresetRow(
+                    name = preset.name(state.language),
+                    ticked = on,
+                    enabled = on || !state.full,
+                    onToggle = { state.onToggle(preset.id, it) }
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.onboarding_staples_later),
+            modifier = Modifier.padding(top = LarderSpace.s4),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            text = stringResource(R.string.staples_note),
+            modifier = Modifier.padding(top = LarderSpace.s2),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 @Composable
 internal fun OnboardingRow(icon: LarderIcons, title: String, supporting: String) {
     LarderListItem(
@@ -457,12 +540,24 @@ private fun DeclinedStep(flow: OnboardingFlow, onFinished: (OnboardingExit) -> U
 }
 
 @Composable
-private fun OnboardingStepPreview(step: OnboardingStep, flow: OnboardingFlow = OnboardingFlow(step)) =
+private fun OnboardingStepPreview(
+    step: OnboardingStep,
+    flow: OnboardingFlow = OnboardingFlow(step),
+    staplesStep: StaplesStepState = StaplesStepState()
+) =
     LarderPreview {
         Box(Modifier.height(720.dp)) {
-            OnboardingStepContent(step, flow, {}, {}, {}, {}, {}, {})
+            OnboardingStepContent(step, flow, {}, {}, {}, {}, {}, {}, staplesStep)
         }
     }
+
+/** The staples step with salt, olive oil and eggs ticked. */
+@PreviewLightDark
+@Composable
+internal fun OnboardingStaplesPreview() = OnboardingStepPreview(
+    OnboardingStep.Staples,
+    staplesStep = StaplesStepState(ticked = setOf("salt", "olive_oil", "eggs"))
+)
 
 @PreviewLightDark
 @Composable

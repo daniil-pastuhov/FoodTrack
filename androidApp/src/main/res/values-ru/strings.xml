@@ -144,7 +144,9 @@
     <string name="camera_off_allow">Разрешить камеру</string>
     <string name="camera_off_add_by_hand">Ввести вручную</string>
     <string name="scan_mode_batch">Пакет</string>
-    <string name="reticle_hint_batch">Продолжайте сканировать — всё попадёт в список</string>
+    <string name="reticle_hint_batch">Отсканируйте штрихкод, затем покажите дату</string>
+    <string name="batch_date_rescan">Считать дату заново</string>
+    <string name="batch_date_read">Дата считана: %1$s</string>
     <string name="scan_mode_receipt">Чек</string>
     <string name="reticle_hint_receipt">Поместите чек целиком в кадр и нажмите, чтобы считать</string>
     <string name="scan_receipt_button">Считать чек</string>
@@ -1455,4 +1457,43 @@
         <item quantity="other">После входа вы также получите %1$d бесплатного рецепта.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Базовые продукты</string>
+    <string name="staples_intro">Продукты, которые всегда есть дома, например соль и масло. У них нет срока, и рецепты могут их использовать.</string>
+    <string name="staples_common_header">Распространённые базовые продукты</string>
+    <string name="staples_own_header">Свои</string>
+    <string name="staples_add_placeholder">Добавить продукт</string>
+    <string name="staples_add">Добавить</string>
+    <string name="staples_ran_out">Закончилось</string>
+    <string name="staples_ran_out_desc">%1$s закончилось: добавить в список покупок</string>
+    <string name="staples_on_list">В списке покупок</string>
+    <string name="staples_remove">Удалить %1$s</string>
+    <string name="staples_removed">Удалено: %1$s</string>
+    <string name="staples_added_to_list">Добавлено в список покупок: %1$s</string>
+    <string name="staples_already">Уже в базовых продуктах: %1$s</string>
+    <string name="staples_full">Можно добавить не больше %1$d базовых продуктов. Удалите один, чтобы добавить другой.</string>
+    <string name="staples_settings_desc">Продукты, которые всегда есть дома, например соль и масло. Рецепты могут их использовать.</string>
+    <string name="staples_manage">Настроить базовые продукты</string>
+    <string name="staples_none">Пока нет</string>
+    <string name="staples_open">Открыть базовые продукты</string>
+    <string name="recipe_your_staple">Базовый</string>
+    <string name="recipe_prompt_staples_intro">Ещё у меня всегда есть дома эти базовые продукты. Используй любые из них, если они нужны рецепту; использовать их не обязательно:</string>
+    <string name="staples_note">Названия базовых продуктов отправляются с каждым запросом рецепта: на наш сервер для рецепта из пакета и в составе запроса, которым вы делитесь. Пока продукт в списке покупок, он не отправляется.</string>
+    <string name="onboarding_staples_title">Что у вас всегда есть дома?</string>
+    <string name="onboarding_staples_later">Можно пропустить и настроить позже: Настройки › Базовые продукты.</string>
+    <string name="onboarding_staples_continue">Продолжить</string>
+    <string name="onboarding_staples_skip">Пропустить</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d продукт</item>
+        <item quantity="few">%1$d продукта</item>
+        <item quantity="many">%1$d продуктов</item>
+        <item quantity="other">%1$d продукта</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Можно использовать и базовые продукты: %1$d</item>
+        <item quantity="few">Можно использовать и базовые продукты: %1$d</item>
+        <item quantity="many">Можно использовать и базовые продукты: %1$d</item>
+        <item quantity="other">Можно использовать и базовые продукты: %1$d</item>
+    </plurals>
 </resources>

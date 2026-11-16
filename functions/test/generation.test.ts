@@ -108,7 +108,7 @@ describe("generateRecipe charging", () => {
     slow.release();
     const res = await pending;
     expect(res).toMatchObject({ status: "DONE", balance: 8, costs: { recipe: 2, menu2: 3, menu3: 6 } });
-    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
+    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, acceptsStaples: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
   });
 
   test.each([

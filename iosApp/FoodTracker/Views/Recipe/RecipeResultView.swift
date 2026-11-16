@@ -90,8 +90,9 @@ struct RecipeDocument: View {
                         ingredientRow(ingredient)
                     }
                 }
-                // True for staples and extras alike, so no row is labelled wrongly.
-                if recipe.ingredients.contains(where: { !$0.fromPantry }) {
+                // True for staples and extras alike, so no row is labelled wrongly; not needed when
+                // every such row says it is one of the person's staples.
+                if recipe.ingredients.contains(where: { !$0.fromPantry && $0.stapleName == nil }) {
                     Text(L10n.recipeNotFromPantryHint)
                         .larderFont(.caption)
                         .foregroundStyle(LarderColor.onSurfaceVariant)
@@ -181,6 +182,18 @@ struct RecipeDocument: View {
                 .padding(.trailing, LarderSpace.s2)
                 .background(LarderColor.successContainer, in: RoundedRectangle(cornerRadius: LarderRadius.sm))
                 .fixedSize()
+            } else if ingredient.stapleName != nil {
+                // One of the person's staples: the same shape, neutral.
+                HStack(spacing: 2) {
+                    LarderIcon(.wheat, size: .custom(14))
+                    Text(L10n.recipeYourStaple).larderFont(.caption)
+                }
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .padding(.vertical, 1)
+                .padding(.leading, LarderSpace.s1)
+                .padding(.trailing, LarderSpace.s2)
+                .background(LarderColor.surfaceContainerHigh, in: RoundedRectangle(cornerRadius: LarderRadius.sm))
+                .fixedSize()
             }
         }
         .padding(.vertical, LarderSpace.s3)
@@ -234,6 +247,8 @@ struct RecipeDocument: View {
 /// (previews) nothing is offered. Android: `RecipeShoppingActions`.
 struct RecipeShoppingContext {
     var listedNames: [String] = []
+    /// The person's staples not on the list (`Staples.currentKeys`): never offered.
+    var stapleKeys: Set<String> = []
     var add: (([String]) -> Int)? = nil
     var openShoppingList: () -> Void = {}
 }
@@ -263,9 +278,9 @@ struct RecipeShoppingButton: View {
     var body: some View {
         // Hidden when nothing can be added (nothing to buy, or every row on the list already);
         // `listedNames` is the live list, so it comes back when the list changes.
-        if shopping.add != nil, RecipeShopping.hasSomethingToAdd(RecipeShopping.candidates(recipes, listedNames: shopping.listedNames)) {
+        if shopping.add != nil, RecipeShopping.hasSomethingToAdd(RecipeShopping.candidates(recipes, listedNames: shopping.listedNames, stapleKeys: shopping.stapleKeys)) {
             LarderButton(L10n.recipeShoppingAdd, icon: .listPlus, variant: .outline, fullWidth: true) {
-                candidates = RecipeShopping.candidates(recipes, listedNames: shopping.listedNames)
+                candidates = RecipeShopping.candidates(recipes, listedNames: shopping.listedNames, stapleKeys: shopping.stapleKeys)
             }
             .larderSheet(isPresented: Binding(get: { candidates != nil }, set: { if !$0 { candidates = nil } }), fitsContent: true) {
                 if let candidates {

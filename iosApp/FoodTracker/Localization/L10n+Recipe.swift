@@ -691,3 +691,38 @@ extension L10n {
         return (parts.joined(separator: " \u{00B7} "), new > 0 ? tasteNewQuestions(new) : nil)
     }
 }
+
+/// Staples: the Staples screen, its Settings card, the Recipe form's line and a result's chip.
+extension L10n {
+    private static func staple(_ key: String) -> String { NSLocalizedString(key, comment: "") }
+
+    static var staplesTitle: String { staple("staples_title") }
+    static var staplesIntro: String { staple("staples_intro") }
+    static var staplesCommonHeader: String { staple("staples_common_header") }
+    static var staplesOwnHeader: String { staple("staples_own_header") }
+    static var staplesAddPlaceholder: String { staple("staples_add_placeholder") }
+    static var staplesAdd: String { staple("staples_add") }
+    static var staplesRanOut: String { staple("staples_ran_out") }
+    static func staplesRanOutDescription(_ name: String) -> String { String(format: staple("staples_ran_out_desc"), name) }
+    static var staplesOnList: String { staple("staples_on_list") }
+    static func staplesRemove(_ name: String) -> String { String(format: staple("staples_remove"), name) }
+    static func staplesRemoved(_ name: String) -> String { String(format: staple("staples_removed"), isolated(name)) }
+    static func staplesAddedToList(_ name: String) -> String { String(format: staple("staples_added_to_list"), isolated(name)) }
+    static func staplesAlready(_ name: String) -> String { String(format: staple("staples_already"), isolated(name)) }
+    static func staplesFull(_ limit: Int) -> String { String(format: staple("staples_full"), limit) }
+    static var staplesSettingsDescription: String { staple("staples_settings_desc") }
+    static var staplesManage: String { staple("staples_manage") }
+    static var staplesNone: String { staple("staples_none") }
+    static var staplesOpen: String { staple("staples_open") }
+    static var staplesNote: String { staple("staples_note") }
+    /// "3 staples": the Settings section row's value.
+    static func staplesCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("staples_count", comment: ""), count)
+    }
+    /// "Your 4 staples may be used too", under Cook with.
+    static func recipeStaplesCount(_ count: Int) -> String {
+        String.localizedStringWithFormat(NSLocalizedString("recipe_staples_count", comment: ""), count)
+    }
+    static var recipeYourStaple: String { staple("recipe_your_staple") }
+    static var recipePromptStaplesIntro: String { staple("recipe_prompt_staples_intro") }
+}

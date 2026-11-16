@@ -78,13 +78,18 @@ struct RootTabView: View {
         // safe area inset around all of them, which a screen's List or ScrollView takes up as
         // content inset, so everything scrolls under the pill and still clears it at the end.
         ZStack(alignment: .bottom) {
-            tabContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    Color.clear
-                        .frame(height: metrics.contentClearance)
-                        .allowsHitTesting(false)
-                }
+            // Exactly the screen, whatever a tab asks for: a tab taller than the screen (a stack
+            // that can't shrink, at the largest text sizes) would otherwise grow the shell with it
+            // and carry the pill and Scan off the bottom.
+            TakesOfferedSpace {
+                tabContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        Color.clear
+                            .frame(height: metrics.contentClearance)
+                            .allowsHitTesting(false)
+                    }
+            }
 
             floatingLayer
         }
@@ -167,7 +172,19 @@ struct RootTabView: View {
         .accessibilityHidden(showOnboarding)
         .overlay {
             if showOnboarding {
-                OnboardingView(onFinish: finishOnboarding)
+                OnboardingView(
+                    startingAt: onboardingStart,
+                    staples: viewModel.staples,
+                    applyStaples: { [viewModel] changes in
+                        for staple in changes.remove { viewModel.removeStaple(id: staple.id) }
+                        for id in changes.add {
+                            if let preset = StaplePresets.byId(id) {
+                                viewModel.addStaple(name: preset.name(Staples.appLanguage), presetId: id)
+                            }
+                        }
+                    },
+                    onFinish: finishOnboarding
+                )
                     .accessibilityElement(children: .contain)
                     .accessibilityAddTraits(.isModal)
                     .transition(.opacity)
@@ -423,6 +440,17 @@ struct RootTabView: View {
         bottomSafeArea = insets.bottom
     }
 
+    /// Where onboarding opens: the start, or in Debug `-demoOnboardingStep <step>` (with
+    /// `-demoRoute onboarding`; `declined` as with both refused).
+    private var onboardingStart: OnboardingFlow {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "demoOnboardingStep"), let step = OnboardingStep(rawValue: raw) {
+            return .at(step, remindersDeclined: step == .declined, cameraDeclined: step == .declined)
+        }
+        #endif
+        return OnboardingFlow()
+    }
+
     private func finishOnboarding(_ exit: OnboardingExit) {
         viewModel.completeOnboarding()
         withAnimation { showOnboarding = false }
@@ -483,11 +511,25 @@ private struct AddEditRequest: Identifiable {
 }
 
 #if DEBUG
+/// Takes the size offered and offers it on to its content, which can never make it larger: the
+/// app shell stays the size of the screen however tall a tab's content would like to be.
+private struct TakesOfferedSpace: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for subview in subviews {
+            subview.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
+        }
+    }
+}
+
 extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
     /// recipe, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
-    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`,
+    /// an Undo, and `-demoRoute <name>` (onboarding, categories, staples, productDetail with `-demoItem <name>`,
     /// recipeSettings, savedRecipes, recipeResult, which saves a sample recipe first, or the one in
     /// `-demoRecipe <file>`, likewise recipeMenu, and scan, see below) goes to that route, and
     /// `-demoAllergen <name>` adds to the allergen list.
@@ -567,6 +609,10 @@ extension RootTabView {
         case "savedRecipes":
             selectedTab = .recipe
             recipeViewModel.path = [.saved]
+        // The Staples screen, over the Recipe tab (its line under Cook with opens it there too).
+        case "staples":
+            selectedTab = .recipe
+            recipeViewModel.path = [.staples]
         case "recipeResult":
             selectedTab = .recipe
             recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe(demoFile(Recipe.self)))]

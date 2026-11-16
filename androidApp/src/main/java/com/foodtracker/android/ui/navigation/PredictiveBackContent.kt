@@ -169,10 +169,17 @@ fun <T : Any> PredictiveBackContent(
  * onboarding (its own steps handle Back; on its first step the app closes) and the product
  * sheet, which is never the current route.
  */
-fun larderBackTarget(route: LarderRoute, scanReturn: LarderRoute, recipeResultReturn: LarderRoute): LarderRoute? =
+fun larderBackTarget(
+    route: LarderRoute,
+    scanReturn: LarderRoute,
+    recipeResultReturn: LarderRoute,
+    staplesReturn: LarderRoute = LarderRoute.Settings
+): LarderRoute? =
     when (route) {
         is LarderRoute.Scanner, is LarderRoute.AddItem -> scanReturn
         LarderRoute.Categories -> LarderRoute.Settings
+        // Settings, or the Recipe form when its staples line opened it.
+        LarderRoute.Staples -> staplesReturn
         is LarderRoute.RecipeResult -> recipeResultReturn
         is LarderRoute.MenuDish -> LarderRoute.RecipeResult(route.savedId)
         LarderRoute.SavedRecipes, LarderRoute.RecipeSettings -> LarderRoute.Recipe

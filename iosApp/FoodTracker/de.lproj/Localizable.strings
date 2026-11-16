@@ -319,7 +319,9 @@
 "notif_action_snooze" = "Morgen";
 
 "scan_mode_batch" = "Serie";
-"reticle_hint_batch" = "Scanne einfach weiter. Alles landet in der Liste";
+"reticle_hint_batch" = "Barcode scannen, dann das Datum zeigen";
+"batch_date_read_format" = "Datum gelesen: %@";
+"batch_date_rescan" = "Datum erneut scannen";
 "scan_mode_receipt" = "Kassenbon";
 "reticle_hint_receipt" = "Bring den ganzen Kassenbon ins Bild und tippe dann, um ihn zu lesen";
 "scan_receipt_button" = "Bon lesen";
@@ -903,3 +905,32 @@
 "welcome_settings_account_one" = "Dieses Konto kann ein kostenloses Rezept von unserem Server bekommen.";
 "welcome_settings_on_phone_one" = "Mit der Anmeldung bekommst du außerdem ein kostenloses Rezept.";
 "welcome_delete_note" = "Wenn du dich später wieder anmeldest, gibt es die kostenlosen Rezepte nicht noch einmal.";
+
+/* Staples: basics the person always has, the Staples screen, its Settings card and the Recipe form's line; copied from Android's strings.xml. */
+"staples_title" = "Grundzutaten";
+"staples_intro" = "Grundzutaten, die du immer zu Hause hast, wie Salz und Öl. Sie haben kein Datum, und Rezepte dürfen sie verwenden.";
+"staples_common_header" = "Häufige Grundzutaten";
+"staples_own_header" = "Eigene";
+"staples_add_placeholder" = "Grundzutat hinzufügen";
+"staples_add" = "Hinzufügen";
+"staples_ran_out" = "Aufgebraucht";
+"staples_ran_out_desc" = "%@ aufgebraucht: auf die Einkaufsliste setzen";
+"staples_on_list" = "Auf der Einkaufsliste";
+"staples_remove" = "%@ entfernen";
+"staples_removed" = "%@ aus den Grundzutaten entfernt";
+"staples_added_to_list" = "%@ auf die Einkaufsliste gesetzt";
+"staples_already" = "%@ ist schon eine Grundzutat";
+"staples_full" = "Du kannst bis zu %d Grundzutaten haben. Entferne eine, um eine andere hinzuzufügen.";
+"staples_settings_desc" = "Grundzutaten, die du immer hast, wie Salz und Öl. Rezepte dürfen sie verwenden.";
+"staples_manage" = "Grundzutaten verwalten";
+"staples_none" = "Noch keine";
+"staples_open" = "Grundzutaten öffnen";
+"recipe_your_staple" = "Grundzutat";
+"recipe_prompt_staples_intro" = "Außerdem habe ich diese Grundzutaten immer zu Hause. Verwende davon, was das Rezept braucht; keine davon muss vorkommen:";
+"staples_note" = "Die Namen deiner Grundzutaten werden mit jeder Rezeptanfrage gesendet: an unseren Server für ein Rezept aus einem Paket und in einem Prompt, den du teilst. Solange eine Grundzutat auf deiner Einkaufsliste steht, wird sie nicht gesendet.";
+
+/* Onboarding: the Staples step. */
+"onboarding_staples_title" = "Was hast du immer zu Hause?";
+"onboarding_staples_later" = "Du kannst das überspringen und später unter Einstellungen › Grundzutaten erledigen.";
+"onboarding_staples_continue" = "Weiter";
+"onboarding_staples_skip" = "Überspringen";

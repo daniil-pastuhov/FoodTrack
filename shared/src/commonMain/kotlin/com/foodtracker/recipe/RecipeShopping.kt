@@ -24,14 +24,18 @@ data class ShoppingCandidate(
  * out when the server marked it a staple ([isPlainWater]); without that mark (older answers, the
  * phone's own recipes) every non-pantry ingredient is listed.
  */
-fun shoppingCandidates(recipes: List<Recipe>, listedNames: Collection<String>): List<ShoppingCandidate> {
+fun shoppingCandidates(recipes: List<Recipe>, listedNames: Collection<String>, stapleKeys: Set<String> = emptySet()): List<ShoppingCandidate> {
     val listed = listedNames.mapTo(HashSet()) { it.trim().lowercase() }
     val seen = LinkedHashMap<String, ShoppingCandidate>()
     for (ingredient in recipes.flatMap { it.ingredients }) {
         if (ingredient.fromPantry) continue
+        // The person's staples ([stapleKeys]: the ones not out, every language's names) are at
+        // home: an ingredient that is one, and any tidied entry that is one, is not to buy.
+        if (ingredient.stapleName?.let { it.trim().lowercase() in stapleKeys } == true) continue
         for (name in tidyShoppingNames(ingredient.name)) {
             if (ingredient.staple && isPlainWater(name)) continue
             val key = name.lowercase()
+            if (key in stapleKeys) continue
             val known = seen[key]
             // A staple elsewhere in the menu stays one only if every mention is one.
             if (known == null) {
@@ -43,6 +47,21 @@ fun shoppingCandidates(recipes: List<Recipe>, listedNames: Collection<String>): 
     }
     val all = seen.values.toList()
     return all.filterNot { it.staple } + all.filter { it.staple }
+}
+
+/**
+ * The staple among [stapleNames] that an ingredient called [name] is, for recipes the phone wrote
+ * (server recipes say it by index): when every entry [tidyShoppingNames] makes of the name is a
+ * staple's name (ignoring case), the staple named by the first entry; null otherwise, so "Salt
+ * and pepper" or "Extra virgin olive oil" is no staple. iOS: `RecipeShopping.stapleName(of:staples:)`.
+ */
+fun stapleNameOf(name: String, stapleNames: Collection<String>): String? {
+    val entries = tidyShoppingNames(name)
+    if (entries.isEmpty()) return null
+    val byKey = LinkedHashMap<String, String>()
+    for (staple in stapleNames) byKey.putIfAbsent(staple.trim().lowercase(), staple)
+    if (entries.any { it.lowercase() !in byKey }) return null
+    return byKey[entries.first().lowercase()]
 }
 
 /** Whether "Add to shopping list" has anything to offer: a row not on the list already. With

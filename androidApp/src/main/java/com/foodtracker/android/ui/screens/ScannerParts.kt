@@ -95,6 +95,7 @@ import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.api.ProductLookupResult
 import com.foodtracker.model.ProductInfo
 import com.foodtracker.model.ShelfLifeSource
+import com.foodtracker.viewmodel.BatchDateRead
 import com.foodtracker.viewmodel.BatchScanEntry
 import com.foodtracker.viewmodel.PantryUiState
 import kotlinx.datetime.LocalDate
@@ -975,7 +976,12 @@ internal fun QueuePanel(
     today: LocalDate,
     onRemove: (BatchScanEntry) -> Unit,
     onClear: () -> Unit,
-    onCommit: () -> Unit
+    onCommit: () -> Unit,
+    /** The row whose date is being read again, marked as the camera's target. */
+    rescanRowId: String? = null,
+    /** A tap on a row's date (Batch only, see `BatchDateRead.mayRescan`); null where the
+     *  camera can't read one. */
+    onRescanDate: ((BatchScanEntry) -> Unit)? = null
 ) {
     val inset = if (expanded) LarderSpace.s5 else LarderSpace.s4
     Column(
@@ -1020,7 +1026,16 @@ internal fun QueuePanel(
                 }
             ) {
                 items(entries, key = { it.id }) { entry ->
-                    QueueRow(entry, today, inset, onRemove = { onRemove(entry) })
+                    QueueRow(
+                        entry,
+                        today,
+                        inset,
+                        rescanning = entry.id == rescanRowId,
+                        onRescanDate = onRescanDate
+                            ?.takeIf { BatchDateRead.mayRescan(entry) }
+                            ?.let { rescan -> { rescan(entry) } },
+                        onRemove = { onRemove(entry) }
+                    )
                 }
             }
             LarderButton(
@@ -1035,10 +1050,19 @@ internal fun QueuePanel(
 }
 
 @Composable
-private fun QueueRow(entry: BatchScanEntry, today: LocalDate, inset: Dp, onRemove: () -> Unit) {
+private fun QueueRow(
+    entry: BatchScanEntry,
+    today: LocalDate,
+    inset: Dp,
+    rescanning: Boolean,
+    onRescanDate: (() -> Unit)?,
+    onRemove: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // The selected fill the chips and tabs use: this is the row the camera is reading.
+            .then(if (rescanning) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
             .heightIn(min = QUEUE_ROW_MIN_HEIGHT)
             .padding(start = inset, end = LarderSpace.s1, top = LarderSpace.s1, bottom = LarderSpace.s1),
         horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
@@ -1058,10 +1082,22 @@ private fun QueueRow(entry: BatchScanEntry, today: LocalDate, inset: Dp, onRemov
             ) {
                 if (entry.isLookingUp) LarderSpinner(Modifier.size(LarderIconSize.Small))
                 if (entry.showsCheckDate) CheckDateMark()
+                val rescanLabel = stringResource(R.string.batch_date_rescan)
                 Text(
                     text = queueRowMeta(entry, today),
+                    modifier = if (onRescanDate != null) {
+                        Modifier
+                            .clip(RoundedCornerShape(LarderRadius.sm))
+                            .clickable(onClickLabel = rescanLabel, role = Role.Button, onClick = onRescanDate)
+                    } else {
+                        Modifier
+                    },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (rescanning) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1292,6 +1328,8 @@ internal fun QueuePanelPreview() = LarderPreview {
     Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
         QueuePanel(false, emptyList(), "Scan a product to start the list", PreviewToday, {}, {}, {})
         QueuePanel(false, PreviewQueue, "", PreviewToday, {}, {}, {})
+        // A row's date being read again.
+        QueuePanel(false, PreviewQueue, "", PreviewToday, {}, {}, {}, rescanRowId = PreviewQueue.first().id, onRescanDate = {})
         ReceiptReadingPanel(false)
     }
 }

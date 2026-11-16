@@ -85,10 +85,10 @@ Add a public TestFlight link here if you open one for the release build.
 
 **Does this app include a pre-order?** No.
 
-**Helpful details** (paste as is; 497 of 500 characters):
+**Helpful details** (paste as is; 499 of 500 characters):
 
 ```text
-One developer, open source (Apache-2.0), so anyone can check what the app sends. A new app with few ratings, built Apple-first: Foundation Models on device, Vision for reading dates, WidgetKit, layouts for iPhone Duo and iPad, App Attest for the recipe server, Sign in with Apple. The free routes need no account and send nothing to us; a pack recipe sends the ticked items (all items only if the person turns that on) and allergens only after consent. Localised in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
+One developer, open source (Apache-2.0): anyone can check what it sends. New, few ratings, Apple-first: Foundation Models on device, Vision reading dates, WidgetKit, layouts for iPhone Duo and iPad, App Attest for our server, Sign in with Apple. Free routes need no account and send us nothing; a pack recipe sends the ticked items (all items only if turned on), staples' names, and allergens only after consent. Localised in English, Russian, Norwegian, Spanish, German, French, Swedish and Danish.
 ```
 
 ## Before you submit, check

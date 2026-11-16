@@ -94,6 +94,7 @@ struct RecipeCreditsStorage {
         static let serverTakesDanish = "com.foodtracker.recipe.server_takes_danish"
         static let serverTakesMenuDays = "com.foodtracker.recipe.server_takes_menu_days"
         static let serverTakesTaste = "com.foodtracker.recipe.server_takes_taste"
+        static let serverTakesStaples = "com.foodtracker.recipe.server_takes_staples"
         static let welcomeOffer = "com.foodtracker.recipe.welcome_offer"
         static let welcomeOfferAskedAt = "com.foodtracker.recipe.welcome_offer_asked_at"
         static let welcomeClaimed = "com.foodtracker.recipe.welcome_claimed"
@@ -167,6 +168,13 @@ struct RecipeCreditsStorage {
     var serverTakesTaste: Bool {
         get { defaults.bool(forKey: Key.serverTakesTaste) }
         nonmutating set { defaults.set(newValue, forKey: Key.serverTakesTaste) }
+    }
+
+    /// The same for `acceptsStaples`: only then do the person's staples go as `staples`
+    /// (`RecipeWire.stapleNames`). Cleared when a request that carried them was refused as invalid.
+    var serverTakesStaples: Bool {
+        get { defaults.bool(forKey: Key.serverTakesStaples) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesStaples) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -531,6 +539,7 @@ final class RecipeCredits: ObservableObject {
         storage.serverTakesDanish = response.acceptsDanish?.value ?? false
         setServerTakesMenuDays(response.acceptsMenuDays?.value ?? false)
         storage.serverTakesTaste = response.acceptsTaste?.value ?? false
+        storage.serverTakesStaples = response.acceptsStaples?.value ?? false
         let quizVersion = response.tasteQuizVersion?.value
         if serverTasteQuizVersion != quizVersion { serverTasteQuizVersion = quizVersion }
         let welcome = WelcomeRecipes.accountRecipes(

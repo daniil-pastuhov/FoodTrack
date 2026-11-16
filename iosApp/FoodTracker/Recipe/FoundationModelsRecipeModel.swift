@@ -115,15 +115,19 @@ extension GeneratedRecipe {
             servings: request.config.servings,
             difficulty: request.config.difficulty,
             ingredients: ingredients.map { ingredient in
-                RecipeIngredient(
+                let name = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                let fromPantry = RecipeMatching.isFromPantry(
+                    ingredient.name,
+                    pantryItem: ingredient.pantryItem,
+                    claimed: ingredient.fromPantry,
+                    pantryNames: pantryNames
+                )
+                return RecipeIngredient(
                     amount: ingredient.amount.trimmingCharacters(in: .whitespacesAndNewlines),
-                    name: ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines),
-                    fromPantry: RecipeMatching.isFromPantry(
-                        ingredient.name,
-                        pantryItem: ingredient.pantryItem,
-                        claimed: ingredient.fromPantry,
-                        pantryNames: pantryNames
-                    )
+                    name: name,
+                    fromPantry: fromPantry,
+                    // The person's staple it is, by name: the model gives no index.
+                    stapleName: fromPantry ? nil : RecipeShopping.stapleName(of: name, staples: request.staples)
                 )
             },
             steps: steps.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty },

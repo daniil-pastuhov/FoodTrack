@@ -2,7 +2,8 @@
  * Validation of the model's answer before anything is stored or returned. Pure: no I/O.
  *
  * The model answers in an internal shape (see adapters/prompt.ts): pantry ingredients carry a
- * `pantryId` ("p1".."pN", or "none" for a staple) instead of a self-declared `fromPantry` flag,
+ * `pantryId` ("p1".."pN", "o1".."oN" for an optional item, "s1".."sN" for one of the person's own
+ * staples, or "none" for anything else) instead of a self-declared `fromPantry` flag,
  * and a menu day's `uses` is a list of pantry ids. This module turns that into the public Recipe /
  * Menu (CONTRACT.md), so `fromPantry` and `uses` are always the server's reading of the ids and
  * `uses` holds the user's own item names, never model text.
@@ -15,7 +16,7 @@
  * what was requested. Everything else that is wrong makes the whole answer invalid (an
  * OutputRule), which generation settles as a content failure.
  */
-import { coursesFor, menuDates, menuDaysOf, type Course, type GenerateRequest, type Menu, type MenuDay, type Recipe, type RecipeIngredient } from "../contract";
+import { coursesFor, menuDates, menuDaysOf, type Course, type GenerateRequest, type Menu, type MenuDay, type Recipe, type RecipeIngredient, type StapleInput } from "../contract";
 import {
   ALLERGEN_ALIASES,
   ALLERGEN_GROUPS,
@@ -127,8 +128,22 @@ export function idNamesFor(req: GenerateRequest): Array<[string, string]> {
   ];
 }
 
+/** Ids of the usable staples ("s1".."sN", CONTRACT.md "Staples"), a third series apart from items. */
+export const stapleIdsFor = (n: number): string[] => Array.from({ length: n }, (_, i) => `s${i + 1}`);
+
+/**
+ * The kept staples the prompt and the answer check use: those whose own name the request's diet
+ * or allergens would not refuse ("Butter" under dairy-free, "Eggs" with an egg allergen are left
+ * out quietly, never refused). Ids `s1..sN` follow this list's order.
+ */
+export function usableStaples(req: GenerateRequest): StapleInput[] {
+  return req.staples.filter((s) => !breaksDietOrAllergens(s.name, req));
+}
+
 /** The request's item names, ticked and optional. */
 const itemNames = (req: GenerateRequest): string[] => [...req.ingredients, ...req.optionalIngredients].map((i) => i.name);
+/** The request's own names an answer may quote: items and usable staples. */
+const ownNames = (req: GenerateRequest): string[] => [...itemNames(req), ...usableStaples(req).map((s) => s.name)];
 
 class Invalid extends Error {
   constructor(readonly rule: OutputRule) {
@@ -170,7 +185,7 @@ const REPEATED_CHAR = /(.)\1{9,}/u;
 const NON_FOOD_TERMS = compileTerms(NON_FOOD);
 const SOLICITATION_TERMS = compileTerms(SOLICITATION);
 /** Names of the prompt's own parts; they never belong in a recipe. */
-const PROMPT_WORDS = compileTerms(["pantry_data", "begin_pantry_data", "end_pantry_data", "system instruction", "systeminstruks", "response schema", "pantryid"]);
+const PROMPT_WORDS = compileTerms(["pantry_data", "begin_pantry_data", "end_pantry_data", "begin_staples_data", "end_staples_data", "system instruction", "systeminstruks", "response schema", "pantryid"]);
 
 const LEAK_NGRAM = 8;
 
@@ -215,7 +230,7 @@ function withoutTasteLists(systemInstruction: string): string {
 export function promptLeak(s: string, src: LeakSource): string | null {
   if (src.canary && s.toUpperCase().includes(src.canary)) return "the canary";
   const folded = foldText(s);
-  if (matchesAny(folded, PROMPT_WORDS) || s.toLowerCase().includes("pantry_data")) return "a name of the prompt's parts";
+  if (matchesAny(folded, PROMPT_WORDS) || /pantry_data|staples_data/.test(s.toLowerCase())) return "a name of the prompt's parts";
   for (const g of ngrams(folded.words, LEAK_NGRAM)) if (src.leakNgrams.has(g)) return `"${g}" from the system instruction`;
   return null;
 }
@@ -249,10 +264,11 @@ const SCRIPT_FAMILIES: ReadonlyArray<readonly string[]> = [
  * a script none of those uses is refused (SCRIPT), and so is any run of letters outside Latin and
  * Cyrillic that is not part of one of those names (scan): the answer may quote the user's items in
  * their own script, but not write anything else in it, since no word list reads other languages.
+ * The usable staples' names count as the request's own names here.
  */
 export function allowedScripts(req: GenerateRequest): Set<string> {
   const out = new Set<string>(["Latin", "Cyrillic"]);
-  for (const name of [...itemNames(req), ...req.allergens]) {
+  for (const name of [...ownNames(req), ...req.allergens]) {
     for (const ch of name) {
       if (!/\p{L}/u.test(ch)) continue;
       const s = scriptOf(ch);
@@ -460,12 +476,68 @@ export function hasStapleWord(name: string): boolean {
     .some((w) => matchesAny({ words: [w], flat: ` ${w} ` }, STAPLE_TERMS));
 }
 
+// --- The person's staples (stapleIndex) ------------------------------------------------------------
+
+/** A name's words that say what it is: folded, split at apostrophes, without numbers and STAPLE_FILLERS. */
+function significantWords(name: string): string[] {
+  return foldText(name).words.flatMap((x) => x.split("'")).filter((w) => w && !/^\p{N}+$/u.test(w) && !FILLER_WORDS.has(w));
+}
+
+/**
+ * Two folded words name the same thing: equal; one the other plus at most two letters, both at
+ * least 3 long ("egg" / "eggs", "løk" / "løken"); or the longer ends with the shorter, at least 4
+ * long (a compound's head: "havsalt" / "salt", "meersalz" / "salz", "olivenolje" / "olje").
+ */
+function sameWord(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  if (Array.from(short).length >= 3 && long.startsWith(short) && Array.from(long).length - Array.from(short).length <= 2) return true;
+  return Array.from(short).length >= 4 && long.endsWith(short);
+}
+
+/**
+ * The multi-language groups of core/foodTerms.ts that name one food each, so that two names whose
+ * every significant word is in the same group name the same staple across languages ("Eggs" /
+ * "яйца" / "huevos"). Broader groups (milk: butter and cream; fish; tree nuts; soy: tofu and miso;
+ * gluten; peanut: peanut butter) are left out, and so are the egg group's dishes and products
+ * (mayonnaise, omelette, frittata), which are not the staple.
+ */
+const SAME_FOOD_GROUPS: readonly CompiledTerm[][] = (["egg", "sesame", "mustard", "celery", "lupin"] as const).map((k) =>
+  compileTerms(ALLERGEN_GROUPS[k].terms.filter((t) => !/^(?:mayo|majon|майонез|omelet|frittat)/u.test(t))));
+const EGG_EXEMPT = compileTerms(ALLERGEN_GROUPS.egg.exempt ?? []);
+
+/**
+ * Whether an ingredient the model labelled with a staple's id plausibly is that staple, so that it
+ * may carry `stapleIndex` (the apps then show "Your staple" and leave it off the shopping list).
+ * When in doubt it is not: the ingredient is then an ordinary one, shown without the mark and
+ * offered for the shopping list. True when either
+ * - every significant word of the staple's name has the same word (sameWord) in the ingredient's
+ *   name ("Sea salt" for "Salt", "dark soy sauce" for "Soy sauce", but not "fish sauce"), or
+ * - every significant word of both names is in the same one-food group of core/foodTerms.ts
+ *   (SAME_FOOD_GROUPS: "яйца" for "Eggs").
+ * A staple written in a language the tables cannot relate ("соль" for "Salt") is not matched.
+ */
+export function namesStaple(ingredientName: string, stapleName: string): boolean {
+  const ing = significantWords(ingredientName);
+  const st = significantWords(stapleName);
+  if (ing.length === 0 || st.length === 0) return false;
+  if (st.every((s) => ing.some((w) => sameWord(s, w)))) return true;
+  const inGroup = (words: string[], terms: CompiledTerm[]) =>
+    words.every((w) => {
+      const t = { words: [w], flat: ` ${w} ` };
+      return matchesAny(t, terms) && !matchesAny(t, EGG_EXEMPT);
+    });
+  return SAME_FOOD_GROUPS.some((terms) => inGroup(ing, terms) && inGroup(st, terms));
+}
+
 // --- Recipe and menu ---------------------------------------------------------------------------
 
 interface Checker {
   sc: Scanner;
   req: GenerateRequest;
   idToName: Map<string, string>;
+  /** The usable staples by id ("s1".."sN"); kept apart from idToName, so a day's `uses` cannot name one. */
+  stapleIds: Map<string, StapleInput>;
   allergen: Guard[];
   diet: Guard[];
   /** Ingredients that are one of the ticked items: at least one is required (NO_PANTRY). An
@@ -484,6 +556,19 @@ function ingredient(ch: Checker, raw: unknown): RecipeIngredient {
   const name = text(ch.sc, r.name, LIMITS.ingredientName);
   const id = r.pantryId;
   if (typeof id !== "string") bad("SHAPE");
+  if ((id as string).startsWith("s")) {
+    // One of the person's staples: never pantry use, so it neither counts for NO_PANTRY nor
+    // carries pantryIndex; it says which staple it is as sent.
+    const staple = ch.stapleIds.get(id as string);
+    if (!staple) bad("PANTRY_REF");
+    const names = [foldText(name), foldText(staple!.name)];
+    if (names.some((n) => violates(n, ch.allergen))) bad("ALLERGEN");
+    if (names.some((n) => violates(n, ch.diet))) bad("DIET");
+    // Only an ingredient that plausibly is that staple says so; anything else the model labelled
+    // with a staple's id ("Chicken thighs" as "Salt") is an ordinary ingredient, as with "none".
+    const isStaple = namesStaple(name, staple!.name);
+    return { amount, name, fromPantry: false, ...(isStaple ? { stapleIndex: staple!.sentIndex } : {}), ...(isStapleName(name) ? { staple: true as const } : {}) };
+  }
   if (id !== "none" && !ch.idToName.has(id as string)) bad("PANTRY_REF");
   const itemName = id === "none" ? undefined : ch.idToName.get(id as string)!;
   const names = [foldText(name), ...(itemName === undefined ? [] : [foldText(itemName)])];
@@ -556,13 +641,18 @@ function checker(ctx: OutputContext): Checker {
       leakNgrams: leak.leakNgrams,
       canary: leak.canary,
       allowed: allowedScripts(ctx.req),
-      quotable: [...itemNames(ctx.req), ...ctx.req.allergens].map(fold).join("\n"),
+      quotable: [...ownNames(ctx.req), ...ctx.req.allergens].map(fold).join("\n"),
       wanted: ctx.req.config.language === "ru" || ctx.req.config.language === "uk" ? "Cyrillic" : "Latin",
       wantedLetters: 0,
       letters: 0,
     },
     req: ctx.req,
     idToName: new Map(idNamesFor(ctx.req)),
+    stapleIds: new Map((() => {
+      const usable = usableStaples(ctx.req);
+      const ids = stapleIdsFor(usable.length);
+      return usable.map((s, n): [string, StapleInput] => [ids[n], s]);
+    })()),
     allergen: allergenGuards(ctx.req.allergens),
     diet,
     pantryUses: 0,

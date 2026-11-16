@@ -80,6 +80,19 @@ private struct WholeAreaMessage<Header: View, Actions: View>: View {
     let actions: Actions
 
     var body: some View {
+        // Centred in its area while it fits. Taller than its area (the largest text sizes, or the
+        // keyboard up) it scrolls instead: a stack that can't shrink would push the screen around
+        // it, the tab bar included, off the display.
+        ViewThatFits(in: .vertical) {
+            stack.frame(maxWidth: .infinity, maxHeight: .infinity)
+            ScrollView {
+                stack.frame(maxWidth: .infinity)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+    }
+
+    private var stack: some View {
         VStack(spacing: LarderSpace.s3) {
             header
             // Fixed vertically, so a short area, as with the keyboard up, can't squeeze the
@@ -101,7 +114,6 @@ private struct WholeAreaMessage<Header: View, Actions: View>: View {
         .multilineTextAlignment(.center)
         .padding(.vertical, LarderSpace.s8)
         .padding(.horizontal, LarderSpace.s6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

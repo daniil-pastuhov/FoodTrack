@@ -62,7 +62,8 @@ fun recipePromptStrings(context: Context): RecipePromptStrings {
         language = { code -> context.getString(R.string.recipe_prompt_language, languageDisplayName(code)) },
         pastDateNote = { count ->
             context.getString(if (count == 1) R.string.recipe_prompt_past_date_one else R.string.recipe_prompt_past_date_many)
-        }
+        },
+        staplesIntro = context.getString(R.string.recipe_prompt_staples_intro)
     )
 }
 
@@ -96,7 +97,8 @@ fun recipeDietLabel(resources: Resources, diet: RecipeDiet): String = resources.
 /**
  * Builds a device-language prompt asking an AI assistant for recipe ideas using [items], keeping
  * to the Recipe tab's [config] and leaving out [allergens]. [otherItems] ("Send all products")
- * are listed after them as items the recipe may use as well.
+ * are listed after them as items the recipe may use as well, and [staples] (the person's staples
+ * not on the shopping list, `RecipeUiState.stapleNames`) after those, whatever "Send all products" says.
  *
  * The prompt itself is assembled by `shared`'s [buildSharedRecipePrompt]; this only supplies the
  * localized wording.
@@ -106,14 +108,16 @@ fun buildRecipePrompt(
     items: List<PantryItem>,
     config: RecipeConfig,
     allergens: Collection<String>,
-    otherItems: List<PantryItem> = emptyList()
+    otherItems: List<PantryItem> = emptyList(),
+    staples: List<String> = emptyList()
 ): String = buildSharedRecipePrompt(
     strings = recipePromptStrings(context),
     today = DateUtils.today(),
     items = items,
     otherItems = otherItems,
     config = config,
-    allergens = allergens
+    allergens = allergens,
+    staples = staples
 )
 
 /** Hands [prompt] to the system share sheet, for an AI app the person already uses. */

@@ -7,6 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		39EAD2313A8F27CB79A3787F /* Staple.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2EE8F0D49F05DD88911E9CC /* Staple.swift */; };
+		0C03EE2322E8F562DC9F74D1 /* Staple.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2EE8F0D49F05DD88911E9CC /* Staple.swift */; };
+		9044149CB0C630612871E53D /* StapleRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4494ACC776FA5812E0E326E /* StapleRecord.swift */; };
+		C90C8B49A438031EDD09D837 /* StapleRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4494ACC776FA5812E0E326E /* StapleRecord.swift */; };
+		BE48032C275A2BDFE5E8B443 /* StaplesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E95C8D3D4D3348ABE88C292 /* StaplesView.swift */; };
 		49EC1642A70BBBA187CDD961 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = B57A120172E7E297EF9CE625 /* GoogleSignInSwift */; };
 		C4A08131025712F70D97E3A3 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 38D906412AD359372AB3FD9F /* GoogleSignIn */; };
 		4E0F844EA39A9EABDBEB3299 /* FirebaseAppCheck in Frameworks */ = {isa = PBXBuildFile; productRef = 96764280BE35138D366540C0 /* FirebaseAppCheck */; };
@@ -186,6 +191,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A2EE8F0D49F05DD88911E9CC /* Staple.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Staple.swift; sourceTree = "<group>"; };
+		C4494ACC776FA5812E0E326E /* StapleRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StapleRecord.swift; sourceTree = "<group>"; };
+		8E95C8D3D4D3348ABE88C292 /* StaplesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StaplesView.swift; sourceTree = "<group>"; };
 		99ADD03720EF74D5011F5B9C /* Recipes.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = Recipes.storekit; sourceTree = "<group>"; };
 		73AC4A4D9C4B693BC1B357CF /* RecipeMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeMenuView.swift"; sourceTree = "<group>"; };
 		5E4FC3FD21730F58EED5C63F /* RecipeAccountCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "RecipeAccountCard.swift"; sourceTree = "<group>"; };
@@ -423,6 +431,7 @@
 				F44742679EBB5F68A83CFFCF /* PantryDashboardView.swift */,
 				E262F7E355D522F4D6D65C04 /* SettingsView.swift */,
 				6B102148F4E1D8FF58A6B369 /* CategorySettingsView.swift */,
+				8E95C8D3D4D3348ABE88C292 /* StaplesView.swift */,
 				32F5E332BCAB482A98210E13 /* ShoppingListView.swift */,
 				1025C863D9DEB8A7DEBBB78D /* ShoppingSectionList.swift */,
 				A726EFC379384BEA96DED5C8 /* RootTabView.swift */,
@@ -443,6 +452,8 @@
 			isa = PBXGroup;
 			children = (
 				18CE8BC8F5AC452974CB6B22 /* SavedRecipeRecord.swift */,
+				A2EE8F0D49F05DD88911E9CC /* Staple.swift */,
+				C4494ACC776FA5812E0E326E /* StapleRecord.swift */,
 				71BE908300E89BE1DBD27BE7 /* RecipeModels.swift */,
 				4CEB3B67E60D5B4D82277249 /* LocalModels.swift */,
 				22DF0783520A6DF850836682 /* PantryItemRecord.swift */,
@@ -822,6 +833,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				05633CA53372ED53E68EDDF8 /* SavedRecipeRecord.swift in Sources */,
+				0C03EE2322E8F562DC9F74D1 /* Staple.swift in Sources */,
+				C90C8B49A438031EDD09D837 /* StapleRecord.swift in Sources */,
 				0AD502ABE23B68E119E02A41 /* LarderTokens.swift in Sources */,
 				CCBEF7212E704A1E4D56531C /* LarderIcon.swift in Sources */,
 				7844477981E4ED858292417E /* LarderFont.swift in Sources */,
@@ -890,6 +903,8 @@
 				E0ADA1FEEF7C5C2FB105D506 /* RecipeViewModel.swift in Sources */,
 				A7C3E1F05B2D4E6F8A9B0C1D /* ReviewPrompt.swift in Sources */,
 				142919905578DED0C4BDAEFE /* SavedRecipeRecord.swift in Sources */,
+				39EAD2313A8F27CB79A3787F /* Staple.swift in Sources */,
+				9044149CB0C630612871E53D /* StapleRecord.swift in Sources */,
 				0A5A585E436779C0D463B988 /* RecipeModels.swift in Sources */,
 				A1B0DE010000000000000001 /* OnboardingFlow.swift in Sources */,
 				6419956E33C023008B2DC1FD /* OnboardingView.swift in Sources */,
@@ -960,6 +975,7 @@
 				A1B2C3D40000000000000002 /* ShelfLife.swift in Sources */,
 				333BD43AE5A4BDA48CD004F6 /* CategoryPreferenceRecord.swift in Sources */,
 				625E9325BA2904F65F1624C1 /* CategorySettingsView.swift in Sources */,
+				BE48032C275A2BDFE5E8B443 /* StaplesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -179,6 +179,10 @@ public enum L10n {
     }
     public static var onboardingNotificationsAllow: String { NSLocalizedString("onboarding_notifications_allow", comment: "") }
     public static var onboardingNotNow: String { NSLocalizedString("onboarding_not_now", comment: "") }
+    public static var onboardingStaplesTitle: String { NSLocalizedString("onboarding_staples_title", comment: "") }
+    public static var onboardingStaplesLater: String { NSLocalizedString("onboarding_staples_later", comment: "") }
+    public static var onboardingStaplesContinue: String { NSLocalizedString("onboarding_staples_continue", comment: "") }
+    public static var onboardingStaplesSkip: String { NSLocalizedString("onboarding_staples_skip", comment: "") }
     public static var onboardingCameraTitle: String { NSLocalizedString("onboarding_camera_title", comment: "") }
     public static func onboardingCameraBody(_ appName: String) -> String {
         String(format: NSLocalizedString("onboarding_camera_body", comment: ""), appName)
@@ -442,6 +446,10 @@ public enum L10n {
     public static var reticleHintPhoto: String { NSLocalizedString("reticle_hint_photo", comment: "") }
     public static var scanModeBatch: String { NSLocalizedString("scan_mode_batch", comment: "") }
     public static var reticleHintBatch: String { NSLocalizedString("reticle_hint_batch", comment: "") }
+    public static var batchDateRescan: String { NSLocalizedString("batch_date_rescan", comment: "") }
+    public static func batchDateRead(_ date: String) -> String {
+        String(format: NSLocalizedString("batch_date_read_format", comment: ""), date)
+    }
     public static var scanModeReceipt: String { NSLocalizedString("scan_mode_receipt", comment: "") }
     public static var reticleHintReceipt: String { NSLocalizedString("reticle_hint_receipt", comment: "") }
     public static var scanReceiptButton: String { NSLocalizedString("scan_receipt_button", comment: "") }

@@ -144,7 +144,9 @@
     <string name="camera_off_allow">Allow camera</string>
     <string name="camera_off_add_by_hand">Type it in</string>
     <string name="scan_mode_batch">Batch</string>
-    <string name="reticle_hint_batch">Keep scanning. Everything lands in the list</string>
+    <string name="reticle_hint_batch">Scan a barcode, then show its date</string>
+    <string name="batch_date_rescan">Scan the date again</string>
+    <string name="batch_date_read">Date read: %1$s</string>
     <string name="scan_mode_receipt">Receipt</string>
     <string name="reticle_hint_receipt">Fit the whole receipt in the frame, then tap to read it</string>
     <string name="scan_receipt_button">Read receipt</string>
@@ -1285,4 +1287,39 @@
         <item quantity="other">Signing in also gets you %1$d free recipes.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Staples</string>
+    <string name="staples_intro">Basics you always have at home, like salt and oil. They have no date, and recipes may use them.</string>
+    <string name="staples_common_header">Common staples</string>
+    <string name="staples_own_header">Your own</string>
+    <string name="staples_add_placeholder">Add a staple</string>
+    <string name="staples_add">Add</string>
+    <string name="staples_ran_out">Ran out</string>
+    <string name="staples_ran_out_desc">Ran out of %1$s: add it to your shopping list</string>
+    <string name="staples_on_list">On your shopping list</string>
+    <string name="staples_remove">Remove %1$s</string>
+    <string name="staples_removed">%1$s removed from staples</string>
+    <string name="staples_added_to_list">%1$s added to your shopping list</string>
+    <string name="staples_already">%1$s is already a staple</string>
+    <string name="staples_full">You can have up to %1$d staples. Remove one to add another.</string>
+    <string name="staples_settings_desc">Basics you always have, like salt and oil. Recipes may use them.</string>
+    <string name="staples_manage">Manage staples</string>
+    <string name="staples_none">None yet</string>
+    <string name="staples_open">Open staples</string>
+    <string name="recipe_your_staple">Your staple</string>
+    <string name="recipe_prompt_staples_intro">I always have these basics at home too. Use any of them if the recipe needs them; none of them has to be used:</string>
+    <string name="staples_note">Your staples are sent with every recipe request, as names only: to our server for a recipe from a pack, and inside a prompt you share. While a staple is on your shopping list, it isn\'t sent.</string>
+    <string name="onboarding_staples_title">What do you always have at home?</string>
+    <string name="onboarding_staples_later">You can skip this and set it up later in Settings › Staples.</string>
+    <string name="onboarding_staples_continue">Continue</string>
+    <string name="onboarding_staples_skip">Skip</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d staple</item>
+        <item quantity="other">%1$d staples</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Your staple may be used too</item>
+        <item quantity="other">Your %1$d staples may be used too</item>
+    </plurals>
 </resources>

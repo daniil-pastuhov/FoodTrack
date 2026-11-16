@@ -86,6 +86,9 @@ import com.foodtracker.android.ui.design.expiryStatusLabel
 import com.foodtracker.android.ui.design.isExpanded
 import com.foodtracker.android.ui.navigation.LarderRoute
 import com.foodtracker.android.ui.navigation.LocalLarderNavigator
+import com.foodtracker.android.ui.theme.LarderSize
+import com.foodtracker.model.Staple
+import com.foodtracker.staples.StaplePresets
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalReviewPrompter
 import com.foodtracker.android.ui.theme.LarderSpace
@@ -286,7 +289,9 @@ fun RecipeScreen(
         state.config,
         state.allergens,
         // "Send all products": the rest of the pantry, as items the recipe may use as well.
-        otherItems = if (state.options.sendAllItems) state.otherRows.map { it.item } else emptyList()
+        otherItems = if (state.options.sendAllItems) state.otherRows.map { it.item } else emptyList(),
+        // The person's staples, always: names only, never one on the shopping list.
+        staples = state.stapleNames
     )
 
     RecipeTabContent(
@@ -677,6 +682,25 @@ private fun CookWith(state: RecipeUiState, onToggle: (String) -> Unit, onAddOthe
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+    // The person's staples go with every route: one quiet line, which opens Staples.
+    val staples = state.stapleCount
+    if (staples > 0) {
+        val navigator = LocalLarderNavigator.current
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = LarderSize.touch)
+                .clickable(role = Role.Button, onClickLabel = stringResource(R.string.staples_open)) { navigator.navigate(LarderRoute.Staples) }
+                .padding(horizontal = LarderSpace.s2),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = pluralStringResource(R.plurals.recipe_staples_count, staples, staples),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -1230,7 +1254,8 @@ private fun previewState(
     rows: List<PantryRow> = previewRows,
     writing: Boolean = false,
     paid: PaidUiState = PaidUiState(),
-    mode: RecipeMode = RecipeMode.RECIPE
+    mode: RecipeMode = RecipeMode.RECIPE,
+    staples: List<Staple> = emptyList()
 ) = RecipeUiState(
     isLoading = false,
     rows = rows,
@@ -1239,8 +1264,14 @@ private fun previewState(
     onDeviceSupportsLanguage = true,
     isWriting = writing,
     paid = paid,
-    mode = mode
+    mode = mode,
+    staples = staples
 )
+
+/** Four of the presets, ticked with fixed times. */
+private val previewStaples = listOf("salt", "black_pepper", "olive_oil", "garlic").mapIndexed { index, id ->
+    Staple(id = "staple_$index", name = StaplePresets.byId(id)!!.name("en"), presetId = id, addedAtEpochMillis = 1_762_000_000_000L + index)
+}
 
 @Composable
 private fun RecipeTabPreview(state: RecipeUiState) = LarderTheme {
@@ -1310,6 +1341,11 @@ internal fun RecipeTabWritingPreview() = RecipeTabPreview(previewState(OnDeviceA
 @Preview
 @Composable
 internal fun RecipeTabEmptyPreview() = RecipeTabPreview(previewState(rows = emptyList()))
+
+/** The staples line under Cook with: four staples go with the recipe. */
+@Preview
+@Composable
+internal fun RecipeTabStaplesPreview() = RecipeTabPreview(previewState(OnDeviceAvailability.AVAILABLE, paid = previewPaid(12), staples = previewStaples))
 
 @Preview(locale = "ru")
 @Composable

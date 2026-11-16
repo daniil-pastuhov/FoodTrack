@@ -22,12 +22,16 @@ extension UIImage.Orientation {
 }
 
 public enum IOSCameraMode {
+    /// Reads barcodes, and printed dates beside them, so a date caught with the barcode saves
+    /// the Scan date step (see `ScannerSheetView.barcodeModeDateFound`).
     case barcode
     case dateOcr
     case photo
     /// Keeps the camera live and queues each scanned product instead of stopping to fill in a
     /// form, for unpacking a whole shop. Uses the same detection path as `barcode`; only what
-    /// the sheet does with each result differs.
+    /// the sheet does with each result differs. Like `barcode` it also reads printed dates beside
+    /// the barcodes, and for a few seconds after each scan as often as `dateOcr`, for that scan's
+    /// row (`BatchDateRead`).
     case batch
 
     /// Photographs a till receipt and reads every product line off it in one pass, filling the
@@ -75,7 +79,16 @@ public struct CameraScannerView: UIViewControllerRepresentable {
 }
 
 public class CameraScannerViewController: UIViewController, AVCaptureMetadataOutputObjectsDelegate, AVCaptureVideoDataOutputSampleBufferDelegate {
-    public var mode: IOSCameraMode = .barcode
+    public var mode: IOSCameraMode = .barcode {
+        didSet {
+            guard mode != oldValue else { return }
+            // A date the last mode read must not be held back for 2 s in the next one.
+            ocrQueue.async { [weak self] in
+                self?.lastDateString = nil
+                self?.lastDateTime = .distantPast
+            }
+        }
+    }
     public var onBarcodeFound: ((String) -> Void)?
     public var onDateFound: ((Date) -> Void)?
 
@@ -106,8 +119,37 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
         }
     }
 
+    /// Until when Batch mode also reads printed dates (`BatchDateRead`'s window after a scan).
+    /// Set on the main thread, read on the OCR queue, hence the lock.
+    public var readsBatchDatesUntil: Date? {
+        get { batchDateLock.withLock { batchDatesUntil } }
+        set { batchDateLock.withLock { batchDatesUntil = newValue } }
+    }
+    /// Barcode mode's held scan already has a date (`BatchDateRead.pausesSingleScanDates`), so
+    /// no text is read until it is let go. Same threading as `readsBatchDatesUntil`.
+    public var pausesAutomaticDates: Bool {
+        get { batchDateLock.withLock { pausedAutomaticDates } }
+        set { batchDateLock.withLock { pausedAutomaticDates = newValue } }
+    }
+    private let batchDateLock = NSLock()
+    private var batchDatesUntil: Date?
+    private var pausedAutomaticDates = false
+    /// Frames for text reading arrive here one at a time, and each read finishes before the next
+    /// frame is taken (late frames are dropped), so two reads never run at once.
+    private let ocrQueue = DispatchQueue(label: "ocrQueue")
+
+    /// The confirmation a date read gets: Date mode plays it here, Batch mode only once the date
+    /// has landed on a row, since most reads there are ignored.
+    public static func confirmDateRead() {
+        AudioServicesPlaySystemSound(SystemSoundID(1519)) // subtle haptic
+    }
+
     private var lastBarcode: String?
     private var lastDateString: String?
+    /// The date reads' own clock, apart from `lastScanTime`'s barcodes: both now run at once.
+    /// Touched only on the OCR queue, like `lastTextReadAt`.
+    private var lastDateTime: Date = Date()
+    private var lastTextReadAt: Date = .distantPast
     private var lastScanTime: Date = Date()
     private var photoCaptureCompletion: ((URL?) -> Void)?
     private var isPhotoOutputConfigured = false
@@ -160,7 +202,7 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
 
         // 2. Video Output for Live Vision OCR
         if captureSession.canAddOutput(videoOutput) {
-            videoOutput.setSampleBufferDelegate(self, queue: DispatchQueue(label: "ocrQueue"))
+            videoOutput.setSampleBufferDelegate(self, queue: ocrQueue)
             captureSession.addOutput(videoOutput)
         }
 
@@ -244,7 +286,24 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
 
     // MARK: - Video Data Delegate for Apple Vision Text OCR
     public func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
-        guard mode == .dateOcr else { return }
+        // Barcode and Batch read dates beside barcodes all the time, but leave
+        // `idleTextReadInterval` between the end of one read and the start of the next, except in
+        // Batch for a few seconds after a scan (or a tap on a row's date), where they read every
+        // frame as Date mode does. These frames come on their own queue, so barcodes (the
+        // metadata output, on the main queue) never wait for them.
+        let readMode = mode
+        let started = Date()
+        switch readMode {
+        case .dateOcr:
+            break
+        case .barcode, .batch:
+            if readMode == .barcode, pausesAutomaticDates { return }
+            let windowOpen = readMode == .batch && (readsBatchDatesUntil.map { started < $0 } ?? false)
+            guard windowOpen || started.timeIntervalSince(lastTextReadAt) >= BatchDateRead.idleTextReadInterval else { return }
+        case .photo, .receipt:
+            return
+        }
+        defer { lastTextReadAt = Date() }
 
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
@@ -264,12 +323,16 @@ public class CameraScannerViewController: UIViewController, AVCaptureMetadataOut
                 let dateStr = formatter.string(from: date)
 
                 let now = Date()
-                if dateStr != self?.lastDateString || now.timeIntervalSince(self?.lastScanTime ?? Date()) > 2.0 {
+                if dateStr != self?.lastDateString || now.timeIntervalSince(self?.lastDateTime ?? Date()) > 2.0 {
                     self?.lastDateString = dateStr
-                    self?.lastScanTime = now
+                    self?.lastDateTime = now
                     DispatchQueue.main.async {
-                        AudioServicesPlaySystemSound(SystemSoundID(1519)) // subtle haptic
-                        self?.onDateFound?(date)
+                        // A read that outlived its mode belongs to none of the next one's results.
+                        guard let self, self.mode == readMode else { return }
+                        // Outside Date mode most reads go on nothing, so the sheet confirms only
+                        // the ones that land.
+                        if readMode == .dateOcr { Self.confirmDateRead() }
+                        self.onDateFound?(date)
                     }
                 }
             }

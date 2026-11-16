@@ -24,6 +24,7 @@ import com.foodtracker.recipe.welcomeStatusOf
 import com.foodtracker.recipe.acceptsDanishOf
 import com.foodtracker.recipe.acceptsMenuDaysOf
 import com.foodtracker.recipe.acceptsTasteOf
+import com.foodtracker.recipe.acceptsStaplesOf
 import com.foodtracker.recipe.tasteQuizVersionOf
 import com.foodtracker.recipe.acceptsMultiChoiceConfigOf
 import com.foodtracker.recipe.acceptsOptionalIngredientsOf
@@ -173,14 +174,14 @@ internal fun mergeReplyOf(json: JsonElement): MergeReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: return null
     val moved = (reply["moved"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: 0
-    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]))
+    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]), acceptsStaplesOf(reply["acceptsStaples"]))
 }
 
 /** `getBalance`'s reply: the count, and the costs when they came and could be read. */
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.longOrNull?.toInt() ?: return null
-    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]))
+    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]), acceptsStaplesOf(reply["acceptsStaples"]))
 }
 
 /** `claimWelcome`'s reply: its status and `granted`, and everything a balance carries. Null without
