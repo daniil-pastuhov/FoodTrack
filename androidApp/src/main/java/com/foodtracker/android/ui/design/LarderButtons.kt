@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,10 +44,17 @@ import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.foodtracker.android.R
@@ -203,9 +211,13 @@ private fun LarderButtonImpl(
 
 /**
  * A form's primary action, the first and only filled button of its group (the Recipe tab's
- * Generate or Share): full width as the caller sizes it, 56dp high, with [cost] as a small
- * outlined pill at the end ("Free", "5 recipes"). Drawn in the flow of the form, not floating.
- * The label wraps when large text needs it.
+ * Generate or Share): full width as the caller sizes it, at least 56dp high, a rounded rectangle
+ * whose 28dp corners make it a pill at that height (never an oval when it grows), with [cost] as a
+ * small outlined pill at the end ("Free", "5 recipes") that never wraps or shrinks. [subtitle] is a
+ * quieter line under the label. Label and subtitle take up to two lines each beside the icon and the
+ * pill; when they need more, or with font scale 1.5 and over, the icon goes and label, subtitle and
+ * pill stack, centred. Drawn in the flow of the form, not floating. One element to a screen reader:
+ * label, cost, subtitle.
  */
 @Composable
 fun LarderPrimaryAction(
@@ -214,7 +226,8 @@ fun LarderPrimaryAction(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     cost: String? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    subtitle: String? = null
 ) {
     val source = remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
@@ -232,45 +245,93 @@ fun LarderPrimaryAction(
         else -> scheme.onPrimary.copy(alpha = overlay).compositeOver(scheme.primary)
     }
     val content = if (enabled) scheme.onPrimary else scheme.onSurface.copy(alpha = 0.38f)
+    val shape = RoundedCornerShape(PRIMARY_ACTION_RADIUS)
+    val spoken = listOfNotNull(text, cost, subtitle).joinToString(", ")
+    val labelStyle = MaterialTheme.typography.labelLarge
+    val subtitleStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Normal)
+    val costStyle = MaterialTheme.typography.labelSmall
+    val horizontalPadding = LarderSpace.s5
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
     CompositionLocalProvider(LocalRippleConfiguration provides null) {
-        Button(
-            onClick = onClick,
-            modifier = modifier
-                .heightIn(min = 56.dp)
-                .focusRing(focused, LarderTheme.colors.focusRing, CircleShape),
-            enabled = enabled,
-            shape = CircleShape,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = container,
-                contentColor = content,
-                disabledContainerColor = container,
-                disabledContentColor = content
-            ),
-            elevation = null,
-            contentPadding = PaddingValues(horizontal = LarderSpace.s5, vertical = LarderSpace.s2),
-            interactionSource = source
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
-                verticalAlignment = Alignment.CenterVertically
+        BoxWithConstraints(modifier = modifier) {
+            // Side by side when label and subtitle each fit in two lines beside the icon and the pill.
+            val stacked = density.fontScale >= 1.5f || run {
+                val pillWidth = cost?.let {
+                    with(density) { measurer.measure(it, costStyle, maxLines = 1, softWrap = false).size.width.toDp() } + LarderSpace.s2 * 2 + 2.dp
+                } ?: 0.dp
+                val gaps = LarderSpace.s3 * (if (cost != null) 2 else 1)
+                val textWidth = maxWidth - horizontalPadding * 2 - LarderIconSize.Default - gaps - pillWidth
+                if (textWidth <= 0.dp) return@run true
+                val px = with(density) { textWidth.roundToPx() }
+                val fits = { s: String, style: TextStyle -> measurer.measure(s, style, constraints = Constraints(maxWidth = px)).lineCount <= 2 }
+                !fits(text, labelStyle) || (subtitle != null && !fits(subtitle, subtitleStyle))
+            }
+            Button(
+                onClick = onClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 56.dp)
+                    .focusRing(focused, LarderTheme.colors.focusRing, shape)
+                    .semantics { contentDescription = spoken },
+                enabled = enabled,
+                shape = shape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = container,
+                    contentColor = content,
+                    disabledContainerColor = container,
+                    disabledContentColor = content
+                ),
+                elevation = null,
+                contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = LarderSpace.s2),
+                interactionSource = source
             ) {
-                LarderIcon(icon, contentDescription = null, tint = content)
-                Text(text = text, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, color = content)
-                cost?.let {
-                    Text(
-                        text = it,
-                        modifier = Modifier
-                            .border(1.dp, content, RoundedCornerShape(LarderRadius.xl))
-                            .padding(horizontal = LarderSpace.s2, vertical = 2.dp),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = content,
-                        maxLines = 1
-                    )
+                val pill: @Composable () -> Unit = {
+                    cost?.let {
+                        Text(
+                            text = it,
+                            modifier = Modifier
+                                .border(1.dp, content, RoundedCornerShape(LarderRadius.xl))
+                                .padding(horizontal = LarderSpace.s2, vertical = 2.dp),
+                            style = costStyle,
+                            color = content,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+                val subColor = content.copy(alpha = content.alpha * 0.8f)
+                if (stacked) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().clearAndSetSemantics { },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(LarderSpace.s1)
+                    ) {
+                        Text(text = text, style = labelStyle, color = content, textAlign = TextAlign.Center)
+                        subtitle?.let { Text(text = it, style = subtitleStyle, color = subColor, textAlign = TextAlign.Center) }
+                        pill()
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.clearAndSetSemantics { },
+                        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        LarderIcon(icon, contentDescription = null, tint = content)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = text, style = labelStyle, color = content, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            subtitle?.let { Text(text = it, style = subtitleStyle, color = subColor, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+                        }
+                        pill()
+                    }
                 }
             }
         }
     }
 }
+
+/** Half the primary action's 56dp minimum: a pill at that height, a rounded rectangle when taller. */
+private val PRIMARY_ACTION_RADIUS = 28.dp
 
 /** A 48dp round icon button. [contentDescription] is required: an icon alone says nothing to a
  *  screen reader. */
@@ -354,6 +415,8 @@ internal fun LarderPrimaryActionPreview() = LarderPreview {
         LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 recipe")
         LarderPrimaryAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free")
         LarderPrimaryAction("Share prompt", LarderIcons.Share2, {}, Modifier.fillMaxWidth())
+        LarderPrimaryAction("Generate recipe", LarderIcons.Sparkles, {}, Modifier.fillMaxWidth(), cost = "1 recipe", subtitle = "Uses your taste profile")
+        LarderPrimaryAction("Составить на этом устройстве с длинной подписью", LarderIcons.Smartphone, {}, Modifier.widthIn(max = 280.dp), cost = "Бесплатно", subtitle = "С учётом вашего вкусового профиля")
         LarderPrimaryAction("Generate on this device", LarderIcons.Smartphone, {}, Modifier.fillMaxWidth(), cost = "Free", enabled = false)
     }
 }

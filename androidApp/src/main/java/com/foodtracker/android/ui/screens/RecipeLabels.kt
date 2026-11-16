@@ -99,11 +99,6 @@ fun recipeLanguageLabel(resources: Resources, language: String?, appLanguage: St
         recipeLanguageEndonym(language)
     }
 
-/** The one line under "Generate on this device": what the phone's own model is like, weak
- *  points first, then why it is still worth it. iOS: `L10n.recipeOnDeviceNote`. */
-fun recipeOnDeviceNote(resources: Resources): String =
-    resources.getString(R.string.recipe_on_device_weak) + " " + resources.getString(R.string.recipe_on_device_upsides)
-
 /** The menu form's "few items" hint ([com.foodtracker.recipe.menuItemsHint]): "Only 2 items for
  *  12 dishes. Most of this menu will need shopping." iOS: `L10n.recipeMenuFewItems`. */
 fun recipeMenuFewItems(resources: Resources, hint: MenuItemsHint): String =

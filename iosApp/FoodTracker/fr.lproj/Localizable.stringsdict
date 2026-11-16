@@ -1387,60 +1387,6 @@
             <string>Recevoir %d recettes gratuites</string>
         </dict>
     </dict>
-    <key>welcome_menu_enough</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d recette gratuite suffit pour ce menu.</string>
-            <key>many</key>
-            <string>%d recettes gratuites suffisent pour ce menu.</string>
-            <key>other</key>
-            <string>%d recettes gratuites suffisent pour ce menu.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_smaller</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d recette gratuite suffit pour une recette seule ou un menu plus petit, pas pour celui-ci.</string>
-            <key>many</key>
-            <string>%d recettes gratuites suffisent pour des recettes seules ou un menu plus petit, pas pour celui-ci.</string>
-            <key>other</key>
-            <string>%d recettes gratuites suffisent pour des recettes seules ou un menu plus petit, pas pour celui-ci.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_single</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d recette gratuite suffit pour une recette seule, pas pour un menu.</string>
-            <key>many</key>
-            <string>%d recettes gratuites suffisent pour des recettes seules, pas pour un menu.</string>
-            <key>other</key>
-            <string>%d recettes gratuites suffisent pour des recettes seules, pas pour un menu.</string>
-        </dict>
-    </dict>
     <key>welcome_intro_sign_in</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

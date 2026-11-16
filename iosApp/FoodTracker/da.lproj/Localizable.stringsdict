@@ -1237,54 +1237,6 @@
             <string>Få %d gratis opskrifter</string>
         </dict>
     </dict>
-    <key>welcome_menu_enough</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d gratis opskrift er nok til denne menu.</string>
-            <key>other</key>
-            <string>%d gratis opskrifter er nok til denne menu.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_smaller</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d gratis opskrift rækker til en enkelt opskrift eller en mindre menu, ikke denne.</string>
-            <key>other</key>
-            <string>%d gratis opskrifter rækker til enkelte opskrifter eller en mindre menu, ikke denne.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_single</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d gratis opskrift rækker til en enkelt opskrift, ikke en menu.</string>
-            <key>other</key>
-            <string>%d gratis opskrifter rækker til enkelte opskrifter, ikke en menu.</string>
-        </dict>
-    </dict>
     <key>welcome_intro_sign_in</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

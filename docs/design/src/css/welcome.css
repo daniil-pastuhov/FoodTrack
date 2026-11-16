@@ -1,11 +1,6 @@
 /* Free recipes for signing in (2026-11-16): the offer in the Recipe form's action group, the sign-in sheet,
    the notes in Recipe settings. Scoped under .recipe. Tokens only. */
 
-/* The form's filled primary, as LarderPrimaryAction (56 high) */
-.recipe .r-actions .btn.block.wl-primary { min-height: 56px; border-radius: var(--radius-lg); }
-/* The offer: an outline button with a gift, centred like the other secondary buttons; the label wraps */
-.recipe .r-actions .btn.block.wl-offer { justify-content: center; text-align: center; }
-.recipe .r-actions .btn.block.wl-offer > span:not(.spinner) { flex: 0 1 auto; }
 .recipe .btn.wl-offer > svg.lucide { color: var(--color-primary); }
 .recipe .btn.wl-offer[disabled] { background: transparent; box-shadow: inset 0 0 0 1px var(--color-outline-variant); color: var(--color-on-surface-variant); cursor: progress; }
 .recipe .wl-spin { flex: none; width: 18px; height: 18px; border-width: 2px; }

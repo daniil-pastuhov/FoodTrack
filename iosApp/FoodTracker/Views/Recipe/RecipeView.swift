@@ -411,66 +411,16 @@ struct RecipeView: View {
         }
     }
 
-    private func buyButton(_ variant: LarderButton.Variant = .outline, fullWidth: Bool = true) -> some View {
-        LarderButton(L10n.recipeBuy, icon: .ticket, variant: variant, fullWidth: fullWidth) {
-            model.showsBuySheet = true
-        }
-    }
-
-    /// Buy recipes, or where it would be, the line saying why this account can't buy.
+    /// Where Buy recipes would be, the line saying why this account can't buy.
     @ViewBuilder
-    private var buyOrBlocked: some View {
-        if credits.canBuy {
-            buyButton()
-        } else if credits.showsPurchasesBlocked {
+    private var purchasesBlockedLine: some View {
+        if !credits.canBuy && credits.showsPurchasesBlocked {
             hint(L10n.recipePurchasesBlocked)
         }
     }
 
     /// The free recipes' offer, where it shows (`RecipeCredits.welcomeHint`).
     private var welcome: WelcomeHint? { credits.welcomeHint }
-
-    /// Under the primary when there is no pack: the offer (outline) above Buy, which drops to a
-    /// text button, as it already does beside Share prompt; without an offer, today's outline Buy.
-    /// The two cross-fade as the offer comes and goes.
-    @ViewBuilder
-    private var offerThenBuy: some View {
-        if let welcome {
-            WelcomeOfferButton(model: model, hint: welcome).welcomeTransition()
-            if credits.canBuy { buyButton(.text).transition(.opacity) }
-        } else {
-            buyOrBlocked.transition(.opacity)
-        }
-    }
-
-    /// Under "Generate on this device": with an offer, the offer, then Buy and Share prompt as
-    /// one row of text buttons (two rows when they don't fit side by side), so the group is no
-    /// taller than today's; without one, today's outline Buy and Share prompt.
-    @ViewBuilder
-    private var offerBuyShare: some View {
-        if let welcome {
-            WelcomeOfferButton(model: model, hint: welcome).welcomeTransition()
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: LarderSpace.s4) { buyAndShareText }
-                VStack(spacing: LarderSpace.s1) { buyAndShareText }
-            }
-            .frame(maxWidth: .infinity)
-            .transition(.opacity)
-        } else {
-            Group {
-                buyOrBlocked
-                shareButton
-            }
-            .transition(.opacity)
-        }
-    }
-
-    @ViewBuilder
-    private var buyAndShareText: some View {
-        if credits.canBuy { buyButton(.text, fullWidth: false) }
-        LarderButton(L10n.recipeSharePrompt, icon: .share2, variant: .text, action: sharePrompt)
-            .disabled(nothingTicked)
-    }
 
     private func writingOnServer(_ kind: RecipeKind) -> some View {
         VStack(spacing: LarderSpace.s3) {
@@ -698,36 +648,23 @@ struct RecipeView: View {
     // MARK: Actions
 
     /// The form's one button group, at its end and scrolling with it: the primary action first,
-    /// filled and full width (with what it takes), then the other routes as `RecipeActions` says,
-    /// and the line that explains a disabled one. Nothing floats over the form.
+    /// filled and full width (with what it takes), a caption under it when it is a free route,
+    /// then "Other ways", one card holding every other route as `RecipeActions` says. Nothing
+    /// floats over the form and nothing sits loose between the buttons.
     @ViewBuilder
     private var actions: some View {
-        VStack(spacing: LarderSpace.s2) {
+        VStack(spacing: 0) {
             if isMenu {
                 menuActions
             } else {
-                if nothingTicked { hint(L10n.recipeNoneSelectedHint) }
+                if nothingTicked { hint(L10n.recipeNoneSelectedHint).padding(.bottom, LarderSpace.s2) }
                 primaryButton
-                switch model.actions.primary {
-                case .server:
-                    // The free routes follow, the phone's own first.
-                    if routes.onDevice {
-                        LarderButton(L10n.recipeGenerateOnPhone, icon: .smartphone, variant: .outline, fullWidth: true) {
-                            model.writeOnDevice(from: pantry.items)
-                        }
-                        .disabled(nothingTicked)
-                        .accessibilityLabel("\(L10n.recipeGenerateOnPhone), \(L10n.recipeCostFree)")
-                        hint(L10n.recipeOnDeviceNote)
-                    }
-                    shareButton
-                case .onDevice:
-                    hint(L10n.recipeOnDeviceNote)
-                    offerBuyShare
-                default:
-                    // Share is the primary and the share sheet copies too: the line says what it
-                    // does, then the free recipes' offer, then Buy (where offered).
-                    if !nothingTicked { hint(L10n.recipePromptOnlyHint) }
-                    offerThenBuy
+                if let caption = primaryCaption {
+                    hint(caption).padding(.top, LarderSpace.s1)
+                }
+                otherWays
+                if model.actions.primary != .server {
+                    purchasesBlockedLine.padding(.top, LarderSpace.s2)
                 }
             }
         }
@@ -736,82 +673,138 @@ struct RecipeView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// A menu has no free route: with enough recipes its button and the line under it; with too
-    /// few a callout in the button's place, and Buy.
+    /// Under a free primary only: what it is, in one line.
+    private var primaryCaption: String? {
+        switch model.actions.primary {
+        case .onDevice: return L10n.recipeOnDeviceCaption
+        case .share: return L10n.recipeShareCaption
+        default: return nil
+        }
+    }
+
+    /// The other routes, in this order: the free recipes' offer (not beside the server, as
+    /// before), the phone's model, Share prompt, Buy recipes. The ones that need ticked items stay,
+    /// dimmed, while nothing is ticked. No card without a row.
+    @ViewBuilder
+    private var otherWays: some View {
+        let secondary = model.actions.secondary
+        let offer = model.actions.primary == .server ? nil : welcome
+        if offer != nil || !secondary.isEmpty {
+            RecipeOtherWays { tiles in
+                if let offer {
+                    WelcomeOfferRow(model: model, hint: offer, showsTile: tiles).welcomeTransition()
+                }
+                ForEach(secondary, id: \.self) { route in
+                    otherWay(route, showsTile: tiles)
+                }
+            }
+            .padding(.top, LarderSpace.s4)
+        }
+    }
+
+    @ViewBuilder
+    private func otherWay(_ route: RecipeAction, showsTile: Bool) -> some View {
+        switch route {
+        case .onDevice:
+            RecipeWayRow(L10n.recipeGenerateOnPhone, icon: .smartphone, free: L10n.recipeCostFree, supporting: L10n.recipeOnDeviceCaption, showsTile: showsTile) {
+                model.writeOnDevice(from: pantry.items)
+            }
+            .disabled(nothingTicked)
+        case .share:
+            RecipeWayRow(L10n.recipeSharePrompt, icon: .share2, free: L10n.recipeCostFree, supporting: L10n.recipeShareCaption, showsTile: showsTile, action: sharePrompt)
+                .disabled(nothingTicked)
+        case .buy:
+            RecipeWayRow(L10n.recipeBuy, icon: .ticket, chevron: true, showsTile: showsTile) {
+                model.showsBuySheet = true
+            }
+        case .server:
+            EmptyView()
+        }
+    }
+
+    /// A menu has no free route: with enough recipes its button; with too few a callout in the
+    /// button's place and Buy as the primary, and the free recipes' offer under it with one line
+    /// on what they cover, never a promise the menu can't keep.
     @ViewBuilder
     private var menuActions: some View {
         if model.serverCanWriteMenu {
             // Few items for many dishes: said, never stopped; live with the ticks and choices.
             if let few = model.menuItemsHint(for: pantry.items) {
                 LarderCallout(.info, icon: .shoppingBasket, message: L10n.recipeMenuFewItems(few))
+                    .padding(.bottom, LarderSpace.s2)
             }
-            RecipeGoButton(title: L10n.recipeGenerateMenu, icon: .sparkles, cost: L10n.recipeCost(model.menuCost)) {
+            if nothingTicked { hint(L10n.recipeNoneSelectedHint).padding(.bottom, LarderSpace.s2) }
+            RecipeGoButton(
+                title: L10n.recipeGenerateMenu,
+                icon: .sparkles,
+                cost: L10n.recipeCost(model.menuCost),
+                subtitle: model.sendsTaste ? L10n.tasteUsesProfile : nil
+            ) {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
-            hint(nothingTicked ? L10n.recipeNoneSelectedHint : L10n.recipeMenuServerHint(model.menuCost))
-            if model.sendsTaste { TasteUsesProfileLine() }
         } else if !credits.serverPaused {
             LarderCallout(
                 .info,
                 title: L10n.recipeMenuShortTitle(model.menuCost),
                 message: L10n.recipeMenuShortMessage(credits.balance ?? 0, recipeCost: model.recipeCost)
             )
-            if let welcome {
-                // Buy stays the way on, filled; the offer goes under it with one quiet line on
-                // what the free recipes cover, never a promise the menu can't keep.
-                if credits.canBuy {
-                    RecipeGoButton(title: L10n.recipeBuy, icon: .ticket) { model.showsBuySheet = true }
-                        .transition(.opacity)
-                }
-                VStack(spacing: LarderSpace.s2) {
-                    WelcomeOfferButton(model: model, hint: welcome)
-                    hint(L10n.welcomeMenuCover(
-                        WelcomeRecipes.menuCover(
-                            recipes: welcome.recipes,
-                            balance: credits.balance ?? 0,
-                            menuCost: model.menuCost,
-                            costs: credits.costs,
-                            takesMenuDays: credits.serverTakesMenuDays
-                        ),
-                        recipes: welcome.recipes
-                    ))
-                }
-                .welcomeTransition()
-            } else {
-                buyOrBlocked.transition(.opacity)
+            .padding(.bottom, LarderSpace.s2)
+            if credits.canBuy {
+                RecipeGoButton(title: L10n.recipeBuy, icon: .ticket) { model.showsBuySheet = true }
+                    .transition(.opacity)
             }
+            if let welcome {
+                RecipeOtherWays { tiles in
+                    WelcomeOfferRow(
+                        model: model,
+                        hint: welcome,
+                        supporting: L10n.welcomeMenuCover(
+                            WelcomeRecipes.menuCover(
+                                recipes: welcome.recipes,
+                                balance: credits.balance ?? 0,
+                                menuCost: model.menuCost,
+                                costs: credits.costs,
+                                takesMenuDays: credits.serverTakesMenuDays
+                            )
+                        ),
+                        showsTile: tiles
+                    )
+                }
+                .padding(.top, credits.canBuy ? LarderSpace.s4 : 0)
+                .welcomeTransition()
+            }
+            purchasesBlockedLine.padding(.top, LarderSpace.s2)
         }
     }
 
     /// The server while the pack has recipes, else the free route that writes in the app where
-    /// the phone can, else the shared prompt.
+    /// the phone can, else the shared prompt. The server's says inside it when the taste profile
+    /// goes with the request.
     @ViewBuilder
     private var primaryButton: some View {
         switch model.actions.primary {
         case .server:
-            RecipeGoButton(title: L10n.recipeGenerateRecipe, icon: .sparkles, cost: L10n.recipeCost(model.recipeCost)) {
+            RecipeGoButton(
+                title: L10n.recipeGenerateRecipe,
+                icon: .sparkles,
+                cost: L10n.recipeCost(model.recipeCost),
+                // Only when a profile will really be sent with it.
+                subtitle: model.sendsTaste ? L10n.tasteUsesProfile : nil
+            ) {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
-            // Only when a profile will really be sent with it.
-            if model.sendsTaste { TasteUsesProfileLine() }
         case .onDevice:
             RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
                 model.writeOnDevice(from: pantry.items)
             }
             .disabled(nothingTicked)
         default:
+            // The share sheet has Copy too, so there is no button of its own for it.
             RecipeGoButton(title: L10n.recipeSharePrompt, icon: .share2, action: sharePrompt)
                 .disabled(nothingTicked)
         }
-    }
-
-    /// The share sheet has Copy too, so there is no button of its own for it.
-    private var shareButton: some View {
-        LarderButton(L10n.recipeSharePrompt, icon: .share2, variant: .text, action: sharePrompt)
-            .frame(maxWidth: .infinity)
-            .disabled(nothingTicked)
     }
 
     private func hint(_ text: String) -> some View {

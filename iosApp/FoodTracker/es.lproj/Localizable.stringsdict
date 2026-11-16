@@ -1387,60 +1387,6 @@
             <string>Conseguir %d recetas gratis</string>
         </dict>
     </dict>
-    <key>welcome_menu_enough</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d receta gratis es suficiente para este menú.</string>
-            <key>many</key>
-            <string>%d recetas gratis son suficientes para este menú.</string>
-            <key>other</key>
-            <string>%d recetas gratis son suficientes para este menú.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_smaller</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d receta gratis sirve para una receta suelta o un menú más pequeño, no para este.</string>
-            <key>many</key>
-            <string>%d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</string>
-            <key>other</key>
-            <string>%d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_single</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d receta gratis sirve para una receta suelta, no para un menú.</string>
-            <key>many</key>
-            <string>%d recetas gratis sirven para recetas sueltas, no para un menú.</string>
-            <key>other</key>
-            <string>%d recetas gratis sirven para recetas sueltas, no para un menú.</string>
-        </dict>
-    </dict>
     <key>welcome_intro_sign_in</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

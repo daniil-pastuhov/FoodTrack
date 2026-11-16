@@ -596,7 +596,9 @@
 "recipe_generate_on_phone" = "Auf diesem {device} erstellen";
 "recipe_cost_free" = "Kostenlos";
 "recipe_share_prompt" = "Prompt teilen";
-"recipe_prompt_only_hint" = "Kostenlos: Schick den Prompt an eine KI-App, die du schon nutzt.";
+"recipe_other_ways" = "Andere Wege";
+"recipe_on_device_caption" = "Kocht noch nicht gut. Nichts verlässt dein {device}.";
+"recipe_share_caption" = "Für eine KI‑App, die du schon nutzt";
 "recipe_none_selected_hint" = "Wähle mindestens einen Artikel zum Kochen aus.";
 "recipe_writing_on_phone_title" = "Wird auf diesem {device} erstellt";
 "recipe_writing_on_phone_message" = "Es wird nichts gesendet. Das kann eine Minute dauern.";
@@ -665,7 +667,6 @@
 "recipe_generate_recipe" = "Rezept erstellen";
 "recipe_generate_menu" = "Menü erstellen";
 "recipe_buy" = "Rezepte kaufen";
-"recipe_menu_server_hint" = "Ein Menü wird auf unserem Server erstellt und kostet %1$@ aus einem Paket.";
 "recipe_menu_short_title" = "Ein Menü kostet %1$@";
 "recipe_menu_short_none" = "Du hast keine Rezepte mehr.";
 "recipe_writing_server_title" = "Dein Rezept wird erstellt";
@@ -784,7 +785,6 @@
 "recipe_intro_device_title" = "Kostenlos, auf diesem {device}";
 "recipe_intro_device_message" = "Dieses {device} erstellt das Rezept selbst, und es wird nichts gesendet.";
 "recipe_on_device_weak" = "Das Modell auf diesem {device} kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.";
-"recipe_on_device_upsides" = "Es ist kostenlos, und nichts verlässt dein {device}.";
 "recipe_intro_packs_title" = "Aus einem Rezeptpaket";
 "recipe_intro_packs_price" = "Pakete ab %@.";
 "recipe_intro_free_stays" = "Die kostenlosen Wege bleiben, auch wenn du ein Paket hast.";
@@ -875,9 +875,9 @@
 "welcome_sign_in_one" = "Melde dich an und erhalte ein kostenloses Rezept";
 "welcome_get_one" = "Ein kostenloses Rezept holen";
 "welcome_claiming" = "Deine kostenlosen Rezepte werden geholt…";
-"welcome_menu_enough_one" = "Ein kostenloses Rezept reicht für dieses Menü.";
-"welcome_menu_smaller_one" = "Ein kostenloses Rezept reicht für ein einzelnes Rezept oder ein kleineres Menü, nicht für dieses.";
-"welcome_menu_single_one" = "Ein kostenloses Rezept reicht für ein einzelnes Rezept, nicht für ein Menü.";
+"welcome_menu_enough" = "Genug für dieses Menü.";
+"welcome_menu_smaller" = "Genug für einzelne Rezepte oder ein kleineres Menü, nicht für dieses.";
+"welcome_menu_single" = "Genug für einzelne Rezepte, nicht für ein Menü.";
 "welcome_intro_sign_in_one" = "Melde dich an, um ein kostenloses Rezept zu bekommen und es auszuprobieren.";
 "welcome_intro_account_one" = "Dieses Konto kann ein kostenloses Rezept bekommen, um es auszuprobieren.";
 "welcome_buy_sign_in_one" = "Oder melde dich an und erhalte ein kostenloses Rezept";

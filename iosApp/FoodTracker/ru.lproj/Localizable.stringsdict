@@ -1545,66 +1545,6 @@
             <string>Получить %d бесплатного рецепта</string>
         </dict>
     </dict>
-    <key>welcome_menu_enough</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d бесплатного рецепта хватит на это меню.</string>
-            <key>few</key>
-            <string>%d бесплатных рецептов хватит на это меню.</string>
-            <key>many</key>
-            <string>%d бесплатных рецептов хватит на это меню.</string>
-            <key>other</key>
-            <string>%d бесплатного рецепта хватит на это меню.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_smaller</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.</string>
-            <key>few</key>
-            <string>%d бесплатных рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</string>
-            <key>many</key>
-            <string>%d бесплатных рецептов подойдут для отдельных рецептов или меню поменьше, но не для этого.</string>
-            <key>other</key>
-            <string>%d бесплатного рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_single</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.</string>
-            <key>few</key>
-            <string>%d бесплатных рецепта подойдут для отдельных рецептов, но не для меню.</string>
-            <key>many</key>
-            <string>%d бесплатных рецептов подойдут для отдельных рецептов, но не для меню.</string>
-            <key>other</key>
-            <string>%d бесплатного рецепта подойдут для отдельных рецептов, но не для меню.</string>
-        </dict>
-    </dict>
     <key>welcome_intro_sign_in</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

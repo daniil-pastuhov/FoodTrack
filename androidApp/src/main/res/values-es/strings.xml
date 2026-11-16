@@ -838,7 +838,9 @@
     <string name="recipe_prompt_clip_label">Prompt de receta</string>
     <string name="recipe_generate_on_phone">Crear en este dispositivo</string>
     <string name="recipe_cost_free">Gratis</string>
-    <string name="recipe_prompt_hint">Gratis: envía el prompt a la app de IA que ya usas.</string>
+    <string name="recipe_other_ways">Otras formas</string>
+    <string name="recipe_on_device_caption">Aún flojea en la cocina. Nada sale de este dispositivo.</string>
+    <string name="recipe_share_caption">Para la app de IA que ya usas</string>
     <string name="recipe_tick_hint">Marca al menos un producto para cocinar.</string>
     <string name="recipe_writing_phone_title">Escribiendo en este dispositivo</string>
     <string name="recipe_writing_phone_body">No se envía nada a ningún sitio. Puede tardar un minuto.</string>
@@ -957,9 +959,7 @@
         <item quantity="other">%1$d recetas</item>
     </plurals>
     <string name="recipe_buy">Comprar recetas</string>
-    <string name="recipe_menu_hint">Un menú se escribe en nuestro servidor y descuenta %1$s de un paquete.</string>
     <string name="recipe_on_device_weak">El modelo de este dispositivo aún flojea en la cocina, así que comprueba que la receta tenga sentido.</string>
-    <string name="recipe_on_device_upsides">Es gratis y nada sale de este dispositivo.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Solo %1$d producto para %2$d platos. Habrá que comprar casi todo para este menú.</item>
         <item quantity="many">Solo %1$d productos para %2$d platos. Habrá que comprar casi todo para este menú.</item>
@@ -1280,9 +1280,6 @@
     <string name="welcome_sign_in_one">Inicia sesión y consigue una receta gratis</string>
     <string name="welcome_get_one">Conseguir una receta gratis</string>
     <string name="welcome_claiming">Consiguiendo tus recetas gratis…</string>
-    <string name="welcome_menu_enough_one">Una receta gratis es suficiente para este menú.</string>
-    <string name="welcome_menu_smaller_one">Una receta gratis sirve para una receta suelta o un menú más pequeño, no para este.</string>
-    <string name="welcome_menu_single_one">Una receta gratis sirve para una receta suelta, no para un menú.</string>
     <string name="welcome_intro_sign_in_one">Inicia sesión para conseguir una receta gratis y probarlo.</string>
     <string name="welcome_intro_account_one">Esta cuenta puede conseguir una receta gratis para probarlo.</string>
     <string name="welcome_buy_sign_in_one">O inicia sesión y consigue una receta gratis</string>
@@ -1316,21 +1313,9 @@
         <item quantity="many">Conseguir %1$d recetas gratis</item>
         <item quantity="other">Conseguir %1$d recetas gratis</item>
     </plurals>
-    <plurals name="welcome_menu_enough">
-        <item quantity="one">%1$d receta gratis es suficiente para este menú.</item>
-        <item quantity="many">%1$d recetas gratis son suficientes para este menú.</item>
-        <item quantity="other">%1$d recetas gratis son suficientes para este menú.</item>
-    </plurals>
-    <plurals name="welcome_menu_smaller">
-        <item quantity="one">%1$d receta gratis sirve para una receta suelta o un menú más pequeño, no para este.</item>
-        <item quantity="many">%1$d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</item>
-        <item quantity="other">%1$d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</item>
-    </plurals>
-    <plurals name="welcome_menu_single">
-        <item quantity="one">%1$d receta gratis sirve para una receta suelta, no para un menú.</item>
-        <item quantity="many">%1$d recetas gratis sirven para recetas sueltas, no para un menú.</item>
-        <item quantity="other">%1$d recetas gratis sirven para recetas sueltas, no para un menú.</item>
-    </plurals>
+    <string name="welcome_menu_enough">Suficiente para este menú.</string>
+    <string name="welcome_menu_smaller">Suficiente para recetas sueltas o un menú más pequeño, no para este.</string>
+    <string name="welcome_menu_single">Suficiente para recetas sueltas, no para un menú.</string>
     <plurals name="welcome_intro_sign_in">
         <item quantity="one">Inicia sesión para conseguir %1$d receta gratis y probarlo.</item>
         <item quantity="many">Inicia sesión para conseguir %1$d recetas gratis y probarlo.</item>

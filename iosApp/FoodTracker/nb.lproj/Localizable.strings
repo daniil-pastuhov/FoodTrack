@@ -596,7 +596,9 @@
 "recipe_generate_on_phone" = "Lag på denne {the_device}";
 "recipe_cost_free" = "Gratis";
 "recipe_share_prompt" = "Del ledeteksten";
-"recipe_prompt_only_hint" = "Gratis: send ledeteksten til en KI-app du allerede bruker.";
+"recipe_other_ways" = "Andre måter";
+"recipe_on_device_caption" = "Fortsatt svak på matlaging. Ingenting forlater {the_device}.";
+"recipe_share_caption" = "Til en KI‑app du allerede bruker";
 "recipe_none_selected_hint" = "Kryss av minst én vare å lage mat med.";
 "recipe_writing_on_phone_title" = "Skriver på denne {the_device}";
 "recipe_writing_on_phone_message" = "Ingenting sendes noe sted. Dette kan ta et minutt.";
@@ -665,7 +667,6 @@
 "recipe_generate_recipe" = "Lag oppskrift";
 "recipe_generate_menu" = "Lag meny";
 "recipe_buy" = "Kjøp oppskrifter";
-"recipe_menu_server_hint" = "En meny skrives på serveren vår og bruker %1$@ fra en pakke.";
 "recipe_menu_short_title" = "En meny bruker %1$@";
 "recipe_menu_short_none" = "Du har ingen oppskrifter igjen.";
 "recipe_writing_server_title" = "Skriver oppskriften din";
@@ -784,7 +785,6 @@
 "recipe_intro_device_title" = "Gratis, på denne {the_device}";
 "recipe_intro_device_message" = "Oppskriften lages på selve {the_device}, og ingenting sendes noe sted.";
 "recipe_on_device_weak" = "Modellen på denne {the_device} er fortsatt svak på matlaging, så sjekk at oppskriften gir mening.";
-"recipe_on_device_upsides" = "Det er gratis, og ingenting forlater {the_device}.";
 "recipe_intro_packs_title" = "Fra en oppskriftspakke";
 "recipe_intro_packs_price" = "Pakker fra %@.";
 "recipe_intro_free_stays" = "De gratis måtene er der fortsatt når du har en pakke.";
@@ -875,9 +875,9 @@
 "welcome_sign_in_one" = "Logg inn og få en gratis oppskrift";
 "welcome_get_one" = "Få en gratis oppskrift";
 "welcome_claiming" = "Henter de gratis oppskriftene dine…";
-"welcome_menu_enough_one" = "En gratis oppskrift er nok til denne menyen.";
-"welcome_menu_smaller_one" = "En gratis oppskrift holder til en enkelt oppskrift eller en mindre meny, ikke denne.";
-"welcome_menu_single_one" = "En gratis oppskrift holder til en enkelt oppskrift, ikke en meny.";
+"welcome_menu_enough" = "Nok til denne menyen.";
+"welcome_menu_smaller" = "Nok til enkeltoppskrifter eller en mindre meny, ikke denne.";
+"welcome_menu_single" = "Nok til enkeltoppskrifter, ikke en meny.";
 "welcome_intro_sign_in_one" = "Logg inn for å få en gratis oppskrift og prøve det.";
 "welcome_intro_account_one" = "Denne kontoen kan få en gratis oppskrift for å prøve det.";
 "welcome_buy_sign_in_one" = "Eller logg inn og få en gratis oppskrift";

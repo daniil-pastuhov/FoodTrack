@@ -596,7 +596,9 @@
 "recipe_generate_on_phone" = "Crear en este {device}";
 "recipe_cost_free" = "Gratis";
 "recipe_share_prompt" = "Compartir prompt";
-"recipe_prompt_only_hint" = "Gratis: envía el prompt a la app de IA que ya usas.";
+"recipe_other_ways" = "Otras formas";
+"recipe_on_device_caption" = "Aún flojea en la cocina. Nada sale de este {device}.";
+"recipe_share_caption" = "Para la app de IA que ya usas";
 "recipe_none_selected_hint" = "Marca al menos un producto para cocinar.";
 "recipe_writing_on_phone_title" = "Escribiendo en este {device}";
 "recipe_writing_on_phone_message" = "No se envía nada a ningún sitio. Puede tardar un minuto.";
@@ -665,7 +667,6 @@
 "recipe_generate_recipe" = "Crear receta";
 "recipe_generate_menu" = "Crear menú";
 "recipe_buy" = "Comprar recetas";
-"recipe_menu_server_hint" = "Un menú se escribe en nuestro servidor y descuenta %1$@ de un paquete.";
 "recipe_menu_short_title" = "Un menú cuesta %1$@";
 "recipe_menu_short_none" = "No te quedan recetas.";
 "recipe_writing_server_title" = "Escribiendo tu receta";
@@ -784,7 +785,6 @@
 "recipe_intro_device_title" = "Gratis, en este {device}";
 "recipe_intro_device_message" = "Este {device} escribe la receta por sí mismo y no se envía nada a ningún sitio.";
 "recipe_on_device_weak" = "El modelo de este {device} aún flojea en la cocina, así que comprueba que la receta tenga sentido.";
-"recipe_on_device_upsides" = "Es gratis y nada sale de este {device}.";
 "recipe_intro_packs_title" = "Con un paquete de recetas";
 "recipe_intro_packs_price" = "Paquetes desde %@.";
 "recipe_intro_free_stays" = "Las opciones gratuitas siguen ahí aunque tengas un paquete.";
@@ -875,9 +875,9 @@
 "welcome_sign_in_one" = "Inicia sesión y consigue una receta gratis";
 "welcome_get_one" = "Conseguir una receta gratis";
 "welcome_claiming" = "Consiguiendo tus recetas gratis…";
-"welcome_menu_enough_one" = "Una receta gratis es suficiente para este menú.";
-"welcome_menu_smaller_one" = "Una receta gratis sirve para una receta suelta o un menú más pequeño, no para este.";
-"welcome_menu_single_one" = "Una receta gratis sirve para una receta suelta, no para un menú.";
+"welcome_menu_enough" = "Suficiente para este menú.";
+"welcome_menu_smaller" = "Suficiente para recetas sueltas o un menú más pequeño, no para este.";
+"welcome_menu_single" = "Suficiente para recetas sueltas, no para un menú.";
 "welcome_intro_sign_in_one" = "Inicia sesión para conseguir una receta gratis y probarlo.";
 "welcome_intro_account_one" = "Esta cuenta puede conseguir una receta gratis para probarlo.";
 "welcome_buy_sign_in_one" = "O inicia sesión y consigue una receta gratis";

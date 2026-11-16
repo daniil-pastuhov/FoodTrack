@@ -47,9 +47,9 @@ class WelcomeWordingTest {
     @Config(sdk = [34], qualifiers = "en")
     fun englishMenuLinesAndSettingsNotes() {
         val r = context.resources
-        assertEquals("3 free recipes are enough for this menu.", welcomeMenuLine(r, 3, WelcomeMenuCover.ENOUGH))
-        assertEquals("3 free recipes cover single recipes or a smaller menu, not this one.", welcomeMenuLine(r, 3, WelcomeMenuCover.SMALLER_MENU))
-        assertEquals("A free recipe covers a single recipe, not a menu.", welcomeMenuLine(r, 1, WelcomeMenuCover.SINGLE_ONLY))
+        assertEquals("Enough for this menu.", welcomeMenuLine(r, WelcomeMenuCover.ENOUGH))
+        assertEquals("Enough for single recipes or a smaller menu, not this one.", welcomeMenuLine(r, WelcomeMenuCover.SMALLER_MENU))
+        assertEquals("Enough for single recipes, not a menu.", welcomeMenuLine(r, WelcomeMenuCover.SINGLE_ONLY))
         assertEquals(
             "Sign in and get 3 free recipes from our server, once per Google account.",
             welcomeSettingsNote(r, WelcomeHint(3, WelcomeKind.SIGN_IN), onThisDevice = false)

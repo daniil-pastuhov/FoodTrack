@@ -131,23 +131,14 @@
 .recipe .r-lang { width: 100%; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; }
 .recipe .r-lang svg.lucide { flex: none; color: var(--color-primary); }
 
-/* Primary action, pinned above the nav where Scan sits on Home */
-.recipe .r-go { position: absolute; left: var(--space-4); right: var(--space-4); bottom: 96px; z-index: 6; }
-.recipe .r-go .btn { min-height: 56px; height: auto; padding-block: var(--space-2); border-radius: var(--radius-lg); box-shadow: var(--elevation-2); white-space: normal; text-align: left; justify-content: flex-start; }
-.recipe .r-go .btn > span:first-of-type { flex: 1; min-width: 0; }
-.recipe .r-go .btn[disabled] { box-shadow: none; }
-.recipe.has-go .snackbar-host { bottom: 164px; }
 .recipe .r-actions:empty { display: none; }
 .recipe .r-add .text > span { display: block; }
 @container (min-width: 700px) {
-  .recipe .r-go { left: auto; right: var(--space-6); width: calc(50% - var(--space-8)); max-width: 440px; }
   .recipe.has-nav .scroll.has-fab { padding-bottom: 172px; }
 }
 .recipe .r-saved .text > span { display: block; }
-.recipe .r-go .btn[disabled] { background: var(--color-surface-container-high); color: var(--color-on-surface-variant); opacity: 1; }
 
 /* 2026-11-15: the lone Share prompt is the Scan button's component (.fab), placed where Scan sits on Home */
-.recipe .fab.r-share { z-index: 6; max-width: calc(100% - var(--space-8)); }
 
 /* Past-date warning (danger tier) and the Send all products line */
 .recipe .r-past { margin-bottom: var(--space-3); }
@@ -202,3 +193,40 @@
 .recipe .r-shop .tick[disabled] { cursor: not-allowed; }
 .recipe .r-shop + .actions { position: sticky; bottom: calc(var(--space-6) * -1); margin: 0 calc(var(--space-4) * -1) calc(var(--space-6) * -1); padding: var(--space-3) var(--space-4) var(--space-6); background: var(--color-surface-container-high); }
 .recipe .r-shop .tick[disabled]::before { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-on-surface) 38%, transparent); }
+
+/* 2026-11-16 (owner): the form's action group. The filled primary first (label up to two lines beside the cost pill,
+   the taste profile as a subtitle inside it), one caption under a free primary, then "Other ways": one grouped card,
+   a row per other route (offer, device, Share, Copy on Android 7–9, Buy). Nothing loose between buttons. */
+.recipe .r-actions .btn.block.r-primary { min-height: 56px; height: auto; gap: var(--space-3); padding: var(--space-2) var(--space-4) var(--space-2) var(--space-5); border-radius: 28px; /* half of 56: the pill's own shape, never an oval when taller */ white-space: normal; text-align: left; justify-content: flex-start; }
+.recipe .r-primary > svg.lucide { flex: none; }
+.recipe .r-primary .r-pl { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.recipe .r-primary .r-pl > span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.recipe .r-primary .r-psub { font: var(--type-caption); color: inherit; opacity: .8; }
+.recipe .r-primary .r-cost { flex: none; white-space: nowrap; }
+.recipe .r-actions .btn.block.r-primary[disabled] { background: var(--color-surface-container-high); color: var(--color-on-surface-variant); opacity: 1; }
+/* Stacked: when the label (and subtitle) won't fit in two lines beside icon and pill, or at 150% text and more */
+.recipe .r-actions .btn.block.r-primary.r-stacked { flex-wrap: wrap; justify-content: center; text-align: center; row-gap: var(--space-1); padding: var(--space-3) var(--space-5); }
+.recipe .r-primary.r-stacked > svg.lucide { display: none; }
+.recipe .r-actions .btn.block.r-primary.r-stacked > .r-pl { flex: 1 1 100%; align-items: center; }
+.recipe .r-cap { margin: calc(var(--space-1) - var(--space-2)) 0 0; font: var(--type-body-sm); color: var(--color-on-surface-variant); text-align: center; text-wrap: balance; }
+.recipe .r-ways { margin-top: var(--space-2); }
+.recipe .r-ways .sec { margin: 0 0 var(--space-2); }
+.recipe .r-way { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.recipe .r-ways li + li .r-way { border-top: 1px solid var(--color-outline-variant); }
+.recipe .r-way .text > span { display: block; }
+.recipe .r-way .text > :first-child { font-weight: 500; }
+.recipe .r-tile { width: 40px; height: 40px; }
+.recipe .r-tile svg.lucide { width: 20px; height: 20px; }
+.recipe .r-tile-offer { background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.recipe .r-freew { font-weight: 600; color: var(--color-primary); }
+.recipe .r-way > svg.lucide { flex: none; width: 20px; height: 20px; color: var(--color-on-surface-variant); }
+.recipe .r-way.is-off { opacity: .38; cursor: default; }
+.recipe .r-way.is-busy { cursor: progress; }
+.recipe .r-way.is-busy .text > :first-child { color: var(--color-on-surface-variant); }
+/* Tiles go at 150% text, and at 130% under 360 wide */
+.recipe.r-notile .r-tile { display: none; }
+/* Design-only frames: about 150% text, and a 320-wide phone */
+.r-large { --type-title-sm: 600 23px/30px var(--font-body); --type-body: 400 23px/32px var(--font-body); --type-body-sm: 400 20px/28px var(--font-body);
+  --type-label: 600 20px/28px var(--font-body); --type-caption: 500 17px/22px var(--font-body); }
+.v-frame .app.r-w320 { width: 320px; margin: 0 auto; box-shadow: 0 0 0 1px var(--color-outline); }
+@container (max-width: 699px) { .v-frame .app.r-off .scroll > :first-child { margin-top: var(--r-off); } } /* design-only: the form scrolled to its actions */

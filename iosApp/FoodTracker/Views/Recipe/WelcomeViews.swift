@@ -59,6 +59,56 @@ struct WelcomeOfferButton: View {
     }
 }
 
+/// The offer as a row of the Recipe form's "Other ways": the gift's tile, "Sign in and get 3 free
+/// recipes" (or "Get 3 free recipes"), an optional supporting line (a menu's "Enough for this
+/// menu.") and a chevron. While the claim runs, a spinner in the tile and "Getting your free
+/// recipes…", not tappable. Android: `WelcomeOfferRow`.
+struct WelcomeOfferRow: View {
+    @ObservedObject var model: RecipeViewModel
+    @ObservedObject var credits: RecipeCredits
+    let hint: WelcomeHint
+    var supporting: String? = nil
+    var showsTile = true
+
+    init(model: RecipeViewModel, hint: WelcomeHint, supporting: String? = nil, showsTile: Bool = true) {
+        self.model = model
+        credits = model.credits
+        self.hint = hint
+        self.supporting = supporting
+        self.showsTile = showsTile
+    }
+
+    var body: some View {
+        if credits.isClaimingWelcome {
+            RecipeWayRow(title: L10n.welcomeClaiming, titleColor: LarderColor.onSurfaceVariant, supporting: supporting, showsTile: showsTile) {
+                LarderSpinner(size: 20, lineWidth: 2, color: LarderColor.onPrimaryContainer)
+                    .frame(width: 40, height: 40)
+                    .background(LarderColor.primaryContainer, in: RoundedRectangle(cornerRadius: LarderRadius.md))
+            }
+            .accessibilityAddTraits(.updatesFrequently)
+        } else {
+            RecipeWayRow(
+                title: L10n.welcomeOffer(hint),
+                titleColor: LarderColor.primary,
+                supporting: supporting,
+                chevron: true,
+                showsTile: showsTile,
+                action: { model.takeWelcomeOffer() }
+            ) {
+                if model.openingWelcomeSheet {
+                    LarderSpinner(size: 20, lineWidth: 2, color: LarderColor.onPrimaryContainer)
+                        .frame(width: 40, height: 40)
+                        .background(LarderColor.primaryContainer, in: RoundedRectangle(cornerRadius: LarderRadius.md))
+                } else {
+                    RecipeWayTile(icon: .gift, background: LarderColor.primaryContainer, foreground: LarderColor.onPrimaryContainer)
+                }
+            }
+            // A second tap while the sheet opens is ignored by the model.
+            .disabled(credits.isSigningIn)
+        }
+    }
+}
+
 /// The offer's note in a card: a gift and one line, in a quiet bordered box (Recipe settings).
 struct WelcomeNote: View {
     let text: String

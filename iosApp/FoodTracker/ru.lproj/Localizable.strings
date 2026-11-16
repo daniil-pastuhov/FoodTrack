@@ -596,7 +596,9 @@
 "recipe_generate_on_phone" = "Составить на этом {device}";
 "recipe_cost_free" = "Бесплатно";
 "recipe_share_prompt" = "Поделиться запросом";
-"recipe_prompt_only_hint" = "Бесплатно: отправьте запрос в ИИ-приложение, которым вы уже пользуетесь.";
+"recipe_other_ways" = "Другие способы";
+"recipe_on_device_caption" = "Пока слабо готовит. Ничего не покидает {device}.";
+"recipe_share_caption" = "Для ИИ‑приложения, которым вы уже пользуетесь";
 "recipe_none_selected_hint" = "Отметьте хотя бы один продукт.";
 "recipe_writing_on_phone_title" = "Составляем на этом {device}";
 "recipe_writing_on_phone_message" = "Ничего никуда не отправляется. Это может занять минуту.";
@@ -665,7 +667,6 @@
 "recipe_generate_recipe" = "Составить рецепт";
 "recipe_generate_menu" = "Составить меню";
 "recipe_buy" = "Купить рецепты";
-"recipe_menu_server_hint" = "Меню составляется на нашем сервере и стоит %1$@ из пакета.";
 "recipe_menu_short_title" = "Для меню нужно %1$@";
 "recipe_menu_short_none" = "Рецептов не осталось.";
 "recipe_writing_server_title" = "Составляем рецепт";
@@ -784,7 +785,6 @@
 "recipe_intro_device_title" = "Бесплатно — на этом {device}";
 "recipe_intro_device_message" = "Рецепт составляет сам {device}, и ничего никуда не отправляется.";
 "recipe_on_device_weak" = "Модель на этом {device} пока слабо разбирается в кулинарии, так что проверьте, что рецепт имеет смысл.";
-"recipe_on_device_upsides" = "Это бесплатно, и ничего не покидает {device}.";
 "recipe_intro_packs_title" = "Из пакета рецептов";
 "recipe_intro_packs_price" = "Пакеты — от %@.";
 "recipe_intro_free_stays" = "Бесплатные способы остаются и тогда, когда у вас есть пакет.";
@@ -875,9 +875,9 @@
 "welcome_sign_in_one" = "Войдите и получите бесплатный рецепт";
 "welcome_get_one" = "Получить бесплатный рецепт";
 "welcome_claiming" = "Получаем бесплатные рецепты…";
-"welcome_menu_enough_one" = "Бесплатного рецепта хватит на это меню.";
-"welcome_menu_smaller_one" = "Бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.";
-"welcome_menu_single_one" = "Бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.";
+"welcome_menu_enough" = "Хватит на это меню.";
+"welcome_menu_smaller" = "Хватит на отдельные рецепты или меню поменьше, но не на это.";
+"welcome_menu_single" = "Хватит на отдельные рецепты, но не на меню.";
 "welcome_intro_sign_in_one" = "Войдите, чтобы получить бесплатный рецепт и попробовать.";
 "welcome_intro_account_one" = "Этот аккаунт может получить бесплатный рецепт, чтобы попробовать.";
 "welcome_buy_sign_in_one" = "Или войдите и получите бесплатный рецепт";
