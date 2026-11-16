@@ -21,7 +21,11 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
 cd functions && npm ci && npm run lint && npm run typecheck  # backend (Node.js 24)
 cd functions && npm test                                    # backend tests (Vitest) against the Auth + Firestore emulators, project demo-foodtracker; needs Java 21+
 ./gradlew :androidApp:installDebug -PrecipeEmulatorHost=10.0.2.2  # debug build against the local emulators (functions/README.md, "Running the functions for the apps")
+scripts/ui_check.sh                                         # UI screenshot check: every Android screen against its baseline (0 none / 1 differences / 2 failed)
+scripts/ui_check.sh --record                                # accept the current Android UI as the new baseline
 ```
+
+**UI screenshot check** (README "UI screenshot check"): Roborazzi on Robolectric renders every `@Preview` under `androidApp/.../ui/` (found by Roborazzi's generated `RoborazziPreviewParameterizedTests` through `FoodTrackerPreviewTester`, which adds a `_NIGHT` twin to previews without a dark variant, pins the clock and compares strictly) plus `ScreenScreenshotTest` (Home, shopping list, add/edit over in-memory fakes), against the PNGs in `androidApp/src/test/snapshots/images/`, recorded on macOS; CI never verifies against them (Robolectric's rendering can differ slightly on Linux): its plain `testDebugUnitTest` renders them, and on a pull request touching Android the `ui-screenshots` jobs in `ci.yml` render the PR's base and head on Linux, compare the two and keep one comment on the PR with what changed (`scripts/ui_diff.py`; images on the `screenshot-diffs` branch, removed when the PR closes; it informs and never fails on a difference). A UI change you mean ships with `--record`ed images; a new `@Preview` needs one too, and its sample data must use fixed dates, never `DateUtils.today()`. Not `scripts/screenshot_check.py`, the slower emulator/simulator check of the store screenshots.
 
 Every backend test needs the emulators, so there is no separate unit-test script. CI (`.github/workflows/ci.yml`, job `functions`) lints, typechecks, builds and runs the emulator tests on changes under `functions/`; nothing deploys the backend automatically (`functions/README.md`, "Deploying from CI").
 

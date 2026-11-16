@@ -65,6 +65,22 @@ Requires JDK 17 for Android and Xcode for iOS. See [CONTRIBUTING.md](CONTRIBUTIN
 cd functions && npm ci && npm test   # backend, against the Firebase emulators (Node.js 24, Java 21+)
 ```
 
+### UI screenshot check
+
+A quick answer to "did I change any Android screen I didn't mean to?", on the JVM with no emulator ([Roborazzi](https://github.com/takahirom/roborazzi) on Robolectric, about half a minute):
+
+```bash
+scripts/ui_check.sh            # compare every screen with its baseline: exit 0 none / 1 differences / 2 failed to run
+scripts/ui_check.sh --record   # accept the current UI as the new baseline (then review and commit the images)
+```
+
+- **What is checked**: every `@Preview` under `androidApp/.../ui/`, found automatically (private ones too), with its own size, locale, font scale and dark/light setting; a preview with no dark variant of its own is also taken in dark (`_NIGHT`). A new `@Preview` is covered with no other work, but fails as "without a baseline" until it is recorded. Home, the shopping list and the add/edit form take a `PantryStateHolder` and have no preview, so `ScreenScreenshotTest` builds them over in-memory data.
+- **Baselines**: `androidApp/src/test/snapshots/images/`, one PNG per preview and variant, named after its file, function and variant, so a renamed or removed preview shows in `git status` after a record.
+- **When something changed**: the script lists the screenshots; `androidApp/build/outputs/roborazzi/<name>_compare.png` shows reference, diff and new side by side, and `androidApp/build/reports/roborazzi/debug/index.html` has them all. If the change was meant, record and commit the new images with the code.
+- **Strict and fixed**: one pixel off by more than Roborazzi's anti-aliasing tolerance fails, so a 1dp shift or a small colour change does. Device (Pixel 5, en-GB), SDK 34, time zone (UTC) and the animation clock (10 s) are fixed, dates come from the sample data, never from today, and pictures never load from the network.
+- **On a pull request**: the baselines are recorded on macOS, and Robolectric's rendering can differ slightly on Linux, so CI never compares with them. Plain `./gradlew :androidApp:testDebugUnitTest` (the `android` job) renders every preview, so a preview that crashes fails there. On a pull request touching Android, the `ui-screenshots` job renders the pull request's base (with the base's own `scripts/ui_check.sh --record`, cached per base commit and runner image) and its head on Linux and compares the two (`scripts/ui_diff.py`). With differences, one comment on the pull request, updated in place on every push, gives the counts (changed, new, removed) and up to 20 of them inline as reference | diff | new, the rest by name; the images are on the `screenshot-diffs` branch under `pr-<n>/`, removed when the pull request closes, and every image is in the run's artifact. A later push without differences, or after which the pull request no longer touches Android, rewrites the comment to say so; a pull request that never had any gets no comment. A difference never fails the job, only a build error or a crash does; a base older than the check has nothing to compare with and passes. A fork's pull request gets the artifact and the job summary only (its token can't comment). A same-repo `release/v*` pull request runs none of it, like the rest of CI.
+- This is not `scripts/screenshot_check.py` (below), which re-takes the store screenshots on an emulator and a simulator and is much slower.
+
 ### Build Android App
 ```bash
 ./gradlew :androidApp:assembleDebug

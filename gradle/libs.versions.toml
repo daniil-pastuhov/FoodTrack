@@ -37,6 +37,10 @@ play-billing = "9.1.0"
 play-review = "2.0.2"
 credentials = "1.6.0"
 googleid = "1.2.1"
+roborazzi = "1.79.0"
+# The version Roborazzi is built against (its gradle/libs.versions.toml): 0.10.0 changed
+# ComposablePreview.invoke and fails every test with NoSuchMethodError.
+composable-preview-scanner = "0.9.1"
 
 [libraries]
 # KotlinX
@@ -126,6 +130,15 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 junit = { module = "junit:junit", version.ref = "junit" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidx-test-core" }
+# UI screenshot check (scripts/ui_check.sh): every @Preview rendered on Robolectric, compared with
+# the baselines in androidApp/src/test/snapshots/.
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
+roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }
+roborazzi-compose-preview-scanner-support = { module = "io.github.takahirom.roborazzi:roborazzi-compose-preview-scanner-support", version.ref = "roborazzi" }
+composable-preview-scanner = { module = "io.github.sergio-sastre.ComposablePreviewScanner:android", version.ref = "composable-preview-scanner" }
+# The scanner's own (runtime) dependency, at its version; FoodTrackerPreviewTester names one of its types.
+classgraph = { module = "io.github.classgraph:classgraph", version = "4.8.184" }
 
 # Performance measurement (see perf/README.md and scripts/perf.sh)
 androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "benchmark" }
@@ -144,3 +157,4 @@ compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 google-services = { id = "com.google.gms.google-services", version.ref = "google-services" }
 firebase-crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "firebase-crashlytics-plugin" }
+roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }

@@ -125,10 +125,11 @@ fun AddEditItemScreen(
     /** Called instead of a save when the user chose to add a unit to an item they already have,
      *  so the host can report it and leave this screen. */
     onDuplicateMerged: (PantryItem) -> Unit = {},
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** The day the form counts from. Only the screenshot check passes one, to pin the date. */
+    today: LocalDate = remember { DateUtils.today() }
 ) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
-    val today = remember { DateUtils.today() }
     val focusManager = LocalFocusManager.current
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
