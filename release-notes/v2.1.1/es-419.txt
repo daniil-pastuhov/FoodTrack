@@ -1,0 +1,5 @@
+• Inicia sesión y obtén algunas recetas gratis para probar.
+• Nuevo perfil de gustos en la configuración de recetas: responde un cuestionario breve y las recetas de los paquetes se adaptarán a tus gustos.
+• Los menús ahora te avisan si marcaste muy pocos productos y habría que comprar casi todo.
+• Las recetas escritas en tu teléfono ahora están claramente indicadas.
+• Diseño más prolijo: nada queda bajo la barra de estado y las pestañas del escáner caben en una línea.
