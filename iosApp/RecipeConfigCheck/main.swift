@@ -953,11 +953,10 @@ oAll.notificationsAnswered(true, OnboardingAsks(notifications: false, camera: tr
 expect(oAll.step, .camera, "then camera")
 oAll.cameraAnswered(false)
 expect(oAll.step, .staples, "then Staples, before the last screen")
-expect(oAll.back(), false, "Staples has no back")
 oAll.staplesDone()
 expect(oAll.step, .declined, "Staples goes on to Declined when the camera was refused")
-expect(oAll.back(), true, "back from Declined")
-expect(oAll.step, .staples, "is Staples")
+oAll.back(OnboardingAsks(notifications: false, camera: false))
+expect(oAll.step, .staples, "back from Declined is Staples")
 oAll.staplesDone()
 expect(oAll.step, .declined, "and on again")
 var oNone = oFlow(false, false)
@@ -977,6 +976,42 @@ var oDeclinedReminders = oFlow(true, false)
 oDeclinedReminders.notificationsAnswered(false, OnboardingAsks(notifications: false, camera: false))
 oDeclinedReminders.staplesDone()
 expect(oDeclinedReminders.step, .declined, "reminders refused: Declined after Staples")
+// Back, as Android's OnboardingFlowTest: retraces the screens shown, skipping those with nothing left to ask.
+let oAskBoth = OnboardingAsks(notifications: true, camera: true)
+let oAskCamera = OnboardingAsks(notifications: false, camera: true)
+let oAskNone = OnboardingAsks(notifications: false, camera: false)
+func oBack(from step: OnboardingStep, _ asks: OnboardingAsks) -> OnboardingStep {
+    var f = OnboardingFlow()
+    f.start(oAskBoth)
+    if step != .notifications { f.notificationsAnswered(nil, oAskBoth) }
+    if step == .staples || step == .ready || step == .declined { f.cameraAnswered(nil) }
+    if step == .ready || step == .declined { f.staplesDone() }
+    if step == .welcome { f.back(oAskBoth) }
+    f.back(asks)
+    return f.step
+}
+expect(oBack(from: .welcome, oAskBoth), .welcome, "Welcome has nothing before it")
+expect(oBack(from: .notifications, oAskBoth), .welcome, "notifications back to Welcome")
+expect(oBack(from: .camera, oAskBoth), .notifications, "camera back to notifications")
+expect(oBack(from: .camera, oAskCamera), .welcome, "camera back skips answered notifications")
+expect(oBack(from: .staples, oAskBoth), .camera, "Staples back to camera")
+expect(oBack(from: .staples, OnboardingAsks(notifications: true, camera: false)), .notifications, "Staples back skips an answered camera")
+expect(oBack(from: .staples, oAskNone), .welcome, "Staples back to Welcome when nothing is left to ask")
+expect(oBack(from: .ready, oAskNone), .staples, "Ready back to Staples")
+var oCanBack = OnboardingFlow()
+expect(oCanBack.canGoBack, false, "no Back on Welcome")
+oCanBack.start(oAskNone)
+expect(oCanBack.canGoBack, true, "Back from Staples")
+// Going back and answering again replaces the answer, as on Android.
+var oChanged = oFlow(false, true)
+oChanged.cameraAnswered(false)
+oChanged.staplesDone()
+expect(oChanged.step, .declined, "camera refused: Declined")
+oChanged.back(oAskCamera); oChanged.back(oAskCamera)
+expect(oChanged.step, .camera, "back twice is the camera again")
+oChanged.cameraAnswered(true)
+oChanged.staplesDone()
+expect(oChanged.step, .ready, "a new answer replaces the refusal")
 let oHad = [Staple(id: "h1", name: "Salt", presetId: "salt", addedAtEpochMillis: 1), Staple(id: "h2", name: "Eggs", presetId: "eggs", addedAtEpochMillis: 2), Staple(id: "h3", name: "Soy sauce", addedAtEpochMillis: 3)]
 expect(Staples.presetTicks(oHad), ["salt", "eggs"], "first ticks: the presets already there")
 expect(Staples.presetTicks([]), [], "none at first run")

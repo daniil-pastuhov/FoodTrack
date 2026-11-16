@@ -1,5 +1,5 @@
 /// The first-run screens. Mirrors Android's `OnboardingFlow.kt`.
-enum OnboardingStep {
+enum OnboardingStep: String {
     case welcome, notifications, camera, staples, ready, declined
 }
 
@@ -54,14 +54,24 @@ struct OnboardingFlow {
         step = ending
     }
 
-    /// Back from the last screen goes to Staples. Staples itself goes back nowhere, as the last
-    /// screen didn't before it. Returns whether the step changed. Android: `OnboardingFlow.back`.
-    @discardableResult
-    mutating func back() -> Bool {
-        guard step == .ready || step == .declined else { return false }
-        step = .staples
-        return true
+    /// The screen before this one, skipping those with nothing left to ask (a permission already
+    /// answered on the system prompt can't be asked again). Welcome is the first and stays.
+    /// Answers already given are kept: a later answer replaces them. Android: `OnboardingFlow.back`.
+    mutating func back(_ asks: OnboardingAsks) {
+        switch step {
+        case .welcome, .notifications:
+            step = .welcome
+        case .camera:
+            step = asks.notifications ? .notifications : .welcome
+        case .staples:
+            step = asks.camera ? .camera : asks.notifications ? .notifications : .welcome
+        case .ready, .declined:
+            step = .staples
+        }
     }
+
+    /// Whether the screen offers Back: every one but the first.
+    var canGoBack: Bool { step != .welcome }
 
     /// Scanning leads the way unless the camera was refused, when the scanner would have nothing
     /// to show. Reminders being off doesn't get in the way of a scan.

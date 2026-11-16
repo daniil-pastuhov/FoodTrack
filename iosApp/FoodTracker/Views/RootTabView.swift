@@ -170,6 +170,7 @@ struct RootTabView: View {
         .overlay(alignment: .top) {
             if showOnboarding {
                 OnboardingView(
+                    startingAt: onboardingStart,
                     staples: viewModel.staples,
                     applyStaples: { [viewModel] changes in
                         for staple in changes.remove { viewModel.removeStaple(id: staple.id) }
@@ -435,6 +436,17 @@ struct RootTabView: View {
     private func readSafeArea(_ insets: EdgeInsets) {
         hasSideSafeAreaInset = insets.leading > 0 || insets.trailing > 0
         bottomSafeArea = insets.bottom
+    }
+
+    /// Where onboarding opens: the start, or in Debug `-demoOnboardingStep <step>` (with
+    /// `-demoRoute onboarding`; `declined` as with both refused).
+    private var onboardingStart: OnboardingFlow {
+        #if DEBUG
+        if let raw = UserDefaults.standard.string(forKey: "demoOnboardingStep"), let step = OnboardingStep(rawValue: raw) {
+            return .at(step, remindersDeclined: step == .declined, cameraDeclined: step == .declined)
+        }
+        #endif
+        return OnboardingFlow()
     }
 
     private func finishOnboarding(_ exit: OnboardingExit) {
