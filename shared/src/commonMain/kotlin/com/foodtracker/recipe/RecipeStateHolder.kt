@@ -996,6 +996,29 @@ class RecipeStateHolder(
         coroutineScope.launch { savedRecipeRepository.save(saved) }
     }
 
+    /** Saved recipes' multi-select: deletes the saved recipes and menus among [ids] in one
+     *  repository call, like [deleteSaved] taking them out of the unread ones, and hands what it
+     *  removed to [onDeleted] for one Undo through [restoreSaved]. Ids not saved are ignored;
+     *  nothing selected, nothing happens. */
+    fun deleteSaved(ids: Set<String>, onDeleted: (List<SavedRecipe>) -> Unit = {}) {
+        val removed = SavedSelection.toDelete(_uiState.value.saved, ids)
+        if (removed.isEmpty()) return
+        val removedIds = removed.mapTo(HashSet()) { it.id }
+        if (_uiState.value.options.unreadSaved.any { it in removedIds }) {
+            updateOptions { it.copy(unreadSaved = it.unreadSaved - removedIds) }
+        }
+        coroutineScope.launch {
+            savedRecipeRepository.delete(removedIds)
+            onDeleted(removed)
+        }
+    }
+
+    /** Undo of the multi-select Delete: everything it removed back at once. */
+    fun restoreSaved(saved: List<SavedRecipe>) {
+        if (saved.isEmpty()) return
+        coroutineScope.launch { savedRecipeRepository.saveAll(saved) }
+    }
+
     /**
      * Settings' Clear all data: the saved recipes, the form and the taste profile go back to how a new install has
      * them. What was bought is not touched: the count lives on our server, and a purchase still

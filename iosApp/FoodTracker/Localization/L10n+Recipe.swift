@@ -186,6 +186,10 @@ extension L10n {
     static var recipeSavedEmptyTitle: String { text("recipe_saved_empty_title") }
     static var recipeSavedEmptyMessage: String { text("recipe_saved_empty_message") }
     static var recipeSavedDeleted: String { text("recipe_saved_deleted") }
+    /// Multi-select's Delete, with one Undo: "3 recipes deleted".
+    static func recipeSavedDeletedCount(_ count: Int) -> String { plural("recipe_saved_deleted_count", count) }
+    static var selectAllButton: String { text("select_all_button") }
+    static var deselectAllButton: String { text("deselect_all_button") }
     static var recipeSavedToday: String { text("recipe_saved_today") }
     static var recipeSavedYesterday: String { text("recipe_saved_yesterday") }
     /// "Written on this iPhone": the label of a recipe from the phone's model (its chip, and its

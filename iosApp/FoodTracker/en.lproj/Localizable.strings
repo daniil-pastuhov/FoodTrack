@@ -619,6 +619,8 @@
 "recipe_saved_empty_title" = "No recipes yet";
 "recipe_saved_empty_message" = "Recipes and menus written in the app are kept here.";
 "recipe_saved_deleted" = "Recipe deleted";
+"select_all_button" = "Select all";
+"deselect_all_button" = "Deselect all";
 "recipe_saved_today" = "Today";
 "recipe_saved_yesterday" = "Yesterday";
 "recipe_saved_from_phone" = "Written on this {device}";

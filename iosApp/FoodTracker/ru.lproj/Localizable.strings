@@ -619,6 +619,8 @@
 "recipe_saved_empty_title" = "Пока нет рецептов";
 "recipe_saved_empty_message" = "Здесь хранятся рецепты и меню, составленные в приложении.";
 "recipe_saved_deleted" = "Рецепт удалён";
+"select_all_button" = "Выбрать все";
+"deselect_all_button" = "Снять выбор";
 "recipe_saved_today" = "Сегодня";
 "recipe_saved_yesterday" = "Вчера";
 "recipe_saved_from_phone" = "Составлено на этом {device}";

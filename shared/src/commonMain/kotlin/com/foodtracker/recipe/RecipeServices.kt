@@ -59,6 +59,12 @@ interface SavedRecipeRepository {
     fun getAllFlow(): Flow<List<SavedRecipe>>
     suspend fun save(recipe: SavedRecipe)
     suspend fun delete(id: String)
+
+    /** Saved recipes' multi-select Delete: all of [ids] in one go (Room: one transaction). */
+    suspend fun delete(ids: Collection<String>) = ids.forEach { delete(it) }
+
+    /** Undo of that Delete: [recipes] back as they were, ids intact (Room: one transaction). */
+    suspend fun saveAll(recipes: List<SavedRecipe>) = recipes.forEach { save(it) }
     suspend fun clearAll()
 }
 

@@ -21,5 +21,9 @@ class RoomSavedRecipeRepository(private val dao: SavedRecipeDao) : SavedRecipeRe
 
     override suspend fun delete(id: String) = dao.deleteById(id)
 
+    override suspend fun delete(ids: Collection<String>) = dao.deleteByIds(ids.toList())
+
+    override suspend fun saveAll(recipes: List<SavedRecipe>) = dao.upsertAll(recipes.map { it.toEntity() })
+
     override suspend fun clearAll() = dao.clear()
 }

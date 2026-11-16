@@ -869,6 +869,15 @@
     <string name="recipe_saved_empty_title">Aucune recette pour l\'instant</string>
     <string name="recipe_saved_empty_body">Les recettes et menus rédigés dans l\'appli sont conservés ici.</string>
     <string name="recipe_deleted">Recette supprimée</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Sélectionner</string>
+    <string name="select_all_button">Tout sélectionner</string>
+    <string name="deselect_all_button">Tout désélectionner</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">%d recette supprimée</item>
+        <item quantity="many">%d recettes supprimées</item>
+        <item quantity="other">%d recettes supprimées</item>
+    </plurals>
     <string name="recipe_cooking">Cuisine</string>
     <string name="recipe_cooking_desc">Utilisés pour chaque recette, prompt et menu jusqu\'à ce que vous les changiez.</string>
     <string name="recipe_detail">Niveau de détail</string>

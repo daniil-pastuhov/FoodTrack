@@ -296,6 +296,8 @@ fun LarderTopBar(
     onBack: (() -> Unit)?,
     modifier: Modifier = Modifier,
     backDescription: String = stringResource(R.string.back_content_description),
+    /** X for a mode the button leaves, such as selection, rather than a screen it goes back from. */
+    navigationIcon: LarderIcons = LarderIcons.ArrowLeft,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     TopAppBar(
@@ -304,7 +306,7 @@ fun LarderTopBar(
         },
         modifier = modifier,
         navigationIcon = {
-            onBack?.let { LarderIconButton(LarderIcons.ArrowLeft, backDescription, it) }
+            onBack?.let { LarderIconButton(navigationIcon, backDescription, it) }
         },
         actions = actions,
         expandedHeight = 64.dp,

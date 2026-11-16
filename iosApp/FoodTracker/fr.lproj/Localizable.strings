@@ -619,6 +619,8 @@
 "recipe_saved_empty_title" = "Aucune recette pour l'instant";
 "recipe_saved_empty_message" = "Les recettes et menus rédigés dans l'appli sont conservés ici.";
 "recipe_saved_deleted" = "Recette supprimée";
+"select_all_button" = "Tout sélectionner";
+"deselect_all_button" = "Tout désélectionner";
 "recipe_saved_today" = "Aujourd'hui";
 "recipe_saved_yesterday" = "Hier";
 "recipe_saved_from_phone" = "Rédigée sur cet {device}";

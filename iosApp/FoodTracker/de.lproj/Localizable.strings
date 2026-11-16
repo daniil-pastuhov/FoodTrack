@@ -619,6 +619,8 @@
 "recipe_saved_empty_title" = "Noch keine Rezepte";
 "recipe_saved_empty_message" = "Rezepte und Menüs, die in der App erstellt werden, findest du hier.";
 "recipe_saved_deleted" = "Rezept gelöscht";
+"select_all_button" = "Alle auswählen";
+"deselect_all_button" = "Auswahl aufheben";
 "recipe_saved_today" = "Heute";
 "recipe_saved_yesterday" = "Gestern";
 "recipe_saved_from_phone" = "Auf diesem {device} erstellt";

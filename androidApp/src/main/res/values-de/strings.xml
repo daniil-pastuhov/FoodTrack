@@ -829,6 +829,14 @@
     <string name="recipe_saved_empty_title">Noch keine Rezepte</string>
     <string name="recipe_saved_empty_body">Rezepte und Menüs, die in der App erstellt werden, findest du hier.</string>
     <string name="recipe_deleted">Rezept gelöscht</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Auswählen</string>
+    <string name="select_all_button">Alle auswählen</string>
+    <string name="deselect_all_button">Auswahl aufheben</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">%d Rezept gelöscht</item>
+        <item quantity="other">%d Rezepte gelöscht</item>
+    </plurals>
     <string name="recipe_cooking">Kochen</string>
     <string name="recipe_cooking_desc">Gilt für jedes Rezept, jeden Prompt und jedes Menü, bis du es änderst.</string>
     <string name="recipe_detail">Ausführlichkeit</string>

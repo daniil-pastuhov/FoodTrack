@@ -1726,5 +1726,25 @@
         </dict>
     </dict>
     <!-- /Free recipes -->
+    <key>recipe_saved_deleted_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Удалён %d рецепт</string>
+            <key>few</key>
+            <string>Удалено %d рецепта</string>
+            <key>many</key>
+            <string>Удалено %d рецептов</string>
+            <key>other</key>
+            <string>Удалено %d рецепта</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

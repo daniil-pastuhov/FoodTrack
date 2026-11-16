@@ -903,6 +903,16 @@
     <string name="recipe_saved_empty_title">Пока нет рецептов</string>
     <string name="recipe_saved_empty_body">Здесь хранятся рецепты и меню, составленные в приложении.</string>
     <string name="recipe_deleted">Рецепт удалён</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Выбрать</string>
+    <string name="select_all_button">Выбрать все</string>
+    <string name="deselect_all_button">Снять выбор</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">Удалён %d рецепт</item>
+        <item quantity="few">Удалено %d рецепта</item>
+        <item quantity="many">Удалено %d рецептов</item>
+        <item quantity="other">Удалено %d рецепта</item>
+    </plurals>
     <string name="recipe_cooking">Готовка</string>
     <string name="recipe_cooking_desc">Применяются ко всем рецептам, запросам и меню, пока вы их не измените.</string>
     <string name="recipe_detail">Детализация</string>
