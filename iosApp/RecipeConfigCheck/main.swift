@@ -355,6 +355,21 @@ expect(PackSavings.percents(offers("GBP", [(10, "0"), (50, "10.99"), (100, "18.9
 expect(PackSavings.percents(offers("GBP", [(10, "2.99"), (50, "0"), (100, "18.99")])), [nil, nil, 36], "a free larger pack gets none")
 expect(PackSavings.badgeText(26), "\u{2212}26%", "minus sign, no space")
 
+// The menu form's "few items" hint (Android's MenuItemsHintTest): fewer usable items than half
+// the dishes, rounded up, with something ticked; items "Send all products" would send count.
+expect(MenuSet(days: 1, courses: 1).itemsHint(ticked: 1, optional: 0), nil, "1 x 1 never")
+expect(MenuSet(days: 1, courses: 3).itemsHint(ticked: 1, optional: 0), MenuItemsHint(items: 1, dishes: 3), "1 x 3 with 1")
+expect(MenuSet(days: 1, courses: 3).itemsHint(ticked: 2, optional: 0), nil, "1 x 3 with 2")
+expect(MenuSet(days: 3, courses: 2).itemsHint(ticked: 2, optional: 0), MenuItemsHint(items: 2, dishes: 6), "3 x 2 with 2")
+expect(MenuSet(days: 3, courses: 2).itemsHint(ticked: 3, optional: 0), nil, "3 x 2 with 3")
+expect(MenuSet(days: 4, courses: 3).itemsHint(ticked: 5, optional: 0), MenuItemsHint(items: 5, dishes: 12), "4 x 3 with 5")
+expect(MenuSet(days: 4, courses: 3).itemsHint(ticked: 6, optional: 0), nil, "4 x 3 with 6")
+expect(MenuSet(days: 4, courses: 3).itemsHint(ticked: 2, optional: 10), nil, "4 x 3 with 2 ticked and 10 sent with them")
+expect(MenuSet(days: 4, courses: 3).itemsHint(ticked: 2, optional: 3), MenuItemsHint(items: 5, dishes: 12), "4 x 3 with 2 ticked and 3 sent")
+expect(MenuSet(days: 4, courses: 3).itemsHint(ticked: 0, optional: 10), nil, "nothing ticked has its own hint")
+// The menu set actually asked for: 4 x 3 chosen from a server without menu sets is 3 x 3.
+expect(MenuSet.effective(days: 4, courses: 3, takesMenuDays: false, costs: withSets).itemsHint(ticked: 4, optional: 0), MenuItemsHint(items: 4, dishes: 9), "the fallback pair's dishes")
+
 // Taste profile: the server's quiz definition, decoded leniently, and the rules on it (Android:
 // TasteProfileTest, the same cases).
 func quiz(_ json: String) -> TasteQuiz? { TasteQuiz.decoded(from: Data(json.utf8)) }

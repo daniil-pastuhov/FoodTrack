@@ -81,7 +81,7 @@ internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onD
                 OnboardingRow(
                     LarderIcons.Smartphone,
                     stringResource(R.string.recipe_intro_device_title),
-                    stringResource(R.string.recipe_intro_device_body)
+                    stringResource(R.string.recipe_intro_device_body) + " " + stringResource(R.string.recipe_on_device_weak)
                 )
             }
             if (content.packs) {

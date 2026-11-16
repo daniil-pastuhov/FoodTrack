@@ -1162,6 +1162,26 @@
             <string>После возврата денег в магазине этот {device} был должен %d рецепта. Они списаны с вашего аккаунта.</string>
         </dict>
     </dict>
+    <key>recipe_menu_few_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Только %d продукт для {dishes} блюд. Почти всё для этого меню придётся докупить.</string>
+            <key>few</key>
+            <string>Только %d продукта для {dishes} блюд. Почти всё для этого меню придётся докупить.</string>
+            <key>many</key>
+            <string>Только %d продуктов для {dishes} блюд. Почти всё для этого меню придётся докупить.</string>
+            <key>other</key>
+            <string>Только %d продукта для {dishes} блюд. Почти всё для этого меню придётся докупить.</string>
+        </dict>
+    </dict>
     <key>recipe_optional_count</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

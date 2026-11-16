@@ -27,6 +27,7 @@ import com.foodtracker.android.ui.theme.LarderSpace
 import com.foodtracker.android.util.recipeDietLabel
 import com.foodtracker.android.util.recipeMealLabel
 import com.foodtracker.recipe.MAX_RECIPE_SERVINGS
+import com.foodtracker.recipe.MenuItemsHint
 import com.foodtracker.recipe.MIN_RECIPE_SERVINGS
 import com.foodtracker.recipe.RECIPE_DIET_CHOICES
 import com.foodtracker.recipe.RECIPE_MINUTES_CEILING
@@ -97,6 +98,16 @@ fun recipeLanguageLabel(resources: Resources, language: String?, appLanguage: St
     } else {
         recipeLanguageEndonym(language)
     }
+
+/** The one line under "Generate on this device": what the phone's own model is like, weak
+ *  points first, then why it is still worth it. iOS: `L10n.recipeOnDeviceNote`. */
+fun recipeOnDeviceNote(resources: Resources): String =
+    resources.getString(R.string.recipe_on_device_weak) + " " + resources.getString(R.string.recipe_on_device_upsides)
+
+/** The menu form's "few items" hint ([com.foodtracker.recipe.menuItemsHint]): "Only 2 items for
+ *  12 dishes. Most of this menu will need shopping." iOS: `L10n.recipeMenuFewItems`. */
+fun recipeMenuFewItems(resources: Resources, hint: MenuItemsHint): String =
+    resources.getQuantityString(R.plurals.recipe_menu_few_items, hint.items, hint.items, hint.dishes)
 
 /** "English · Standard detail · Any meal · No diet", under More options. */
 fun recipeOptionsSummary(resources: Resources, config: RecipeConfig, appLanguage: String): String = listOf(

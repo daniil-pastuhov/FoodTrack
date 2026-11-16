@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Tip";
 "recipe_in_your_pantry" = "I dit forråd";
 "recipe_share_recipe" = "Del opskrift";
-"recipe_source_device" = "Skrevet på denne {device} · Intet blev sendt nogen steder hen";
-"recipe_source_server" = "Skrevet af vores server · Gemt på denne {device}";
+"recipe_source_device" = "Intet blev sendt nogen steder hen";
 "recipe_saved_empty_title" = "Ingen opskrifter endnu";
 "recipe_saved_empty_message" = "Opskrifter og menuer, der er skrevet i appen, gemmes her.";
 "recipe_saved_deleted" = "Opskriften er slettet";
 "recipe_saved_today" = "I dag";
 "recipe_saved_yesterday" = "I går";
 "recipe_saved_from_phone" = "Skrevet på denne {device}";
-"recipe_saved_from_pack" = "Fra din pakke";
 "recipe_settings_cooking" = "Madlavning";
 "recipe_settings_cooking_desc" = "Bruges til alle opskrifter, prompter og menuer, indtil du ændrer dem.";
 "recipe_label_detail" = "Detaljegrad";
@@ -785,6 +783,8 @@
 "recipe_intro_prompt_message" = "Del eller kopiér en færdig prompt til den AI-app, du allerede bruger.";
 "recipe_intro_device_title" = "Gratis, på denne {device}";
 "recipe_intro_device_message" = "Din {device} skriver selv opskriften, og intet bliver sendt nogen steder hen.";
+"recipe_on_device_weak" = "Modellen på din {device} er stadig svag til madlavning, så tjek, at opskriften giver mening.";
+"recipe_on_device_upsides" = "Det er gratis, og intet forlader din {device}.";
 "recipe_intro_packs_title" = "Fra en opskriftspakke";
 "recipe_intro_packs_price" = "Pakker fra %@.";
 "recipe_intro_free_stays" = "De gratis muligheder er der stadig, når du har en pakke.";

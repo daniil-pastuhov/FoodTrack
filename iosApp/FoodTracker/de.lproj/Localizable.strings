@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Tipp";
 "recipe_in_your_pantry" = "Im Vorrat";
 "recipe_share_recipe" = "Rezept teilen";
-"recipe_source_device" = "Auf diesem {device} erstellt · Es wurde nichts gesendet";
-"recipe_source_server" = "Von unserem Server erstellt · Auf diesem {device} gespeichert";
+"recipe_source_device" = "Es wurde nichts gesendet";
 "recipe_saved_empty_title" = "Noch keine Rezepte";
 "recipe_saved_empty_message" = "Rezepte und Menüs, die in der App erstellt werden, findest du hier.";
 "recipe_saved_deleted" = "Rezept gelöscht";
 "recipe_saved_today" = "Heute";
 "recipe_saved_yesterday" = "Gestern";
 "recipe_saved_from_phone" = "Auf diesem {device} erstellt";
-"recipe_saved_from_pack" = "Aus deinem Paket";
 "recipe_settings_cooking" = "Kochen";
 "recipe_settings_cooking_desc" = "Gilt für jedes Rezept, jeden Prompt und jedes Menü, bis du es änderst.";
 "recipe_label_detail" = "Ausführlichkeit";
@@ -785,6 +783,8 @@
 "recipe_intro_prompt_message" = "Teile oder kopiere einen fertigen Prompt in die KI-App, die du schon nutzt.";
 "recipe_intro_device_title" = "Kostenlos, auf diesem {device}";
 "recipe_intro_device_message" = "Dieses {device} erstellt das Rezept selbst, und es wird nichts gesendet.";
+"recipe_on_device_weak" = "Das Modell auf diesem {device} kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.";
+"recipe_on_device_upsides" = "Es ist kostenlos, und nichts verlässt dein {device}.";
 "recipe_intro_packs_title" = "Aus einem Rezeptpaket";
 "recipe_intro_packs_price" = "Pakete ab %@.";
 "recipe_intro_free_stays" = "Die kostenlosen Wege bleiben, auch wenn du ein Paket hast.";

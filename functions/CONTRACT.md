@@ -193,7 +193,9 @@ Beside it, every response that carries `balance` also carries **`"tasteQuizVersi
 `version` now (it reflects the catalogue and `config/runtime.tasteQuiz.hidden`, and is the same
 in every language). The apps compare it with the version of the quiz they cached to show that
 there are new questions (the dot on Recipe settings) without fetching the quiz; when it differs
-they fetch the quiz the next time it is opened, never in the background for this. It is opaque:
+they fetch the quiz quietly in the background, at most once per version and language and only for
+an account that already exists (never for someone who would see the promo), so a new question can
+be noted before the quiz is opened; an open quiz is never swapped. It is opaque:
 compare for equality only. A server from before it sends nothing; treat that as "unknown", not as
 a change.
 

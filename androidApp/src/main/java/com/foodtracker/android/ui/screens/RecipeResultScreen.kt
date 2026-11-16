@@ -336,18 +336,6 @@ internal fun MenuDocument(
                     }
                 }
             }
-            Row(
-                modifier = Modifier.padding(top = LarderSpace.s6),
-                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                LarderIcon(LarderIcons.Cloud, contentDescription = null, size = 16.dp, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    text = stringResource(R.string.recipe_source_server),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
     }
 }
@@ -394,6 +382,10 @@ internal fun RecipeDocument(
                     pluralStringResource(R.plurals.recipe_servings_count, recipe.servings, recipe.servings)
                 )
                 RecipeFact(LarderIcons.Gauge, recipeDifficultyLabel(resources, recipe.difficulty))
+                // Never mistaken for one from our server: the phone's model is the weaker writer.
+                if (recipe.source == RecipeSource.DEVICE && !partOfMenu) {
+                    RecipeFact(LarderIcons.Smartphone, stringResource(R.string.recipe_saved_from_phone))
+                }
             }
             // Above the ingredients, never in a footer: seen as the recipe opens.
             PastDateCallout(recipe.pastDate, Modifier.padding(top = LarderSpace.s4))
@@ -444,27 +436,31 @@ internal fun RecipeDocument(
                 )
             }
 
-            Row(
-                modifier = Modifier.padding(top = LarderSpace.s6),
-                horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                val fromPhone = recipe.source == RecipeSource.DEVICE
-                LarderIcon(
-                    icon = if (partOfMenu) LarderIcons.Utensils else if (fromPhone) LarderIcons.Smartphone else LarderIcons.Cloud,
-                    contentDescription = null,
-                    size = 16.dp,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = when {
-                        partOfMenu -> pluralStringResource(R.plurals.recipe_part_of_menu, menuDays, menuDays)
-                        fromPhone -> stringResource(R.string.recipe_source_phone)
-                        else -> stringResource(R.string.recipe_source_server)
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            // A dish says which menu it is part of; a recipe from the phone's model, under its chip,
+            // that nothing was sent. A server-written recipe has no source line.
+            val footer = when {
+                partOfMenu -> pluralStringResource(R.plurals.recipe_part_of_menu, menuDays, menuDays)
+                recipe.source == RecipeSource.DEVICE -> stringResource(R.string.recipe_source_phone)
+                else -> null
+            }
+            if (footer != null) {
+                Row(
+                    modifier = Modifier.padding(top = LarderSpace.s6),
+                    horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LarderIcon(
+                        icon = if (partOfMenu) LarderIcons.Utensils else LarderIcons.Smartphone,
+                        contentDescription = null,
+                        size = 16.dp,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = footer,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

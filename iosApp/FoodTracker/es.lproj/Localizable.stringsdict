@@ -1046,6 +1046,24 @@
 			<string>Este {device} debía %d recetas tras un reembolso de la tienda. Se han descontado de tu cuenta.</string>
 		</dict>
 	</dict>
+	<key>recipe_menu_few_items</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Solo %d producto para {dishes} platos. Habrá que comprar casi todo para este menú.</string>
+			<key>many</key>
+			<string>Solo %d productos para {dishes} platos. Habrá que comprar casi todo para este menú.</string>
+			<key>other</key>
+			<string>Solo %d productos para {dishes} platos. Habrá que comprar casi todo para este menú.</string>
+		</dict>
+	</dict>
 	<key>recipe_optional_count</key>
 	<dict>
 		<key>NSStringLocalizedFormatKey</key>
