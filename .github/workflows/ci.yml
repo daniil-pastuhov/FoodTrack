@@ -2,8 +2,8 @@ name: CI
 
 # Every push and pull request: Android and shared unit tests, an Android debug build, an iOS build,
 # and the Cloud Functions lint and emulator tests, each only when its files changed (see the
-# "changes" job), and none where another run
-# already built the same code:
+# "changes" job), plus the UI screenshot diff on a pull request touching Android, and none where
+# another run already built the same code:
 # - a release/v* pull request from this repository (not a fork, whose pushes run nothing here): the
 #   push run of the same commit builds it, and must, as the publish jobs need it;
 # - the push of a pull request's merge commit to main: the pull request's runs built the merge (as
@@ -148,6 +148,182 @@ jobs:
             androidApp/build/reports/tests/
             shared/build/reports/tests/
           retention-days: 7
+
+  # The UI screenshot diff (README "UI screenshot check"): which Android screenshots a pull request
+  # changes, as one comment on it with the pictures. The committed baselines are recorded on macOS
+  # and Robolectric renders slightly differently here, so they are never compared: the base (the
+  # merge commit's first parent) is rendered with its own scripts/ui_check.sh --record, cached by
+  # its commit and the runner image, and the head (the merge commit) is compared with those images
+  # in Roborazzi's compare mode. A difference never fails the job; a crash or a build error does.
+  # A base without the check (older than it) is reported as nothing to compare with. This job runs
+  # the pull request's code with the read-only token; the comment job below, which writes, runs
+  # only scripts/ui_diff.py, and never for a fork.
+  ui-screenshots:
+    name: UI screenshot diff
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    outputs:
+      status: ${{ steps.compare.outputs.status }}
+      artifact-url: ${{ steps.upload.outputs.artifact-url }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The merge commit and its parents: the first one is the base it is compared with.
+          fetch-depth: 2
+          persist-credentials: false
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v5
+      # As in the android job.
+      - name: Create a debug keystore
+        run: |
+          mkdir -p ~/.android
+          keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android \
+            -alias debug -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+      - name: Find the base
+        id: base
+        run: |
+          BASE=$(git rev-parse HEAD^1)
+          echo "sha=$BASE" >> "$GITHUB_OUTPUT"
+          if git cat-file -e "$BASE:scripts/ui_check.sh" 2>/dev/null; then HAS=true; else HAS=false; fi
+          echo "has-check=$HAS" >> "$GITHUB_OUTPUT"
+          # Rendering can change with the runner image (fonts, JDK), so the cache is per image too.
+          echo "image=$ImageOS-$ImageVersion" >> "$GITHUB_OUTPUT"
+          echo "Base $BASE, UI screenshot check: $HAS, runner image $ImageOS $ImageVersion"
+      - name: Restore the base's screenshots
+        id: cache
+        if: steps.base.outputs.has-check == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ${{ runner.temp }}/ui-base
+          key: ui-screenshots-${{ steps.base.outputs.image }}-${{ steps.base.outputs.sha }}
+      - name: Render the base
+        if: steps.base.outputs.has-check == 'true' && steps.cache.outputs.cache-hit != 'true'
+        env:
+          BASE: ${{ steps.base.outputs.sha }}
+        run: |
+          git worktree add -q "$RUNNER_TEMP/base-src" "$BASE"
+          if ! (cd "$RUNNER_TEMP/base-src" && scripts/ui_check.sh --record); then
+            tail -n 80 "$RUNNER_TEMP/base-src/androidApp/build/ui-check.log"
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/ui-base"
+          cp "$RUNNER_TEMP/base-src/androidApp/src/test/snapshots/images/"*.png "$RUNNER_TEMP/ui-base/"
+          git worktree remove --force "$RUNNER_TEMP/base-src"
+      - name: Render the head and compare
+        id: compare
+        env:
+          BASE: ${{ steps.base.outputs.sha }}
+          HAS_CHECK: ${{ steps.base.outputs.has-check }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$HAS_CHECK" != true ]; then
+            python3 scripts/ui_diff.py no-base --out "$RUNNER_TEMP/ui-diff" --base "$BASE" --head "$HEAD_SHA"
+            exit 0
+          fi
+          # The base's Linux images stand in for the committed baselines.
+          rm -rf androidApp/src/test/snapshots/images
+          mkdir -p androidApp/src/test/snapshots/images
+          cp "$RUNNER_TEMP/ui-base/"*.png androidApp/src/test/snapshots/images/
+          STATUS=0
+          ./gradlew :androidApp:testDebugUnitTest \
+            --tests "com.github.takahirom.roborazzi.RoborazziPreviewParameterizedTests" \
+            --tests "com.foodtracker.android.screenshots.*" \
+            -Proborazzi.test.compare=true --console=plain > "$RUNNER_TEMP/ui-head.log" 2>&1 || STATUS=$?
+          if ! python3 scripts/ui_diff.py collect --results androidApp/build/test-results/roborazzi \
+                 --test-xml androidApp/build/test-results/testDebugUnitTest \
+                 --baselines "$RUNNER_TEMP/ui-base" --out "$RUNNER_TEMP/ui-diff" \
+                 --base "$BASE" --head "$HEAD_SHA" --gradle-status "$STATUS"; then
+            tail -n 80 "$RUNNER_TEMP/ui-head.log"
+            exit 1
+          fi
+      - name: Keep the diff
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: ui-screenshot-diff
+          path: ${{ runner.temp }}/ui-diff
+          if-no-files-found: error
+          retention-days: 14
+      - name: Job summary
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          python3 scripts/ui_diff.py summary --manifest "$RUNNER_TEMP/ui-diff/manifest.json" \
+            --artifact-url "$ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  # Puts the diff on the pull request (scripts/ui_diff.py publish): the images on the
+  # screenshot-diffs branch under pr-<n>/<head sha>/ (the next push and the pull request's closing
+  # remove them), one comment updated in place, and no comment while there never was a difference.
+  # A fork's pull request has a read-only token, so it gets the artifact and the job summary only.
+  # A push made with this token starts no workflow run, and this workflow's push trigger doesn't
+  # cover screenshot-diffs anyway.
+  ui-screenshots-comment:
+    name: UI screenshot diff comment
+    needs: ui-screenshots
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/ui_diff.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/download-artifact@v7
+        with:
+          name: ui-screenshot-diff
+          path: ${{ runner.temp }}/ui-diff
+      - name: Comment on the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ needs.ui-screenshots.outputs.artifact-url }}
+        run: |
+          python3 scripts/ui_diff.py publish --manifest "$RUNNER_TEMP/ui-diff/manifest.json" \
+            --repo "$GITHUB_REPOSITORY" --pr "$PR" --run-url "$RUN_URL" --artifact-url "$ARTIFACT_URL"
+
+  # A closed pull request's images leave the screenshot-diffs branch (its history keeps them, so
+  # the comment's pinned links still load). Plain git, no checkout of the pull request's code.
+  ui-screenshots-cleanup:
+    name: Remove the pull request's UI screenshot diff images
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Remove pr-<n>/ from the screenshot-diffs branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          git init -q diffs && cd diffs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          AUTH="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          URL="https://github.com/$GITHUB_REPOSITORY"
+          for attempt in 1 2 3 4 5; do
+            git -c http.extraheader="$AUTH" fetch -q --depth 1 "$URL" screenshot-diffs \
+              || { echo "No screenshot-diffs branch"; exit 0; }
+            git checkout -q -f -B screenshot-diffs FETCH_HEAD
+            [ -d "pr-$PR" ] || { echo "No images of #$PR"; exit 0; }
+            git rm -rq "pr-$PR"
+            git commit -qm "PR #$PR: closed"
+            git -c http.extraheader="$AUTH" push -q "$URL" HEAD:refs/heads/screenshot-diffs && exit 0
+            echo "Push refused (attempt $attempt); fetching again"
+          done
+          exit 1
 
   # Cloud Functions (functions/): lint, typecheck, build, and the tests against the Firestore and
   # Auth emulators, which need Java. Stores and the LLM are faked, and the demo- project id keeps

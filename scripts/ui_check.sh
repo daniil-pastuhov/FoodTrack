@@ -10,8 +10,8 @@
 # Exit status: 0 nothing changed / 1 differences (or a preview with no baseline yet) / 2 the
 # check could not run (a build error, a preview that crashed).
 #
-# The baselines are recorded on macOS; Robolectric's rendering differs slightly on Linux, so CI
-# does not run this. Plain ./gradlew :androidApp:testDebugUnitTest renders but compares nothing.
+# The baselines are recorded on macOS; Robolectric renders slightly differently on Linux, so CI
+# never compares with them: on a pull request it diffs the base and the head (scripts/ui_diff.py).
 # Not to be confused with scripts/screenshot_check.py, which re-takes the store screenshots on an
 # emulator and a simulator.
 #
