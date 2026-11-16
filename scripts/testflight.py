@@ -42,6 +42,11 @@ Used by .github/workflows/ci.yml as part of the release flow (see "Releasing" in
     python3 scripts/testflight.py listing [--apply]
     python3 scripts/testflight.py screenshots [--apply]
 
+    # The App Store preview videos (build/app-store-preview/<locale>/preview.mp4, from
+    # scripts/ios_preview.sh and ios_preview_assemble.py) against each localization's iPhone
+    # preview: dry run by default, --apply uploads those whose file differs and sets the poster.
+    python3 scripts/testflight.py previews [--apply]
+
     # Read-only: the raw screenshot sets and App Asset Library images and placements of that
     # version, to check the folders' mapping against the account (GET requests only).
     python3 scripts/testflight.py screenshots --inspect [--dump FILE]
@@ -1662,6 +1667,160 @@ def sync_screenshots(asc, localizations, apply, root=LISTING_DIR, app_id=None):
     return changed
 
 
+# --- App previews ---------------------------------------------------------------------------------
+#
+# The App Store preview videos scripts/ios_preview_assemble.py writes (git-ignored, so they are
+# local only): build/app-store-preview/<listing folder>/preview.mp4, with the poster frame's time
+# in poster_time.txt beside it. One preview per localization in its iPhone 6.7"/6.9" preview set
+# (previewType IPHONE_67, which the smaller iPhones scale down from), through the classic
+# appPreviewSets / appPreviews resources (App Store Connect API, OpenAPI spec 4.6): reserve with
+# POST /v1/appPreviews (fileName, fileSize, mimeType, previewFrameTimeCode), send the parts as
+# uploadOperations say, then PATCH uploaded and sourceFileChecksum, as for a screenshot. A
+# localization without a folder of its own takes its fallback's (fallback(): es-MX es-ES's, fr-CA
+# fr-FR's, the other English ones en-GB's). Processing a video takes up to a day; the command
+# doesn't wait for it.
+
+PREVIEW_DIR = LISTING_DIR.parent.parent / "build" / "app-store-preview"
+PREVIEW_TYPE = "IPHONE_67"
+PREVIEW_FPS = 30
+# App Store Connect's own default poster frame, when the folder doesn't say.
+DEFAULT_POSTER_SECONDS = 5.0
+
+
+def preview_folder(root, locale):
+    """The folder whose preview.mp4 the localization gets: its own, else its fallback's."""
+    root = pathlib.Path(root)
+    if (root / locale / "preview.mp4").is_file():
+        return root / locale
+    parent = fallback(locale)
+    if parent and (root / parent / "preview.mp4").is_file():
+        return root / parent
+    return None
+
+
+def time_code(seconds, fps=PREVIEW_FPS):
+    """A poster frame time as previewFrameTimeCode: hours:minutes:seconds:frames, "00:00:04:18"
+    for 4.6 s at 30 fps."""
+    frames = round(seconds * fps)
+    whole, frame = divmod(frames, fps)
+    minutes, secs = divmod(whole, 60)
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}:{frame:02d}"
+
+
+def local_preview(folder):
+    """preview.mp4 with its size and MD5, and the poster time code (poster_time.txt, seconds)."""
+    preview = local_image(pathlib.Path(folder) / "preview.mp4")
+    poster = pathlib.Path(folder) / "poster_time.txt"
+    seconds = float(poster.read_text().strip()) if poster.is_file() else DEFAULT_POSTER_SECONDS
+    return dict(preview, time_code=time_code(seconds))
+
+
+def remote_preview(item):
+    attrs = item.get("attributes") or {}
+    state = (attrs.get("videoDeliveryState") or attrs.get("assetDeliveryState") or {}).get("state")
+    return {"id": item["id"], "name": attrs.get("fileName") or "",
+            "md5": (attrs.get("sourceFileChecksum") or "").lower(), "state": state,
+            "time_code": attrs.get("previewFrameTimeCode")}
+
+
+def plan_preview(local, remote):
+    """What turns the set's previews into the one local video: keep a remote one with the same
+    MD5 (that didn't fail), setting its poster time if it differs; delete every other; upload the
+    file when none is kept."""
+    keep = next((r for r in remote if r["md5"] == local["md5"] and r["state"] != "FAILED"), None)
+    return {"keep": keep, "upload": keep is None,
+            "delete": [r for r in remote if keep is None or r["id"] != keep["id"]],
+            "time_code": bool(keep) and keep["time_code"] != local["time_code"]}
+
+
+def upload_preview(asc, set_id, preview):
+    """Reserves, uploads and commits one preview video. Returns its id."""
+    reserved = asc.call("POST", "/appPreviews", body={"data": {
+        "type": "appPreviews",
+        "attributes": {"fileName": preview["name"], "fileSize": preview["size"],
+                       "mimeType": "video/mp4", "previewFrameTimeCode": preview["time_code"]},
+        "relationships": {"appPreviewSet": {"data": {"type": "appPreviewSets", "id": set_id}}}}})["data"]
+    send_parts(asc, reserved, preview)
+    asc.call("PATCH", f"/appPreviews/{reserved['id']}", body={"data": {
+        "type": "appPreviews", "id": reserved["id"],
+        "attributes": {"uploaded": True, "sourceFileChecksum": preview["md5"],
+                       "previewFrameTimeCode": preview["time_code"]}}})
+    return reserved["id"]
+
+
+def sync_previews(asc, localizations, apply, root=PREVIEW_DIR):
+    """Sets each localization's ({locale: id}) iPhone preview to its folder's preview.mp4.
+    Returns whether anything differed."""
+    changed = False
+    for locale in sorted(localizations):
+        folder = preview_folder(root, locale)
+        if folder is None:
+            print(f"  {locale}: no preview.mp4 in {root}/{locale} or its fallback; left as it is")
+            continue
+        # Named by localization, as App Store Connect lists them ("preview-en-GB.mp4").
+        local = dict(local_preview(folder), name=f"preview-{locale}.mp4")
+        sets = [s for s in asc.call("GET", f"/appStoreVersionLocalizations/{localizations[locale]}"
+                                           "/appPreviewSets", {"limit": 50}).get("data", [])
+                if (s.get("attributes") or {}).get("previewType") == PREVIEW_TYPE]
+        existing = sets[0] if sets else None
+        remote = [remote_preview(item) for item in asc.call(
+            "GET", f"/appPreviewSets/{existing['id']}/appPreviews", {"limit": 10}).get("data", [])] \
+            if existing else []
+        plan = plan_preview(local, remote)
+        source = "" if folder.name == locale else f" (from {folder.name})"
+        print(f"  {locale} {PREVIEW_TYPE}: {folder.name}/preview.mp4{source} "
+              f"{local['size'] / 1e6:.1f} MB md5 {local['md5'][:8]}, poster {local['time_code']}; "
+              f"{len(remote)} in App Store Connect" + ("" if existing else ", no preview set yet")
+              + "".join(f"\n    remote: {r['name'] or r['id']} md5 {r['md5'][:8] or 'none'} "
+                        f"({r['state'] or '?'}, poster {r['time_code'] or '?'})" for r in remote))
+        if not (plan["upload"] or plan["delete"] or plan["time_code"]):
+            print("    up to date")
+            continue
+        changed = True
+        verb = (lambda doing, would: doing) if apply else (lambda doing, would: would)
+        for r in plan["delete"]:
+            print(f"    {verb('deleting', 'would delete')} {r['name'] or r['id']}")
+        if plan["upload"]:
+            print(f"    {verb('uploading', 'would upload')} {local['name']} with poster {local['time_code']}")
+        if plan["time_code"]:
+            print(f"    {verb('setting', 'would set')} the poster to {local['time_code']}")
+        if not apply:
+            continue
+        if not existing:
+            existing = asc.call("POST", "/appPreviewSets", body={"data": {
+                "type": "appPreviewSets", "attributes": {"previewType": PREVIEW_TYPE},
+                "relationships": {"appStoreVersionLocalization": {"data": {
+                    "type": "appStoreVersionLocalizations", "id": localizations[locale]}}}}})["data"]
+        for r in plan["delete"]:
+            asc.call("DELETE", f"/appPreviews/{r['id']}")
+        if plan["upload"]:
+            upload_preview(asc, existing["id"], local)
+        if plan["time_code"]:
+            asc.call("PATCH", f"/appPreviews/{plan['keep']['id']}", body={"data": {
+                "type": "appPreviews", "id": plan["keep"]["id"],
+                "attributes": {"previewFrameTimeCode": local["time_code"]}}})
+        print("    done (App Store Connect processes a video for up to a day)")
+    return changed
+
+
+def cmd_previews(args):
+    asc = Asc()
+    app_id = asc.app_id()
+    version, _, _, summary = listing_target(asc, app_id, args.version)
+    print(summary)
+    if version is None:
+        return 1 if args.apply else 0
+    editable = version_state(version) in EDITABLE_STATES
+    apply = args.apply and editable
+    print("APPLY" if apply else "DRY RUN (pass --apply to write)" if editable else "READ ONLY")
+    localizations = {locale: loc["id"] for locale, loc in localizations_by_locale(
+        asc, f"/appStoreVersions/{version['id']}/appStoreVersionLocalizations").items()}
+    changed = sync_previews(asc, localizations, apply, pathlib.Path(args.dir))
+    print(outcome(changed, apply, editable, "previews"))
+    return 1 if args.apply and not editable else 0
+
+
 # --- Inspecting what App Store Connect holds (read-only) -----------------------------------------
 
 class ReadOnlyAsc:
@@ -2618,6 +2777,15 @@ def main() -> int:
                                       "images and placements of the version (GET requests only)")
             command.add_argument("--dump", metavar="FILE",
                                  help="with --inspect, also write every response to FILE as JSON")
+    previews = commands.add_parser(
+        "previews", help="compare each localization's iPhone app preview with "
+                         "build/app-store-preview/<locale>/preview.mp4 (dry run unless --apply)")
+    previews.add_argument("--apply", action="store_true", help="upload the differing previews")
+    previews.add_argument("--version", help="the version to compare with (default: the one in "
+                                            "preparation, else the newest)")
+    previews.add_argument("--dir", default=str(PREVIEW_DIR),
+                          help="the folder of per-locale preview.mp4 files (default: %(default)s)")
+    previews.set_defaults(func=cmd_previews)
     iaps = commands.add_parser("iaps", help="read-only: the in-app purchases and what `appstore` "
                                             "would do with them")
     iaps.add_argument("--version", help="the version to plan for (default: the one in "
