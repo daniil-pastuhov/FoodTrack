@@ -57,6 +57,8 @@ struct PantryProductDetail: View {
                 .padding(LarderSpace.s4)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            // Home's pane on wide windows starts at the top of the screen.
+            .clipsBelowStatusBar()
             if !actionsScroll {
                 LarderDivider()
                 buttons

@@ -28,6 +28,7 @@ Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), saved
 - Tokens and components only: no literal colours, sizes or fonts in screens.
 - Lucide icons through `LarderIcon`. Vollkorn for display, headline and title styles; system fonts elsewhere; both scale with system text size.
 - 48dp and 44pt minimum targets. Every status has an icon and words.
+- The status bar always sits on the page background, also where a header scrolls away with the content (Home, the Recipe form): on iOS every scroll view that starts at the top of the screen with no bar above it is clipped there with `clipsBelowStatusBar()` (`LarderLayout.swift`).
 - Reversible actions are immediate with Undo. Dialogs only for irreversible actions or real choices.
 - New strings go in all eight languages (en, ru, nb, es, de, fr, sv, da), in your feature's commented block, and use the design's ru copy where it exists. Your report lists every new translated string.
 - `@Composable` previews per component state.
