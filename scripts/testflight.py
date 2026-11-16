@@ -290,8 +290,12 @@ def version_state(version):
 
 # Parent states of an in-app purchase that still has to be reviewed.
 IAP_TO_SUBMIT_STATES = {"READY_TO_SUBMIT", "DEVELOPER_ACTION_NEEDED", "REJECTED"}
+# In-App Purchase version states that can be added to a review submission: a fresh draft, or one
+# the developer withdrew from review (cancelling a submission leaves its versions DEVELOPER_REJECTED).
+IAP_RESUBMIT_VERSION_STATES = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED"}
 # In-App Purchase version states: a draft, or one already in a submission not yet sent.
-IAP_DRAFT_VERSION_STATES = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW"}
+# DEVELOPER_REJECTED: a version withdrawn from review with its submission; it goes back as it is.
+IAP_DRAFT_VERSION_STATES = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "DEVELOPER_REJECTED"}
 OPEN_SUBMISSION_STATES = "READY_FOR_REVIEW,UNRESOLVED_ISSUES"
 
 
@@ -377,8 +381,8 @@ def plan_iaps(iaps, submissions, version_id):
         elif held_in:
             plan.append((iap, "elsewhere", "its version is in another open review submission ("
                          + ", ".join(s["submission"]["id"] for s in held_in) + ")"))
-        elif iap["state"] in IAP_TO_SUBMIT_STATES or iap["version_state"] == "PREPARE_FOR_SUBMISSION":
-            if iap["version_state"] == "PREPARE_FOR_SUBMISSION":
+        elif iap["state"] in IAP_TO_SUBMIT_STATES or iap["version_state"] in IAP_RESUBMIT_VERSION_STATES:
+            if iap["version_state"] in IAP_RESUBMIT_VERSION_STATES:
                 plan.append((iap, "add", "added to the review submission with the app version"))
             elif iap["state"] == "READY_TO_SUBMIT":
                 plan.append((iap, "missing", "no In-App Purchase version in PREPARE_FOR_SUBMISSION "
