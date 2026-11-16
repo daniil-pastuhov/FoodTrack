@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Astuce";
 "recipe_in_your_pantry" = "Chez vous";
 "recipe_share_recipe" = "Partager la recette";
-"recipe_source_device" = "Rédigée sur cet {device} · Rien n'a été envoyé";
-"recipe_source_server" = "Rédigée par notre serveur · Enregistrée sur cet {device}";
+"recipe_source_device" = "Rien n'a été envoyé";
 "recipe_saved_empty_title" = "Aucune recette pour l'instant";
 "recipe_saved_empty_message" = "Les recettes et menus rédigés dans l'appli sont conservés ici.";
 "recipe_saved_deleted" = "Recette supprimée";
 "recipe_saved_today" = "Aujourd'hui";
 "recipe_saved_yesterday" = "Hier";
 "recipe_saved_from_phone" = "Rédigée sur cet {device}";
-"recipe_saved_from_pack" = "De votre pack";
 "recipe_settings_cooking" = "Cuisine";
 "recipe_settings_cooking_desc" = "Utilisés pour chaque recette, prompt et menu jusqu'à ce que vous les changiez.";
 "recipe_label_detail" = "Niveau de détail";
@@ -785,6 +783,8 @@
 "recipe_intro_prompt_message" = "Partagez ou copiez un prompt prêt à l'emploi vers l'appli d'IA que vous utilisez déjà.";
 "recipe_intro_device_title" = "Gratuit, sur cet {device}";
 "recipe_intro_device_message" = "Cet {device} rédige lui-même la recette, et rien n'est envoyé nulle part.";
+"recipe_on_device_weak" = "Le modèle de cet {device} est encore faible en cuisine, alors vérifiez que la recette tient la route.";
+"recipe_on_device_upsides" = "C'est gratuit, et rien ne quitte cet {device}.";
 "recipe_intro_packs_title" = "Avec un pack de recettes";
 "recipe_intro_packs_price" = "Packs à partir de %@.";
 "recipe_intro_free_stays" = "Les options gratuites restent disponibles quand vous avez un pack.";

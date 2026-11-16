@@ -819,13 +819,11 @@
     <string name="recipe_method">Zubereitung</string>
     <string name="recipe_in_pantry">Im Vorrat</string>
     <string name="recipe_tip">Tipp</string>
-    <string name="recipe_source_phone">Auf diesem Gerät erstellt · Es wurde nichts gesendet</string>
-    <string name="recipe_source_server">Von unserem Server erstellt · Auf diesem Gerät gespeichert</string>
+    <string name="recipe_source_phone">Es wurde nichts gesendet</string>
     <string name="recipe_not_found">Dieses Rezept ist nicht mehr gespeichert.</string>
     <string name="recipe_saved_today">Heute</string>
     <string name="recipe_saved_yesterday">Gestern</string>
     <string name="recipe_saved_from_phone">Auf diesem Gerät erstellt</string>
-    <string name="recipe_saved_from_pack">Aus deinem Paket</string>
     <string name="recipe_saved_empty_title">Noch keine Rezepte</string>
     <string name="recipe_saved_empty_body">Rezepte und Menüs, die in der App erstellt werden, findest du hier.</string>
     <string name="recipe_deleted">Rezept gelöscht</string>
@@ -914,6 +912,12 @@
     </plurals>
     <string name="recipe_buy">Rezepte kaufen</string>
     <string name="recipe_menu_hint">Ein Menü wird auf unserem Server erstellt und kostet %1$s aus einem Paket.</string>
+    <string name="recipe_on_device_weak">Das Modell auf diesem Gerät kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.</string>
+    <string name="recipe_on_device_upsides">Es ist kostenlos, und nichts verlässt das Gerät.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
+        <item quantity="other">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
+    </plurals>
     <string name="recipe_menu_short_title">Ein Menü kostet %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Du hast noch %1$d. Ein einzelnes Rezept geht trotzdem.</item>

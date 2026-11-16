@@ -509,6 +509,26 @@ final class RecipeViewModel: ObservableObject {
         MenuSet.effective(days: menuDays, courses: menuCourses, takesMenuDays: credits.serverTakesMenuDays, costs: credits.costs)
     }
 
+    /// The menu form's "few items for this menu" hint (`MenuSet.itemsHint`) for the menu set asked
+    /// for, from `items`: the ticked ones, and with "Send all products" on and a server that reads
+    /// them, the other items the request would carry (`RecipeWire.optionalIngredients`). Nil in
+    /// single-recipe mode and with enough items. Android: `RecipeUiState.menuItemsHint`.
+    func menuItemsHint(for items: [PantryItem]) -> MenuItemsHint? {
+        guard credits.isPaidRouteAvailable, mode == .menu else { return nil }
+        let ticked = selectedItems(from: items)
+        var optional = 0
+        if options.sendAllItems, credits.storage.serverTakesOptional {
+            let wire = { (item: PantryItem) -> WireIngredient? in
+                RecipeWire.cleanName(item.name).map { WireIngredient(name: $0, expiresOn: nil, quantity: nil) }
+            }
+            optional = RecipeWire.optionalIngredients(
+                ticked: Array(ticked.compactMap(wire).prefix(RecipeWire.maxIngredients)),
+                others: optionalItems(from: items).compactMap(wire)
+            ).count
+        }
+        return menuSet.itemsHint(ticked: ticked.count, optional: optional)
+    }
+
     /// The Days choices (empty: not shown) and the Courses choices for the form.
     var menuDayOptions: [Int] { MenuSet.dayOptions(for: menuSet, takesMenuDays: credits.serverTakesMenuDays, costs: credits.costs) }
     var menuCourseOptions: [Int] { MenuSet.courseOptions(for: menuSet, takesMenuDays: credits.serverTakesMenuDays, costs: credits.costs) }

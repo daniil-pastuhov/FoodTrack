@@ -930,6 +930,22 @@
             <string>This {device} owed %d recipes after a store refund. They were taken from your account.</string>
         </dict>
     </dict>
+    <key>recipe_menu_few_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Only %d item for {dishes} dishes. Most of this menu will need shopping.</string>
+            <key>other</key>
+            <string>Only %d items for {dishes} dishes. Most of this menu will need shopping.</string>
+        </dict>
+    </dict>
     <key>recipe_optional_count</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

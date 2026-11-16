@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Tip";
 "recipe_in_your_pantry" = "In your pantry";
 "recipe_share_recipe" = "Share recipe";
-"recipe_source_device" = "Written on this {device} · Nothing was sent anywhere";
-"recipe_source_server" = "Written by our server · Saved on this {device}";
+"recipe_source_device" = "Nothing was sent anywhere";
 "recipe_saved_empty_title" = "No recipes yet";
 "recipe_saved_empty_message" = "Recipes and menus written in the app are kept here.";
 "recipe_saved_deleted" = "Recipe deleted";
 "recipe_saved_today" = "Today";
 "recipe_saved_yesterday" = "Yesterday";
 "recipe_saved_from_phone" = "Written on this {device}";
-"recipe_saved_from_pack" = "From your pack";
 "recipe_settings_cooking" = "Cooking";
 "recipe_settings_cooking_desc" = "Used for every recipe, prompt and menu until you change them.";
 "recipe_label_detail" = "Detail";
@@ -785,6 +783,8 @@
 "recipe_intro_prompt_message" = "Share or copy a ready-made prompt to the AI app you already use.";
 "recipe_intro_device_title" = "Free, on this {device}";
 "recipe_intro_device_message" = "This {device} writes the recipe itself, and nothing is sent anywhere.";
+"recipe_on_device_weak" = "The model on this {device} is still weak at cooking, so check the recipe makes sense.";
+"recipe_on_device_upsides" = "It's free, and nothing leaves this {device}.";
 "recipe_intro_packs_title" = "From a recipe pack";
 "recipe_intro_packs_price" = "Packs from %@.";
 "recipe_intro_free_stays" = "The free ways stay there when you have a pack.";

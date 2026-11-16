@@ -613,15 +613,13 @@
 "recipe_tip_title" = "Совет";
 "recipe_in_your_pantry" = "Есть дома";
 "recipe_share_recipe" = "Поделиться рецептом";
-"recipe_source_device" = "Составлено на этом {device} · Ничего не отправлялось";
-"recipe_source_server" = "Составлено нашим сервером · Сохранено на этом {device}";
+"recipe_source_device" = "Ничего не отправлялось";
 "recipe_saved_empty_title" = "Пока нет рецептов";
 "recipe_saved_empty_message" = "Здесь хранятся рецепты и меню, составленные в приложении.";
 "recipe_saved_deleted" = "Рецепт удалён";
 "recipe_saved_today" = "Сегодня";
 "recipe_saved_yesterday" = "Вчера";
 "recipe_saved_from_phone" = "Составлено на этом {device}";
-"recipe_saved_from_pack" = "Из вашего пакета";
 "recipe_settings_cooking" = "Готовка";
 "recipe_settings_cooking_desc" = "Применяются ко всем рецептам, запросам и меню, пока вы их не измените.";
 "recipe_label_detail" = "Подробность";
@@ -785,6 +783,8 @@
 "recipe_intro_prompt_message" = "Поделитесь готовым запросом или скопируйте его в ИИ-приложение, которым вы уже пользуетесь.";
 "recipe_intro_device_title" = "Бесплатно — на этом {device}";
 "recipe_intro_device_message" = "Рецепт составляет сам {device}, и ничего никуда не отправляется.";
+"recipe_on_device_weak" = "Модель на этом {device} пока слабо разбирается в кулинарии, так что проверьте, что рецепт имеет смысл.";
+"recipe_on_device_upsides" = "Это бесплатно, и ничего не покидает {device}.";
 "recipe_intro_packs_title" = "Из пакета рецептов";
 "recipe_intro_packs_price" = "Пакеты — от %@.";
 "recipe_intro_free_stays" = "Бесплатные способы остаются и тогда, когда у вас есть пакет.";
