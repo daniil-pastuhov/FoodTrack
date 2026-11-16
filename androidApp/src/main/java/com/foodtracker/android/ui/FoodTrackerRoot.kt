@@ -1,9 +1,8 @@
 package com.foodtracker.android.ui
 
 import android.content.Context
-import androidx.activity.BackEventCompat
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -21,7 +20,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.foundation.layout.ime
@@ -34,7 +32,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,8 +41,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -73,6 +68,8 @@ import com.foodtracker.android.ui.navigation.LarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalLarderNavigator
 import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
 import com.foodtracker.android.ui.navigation.LocalReviewPrompter
+import com.foodtracker.android.ui.navigation.PredictiveBackContent
+import com.foodtracker.android.ui.navigation.larderBackTarget
 import com.foodtracker.android.ui.navigation.route
 import com.foodtracker.android.ui.navigation.tab
 import com.foodtracker.android.ui.screens.AddEditItemScreen
@@ -110,7 +107,6 @@ import com.foodtracker.review.ReviewPrompter
 import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.HomeConfirmation
 import com.foodtracker.viewmodel.PantryStateHolder
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -155,12 +151,6 @@ private fun confirmationMessage(context: Context, confirmation: HomeConfirmation
             confirmation.quantity
         )
     }
-
-// Material predictive-back visual treatment for the screen being swiped away: it shrinks
-// slightly, shifts toward the swipe edge, and gains rounded corners as the gesture progresses.
-private const val PREDICTIVE_BACK_SCALE_FACTOR = 0.1f
-private const val PREDICTIVE_BACK_MAX_TRANSLATION_FRACTION = 0.05f
-private val PREDICTIVE_BACK_MAX_CORNER_RADIUS_DP = 32.dp
 
 /**
  * The app's whole Compose UI: theme, screen switching, predictive back, the shared bottom-nav
@@ -659,45 +649,23 @@ fun FoodTrackerRoot(
                 }
             }
 
-            // Predictive back state: tracks an in-flight system back gesture so the
-            // current screen can be scaled/translated away, previewing the Dashboard
-            // underneath, instead of cutting straight to it on release.
-            var inPredictiveBack by remember { mutableStateOf(false) }
-            var backProgress by remember { mutableFloatStateOf(0f) }
-            var backSwipeEdge by remember { mutableStateOf(BackEventCompat.EDGE_LEFT) }
-
-            // Onboarding steps back through its own screens, and Back on its first leaves the app
-            // rather than reaching Home with the flow unfinished.
-            PredictiveBackHandler(
-                enabled = currentScreen != LarderRoute.Home && currentScreen != LarderRoute.Onboarding
-            ) { progress ->
-                try {
-                    progress.collect { backEvent ->
-                        inPredictiveBack = true
-                        backProgress = backEvent.progress
-                        backSwipeEdge = backEvent.swipeEdge
+            // System Back from the current screen when no screen handles it itself; see
+            // PredictiveBackContent, which previews larderBackTarget's screen during the swipe.
+            val backTarget = larderBackTarget(currentScreen, scanReturnScreen, recipeResultReturn)
+            val onSystemBack: () -> Unit = {
+                when (val screen = currentScreen) {
+                    is LarderRoute.Scanner -> navigateBackFromScanner()
+                    is LarderRoute.AddItem -> {
+                        stateHolder.clearScanState()
+                        scanningShoppingListEntry = null
+                        currentScreen = scanReturnScreen
                     }
-                    inPredictiveBack = false
-                    backProgress = 0f
-                    when (currentScreen) {
-                        is LarderRoute.Scanner -> navigateBackFromScanner()
-                        is LarderRoute.AddItem -> {
-                            stateHolder.clearScanState()
-                            scanningShoppingListEntry = null
-                            currentScreen = scanReturnScreen
-                        }
-                        LarderRoute.Categories -> currentScreen = LarderRoute.Settings
-                        is LarderRoute.RecipeResult -> currentScreen = recipeResultReturn
-                        is LarderRoute.MenuDish -> currentScreen = LarderRoute.RecipeResult((currentScreen as LarderRoute.MenuDish).savedId)
-                        LarderRoute.SavedRecipes, LarderRoute.RecipeSettings -> currentScreen = LarderRoute.Recipe
-                        // The quiz handles back itself (a step back, or leaving); this is a fallback.
-                        LarderRoute.TasteProfile -> currentScreen = LarderRoute.RecipeSettings
-                        LarderRoute.Settings, LarderRoute.Recipe, LarderRoute.Shopping -> navigateToDashboard()
-                        is LarderRoute.ProductDetail, LarderRoute.Home, LarderRoute.Onboarding -> Unit
+                    // The quiz handles Back itself once its steps are up; before that it closes.
+                    LarderRoute.TasteProfile -> {
+                        recipeStateHolder.closeTasteQuiz()
+                        currentScreen = LarderRoute.RecipeSettings
                     }
-                } catch (e: CancellationException) {
-                    inPredictiveBack = false
-                    backProgress = 0f
+                    else -> larderBackTarget(screen, scanReturnScreen, recipeResultReturn)?.let { currentScreen = it }
                 }
             }
 
@@ -721,62 +689,32 @@ fun FoodTrackerRoot(
                 LocalReviewPrompter provides reviewPrompter
             ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                // Background preview of the Dashboard, revealed as the current screen
-                // scales away during an in-progress predictive back gesture.
-                if (inPredictiveBack && currentScreen != LarderRoute.Home) {
-                    PantryDashboardScreen(
-                        stateHolder = stateHolder,
-                        onUseOne = onUseOneHandler,
-                        onDeleteItem = onDeleteItemHandler,
-                        onDeleteItems = onDeleteItemsHandler,
-                        onMoveToShoppingList = onMoveToShoppingListHandler,
-                        listState = dashboardListState
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(
-                            if (inPredictiveBack) {
-                                Modifier.graphicsLayer {
-                                    val scale = 1f - PREDICTIVE_BACK_SCALE_FACTOR * backProgress
-                                    scaleX = scale
-                                    scaleY = scale
-                                    val maxTranslationPx = size.width * PREDICTIVE_BACK_MAX_TRANSLATION_FRACTION
-                                    translationX = if (backSwipeEdge == BackEventCompat.EDGE_LEFT) {
-                                        backProgress * maxTranslationPx
-                                    } else {
-                                        -backProgress * maxTranslationPx
-                                    }
-                                    transformOrigin = TransformOrigin(
-                                        pivotFractionX = if (backSwipeEdge == BackEventCompat.EDGE_LEFT) 1f else 0f,
-                                        pivotFractionY = 0.5f
-                                    )
-                                    shape = RoundedCornerShape(PREDICTIVE_BACK_MAX_CORNER_RADIUS_DP * backProgress)
-                                    clip = true
-                                }
-                            } else {
-                                Modifier
-                            }
-                        )
-                ) {
                     if (holdFirstScreen) {
                         // Blank; see holdsFirstScreen.
-                    } else if (currentTab != null) {
-                        // The floating pill and Scan overlay full-size, edge-to-edge tab content
-                        // rather than reserving layout space like a Scaffold's bars, so lists
-                        // scroll underneath them. Each tab keeps its last row reachable with the
-                        // bottom padding it gets from shellClearance.
-                        CompositionLocalProvider(LocalShellChrome provides shellChrome) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            AnimatedContent(
-                                targetState = currentScreen,
-                                transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
-                                modifier = Modifier.fillMaxSize(),
-                                label = "tabContent"
-                            ) { screen ->
-                            when (screen) {
+                    } else {
+                        // Every screen, tab or pushed, in one place, so a back swipe can show the
+                        // real screen it goes to underneath the one being swiped away.
+                        PredictiveBackContent(
+                            current = currentScreen,
+                            backTarget = backTarget,
+                            onBack = onSystemBack,
+                            modifier = Modifier.fillMaxSize(),
+                            transitionSpec = {
+                                // A short cross-fade between tabs; to or from a pushed screen, a cut.
+                                if (initialState.tab != null && targetState.tab != null) {
+                                    fadeIn(tween(220)) togetherWith fadeOut(tween(150))
+                                } else {
+                                    EnterTransition.None togetherWith ExitTransition.None
+                                }
+                            }
+                        ) { screen ->
+                            // The floating pill and Scan overlay full-size, edge-to-edge tab content
+                            // rather than reserving layout space like a Scaffold's bars, so lists
+                            // scroll underneath them. Each tab keeps its last row reachable with the
+                            // bottom padding it gets from shellClearance.
+                            val chrome = if (screen.tab != null) shellChrome else LocalShellChrome.current
+                            CompositionLocalProvider(LocalShellChrome provides chrome) {
+                            when (val route = screen) {
                                 LarderRoute.Home -> {
                                     PantryDashboardScreen(
                                         stateHolder = stateHolder,
@@ -858,10 +796,203 @@ fun FoodTrackerRoot(
                                         bottomOverlayClearance = clearance.content
                                     )
                                 }
+                                is LarderRoute.Scanner -> {
+                                    ScannerScreen(
+                                        stateHolder = stateHolder,
+                                        initialMode = route.mode,
+                                        onNavigateBack = navigateBackFromScanner,
+                                        onShoppingListScanned = onShoppingListPayloadScanned,
+                                        onBatchCommitted = onBatchCommitted,
+                                        // Not while the scan is filling in a shopping list entry:
+                                        // that scan is about buying the product, not using it.
+                                        onUseOne = if (isScanningForNewShoppingListEntry || scanningShoppingListEntry != null) {
+                                            null
+                                        } else {
+                                            { item ->
+                                                onUseOneHandler(item)
+                                                navigateBackFromScanner()
+                                            }
+                                        },
+                                        onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category, suggestedExpiry ->
+                                            if (isScanningForNewShoppingListEntry) {
+                                                isScanningForNewShoppingListEntry = false
+                                                // Read from the flow rather than composition state: this runs
+                                                // in a callback, so there is no reason to make the root scope
+                                                // a reader of the whole shopping list.
+                                                when (val result = ShoppingListMatcher.match(name, barcode, stateHolder.uiState.value.shoppingList)) {
+                                                    is ShoppingListMatchResult.ExactBarcodeMatch -> {
+                                                        stateHolder.beginScanForShoppingListEntry(result.entry.id)
+                                                        openPrefilledItem(
+                                                            ItemPrefill(
+                                                                barcode = barcode,
+                                                                name = name ?: result.entry.productName,
+                                                                brand = brand,
+                                                                imageUrl = imageUrl,
+                                                                expiryDate = expiryDate,
+                                                                category = category ?: result.entry.category,
+                                                                suggestion = suggestedExpiry
+                                                            )
+                                                        )
+                                                    }
+                                                    is ShoppingListMatchResult.Suggestions -> {
+                                                        pendingShoppingListMatch = PendingShoppingListMatch(
+                                                            barcode = barcode,
+                                                            name = name,
+                                                            brand = brand,
+                                                            imageUrl = imageUrl,
+                                                            expiryDate = expiryDate,
+                                                            category = category,
+                                                            suggestedExpiry = suggestedExpiry,
+                                                            candidates = result.candidates
+                                                        )
+                                                        currentScreen = scanReturnScreen
+                                                    }
+                                                    ShoppingListMatchResult.NoMatch -> {
+                                                        openPrefilledItem(
+                                                            ItemPrefill(
+                                                                barcode = barcode,
+                                                                name = name,
+                                                                brand = brand,
+                                                                imageUrl = imageUrl,
+                                                                expiryDate = expiryDate,
+                                                                category = category,
+                                                                suggestion = suggestedExpiry
+                                                            )
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                val fallbackEntry = scanningShoppingListEntry
+                                                openPrefilledItem(
+                                                    ItemPrefill(
+                                                        barcode = barcode,
+                                                        name = name ?: fallbackEntry?.productName,
+                                                        brand = brand,
+                                                        imageUrl = imageUrl,
+                                                        expiryDate = expiryDate,
+                                                        category = category ?: fallbackEntry?.category,
+                                                        suggestion = suggestedExpiry
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+
+                                is LarderRoute.AddItem -> {
+                                    val prefill = (route.mode as? AddItemMode.Prefilled)?.prefill
+                                    val editingId = (route.mode as? AddItemMode.Edit)?.itemId
+                                    val editingItem = remember(editingId) {
+                                        stateHolder.uiState.value.items.find { it.id == editingId }
+                                    }
+                                    AddEditItemScreen(
+                                        stateHolder = stateHolder,
+                                        initialItem = editingItem,
+                                        prefillBarcode = prefill?.barcode,
+                                        prefillName = prefill?.name,
+                                        prefillBrand = prefill?.brand,
+                                        prefillImageUrl = prefill?.imageUrl,
+                                        prefillExpiryDate = prefill?.expiryDate,
+                                        prefillCategory = prefill?.category,
+                                        prefillSuggestion = prefill?.suggestion,
+                                        settings = settings,
+                                        onNavigateBack = {
+                                            // Cancelling out of Add/Edit must clear any pending
+                                            // shopping-list-entry match (set by beginScanForShoppingListEntry
+                                            // when this screen was reached directly from a shopping
+                                            // list row, or via the scanner completing one) — otherwise
+                                            // it lingers and the next unrelated saveItem call deletes
+                                            // that entry as a side effect.
+                                            stateHolder.clearScanState()
+                                            scanningShoppingListEntry = null
+                                            currentScreen = scanReturnScreen
+                                        },
+                                        onSaveItem = { item ->
+                                            com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, item)
+                                            stateHolder.saveItem(item)
+                                            scanningShoppingListEntry = null
+                                            currentScreen = scanReturnScreen
+                                        },
+                                        onDuplicateMerged = onDuplicateMerged
+                                    )
+                                }
+
+                                LarderRoute.Categories -> {
+                                    CategorySettingsScreen(
+                                        stateHolder = stateHolder,
+                                        onNavigateBack = { currentScreen = LarderRoute.Settings }
+                                    )
+                                }
+
+                                is LarderRoute.RecipeResult -> {
+                                    RecipeResultScreen(
+                                        stateHolder = recipeStateHolder,
+                                        savedId = route.savedId,
+                                        onBack = { currentScreen = recipeResultReturn },
+                                        onDelete = { id ->
+                                            currentScreen = recipeResultReturn
+                                            onDeleteSavedRecipe(id)
+                                        },
+                                        onOpenDish = { day, course -> currentScreen = LarderRoute.MenuDish(route.savedId, day, course) },
+                                        shopping = recipeShopping
+                                    )
+                                }
+
+                                is LarderRoute.MenuDish -> {
+                                    MenuDishScreen(
+                                        stateHolder = recipeStateHolder,
+                                        savedId = route.savedId,
+                                        day = route.day,
+                                        course = route.course,
+                                        onBack = { currentScreen = LarderRoute.RecipeResult(route.savedId) },
+                                        shopping = recipeShopping
+                                    )
+                                }
+
+                                LarderRoute.SavedRecipes -> {
+                                    SavedRecipesScreen(
+                                        stateHolder = recipeStateHolder,
+                                        onBack = { currentScreen = LarderRoute.Recipe },
+                                        onDelete = onDeleteSavedRecipe,
+                                        onDeleteSelected = onDeleteSavedRecipes
+                                    )
+                                }
+
+                                LarderRoute.RecipeSettings -> {
+                                    RecipeSettingsScreen(
+                                        stateHolder = recipeStateHolder,
+                                        onBack = { currentScreen = LarderRoute.Recipe },
+                                        onOpenTaste = { currentScreen = LarderRoute.TasteProfile }
+                                    )
+                                }
+
+                                LarderRoute.TasteProfile -> {
+                                    TasteProfileScreen(
+                                        stateHolder = recipeStateHolder,
+                                        onClose = { currentScreen = LarderRoute.RecipeSettings }
+                                    )
+                                }
+
+                                LarderRoute.Onboarding -> {
+                                    OnboardingScreen(
+                                        onFinished = { exit ->
+                                            stateHolder.completeOnboarding()
+                                            scanReturnScreen = LarderRoute.Home
+                                            currentScreen = when (exit) {
+                                                OnboardingExit.Scanner -> LarderRoute.Scanner()
+                                                OnboardingExit.AddByHand -> LarderRoute.AddItem()
+                                                OnboardingExit.Home -> LarderRoute.Home
+                                            }
+                                        }
+                                    )
+                                }
+
                                 else -> Unit
                             }
                             }
+                        }
 
+                        if (currentTab != null) {
                             AnimatedVisibility(
                                 visible = !shellChrome.navHidden,
                                 enter = fadeIn() + slideInVertically { it / 2 },
@@ -897,204 +1028,7 @@ fun FoodTrackerRoot(
                                 )
                             }
                         }
-                        }
-                    } else {
-                    when (val route = currentScreen) {
-                        is LarderRoute.Scanner -> {
-                            ScannerScreen(
-                                stateHolder = stateHolder,
-                                initialMode = route.mode,
-                                onNavigateBack = navigateBackFromScanner,
-                                onShoppingListScanned = onShoppingListPayloadScanned,
-                                onBatchCommitted = onBatchCommitted,
-                                // Not while the scan is filling in a shopping list entry:
-                                // that scan is about buying the product, not using it.
-                                onUseOne = if (isScanningForNewShoppingListEntry || scanningShoppingListEntry != null) {
-                                    null
-                                } else {
-                                    { item ->
-                                        onUseOneHandler(item)
-                                        navigateBackFromScanner()
-                                    }
-                                },
-                                onProceedToAddItem = { barcode, name, brand, imageUrl, expiryDate, category, suggestedExpiry ->
-                                    if (isScanningForNewShoppingListEntry) {
-                                        isScanningForNewShoppingListEntry = false
-                                        // Read from the flow rather than composition state: this runs
-                                        // in a callback, so there is no reason to make the root scope
-                                        // a reader of the whole shopping list.
-                                        when (val result = ShoppingListMatcher.match(name, barcode, stateHolder.uiState.value.shoppingList)) {
-                                            is ShoppingListMatchResult.ExactBarcodeMatch -> {
-                                                stateHolder.beginScanForShoppingListEntry(result.entry.id)
-                                                openPrefilledItem(
-                                                    ItemPrefill(
-                                                        barcode = barcode,
-                                                        name = name ?: result.entry.productName,
-                                                        brand = brand,
-                                                        imageUrl = imageUrl,
-                                                        expiryDate = expiryDate,
-                                                        category = category ?: result.entry.category,
-                                                        suggestion = suggestedExpiry
-                                                    )
-                                                )
-                                            }
-                                            is ShoppingListMatchResult.Suggestions -> {
-                                                pendingShoppingListMatch = PendingShoppingListMatch(
-                                                    barcode = barcode,
-                                                    name = name,
-                                                    brand = brand,
-                                                    imageUrl = imageUrl,
-                                                    expiryDate = expiryDate,
-                                                    category = category,
-                                                    suggestedExpiry = suggestedExpiry,
-                                                    candidates = result.candidates
-                                                )
-                                                currentScreen = scanReturnScreen
-                                            }
-                                            ShoppingListMatchResult.NoMatch -> {
-                                                openPrefilledItem(
-                                                    ItemPrefill(
-                                                        barcode = barcode,
-                                                        name = name,
-                                                        brand = brand,
-                                                        imageUrl = imageUrl,
-                                                        expiryDate = expiryDate,
-                                                        category = category,
-                                                        suggestion = suggestedExpiry
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    } else {
-                                        val fallbackEntry = scanningShoppingListEntry
-                                        openPrefilledItem(
-                                            ItemPrefill(
-                                                barcode = barcode,
-                                                name = name ?: fallbackEntry?.productName,
-                                                brand = brand,
-                                                imageUrl = imageUrl,
-                                                expiryDate = expiryDate,
-                                                category = category ?: fallbackEntry?.category,
-                                                suggestion = suggestedExpiry
-                                            )
-                                        )
-                                    }
-                                }
-                            )
-                        }
-
-                        is LarderRoute.AddItem -> {
-                            val prefill = (route.mode as? AddItemMode.Prefilled)?.prefill
-                            val editingId = (route.mode as? AddItemMode.Edit)?.itemId
-                            val editingItem = remember(editingId) {
-                                stateHolder.uiState.value.items.find { it.id == editingId }
-                            }
-                            AddEditItemScreen(
-                                stateHolder = stateHolder,
-                                initialItem = editingItem,
-                                prefillBarcode = prefill?.barcode,
-                                prefillName = prefill?.name,
-                                prefillBrand = prefill?.brand,
-                                prefillImageUrl = prefill?.imageUrl,
-                                prefillExpiryDate = prefill?.expiryDate,
-                                prefillCategory = prefill?.category,
-                                prefillSuggestion = prefill?.suggestion,
-                                settings = settings,
-                                onNavigateBack = {
-                                    // Cancelling out of Add/Edit must clear any pending
-                                    // shopping-list-entry match (set by beginScanForShoppingListEntry
-                                    // when this screen was reached directly from a shopping
-                                    // list row, or via the scanner completing one) — otherwise
-                                    // it lingers and the next unrelated saveItem call deletes
-                                    // that entry as a side effect.
-                                    stateHolder.clearScanState()
-                                    scanningShoppingListEntry = null
-                                    currentScreen = scanReturnScreen
-                                },
-                                onSaveItem = { item ->
-                                    com.foodtracker.android.notification.NotificationHelper.scheduleNotification(context, item)
-                                    stateHolder.saveItem(item)
-                                    scanningShoppingListEntry = null
-                                    currentScreen = scanReturnScreen
-                                },
-                                onDuplicateMerged = onDuplicateMerged
-                            )
-                        }
-
-                        LarderRoute.Categories -> {
-                            CategorySettingsScreen(
-                                stateHolder = stateHolder,
-                                onNavigateBack = { currentScreen = LarderRoute.Settings }
-                            )
-                        }
-
-                        is LarderRoute.RecipeResult -> {
-                            RecipeResultScreen(
-                                stateHolder = recipeStateHolder,
-                                savedId = route.savedId,
-                                onBack = { currentScreen = recipeResultReturn },
-                                onDelete = { id ->
-                                    currentScreen = recipeResultReturn
-                                    onDeleteSavedRecipe(id)
-                                },
-                                onOpenDish = { day, course -> currentScreen = LarderRoute.MenuDish(route.savedId, day, course) },
-                                shopping = recipeShopping
-                            )
-                        }
-
-                        is LarderRoute.MenuDish -> {
-                            MenuDishScreen(
-                                stateHolder = recipeStateHolder,
-                                savedId = route.savedId,
-                                day = route.day,
-                                course = route.course,
-                                onBack = { currentScreen = LarderRoute.RecipeResult(route.savedId) },
-                                shopping = recipeShopping
-                            )
-                        }
-
-                        LarderRoute.SavedRecipes -> {
-                            SavedRecipesScreen(
-                                stateHolder = recipeStateHolder,
-                                onBack = { currentScreen = LarderRoute.Recipe },
-                                onDelete = onDeleteSavedRecipe,
-                                onDeleteSelected = onDeleteSavedRecipes
-                            )
-                        }
-
-                        LarderRoute.RecipeSettings -> {
-                            RecipeSettingsScreen(
-                                stateHolder = recipeStateHolder,
-                                onBack = { currentScreen = LarderRoute.Recipe },
-                                onOpenTaste = { currentScreen = LarderRoute.TasteProfile }
-                            )
-                        }
-
-                        LarderRoute.TasteProfile -> {
-                            TasteProfileScreen(
-                                stateHolder = recipeStateHolder,
-                                onClose = { currentScreen = LarderRoute.RecipeSettings }
-                            )
-                        }
-
-                        LarderRoute.Onboarding -> {
-                            OnboardingScreen(
-                                onFinished = { exit ->
-                                    stateHolder.completeOnboarding()
-                                    scanReturnScreen = LarderRoute.Home
-                                    currentScreen = when (exit) {
-                                        OnboardingExit.Scanner -> LarderRoute.Scanner()
-                                        OnboardingExit.AddByHand -> LarderRoute.AddItem()
-                                        OnboardingExit.Home -> LarderRoute.Home
-                                    }
-                                }
-                            )
-                        }
-
-                        else -> Unit
                     }
-                    }
-                }
 
                 pendingShoppingListMatch?.let { pending ->
                     ShoppingListMatchDialog(
