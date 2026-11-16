@@ -78,13 +78,18 @@ struct RootTabView: View {
         // safe area inset around all of them, which a screen's List or ScrollView takes up as
         // content inset, so everything scrolls under the pill and still clears it at the end.
         ZStack(alignment: .bottom) {
-            tabContent
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    Color.clear
-                        .frame(height: metrics.contentClearance)
-                        .allowsHitTesting(false)
-                }
+            // Exactly the screen, whatever a tab asks for: a tab taller than the screen (a stack
+            // that can't shrink, at the largest text sizes) would otherwise grow the shell with it
+            // and carry the pill and Scan off the bottom.
+            TakesOfferedSpace {
+                tabContent
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        Color.clear
+                            .frame(height: metrics.contentClearance)
+                            .allowsHitTesting(false)
+                    }
+            }
 
             floatingLayer
         }
@@ -165,9 +170,7 @@ struct RootTabView: View {
         // Over the shell rather than a cover of its own, so it is up from the first frame and the
         // scanner or the add sheet can open as it goes, with no wait for a dismissal.
         .accessibilityHidden(showOnboarding)
-        // Top-aligned and as tall as the window, whatever height the shell under it takes: at the
-        // largest text sizes the shell grows past the screen, and onboarding's buttons with it.
-        .overlay(alignment: .top) {
+        .overlay {
             if showOnboarding {
                 OnboardingView(
                     startingAt: onboardingStart,
@@ -182,7 +185,6 @@ struct RootTabView: View {
                     },
                     onFinish: finishOnboarding
                 )
-                    .containerRelativeFrame(.vertical)
                     .accessibilityElement(children: .contain)
                     .accessibilityAddTraits(.isModal)
                     .transition(.opacity)
@@ -509,6 +511,20 @@ private struct AddEditRequest: Identifiable {
 }
 
 #if DEBUG
+/// Takes the size offered and offers it on to its content, which can never make it larger: the
+/// app shell stays the size of the screen however tall a tab's content would like to be.
+private struct TakesOfferedSpace: Layout {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        proposal.replacingUnspecifiedDimensions()
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        for subview in subviews {
+            subview.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
+        }
+    }
+}
+
 extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
