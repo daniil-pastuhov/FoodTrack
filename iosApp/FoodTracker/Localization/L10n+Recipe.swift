@@ -151,7 +151,13 @@ extension L10n {
     static var recipeGenerateOnPhone: String { text("recipe_generate_on_phone") }
     static var recipeCostFree: String { text("recipe_cost_free") }
     static var recipeSharePrompt: String { text("recipe_share_prompt") }
-    static var recipePromptOnlyHint: String { text("recipe_prompt_only_hint") }
+    /// "Other ways": the label over the form's other routes.
+    static var recipeOtherWays: String { text("recipe_other_ways") }
+    /// Under the phone's model, as the primary's caption and in its row after "Free · ":
+    /// "Still weak at cooking. Nothing leaves this iPhone."
+    static var recipeOnDeviceCaption: String { text("recipe_on_device_caption") }
+    /// Under Share prompt, the same way: "For an AI app you already use".
+    static var recipeShareCaption: String { text("recipe_share_caption") }
     static var recipeNoneSelectedHint: String { text("recipe_none_selected_hint") }
 
     // States
@@ -271,10 +277,6 @@ extension L10n {
     static func recipeCost(_ count: Int) -> String { plural("recipe_cost_count", count) }
     static func recipeBalanceLeft(_ count: Int) -> String { plural("recipe_balance_left", count) }
     static var recipeBuy: String { paid("recipe_buy") }
-    /// `cost` is what a menu of the chosen number of courses takes.
-    static func recipeMenuServerHint(_ cost: Int) -> String {
-        String(format: paid("recipe_menu_server_hint"), recipeCost(cost))
-    }
     static func recipeMenuShortTitle(_ cost: Int) -> String {
         String(format: paid("recipe_menu_short_title"), recipeCost(cost))
     }
@@ -434,9 +436,6 @@ extension L10n {
     static var recipeIntroDeviceMessage: String { paid("recipe_intro_device_message") + " " + recipeOnDeviceWeak }
     /// "The model on this iPhone is still weak at cooking, so check the recipe makes sense."
     static var recipeOnDeviceWeak: String { paid("recipe_on_device_weak") }
-    /// The one line under "Generate on this iPhone", wherever it is offered: the weak point, then
-    /// why it is still worth it. Android: `recipeOnDeviceNote`.
-    static var recipeOnDeviceNote: String { recipeOnDeviceWeak + " " + paid("recipe_on_device_upsides") }
     /// "Only 2 items for 12 dishes. Most of this menu will need shopping." Android: `recipeMenuFewItems`.
     static func recipeMenuFewItems(_ hint: MenuItemsHint) -> String {
         plural("recipe_menu_few_items", hint.items, ["dishes": "\(hint.dishes)"])
@@ -533,11 +532,12 @@ extension L10n {
     }
     /// The confirmation, with the numeral even for one ("1 free recipe added").
     static func welcomeAdded(_ count: Int) -> String { plural("welcome_granted", count) }
-    static func welcomeMenuCover(_ line: WelcomeMenuCover, recipes: Int) -> String {
+    /// The offer row's line in menu mode, without the number (the row's title says it).
+    static func welcomeMenuCover(_ line: WelcomeMenuCover) -> String {
         switch line {
-        case .enough: return welcomeCount("welcome_menu_enough", recipes)
-        case .smallerMenu: return welcomeCount("welcome_menu_smaller", recipes)
-        case .singleOnly: return welcomeCount("welcome_menu_single", recipes)
+        case .enough: return paid("welcome_menu_enough")
+        case .smallerMenu: return paid("welcome_menu_smaller")
+        case .singleOnly: return paid("welcome_menu_single")
         }
     }
     /// "How recipes work"'s packs row: the sentence set in the label weight.

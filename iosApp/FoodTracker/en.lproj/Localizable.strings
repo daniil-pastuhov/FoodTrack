@@ -596,7 +596,9 @@
 "recipe_generate_on_phone" = "Generate on this {device}";
 "recipe_cost_free" = "Free";
 "recipe_share_prompt" = "Share prompt";
-"recipe_prompt_only_hint" = "Free: send the prompt to an AI app you already use.";
+"recipe_other_ways" = "Other ways";
+"recipe_on_device_caption" = "Still weak at cooking. Nothing leaves this {device}.";
+"recipe_share_caption" = "For an AI app you already use";
 "recipe_none_selected_hint" = "Tick at least one item to cook with.";
 "recipe_writing_on_phone_title" = "Writing on this {device}";
 "recipe_writing_on_phone_message" = "Nothing is sent anywhere. This can take a minute.";
@@ -665,7 +667,6 @@
 "recipe_generate_recipe" = "Generate recipe";
 "recipe_generate_menu" = "Generate menu";
 "recipe_buy" = "Buy recipes";
-"recipe_menu_server_hint" = "A menu is written on our server and takes %1$@ from a pack.";
 "recipe_menu_short_title" = "A menu takes %1$@";
 "recipe_menu_short_none" = "You have no recipes left.";
 "recipe_writing_server_title" = "Writing your recipe";
@@ -784,7 +785,6 @@
 "recipe_intro_device_title" = "Free, on this {device}";
 "recipe_intro_device_message" = "This {device} writes the recipe itself, and nothing is sent anywhere.";
 "recipe_on_device_weak" = "The model on this {device} is still weak at cooking, so check the recipe makes sense.";
-"recipe_on_device_upsides" = "It's free, and nothing leaves this {device}.";
 "recipe_intro_packs_title" = "From a recipe pack";
 "recipe_intro_packs_price" = "Packs from %@.";
 "recipe_intro_free_stays" = "The free ways stay there when you have a pack.";
@@ -875,9 +875,9 @@
 "welcome_sign_in_one" = "Sign in and get a free recipe";
 "welcome_get_one" = "Get a free recipe";
 "welcome_claiming" = "Getting your free recipes…";
-"welcome_menu_enough_one" = "A free recipe is enough for this menu.";
-"welcome_menu_smaller_one" = "A free recipe covers a single recipe or a smaller menu, not this one.";
-"welcome_menu_single_one" = "A free recipe covers a single recipe, not a menu.";
+"welcome_menu_enough" = "Enough for this menu.";
+"welcome_menu_smaller" = "Enough for single recipes or a smaller menu, not this one.";
+"welcome_menu_single" = "Enough for single recipes, not a menu.";
 "welcome_intro_sign_in_one" = "Sign in to get a free recipe and try it.";
 "welcome_intro_account_one" = "This account can get a free recipe to try it.";
 "welcome_buy_sign_in_one" = "Or sign in and get a free recipe";

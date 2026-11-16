@@ -5,7 +5,6 @@ import android.provider.Settings
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -102,12 +101,15 @@ internal fun welcomeIntroSentence(resources: Resources, hint: WelcomeHint): Stri
     WelcomeKind.CLAIM -> welcomeText(resources, hint.recipes, R.string.welcome_intro_account_one, R.plurals.welcome_intro_account)
 }
 
-/** The menu set's quiet line under the offer: what the free recipes cover. */
-internal fun welcomeMenuLine(resources: Resources, recipes: Int, cover: WelcomeMenuCover): String = when (cover) {
-    WelcomeMenuCover.ENOUGH -> welcomeText(resources, recipes, R.string.welcome_menu_enough_one, R.plurals.welcome_menu_enough)
-    WelcomeMenuCover.SMALLER_MENU -> welcomeText(resources, recipes, R.string.welcome_menu_smaller_one, R.plurals.welcome_menu_smaller)
-    WelcomeMenuCover.SINGLE_ONLY -> welcomeText(resources, recipes, R.string.welcome_menu_single_one, R.plurals.welcome_menu_single)
-}
+/** The menu set's quiet line under the offer's row: what the free recipes cover, without their
+ *  number (the row's title already says it). */
+internal fun welcomeMenuLine(resources: Resources, cover: WelcomeMenuCover): String = resources.getString(
+    when (cover) {
+        WelcomeMenuCover.ENOUGH -> R.string.welcome_menu_enough
+        WelcomeMenuCover.SMALLER_MENU -> R.string.welcome_menu_smaller
+        WelcomeMenuCover.SINGLE_ONLY -> R.string.welcome_menu_single
+    }
+)
 
 /** Recipe settings' note in the account card: signed out with nothing on this device, with recipes
  *  on this device, or signed in. */
@@ -158,13 +160,6 @@ internal fun AnimatedWelcome(hint: WelcomeHint?, content: @Composable (WelcomeHi
     }
 }
 
-/** A button whose style changes with the hint (Buy: outline without an offer, text with one),
- *  cross-faded in the same motion as the hint. */
-@Composable
-internal fun <T> WelcomeCrossfade(target: T, content: @Composable (T) -> Unit) {
-    Crossfade(targetState = target, animationSpec = tween(WELCOME_MOTION_MILLIS, easing = FastOutSlowInEasing), label = "welcome") { content(it) }
-}
-
 /** The offer on the form: an outline button with a gift, never filled. While a one-tap claim runs
  *  it spins and says what is happening; everything else stays usable. */
 @Composable
@@ -196,6 +191,25 @@ internal fun WelcomeOfferButton(hint: WelcomeHint, claiming: Boolean, onClick: (
         WelcomeSpinner()
         Text(text = stringResource(R.string.welcome_claiming), style = MaterialTheme.typography.labelLarge, color = scheme.primary)
     }
+}
+
+/** The offer as the first row of the Recipe form's "Other ways" card: the gift in an accent tile,
+ *  the offer as its title, [supporting] under it (a menu's line), and a chevron, as it opens the
+ *  sign-in sheet. While a one-tap claim runs, a spinner in the tile and what is happening, and no
+ *  taps. */
+@Composable
+internal fun WelcomeOfferRow(hint: WelcomeHint, claiming: Boolean, tiles: Boolean, supporting: String?, onClick: () -> Unit) {
+    val resources = LocalContext.current.resources
+    RouteRow(
+        icon = LarderIcons.Gift,
+        title = if (claiming) stringResource(R.string.welcome_claiming) else welcomeOfferLabel(resources, hint),
+        supporting = if (claiming) null else supporting?.let(::AnnotatedString),
+        onClick = onClick,
+        tiles = tiles,
+        chevron = true,
+        accent = true,
+        busy = claiming
+    )
 }
 
 @Composable
@@ -355,18 +369,6 @@ internal fun WelcomeAlreadyDialog(onClose: () -> Unit, onPacks: (() -> Unit)?) {
         onConfirm = { onPacks?.invoke() },
         onDismissRequest = onClose,
         dismissLabel = stringResource(R.string.recipe_close)
-    )
-}
-
-/** The menu set's line under the offer. */
-@Composable
-internal fun WelcomeMenuLine(text: String) {
-    Text(
-        text = text,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LarderSpace.s2),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
     )
 }
 

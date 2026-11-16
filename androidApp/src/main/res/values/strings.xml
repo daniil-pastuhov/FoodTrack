@@ -799,7 +799,9 @@
     <string name="recipe_prompt_clip_label">Recipe prompt</string>
     <string name="recipe_generate_on_phone">Generate on this device</string>
     <string name="recipe_cost_free">Free</string>
-    <string name="recipe_prompt_hint">Free: send the prompt to an AI app you already use.</string>
+    <string name="recipe_other_ways">Other ways</string>
+    <string name="recipe_on_device_caption">Still weak at cooking. Nothing leaves this device.</string>
+    <string name="recipe_share_caption">For an AI app you already use</string>
     <string name="recipe_tick_hint">Tick at least one item to cook with.</string>
     <string name="recipe_writing_phone_title">Writing on this device</string>
     <string name="recipe_writing_phone_body">Nothing is sent anywhere. This can take a minute.</string>
@@ -911,9 +913,7 @@
         <item quantity="other">%1$d recipes</item>
     </plurals>
     <string name="recipe_buy">Buy recipes</string>
-    <string name="recipe_menu_hint">A menu is written on our server and takes %1$s from a pack.</string>
     <string name="recipe_on_device_weak">The model on this device is still weak at cooking, so check the recipe makes sense.</string>
-    <string name="recipe_on_device_upsides">It\'s free, and nothing leaves this device.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Only %1$d item for %2$d dishes. Most of this menu will need shopping.</item>
         <item quantity="other">Only %1$d items for %2$d dishes. Most of this menu will need shopping.</item>
@@ -1206,9 +1206,6 @@
     <string name="welcome_sign_in_one">Sign in and get a free recipe</string>
     <string name="welcome_get_one">Get a free recipe</string>
     <string name="welcome_claiming">Getting your free recipes…</string>
-    <string name="welcome_menu_enough_one">A free recipe is enough for this menu.</string>
-    <string name="welcome_menu_smaller_one">A free recipe covers a single recipe or a smaller menu, not this one.</string>
-    <string name="welcome_menu_single_one">A free recipe covers a single recipe, not a menu.</string>
     <string name="welcome_intro_sign_in_one">Sign in to get a free recipe and try it.</string>
     <string name="welcome_intro_account_one">This account can get a free recipe to try it.</string>
     <string name="welcome_buy_sign_in_one">Or sign in and get a free recipe</string>
@@ -1240,18 +1237,9 @@
         <item quantity="one">Get %1$d free recipe</item>
         <item quantity="other">Get %1$d free recipes</item>
     </plurals>
-    <plurals name="welcome_menu_enough">
-        <item quantity="one">%1$d free recipe is enough for this menu.</item>
-        <item quantity="other">%1$d free recipes are enough for this menu.</item>
-    </plurals>
-    <plurals name="welcome_menu_smaller">
-        <item quantity="one">%1$d free recipe covers a single recipe or a smaller menu, not this one.</item>
-        <item quantity="other">%1$d free recipes cover single recipes or a smaller menu, not this one.</item>
-    </plurals>
-    <plurals name="welcome_menu_single">
-        <item quantity="one">%1$d free recipe covers a single recipe, not a menu.</item>
-        <item quantity="other">%1$d free recipes cover single recipes, not a menu.</item>
-    </plurals>
+    <string name="welcome_menu_enough">Enough for this menu.</string>
+    <string name="welcome_menu_smaller">Enough for single recipes or a smaller menu, not this one.</string>
+    <string name="welcome_menu_single">Enough for single recipes, not a menu.</string>
     <plurals name="welcome_intro_sign_in">
         <item quantity="one">Sign in to get %1$d free recipe and try it.</item>
         <item quantity="other">Sign in to get %1$d free recipes and try it.</item>

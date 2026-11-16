@@ -873,7 +873,9 @@
     <string name="recipe_prompt_clip_label">Запрос для рецепта</string>
     <string name="recipe_generate_on_phone">Составить на этом устройстве</string>
     <string name="recipe_cost_free">Бесплатно</string>
-    <string name="recipe_prompt_hint">Бесплатно: отправьте запрос в ИИ-приложение, которым вы уже пользуетесь.</string>
+    <string name="recipe_other_ways">Другие способы</string>
+    <string name="recipe_on_device_caption">Пока слабо готовит. Ничего не покидает устройство.</string>
+    <string name="recipe_share_caption">Для ИИ‑приложения, которым вы уже пользуетесь</string>
     <string name="recipe_tick_hint">Отметьте хотя бы один продукт.</string>
     <string name="recipe_writing_phone_title">Составляем на этом устройстве</string>
     <string name="recipe_writing_phone_body">Ничего никуда не отправляется. Это может занять минуту.</string>
@@ -999,9 +1001,7 @@
         <item quantity="other">%1$d рецепта</item>
     </plurals>
     <string name="recipe_buy">Купить рецепты</string>
-    <string name="recipe_menu_hint">Меню составляется на нашем сервере и стоит %1$s из пакета.</string>
     <string name="recipe_on_device_weak">Модель на этом устройстве пока слабо разбирается в кулинарии, так что проверьте, что рецепт имеет смысл.</string>
-    <string name="recipe_on_device_upsides">Это бесплатно, и ничего не покидает устройство.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Только %1$d продукт для %2$d блюд. Почти всё для этого меню придётся докупить.</item>
         <item quantity="few">Только %1$d продукта для %2$d блюд. Почти всё для этого меню придётся докупить.</item>
@@ -1352,9 +1352,6 @@
     <string name="welcome_sign_in_one">Войдите и получите бесплатный рецепт</string>
     <string name="welcome_get_one">Получить бесплатный рецепт</string>
     <string name="welcome_claiming">Получаем бесплатные рецепты…</string>
-    <string name="welcome_menu_enough_one">Бесплатного рецепта хватит на это меню.</string>
-    <string name="welcome_menu_smaller_one">Бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.</string>
-    <string name="welcome_menu_single_one">Бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.</string>
     <string name="welcome_intro_sign_in_one">Войдите, чтобы получить бесплатный рецепт и попробовать.</string>
     <string name="welcome_intro_account_one">Этот аккаунт может получить бесплатный рецепт, чтобы попробовать.</string>
     <string name="welcome_buy_sign_in_one">Или войдите и получите бесплатный рецепт</string>
@@ -1390,24 +1387,9 @@
         <item quantity="many">Получить %1$d бесплатных рецептов</item>
         <item quantity="other">Получить %1$d бесплатного рецепта</item>
     </plurals>
-    <plurals name="welcome_menu_enough">
-        <item quantity="one">%1$d бесплатного рецепта хватит на это меню.</item>
-        <item quantity="few">%1$d бесплатных рецептов хватит на это меню.</item>
-        <item quantity="many">%1$d бесплатных рецептов хватит на это меню.</item>
-        <item quantity="other">%1$d бесплатного рецепта хватит на это меню.</item>
-    </plurals>
-    <plurals name="welcome_menu_smaller">
-        <item quantity="one">%1$d бесплатный рецепт подойдёт для отдельного рецепта или меню поменьше, но не для этого.</item>
-        <item quantity="few">%1$d бесплатных рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</item>
-        <item quantity="many">%1$d бесплатных рецептов подойдут для отдельных рецептов или меню поменьше, но не для этого.</item>
-        <item quantity="other">%1$d бесплатного рецепта подойдут для отдельных рецептов или меню поменьше, но не для этого.</item>
-    </plurals>
-    <plurals name="welcome_menu_single">
-        <item quantity="one">%1$d бесплатный рецепт подойдёт для отдельного рецепта, но не для меню.</item>
-        <item quantity="few">%1$d бесплатных рецепта подойдут для отдельных рецептов, но не для меню.</item>
-        <item quantity="many">%1$d бесплатных рецептов подойдут для отдельных рецептов, но не для меню.</item>
-        <item quantity="other">%1$d бесплатного рецепта подойдут для отдельных рецептов, но не для меню.</item>
-    </plurals>
+    <string name="welcome_menu_enough">Хватит на это меню.</string>
+    <string name="welcome_menu_smaller">Хватит на отдельные рецепты или меню поменьше, но не на это.</string>
+    <string name="welcome_menu_single">Хватит на отдельные рецепты, но не на меню.</string>
     <plurals name="welcome_intro_sign_in">
         <item quantity="one">Войдите, чтобы получить %1$d бесплатный рецепт и попробовать.</item>
         <item quantity="few">Войдите, чтобы получить %1$d бесплатных рецепта и попробовать.</item>

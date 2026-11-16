@@ -1237,54 +1237,6 @@
             <string>%d kostenlose Rezepte holen</string>
         </dict>
     </dict>
-    <key>welcome_menu_enough</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d kostenloses Rezept reicht für dieses Menü.</string>
-            <key>other</key>
-            <string>%d kostenlose Rezepte reichen für dieses Menü.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_smaller</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d kostenloses Rezept reicht für ein einzelnes Rezept oder ein kleineres Menü, nicht für dieses.</string>
-            <key>other</key>
-            <string>%d kostenlose Rezepte reichen für einzelne Rezepte oder ein kleineres Menü, nicht für dieses.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_single</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d kostenloses Rezept reicht für ein einzelnes Rezept, nicht für ein Menü.</string>
-            <key>other</key>
-            <string>%d kostenlose Rezepte reichen für einzelne Rezepte, nicht für ein Menü.</string>
-        </dict>
-    </dict>
     <key>welcome_intro_sign_in</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

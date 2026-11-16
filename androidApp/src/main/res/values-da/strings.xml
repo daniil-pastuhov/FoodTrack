@@ -800,7 +800,9 @@
     <string name="recipe_prompt_clip_label">Opskriftsprompt</string>
     <string name="recipe_generate_on_phone">Lav på denne enhed</string>
     <string name="recipe_cost_free">Gratis</string>
-    <string name="recipe_prompt_hint">Gratis: send prompten til en AI-app, du allerede bruger.</string>
+    <string name="recipe_other_ways">Andre måder</string>
+    <string name="recipe_on_device_caption">Stadig svag til madlavning. Intet forlader enheden.</string>
+    <string name="recipe_share_caption">Til en AI‑app, du allerede bruger</string>
     <string name="recipe_tick_hint">Sæt kryds ved mindst én vare at lave mad med.</string>
     <string name="recipe_writing_phone_title">Skriver på denne enhed</string>
     <string name="recipe_writing_phone_body">Intet bliver sendt nogen steder hen. Det kan tage et minut.</string>
@@ -912,9 +914,7 @@
         <item quantity="other">%1$d opskrifter</item>
     </plurals>
     <string name="recipe_buy">Køb opskrifter</string>
-    <string name="recipe_menu_hint">En menu skrives på vores server og bruger %1$s fra en pakke.</string>
     <string name="recipe_on_device_weak">Modellen på denne enhed er stadig svag til madlavning, så tjek, at opskriften giver mening.</string>
-    <string name="recipe_on_device_upsides">Det er gratis, og intet forlader enheden.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Kun %1$d vare til %2$d retter. Det meste til denne menu skal købes ind.</item>
         <item quantity="other">Kun %1$d varer til %2$d retter. Det meste til denne menu skal købes ind.</item>
@@ -1207,9 +1207,6 @@
     <string name="welcome_sign_in_one">Log ind og få en gratis opskrift</string>
     <string name="welcome_get_one">Få en gratis opskrift</string>
     <string name="welcome_claiming">Henter dine gratis opskrifter…</string>
-    <string name="welcome_menu_enough_one">En gratis opskrift er nok til denne menu.</string>
-    <string name="welcome_menu_smaller_one">En gratis opskrift rækker til en enkelt opskrift eller en mindre menu, ikke denne.</string>
-    <string name="welcome_menu_single_one">En gratis opskrift rækker til en enkelt opskrift, ikke en menu.</string>
     <string name="welcome_intro_sign_in_one">Log ind for at få en gratis opskrift og prøve det.</string>
     <string name="welcome_intro_account_one">Denne konto kan få en gratis opskrift til at prøve det.</string>
     <string name="welcome_buy_sign_in_one">Eller log ind og få en gratis opskrift</string>
@@ -1241,18 +1238,9 @@
         <item quantity="one">Få %1$d gratis opskrift</item>
         <item quantity="other">Få %1$d gratis opskrifter</item>
     </plurals>
-    <plurals name="welcome_menu_enough">
-        <item quantity="one">%1$d gratis opskrift er nok til denne menu.</item>
-        <item quantity="other">%1$d gratis opskrifter er nok til denne menu.</item>
-    </plurals>
-    <plurals name="welcome_menu_smaller">
-        <item quantity="one">%1$d gratis opskrift rækker til en enkelt opskrift eller en mindre menu, ikke denne.</item>
-        <item quantity="other">%1$d gratis opskrifter rækker til enkelte opskrifter eller en mindre menu, ikke denne.</item>
-    </plurals>
-    <plurals name="welcome_menu_single">
-        <item quantity="one">%1$d gratis opskrift rækker til en enkelt opskrift, ikke en menu.</item>
-        <item quantity="other">%1$d gratis opskrifter rækker til enkelte opskrifter, ikke en menu.</item>
-    </plurals>
+    <string name="welcome_menu_enough">Nok til denne menu.</string>
+    <string name="welcome_menu_smaller">Nok til enkelte opskrifter eller en mindre menu, ikke denne.</string>
+    <string name="welcome_menu_single">Nok til enkelte opskrifter, ikke en menu.</string>
     <plurals name="welcome_intro_sign_in">
         <item quantity="one">Log ind for at få %1$d gratis opskrift og prøve det.</item>
         <item quantity="other">Log ind for at få %1$d gratis opskrifter og prøve det.</item>

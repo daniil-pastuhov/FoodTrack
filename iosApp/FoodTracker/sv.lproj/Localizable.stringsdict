@@ -1237,54 +1237,6 @@
             <string>Få %d gratis recept</string>
         </dict>
     </dict>
-    <key>welcome_menu_enough</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d gratis recept räcker till den här menyn.</string>
-            <key>other</key>
-            <string>%d gratis recept räcker till den här menyn.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_smaller</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d gratis recept räcker till ett enskilt recept eller en mindre meny, inte den här.</string>
-            <key>other</key>
-            <string>%d gratis recept räcker till enskilda recept eller en mindre meny, inte den här.</string>
-        </dict>
-    </dict>
-    <key>welcome_menu_single</key>
-    <dict>
-        <key>NSStringLocalizedFormatKey</key>
-        <string>%#@count@</string>
-        <key>count</key>
-        <dict>
-            <key>NSStringFormatSpecTypeKey</key>
-            <string>NSStringPluralRuleType</string>
-            <key>NSStringFormatValueTypeKey</key>
-            <string>d</string>
-            <key>one</key>
-            <string>%d gratis recept räcker till ett enskilt recept, inte en meny.</string>
-            <key>other</key>
-            <string>%d gratis recept räcker till enskilda recept, inte en meny.</string>
-        </dict>
-    </dict>
     <key>welcome_intro_sign_in</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

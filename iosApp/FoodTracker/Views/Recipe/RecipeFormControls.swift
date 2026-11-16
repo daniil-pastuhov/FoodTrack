@@ -309,42 +309,65 @@ struct RecipeChoiceChips<Option: Hashable>: View {
 
 /// The form's primary action: the first button of its button group, filled and full width like a
 /// primary `LarderButton`, with what it takes in a pill beside the label ("1 recipe", "Free") so
-/// it reads as the cost before it is tapped. The label still wraps when large text needs it.
+/// it reads as the cost before it is tapped. `subtitle` is a quieter line inside the button under
+/// the label ("Uses your taste profile"). The label and the subtitle take at most two lines each
+/// beside the icon and the pill, which never wraps or shrinks; when they need more, or the text is
+/// very large, the icon goes and the label, subtitle and pill stack. The shape is a rounded
+/// rectangle of radius 28: a pill at its usual height, never an oval when taller. Android:
+/// `LarderPrimaryAction`.
 struct RecipeGoButton: View {
     let title: String
     let icon: LarderIconName
     var cost: String? = nil
+    var subtitle: String? = nil
     let action: () -> Void
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    static let radius: CGFloat = 28
+    static var shape: RoundedRectangle { RoundedRectangle(cornerRadius: radius) }
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: LarderSpace.s2) {
+            RecipeGoLayout(
+                alwaysStacked: dynamicTypeSize >= .accessibility1,
+                hasSubtitle: subtitle != nil,
+                hasCost: cost != nil
+            ) {
+                // Shrinks to nothing (and is clipped) when the layout stacks without it.
                 LarderIcon(icon)
+                    .frame(minWidth: 0, maxWidth: LarderIcon.Size.medium.points, minHeight: 0, maxHeight: LarderIcon.Size.medium.points)
+                    .clipped()
                 Text(title)
                     .larderFont(.label)
                     .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle {
+                    Text(subtitle)
+                        .larderFont(.caption)
+                        .multilineTextAlignment(.center)
+                        .opacity(0.8)
+                }
                 if let cost {
                     Text(cost)
                         .larderFont(.caption)
+                        .lineLimit(1)
                         .padding(.vertical, 2)
                         .padding(.horizontal, LarderSpace.s2)
                         .overlay { Capsule().strokeBorder(lineWidth: 1) }
                         .fixedSize()
-                        .padding(.leading, LarderSpace.s1)
                 }
             }
             .foregroundStyle(isEnabled ? LarderColor.onPrimary : LarderColor.onSurface.opacity(0.38))
             .padding(.vertical, LarderSpace.s2)
             .padding(.horizontal, LarderSpace.s5)
             .frame(maxWidth: .infinity, minHeight: LarderSize.control)
-            .background(isEnabled ? LarderColor.primary : LarderColor.onSurface.opacity(0.12), in: Capsule())
-            .contentShape(Capsule())
+            .background(isEnabled ? LarderColor.primary : LarderColor.onSurface.opacity(0.12), in: Self.shape)
+            .contentShape(Self.shape)
         }
         .buttonStyle(RecipeGoButtonStyle())
-        .accessibilityLabel(cost.map { "\(title), \($0)" } ?? title)
+        // One element: the label, what it takes, then the subtitle.
+        .accessibilityLabel([title, cost, subtitle].compactMap { $0 }.joined(separator: ", "))
     }
 }
 
@@ -352,8 +375,265 @@ private struct RecipeGoButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .overlay {
-                Capsule().fill(LarderColor.onPrimary.opacity(configuration.isPressed ? 0.14 : 0))
+                RecipeGoButton.shape.fill(LarderColor.onPrimary.opacity(configuration.isPressed ? 0.14 : 0))
             }
+    }
+}
+
+/// The primary's content: icon, label (and subtitle) and pill in a row, centred, while the label
+/// and the subtitle fit in two lines each there; otherwise (or always, at very large text) the
+/// label, the subtitle and the pill stacked, centred, without the icon. Subviews in order: icon,
+/// title, subtitle (when `hasSubtitle`), pill (when `hasCost`).
+private struct RecipeGoLayout: Layout {
+    let alwaysStacked: Bool
+    let hasSubtitle: Bool
+    let hasCost: Bool
+
+    private let iconGap = LarderSpace.s2
+    private let pillGap = LarderSpace.s3
+    private let subtitleGap: CGFloat = 2
+    private let stackGap = LarderSpace.s1
+
+    private struct Parts {
+        let icon: LayoutSubview
+        let title: LayoutSubview
+        let subtitle: LayoutSubview?
+        let pill: LayoutSubview?
+    }
+
+    private func parts(_ subviews: Subviews) -> Parts {
+        var index = 2
+        let subtitle = hasSubtitle ? subviews[index] : nil
+        if hasSubtitle { index += 1 }
+        return Parts(icon: subviews[0], title: subviews[1], subtitle: subtitle, pill: hasCost ? subviews[index] : nil)
+    }
+
+    private struct Plan {
+        var stacked: Bool
+        var icon: CGSize
+        var title: CGSize
+        var subtitle: CGSize
+        var pill: CGSize
+        var labelWidth: CGFloat
+    }
+
+    /// At most two lines: a wrapped text's height against its one-line height.
+    private func fitsTwoLines(_ view: LayoutSubview, width: CGFloat) -> (Bool, CGSize) {
+        let line = view.sizeThatFits(.unspecified).height
+        let size = view.sizeThatFits(ProposedViewSize(width: width, height: nil))
+        return (size.height <= line * 2.5, size)
+    }
+
+    private func plan(width: CGFloat?, _ p: Parts) -> Plan {
+        let pill = p.pill?.sizeThatFits(.unspecified) ?? .zero
+        let pillSpace = p.pill == nil ? 0 : pill.width + pillGap
+        guard let width else {
+            // Ideal: everything on one line.
+            let icon = p.icon.sizeThatFits(.unspecified)
+            let title = p.title.sizeThatFits(.unspecified)
+            let subtitle = p.subtitle?.sizeThatFits(.unspecified) ?? .zero
+            return Plan(stacked: alwaysStacked, icon: icon, title: title, subtitle: subtitle, pill: pill, labelWidth: max(title.width, subtitle.width))
+        }
+        if !alwaysStacked {
+            let icon = p.icon.sizeThatFits(.unspecified)
+            let labelWidth = width - icon.width - iconGap - pillSpace
+            if labelWidth >= 40 {
+                let (titleFits, title) = fitsTwoLines(p.title, width: labelWidth)
+                let (subtitleFits, subtitle) = p.subtitle.map { fitsTwoLines($0, width: labelWidth) } ?? (true, .zero)
+                if titleFits && subtitleFits {
+                    return Plan(stacked: false, icon: icon, title: title, subtitle: subtitle, pill: pill, labelWidth: max(title.width, subtitle.width))
+                }
+            }
+        }
+        let title = p.title.sizeThatFits(ProposedViewSize(width: width, height: nil))
+        let subtitle = p.subtitle?.sizeThatFits(ProposedViewSize(width: width, height: nil)) ?? .zero
+        return Plan(stacked: true, icon: .zero, title: title, subtitle: subtitle, pill: pill, labelWidth: max(title.width, subtitle.width))
+    }
+
+    private func labelHeight(_ plan: Plan) -> CGFloat {
+        plan.title.height + (hasSubtitle ? subtitleGap + plan.subtitle.height : 0)
+    }
+
+    private func size(_ plan: Plan) -> CGSize {
+        if plan.stacked {
+            let width = max(plan.labelWidth, plan.pill.width)
+            return CGSize(width: width, height: labelHeight(plan) + (hasCost ? stackGap + plan.pill.height : 0))
+        }
+        let width = plan.icon.width + iconGap + plan.labelWidth + (hasCost ? pillGap + plan.pill.width : 0)
+        return CGSize(width: width, height: max(plan.icon.height, labelHeight(plan), plan.pill.height))
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let plan = plan(width: proposal.width, parts(subviews))
+        let natural = size(plan)
+        return CGSize(width: proposal.width ?? natural.width, height: natural.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let p = parts(subviews)
+        let plan = plan(width: bounds.width, p)
+        let total = size(plan)
+        if plan.stacked {
+            p.icon.place(at: CGPoint(x: bounds.midX, y: bounds.minY), anchor: .top, proposal: .zero)
+            var y = bounds.midY - total.height / 2
+            p.title.place(at: CGPoint(x: bounds.midX, y: y), anchor: .top, proposal: ProposedViewSize(width: bounds.width, height: nil))
+            y += plan.title.height
+            if let subtitle = p.subtitle {
+                y += subtitleGap
+                subtitle.place(at: CGPoint(x: bounds.midX, y: y), anchor: .top, proposal: ProposedViewSize(width: bounds.width, height: nil))
+                y += plan.subtitle.height
+            }
+            if let pill = p.pill {
+                pill.place(at: CGPoint(x: bounds.midX, y: y + stackGap), anchor: .top, proposal: .unspecified)
+            }
+            return
+        }
+        var x = bounds.midX - total.width / 2
+        let midY = bounds.midY
+        p.icon.place(at: CGPoint(x: x, y: midY), anchor: .leading, proposal: .unspecified)
+        x += plan.icon.width + iconGap
+        let labelMidX = x + plan.labelWidth / 2
+        var y = midY - labelHeight(plan) / 2
+        p.title.place(at: CGPoint(x: labelMidX, y: y), anchor: .top, proposal: ProposedViewSize(width: plan.labelWidth, height: nil))
+        y += plan.title.height
+        if let subtitle = p.subtitle {
+            subtitle.place(at: CGPoint(x: labelMidX, y: y + subtitleGap), anchor: .top, proposal: ProposedViewSize(width: plan.labelWidth, height: nil))
+        }
+        x += plan.labelWidth
+        if let pill = p.pill {
+            pill.place(at: CGPoint(x: x + pillGap, y: midY), anchor: .leading, proposal: .unspecified)
+        }
+    }
+}
+
+/// "Other ways": the form's other routes, one card of rows under the primary (and its caption).
+/// A small label over the group; each row is one target. The icon tiles go at very large text,
+/// and at large text on a narrow screen, so the words keep the room. Android: `RecipeOtherWays`.
+struct RecipeOtherWays<Rows: View>: View {
+    @ViewBuilder let rows: (_ showsTiles: Bool) -> Rows
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @State private var width: CGFloat = 400
+
+    private var showsTiles: Bool {
+        if dynamicTypeSize >= .accessibility1 { return false }
+        if dynamicTypeSize >= .xxxLarge && width < 360 { return false }
+        return true
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: LarderSpace.s2) {
+            Text(L10n.recipeOtherWays)
+                .larderFont(.label)
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, LarderSpace.s1)
+            LarderGroup { rows(showsTiles) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+}
+
+/// One row of "Other ways": a 40pt icon tile, the title and a supporting line (neither cut
+/// short), a chevron where it opens a sheet. The whole row is the target, at least 56pt tall.
+struct RecipeWayRow<Tile: View>: View {
+    let title: String
+    var titleColor: Color = LarderColor.onSurface
+    /// "Free · …": the word in bold, in the accent colour.
+    var free: String? = nil
+    var supporting: String? = nil
+    var chevron = false
+    var showsTile = true
+    var action: (() -> Void)? = nil
+    @ViewBuilder let tile: () -> Tile
+
+    @Environment(\.isEnabled) private var isEnabled
+
+    private var supportingText: Text? {
+        switch (free, supporting) {
+        case let (free?, supporting?):
+            return Text(free).fontWeight(.semibold).foregroundColor(LarderColor.primary) + Text(" · " + supporting)
+        case let (free?, nil):
+            return Text(free).fontWeight(.semibold).foregroundColor(LarderColor.primary)
+        case let (nil, supporting?):
+            return Text(supporting)
+        default:
+            return nil
+        }
+    }
+
+    private var row: some View {
+        HStack(spacing: LarderSpace.s3) {
+            if showsTile {
+                tile()
+                    .frame(width: 40, height: 40)
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .larderFont(.body)
+                    .foregroundStyle(titleColor)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let supportingText {
+                    supportingText
+                        .larderFont(.bodySm)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if chevron {
+                LarderIcon(.chevronRight)
+                    .foregroundStyle(LarderColor.onSurfaceVariant)
+                    .accessibilityHidden(true)
+            }
+        }
+        .padding(.vertical, LarderSpace.s2)
+        .padding(.horizontal, LarderSpace.s4)
+        .frame(minHeight: 56)
+        .contentShape(Rectangle())
+        .opacity(isEnabled ? 1 : 0.38)
+    }
+
+    var body: some View {
+        if let action {
+            Button(action: action) { row }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+        } else {
+            row.accessibilityElement(children: .combine)
+        }
+    }
+}
+
+extension RecipeWayRow where Tile == RecipeWayTile {
+    init(
+        _ title: String,
+        icon: LarderIconName,
+        free: String? = nil,
+        supporting: String? = nil,
+        chevron: Bool = false,
+        showsTile: Bool = true,
+        action: (() -> Void)? = nil
+    ) {
+        self.init(title: title, free: free, supporting: supporting, chevron: chevron, showsTile: showsTile, action: action) {
+            RecipeWayTile(icon: icon)
+        }
+    }
+}
+
+/// A row's 40pt tile: the route's icon on a quiet square.
+struct RecipeWayTile: View {
+    let icon: LarderIconName
+    var background: Color = LarderColor.surfaceContainer
+    var foreground: Color = LarderColor.onSurfaceVariant
+
+    var body: some View {
+        LarderIcon(icon, size: .custom(20))
+            .foregroundStyle(foreground)
+            .frame(width: 40, height: 40)
+            .background(background, in: RoundedRectangle(cornerRadius: LarderRadius.md))
     }
 }
 
@@ -442,7 +722,12 @@ private struct FormPreview: View {
                     RecipeTimeField(minMinutes: $minimum, maxMinutes: $minutes)
                 }
                 RecipeGoButton(title: "Generate on this phone", icon: .smartphone, cost: "Free") {}
+                RecipeGoButton(title: "Generate recipe", icon: .sparkles, cost: "1 recipe", subtitle: "Uses your taste profile") {}
                 RecipeGoButton(title: "Share prompt", icon: .share2) {}.disabled(true)
+                RecipeOtherWays { tiles in
+                    RecipeWayRow("Generate on this phone", icon: .smartphone, free: "Free", supporting: "Still weak at cooking. Nothing leaves this phone.", showsTile: tiles) {}
+                    RecipeWayRow("Buy recipes", icon: .ticket, chevron: true, showsTile: tiles) {}
+                }
             }
             .padding(LarderSpace.s4)
         }

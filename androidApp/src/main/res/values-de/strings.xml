@@ -799,7 +799,9 @@
     <string name="recipe_prompt_clip_label">Rezept-Prompt</string>
     <string name="recipe_generate_on_phone">Auf diesem Gerät erstellen</string>
     <string name="recipe_cost_free">Kostenlos</string>
-    <string name="recipe_prompt_hint">Kostenlos: Schick den Prompt an eine KI-App, die du schon nutzt.</string>
+    <string name="recipe_other_ways">Andere Wege</string>
+    <string name="recipe_on_device_caption">Kocht noch nicht gut. Nichts verlässt das Gerät.</string>
+    <string name="recipe_share_caption">Für eine KI‑App, die du schon nutzt</string>
     <string name="recipe_tick_hint">Wähle mindestens einen Artikel zum Kochen aus.</string>
     <string name="recipe_writing_phone_title">Wird auf diesem Gerät erstellt</string>
     <string name="recipe_writing_phone_body">Es wird nichts gesendet. Das kann eine Minute dauern.</string>
@@ -911,9 +913,7 @@
         <item quantity="other">%1$d Rezepte</item>
     </plurals>
     <string name="recipe_buy">Rezepte kaufen</string>
-    <string name="recipe_menu_hint">Ein Menü wird auf unserem Server erstellt und kostet %1$s aus einem Paket.</string>
     <string name="recipe_on_device_weak">Das Modell auf diesem Gerät kann noch nicht gut kochen, also prüfe, ob das Rezept Sinn ergibt.</string>
-    <string name="recipe_on_device_upsides">Es ist kostenlos, und nichts verlässt das Gerät.</string>
     <plurals name="recipe_menu_few_items">
         <item quantity="one">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
         <item quantity="other">Nur %1$d Artikel für %2$d Gerichte. Für dieses Menü musst du das meiste einkaufen.</item>
@@ -1206,9 +1206,6 @@
     <string name="welcome_sign_in_one">Melde dich an und erhalte ein kostenloses Rezept</string>
     <string name="welcome_get_one">Ein kostenloses Rezept holen</string>
     <string name="welcome_claiming">Deine kostenlosen Rezepte werden geholt…</string>
-    <string name="welcome_menu_enough_one">Ein kostenloses Rezept reicht für dieses Menü.</string>
-    <string name="welcome_menu_smaller_one">Ein kostenloses Rezept reicht für ein einzelnes Rezept oder ein kleineres Menü, nicht für dieses.</string>
-    <string name="welcome_menu_single_one">Ein kostenloses Rezept reicht für ein einzelnes Rezept, nicht für ein Menü.</string>
     <string name="welcome_intro_sign_in_one">Melde dich an, um ein kostenloses Rezept zu bekommen und es auszuprobieren.</string>
     <string name="welcome_intro_account_one">Dieses Konto kann ein kostenloses Rezept bekommen, um es auszuprobieren.</string>
     <string name="welcome_buy_sign_in_one">Oder melde dich an und erhalte ein kostenloses Rezept</string>
@@ -1240,18 +1237,9 @@
         <item quantity="one">%1$d kostenloses Rezept holen</item>
         <item quantity="other">%1$d kostenlose Rezepte holen</item>
     </plurals>
-    <plurals name="welcome_menu_enough">
-        <item quantity="one">%1$d kostenloses Rezept reicht für dieses Menü.</item>
-        <item quantity="other">%1$d kostenlose Rezepte reichen für dieses Menü.</item>
-    </plurals>
-    <plurals name="welcome_menu_smaller">
-        <item quantity="one">%1$d kostenloses Rezept reicht für ein einzelnes Rezept oder ein kleineres Menü, nicht für dieses.</item>
-        <item quantity="other">%1$d kostenlose Rezepte reichen für einzelne Rezepte oder ein kleineres Menü, nicht für dieses.</item>
-    </plurals>
-    <plurals name="welcome_menu_single">
-        <item quantity="one">%1$d kostenloses Rezept reicht für ein einzelnes Rezept, nicht für ein Menü.</item>
-        <item quantity="other">%1$d kostenlose Rezepte reichen für einzelne Rezepte, nicht für ein Menü.</item>
-    </plurals>
+    <string name="welcome_menu_enough">Genug für dieses Menü.</string>
+    <string name="welcome_menu_smaller">Genug für einzelne Rezepte oder ein kleineres Menü, nicht für dieses.</string>
+    <string name="welcome_menu_single">Genug für einzelne Rezepte, nicht für ein Menü.</string>
     <plurals name="welcome_intro_sign_in">
         <item quantity="one">Melde dich an, um %1$d kostenloses Rezept zu bekommen und es auszuprobieren.</item>
         <item quantity="other">Melde dich an, um %1$d kostenlose Rezepte zu bekommen und es auszuprobieren.</item>

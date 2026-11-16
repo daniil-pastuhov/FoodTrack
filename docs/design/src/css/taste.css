@@ -65,9 +65,6 @@
 .recipe .tp-promo .r-intro { margin-bottom: var(--space-4); }
 
 /* Recipe form: the quiet line under the server action */
-.recipe .tp-uses { display: flex; justify-content: center; align-items: center; gap: var(--space-1); }
-.recipe .tp-uses svg.lucide { flex: none; width: 16px; height: 16px; color: var(--color-primary); }
-.recipe .r-actions .btn.block.tp-primary { min-height: 56px; border-radius: var(--radius-lg); }
 
 /* Design-only frames: a small phone (360 x 640) inside the phone frame, and large text (about 150%) */
 .v-frame .app.tp-small { width: 360px; height: 640px; margin: 24px auto 0; border-radius: 16px; box-shadow: 0 0 0 1px var(--color-outline); }

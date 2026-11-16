@@ -1,10 +1,31 @@
 package com.foodtracker.android.ui.screens
 
 import android.os.Build
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
+import com.foodtracker.android.ui.theme.LarderRadius
+import com.foodtracker.recipe.WelcomeHint
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -749,104 +770,173 @@ private fun QuickForm(state: RecipeUiState, actions: RecipeTabActions) {
 
 /**
  * The form's one group of actions, at its foot: the primary action first, filled and full width
- * (with its cost where it has one), then the other routes, in [RecipeUiState.actions]' order. With
- * nothing ticked the primary stays, off, under the hint that says why.
+ * (with its cost where it has one), a caption under it when it is a free route, then "Other ways":
+ * one card with every other route in [RecipeUiState.actions]' order, the offer of free recipes
+ * first where Buy goes. With nothing ticked the primary stays, off, under the hint that says why,
+ * and so do the rows that need ticked items; Buy and the offer stay usable.
  */
 @Composable
 private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabActions) {
     val paid = state.paid
     val nothingTicked = state.selectedIds.isEmpty()
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(top = LarderSpace.s2),
-        verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)
-    ) {
-        if (nothingTicked) RecipeHint(stringResource(R.string.recipe_tick_hint))
+    Column(modifier = Modifier.fillMaxWidth().padding(top = LarderSpace.s2)) {
+        if (nothingTicked) {
+            RecipeHint(stringResource(R.string.recipe_tick_hint))
+            Spacer(Modifier.height(LarderSpace.s2))
+        }
         if (state.mode == RecipeMode.MENU) {
             MenuActions(state, actions, enabled = !nothingTicked)
             return@Column
         }
         val primary = recipePrimary(state)
         PrimaryAction(state, primary, actions, enabled = !nothingTicked)
-        if (primary == RecipePrimary.OnDevice) OnDeviceNote()
-        if (nothingTicked) return@Column
         when (primary) {
-            RecipePrimary.Server -> {
-                if (state.sendsTaste) TasteProfileHint()
-                if (state.onDeviceRoute == OnDeviceRoute.READY) {
-                    LarderButton(
-                        text = stringResource(R.string.recipe_generate_on_phone) + " · " + stringResource(R.string.recipe_cost_free),
-                        onClick = actions.onGenerateOnDevice,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = LarderButtonStyle.Outline,
-                        leadingIcon = LarderIcons.Smartphone
-                    )
-                    OnDeviceNote()
-                }
-                ShareAndCopy(state, actions)
+            RecipePrimary.OnDevice -> PrimaryCaption(stringResource(R.string.recipe_on_device_caption))
+            RecipePrimary.Share -> PrimaryCaption(stringResource(R.string.recipe_share_caption))
+            else -> Unit
+        }
+        val ways = state.actions.secondary.mapNotNull { action ->
+            when (action) {
+                RecipeAction.ON_DEVICE -> OtherWay.Device
+                RecipeAction.SHARE -> OtherWay.Share
+                RecipeAction.COPY -> OtherWay.Copy
+                RecipeAction.BUY -> OtherWay.Buy
+                RecipeAction.SERVER -> null
             }
-            RecipePrimary.OnDevice -> {
-                // The offer takes the first place under the primary; Buy and Share then share one
-                // row of text buttons, so the group is no taller than without it.
-                val welcome = paid.welcome
-                AnimatedWelcome(welcome) { WelcomeOfferButton(it, paid.welcomeClaiming, actions.onWelcome) }
-                WelcomeCrossfade(welcome != null) { offer ->
-                    if (offer) {
-                        BuyAndShareRow(state, actions)
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
-                            BuyOrBlocked(paid, actions, LarderButtonStyle.Outline)
-                            ShareAndCopy(state, actions)
-                        }
-                    }
-                }
-            }
-            else -> {
-                val copy = RecipeAction.COPY in state.actions.secondary
-                if (copy) {
-                    LarderButton(
-                        text = stringResource(R.string.recipe_copy_prompt),
-                        onClick = actions.onCopy,
-                        modifier = Modifier.fillMaxWidth(),
-                        style = LarderButtonStyle.Outline,
-                        leadingIcon = LarderIcons.Copy
-                    )
-                }
-                RecipeHint(stringResource(R.string.recipe_prompt_hint))
-                // Free recipes for signing in: the outline button with a gift, above Buy, which
-                // drops to a text button meanwhile. Without Copy or an offer, Buy is the one button
-                // under Share: outlined, not a link.
-                val welcome = paid.welcome
-                AnimatedWelcome(welcome) { WelcomeOfferButton(it, paid.welcomeClaiming, actions.onWelcome) }
-                WelcomeCrossfade(if (copy || welcome != null) LarderButtonStyle.Text else LarderButtonStyle.Outline) { style ->
-                    BuyOrBlocked(paid, actions, style)
-                }
-            }
+        }
+        // The offer goes where Buy goes: not under the server, which already has recipes to spend.
+        val buyHere = primary != RecipePrimary.Server
+        OtherWays(
+            ways = ways,
+            welcome = if (buyHere) paid.welcome else null,
+            claiming = paid.welcomeClaiming,
+            ticked = !nothingTicked,
+            actions = actions
+        )
+        if (buyHere && paid.available && paid.purchasesBlocked) {
+            Spacer(Modifier.height(LarderSpace.s3))
+            RecipeHint(stringResource(R.string.recipe_purchases_blocked))
         }
     }
 }
 
-/** With an offer and the phone's own model: Buy and Share (and Copy) as one row of text buttons,
- *  wrapping to two rows when they don't fit side by side. */
+/** A route other than the primary, as a row of the "Other ways" card. */
+private enum class OtherWay { Device, Share, Copy, Buy }
+
+/**
+ * "Other ways": a small label and one card of rows, the offer of free recipes first (with its
+ * grow-and-fade), then [ways]. Nothing at all when there is no row. [offerSupporting] is the
+ * offer's line under its title (the menu's "Enough for this menu.").
+ */
 @Composable
-private fun BuyAndShareRow(state: RecipeUiState, actions: RecipeTabActions) {
-    val paid = state.paid
-    val copy = RecipeAction.COPY in state.actions.secondary
-    if (paid.available && paid.purchasesBlocked) RecipeHint(stringResource(R.string.recipe_purchases_blocked))
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.CenterHorizontally)
-    ) {
-        if (paid.canBuy) {
-            LarderButton(text = stringResource(R.string.recipe_buy), onClick = actions.onBuy, style = LarderButtonStyle.Text, leadingIcon = LarderIcons.Ticket)
+private fun OtherWays(
+    ways: List<OtherWay>,
+    welcome: WelcomeHint?,
+    claiming: Boolean,
+    ticked: Boolean,
+    actions: RecipeTabActions,
+    offerSupporting: ((WelcomeHint) -> String)? = null
+) {
+    val tiles = otherWayTiles()
+    val offer: @Composable (WelcomeHint) -> Unit = { hint ->
+        WelcomeOfferRow(hint, claiming, tiles, offerSupporting?.invoke(hint), actions.onWelcome)
+    }
+    if (ways.isEmpty()) {
+        // The offer alone: label and card come and go with it.
+        AnimatedWelcome(welcome) { hint ->
+            Column {
+                OtherWaysHeader()
+                LarderGroup { offer(hint) }
+            }
         }
-        LarderButton(text = stringResource(R.string.recipe_share_prompt), onClick = actions.onShare, style = LarderButtonStyle.Text, leadingIcon = LarderIcons.Share2)
-        if (copy) {
-            LarderButton(text = stringResource(R.string.recipe_copy_prompt), onClick = actions.onCopy, style = LarderButtonStyle.Text, leadingIcon = LarderIcons.Copy)
+        return
+    }
+    OtherWaysHeader()
+    LarderGroup {
+        AnimatedWelcome(welcome) { hint ->
+            Column {
+                offer(hint)
+                LarderDivider()
+            }
+        }
+        ways.forEachIndexed { index, way ->
+            if (index > 0) LarderDivider()
+            OtherWayRow(way, ticked, tiles, actions)
         }
     }
 }
 
-/** The filled first button of the group: the server, the phone's model or the shared prompt. */
+@Composable
+private fun OtherWaysHeader() {
+    SectionHeader(text = stringResource(R.string.recipe_other_ways))
+}
+
+@Composable
+private fun OtherWayRow(way: OtherWay, ticked: Boolean, tiles: Boolean, actions: RecipeTabActions) {
+    val free = stringResource(R.string.recipe_cost_free)
+    when (way) {
+        OtherWay.Device -> RouteRow(
+            icon = LarderIcons.Smartphone,
+            title = stringResource(R.string.recipe_generate_on_phone),
+            supporting = freeLine(free, stringResource(R.string.recipe_on_device_caption)),
+            onClick = actions.onGenerateOnDevice,
+            enabled = ticked,
+            tiles = tiles
+        )
+        OtherWay.Share -> RouteRow(
+            icon = LarderIcons.Share2,
+            title = stringResource(R.string.recipe_share_prompt),
+            supporting = freeLine(free, stringResource(R.string.recipe_share_caption)),
+            onClick = actions.onShare,
+            enabled = ticked,
+            tiles = tiles
+        )
+        OtherWay.Copy -> RouteRow(
+            icon = LarderIcons.Copy,
+            title = stringResource(R.string.recipe_copy_prompt),
+            supporting = freeLine(free, null),
+            onClick = actions.onCopy,
+            enabled = ticked,
+            tiles = tiles
+        )
+        OtherWay.Buy -> RouteRow(
+            icon = LarderIcons.Ticket,
+            title = stringResource(R.string.recipe_buy),
+            supporting = null,
+            onClick = actions.onBuy,
+            tiles = tiles,
+            chevron = true
+        )
+    }
+}
+
+/** "Free · [rest]", "Free" in the accent colour and bold so it is found at a glance. */
+@Composable
+private fun freeLine(free: String, rest: String?): AnnotatedString {
+    val accent = MaterialTheme.colorScheme.primary
+    return buildAnnotatedString {
+        withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = accent)) { append(free) }
+        rest?.let {
+            append(" · ")
+            append(it)
+        }
+    }
+}
+
+/** The quiet line directly under a free primary: what the route is. Never under the server. */
+@Composable
+private fun PrimaryCaption(text: String) {
+    Text(
+        text = text,
+        modifier = Modifier.fillMaxWidth().padding(top = LarderSpace.s1).padding(horizontal = LarderSpace.s2),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center
+    )
+}
+
+/** The filled first button of the group: the server, the phone's model or the shared prompt. The
+ *  server's carries "Uses your taste profile" while the request will send it. */
 @Composable
 private fun PrimaryAction(state: RecipeUiState, primary: RecipePrimary, actions: RecipeTabActions, enabled: Boolean) {
     if (primary == RecipePrimary.None) return
@@ -871,12 +961,14 @@ private fun PrimaryAction(state: RecipeUiState, primary: RecipePrimary, actions:
             RecipePrimary.OnDevice -> stringResource(R.string.recipe_cost_free)
             else -> null
         },
+        subtitle = if (primary == RecipePrimary.Server && state.sendsTaste) stringResource(R.string.taste_uses_profile) else null,
         enabled = enabled,
         modifier = Modifier.fillMaxWidth()
     )
 }
 
-/** A menu has only the server: Generate menu with its cost, or how to get enough for one. */
+/** A menu has only the server: Generate menu with its cost, or how to get enough for one (Buy,
+ *  filled, and the offer of free recipes with what they cover). */
 @Composable
 private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled: Boolean) {
     val paid = state.paid
@@ -898,17 +990,20 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled
                     else -> pluralStringResource(R.plurals.recipe_balance_left, balance, balance)
                 }
             )
+            Spacer(Modifier.height(LarderSpace.s2))
             BuyOrBlocked(paid, actions, LarderButtonStyle.Primary)
-            // The offer under Buy, with one quiet line on what the free recipes cover: never a
-            // promise the menu can't keep.
-            AnimatedWelcome(paid.welcome) { hint ->
-                Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
-                    WelcomeOfferButton(hint, paid.welcomeClaiming, actions.onWelcome)
-                    WelcomeMenuLine(
-                        welcomeMenuLine(resources, hint.recipes, welcomeMenuCover(hint.recipes, balance, state.serverCost, paid.costs, paid.menuSets))
-                    )
+            // The offer, with one quiet line on what the free recipes cover: never a promise the
+            // menu can't keep.
+            OtherWays(
+                ways = emptyList(),
+                welcome = paid.welcome,
+                claiming = paid.welcomeClaiming,
+                ticked = enabled,
+                actions = actions,
+                offerSupporting = { hint ->
+                    welcomeMenuLine(resources, welcomeMenuCover(hint.recipes, balance, state.serverCost, paid.costs, paid.menuSets))
                 }
-            }
+            )
         }
         else -> {
             // Few items for many dishes: said, never stopped; live with the ticks and choices.
@@ -918,10 +1013,9 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled
                     icon = LarderIcons.ShoppingBasket,
                     message = recipeMenuFewItems(resources, hint)
                 )
+                Spacer(Modifier.height(LarderSpace.s2))
             }
             PrimaryAction(state, recipePrimary(state), actions, enabled)
-            if (enabled) RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
-            if (enabled && state.sendsTaste) TasteProfileHint()
         }
     }
 }
@@ -932,58 +1026,91 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled
 private fun BuyOrBlocked(paid: PaidUiState, actions: RecipeTabActions, style: LarderButtonStyle) {
     when {
         paid.available && paid.purchasesBlocked -> RecipeHint(stringResource(R.string.recipe_purchases_blocked))
-        paid.canBuy -> BuyButton(actions, style)
+        paid.canBuy -> LarderButton(
+            text = stringResource(R.string.recipe_buy),
+            onClick = actions.onBuy,
+            modifier = Modifier.fillMaxWidth(),
+            style = style,
+            leadingIcon = LarderIcons.Ticket
+        )
     }
 }
 
+/** The icon tiles of "Other ways" rows: dropped with large text (font scale 1.5 and over, or 1.3
+ *  and over under 360dp wide), so titles keep their room. */
 @Composable
-private fun BuyButton(actions: RecipeTabActions, style: LarderButtonStyle) {
-    LarderButton(
-        text = stringResource(R.string.recipe_buy),
-        onClick = actions.onBuy,
-        modifier = Modifier.fillMaxWidth(),
-        style = style,
-        leadingIcon = LarderIcons.Ticket
-    )
+private fun otherWayTiles(): Boolean {
+    val fontScale = LocalDensity.current.fontScale
+    val width = LocalConfiguration.current.screenWidthDp
+    return !(fontScale >= 1.5f || (fontScale >= 1.3f && width < 360))
 }
 
-/** Share, and Copy where the share sheet can't copy (Android below 10): side by side, and one
- *  under the other when large text leaves no room for both. */
+/**
+ * A row of the "Other ways" card: a 40dp icon tile (unless [tiles] is off), the title (no line
+ * limit), [supporting] in full, and a chevron on rows that open a sheet. The whole row is the tap
+ * target, at least 56dp tall; off ([enabled] false) it is dimmed and does nothing. [busy] puts a
+ * spinner in the tile and takes no taps; [accent] draws the title and tile in the accent colours.
+ */
 @Composable
-private fun ShareAndCopy(state: RecipeUiState, actions: RecipeTabActions) {
-    val copy = RecipeAction.COPY in state.actions.secondary
-    FlowRow(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.CenterHorizontally)
-    ) {
-        LarderButton(
-            text = stringResource(R.string.recipe_share_prompt),
-            onClick = actions.onShare,
-            style = LarderButtonStyle.Text,
-            leadingIcon = LarderIcons.Share2
-        )
-        if (copy) {
-            LarderButton(
-                text = stringResource(R.string.recipe_copy_prompt),
-                onClick = actions.onCopy,
-                style = LarderButtonStyle.Text,
-                leadingIcon = LarderIcons.Copy
+internal fun RouteRow(
+    icon: LarderIcons,
+    title: String,
+    supporting: AnnotatedString?,
+    onClick: () -> Unit,
+    tiles: Boolean,
+    enabled: Boolean = true,
+    chevron: Boolean = false,
+    accent: Boolean = false,
+    busy: Boolean = false
+) {
+    val scheme = MaterialTheme.colorScheme
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (busy) {
+                    Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
+                } else {
+                    Modifier.clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                }
             )
+            .heightIn(min = 56.dp)
+            .alpha(if (enabled) 1f else 0.38f)
+            .padding(horizontal = LarderSpace.s4, vertical = LarderSpace.s3),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s3),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (tiles) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(LarderRadius.md))
+                    .background(if (accent) scheme.primaryContainer else scheme.surfaceContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                if (busy) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), color = scheme.primary, strokeWidth = 2.dp)
+                } else {
+                    LarderIcon(icon, contentDescription = null, tint = if (accent) scheme.onPrimaryContainer else scheme.onSurfaceVariant)
+                }
+            }
+        } else if (busy) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), color = scheme.primary, strokeWidth = 2.dp)
+        }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = if (accent) scheme.primary else scheme.onSurface
+            )
+            supporting?.let {
+                Text(text = it, style = MaterialTheme.typography.bodyMedium, color = scheme.onSurfaceVariant)
+            }
+        }
+        if (chevron && !busy) {
+            LarderIcon(LarderIcons.ChevronRight, contentDescription = null, size = 20.dp, tint = scheme.onSurfaceVariant)
         }
     }
-}
-
-/** Helper text directly under "Generate on this device", wherever it is offered: the phone's
- *  model is weaker than the server, and free and private. Small, so the group stays tight. */
-@Composable
-private fun OnDeviceNote() {
-    Text(
-        text = recipeOnDeviceNote(LocalContext.current.resources),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = LarderSpace.s2),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
-    )
 }
 
 @Composable

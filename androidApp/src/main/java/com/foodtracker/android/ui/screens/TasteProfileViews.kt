@@ -110,26 +110,6 @@ import com.foodtracker.recipe.undoneMove
  * (TasteQuiz). The app bundles no steps, options or their texts; only the chrome below.
  */
 
-// --- Recipe form ------------------------------------------------------------------------------
-
-/** The quiet line under the server's action while a taste profile goes with its requests
- *  ([com.foodtracker.recipe.RecipeUiState.sendsTaste]); never under the free routes. */
-@Composable
-internal fun TasteProfileHint() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s1, Alignment.CenterHorizontally),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        LarderIcon(LarderIcons.Heart, contentDescription = null, size = 16.dp, tint = MaterialTheme.colorScheme.primary)
-        Text(
-            text = stringResource(R.string.taste_uses_profile),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
 // --- Recipe settings row ----------------------------------------------------------------------
 
 /** The row's summary: "Italian, Nordic · Medium · 5 more", or "6 answers" without the labels

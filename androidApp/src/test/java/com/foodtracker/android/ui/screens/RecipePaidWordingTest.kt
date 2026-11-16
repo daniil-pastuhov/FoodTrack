@@ -165,10 +165,6 @@ class RecipePaidWordingTest {
             recipePacksBody(resources, costs)
         )
         assertEquals("A menu takes 5 recipes", resources.getString(R.string.recipe_menu_short_title, recipeCount(resources, costs.menu3)))
-        assertEquals(
-            "A menu is written on our server and takes 4 recipes from a pack.",
-            resources.getString(R.string.recipe_menu_hint, recipeCount(resources, costs.menu2))
-        )
     }
 
     @Test
@@ -351,11 +347,9 @@ class RecipePaidWordingTest {
             "Only 5 items for 12 dishes. Most of this menu will need shopping.",
             recipeMenuFewItems(r, MenuItemsHint(5, 12))
         )
-        assertEquals(
-            "The model on this device is still weak at cooking, so check the recipe makes sense. " +
-                "It's free, and nothing leaves this device.",
-            recipeOnDeviceNote(r)
-        )
+        assertEquals("Still weak at cooking. Nothing leaves this device.", r.getString(R.string.recipe_on_device_caption))
+        assertEquals("For an AI app you already use", r.getString(R.string.recipe_share_caption))
+        assertEquals("Other ways", r.getString(R.string.recipe_other_ways))
     }
 
     @Test

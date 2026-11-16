@@ -631,19 +631,6 @@ private struct TasteCard: View {
     }
 }
 
-/// "Uses your taste profile" under the server's button, only when a profile will really be sent.
-struct TasteUsesProfileLine: View {
-    var body: some View {
-        HStack(spacing: LarderSpace.s1) {
-            LarderIcon(.heart, size: .custom(14))
-            Text(L10n.tasteUsesProfile).larderFont(.bodySm)
-        }
-        .foregroundStyle(LarderColor.onSurfaceVariant)
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-    }
-}
-
 // MARK: Previews
 
 #if DEBUG
