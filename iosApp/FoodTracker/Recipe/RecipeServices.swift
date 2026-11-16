@@ -26,7 +26,7 @@ protocol OnDeviceRecipeModel: Sendable {
 
 // MARK: Paid route
 
-/// Our server's five callables (`functions/CONTRACT.md`). `FirebaseRecipeBackend` is the real
+/// Our server's callables (`functions/CONTRACT.md`). `FirebaseRecipeBackend` is the real
 /// one; errors are `RecipeServerError`. `RecipeCredits` builds the purchase and account flows on
 /// it, and `RecipeViewModel` the generation.
 protocol RecipeBackend: Sendable {
@@ -46,6 +46,13 @@ protocol RecipeBackend: Sendable {
     /// The taste-profile quiz in `language` (an ordinary App Check token, as `getBalance`). Only
     /// when the person opens the quiz, and only after a reply said `acceptsTaste`.
     func tasteQuiz(language: String) async throws -> TasteQuiz
+    /// `getWelcomeOffer`: how many free recipes a sign-in gets now. App Check only (an ordinary
+    /// token), no sign-in: it works before any account exists and creates none, and it sends
+    /// nothing about the person. Only where the paid route can be available (`WelcomeRecipes.asks`).
+    func welcomeOffer() async throws -> WelcomeOfferResponse
+    /// `claimWelcome`: the free recipes, once per Apple or Google account. Signed in only, with a
+    /// limited-use App Check token. Idempotent: a retry after a lost answer never grants twice.
+    func claimWelcome() async throws -> ClaimWelcomeResponse
 }
 
 // MARK: Configuration

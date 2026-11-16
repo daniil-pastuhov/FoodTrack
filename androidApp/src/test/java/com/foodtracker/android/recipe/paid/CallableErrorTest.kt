@@ -7,6 +7,7 @@ import com.foodtracker.recipe.appleLinkLeftBehind
 import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
+import com.foodtracker.recipe.WelcomeStatus
 import com.google.firebase.functions.FirebaseFunctionsException.Code
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -266,12 +267,58 @@ class CallableErrorTest {
 
     @Test
     fun exactlyTheConsumingCallablesUseLimitedUseTokens() {
-        for (name in listOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount")) {
+        for (name in listOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount", "claimWelcome")) {
             assertEquals(true, usesLimitedUseToken(name), name)
         }
-        for (name in listOf("getGeneration", "getBalance")) {
+        // getWelcomeOffer is asked before any account exists, with an ordinary token.
+        for (name in listOf("getGeneration", "getBalance", "getTasteQuiz", "getWelcomeOffer")) {
             assertEquals(false, usesLimitedUseToken(name), name)
         }
+    }
+
+    @Test
+    fun balanceAndMergeRepliesCarryTheFreeRecipes() {
+        val reply = JsonObject(mapOf("balance" to JsonPrimitive(0), "acceptsWelcome" to JsonPrimitive(true), "welcomeRecipes" to JsonPrimitive(3)))
+        assertEquals(true, balanceReplyOf(reply)?.acceptsWelcome)
+        assertEquals(3, balanceReplyOf(reply)?.welcomeRecipes)
+        assertEquals(3, mergeReplyOf(reply)?.welcomeRecipes)
+        val older = balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(0))))
+        assertEquals(false, older?.acceptsWelcome)
+        assertEquals(null, older?.welcomeRecipes)
+    }
+
+    @Test
+    fun claimRepliesCarryTheStatusTheGrantAndTheBalance() {
+        val granted = welcomeClaimReplyOf(
+            JsonObject(
+                mapOf(
+                    "status" to JsonPrimitive("GRANTED"),
+                    "granted" to JsonPrimitive(3),
+                    "balance" to JsonPrimitive(3),
+                    "acceptsWelcome" to JsonPrimitive(true),
+                    "welcomeRecipes" to JsonPrimitive(3)
+                )
+            )
+        )
+        assertEquals(WelcomeStatus.GRANTED, granted?.status)
+        assertEquals(3, granted?.granted)
+        assertEquals(3, granted?.balance?.balance)
+        // `granted` counts only with GRANTED.
+        val already = welcomeClaimReplyOf(JsonObject(mapOf("status" to JsonPrimitive("ALREADY"), "granted" to JsonPrimitive(3), "balance" to JsonPrimitive(7))))
+        assertEquals(WelcomeStatus.ALREADY, already?.status)
+        assertEquals(0, already?.granted)
+        assertEquals(7, already?.balance?.balance)
+        // Without a status or a balance it can't be read: treated as a claim not reached.
+        assertEquals(null, welcomeClaimReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(3)))))
+        assertEquals(null, welcomeClaimReplyOf(JsonObject(mapOf("status" to JsonPrimitive("OFF")))))
+        assertEquals(null, welcomeClaimReplyOf(JsonObject(mapOf("status" to JsonPrimitive("MAYBE"), "balance" to JsonPrimitive(3)))))
+    }
+
+    @Test
+    fun signInRequiredIsTheClaimsOwnRefusal() {
+        assertEquals(ServerError.SIGN_IN_REQUIRED, error(Code.FAILED_PRECONDITION, "SIGN_IN_REQUIRED"))
+        // An older server without the callable: no free recipes, read as 0.
+        assertEquals(ServerError.CALLABLE_MISSING, error(Code.NOT_FOUND))
     }
 
     @Test

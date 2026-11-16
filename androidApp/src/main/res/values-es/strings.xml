@@ -1276,4 +1276,105 @@
     <string name="taste_promo_taste_body">Nuestro servidor se inclina por lo que te gusta y deja fuera lo que prefieres evitar. Tu despensa, tus alérgenos y tu dieta siguen siendo lo primero.</string>
     <string name="taste_promo_device_title">Se queda en este dispositivo</string>
     <string name="taste_promo_device_body">Solo se envía con las solicitudes de recetas de un paquete.</string>
+    <!-- Free recipes for signing in (the welcome grant): one with no numeral in an offer (_one), a numeral in a confirmation. -->
+    <string name="welcome_sign_in_one">Inicia sesión y consigue una receta gratis</string>
+    <string name="welcome_get_one">Conseguir una receta gratis</string>
+    <string name="welcome_claiming">Consiguiendo tus recetas gratis…</string>
+    <string name="welcome_menu_enough_one">Una receta gratis es suficiente para este menú.</string>
+    <string name="welcome_menu_smaller_one">Una receta gratis sirve para una receta suelta o un menú más pequeño, no para este.</string>
+    <string name="welcome_menu_single_one">Una receta gratis sirve para una receta suelta, no para un menú.</string>
+    <string name="welcome_intro_sign_in_one">Inicia sesión para conseguir una receta gratis y probarlo.</string>
+    <string name="welcome_intro_account_one">Esta cuenta puede conseguir una receta gratis para probarlo.</string>
+    <string name="welcome_buy_sign_in_one">O inicia sesión y consigue una receta gratis</string>
+    <string name="welcome_buy_get_one">O consigue una receta gratis</string>
+    <string name="welcome_sheet_lede_one">Inicia sesión y nuestro servidor añade una receta gratis a tu cuenta, para que pruebes lo que da un paquete.</string>
+    <string name="welcome_sheet_server_title">Escritas por nuestro servidor</string>
+    <string name="welcome_sheet_server_body">Funcionan como las recetas de un paquete: una receta suelta, o un menú si hay suficientes.</string>
+    <string name="welcome_sheet_account_title">Guardadas en tu cuenta</string>
+    <string name="welcome_sheet_account_body">Ellas, y cualquier receta que compres después, te siguen a un teléfono nuevo donde inicies sesión con Google.</string>
+    <string name="welcome_sheet_privacy_title">Una cuenta en nuestro servidor</string>
+    <string name="welcome_sheet_privacy_body">Guardamos el ID de tu cuenta y tu correo electrónico. Iniciar sesión no envía nada de tu despensa, y puedes eliminar la cuenta en Ajustes de recetas.</string>
+    <string name="welcome_once">Las recetas gratis se dan una vez por cuenta de Google.</string>
+    <string name="welcome_not_now">Ahora no</string>
+    <string name="welcome_adding">Añadiendo tus recetas gratis…</string>
+    <string name="welcome_already_title">Esta cuenta ya recibió sus recetas gratis</string>
+    <string name="welcome_already_body">Las recetas gratis se dan una vez por cuenta de Apple o Google. Has iniciado sesión, y las recetas que compres se guardan en esta cuenta.</string>
+    <string name="welcome_off_signed_in_now">Las recetas gratis no están disponibles ahora mismo. Has iniciado sesión; nada más ha cambiado.</string>
+    <string name="welcome_off">Las recetas gratis no están disponibles ahora mismo. No ha cambiado nada.</string>
+    <string name="welcome_claim_failed">Has iniciado sesión, pero aún no se han podido añadir tus recetas gratis.</string>
+    <string name="welcome_settings_sign_in_one">Inicia sesión y consigue una receta gratis de nuestro servidor, una vez por cuenta de Google.</string>
+    <string name="welcome_settings_account_one">Esta cuenta puede conseguir una receta gratis de nuestro servidor.</string>
+    <string name="welcome_settings_on_phone_one">Al iniciar sesión también consigues una receta gratis.</string>
+    <string name="welcome_delete_note">Volver a iniciar sesión más adelante no devolverá las recetas gratis.</string>
+    <plurals name="welcome_sign_in">
+        <item quantity="one">Inicia sesión y consigue %1$d receta gratis</item>
+        <item quantity="many">Inicia sesión y consigue %1$d recetas gratis</item>
+        <item quantity="other">Inicia sesión y consigue %1$d recetas gratis</item>
+    </plurals>
+    <plurals name="welcome_get">
+        <item quantity="one">Conseguir %1$d receta gratis</item>
+        <item quantity="many">Conseguir %1$d recetas gratis</item>
+        <item quantity="other">Conseguir %1$d recetas gratis</item>
+    </plurals>
+    <plurals name="welcome_menu_enough">
+        <item quantity="one">%1$d receta gratis es suficiente para este menú.</item>
+        <item quantity="many">%1$d recetas gratis son suficientes para este menú.</item>
+        <item quantity="other">%1$d recetas gratis son suficientes para este menú.</item>
+    </plurals>
+    <plurals name="welcome_menu_smaller">
+        <item quantity="one">%1$d receta gratis sirve para una receta suelta o un menú más pequeño, no para este.</item>
+        <item quantity="many">%1$d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</item>
+        <item quantity="other">%1$d recetas gratis sirven para recetas sueltas o un menú más pequeño, no para este.</item>
+    </plurals>
+    <plurals name="welcome_menu_single">
+        <item quantity="one">%1$d receta gratis sirve para una receta suelta, no para un menú.</item>
+        <item quantity="many">%1$d recetas gratis sirven para recetas sueltas, no para un menú.</item>
+        <item quantity="other">%1$d recetas gratis sirven para recetas sueltas, no para un menú.</item>
+    </plurals>
+    <plurals name="welcome_intro_sign_in">
+        <item quantity="one">Inicia sesión para conseguir %1$d receta gratis y probarlo.</item>
+        <item quantity="many">Inicia sesión para conseguir %1$d recetas gratis y probarlo.</item>
+        <item quantity="other">Inicia sesión para conseguir %1$d recetas gratis y probarlo.</item>
+    </plurals>
+    <plurals name="welcome_intro_account">
+        <item quantity="one">Esta cuenta puede conseguir %1$d receta gratis para probarlo.</item>
+        <item quantity="many">Esta cuenta puede conseguir %1$d recetas gratis para probarlo.</item>
+        <item quantity="other">Esta cuenta puede conseguir %1$d recetas gratis para probarlo.</item>
+    </plurals>
+    <plurals name="welcome_buy_sign_in">
+        <item quantity="one">O inicia sesión y consigue %1$d receta gratis</item>
+        <item quantity="many">O inicia sesión y consigue %1$d recetas gratis</item>
+        <item quantity="other">O inicia sesión y consigue %1$d recetas gratis</item>
+    </plurals>
+    <plurals name="welcome_buy_get">
+        <item quantity="one">O consigue %1$d receta gratis</item>
+        <item quantity="many">O consigue %1$d recetas gratis</item>
+        <item quantity="other">O consigue %1$d recetas gratis</item>
+    </plurals>
+    <plurals name="welcome_sheet_lede">
+        <item quantity="one">Inicia sesión y nuestro servidor añade %1$d receta gratis a tu cuenta, para que pruebes lo que da un paquete.</item>
+        <item quantity="many">Inicia sesión y nuestro servidor añade %1$d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</item>
+        <item quantity="other">Inicia sesión y nuestro servidor añade %1$d recetas gratis a tu cuenta, para que pruebes lo que da un paquete.</item>
+    </plurals>
+    <plurals name="welcome_granted">
+        <item quantity="one">%1$d receta gratis añadida</item>
+        <item quantity="many">%1$d recetas gratis añadidas</item>
+        <item quantity="other">%1$d recetas gratis añadidas</item>
+    </plurals>
+    <plurals name="welcome_settings_sign_in">
+        <item quantity="one">Inicia sesión y consigue %1$d receta gratis de nuestro servidor, una vez por cuenta de Google.</item>
+        <item quantity="many">Inicia sesión y consigue %1$d recetas gratis de nuestro servidor, una vez por cuenta de Google.</item>
+        <item quantity="other">Inicia sesión y consigue %1$d recetas gratis de nuestro servidor, una vez por cuenta de Google.</item>
+    </plurals>
+    <plurals name="welcome_settings_account">
+        <item quantity="one">Esta cuenta puede conseguir %1$d receta gratis de nuestro servidor.</item>
+        <item quantity="many">Esta cuenta puede conseguir %1$d recetas gratis de nuestro servidor.</item>
+        <item quantity="other">Esta cuenta puede conseguir %1$d recetas gratis de nuestro servidor.</item>
+    </plurals>
+    <plurals name="welcome_settings_on_phone">
+        <item quantity="one">Al iniciar sesión también consigues %1$d receta gratis.</item>
+        <item quantity="many">Al iniciar sesión también consigues %1$d recetas gratis.</item>
+        <item quantity="other">Al iniciar sesión también consigues %1$d recetas gratis.</item>
+    </plurals>
+    <!-- /Free recipes for signing in -->
 </resources>

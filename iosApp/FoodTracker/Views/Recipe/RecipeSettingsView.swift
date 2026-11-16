@@ -120,6 +120,10 @@ struct RecipeSettingsView: View {
             .frame(maxWidth: .infinity)
         }
         #if DEBUG
+        // `-demoRecipeScrollEnd YES`: opens at its end (the account card), for screenshots.
+        .defaultScrollAnchor(UserDefaults.standard.bool(forKey: "demoRecipeScrollEnd") ? .bottom : .top)
+        #endif
+        #if DEBUG
         // `-demoTasteScroll YES`: the taste profile's row in view, for screenshots.
         .onAppear {
             if UserDefaults.standard.bool(forKey: "demoTasteScroll") { proxy.scrollTo(Self.tasteRowID, anchor: .center) }

@@ -33,7 +33,8 @@ struct RecipeAccountCard: View {
         .larderDialog(
             L10n.recipeDeleteTitle,
             isPresented: $confirmingDelete,
-            message: L10n.recipeDeleteMessage(credits.balance ?? 0),
+            // An account that had its free recipes: signing in again won't bring them back.
+            message: L10n.recipeDeleteMessage(credits.balance ?? 0, hadFreeRecipes: credits.welcomeClaimedHere),
             actions: [
                 .cancel(L10n.cancelButton),
                 .destructive(L10n.recipeDeleteAccount) { Task { await credits.deleteAccount() } },
@@ -105,6 +106,10 @@ struct RecipeAccountCard: View {
         heading(L10n.recipeSettingsAccount, icon: .userRound)
         note(L10n.recipeSettingsNoAccount)
         if credits.isPaidRouteAvailable {
+            // The offer, with the server's number; these buttons claim it too once signed in.
+            if let hint = credits.welcomeHint {
+                WelcomeNote(text: L10n.welcomeSettingsSignIn(hint.recipes)).welcomeTransition()
+            }
             // Someone with recipes in an account, on a new phone, signs in here without buying.
             note(L10n.recipeHaveAccountHint)
             RecipeSignInButtons(credits: credits) { _ in }
@@ -116,6 +121,9 @@ struct RecipeAccountCard: View {
         heading(L10n.recipeYourRecipes, icon: .smartphone)
         count(credits.balance ?? 0, label: L10n.recipeOnPhoneLabel(credits.balance ?? 0))
         note(L10n.recipeOnPhoneMessage)
+        if let hint = credits.welcomeHint {
+            WelcomeNote(text: L10n.welcomeSettingsDevice(hint.recipes)).welcomeTransition()
+        }
         RecipeSignInButtons(credits: credits) { _ in }
         if credits.canBuy {
             LarderButton(L10n.recipeBuy, icon: .ticket, variant: .outline, fullWidth: true) {
@@ -164,6 +172,14 @@ struct RecipeAccountCard: View {
         if let missing {
             RecipeSignInButtons(credits: credits, only: missing) { _ in }
                 .accessibilityLabel(L10n.recipeAddSignIn(missing))
+        }
+        // Signed in and not claimed: the account's own number, claimed with one tap.
+        if let hint = credits.welcomeHint {
+            VStack(spacing: LarderSpace.s3) {
+                WelcomeNote(text: L10n.welcomeSettingsAccount(hint.recipes))
+                WelcomeOfferButton(model: model, hint: hint)
+            }
+            .welcomeTransition()
         }
         HStack(spacing: LarderSpace.s2) {
             LarderButton(L10n.recipeSignOut, variant: .outline, fullWidth: true) { confirmingSignOut = true }

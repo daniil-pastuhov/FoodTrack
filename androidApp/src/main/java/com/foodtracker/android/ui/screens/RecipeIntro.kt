@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -26,6 +27,8 @@ import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.recipe.OnDeviceRoute
 import com.foodtracker.recipe.PaidUiState
 import com.foodtracker.recipe.RecipeUiState
+import com.foodtracker.recipe.WelcomeHint
+import com.foodtracker.recipe.WelcomeKind
 
 /** What the introduction can honestly offer on this device and build, worked out from the state. */
 internal data class RecipeIntroContent(
@@ -36,14 +39,17 @@ internal data class RecipeIntroContent(
     /** "See recipe packs": only where buying is offered right now. */
     val canBuy: Boolean,
     /** The store's own formatted price of the cheapest pack, when it has answered. */
-    val lowestPrice: String?
+    val lowestPrice: String?,
+    /** Free recipes for signing in, as the sheet found them when it opened; null for none. */
+    val welcome: WelcomeHint? = null
 )
 
 internal fun recipeIntroContent(state: RecipeUiState) = RecipeIntroContent(
     onDevice = state.onDeviceRoute == OnDeviceRoute.READY || state.onDeviceRoute == OnDeviceRoute.PREPARING,
     packs = state.paid.available,
     canBuy = state.paid.canBuy,
-    lowestPrice = state.paid.lowestPrice
+    lowestPrice = state.paid.lowestPrice,
+    welcome = state.paid.welcome
 )
 
 /**
@@ -55,14 +61,16 @@ internal fun recipeIntroContent(state: RecipeUiState) = RecipeIntroContent(
  */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-internal fun RecipeIntroSheet(state: RecipeUiState, onDismiss: () -> Unit, onPacks: () -> Unit) {
+internal fun RecipeIntroSheet(state: RecipeUiState, onDismiss: () -> Unit, onPacks: () -> Unit, onWelcome: () -> Unit = {}) {
+    // As it was when the sheet opened: an offer that arrives meanwhile waits for the next showing.
+    val content = remember { recipeIntroContent(state) }
     LarderSheet(onDismissRequest = onDismiss, title = stringResource(R.string.recipe_intro_title)) {
-        RecipeIntroBody(recipeIntroContent(state), state.paid, onDismiss, onPacks)
+        RecipeIntroBody(content, state.paid, onDismiss, onPacks, onWelcome)
     }
 }
 
 @Composable
-internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onDismiss: () -> Unit, onPacks: () -> Unit) {
+internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onDismiss: () -> Unit, onPacks: () -> Unit, onWelcome: () -> Unit = {}) {
     val resources = LocalContext.current.resources
     Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
         Text(
@@ -102,10 +110,16 @@ internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onD
                         }
                     )
                     content.lowestPrice?.let { append(' ').append(stringResource(R.string.recipe_intro_packs_price, it)) }
-                    append(' ').append(stringResource(R.string.recipe_intro_free_stays))
                 }
+                val stays = stringResource(R.string.recipe_intro_free_stays)
                 LarderDivider()
-                OnboardingRow(LarderIcons.Sparkles, stringResource(R.string.recipe_intro_packs_title), body)
+                val welcome = content.welcome
+                if (welcome != null) {
+                    // One sentence in the label weight, so it can be found, before the free ways line.
+                    WelcomeInfoRow(LarderIcons.Sparkles, stringResource(R.string.recipe_intro_packs_title), emphasised(body, welcomeIntroSentence(resources, welcome), stays))
+                } else {
+                    OnboardingRow(LarderIcons.Sparkles, stringResource(R.string.recipe_intro_packs_title), "$body $stays")
+                }
             }
         }
         Text(
@@ -118,7 +132,18 @@ internal fun RecipeIntroBody(content: RecipeIntroContent, paid: PaidUiState, onD
             verticalArrangement = Arrangement.spacedBy(LarderSpace.s1)
         ) {
             LarderButton(text = stringResource(R.string.recipe_intro_start), onClick = onDismiss, modifier = Modifier.fillMaxWidth())
-            if (content.canBuy) {
+            // With an offer, its second action is the offer (packs stay a tap away from the count
+            // and Buy); without one, See recipe packs where buying is offered.
+            val welcome = content.welcome
+            if (welcome != null) {
+                LarderButton(
+                    text = welcomeOfferLabel(resources, welcome),
+                    onClick = onWelcome,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = LarderButtonStyle.Text,
+                    leadingIcon = LarderIcons.Gift
+                )
+            } else if (content.canBuy) {
                 LarderButton(
                     text = stringResource(R.string.recipe_intro_packs_action),
                     onClick = onPacks,
@@ -144,6 +169,11 @@ private fun IntroPreview(content: RecipeIntroContent) = LarderTheme {
 @PreviewLightDark
 @Composable
 internal fun RecipeIntroEverythingPreview() = IntroPreview(RecipeIntroContent(onDevice = true, packs = true, canBuy = true, lowestPrice = "£2.99"))
+
+@PreviewLightDark
+@Composable
+internal fun RecipeIntroWelcomePreview() =
+    IntroPreview(RecipeIntroContent(onDevice = true, packs = true, canBuy = true, lowestPrice = "£2.99", welcome = WelcomeHint(1, WelcomeKind.SIGN_IN)))
 
 @Preview
 @Composable

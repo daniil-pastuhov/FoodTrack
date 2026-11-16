@@ -1203,4 +1203,91 @@
     <string name="taste_promo_taste_body">Vores server læner sig mod det, du kan lide, og udelader det, du helst vil være fri for. Dit forråd, dine allergener og din kost kommer stadig først.</string>
     <string name="taste_promo_device_title">Bliver på denne enhed</string>
     <string name="taste_promo_device_body">Den sendes kun med forespørgsler om opskrifter fra en pakke.</string>
+    <!-- Free recipes for signing in (the welcome grant): one with no numeral in an offer (_one), a numeral in a confirmation. -->
+    <string name="welcome_sign_in_one">Log ind og få en gratis opskrift</string>
+    <string name="welcome_get_one">Få en gratis opskrift</string>
+    <string name="welcome_claiming">Henter dine gratis opskrifter…</string>
+    <string name="welcome_menu_enough_one">En gratis opskrift er nok til denne menu.</string>
+    <string name="welcome_menu_smaller_one">En gratis opskrift rækker til en enkelt opskrift eller en mindre menu, ikke denne.</string>
+    <string name="welcome_menu_single_one">En gratis opskrift rækker til en enkelt opskrift, ikke en menu.</string>
+    <string name="welcome_intro_sign_in_one">Log ind for at få en gratis opskrift og prøve det.</string>
+    <string name="welcome_intro_account_one">Denne konto kan få en gratis opskrift til at prøve det.</string>
+    <string name="welcome_buy_sign_in_one">Eller log ind og få en gratis opskrift</string>
+    <string name="welcome_buy_get_one">Eller få en gratis opskrift</string>
+    <string name="welcome_sheet_lede_one">Log ind, så lægger vores server en gratis opskrift på din konto, så du kan prøve, hvad en pakke giver.</string>
+    <string name="welcome_sheet_server_title">Skrevet af vores server</string>
+    <string name="welcome_sheet_server_body">De fungerer som opskrifter fra en pakke: en enkelt opskrift eller en menu, hvis der er nok.</string>
+    <string name="welcome_sheet_account_title">Gemt på din konto</string>
+    <string name="welcome_sheet_account_body">De og alle opskrifter, du køber senere, følger med til en ny telefon, hvor du end logger ind med Google.</string>
+    <string name="welcome_sheet_privacy_title">En konto på vores server</string>
+    <string name="welcome_sheet_privacy_body">Vi gemmer dit konto-id og din e-mailadresse. Når du logger ind, sendes intet fra dit forråd, og du kan slette kontoen under Opskriftsindstillinger.</string>
+    <string name="welcome_once">Gratis opskrifter gives én gang pr. Google-konto.</string>
+    <string name="welcome_not_now">Ikke nu</string>
+    <string name="welcome_adding">Tilføjer dine gratis opskrifter…</string>
+    <string name="welcome_already_title">Denne konto har allerede fået sine gratis opskrifter</string>
+    <string name="welcome_already_body">Gratis opskrifter gives én gang pr. Apple- eller Google-konto. Du er logget ind, og opskrifter, du køber, gemmes på denne konto.</string>
+    <string name="welcome_off_signed_in_now">Gratis opskrifter er ikke tilgængelige lige nu. Du er logget ind; intet andet er ændret.</string>
+    <string name="welcome_off">Gratis opskrifter er ikke tilgængelige lige nu. Intet er ændret.</string>
+    <string name="welcome_claim_failed">Logget ind, men dine gratis opskrifter kunne ikke tilføjes endnu.</string>
+    <string name="welcome_settings_sign_in_one">Log ind og få en gratis opskrift fra vores server, én gang pr. Google-konto.</string>
+    <string name="welcome_settings_account_one">Denne konto kan få en gratis opskrift fra vores server.</string>
+    <string name="welcome_settings_on_phone_one">Når du logger ind, får du også en gratis opskrift.</string>
+    <string name="welcome_delete_note">Logger du ind igen senere, får du ikke gratis opskrifter igen.</string>
+    <plurals name="welcome_sign_in">
+        <item quantity="one">Log ind og få %1$d gratis opskrift</item>
+        <item quantity="other">Log ind og få %1$d gratis opskrifter</item>
+    </plurals>
+    <plurals name="welcome_get">
+        <item quantity="one">Få %1$d gratis opskrift</item>
+        <item quantity="other">Få %1$d gratis opskrifter</item>
+    </plurals>
+    <plurals name="welcome_menu_enough">
+        <item quantity="one">%1$d gratis opskrift er nok til denne menu.</item>
+        <item quantity="other">%1$d gratis opskrifter er nok til denne menu.</item>
+    </plurals>
+    <plurals name="welcome_menu_smaller">
+        <item quantity="one">%1$d gratis opskrift rækker til en enkelt opskrift eller en mindre menu, ikke denne.</item>
+        <item quantity="other">%1$d gratis opskrifter rækker til enkelte opskrifter eller en mindre menu, ikke denne.</item>
+    </plurals>
+    <plurals name="welcome_menu_single">
+        <item quantity="one">%1$d gratis opskrift rækker til en enkelt opskrift, ikke en menu.</item>
+        <item quantity="other">%1$d gratis opskrifter rækker til enkelte opskrifter, ikke en menu.</item>
+    </plurals>
+    <plurals name="welcome_intro_sign_in">
+        <item quantity="one">Log ind for at få %1$d gratis opskrift og prøve det.</item>
+        <item quantity="other">Log ind for at få %1$d gratis opskrifter og prøve det.</item>
+    </plurals>
+    <plurals name="welcome_intro_account">
+        <item quantity="one">Denne konto kan få %1$d gratis opskrift til at prøve det.</item>
+        <item quantity="other">Denne konto kan få %1$d gratis opskrifter til at prøve det.</item>
+    </plurals>
+    <plurals name="welcome_buy_sign_in">
+        <item quantity="one">Eller log ind og få %1$d gratis opskrift</item>
+        <item quantity="other">Eller log ind og få %1$d gratis opskrifter</item>
+    </plurals>
+    <plurals name="welcome_buy_get">
+        <item quantity="one">Eller få %1$d gratis opskrift</item>
+        <item quantity="other">Eller få %1$d gratis opskrifter</item>
+    </plurals>
+    <plurals name="welcome_sheet_lede">
+        <item quantity="one">Log ind, så lægger vores server %1$d gratis opskrift på din konto, så du kan prøve, hvad en pakke giver.</item>
+        <item quantity="other">Log ind, så lægger vores server %1$d gratis opskrifter på din konto, så du kan prøve, hvad en pakke giver.</item>
+    </plurals>
+    <plurals name="welcome_granted">
+        <item quantity="one">%1$d gratis opskrift tilføjet</item>
+        <item quantity="other">%1$d gratis opskrifter tilføjet</item>
+    </plurals>
+    <plurals name="welcome_settings_sign_in">
+        <item quantity="one">Log ind og få %1$d gratis opskrift fra vores server, én gang pr. Google-konto.</item>
+        <item quantity="other">Log ind og få %1$d gratis opskrifter fra vores server, én gang pr. Google-konto.</item>
+    </plurals>
+    <plurals name="welcome_settings_account">
+        <item quantity="one">Denne konto kan få %1$d gratis opskrift fra vores server.</item>
+        <item quantity="other">Denne konto kan få %1$d gratis opskrifter fra vores server.</item>
+    </plurals>
+    <plurals name="welcome_settings_on_phone">
+        <item quantity="one">Når du logger ind, får du også %1$d gratis opskrift.</item>
+        <item quantity="other">Når du logger ind, får du også %1$d gratis opskrifter.</item>
+    </plurals>
+    <!-- /Free recipes for signing in -->
 </resources>

@@ -487,6 +487,10 @@ protocol BalanceCarrying {
     var acceptsTaste: WireFlag? { get }
     /// The taste quiz's current `version` (as `getTasteQuiz` returns it), beside `acceptsTaste`.
     var tasteQuizVersion: WireText? { get }
+    /// From a server that has `claimWelcome`: `acceptsWelcome: true`, and beside it
+    /// `welcomeRecipes`, how many free recipes a claim grants now (`WelcomeRecipes`).
+    var acceptsWelcome: WireFlag? { get }
+    var welcomeRecipes: LenientInt? { get }
 }
 
 enum GenerateStatus: String, Decodable, Sendable {
@@ -509,6 +513,8 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var tasteQuizVersion: WireText?
+    var acceptsWelcome: WireFlag?
+    var welcomeRecipes: LenientInt?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -532,6 +538,8 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var tasteQuizVersion: WireText?
+    var acceptsWelcome: WireFlag?
+    var welcomeRecipes: LenientInt?
 }
 
 struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
@@ -544,6 +552,8 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var tasteQuizVersion: WireText?
+    var acceptsWelcome: WireFlag?
+    var welcomeRecipes: LenientInt?
 }
 
 /// `moved` can be negative: a store refund's debt moves with the recipes.
@@ -558,6 +568,8 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var tasteQuizVersion: WireText?
+    var acceptsWelcome: WireFlag?
+    var welcomeRecipes: LenientInt?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable, Equatable {
@@ -633,6 +645,9 @@ enum RecipeServerError: Error, Equatable, Sendable {
     /// menu, some day has nothing it may use): `NOT_ENOUGH_ITEMS`. Nothing was charged and no model
     /// was called; a changed request needs a new id.
     case notEnoughItems
+    /// `claimWelcome` from an account with no Google or Apple sign-in (`SIGN_IN_REQUIRED`).
+    /// Nothing was granted or recorded.
+    case signInRequired
     /// `resource-exhausted` without a reason: every server instance is busy (HTTP 429). Nothing
     /// was charged; the same request is sent again after a few seconds.
     case serversBusy
@@ -669,6 +684,7 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "PURCHASE_ACCOUNT_MISMATCH": return .purchaseAccountMismatch
         case "ALLERGEN_CONSENT_REQUIRED": return .allergenConsentRequired
         case "NOT_ENOUGH_ITEMS": return .notEnoughItems
+        case "SIGN_IN_REQUIRED": return .signInRequired
         case nil: break
         default: return .unrecognised(charged: charged ?? false)
         }

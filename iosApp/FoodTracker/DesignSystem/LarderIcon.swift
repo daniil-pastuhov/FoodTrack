@@ -43,6 +43,7 @@ enum LarderIconName: String, CaseIterable {
     case flame
     case flashlight
     case gauge
+    case gift
     case globe
     case gripVertical = "grip-vertical"
     case heart
@@ -72,6 +73,7 @@ enum LarderIconName: String, CaseIterable {
     case search
     case settings
     case share2 = "share-2"
+    case shieldCheck = "shield-check"
     case shoppingBasket = "shopping-basket"
     case slidersHorizontal = "sliders-horizontal"
     case smartphone

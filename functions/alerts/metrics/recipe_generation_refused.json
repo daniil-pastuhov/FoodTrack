@@ -12,7 +12,6 @@
     "labels": [
       {
         "key": "reason",
-        "valueType": "STRING",
         "description": "USER_DAILY_LIMIT or INFRA_FAILURE_LIMIT"
       }
     ]

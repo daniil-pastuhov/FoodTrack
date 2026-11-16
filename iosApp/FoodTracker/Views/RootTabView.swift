@@ -536,6 +536,24 @@ extension RootTabView {
                 recipeViewModel.setMenuDays(arguments.integer(forKey: "demoRecipeDays"))
             }
             if arguments.string(forKey: "demoRecipeState") == "busy" { recipeViewModel.showDemoServerBusy() }
+            // Free recipes for signing in, without a server: `-demoWelcomeOffer <n>` (the offer;
+            // `-demoRecipeState none` for no account, `account` for signed in), `-demoWelcomeDelay
+            // <s>` (it arrives after that, with the motion), `-demoWelcomeClaimed YES`,
+            // `-demoWelcomeClaiming YES`, `-demoWelcomeOutcome granted|already|off|notReached`
+            // (what a claim answers; with `-demoWelcomeShowOutcome YES` delivered 1.5 s after
+            // launch), `-demoRoute welcomeSignIn` (the sign-in sheet).
+            if arguments.object(forKey: "demoWelcomeOffer") != nil || arguments.object(forKey: "demoWelcomeOutcome") != nil {
+                recipeViewModel.credits.showWelcomeDemo(
+                    offer: arguments.object(forKey: "demoWelcomeOffer") == nil ? nil : arguments.integer(forKey: "demoWelcomeOffer"),
+                    delay: arguments.double(forKey: "demoWelcomeDelay"),
+                    claimed: arguments.bool(forKey: "demoWelcomeClaimed"),
+                    claiming: arguments.bool(forKey: "demoWelcomeClaiming"),
+                    outcome: arguments.string(forKey: "demoWelcomeOutcome"),
+                    showOutcome: arguments.bool(forKey: "demoWelcomeShowOutcome"),
+                    // `-demoWelcomeOutcomeDelay <s>`: when it is delivered (1.5 s by default).
+                    outcomeDelay: arguments.object(forKey: "demoWelcomeOutcomeDelay") == nil ? 1.5 : arguments.double(forKey: "demoWelcomeOutcomeDelay")
+                )
+            }
         }
         switch arguments.string(forKey: "demoRoute") {
         case "onboarding": apply(.onboarding)
@@ -568,6 +586,9 @@ extension RootTabView {
         case "buyRecipes":
             selectedTab = .recipe
             recipeViewModel.showsBuySheet = true
+        case "welcomeSignIn":
+            selectedTab = .recipe
+            recipeViewModel.welcomeSheet = WelcomeSheetRequest(recipes: recipeViewModel.credits.welcomeHint?.recipes ?? 0)
         // The taste profile from a bundled sample definition in the app's language (en, de, ru;
         // English otherwise), nothing fetched or stored: `tasteQuiz` (`-demoTasteStep N` from 1),
         // `tasteQuizError`, `tasteQuizLoading`, `tastePromo` (over Recipe settings). With

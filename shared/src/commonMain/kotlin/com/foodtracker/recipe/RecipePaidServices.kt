@@ -191,7 +191,11 @@ data class GenerateReply(
     /** Read with [acceptsTasteOf]. */
     val acceptsTaste: JsonElement? = null,
     /** Read with [tasteQuizVersionOf]. */
-    val tasteQuizVersion: JsonElement? = null
+    val tasteQuizVersion: JsonElement? = null,
+    /** Read with [acceptsWelcomeOf]. */
+    val acceptsWelcome: JsonElement? = null,
+    /** Read with [welcomeRecipesFieldOf]. */
+    val welcomeRecipes: JsonElement? = null
 )
 
 @Serializable
@@ -213,7 +217,9 @@ data class VerifyReply(
     val acceptsDanish: JsonElement? = null,
     val acceptsMenuDays: JsonElement? = null,
     val acceptsTaste: JsonElement? = null,
-    val tasteQuizVersion: JsonElement? = null
+    val tasteQuizVersion: JsonElement? = null,
+    val acceptsWelcome: JsonElement? = null,
+    val welcomeRecipes: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -226,7 +232,11 @@ data class BalanceReply(
     val acceptsDanish: Boolean = false,
     val acceptsMenuDays: Boolean = false,
     val acceptsTaste: Boolean = false,
-    val tasteQuizVersion: String? = null
+    val tasteQuizVersion: String? = null,
+    /** The server has `claimWelcome` ([acceptsWelcomeOf]). */
+    val acceptsWelcome: Boolean = false,
+    /** What a claim would grant now ([welcomeRecipesFieldOf]); null when absent. */
+    val welcomeRecipes: Int? = null
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -241,7 +251,11 @@ data class MergeReply(
     val acceptsDanish: Boolean = false,
     val acceptsMenuDays: Boolean = false,
     val acceptsTaste: Boolean = false,
-    val tasteQuizVersion: String? = null
+    val tasteQuizVersion: String? = null,
+    /** The server has `claimWelcome` ([acceptsWelcomeOf]). */
+    val acceptsWelcome: Boolean = false,
+    /** What a claim would grant now ([welcomeRecipesFieldOf]); null when absent. */
+    val welcomeRecipes: Int? = null
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -319,6 +333,10 @@ enum class ServerError {
      *  in the store for the account that bought it. */
     PURCHASE_ACCOUNT_MISMATCH,
 
+    /** `claimWelcome`: the account has no Google or Apple sign-in (an anonymous install). Nothing
+     *  was granted; sign in first. */
+    SIGN_IN_REQUIRED,
+
     /** `generateRecipe`: allergens were sent without `allergenConsent: true` (a request kept from
      *  before the consent step existed). Nothing was charged; a new request carries the flag. */
     ALLERGEN_CONSENT_REQUIRED,
@@ -389,6 +407,15 @@ interface RecipeBackend {
      *  server's JSON, read with [tasteQuizOf]. Only once a reply said `acceptsTaste`. An ordinary
      *  App Check token, as for the balance; charges nothing. */
     suspend fun getTasteQuiz(language: String): ServerResult<JsonElement> = ServerResult.Err(ServerError.CALLABLE_MISSING)
+
+    /** `getWelcomeOffer`: how many free recipes a sign-in gets now, 0 when none. Needs no user and
+     *  creates none: an ordinary App Check token only, and nothing about the person is sent. An older
+     *  server answers [ServerError.CALLABLE_MISSING]. */
+    suspend fun getWelcomeOffer(): ServerResult<Int> = ServerResult.Err(ServerError.CALLABLE_MISSING)
+
+    /** `claimWelcome`: the free recipes for the signed-in Google or Apple account, once ever. A
+     *  limited-use App Check token; safe to ask again (it answers ALREADY). */
+    suspend fun claimWelcome(): ServerResult<WelcomeClaimReply> = ServerResult.Err(ServerError.CALLABLE_MISSING)
 
     /** Deletes the signed-in account on the server. The caller signs out afterwards. */
     suspend fun deleteAccount(): ServerResult<DeleteReply>
@@ -590,7 +617,18 @@ data class RecipePaidSnapshot(
      *  Cleared when a request that carried it is refused as INVALID_REQUEST (a rolled-back server). */
     val serverTakesTaste: Boolean = false,
     /** The last `tasteQuizVersion` a reply carried; null before one did. */
-    val tasteQuizVersion: String? = null
+    val tasteQuizVersion: String? = null,
+    /** The last `getWelcomeOffer` answer, with its time: shown while under a day old. */
+    val welcomeOffer: WelcomeAnswer? = null,
+    /** The `welcomeRecipes` beside the last balance (0 from a server without `acceptsWelcome`),
+     *  with its time: the number for a signed-in account that hasn't claimed. */
+    val welcomeAccount: WelcomeAnswer? = null,
+    /** The accounts ([AccountState.purchaseKey]) whose claim settled on this device (GRANTED or
+     *  ALREADY): the hint never shows for them again here. */
+    val welcomeClaimed: List<String> = emptyList(),
+    /** When `getWelcomeOffer` was last asked, answered or not (this phone's clock): the 15 minutes
+     *  between asks hold across launches ([shouldAskWelcomeOffer]). */
+    val welcomeAskedAtMillis: Long? = null
 )
 
 interface RecipePaidRepository {

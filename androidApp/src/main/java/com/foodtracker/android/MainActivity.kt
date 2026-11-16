@@ -37,6 +37,12 @@ import com.foodtracker.recipe.RecipeCosts
 import com.foodtracker.recipe.RecipeDemo
 import com.foodtracker.recipe.RecipeMode
 import com.foodtracker.recipe.ServerIssue
+import com.foodtracker.recipe.PaidEvent
+import com.foodtracker.recipe.SignInProvider
+import com.foodtracker.recipe.WelcomeOutcome
+import com.foodtracker.recipe.WelcomeSheet
+import com.foodtracker.recipe.BuySheet
+import com.foodtracker.recipe.StorePack
 import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.recipe.RecipeJson
@@ -172,7 +178,17 @@ class MainActivity : ComponentActivity() {
         recipeDemoOf(intent)?.let { demo ->
             reviewPrompter.suppressForSession()
             recipeStateHolder.suppressIntroForSession()
-            recipeStateHolder.showDemo(demo)
+            // `demoWelcomeDelay`: the offer arrives that long after launch, to see the hint's motion.
+            val delayMillis = intent.getIntExtra(EXTRA_DEMO_WELCOME_DELAY, 0).toLong()
+            if (delayMillis > 0 && (demo.paid.welcomeOffer > 0 || demo.paid.welcomeAccount != null)) {
+                recipeStateHolder.showDemo(demo.copy(paid = demo.paid.copy(welcomeOffer = 0, welcomeAccount = null)))
+                lifecycleScope.launch {
+                    kotlinx.coroutines.delay(delayMillis)
+                    recipeStateHolder.showDemo(demo)
+                }
+            } else {
+                recipeStateHolder.showDemo(demo)
+            }
         }
         intent.getStringExtra(EXTRA_DEMO_BACKUP)?.let { path ->
             val raw = runCatching { java.io.File(path).readText() }.getOrNull()
@@ -240,14 +256,25 @@ class MainActivity : ComponentActivity() {
      * `--ez demoRecipeCopy true` (a share sheet without Copy, as below Android 10),
      * `--es demoRecipeMode menu` with `--ei demoRecipeDays <1-4>` and `--ei demoRecipeCourses <1-3>`.
      * The counterpart of iOS's `-demoRecipeCredits` and its companions.
+     *
+     * Free recipes for signing in (WelcomeRecipes.kt): `--ei demoWelcome <n>` is the server's offer
+     * (0: none; it turns the paid route on with packs offered, 0 recipes unless demoRecipeCredits
+     * says otherwise); `--es demoWelcomeAccount signedIn|onPhone` signs in (n then comes beside the
+     * balance) or keeps recipes on this device; `--ez demoWelcomeClaimed true` marks this account's
+     * claim as settled (no hint; Delete account's added sentence); `--ei demoWelcomeDelay <ms>` lets
+     * the offer arrive that long after launch (the hint's motion); `--es demoWelcomeState` shows
+     * one moment: `claiming` (the one-tap spinner), `buy` (the pack sheet with its offer), `sheet` / `adding` / `failed` (the sign-in sheet,
+     * adding, or with the sign-in failed snackbar), `granted`, `already`, `off`, `offNow`,
+     * `notReached` (the outcomes).
      */
     private fun recipeDemoOf(intent: Intent): RecipeDemo? {
         val keys = listOf(
             EXTRA_DEMO_RECIPE_CREDITS, EXTRA_DEMO_RECIPE_STATE, EXTRA_DEMO_RECIPE_PACKS, EXTRA_DEMO_RECIPE_MENU_SETS,
-            EXTRA_DEMO_RECIPE_ON_DEVICE, EXTRA_DEMO_RECIPE_COPY, EXTRA_DEMO_RECIPE_MODE
+            EXTRA_DEMO_RECIPE_ON_DEVICE, EXTRA_DEMO_RECIPE_COPY, EXTRA_DEMO_RECIPE_MODE, EXTRA_DEMO_WELCOME
         )
         if (!isDebuggable() || keys.none(intent::hasExtra)) return null
-        val credits = if (intent.hasExtra(EXTRA_DEMO_RECIPE_CREDITS)) intent.getIntExtra(EXTRA_DEMO_RECIPE_CREDITS, 0) else null
+        val welcome = if (intent.hasExtra(EXTRA_DEMO_WELCOME)) intent.getIntExtra(EXTRA_DEMO_WELCOME, 0) else null
+        val credits = if (intent.hasExtra(EXTRA_DEMO_RECIPE_CREDITS)) intent.getIntExtra(EXTRA_DEMO_RECIPE_CREDITS, 0) else welcome?.let { 0 }
         val menuSets = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_MENU_SETS, true)
         // The server's default table (functions/CONTRACT.md "Costs"), for the demo only: the app
         // itself never prices a menu set on its own.
@@ -266,7 +293,7 @@ class MainActivity : ComponentActivity() {
             menuSets = menuSets,
             // A server that has the taste quiz, so its row shows.
             takesTaste = credits != null
-        )
+        ).let { base -> if (welcome == null) base else welcomeDemoOf(intent, base, welcome) }
         return RecipeDemo(
             paid = paid,
             onDevice = intent.getBooleanExtra(EXTRA_DEMO_RECIPE_ON_DEVICE, false),
@@ -275,6 +302,72 @@ class MainActivity : ComponentActivity() {
             days = intent.getIntExtra(EXTRA_DEMO_RECIPE_DAYS, DEFAULT_MENU_DAYS),
             courses = intent.getIntExtra(EXTRA_DEMO_RECIPE_COURSES, DEFAULT_MENU_COURSES)
         )
+    }
+
+    /** [base] with the free recipes' demo state; see [recipeDemoOf]. */
+    private fun welcomeDemoOf(intent: Intent, base: PaidUiState, recipes: Int): PaidUiState {
+        val accountKind = when (intent.getStringExtra(EXTRA_DEMO_WELCOME_ACCOUNT)) {
+            "signedIn" -> AccountKind.SIGNED_IN
+            "onPhone" -> AccountKind.ANONYMOUS
+            else -> AccountKind.NONE
+        }
+        val signedIn = accountKind == AccountKind.SIGNED_IN
+        var paid = base.copy(
+            packsOffered = if (intent.hasExtra(EXTRA_DEMO_RECIPE_PACKS)) base.packsOffered else true,
+            account = AccountState(accountKind, if (signedIn) setOf(SignInProvider.GOOGLE) else emptySet(), if (signedIn) "someone@example.com" else null),
+            balance = if (accountKind == AccountKind.NONE) null else base.balance,
+            providers = setOf(SignInProvider.GOOGLE),
+            welcomeOffer = if (signedIn) 0 else recipes,
+            welcomeAccount = if (signedIn) recipes else null,
+            welcomeClaimed = intent.getBooleanExtra(EXTRA_DEMO_WELCOME_CLAIMED, false)
+        )
+        paid = when (intent.getStringExtra(EXTRA_DEMO_WELCOME_STATE)) {
+            "claiming" -> paid.copy(welcomeClaiming = true)
+            // The pack sheet with its quiet alternative under the packs (sample store prices).
+            "buy" -> paid.copy(
+                sheet = BuySheet.Packs(
+                    listOf(
+                        StorePack("recipes_10", 10, "£2.99", 2_990_000, "GBP"),
+                        StorePack("recipes_50", 50, "£10.99", 10_990_000, "GBP"),
+                        StorePack("recipes_100", 100, "£18.99", 18_990_000, "GBP")
+                    ),
+                    "recipes_50"
+                )
+            )
+            "sheet" -> paid.copy(welcomeSheet = WelcomeSheet(recipes))
+            "adding" -> paid.copy(welcomeSheet = WelcomeSheet(recipes, adding = true))
+            "failed" -> paid.copy(welcomeSheet = WelcomeSheet(recipes, signInFailed = true), event = PaidEvent.SignInFailed)
+            // After a grant: signed in, the recipes in the count, the hint gone.
+            "granted" -> paid.copy(
+                account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "someone@example.com"),
+                balance = (base.balance ?: 0) + recipes,
+                welcomeClaimed = true,
+                event = PaidEvent.Welcome(WelcomeOutcome.Granted(recipes))
+            )
+            "already" -> paid.copy(
+                account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "someone@example.com"),
+                balance = base.balance ?: 0,
+                welcomeClaimed = true,
+                welcomeAlready = true
+            )
+            "off", "offNow" -> paid.copy(
+                account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "someone@example.com"),
+                balance = base.balance ?: 0,
+                welcomeOffer = 0,
+                welcomeAccount = 0,
+                event = PaidEvent.Welcome(WelcomeOutcome.Off(signedInNow = intent.getStringExtra(EXTRA_DEMO_WELCOME_STATE) == "offNow"))
+            )
+            // Signed in, the claim not reached: the offer reads "Get n" and Try again claims.
+            "notReached" -> paid.copy(
+                account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "someone@example.com"),
+                balance = base.balance ?: 0,
+                welcomeOffer = recipes,
+                welcomeAccount = null,
+                event = PaidEvent.Welcome(WelcomeOutcome.NotReached)
+            )
+            else -> paid
+        }
+        return paid
     }
 
     /** See [loadDemoFromIntent]. Debug builds only: the sample definitions are debug assets. */
@@ -503,6 +596,11 @@ class MainActivity : ComponentActivity() {
         private const val EXTRA_DEMO_ROUTE = "demoRoute"
         private const val EXTRA_DEMO_UNREAD = "demoUnread"
         private const val EXTRA_DEMO_RECIPE_CREDITS = "demoRecipeCredits"
+        private const val EXTRA_DEMO_WELCOME = "demoWelcome"
+        private const val EXTRA_DEMO_WELCOME_ACCOUNT = "demoWelcomeAccount"
+        private const val EXTRA_DEMO_WELCOME_CLAIMED = "demoWelcomeClaimed"
+        private const val EXTRA_DEMO_WELCOME_DELAY = "demoWelcomeDelay"
+        private const val EXTRA_DEMO_WELCOME_STATE = "demoWelcomeState"
         private const val EXTRA_DEMO_RECIPE_STATE = "demoRecipeState"
         private const val EXTRA_DEMO_RECIPE_PACKS = "demoRecipePacks"
         private const val EXTRA_DEMO_RECIPE_MENU_SETS = "demoRecipeMenuSets"

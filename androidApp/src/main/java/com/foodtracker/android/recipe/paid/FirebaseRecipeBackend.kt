@@ -13,7 +13,14 @@ import com.foodtracker.recipe.refusedNameOf
 import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
 import com.foodtracker.recipe.VerifyReply
+import com.foodtracker.recipe.WELCOME_MAX_RECIPES
+import com.foodtracker.recipe.WelcomeClaimReply
+import com.foodtracker.recipe.WelcomeStatus
 import com.foodtracker.recipe.WireKind
+import com.foodtracker.recipe.acceptsWelcomeOf
+import com.foodtracker.recipe.welcomeOfferOf
+import com.foodtracker.recipe.welcomeRecipesFieldOf
+import com.foodtracker.recipe.welcomeStatusOf
 import com.foodtracker.recipe.acceptsDanishOf
 import com.foodtracker.recipe.acceptsMenuDaysOf
 import com.foodtracker.recipe.acceptsTasteOf
@@ -42,10 +49,11 @@ import java.util.concurrent.TimeUnit
 
 /**
  * The callables whose App Check token the server consumes (functions/CONTRACT.md, Calling): each
- * call carries a fresh limited-use token. The rest (`getGeneration`, `getBalance`) take an
+ * call carries a fresh limited-use token. The rest (`getGeneration`, `getBalance`, `getTasteQuiz`,
+ * `getWelcomeOffer`) take an
  * ordinary token, so polling spends no Play Integrity request.
  */
-internal val CONSUMING_CALLABLES = setOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount")
+internal val CONSUMING_CALLABLES = setOf("generateRecipe", "verifyPurchase", "mergeBalance", "deleteAccount", "claimWelcome")
 
 /** Whether [name] is called with a limited-use App Check token. */
 internal fun usesLimitedUseToken(name: String): Boolean = name in CONSUMING_CALLABLES
@@ -100,6 +108,21 @@ class FirebaseRecipeBackend(
     override suspend fun getTasteQuiz(language: String): ServerResult<JsonElement> =
         callRaw(firebase.functions(), "getTasteQuiz", JsonObject(mapOf("language" to JsonPrimitive(language))), 30L)
 
+    // Before any account exists: no Auth user is made for it, so the call carries only an ordinary
+    // App Check token and no input (functions/CONTRACT.md, getWelcomeOffer). An older server
+    // answers not-found, CALLABLE_MISSING, which the caller reads as 0.
+    override suspend fun getWelcomeOffer(): ServerResult<Int> =
+        when (val result = callRaw(firebase.functions(), "getWelcomeOffer", JsonObject(emptyMap()), 20L)) {
+            is ServerResult.Ok -> welcomeOfferOf(result.value)?.let { ServerResult.Ok(it) } ?: ServerResult.Err(ServerError.INTERNAL)
+            is ServerResult.Err -> result
+        }
+
+    override suspend fun claimWelcome(): ServerResult<WelcomeClaimReply> =
+        when (val result = callRaw(firebase.functions(), "claimWelcome", JsonObject(emptyMap()), 30L)) {
+            is ServerResult.Ok -> welcomeClaimReplyOf(result.value)?.let { ServerResult.Ok(it) } ?: ServerResult.Err(ServerError.INTERNAL)
+            is ServerResult.Err -> result
+        }
+
     override suspend fun deleteAccount(): ServerResult<DeleteReply> =
         // No `appleAuthorizationCode`: Android has no Sign in with Apple to get one from. For an
         // account with Apple attached (added on an iPhone) the server revokes the Apple token it
@@ -150,14 +173,24 @@ internal fun mergeReplyOf(json: JsonElement): MergeReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: return null
     val moved = (reply["moved"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt() ?: 0
-    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]))
+    return MergeReply(balance, moved, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]))
 }
 
 /** `getBalance`'s reply: the count, and the costs when they came and could be read. */
 internal fun balanceReplyOf(json: JsonElement): BalanceReply? {
     val reply = json as? JsonObject ?: return null
     val balance = (reply["balance"] as? JsonPrimitive)?.longOrNull?.toInt() ?: return null
-    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]))
+    return BalanceReply(balance, recipeCostsOf(reply["costs"]), purchasesBlockedOf(reply["purchasesBlocked"]), acceptsOptionalIngredientsOf(reply["acceptsOptionalIngredients"]), acceptsMultiChoiceConfigOf(reply["acceptsMultiChoiceConfig"]), acceptsDanishOf(reply["acceptsDanish"]), acceptsMenuDaysOf(reply["acceptsMenuDays"]), acceptsTasteOf(reply["acceptsTaste"]), tasteQuizVersionOf(reply["tasteQuizVersion"]), acceptsWelcomeOf(reply["acceptsWelcome"]), welcomeRecipesFieldOf(reply["welcomeRecipes"]))
+}
+
+/** `claimWelcome`'s reply: its status and `granted`, and everything a balance carries. Null without
+ *  a readable status or balance (read as a claim that didn't reach the server; retrying is safe). */
+internal fun welcomeClaimReplyOf(json: JsonElement): WelcomeClaimReply? {
+    val reply = json as? JsonObject ?: return null
+    val status = welcomeStatusOf(reply["status"]) ?: return null
+    val balance = balanceReplyOf(reply) ?: return null
+    val granted = (reply["granted"] as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.toInt()?.coerceIn(0, WELCOME_MAX_RECIPES) ?: 0
+    return WelcomeClaimReply(status, if (status == WelcomeStatus.GRANTED) granted else 0, balance)
 }
 
 internal suspend fun <T> call(

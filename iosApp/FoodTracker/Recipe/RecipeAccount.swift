@@ -92,6 +92,15 @@ final class RecipeAccount {
 
     var state: RecipeAccountState { Self.state(of: auth?.currentUser) }
 
+    /// The balance answer fetched right after a link (`WelcomeRecipes.recordLinkedSignIn`), for
+    /// the caller to apply once (`takeLinkBalance`); nil when there was none or it failed.
+    private var linkBalance: BalanceResponse?
+
+    func takeLinkBalance() -> BalanceResponse? {
+        defer { linkBalance = nil }
+        return linkBalance
+    }
+
     static func state(of user: User?) -> RecipeAccountState {
         guard let user else { return .none }
         if user.isAnonymous { return .anonymous(uid: user.uid) }
@@ -130,6 +139,19 @@ final class RecipeAccount {
         }
         do {
             _ = try await user.link(with: credential.credential)
+            // Before anything else, whether or not an offer of free recipes shows: a fresh ID
+            // token naming the new provider, then one `getBalance`. The server only learns which
+            // Google and Apple accounts belong to an account when the app talks to it, and records
+            // each one it sees so free recipes are given once per Google or Apple account; Firebase
+            // tells it nothing about a link or an unlink. Without this call a sign-in linked and
+            // then unlinked before the next server call would never be recorded and could claim
+            // again from another account. The apps never unlink, so that needs a tampered client;
+            // this call shortens the window to one request. A failure is silent, retried by the
+            // next balance call, and never fails or undoes the link.
+            linkBalance = await WelcomeRecipes.recordLinkedSignIn(
+                refreshToken: { _ = try await user.getIDTokenResult(forcingRefresh: true) },
+                balance: { try await FirebaseRecipeBackend().balance() }
+            )
             await Self.forgetProfile(of: user)
             return .signedIn(nil)
         } catch {

@@ -16,6 +16,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,7 +37,9 @@ internal class AccountActions(
     val onSignIn: (SignInProvider) -> Unit = {},
     val onBuy: () -> Unit = {},
     val onSignOut: () -> Unit = {},
-    val onDelete: () -> Unit = {}
+    val onDelete: () -> Unit = {},
+    /** Signed in, not claimed: "Get 3 free recipes". */
+    val onWelcome: () -> Unit = {}
 )
 
 /**
@@ -55,10 +58,15 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
     val balance = paid.balance ?: 0
     // Below zero after a store refund of recipes already used: none of them is lost.
     val unused = balance.coerceAtLeast(0)
+    val resources = LocalContext.current.resources
+    // Free recipes for signing in: one note, with the real number (any sign-in made here while it
+    // shows claims them, RecipePaid.signIn); nothing at all without an offer.
+    val welcome = paid.welcome
 
     when (account.kind) {
         AccountKind.NONE -> RecipeFormCard(title = stringResource(R.string.recipe_account), icon = LarderIcons.UserRound) {
             AccountText(stringResource(R.string.recipe_account_none))
+            AnimatedWelcome(welcome) { WelcomeNote(welcomeSettingsNote(resources, it, onThisDevice = false)) }
             if (SignInProvider.GOOGLE in paid.providers) {
                 // Someone with recipes in an account, on a new phone, signs in here without buying.
                 AccountText(stringResource(R.string.recipe_have_account_hint))
@@ -69,6 +77,7 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
         AccountKind.ANONYMOUS -> RecipeFormCard(title = stringResource(R.string.recipe_your_recipes), icon = LarderIcons.Ticket) {
             BalanceLine(balance, pluralStringResource(R.plurals.recipe_on_phone_label, balance))
             AccountText(stringResource(R.string.recipe_on_phone_body))
+            AnimatedWelcome(welcome) { WelcomeNote(welcomeSettingsNote(resources, it, onThisDevice = true)) }
             SignInButtons(paid.providers, signingIn = null, enabled = !paid.accountBusy, onSignIn = actions.onSignIn)
             if (SignInProvider.GOOGLE in paid.providers) AppleOnIphoneHint()
             if (paid.purchasesBlocked) {
@@ -120,6 +129,12 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
                     accessibilityLabel = stringResource(R.string.recipe_add_sign_in, signInProviderName(SignInProvider.GOOGLE))
                 )
             }
+            AnimatedWelcome(welcome) { hint ->
+                Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s3)) {
+                    WelcomeNote(welcomeSettingsNote(resources, hint, onThisDevice = false))
+                    WelcomeOfferButton(hint, paid.welcomeClaiming, actions.onWelcome)
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2), verticalAlignment = Alignment.CenterVertically) {
                 LarderButton(
                     text = stringResource(R.string.recipe_sign_out),
@@ -159,7 +174,9 @@ internal fun AccountCard(paid: PaidUiState, actions: AccountActions) {
             title = stringResource(R.string.recipe_delete_title),
             // Nothing about Apple here: the server removes Apple's link with the token it kept
             // from the iPhone sign-in, and only if it can't is the person told how (RecipePaidOverlays).
-            text = pluralStringResource(R.plurals.recipe_delete_body, balance, balance),
+            // An account that had its free recipes on this device is told they don't come back.
+            text = pluralStringResource(R.plurals.recipe_delete_body, balance, balance) +
+                if (paid.welcomeClaimed) " " + stringResource(R.string.welcome_delete_note) else "",
             confirmLabel = stringResource(R.string.recipe_delete_account),
             onConfirm = {
                 confirmingDelete = false
@@ -272,6 +289,23 @@ internal fun AccountSignedInWithAppleTooPreview() = AccountPreview(
         balance = 12,
         account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE, SignInProvider.APPLE), "k7x2m9@privaterelay.appleid.com"),
         providers = offered
+    )
+)
+
+@PreviewLightDark
+@Composable
+internal fun AccountNoneWelcomePreview() = AccountPreview(PaidUiState(available = true, packsOffered = true, providers = offered, welcomeOffer = 3))
+
+@PreviewLightDark
+@Composable
+internal fun AccountSignedInWelcomePreview() = AccountPreview(
+    PaidUiState(
+        available = true,
+        packsOffered = true,
+        balance = 0,
+        account = AccountState(AccountKind.SIGNED_IN, setOf(SignInProvider.GOOGLE), "someone@example.com"),
+        providers = offered,
+        welcomeAccount = 3
     )
 )
 

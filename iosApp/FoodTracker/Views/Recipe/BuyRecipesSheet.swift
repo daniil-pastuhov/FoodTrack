@@ -16,6 +16,14 @@ struct BuyRecipesSheet: View {
     /// App Check refused this install as the purchase started; `true` when it was App Check's
     /// own token (Debug builds then name the cause). Nil otherwise.
     @State private var notAvailableHere: Bool?
+    /// The free recipes' offer as it was when the sheet opened: an open sheet never changes.
+    @State private var welcomeHint: WelcomeHint?
+
+    init(model: RecipeViewModel, onClose: @escaping () -> Void) {
+        self.model = model
+        self.onClose = onClose
+        _welcomeHint = State(initialValue: model.credits.welcomeHint)
+    }
 
     private enum Step { case packs, choice }
 
@@ -74,6 +82,26 @@ struct BuyRecipesSheet: View {
                     .larderFont(.bodySm)
                     .foregroundStyle(LarderColor.onSurfaceVariant)
                     .fixedSize(horizontal: false, vertical: true)
+                // A quieter way than paying: never above the packs and never filled.
+                if let welcomeHint, !credits.isConfirming {
+                    WelcomeOfferButton(model: model, hint: welcomeHint, variant: .text, label: L10n.welcomeBuy(welcomeHint)) {
+                        if welcomeHint.needsSignIn {
+                            model.buySheetToWelcome()
+                        } else {
+                            // Signed in: claims here; the sheet closes on the answer.
+                            Task {
+                                await credits.claimWelcome()
+                                if credits.welcomeClaimedHere {
+                                    // ALREADY's dialog shows on the form once this sheet has gone.
+                                    let already = credits.welcomeAlready
+                                    credits.welcomeAlready = false
+                                    onClose()
+                                    if already { model.showWelcomeAlreadyAfterSheet() }
+                                }
+                            }
+                        }
+                    }
+                }
                 buttons(selected: packs.first { $0.id == (selectedID ?? Self.defaultSelection(packs)) })
             } else {
                 LarderSpinner()
@@ -217,7 +245,9 @@ private struct RecipePurchaseChoice: View {
                 title: L10n.recipeChoiceAccountTitle,
                 message: L10n.recipeChoiceAccountMessage(googleAvailable: GoogleSignInSupport.isConfigured)
             ) {
-                RecipeSignInButtons(credits: model.credits) { signedIn in
+                // A sign-in here claims the free recipes quietly while an offer shows: only a
+                // grant is said, never a dialog over the payment.
+                RecipeSignInButtons(credits: model.credits, quietClaim: true) { signedIn in
                     if signedIn {
                         model.credits.chosePurchaseLocation()
                         onChosen()
@@ -265,6 +295,12 @@ private struct RecipePurchaseChoice: View {
 struct RecipeSignInButtons: View {
     @ObservedObject var credits: RecipeCredits
     var only: RecipeSignInProvider? = nil
+    /// A cancelled sign-in says nothing (the free recipes' sheet stays as it was).
+    var quietCancel = false
+    /// The first purchase's account choice: the free recipes' claim runs beside it, quietly.
+    var quietClaim = false
+    /// Whether a sign-in here claims (nil: while an offer shows).
+    var claims: Bool? = nil
     let onFinished: (Bool) -> Void
 
     @Environment(\.colorScheme) private var colorScheme
@@ -278,7 +314,7 @@ struct RecipeSignInButtons: View {
                 } onCompletion: { result in
                     let request = appleRequest
                     Task {
-                        let signedIn = await credits.signIn { try request.credential(from: result) }
+                        let signedIn = await credits.signIn(quietCancel: quietCancel, quietClaim: quietClaim, claims: claims) { try request.credential(from: result) }
                         onFinished(signedIn)
                     }
                 }
@@ -300,7 +336,7 @@ struct RecipeSignInButtons: View {
 
     private func signInWithGoogle() {
         Task {
-            let signedIn = await credits.signIn { try await GoogleSignInSupport.signIn() }
+            let signedIn = await credits.signIn(quietCancel: quietCancel, quietClaim: quietClaim, claims: claims) { try await GoogleSignInSupport.signIn() }
             onFinished(signedIn)
         }
     }

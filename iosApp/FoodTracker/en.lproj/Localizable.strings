@@ -870,3 +870,34 @@
 "taste_promo_taste_body" = "Our server leans towards what you like and leaves out what you'd rather skip. Your pantry, allergens and diet still come first.";
 "taste_promo_device_title" = "Kept on this device";
 "taste_promo_device_body" = "It is sent only with requests for recipes from a pack.";
+
+/* Recipe: free recipes for signing in; copied from Android's strings.xml, Apple or Google on iOS. */
+"welcome_sign_in_one" = "Sign in and get a free recipe";
+"welcome_get_one" = "Get a free recipe";
+"welcome_claiming" = "Getting your free recipes…";
+"welcome_menu_enough_one" = "A free recipe is enough for this menu.";
+"welcome_menu_smaller_one" = "A free recipe covers a single recipe or a smaller menu, not this one.";
+"welcome_menu_single_one" = "A free recipe covers a single recipe, not a menu.";
+"welcome_intro_sign_in_one" = "Sign in to get a free recipe and try it.";
+"welcome_intro_account_one" = "This account can get a free recipe to try it.";
+"welcome_buy_sign_in_one" = "Or sign in and get a free recipe";
+"welcome_buy_get_one" = "Or get a free recipe";
+"welcome_sheet_lede_one" = "Sign in, and our server adds a free recipe to your account, so you can try what a pack gives.";
+"welcome_sheet_server_title" = "Written by our server";
+"welcome_sheet_server_body" = "They work like recipes from a pack: a single recipe, or a menu if there are enough.";
+"welcome_sheet_account_title" = "Kept in your account";
+"welcome_sheet_account_body" = "They, and any recipes you buy later, follow you to a new phone wherever you sign in.";
+"welcome_sheet_privacy_title" = "An account on our server";
+"welcome_sheet_privacy_body" = "We keep your account ID and email address. Signing in sends nothing from your pantry, and you can delete the account in Recipe settings.";
+"welcome_once" = "Free recipes are given once per Apple or Google account.";
+"welcome_not_now" = "Not now";
+"welcome_adding" = "Adding your free recipes…";
+"welcome_already_title" = "This account has already had its free recipes";
+"welcome_already_body" = "Free recipes are given once per Apple or Google account. You're signed in, and any recipes you buy are kept in this account.";
+"welcome_off_signed_in_now" = "Free recipes aren't available right now. You're signed in; nothing else has changed.";
+"welcome_off" = "Free recipes aren't available right now. Nothing has changed.";
+"welcome_claim_failed" = "Signed in, but your free recipes couldn't be added yet.";
+"welcome_settings_sign_in_one" = "Sign in and get a free recipe from our server, once per Apple or Google account.";
+"welcome_settings_account_one" = "This account can get a free recipe from our server.";
+"welcome_settings_on_phone_one" = "Signing in also gets you a free recipe.";
+"welcome_delete_note" = "Signing in again later won't bring back free recipes.";

@@ -88,8 +88,11 @@ struct RecipeView: View {
         // Prices from the store, and the count for an install that already has a user. Neither
         // creates a user nor calls our server for anyone who never bought.
         .onDisappear { model.setTabOnScreen(false) }
+        // The free recipes' offer is asked too (at most every 15 minutes, only where buying can
+        // be offered): App Check only, nothing about the person, no account made.
         .task {
             await credits.loadPacksIfNeeded()
+            await credits.refreshWelcomeOffer()
             await credits.refreshBalance()
         }
         .onChange(of: pantry.items) { _, items in model.syncSelection(with: items) }
@@ -127,6 +130,19 @@ struct RecipeView: View {
         .larderSheet(isPresented: $model.showsBuySheet, fitsContent: true) {
             BuyRecipesSheet(model: model) { model.showsBuySheet = false }
         }
+        .larderSheet(item: $model.welcomeSheet, fitsContent: true) { request in
+            WelcomeSignInSheet(model: model, recipes: request.recipes) { model.welcomeSheet = nil }
+        }
+        // ALREADY: the person signed in for nothing, so it is said plainly, with the way on.
+        .larderDialog(
+            L10n.welcomeAlreadyTitle,
+            // The sign-in sheet shows its own while it is up.
+            isPresented: Binding(get: { credits.welcomeAlready && model.welcomeSheet == nil && !model.showsBuySheet }, set: { credits.welcomeAlready = $0 }),
+            message: L10n.welcomeAlreadyMessage,
+            actions: credits.canBuy
+                ? [.cancel(L10n.recipeClose), .init(L10n.recipeIntroPacksAction) { model.welcomeToPacks() }]
+                : [.cancel(L10n.recipeClose)]
+        )
         .larderSheet(
             isPresented: Binding(get: { model.intro == .firstOpen }, set: { if !$0, model.intro == .firstOpen { model.dismissIntro() } }),
             fitsContent: true
@@ -395,8 +411,8 @@ struct RecipeView: View {
         }
     }
 
-    private var buyButton: some View {
-        LarderButton(L10n.recipeBuy, icon: .ticket, variant: .outline, fullWidth: true) {
+    private func buyButton(_ variant: LarderButton.Variant = .outline, fullWidth: Bool = true) -> some View {
+        LarderButton(L10n.recipeBuy, icon: .ticket, variant: variant, fullWidth: fullWidth) {
             model.showsBuySheet = true
         }
     }
@@ -405,10 +421,55 @@ struct RecipeView: View {
     @ViewBuilder
     private var buyOrBlocked: some View {
         if credits.canBuy {
-            buyButton
+            buyButton()
         } else if credits.showsPurchasesBlocked {
             hint(L10n.recipePurchasesBlocked)
         }
+    }
+
+    /// The free recipes' offer, where it shows (`RecipeCredits.welcomeHint`).
+    private var welcome: WelcomeHint? { credits.welcomeHint }
+
+    /// Under the primary when there is no pack: the offer (outline) above Buy, which drops to a
+    /// text button, as it already does beside Share prompt; without an offer, today's outline Buy.
+    /// The two cross-fade as the offer comes and goes.
+    @ViewBuilder
+    private var offerThenBuy: some View {
+        if let welcome {
+            WelcomeOfferButton(model: model, hint: welcome).welcomeTransition()
+            if credits.canBuy { buyButton(.text).transition(.opacity) }
+        } else {
+            buyOrBlocked.transition(.opacity)
+        }
+    }
+
+    /// Under "Generate on this device": with an offer, the offer, then Buy and Share prompt as
+    /// one row of text buttons (two rows when they don't fit side by side), so the group is no
+    /// taller than today's; without one, today's outline Buy and Share prompt.
+    @ViewBuilder
+    private var offerBuyShare: some View {
+        if let welcome {
+            WelcomeOfferButton(model: model, hint: welcome).welcomeTransition()
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: LarderSpace.s4) { buyAndShareText }
+                VStack(spacing: LarderSpace.s1) { buyAndShareText }
+            }
+            .frame(maxWidth: .infinity)
+            .transition(.opacity)
+        } else {
+            Group {
+                buyOrBlocked
+                shareButton
+            }
+            .transition(.opacity)
+        }
+    }
+
+    @ViewBuilder
+    private var buyAndShareText: some View {
+        if credits.canBuy { buyButton(.text, fullWidth: false) }
+        LarderButton(L10n.recipeSharePrompt, icon: .share2, variant: .text, action: sharePrompt)
+            .disabled(nothingTicked)
     }
 
     private func writingOnServer(_ kind: RecipeKind) -> some View {
@@ -511,6 +572,13 @@ struct RecipeView: View {
         case .accountActionFailed: showSnackbar(L10n.recipeAccountActionFailed)
         case .accountBusy: showSnackbar(L10n.recipeAccountBusy)
         case .merged(let moved): showSnackbar(L10n.recipeMerged(moved: moved))
+        case .welcomeGranted(let count): showSnackbar(L10n.welcomeAdded(count))
+        case .welcomeOff(let justSignedIn): showSnackbar(L10n.welcomeOff(justSignedIn: justSignedIn))
+        case .welcomeNotReached:
+            // Signed in and not claimed: the offer reads "Get 3 free recipes"; a retry is safe.
+            showSnackbar(L10n.welcomeNotReached, actionTitle: L10n.settingsTryAgain) {
+                Task { await credits.claimWelcome() }
+            }
         }
     }
 
@@ -654,13 +722,12 @@ struct RecipeView: View {
                     shareButton
                 case .onDevice:
                     hint(L10n.recipeOnDeviceNote)
-                    buyOrBlocked
-                    shareButton
+                    offerBuyShare
                 default:
                     // Share is the primary and the share sheet copies too: the line says what it
-                    // does, Buy (where offered) follows.
+                    // does, then the free recipes' offer, then Buy (where offered).
                     if !nothingTicked { hint(L10n.recipePromptOnlyHint) }
-                    buyOrBlocked
+                    offerThenBuy
                 }
             }
         }
@@ -690,7 +757,30 @@ struct RecipeView: View {
                 title: L10n.recipeMenuShortTitle(model.menuCost),
                 message: L10n.recipeMenuShortMessage(credits.balance ?? 0, recipeCost: model.recipeCost)
             )
-            buyOrBlocked
+            if let welcome {
+                // Buy stays the way on, filled; the offer goes under it with one quiet line on
+                // what the free recipes cover, never a promise the menu can't keep.
+                if credits.canBuy {
+                    RecipeGoButton(title: L10n.recipeBuy, icon: .ticket) { model.showsBuySheet = true }
+                        .transition(.opacity)
+                }
+                VStack(spacing: LarderSpace.s2) {
+                    WelcomeOfferButton(model: model, hint: welcome)
+                    hint(L10n.welcomeMenuCover(
+                        WelcomeRecipes.menuCover(
+                            recipes: welcome.recipes,
+                            balance: credits.balance ?? 0,
+                            menuCost: model.menuCost,
+                            costs: credits.costs,
+                            takesMenuDays: credits.serverTakesMenuDays
+                        ),
+                        recipes: welcome.recipes
+                    ))
+                }
+                .welcomeTransition()
+            } else {
+                buyOrBlocked.transition(.opacity)
+            }
         }
     }
 

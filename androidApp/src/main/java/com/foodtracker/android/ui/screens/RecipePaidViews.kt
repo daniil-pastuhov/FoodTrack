@@ -60,6 +60,9 @@ import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.RecipeUiState
 import com.foodtracker.recipe.SignInProvider
 import com.foodtracker.recipe.StorePack
+import com.foodtracker.recipe.WelcomeHint
+import com.foodtracker.recipe.WelcomeKind
+import com.foodtracker.recipe.WelcomeOutcome
 import com.foodtracker.recipe.recipePackSavingBadge
 import com.foodtracker.recipe.recipePackSavingPercents
 import java.math.BigDecimal
@@ -147,19 +150,31 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
             is PaidEvent.EarlierSaved ->
                 resources.getString(if (event.menu) R.string.recipe_earlier_menu_saved else R.string.recipe_earlier_recipe_saved)
             is PaidEvent.EarlierRefused -> resources.getQuantityString(R.plurals.recipe_earlier_refused, event.taken, event.taken)
+            is PaidEvent.Welcome -> welcomeOutcomeMessage(resources, event.outcome)
             null -> null
         }
-        if (message != null) {
+        if (message != null && event == PaidEvent.SignInFailed && paid.welcomeSheet?.signInFailed == true) {
+            // Said inside the free recipes' sign-in sheet, which stays open (WelcomeSignInBody).
             stateHolder.consumePaidEvent()
-            snackbars.show(message, null, null)
+        } else if (message != null) {
+            stateHolder.consumePaidEvent()
+            // A claim that didn't reach our server can be asked again: it never grants twice.
+            if (event is PaidEvent.Welcome && event.outcome == WelcomeOutcome.NotReached) {
+                snackbars.show(message, resources.getString(R.string.recipe_try_again)) { stateHolder.claimWelcome() }
+            } else {
+                snackbars.show(message, null, null)
+            }
         }
     }
 
     paid.sheet?.let { sheet ->
+        // As it was when the sheet opened: an open sheet never changes under the person.
+        val welcome = remember { paid.welcome }
         BuyRecipesSheet(
             sheet = sheet,
             providers = paid.providers,
             costs = paid.costs,
+            welcome = welcome,
             actions = BuySheetActions(
                 onSelect = stateHolder::selectPack,
                 onContinue = stateHolder::continuePurchase,
@@ -167,8 +182,27 @@ internal fun RecipePaidOverlays(state: RecipeUiState, stateHolder: RecipeStateHo
                 onWithAccount = stateHolder::buyWithAccount,
                 onBack = stateHolder::backToPacks,
                 onRetry = stateHolder::openPacks,
-                onDismiss = stateHolder::dismissPacks
+                onDismiss = stateHolder::dismissPacks,
+                onWelcome = stateHolder::openWelcome
             )
+        )
+    }
+
+    paid.welcomeSheet?.let { sheet ->
+        WelcomeSignInSheet(sheet, paid.providers, onSignIn = stateHolder::welcomeSignIn, onDismiss = stateHolder::dismissWelcomeSheet)
+    }
+
+    if (paid.welcomeAlready) {
+        WelcomeAlreadyDialog(
+            onClose = stateHolder::dismissWelcomeAlready,
+            onPacks = if (paid.canBuy) {
+                {
+                    stateHolder.dismissWelcomeAlready()
+                    stateHolder.openPacks()
+                }
+            } else {
+                null
+            }
         )
     }
 
@@ -249,25 +283,27 @@ internal class BuySheetActions(
     val onWithAccount: (SignInProvider) -> Unit = {},
     val onBack: () -> Unit = {},
     val onRetry: () -> Unit = {},
-    val onDismiss: () -> Unit = {}
+    val onDismiss: () -> Unit = {},
+    /** The quiet "Or sign in and get 3 free recipes" under the packs. */
+    val onWelcome: () -> Unit = {}
 )
 
 /** The pack sheet: prices from the store, then the first purchase's choice, then the store's own
  *  payment sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun BuyRecipesSheet(sheet: BuySheet, providers: Set<SignInProvider>, costs: RecipeCosts, actions: BuySheetActions) {
+internal fun BuyRecipesSheet(sheet: BuySheet, providers: Set<SignInProvider>, costs: RecipeCosts, actions: BuySheetActions, welcome: WelcomeHint? = null) {
     val title = if (sheet is BuySheet.Choice) stringResource(R.string.recipe_choice_title) else stringResource(R.string.recipe_buy)
     LarderSheet(onDismissRequest = actions.onDismiss, title = title) {
-        BuySheetBody(sheet, providers, actions, costs)
+        BuySheetBody(sheet, providers, actions, costs, welcome)
     }
 }
 
 @Composable
-internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actions: BuySheetActions, costs: RecipeCosts = RecipeCosts()) {
+internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actions: BuySheetActions, costs: RecipeCosts = RecipeCosts(), welcome: WelcomeHint? = null) {
     when (sheet) {
         BuySheet.Loading -> PacksList(packs = null, selected = null, purchasing = false, costs = costs, actions = actions)
-        is BuySheet.Packs -> PacksList(sheet.packs, sheet.selected, sheet.purchasing, costs, actions)
+        is BuySheet.Packs -> PacksList(sheet.packs, sheet.selected, sheet.purchasing, costs, actions, welcome)
         is BuySheet.Choice -> StorageChoice(sheet, providers, actions)
         BuySheet.StoreUnavailable -> {
             LarderCallout(
@@ -300,7 +336,7 @@ internal fun BuySheetBody(sheet: BuySheet, providers: Set<SignInProvider>, actio
 }
 
 @Composable
-private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Boolean, costs: RecipeCosts, actions: BuySheetActions) {
+private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Boolean, costs: RecipeCosts, actions: BuySheetActions, welcome: WelcomeHint? = null) {
     val resources = LocalContext.current.resources
     Text(
         text = recipePacksBody(resources, costs),
@@ -324,6 +360,16 @@ private fun PacksList(packs: List<StorePack>?, selected: String?, purchasing: Bo
                 onClick = { actions.onSelect(pack.productId) }
             )
         }
+    }
+    // A quieter way than paying: under the packs, never above them and never filled.
+    if (welcome != null && packs != null && !purchasing) {
+        LarderButton(
+            text = welcomeBuyLabel(resources, welcome),
+            onClick = actions.onWelcome,
+            modifier = Modifier.fillMaxWidth().padding(top = LarderSpace.s3),
+            style = LarderButtonStyle.Text,
+            leadingIcon = LarderIcons.Gift
+        )
     }
     SheetActions {
         LarderButton(text = stringResource(R.string.recipe_cancel), onClick = actions.onDismiss, style = LarderButtonStyle.Text)
@@ -515,6 +561,16 @@ private fun SheetPreview(sheet: BuySheet) = LarderTheme {
 @PreviewLightDark
 @Composable
 internal fun BuyPacksPreview() = SheetPreview(BuySheet.Packs(previewPacks, "recipes_50"))
+
+@PreviewLightDark
+@Composable
+internal fun BuyPacksWithOfferPreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Column(modifier = Modifier.padding(LarderSpace.s4)) {
+            BuySheetBody(BuySheet.Packs(previewPacks, "recipes_50"), setOf(SignInProvider.GOOGLE), BuySheetActions(), welcome = WelcomeHint(3, WelcomeKind.SIGN_IN))
+        }
+    }
+}
 
 @PreviewLightDark
 @Composable

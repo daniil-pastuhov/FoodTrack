@@ -16,6 +16,7 @@ import com.foodtracker.recipe.ServerError
 import com.foodtracker.recipe.ServerResult
 import com.foodtracker.recipe.SignInProvider
 import com.foodtracker.recipe.SignInResult
+import com.foodtracker.recipe.recordLinkedSignIn
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.AuthCredential
@@ -145,6 +146,19 @@ class FirebaseRecipeAccount(
         }
         return try {
             user.linkWithCredential(credential).awaitResult()
+            // Before anything else, whether or not an offer shows: a fresh ID token that names the
+            // new provider, and one getBalance. The server only learns which Google and Apple
+            // accounts belong to an account when the app talks to it, and records each one it sees
+            // so free recipes are given once per Google or Apple account; Firebase tells it nothing
+            // about a link or an unlink. Without this, a sign-in linked and then unlinked before the
+            // next server call would never be recorded and could claim again from another account.
+            // The apps never unlink, so that needs a tampered client; this call shortens the window
+            // to one request. A failure is silent and retried by the next balance call; the link
+            // stands (recordLinkedSignIn).
+            recordLinkedSignIn(
+                refreshIdToken = { (auth.currentUser ?: user).getIdToken(true).awaitResult() },
+                getBalance = { callBalance(firebase.functions()) }
+            )
             dropNameAndPhoto(auth.currentUser)
             SignInResult.SignedIn
         } catch (e: FirebaseAuthUserCollisionException) {

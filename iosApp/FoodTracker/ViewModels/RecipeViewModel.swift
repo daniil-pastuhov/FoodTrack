@@ -122,6 +122,12 @@ struct RecipeActions: Equatable {
 }
 
 /// Where "How recipes work" was opened: by itself on the first visit, or from Recipe settings.
+/// The free recipes' sign-in sheet as it opened: `recipes` is the offer then (0: a plain sign-in).
+struct WelcomeSheetRequest: Identifiable, Equatable {
+    let id = UUID()
+    let recipes: Int
+}
+
 enum RecipeIntroOrigin: Equatable {
     case firstOpen, fromSettings
 }
@@ -182,6 +188,11 @@ final class RecipeViewModel: ObservableObject {
     /// Opens the pack sheet: Buy recipes, the count in the bar, or a generation that found the
     /// pack empty.
     @Published var showsBuySheet = false
+    /// The sign-in sheet of the free recipes, with the number it opened with: it never changes
+    /// while open.
+    @Published var welcomeSheet: WelcomeSheetRequest?
+    /// The offer was tapped and its number is being asked again before the sheet opens.
+    @Published private(set) var openingWelcomeSheet = false
     /// Every server instance was busy on the last call: the writing screen says it is trying
     /// again rather than failing.
     @Published private(set) var serverBusyRetrying = false
@@ -583,6 +594,73 @@ final class RecipeViewModel: ObservableObject {
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: .milliseconds(450))
             self?.showsBuySheet = true
+        }
+    }
+
+    // MARK: Free recipes for signing in
+
+    /// The offer's action, wherever it shows: signed out, the sign-in sheet (after asking the
+    /// number once more, so the sheet names the current one); signed in, the claim itself.
+    func takeWelcomeOffer() {
+        guard let hint = credits.welcomeHint else { return }
+        if hint.needsSignIn {
+            openWelcomeSignIn()
+        } else {
+            Task { await credits.claimWelcome() }
+        }
+    }
+
+    /// Asks `getWelcomeOffer` again (at most 4 s), then opens the sign-in sheet with the number
+    /// as it stands; at 0 the sheet is a plain sign-in that promises nothing.
+    func openWelcomeSignIn() {
+        guard !openingWelcomeSheet, welcomeSheet == nil else { return }
+        openingWelcomeSheet = true
+        let credits = credits
+        Task { @MainActor [weak self] in
+            let refresh = Task { await credits.refreshWelcomeOffer(beforeSignIn: true) }
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await refresh.value }
+                group.addTask { try? await Task.sleep(for: .seconds(4)) }
+                await group.next()
+                group.cancelAll()
+            }
+            guard let self else { return }
+            self.openingWelcomeSheet = false
+            let hint = credits.welcomeHint
+            self.welcomeSheet = WelcomeSheetRequest(recipes: hint?.needsSignIn == true ? hint?.recipes ?? 0 : 0)
+        }
+    }
+
+    /// "How recipes work"'s offer: closed (counts as closed for good), then the offer's action
+    /// once the closing sheet has gone.
+    func introToWelcome() {
+        dismissIntro()
+        afterSheetCloses { $0.takeWelcomeOffer() }
+    }
+
+    /// The Buy sheet's "Or sign in and get 3 free recipes": that sheet closes first.
+    func buySheetToWelcome() {
+        showsBuySheet = false
+        afterSheetCloses { $0.takeWelcomeOffer() }
+    }
+
+    /// The "already had them" dialog, once a closing sheet has gone.
+    func showWelcomeAlreadyAfterSheet() {
+        afterSheetCloses { $0.credits.welcomeAlready = true }
+    }
+
+    /// "See recipe packs" from the "already had them" dialog.
+    func welcomeToPacks() {
+        credits.welcomeAlready = false
+        guard credits.canBuy else { return }
+        afterSheetCloses { $0.showsBuySheet = true }
+    }
+
+    private func afterSheetCloses(_ then: @escaping @MainActor (RecipeViewModel) -> Void) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(450))
+            guard let self else { return }
+            then(self)
         }
     }
 
@@ -1082,7 +1160,7 @@ final class RecipeViewModel: ObservableObject {
             // Nothing was decided on the server for this attempt: ask again under the same id.
             return .serverFailed(kind, sameRequest: true)
         case .requestIdReused, .unauthenticated, .invalidRequest, .recentSignInRequired, .mergeNotAllowed,
-             .storeMismatch, .purchaseAccountMismatch, .refusedName, .allergenConsentRequired:
+             .storeMismatch, .purchaseAccountMismatch, .refusedName, .allergenConsentRequired, .signInRequired:
             // REQUEST_ID_REUSED: the stored request is already dropped, so "Try again" builds a
             // new one under a new id.
             return .serverFailed(kind, sameRequest: false)

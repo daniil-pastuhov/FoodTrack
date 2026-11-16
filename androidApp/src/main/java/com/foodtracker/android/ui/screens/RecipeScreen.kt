@@ -91,6 +91,7 @@ import com.foodtracker.recipe.RecipeSelection
 import com.foodtracker.recipe.RecipeStateHolder
 import com.foodtracker.recipe.RecipeUiState
 import com.foodtracker.recipe.ServerIssue
+import com.foodtracker.recipe.welcomeMenuCover
 import com.foodtracker.viewmodel.PantryRow
 import kotlinx.datetime.LocalDate
 
@@ -129,6 +130,8 @@ fun RecipeScreen(
     // in Saved recipes as unread.
     LifecycleResumeEffect(stateHolder) {
         stateHolder.refresh()
+        // Only here, where the tab itself shows: the free recipes' offer is never asked at launch.
+        stateHolder.onRecipeTabShown()
         stateHolder.setOnScreen(true)
         onPauseOrDispose { stateHolder.setOnScreen(false) }
     }
@@ -288,14 +291,15 @@ fun RecipeScreen(
             },
             onOpenSaved = { navigator.navigate(LarderRoute.SavedRecipes) },
             onOpenSettings = { navigator.navigate(LarderRoute.RecipeSettings) },
-            onScan = { navigator.navigate(LarderRoute.Scanner()) }
+            onScan = { navigator.navigate(LarderRoute.Scanner()) },
+            onWelcome = stateHolder::openWelcome
         )
     )
 
     RecipePaidOverlays(state, stateHolder)
 
     if (state.intro == RecipeIntro.FIRST_OPEN) {
-        RecipeIntroSheet(state, onDismiss = stateHolder::dismissIntro, onPacks = stateHolder::introToPacks)
+        RecipeIntroSheet(state, onDismiss = stateHolder::dismissIntro, onPacks = stateHolder::introToPacks, onWelcome = stateHolder::introToWelcome)
     }
 }
 
@@ -315,7 +319,9 @@ internal class RecipeTabActions(
     val onCopy: () -> Unit = {},
     val onOpenSaved: () -> Unit = {},
     val onOpenSettings: () -> Unit = {},
-    val onScan: () -> Unit = {}
+    val onScan: () -> Unit = {},
+    /** The free recipes' offer: the sign-in sheet, or the claim when signed in. */
+    val onWelcome: () -> Unit = {}
 )
 
 @Composable
@@ -779,8 +785,20 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                 ShareAndCopy(state, actions)
             }
             RecipePrimary.OnDevice -> {
-                BuyOrBlocked(paid, actions, LarderButtonStyle.Outline)
-                ShareAndCopy(state, actions)
+                // The offer takes the first place under the primary; Buy and Share then share one
+                // row of text buttons, so the group is no taller than without it.
+                val welcome = paid.welcome
+                AnimatedWelcome(welcome) { WelcomeOfferButton(it, paid.welcomeClaiming, actions.onWelcome) }
+                WelcomeCrossfade(welcome != null) { offer ->
+                    if (offer) {
+                        BuyAndShareRow(state, actions)
+                    } else {
+                        Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                            BuyOrBlocked(paid, actions, LarderButtonStyle.Outline)
+                            ShareAndCopy(state, actions)
+                        }
+                    }
+                }
             }
             else -> {
                 val copy = RecipeAction.COPY in state.actions.secondary
@@ -794,9 +812,36 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
                     )
                 }
                 RecipeHint(stringResource(R.string.recipe_prompt_hint))
-                // Without Copy, Buy is the one button under Share: outlined, not a link.
-                BuyOrBlocked(paid, actions, if (copy) LarderButtonStyle.Text else LarderButtonStyle.Outline)
+                // Free recipes for signing in: the outline button with a gift, above Buy, which
+                // drops to a text button meanwhile. Without Copy or an offer, Buy is the one button
+                // under Share: outlined, not a link.
+                val welcome = paid.welcome
+                AnimatedWelcome(welcome) { WelcomeOfferButton(it, paid.welcomeClaiming, actions.onWelcome) }
+                WelcomeCrossfade(if (copy || welcome != null) LarderButtonStyle.Text else LarderButtonStyle.Outline) { style ->
+                    BuyOrBlocked(paid, actions, style)
+                }
             }
+        }
+    }
+}
+
+/** With an offer and the phone's own model: Buy and Share (and Copy) as one row of text buttons,
+ *  wrapping to two rows when they don't fit side by side. */
+@Composable
+private fun BuyAndShareRow(state: RecipeUiState, actions: RecipeTabActions) {
+    val paid = state.paid
+    val copy = RecipeAction.COPY in state.actions.secondary
+    if (paid.available && paid.purchasesBlocked) RecipeHint(stringResource(R.string.recipe_purchases_blocked))
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(LarderSpace.s2, Alignment.CenterHorizontally)
+    ) {
+        if (paid.canBuy) {
+            LarderButton(text = stringResource(R.string.recipe_buy), onClick = actions.onBuy, style = LarderButtonStyle.Text, leadingIcon = LarderIcons.Ticket)
+        }
+        LarderButton(text = stringResource(R.string.recipe_share_prompt), onClick = actions.onShare, style = LarderButtonStyle.Text, leadingIcon = LarderIcons.Share2)
+        if (copy) {
+            LarderButton(text = stringResource(R.string.recipe_copy_prompt), onClick = actions.onCopy, style = LarderButtonStyle.Text, leadingIcon = LarderIcons.Copy)
         }
     }
 }
@@ -854,6 +899,16 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled
                 }
             )
             BuyOrBlocked(paid, actions, LarderButtonStyle.Primary)
+            // The offer under Buy, with one quiet line on what the free recipes cover: never a
+            // promise the menu can't keep.
+            AnimatedWelcome(paid.welcome) { hint ->
+                Column(verticalArrangement = Arrangement.spacedBy(LarderSpace.s2)) {
+                    WelcomeOfferButton(hint, paid.welcomeClaiming, actions.onWelcome)
+                    WelcomeMenuLine(
+                        welcomeMenuLine(resources, hint.recipes, welcomeMenuCover(hint.recipes, balance, state.serverCost, paid.costs, paid.menuSets))
+                    )
+                }
+            }
         }
         else -> {
             // Few items for many dishes: said, never stopped; live with the ticks and choices.
