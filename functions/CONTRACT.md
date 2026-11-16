@@ -83,7 +83,7 @@ not on `message` (English, for logs).
 | `resource-exhausted` | `USER_DAILY_LIMIT` | This account reached its daily generation limit (number of generations, estimated usage, or too many requests refused today as prompt injection: see "Name rules"). Try again tomorrow (UTC); nothing was charged. |
 | `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
-| `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, days, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
+| `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, days, staples, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
 | `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`, `claimWelcome`). Retry; the SDK fetches a new limited-use token. |
 | `failed-precondition` | `SIGN_IN_REQUIRED` | `claimWelcome`: the account has no Google or Apple sign-in (an anonymous install). Nothing was granted or recorded; sign in first. |
 | `failed-precondition` | `RECENT_SIGN_IN_REQUIRED` | `deleteAccount` needs a sign-in in the last 5 minutes. Re-authenticate, retry. |
@@ -219,6 +219,22 @@ before bought ones used after the grant; bought recipes used before the grant st
 used), never count in refund-after-use, and are lost with the account like any
 unused recipes.
 
+## Capability `acceptsStaples`
+
+The person's staples (November 2026, "Staples" below): every response that carries `balance`
+(`getBalance`, `verifyPurchase`, `generateRecipe`, `getGeneration`, `mergeBalance`,
+`claimWelcome`) from a server that reads `staples` on `generateRecipe` carries
+`"acceptsStaples": true`; a server deployed before the field existed sends nothing. Clients send
+`staples` only when the latest such response said `true`, and only when the list is not empty
+(keep the flag with the cached balance; absent in a later response withdraws it, as after a
+rollback). Without the flag the request goes **without** `staples`: no error, nothing blocked. A
+server from before it ignores the field (unknown fields are ignored), so the flag keeps a new
+client from sending names a server would not use. A request with `staples` refused as
+`INVALID_REQUEST` **without** `details.field` (a malformed list is the only such refusal the field
+can cause) makes the apps clear the flag and refresh the balance, as for `taste`. Old clients
+ignore the flag and never send the field. Staples cost nothing: the price, the limits and every
+check are the same with and without them.
+
 ## Types
 
 ### RecipeConfig
@@ -307,6 +323,44 @@ An ingredient of the answer that is an optional item has `fromPantry: true`, and
 `uses` may name optional items. An answer that uses no item of `ingredients` is still refused
 (`NO_PANTRY`). The kept optional items are part of the inputs a `requestId` is bound to; a request
 without them is bound exactly as before the field existed.
+
+#### Staples
+
+`staples` (`generateRecipe`, optional) holds the names of the basics the person always has at
+home (salt, olive oil, eggs...: "Staples" in the apps), which the recipe **may** use and never has
+to. They go with every request from a client that keeps any, whatever "Send all products" says,
+but only to a server that says `acceptsStaples`.
+
+```json
+"staples": ["Salt", "Olive oil", "Eggs"]
+```
+
+- **Shape.** Names only, a JSON array of strings; absent or `null` is none. Not an array, more
+  than **20** entries, or an entry that is not a string is `INVALID_REQUEST` (nothing charged; the
+  error's `details` carry no `field`).
+- **Content is lenient, never an error.** Each name goes through the "Name rules" below, but a
+  name the rules refuse, or one equal (ignoring case, after normalising) to a name in
+  `ingredients`, a kept `optionalIngredients` name or an earlier kept staple, is **left out**,
+  never refusing the request and never counted against the daily rejection limit.
+- **Cap.** Of what is left, entries are kept in the order sent while the kept ones hold at most
+  **20 names** and **400 code points of names**; an entry that does not fit is skipped and a
+  later, shorter one may still be kept. This budget is separate from the 30 names / 1,050 code
+  points of `ingredients` plus optional items and uses none of it.
+- **Diet and allergens.** A kept staple whose own name breaks the request's diet or allergens
+  ("Butter" with `dairyFree`, "Eggs" with an egg allergen) is quietly left out of the prompt and
+  of the answer check, never refused.
+- **Binding.** The kept names, in order, are part of the inputs a `requestId` is bound to
+  (another list or another order is `REQUEST_ID_REUSED`); a request without any kept staple is
+  bound exactly as before the field existed. The diet and allergen filter is not part of it.
+- **No other effect.** Staples are never pantry items: they never count as using the pantry
+  (`NO_PANTRY`, `STAPLES_ONLY`), never make `NOT_ENOUGH_ITEMS` pass, are never past their date
+  and never appear in a menu day's `uses`. The price and the limits are the same with and
+  without them.
+
+The model gets them in a third data block, framed as untrusted data like the others, as names
+with ids, with no date or quantity. An ingredient of the answer that is one of them has
+`fromPantry: false` and, when its written name matches the staple, `stapleIndex` (see "Recipe
+(response)").
 
 #### Name rules
 
@@ -448,7 +502,8 @@ sha256 of the validated request, and no inputs); it is not logged either (`llm_c
   "difficulty": "easy | medium | ambitious",
   "ingredients": [{ "amount": "200 g", "name": "pasta", "fromPantry": true, "pantryIndex": 0 },
                   { "amount": "1", "name": "onion", "fromPantry": false },
-                  { "amount": "", "name": "salt", "fromPantry": false, "staple": true }],
+                  { "amount": "", "name": "pepper", "fromPantry": false, "staple": true },
+                  { "amount": "1 tsp", "name": "salt", "fromPantry": false, "stapleIndex": 0, "staple": true }],
   "steps": ["string", "..."],
   "tip": "string (optional, absent when none)"
 }
@@ -463,7 +518,17 @@ staple word is delivered with `fromPantry: false` and `staple: true`).
 when it is one of the request's `optionalIngredients`: its 0-based index in that list **as
 sent** (entries the server left out still count). With them a client can look up the item and
 its `expiresOn` (for example to warn that a dish uses an item past its date). Both are absent on
-answers generated before they existed; read them as optional. An ingredient with
+answers generated before they existed; read them as optional. `stapleIndex` (integer, optional)
+is present when the ingredient is one of the request's `staples`: its 0-based index in
+that list **as sent** (entries the server left out still count). Such an ingredient always has
+`fromPantry: false`; `staple: true` beside it only when its name is a staple word. The server
+omits it when the written name doesn't plausibly name that staple (the model labelled "Chicken
+thighs" as the person's "Salt"): every significant word of the staple's name appears in the
+ingredient's ("Sea salt" for "Salt"), or both names are in the same one-food word group of
+`core/foodTerms.ts` ("яйца" for "Eggs"); otherwise the ingredient is an ordinary one, as with
+`pantryId: "none"`. Absent otherwise and on answers from before it. The apps map it to the
+person's staple: they show a "Your staple" mark on the ingredient and leave it out of "Add to
+shopping list". An ingredient with
 `fromPantry: false` is something the cook supplies: a staple, or one of the few common extras the
 model may add when the pantry items alone do not make a proper dish (it may need buying).
 `staple` (optional, `true` or absent) marks such an ingredient whose name is only a staple (water,
@@ -520,6 +585,7 @@ Request:
   "config": { "...RecipeConfig" },
   "ingredients": [{ "name": "Pasta", "expiresOn": "2026-11-20", "quantity": 1 }],
   "optionalIngredients": [{ "name": "Basil", "expiresOn": null, "quantity": 1 }],
+  "staples": ["Salt", "Olive oil", "Eggs"],
   "allergens": ["peanut"],
   "allergenConsent": true,
   "taste": { "cuisines": ["italian"], "heat": ["medium"], "avoid": ["olives"] },
@@ -536,7 +602,9 @@ absent or null is 3, anything else, or `days` on a recipe, is `INVALID_REQUEST`;
 server that says `acceptsMenuDays`, and only when it is not 3 (see that section). `days` is part
 of the inputs a `requestId` is bound to; `days: 3` binds exactly as no `days`. 1 to 30 ingredients.
 `optionalIngredients`: see "Optional ingredients"; send it only to a server that says
-`acceptsOptionalIngredients` (see that section). `taste` (optional): the quiz answers, step id →
+`acceptsOptionalIngredients` (see that section). `staples` (optional): the names of the person's
+staples (see "Staples"); send it only to a server that says `acceptsStaples`, and only when it
+is not empty. `taste` (optional): the quiz answers, step id →
 option ids (see "Taste profile"); send it only to a server that says `acceptsTaste`, and only when
 it is not empty. It does not change the cost.
 Cost: `costs.recipe` for a recipe, `costs.menuSets["<days>"]["<courses>"]` for a menu (see
@@ -549,7 +617,8 @@ Response:
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
   "costs": { "recipe": 1, "menu2": 4, "menu3": 5, "menuSets": { "...": "see Costs" } },
   "acceptsOptionalIngredients": true, "acceptsMultiChoiceConfig": true, "acceptsDanish": true,
-  "acceptsMenuDays": true, "acceptsTaste": true, "tasteQuizVersion": "35244e855cd4327f" }
+  "acceptsMenuDays": true, "acceptsTaste": true, "tasteQuizVersion": "35244e855cd4327f",
+  "acceptsStaples": true }
 ```
 
 | status | meaning | `charged` | client action |

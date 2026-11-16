@@ -147,6 +147,8 @@ enum RecipeDestination: Hashable {
     case settings
     /// The taste-profile quiz, over Recipe settings.
     case tasteQuiz
+    /// The Staples screen, from the form's staples line.
+    case staples
 }
 
 /// The definition the open quiz shows.
@@ -795,17 +797,28 @@ final class RecipeViewModel: ObservableObject {
 
     // MARK: Routes
 
-    func request(for items: [PantryItem]) -> RecipeRequest {
-        RecipeRequest(
-            items: selectedItems(from: items).map(RecipeIngredientInput.init),
+    /// `staples`: the person's staples (`NativePantryViewModel.stapleRows`); those not on the
+    /// shopping list go to every route whatever "Send all products" says, less those it already lists.
+    func request(for items: [PantryItem], staples: [StapleRow] = []) -> RecipeRequest {
+        let ticked = selectedItems(from: items)
+        let others = optionalItems(from: items)
+        return RecipeRequest(
+            items: ticked.map(RecipeIngredientInput.init),
             config: config,
             allergens: Array(SettingsStore.shared.settings.allergens),
-            otherItems: optionalItems(from: items).map(RecipeIngredientInput.init)
+            otherItems: others.map(RecipeIngredientInput.init),
+            staples: stapleNames(for: items, staples: staples)
         )
     }
 
-    func sharePrompt(for items: [PantryItem]) -> String {
-        RecipePromptBuilder.sharePrompt(for: request(for: items))
+    /// The staples a route gets from `staples` (`Staples.promptStaples`): the form's "Your N
+    /// staples may be used too" counts them. Android: `RecipeUiState.stapleNames`.
+    func stapleNames(for items: [PantryItem], staples: [StapleRow]) -> [String] {
+        Staples.promptStaples(staples, ticked: selectedItems(from: items).map(\.name), others: optionalItems(from: items).map(\.name))
+    }
+
+    func sharePrompt(for items: [PantryItem], staples: [StapleRow] = []) -> String {
+        RecipePromptBuilder.sharePrompt(for: request(for: items, staples: staples))
     }
 
     func setMenuCourses(_ courses: Int) {
@@ -864,9 +877,9 @@ final class RecipeViewModel: ObservableObject {
             && (credits.balance ?? 0) >= (kind == .menu ? menuCost : recipeCost)
     }
 
-    func writeOnServer(from items: [PantryItem]) {
+    func writeOnServer(from items: [PantryItem], staples: [StapleRow] = []) {
         let kind: RecipeKind = mode == .menu ? .menu : .recipe
-        let request = request(for: items)
+        let request = request(for: items, staples: staples)
         guard !request.items.isEmpty, phase == .idle else { return }
         // Allergens are health data: sent only with the person's consent, and never left out
         // instead (a recipe written without them could be unsafe).
@@ -898,7 +911,9 @@ final class RecipeViewModel: ObservableObject {
             multiChoice: credits.storage.serverTakesMultiChoice,
             menuDays: credits.serverTakesMenuDays,
             // The taste profile only to a server that reads it; otherwise the request goes without.
-            taste: tasteToSend
+            taste: tasteToSend,
+            // The staples only to a server that reads them; otherwise the request goes without.
+            withStaples: credits.storage.serverTakesStaples
         ) else {
             failure = .dietsNeedServerUpdate
             return
@@ -1130,6 +1145,12 @@ final class RecipeViewModel: ObservableObject {
         if serverError == .invalidRequest, MenuSet.needsMenuDays(wire) { credits.setServerTakesMenuDays(false) }
         // And a taste profile: the next request goes without it.
         if TasteProfile.clearsFlag(after: serverError, request: wire) { credits.storage.serverTakesTaste = false }
+        // And staples: the next request goes without them, and the balance says again what the server reads.
+        if RecipeWire.clearsStaplesFlag(after: serverError, request: wire) {
+            credits.storage.serverTakesStaples = false
+            let credits = credits
+            Task { await credits.refreshBalance() }
+        }
         if serverError == .insufficientCredits {
             if credits.canBuy { showsBuySheet = true }
             return
@@ -1193,16 +1214,18 @@ final class RecipeViewModel: ObservableObject {
             // ingredients' item indices; without them (an older server) every ticked one.
             let tickedPast = RecipeWire.pastDate(of: wire.ingredients, today: wire.today)
             let optional = wire.optionalIngredients ?? []
+            // Which ingredient is which staple, by its index into the staples as sent.
+            let staples = wire.staples ?? []
             switch kind {
             case .recipe:
-                if var recipe = response.recipe.map(RecipeWire.markedServer) {
+                if var recipe = response.recipe.map(RecipeWire.markedServer).map({ $0.withStapleNames(staples) }) {
                     recipe.pastDate = recipe.hasItemIndices
                         ? RecipeWire.pastDate(of: recipe, ticked: wire.ingredients, optional: optional, today: wire.today)
                         : tickedPast
                     return .saved(.recipe(recipe))
                 }
             case .menu:
-                if var menu = response.menu, !menu.days.isEmpty {
+                if var menu = response.menu?.withStapleNames(staples), !menu.days.isEmpty {
                     for day in menu.days.indices {
                         for course in menu.days[day].courses.indices {
                             menu.days[day].courses[course].recipe.source = .server
@@ -1229,8 +1252,8 @@ final class RecipeViewModel: ObservableObject {
 
     // MARK: On-device route
 
-    func writeOnDevice(from items: [PantryItem]) {
-        let request = request(for: items)
+    func writeOnDevice(from items: [PantryItem], staples: [StapleRow] = []) {
+        let request = request(for: items, staples: staples)
         guard !request.items.isEmpty, phase == .idle else { return }
         phase = .writingOnDevice
         let model = onDeviceModel

@@ -42,6 +42,7 @@ public struct SettingsView: View {
 
     @State private var section: SettingsSection = .notifications
     @State private var showCategories = false
+    @State private var showStaples = false
     @State private var newLocationText: String = ""
     @State private var newLocationError: String?
     @State private var newAllergenText: String = ""
@@ -94,6 +95,9 @@ public struct SettingsView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showCategories) {
                 CategorySettingsView(viewModel: viewModel)
+            }
+            .navigationDestination(isPresented: $showStaples) {
+                StaplesView(viewModel: viewModel)
             }
             .larderDialog(
                 L10n.clearDataDialogTitle,
@@ -171,6 +175,8 @@ public struct SettingsView: View {
                 cardGap
                 categoriesRows
                 cardGap
+                staplesRows
+                cardGap
                 allergensRows
                 groupTitle(L10n.settingsSectionAppearance)
                 appearanceRows
@@ -238,6 +244,13 @@ public struct SettingsView: View {
                     isSelected: false,
                     showsChevron: true
                 ) { showCategories = true }
+                SectionRow(
+                    icon: .wheat,
+                    title: L10n.staplesTitle,
+                    value: viewModel.staples.isEmpty ? L10n.staplesNone : L10n.staplesCount(viewModel.staples.count),
+                    isSelected: false,
+                    showsChevron: true
+                ) { showStaples = true }
                 sectionRow(
                     .allergens,
                     icon: .circleAlert,
@@ -850,6 +863,33 @@ public struct SettingsView: View {
                 HStack(spacing: LarderSpace.s3) {
                     LarderIcon(.layers)
                     Text(L10n.settingsManageCategoriesButton)
+                        .larderFont(.body)
+                        .foregroundStyle(LarderColor.onSurface)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    LarderIcon(.chevronRight)
+                }
+                .foregroundStyle(LarderColor.onSurfaceVariant)
+                .padding(.horizontal, LarderSpace.s3)
+                .frame(minHeight: LarderSize.control)
+                .background(LarderColor.surfaceContainer, in: RoundedRectangle(cornerRadius: LarderRadius.md))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: Staples
+
+    private var staplesRows: some View {
+        cardRow(.only) {
+            cardHead(L10n.staplesTitle, icon: .wheat)
+            description(L10n.staplesSettingsDescription)
+            Button {
+                showStaples = true
+            } label: {
+                HStack(spacing: LarderSpace.s3) {
+                    LarderIcon(.wheat)
+                    Text(L10n.staplesManage)
                         .larderFont(.body)
                         .foregroundStyle(LarderColor.onSurface)
                         .frame(maxWidth: .infinity, alignment: .leading)

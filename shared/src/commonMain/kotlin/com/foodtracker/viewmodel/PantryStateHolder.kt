@@ -20,6 +20,7 @@ import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
+import com.foodtracker.model.Staple
 import com.foodtracker.model.SortOption
 import com.foodtracker.model.UNCATEGORIZED_ORIGIN
 import com.foodtracker.model.resolveCategoryDisplayName
@@ -38,6 +39,14 @@ import com.foodtracker.repository.PantryRepository
 import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.ShoppingSectionRepository
+import com.foodtracker.repository.InMemoryStapleRepository
+import com.foodtracker.repository.StapleRepository
+import com.foodtracker.staples.MAX_STAPLES
+import com.foodtracker.staples.cutStapleName
+import com.foodtracker.staples.mayRestore
+import com.foodtracker.staples.matchKeys
+import com.foodtracker.staples.ordered
+import com.foodtracker.staples.stapleKey
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.util.DateUtils
 import kotlinx.coroutines.CoroutineScope
@@ -183,7 +192,10 @@ data class PantryUiState(
     val categoryRows: List<CategoryRow> = emptyList(),
     /** A finished add waiting to be confirmed. Show it, then call
      *  [PantryStateHolder.consumeHomeConfirmation]. */
-    val homeConfirmation: HomeConfirmation? = null
+    val homeConfirmation: HomeConfirmation? = null,
+    /** The person's staples, already in display order (`ordered`): Settings › Staples and the
+     *  recipe routes. Never pantry items: no date, no status, in no count or widget. */
+    val staples: List<Staple> = emptyList()
 ) {
     /** Whether the first-run flow is due. False until the pantry has loaded, because a pantry
      *  with items in it completes onboarding (see [AppSettings.onboardingCompleted]). */
@@ -199,6 +211,8 @@ class PantryStateHolder(
     private val localProductRepository: LocalProductRepository,
     private val categoryPreferenceRepository: CategoryPreferenceRepository,
     private val shoppingSectionRepository: ShoppingSectionRepository,
+    /** The staples' own table. In memory by default, so fakes that don't care need not pass one. */
+    private val stapleRepository: StapleRepository = InMemoryStapleRepository(),
     /** Localized label for the "Other" bucket (see [UNCATEGORIZED_ORIGIN]) - seeded as that
      *  sentinel category's initial display name the first time it's registered, so it reads
      *  correctly in the device's language rather than a hardcoded English default. */
@@ -274,6 +288,7 @@ class PantryStateHolder(
         observeCategoryPreferences()
         observeDerivedPantry()
         observeShoppingList()
+        observeStaples()
         observeKnownProductNames()
         observeSettingsPersistence()
         observeDayRollover()
@@ -399,6 +414,62 @@ class PantryStateHolder(
         }
     }
 
+    private fun observeStaples() {
+        coroutineScope.launch {
+            stapleRepository.getStaplesFlow().collect { staples ->
+                val sorted = ordered(staples)
+                _uiState.update { it.copy(staples = sorted) }
+            }
+        }
+    }
+
+    // --- Staples -----------------------------------------------------------------------------
+
+    /** Adds a staple: a preset ([presetId], [name] its name in the app's language now) or the
+     *  person's own entry. Nothing past [MAX_STAPLES], nothing blank; the screen checks the rest
+     *  (`addCheck`) before it calls this. */
+    @OptIn(ExperimentalTime::class)
+    fun addStaple(name: String, presetId: String? = null) {
+        val trimmed = cutStapleName(name.trim()).trim()
+        if (trimmed.isEmpty() || _uiState.value.staples.size >= MAX_STAPLES) return
+        val now = currentTimeMillis()
+        val staple = Staple(id = "staple_${now}_${Random.nextInt().toUInt()}", name = trimmed, presetId = presetId, addedAtEpochMillis = now)
+        _uiState.update { it.copy(staples = ordered(it.staples + staple)) }
+        coroutineScope.launch { stapleRepository.upsert(staple) }
+    }
+
+    /** Removes a staple (a preset unticked, or an own entry's X) and hands it to [onRemoved] for
+     *  Undo through [restoreStaple]. */
+    fun removeStaple(id: String, onRemoved: (Staple) -> Unit = {}) {
+        val staple = _uiState.value.staples.firstOrNull { it.id == id } ?: return
+        _uiState.update { state -> state.copy(staples = state.staples.filterNot { it.id == id }) }
+        coroutineScope.launch { stapleRepository.delete(id) }
+        onRemoved(staple)
+    }
+
+    /** Undo of [removeStaple]: the same staple back, same id and time, unless one of its names is a
+     *  staple again by now or there are [MAX_STAPLES] already ([mayRestore]); then nothing. */
+    fun restoreStaple(staple: Staple) {
+        if (!mayRestore(staple, _uiState.value.staples)) return
+        _uiState.update { state -> state.copy(staples = ordered(state.staples.filterNot { it.id == staple.id } + staple)) }
+        coroutineScope.launch { stapleRepository.upsert(staple) }
+    }
+
+    /** "Ran out": the staple's shown name onto the shopping list through its ordinary path. While
+     *  it is there the staple is out (`isOut`); it is back once the entry leaves the list. */
+    fun stapleRanOut(displayName: String) = addManualShoppingListEntry(displayName)
+
+    /** Undo of [stapleRanOut]: the shopping entry with that name's key goes again. Matched in
+     *  Kotlin, so a name outside ASCII ("Соль") matches too. */
+    fun undoStapleRanOut(displayName: String) {
+        val key = stapleKey(displayName)
+        coroutineScope.launch {
+            shoppingListRepository.getEntriesFlow().first()
+                .firstOrNull { stapleKey(it.productName) == key }
+                ?.let { shoppingListRepository.deleteEntry(it.id) }
+        }
+    }
+
     private fun observeKnownProductNames() {
         coroutineScope.launch {
             productNameRepository.getKnownNamesFlow().collectLatest { names ->
@@ -519,7 +590,8 @@ class PantryStateHolder(
                 categoryPreferences = categoryPreferenceRepository.getPreferencesFlow().first(),
                 products = localProductRepository.getAll(),
                 knownProductNames = productNameRepository.getKnownNamesFlow().first(),
-                settings = settingsState.value
+                settings = settingsState.value,
+                staples = ordered(stapleRepository.getAll())
             )
             onReady(BackupSerializer.encode(document), document)
         }
@@ -557,6 +629,7 @@ class PantryStateHolder(
             localProductRepository.clearAll()
             categoryPreferenceRepository.clearAll()
             productNameRepository.clearAll()
+            stapleRepository.clearAll()
         }
 
         // Category preferences go back first: items and shopping entries reference categories by
@@ -589,6 +662,8 @@ class PantryStateHolder(
             entriesRestored++
         }
 
+        val staplesRestored = restoreStaples(document.staples)
+
         localProductRepository.saveAll(document.products)
         document.knownProductNames.forEach { productNameRepository.recordName(it) }
 
@@ -603,8 +678,34 @@ class PantryStateHolder(
             shoppingEntriesRestored = entriesRestored,
             productsRestored = document.products.size,
             categoriesRestored = document.categoryPreferences.size,
-            settingsRestored = mode == RestoreMode.REPLACE
+            settingsRestored = mode == RestoreMode.REPLACE,
+            staplesRestored = staplesRestored
         )
+    }
+
+    /**
+     * A backup's staples, in display order and never past [MAX_STAPLES]. Replace has cleared the
+     * table first. Merge adds one only when none of its names ([matchKeys]) is already a staple's,
+     * here or earlier in the same file. An unknown preset id is kept as it is (shown by its name).
+     */
+    private suspend fun restoreStaples(staples: List<Staple>): Int {
+        val existing = stapleRepository.getAll()
+        val keys = existing.flatMapTo(HashSet()) { matchKeys(it) }
+        val ids = existing.mapTo(HashSet()) { it.id }
+        var count = existing.size
+        val kept = mutableListOf<Staple>()
+        for (staple in ordered(staples)) {
+            if (count >= MAX_STAPLES) break
+            val own = matchKeys(staple)
+            // After Replace's clear, [keys] holds only this file's earlier staples: repeats go.
+            if (staple.id in ids || own.any { it in keys }) continue
+            kept += staple
+            keys += own
+            ids += staple.id
+            count++
+        }
+        if (kept.isNotEmpty()) stapleRepository.upsertAll(kept)
+        return kept.size
     }
 
     @OptIn(ExperimentalTime::class)

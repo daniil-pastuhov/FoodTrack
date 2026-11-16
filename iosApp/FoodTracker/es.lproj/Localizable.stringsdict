@@ -1568,5 +1568,41 @@
             <string>%d recetas eliminadas</string>
         </dict>
     </dict>
+	<key>staples_count</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d básico</string>
+			<key>many</key>
+			<string>%d básicos</string>
+			<key>other</key>
+			<string>%d básicos</string>
+		</dict>
+	</dict>
+	<key>recipe_staples_count</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Tu básico también se puede usar</string>
+			<key>many</key>
+			<string>Tus %d básicos también se pueden usar</string>
+			<key>other</key>
+			<string>Tus %d básicos también se pueden usar</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

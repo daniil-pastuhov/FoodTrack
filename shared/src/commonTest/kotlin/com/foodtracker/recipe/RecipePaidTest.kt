@@ -97,6 +97,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     var balanceMenuDays = false
     var balanceTaste = false
     var balanceTasteVersion: String? = null
+    var balanceStaples = false
     val tasteQuizReplies = ArrayDeque<ServerResult<kotlinx.serialization.json.JsonElement>>()
     val tasteQuizAsked = mutableListOf<String>()
     var balanceCalls = 0
@@ -132,7 +133,7 @@ private class FakeBackend(var available: Boolean = true) : RecipeBackend {
     override suspend fun getBalance(): ServerResult<BalanceReply> {
         balanceCalls++
         return when (val current = balance) {
-            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays, balanceTaste, balanceTasteVersion))
+            is ServerResult.Ok -> ServerResult.Ok(BalanceReply(current.value, balanceCosts, balanceBlocked, balanceOptional, balanceMultiChoice, balanceDanish, balanceMenuDays, balanceTaste, balanceTasteVersion, acceptsStaples = balanceStaples))
             is ServerResult.Err -> current
         }
     }
@@ -3499,5 +3500,154 @@ class RecipePaidTest {
         holder.refresh()
         assertEquals(TasteSummary(emptyList(), null, 3), holder.uiState.value.tasteSummary, "N answers until German is fetched")
         assertEquals(3, holder.uiState.value.taste.count, "nothing lost")
+    }
+
+    // --- Staples: names only, only to a server that says acceptsStaples ------------------------
+
+    private fun withStaplesServer(balance: Int, takes: Boolean, vararg names: String, shopping: List<String> = emptyList()) {
+        withBalance(balance)
+        paidRepository = InMemoryRecipePaidRepository(RecipePaidSnapshot(allergenConsent = agreed, balance = balance, serverTakesStaples = takes))
+        backend.balanceStaples = takes
+        pantry.value = pantry.value.copy(
+            staples = names.mapIndexed { i, name -> com.foodtracker.model.Staple("s$i", name, null, i.toLong()) },
+            shoppingList = shopping.mapIndexed { i, name -> com.foodtracker.model.ShoppingListEntry("e$i", name, addedDate = today) }
+        )
+    }
+
+    @Test
+    fun theStaplesGoToAServerThatReadsThemWithoutOnesOutOrTicked() = runUnconfined {
+        withStaplesServer(5, takes = true, "Salt", "  Olive oil ", "bread", "Eggs", shopping = listOf("eggs"))
+        val holder = holder()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(listOf("Salt", "Olive oil"), backend.generated.single().staples, "Eggs is out, Bread is ticked")
+    }
+
+    @Test
+    fun aServerThatDoesntReadStaplesGetsTheRequestWithoutThem() = runUnconfined {
+        withStaplesServer(5, takes = false, "Salt")
+        val holder = holder()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.single().staples, "no error and nothing blocked: just not sent")
+        assertIs<RecipeEvent.Written>(holder.uiState.value.event)
+    }
+
+    @Test
+    fun noStaplesNoField() = runUnconfined {
+        withStaplesServer(5, takes = true)
+        val holder = holder()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.single().staples)
+    }
+
+    @Test
+    fun aMenuCarriesTheStaplesToo() = runUnconfined {
+        withStaplesServer(10, takes = true, "Salt")
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, menu = sampleMenu(2), balance = 5, charged = true, acceptsStaples = JsonPrimitive(true)))
+        holder.generateOnServer()
+        assertEquals(listOf("Salt"), backend.generated.single().staples)
+    }
+
+    @Test
+    fun aRequestWithStaplesRefusedAsInvalidWithoutAFieldClearsTheFlagAndAsksAgain() = runUnconfined {
+        withStaplesServer(5, takes = true, "Salt")
+        val holder = holder()
+        backend.balanceStaples = false
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        val before = backend.balanceCalls
+        holder.generateOnServer()
+        assertEquals(RecipeEvent.ServerFailed, holder.uiState.value.event)
+        assertEquals(before + 1, backend.balanceCalls)
+        assertFalse(paidRepository.get().serverTakesStaples)
+        holder.consumeEvent()
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertNull(backend.generated.last().staples, "the next try goes without them")
+    }
+
+    @Test
+    fun anInvalidRequestWithoutStaplesLeavesTheFlag() = runUnconfined {
+        withStaplesServer(5, takes = true)
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.INVALID_REQUEST)
+        holder.generateOnServer()
+        assertTrue(paidRepository.get().serverTakesStaples)
+    }
+
+    @Test
+    fun aRefusedIngredientsRetryKeepsTheStaples() = runUnconfined {
+        withStaplesServer(5, takes = true, "Salt")
+        val holder = holder()
+        backend.generateReplies += refusedIngredient(0)
+        backend.generateReplies += done(4)
+        holder.generateOnServer()
+        assertEquals(2, backend.generated.size)
+        assertEquals(backend.generated[0].staples, backend.generated[1].staples)
+        assertTrue(backend.generated[0].requestId != backend.generated[1].requestId)
+    }
+
+    @Test
+    fun aHeldGenerationIsSentAgainWithTheStaplesItWasAskedWith() = runUnconfined {
+        withStaplesServer(5, takes = true, "Salt")
+        val holder = holder()
+        backend.generateReplies += ServerResult.Err(ServerError.OFFLINE)
+        holder.generateOnServer()
+        assertEquals(listOf("Salt"), paidRepository.get().pendingGeneration?.staples)
+        pantry.value = pantry.value.copy(staples = emptyList())
+        backend.generateReplies += done(4)
+        holder.retryServer()
+        assertEquals(backend.generated[0], backend.generated[1], "same id, same inputs")
+    }
+
+    @Test
+    fun aRecipesStapleIndicesBecomeTheStaplesNames() = runUnconfined {
+        withStaplesServer(5, takes = true, "Salt", "Olive oil")
+        val holder = holder()
+        val recipe = sampleRecipe.copy(
+            ingredients = listOf(
+                RecipeIngredient("2", "Bread", fromPantry = true, pantryIndex = 0),
+                RecipeIngredient("1 tbsp", "olive oil", stapleIndex = 1),
+                RecipeIngredient("", "Pepper", staple = true)
+            )
+        )
+        backend.generateReplies += done(4, recipe = recipe)
+        holder.generateOnServer()
+        val written = saved.rows.value.single().recipe!!
+        assertEquals(listOf(null, "Olive oil", null), written.ingredients.map { it.stapleName })
+    }
+
+    @Test
+    fun aMenusStapleIndicesBecomeTheStaplesNamesInEveryDish() = runUnconfined {
+        withStaplesServer(10, takes = true, "Salt")
+        val holder = holder()
+        holder.setMode(RecipeMode.MENU)
+        val dish = sampleRecipe.copy(ingredients = listOf(RecipeIngredient("", "salt", stapleIndex = 0, staple = true)))
+        val menu = Menu(
+            (0 until 3).map { day ->
+                MenuDay(date = LocalDate(2026, 11, 4 + day), uses = listOf("bread"), courses = listOf(MenuCourse(MenuCourseKind.MAIN, dish)))
+            }
+        )
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, menu = menu, balance = 5, charged = true))
+        holder.generateOnServer()
+        val written = saved.rows.value.single().menu!!
+        assertTrue(written.days.all { day -> day.courses.single().recipe.ingredients.single().stapleName == "Salt" })
+    }
+
+    @Test
+    fun repliesThatCarryABalanceSetAndWithdrawTheStaplesFlag() = runUnconfined {
+        withStaplesServer(5, takes = false, "Salt")
+        val holder = holder()
+        backend.generateReplies += ServerResult.Ok(GenerateReply(GenerateStatus.DONE, recipe = sampleRecipe, balance = 4, charged = true, acceptsStaples = JsonPrimitive(true)))
+        holder.generateOnServer()
+        assertTrue(paidRepository.get().serverTakesStaples)
+        holder.consumeEvent()
+        backend.generateReplies += done(3)
+        holder.generateOnServer()
+        assertEquals(listOf("Salt"), backend.generated.last().staples)
+        assertFalse(paidRepository.get().serverTakesStaples, "its absence in a later reply withdraws it")
     }
 }

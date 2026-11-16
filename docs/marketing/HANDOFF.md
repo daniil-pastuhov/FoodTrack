@@ -165,7 +165,10 @@ them with R.
    the store descriptions, subtitles, keywords, promotional texts, onboarding and the release
    notes in es, de, fr, sv, da. What changed after the release is `git diff v2.1.0 --
    store-listing/` (the menu-set and shopping-list bullets, and on Play the "English only for now"
-   note). Fixes go in before the next release PR (an agent can apply them).
+   note). Fixes go in before the next release PR (an agent can apply them). Since 2026-11-16 also
+   the Staples strings (`staples_*`, `recipe_your_staple`, `recipe_staples_count`,
+   `recipe_prompt_staples_intro`) and the 14 preset names (`StaplePresets`) in all seven
+   languages besides English, ru and nb included: none has had a native read.
 8. **The launch version** (owner + agent, release PR merged about Tue 2027-01-05): merge
    `chore/store-screenshots-2.1` (refreshed screenshots and art) and the language
    fixes, cut `scripts/release` (2.1.1 or 2.2.0), set the repository variable

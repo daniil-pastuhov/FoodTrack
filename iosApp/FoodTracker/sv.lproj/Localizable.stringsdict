@@ -1398,5 +1398,37 @@
             <string>%d recept raderade</string>
         </dict>
     </dict>
+    <key>staples_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d basvara</string>
+            <key>other</key>
+            <string>%d basvaror</string>
+        </dict>
+    </dict>
+    <key>recipe_staples_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Din basvara får också användas</string>
+            <key>other</key>
+            <string>Dina %d basvaror får också användas</string>
+        </dict>
+    </dict>
 </dict>
 </plist>

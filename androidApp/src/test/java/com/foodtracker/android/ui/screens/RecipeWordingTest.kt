@@ -56,6 +56,37 @@ class RecipeWordingTest {
     }
 
     @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun englishPromptListsTheStaplesAfterTheItems() {
+        val prompt = buildRecipePrompt(context, listOf(item("Milk", 1)), RecipeConfig(), emptyList(), staples = listOf("Salt", "Olive oil"))
+
+        assertTrue(
+            prompt,
+            prompt.contains("\n\nI always have these basics at home too. Use any of them if the recipe needs them; none of them has to be used:\n- Salt\n- Olive oil\n\nPlease keep to this:")
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun staplesLinesInEnglish() {
+        val resources = context.resources
+        assertEquals("Your staple may be used too", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_staples_count, 1, 1))
+        assertEquals("Your 4 staples may be used too", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_staples_count, 4, 4))
+        assertEquals("1 staple", resources.getQuantityString(com.foodtracker.android.R.plurals.staples_count, 1, 1))
+        assertEquals("20 staples", resources.getQuantityString(com.foodtracker.android.R.plurals.staples_count, 20, 20))
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun russianStaplesLineKeepsTheCount() {
+        val resources = context.resources
+        for (n in listOf(1, 3, 5, 21)) {
+            assertEquals("Можно использовать и базовые продукты: $n", resources.getQuantityString(com.foodtracker.android.R.plurals.recipe_staples_count, n, n))
+        }
+        assertEquals("5 продуктов", resources.getQuantityString(com.foodtracker.android.R.plurals.staples_count, 5, 5))
+    }
+
+    @Test
     @Config(sdk = [34], qualifiers = "ru")
     fun russianPromptIsRussian() {
         val prompt = buildRecipePrompt(context, listOf(item("Молоко", 1)), RecipeConfig(detail = RecipeDetail.BRIEF), emptyList())

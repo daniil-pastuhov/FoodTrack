@@ -260,4 +260,36 @@ class RecipePromptBuilderTest {
 
         assertTrue(prompt.endsWith("- language=ru\n- allergens=gluten"), prompt)
     }
+
+    @Test
+    fun listsTheStaplesAfterTheOtherItemsAndBeforeThePreferences() {
+        val prompt = buildRecipePrompt(
+            strings = strings.copy(staplesIntro = "BASICS:"),
+            today = today,
+            items = listOf(item("Milk", 1)),
+            otherItems = listOf(item("Rice", 200)),
+            config = RecipeConfig(),
+            staples = listOf("Salt", "Olive oil")
+        )
+        assertTrue(prompt.startsWith("INTRO\n\n- Milk (1d)\n\nALSO:\n- Rice (200d)\n\nBASICS:\n- Salt\n- Olive oil\n\nKEEP:\n"), prompt)
+    }
+
+    @Test
+    fun theStaplesComeAfterThePastDateNoteToo() {
+        val prompt = buildRecipePrompt(
+            strings = strings.copy(staplesIntro = "BASICS:", pastDateNote = { "PAST" }),
+            today = today,
+            items = listOf(item("Milk", -1)),
+            staples = listOf("Salt")
+        )
+        assertEquals("INTRO\n\n- Milk (-1d)\n\nPAST\n\nBASICS:\n- Salt", prompt)
+    }
+
+    @Test
+    fun noStaplesSectionWithoutStaplesOrWithoutItsWording() {
+        val none = buildRecipePrompt(strings = strings.copy(staplesIntro = "BASICS:"), today = today, items = listOf(item("Milk", 1)))
+        assertEquals("INTRO\n\n- Milk (1d)", none)
+        val noWording = buildRecipePrompt(strings = strings, today = today, items = listOf(item("Milk", 1)), staples = listOf("Salt"))
+        assertEquals("INTRO\n\n- Milk (1d)", noWording)
+    }
 }

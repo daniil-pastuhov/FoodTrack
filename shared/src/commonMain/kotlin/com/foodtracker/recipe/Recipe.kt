@@ -32,7 +32,15 @@ data class RecipeIngredient(
     val optionalIndex: Int? = null,
     /** Server recipes: the server found this non-pantry ingredient to be only a staple (water,
      *  oil, salt, pepper, sugar, spices). False when it didn't, and wherever nobody said. */
-    val staple: Boolean = false
+    val staple: Boolean = false,
+    /** Server recipes: the index of this ingredient in the request's `staples`, as sent, when it
+     *  is one of the person's staples (functions/CONTRACT.md "Recipe"). Never from the pantry. */
+    val stapleIndex: Int? = null,
+    /** Local only: the person's staple this ingredient is, for the "Your staple" chip and for
+     *  leaving it out of "Add to shopping list". Set by the app when the recipe arrives
+     *  ([withStapleNames], or by name for the phone's own recipes), overwriting anything a reply
+     *  carried; kept in a saved recipe's payload. */
+    val stapleName: String? = null
 )
 
 @Serializable
@@ -52,6 +60,15 @@ data class Recipe(
      *  never sends it, and a row saved before it existed reads as none. */
     val pastDate: List<PastDateItem> = emptyList()
 )
+
+/** Each ingredient's [RecipeIngredient.stapleName]: the staple at its [RecipeIngredient.stapleIndex]
+ *  in [staples] (the request's `staples`, as sent), null otherwise. iOS: `RecipeWire.withStapleNames`. */
+fun Recipe.withStapleNames(staples: List<String>): Recipe =
+    copy(ingredients = ingredients.map { it.copy(stapleName = it.stapleIndex?.let(staples::getOrNull)) })
+
+/** [Recipe.withStapleNames] for every dish of the menu. */
+fun Menu.withStapleNames(staples: List<String>): Menu =
+    copy(days = days.map { day -> day.copy(courses = day.courses.map { it.copy(recipe = it.recipe.withStapleNames(staples)) }) })
 
 /** An item past its date, as it was when a recipe was written: [daysOver] days after its date. */
 @Serializable

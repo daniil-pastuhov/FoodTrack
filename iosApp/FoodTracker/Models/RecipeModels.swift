@@ -273,17 +273,27 @@ public struct RecipeIngredient: Codable, Equatable, Hashable, Sendable {
     public var optionalIndex: Int?
     /// Server recipes: the server found this non-pantry ingredient to be only a staple.
     public var staple: Bool
+    /// Server recipes: this ingredient is the request's `staples` entry at this index (as sent).
+    /// Nil from servers before it, in older saved rows and on-device recipes.
+    public var stapleIndex: Int?
+    /// The person's staple this ingredient is ("Your staple" chip; left out of "Add to shopping
+    /// list" while it is a current staple). Set by the app, never taken from the server: on arrival
+    /// from `stapleIndex` (`Recipe.withStapleNames`, which overwrites whatever came), for the
+    /// phone's model by name (`RecipeShopping.stapleName(of:staples:)`). Kept in the saved payload.
+    public var stapleName: String?
 
-    public init(amount: String, name: String, fromPantry: Bool, pantryIndex: Int? = nil, optionalIndex: Int? = nil, staple: Bool = false) {
+    public init(amount: String, name: String, fromPantry: Bool, pantryIndex: Int? = nil, optionalIndex: Int? = nil, staple: Bool = false, stapleIndex: Int? = nil, stapleName: String? = nil) {
         self.amount = amount
         self.name = name
         self.fromPantry = fromPantry
         self.pantryIndex = pantryIndex
         self.optionalIndex = optionalIndex
         self.staple = staple
+        self.stapleIndex = stapleIndex
+        self.stapleName = stapleName
     }
 
-    private enum CodingKeys: String, CodingKey { case amount, name, fromPantry, pantryIndex, optionalIndex, staple }
+    private enum CodingKeys: String, CodingKey { case amount, name, fromPantry, pantryIndex, optionalIndex, staple, stapleIndex, stapleName }
 
     /// Lenient about the optional fields: absent or unreadable reads as none.
     public init(from decoder: Decoder) throws {
@@ -294,6 +304,8 @@ public struct RecipeIngredient: Codable, Equatable, Hashable, Sendable {
         pantryIndex = (try? c.decodeIfPresent(Int.self, forKey: .pantryIndex)).flatMap { $0 }
         optionalIndex = (try? c.decodeIfPresent(Int.self, forKey: .optionalIndex)).flatMap { $0 }
         staple = (try? c.decodeIfPresent(Bool.self, forKey: .staple)).flatMap { $0 } ?? false
+        stapleIndex = (try? c.decodeIfPresent(Int.self, forKey: .stapleIndex)).flatMap { $0 }
+        stapleName = (try? c.decodeIfPresent(String.self, forKey: .stapleName)).flatMap { $0 }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -304,6 +316,8 @@ public struct RecipeIngredient: Codable, Equatable, Hashable, Sendable {
         try c.encodeIfPresent(pantryIndex, forKey: .pantryIndex)
         try c.encodeIfPresent(optionalIndex, forKey: .optionalIndex)
         if staple { try c.encode(true, forKey: .staple) }
+        try c.encodeIfPresent(stapleIndex, forKey: .stapleIndex)
+        try c.encodeIfPresent(stapleName, forKey: .stapleName)
     }
 }
 
@@ -462,6 +476,32 @@ extension Recipe {
     /// Whether this dish says which request item each pantry ingredient is: answers from servers
     /// before `pantryIndex` / `optionalIndex` don't.
     var hasItemIndices: Bool { ingredients.contains { $0.pantryIndex != nil || $0.optionalIndex != nil } }
+
+    /// With each ingredient's `stapleName` set from its `stapleIndex` into `staples` (the
+    /// request's `staples` as sent), nil where there is none or it is out of range: whatever
+    /// arrived is overwritten. Android: `Recipe.withStapleNames`.
+    func withStapleNames(_ staples: [String]) -> Recipe {
+        var recipe = self
+        recipe.ingredients = ingredients.map { ingredient in
+            var ingredient = ingredient
+            ingredient.stapleName = ingredient.stapleIndex.flatMap { staples.indices.contains($0) ? staples[$0] : nil }
+            return ingredient
+        }
+        return recipe
+    }
+}
+
+extension RecipeMenu {
+    /// `Recipe.withStapleNames` on every dish.
+    func withStapleNames(_ staples: [String]) -> RecipeMenu {
+        var menu = self
+        for day in menu.days.indices {
+            for course in menu.days[day].courses.indices {
+                menu.days[day].courses[course].recipe = menu.days[day].courses[course].recipe.withStapleNames(staples)
+            }
+        }
+        return menu
+    }
 }
 
 public enum SavedRecipeKind: String, Codable, Sendable {
@@ -543,12 +583,16 @@ public struct RecipeRequest: Equatable, Sendable {
     /// "Send all products": the rest of the pantry, soonest first, as items the recipe may use as
     /// well. Empty with the setting off.
     public var otherItems: [RecipeIngredientInput]
+    /// The person's staples not on the shopping list, less those the route already lists
+    /// (`Staples.promptStaples`): basics every route may use, whatever "Send all products" says.
+    public var staples: [String] = []
 
-    public init(items: [RecipeIngredientInput], config: RecipeConfig, allergens: [String], otherItems: [RecipeIngredientInput] = []) {
+    public init(items: [RecipeIngredientInput], config: RecipeConfig, allergens: [String], otherItems: [RecipeIngredientInput] = [], staples: [String] = []) {
         // Soonest first, as every route lists them.
         self.items = items.sorted { $0.daysRemaining < $1.daysRemaining }
         self.config = config
         self.allergens = allergens.sorted()
         self.otherItems = otherItems.sorted { $0.daysRemaining < $1.daysRemaining }
+        self.staples = staples
     }
 }

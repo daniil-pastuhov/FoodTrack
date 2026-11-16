@@ -165,6 +165,8 @@ class MainActivity : ComponentActivity() {
      * true` leaves no definition in the app's language (the row reads "N answers"), and `--ez
      * demoTasteUnseen true` the quiz never opened (the dots). `--es demoRoute tasteRecipe` opens the
      * Recipe tab with the same setup (the header's dot). Nothing is asked of the server.
+     *
+     * `--es demoRoute staples` opens Settings › Staples (with `demoBackup` for its staples).
      */
     private fun loadDemoFromIntent(intent: Intent) {
         // A rating prompt, or the Recipe introduction, must never appear in a store screenshot.
@@ -236,6 +238,8 @@ class MainActivity : ComponentActivity() {
             }
             "recipeSettings", "tastePromo", "tasteQuiz" -> openTasteDemo(intent, route)
             "tasteRecipe" -> openTasteDemo(intent, "recipe")
+            // Settings › Staples, going back to Settings (iOS `-demoRoute staples`).
+            "staples" -> currentScreenState.value = LarderRoute.Staples
             "scan" -> {
                 val picture = intent.getStringExtra(EXTRA_DEMO_SCAN_IMAGE) ?: return
                 val barcode = intent.getStringExtra(EXTRA_DEMO_SCAN_BARCODE) ?: return

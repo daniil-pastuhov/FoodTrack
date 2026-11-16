@@ -7,6 +7,8 @@ import com.foodtracker.android.perf.FakeProductNameRepository
 import com.foodtracker.android.perf.FakeSettingsRepository
 import com.foodtracker.android.perf.FakeShoppingSectionRepository
 import com.foodtracker.android.perf.FakeShoppingListRepository
+import com.foodtracker.android.perf.FakeStapleRepository
+import com.foodtracker.model.Staple
 import com.foodtracker.backup.BackupReadResult
 import com.foodtracker.backup.RestoreMode
 import com.foodtracker.backup.RestoreSummary
@@ -40,9 +42,11 @@ class BackupRestoreTest {
         items: List<PantryItem> = emptyList(),
         entries: List<ShoppingListEntry> = emptyList(),
         categories: List<CategoryPreference> = emptyList(),
-        settings: AppSettings = AppSettings()
+        settings: AppSettings = AppSettings(),
+        staples: List<Staple> = emptyList()
     ) {
         val pantry = FakePantryRepository(items)
+        val stapleRepo = FakeStapleRepository(staples)
         val shopping = FakeShoppingListRepository(entries)
         val localProducts = FakeLocalProductRepository()
         val names = FakeProductNameRepository()
@@ -56,6 +60,7 @@ class BackupRestoreTest {
             localProductRepository = localProducts,
             categoryPreferenceRepository = FakeCategoryPreferenceRepository(categories),
             shoppingSectionRepository = FakeShoppingSectionRepository(),
+            stapleRepository = stapleRepo,
             uncategorizedLabel = "Other",
             coroutineScope = scope,
             computationContext = EmptyCoroutineContext
@@ -256,6 +261,84 @@ class BackupRestoreTest {
         try {
             target.restore(json, RestoreMode.REPLACE)
             assertEquals("Freezer", target.localProducts.storageLocations["111"])
+        } finally {
+            target.close()
+        }
+    }
+
+    private fun staple(id: String, name: String, presetId: String? = null, at: Long = 1_763_300_000_000L) = Staple(id, name, presetId, at)
+
+    @Test
+    fun testStaplesGoIntoTheBackupAndReplaceRestoresThemInOrder() {
+        val source = Fixture(
+            staples = listOf(
+                staple("own", "Smoked paprika", at = 2),
+                staple("salt", "Salt", "salt", at = 5),
+                staple("future", "Truffle oil", "truffle_oil", at = 1)
+            )
+        )
+        val json = try { source.exportJson() } finally { source.close() }
+
+        val target = Fixture(staples = listOf(staple("local", "Honey")))
+        try {
+            val (_, summary) = target.restore(json, RestoreMode.REPLACE)
+            assertEquals(3, summary.staplesRestored)
+            // Known presets first, then the rest by time; an unknown preset is kept as it is.
+            assertEquals(listOf("salt", "future", "own"), target.stateHolder.uiState.value.staples.map { it.id })
+            assertEquals("truffle_oil", target.stapleRepo.staplesFlow.value.single { it.id == "future" }.presetId)
+        } finally {
+            target.close()
+        }
+    }
+
+    @Test
+    fun testMergeAddsOnlyStaplesThatAreNotThereByAnyName() {
+        val source = Fixture(
+            staples = listOf(
+                staple("salt-ru", "Соль", "salt"),
+                staple("oil", "Olive oil", "olive_oil"),
+                staple("own", "Soy sauce", at = 3)
+            )
+        )
+        val json = try { source.exportJson() } finally { source.close() }
+
+        // "salt" typed by hand already: the Russian-ticked preset is the same staple.
+        val target = Fixture(staples = listOf(staple("mine", "salt"), staple("soy", "SOY SAUCE ")))
+        try {
+            val (_, summary) = target.restore(json, RestoreMode.MERGE)
+            assertEquals(1, summary.staplesRestored)
+            assertEquals(setOf("mine", "soy", "oil"), target.stapleRepo.staplesFlow.value.map { it.id }.toSet())
+        } finally {
+            target.close()
+        }
+    }
+
+    @Test
+    fun testReplaceRestoresTwoRowsOfOneStapleAsOne() {
+        val raw = """{"version":1,"staples":[""" +
+            """{"id":"a","name":"Salt","presetId":"salt","addedAtEpochMillis":1},""" +
+            """{"id":"b","name":"Соль","presetId":"salt","addedAtEpochMillis":2},""" +
+            """{"id":"c","name":"salt","presetId":null,"addedAtEpochMillis":3}]}"""
+        val target = Fixture(staples = listOf(staple("local", "Honey")))
+        try {
+            val (_, summary) = target.restore(raw, RestoreMode.REPLACE)
+            assertEquals(1, summary.staplesRestored)
+            assertEquals(listOf("a"), target.stapleRepo.staplesFlow.value.map { it.id })
+        } finally {
+            target.close()
+        }
+    }
+
+    @Test
+    fun testMergeStopsAtTwentyStaples() {
+        val source = Fixture(staples = (1..5).map { staple("b$it", "Backup $it", at = it.toLong()) })
+        val json = try { source.exportJson() } finally { source.close() }
+
+        val target = Fixture(staples = (1..18).map { staple("l$it", "Local $it", at = it.toLong()) })
+        try {
+            val (_, summary) = target.restore(json, RestoreMode.MERGE)
+            assertEquals(2, summary.staplesRestored)
+            assertEquals(20, target.stapleRepo.staplesFlow.value.size)
         } finally {
             target.close()
         }

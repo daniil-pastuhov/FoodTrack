@@ -55,7 +55,10 @@ data class RecipePromptStrings(
      *  given how many (singular for exactly one): "Some of these are past their date. I have
      *  chosen to use them anyway, so please don't leave them out." No names: each item's own
      *  line already says it is past its date. Null leaves the line out. */
-    val pastDateNote: ((count: Int) -> String)? = null
+    val pastDateNote: ((count: Int) -> String)? = null,
+    /** Heads the staples' section: "I always have these basics at home too. Use any of them if
+     *  the recipe needs them; none of them has to be used:". Null leaves the section out. */
+    val staplesIntro: String? = null
 )
 
 /**
@@ -70,6 +73,9 @@ data class RecipePromptStrings(
  * list as items the recipe may use as well, each with how long it has left, soonest first, the
  * same way as [items]. The section is cut at [MAX_OTHER_ITEMS_CHARS] (see that constant's doc for
  * why), with a note of how many were left out.
+ *
+ * [staples] ([RecipeUiState.stapleNames]) follow, whatever "Send all products" says: one line
+ * each, no date, after [strings]' `staplesIntro`. At most 20 short names, so no cap of their own.
  */
 fun buildRecipePrompt(
     strings: RecipePromptStrings,
@@ -77,7 +83,8 @@ fun buildRecipePrompt(
     items: List<PantryItem>,
     otherItems: List<PantryItem> = emptyList(),
     config: RecipeConfig? = null,
-    allergens: Collection<String> = emptyList()
+    allergens: Collection<String> = emptyList(),
+    staples: List<String> = emptyList()
 ): String {
     val lines = items
         .sortedBy { it.daysRemaining(today) }
@@ -117,6 +124,13 @@ fun buildRecipePrompt(
                 prompt.append("\n").append(strings.otherItemsOmitted(omittedCount))
             }
         }
+    }
+
+    if (staples.isNotEmpty() && strings.staplesIntro != null) {
+        prompt.append("\n\n")
+            .append(strings.staplesIntro)
+            .append("\n")
+            .append(staples.joinToString(separator = "\n") { "- $it" })
     }
 
     val preferences = preferenceLines(strings, config, allergens)

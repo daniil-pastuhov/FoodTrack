@@ -555,6 +555,24 @@ private fun IngredientRow(ingredient: RecipeIngredient) {
                     textAlign = TextAlign.Start
                 )
             }
+        } else if (ingredient.stapleName != null) {
+            // One of the person's staples: the pantry chip's shape in neutral tones.
+            val scheme = MaterialTheme.colorScheme
+            Row(
+                modifier = Modifier
+                    .background(scheme.surfaceContainerHigh, RoundedCornerShape(LarderRadius.sm))
+                    .padding(start = LarderSpace.s1, end = LarderSpace.s2, top = 1.dp, bottom = 1.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LarderIcon(LarderIcons.Wheat, contentDescription = null, size = 14.dp, tint = scheme.onSurfaceVariant)
+                Text(
+                    text = stringResource(R.string.recipe_your_staple),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = scheme.onSurfaceVariant,
+                    textAlign = TextAlign.Start
+                )
+            }
         }
     }
 }
@@ -579,6 +597,23 @@ private val previewRecipe = Recipe(
     tip = "Check the bread before using it: one day past a best-before date is usually fine, but not if there is any mould.",
     source = RecipeSource.DEVICE
 )
+
+/** An ingredient that is one of the person's staples, beside one from the pantry and one to buy. */
+@PreviewLightDark
+@Composable
+internal fun RecipeIngredientStaplePreview() = LarderTheme {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        Column(modifier = Modifier.padding(LarderSpace.s4)) {
+            LarderGroup {
+                IngredientRow(RecipeIngredient("2", "Free-range eggs", fromPantry = true))
+                LarderDivider()
+                IngredientRow(RecipeIngredient("1 tbsp", "Olive oil", stapleIndex = 0, stapleName = "Olive oil"))
+                LarderDivider()
+                IngredientRow(RecipeIngredient("1 clove", "Garlic"))
+            }
+        }
+    }
+}
 
 @PreviewLightDark
 @Composable

@@ -152,7 +152,11 @@ fun SettingsScreen(
     onAddCurrentLocationAsStore: (label: String, onResolved: (latitude: Double?, longitude: Double?) -> Unit) -> Unit = { _, onResolved -> onResolved(null, null) },
     modifier: Modifier = Modifier,
     // See PantryDashboardScreen's parameter of the same name.
-    bottomOverlayClearance: Dp = 160.dp
+    bottomOverlayClearance: Dp = 160.dp,
+    /** Opens Staples (after Categories in "Your kitchen"). */
+    onManageStaples: () -> Unit = {},
+    /** How many staples there are, for the expanded list's value. */
+    stapleCount: Int = 0
 ) {
     val context = LocalContext.current
     val snackbars = LocalLarderSnackbars.current
@@ -396,6 +400,8 @@ fun SettingsScreen(
                     selected = section,
                     onSelect = { section = it },
                     onManageCategories = onManageCategories,
+                    onManageStaples = onManageStaples,
+                    stapleCount = stapleCount,
                     modifier = Modifier
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = LarderSpace.s4)
@@ -455,6 +461,7 @@ fun SettingsScreen(
                     ThresholdContent()
                     LocationsContent()
                     CategoriesSection(onManageCategories)
+                    StaplesSection(onManageStaples)
                     AllergensContent()
                     GroupTitle(stringResource(R.string.settings_section_appearance))
                     AppearanceContent()
@@ -495,7 +502,9 @@ private fun SectionList(
     selected: SettingsSection,
     onSelect: (SettingsSection) -> Unit,
     onManageCategories: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onManageStaples: () -> Unit = {},
+    stapleCount: Int = 0
 ) {
     val context = LocalContext.current
 
@@ -547,6 +556,19 @@ private fun SectionList(
                 value = stringResource(R.string.settings_manage_categories_button),
                 selected = false,
                 onClick = onManageCategories,
+                showsChevron = true
+            )
+            LarderDivider()
+            SectionRow(
+                icon = LarderIcons.Wheat,
+                title = stringResource(R.string.staples_title),
+                value = if (stapleCount > 0) {
+                    pluralStringResource(R.plurals.staples_count, stapleCount, stapleCount)
+                } else {
+                    stringResource(R.string.staples_none)
+                },
+                selected = false,
+                onClick = onManageStaples,
                 showsChevron = true
             )
             LarderDivider()
@@ -1202,6 +1224,20 @@ private fun CategoriesSection(onManageCategories: () -> Unit) {
             icon = LarderIcons.Layers,
             title = stringResource(R.string.settings_manage_categories_button),
             onClick = onManageCategories,
+            showsChevron = true
+        )
+    }
+}
+
+/** Names the person always has, apart from the pantry: their own screen (StaplesScreen). */
+@Composable
+private fun StaplesSection(onManageStaples: () -> Unit) {
+    SectionCard(stringResource(R.string.staples_title), LarderIcons.Wheat) {
+        SectionDescription(stringResource(R.string.staples_settings_desc))
+        ValueRow(
+            icon = LarderIcons.Wheat,
+            title = stringResource(R.string.staples_manage),
+            onClick = onManageStaples,
             showsChevron = true
         )
     }

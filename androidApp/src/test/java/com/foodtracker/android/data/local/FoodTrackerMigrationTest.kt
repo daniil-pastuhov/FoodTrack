@@ -93,7 +93,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
 
@@ -183,7 +184,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
 
@@ -278,7 +280,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
 
@@ -392,7 +395,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
 
@@ -495,7 +499,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
 
@@ -627,7 +632,8 @@ class FoodTrackerMigrationTest {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
         val dao = db.localProductDao()
@@ -710,7 +716,8 @@ class FoodTrackerMigrationTest {
             .addMigrations(
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
         val dao = db.localProductDao()
@@ -731,7 +738,14 @@ class FoodTrackerMigrationTest {
     /** Takes a database Room created at the current version back to the version-13 shape: no
      *  `saved_recipes`. */
     private fun stripToVersion13(db: SQLiteDatabase) {
+        stripToVersion14(db)
         db.execSQL("DROP TABLE saved_recipes")
+    }
+
+    /** Takes a database Room created at the current version back to the version-14 shape: no
+     *  `staples`. */
+    private fun stripToVersion14(db: SQLiteDatabase) {
+        db.execSQL("DROP TABLE staples")
     }
 
     /** Takes a database Room created at the current version back to the version-12 shape of
@@ -831,7 +845,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_12_13, FoodTrackerDatabase.MIGRATION_13_14)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_12_13, FoodTrackerDatabase.MIGRATION_13_14, FoodTrackerDatabase.MIGRATION_14_15)
             .build()
 
         val sections = db.shoppingSectionDao().getAll()
@@ -899,7 +913,7 @@ class FoodTrackerMigrationTest {
         }
 
         val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
-            .addMigrations(FoodTrackerDatabase.MIGRATION_13_14)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_13_14, FoodTrackerDatabase.MIGRATION_14_15)
             .build()
 
         val milk = db.pantryDao().getById("milk")
@@ -917,6 +931,70 @@ class FoodTrackerMigrationTest {
         )
         recipes.save(saved)
         assertEquals(listOf(saved), recipes.getAllFlow().first())
+
+        db.close()
+    }
+
+    @Test
+    fun migrate14To15AddsStaplesWithoutTouchingOtherTables() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        dbFile = context.getDatabasePath("migration-test-14-15.db")
+        dbFile.delete()
+
+        Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .build()
+            .apply { openHelper.writableDatabase }
+            .close()
+        SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE).use { db ->
+            stripToVersion14(db)
+            db.insert("pantry_items", null, ContentValues().apply {
+                put("id", "milk")
+                put("name", "Milk")
+                put("expiryDateEpochDays", 20000)
+                put("addedDateEpochDays", 19990)
+                put("storageLocation", "Fridge")
+                put("quantity", 2)
+                put("essential", 1)
+                put("notificationsEnabled", 1)
+            })
+            db.insert("shopping_list_entries", null, ContentValues().apply {
+                put("id", "e1")
+                put("productName", "Bread")
+                put("quantity", 1)
+                put("addedDateEpochDays", 20000)
+                put("sortOrder", 1.0)
+            })
+            db.insert("saved_recipes", null, ContentValues().apply {
+                put("id", "r1")
+                put("kind", "recipe")
+                put("title", "Toast")
+                put("payload", """{"title":"Toast","steps":["Toast it."]}""")
+                put("createdAtEpochMillis", 5L)
+                put("source", "device")
+            })
+            db.version = 14
+        }
+
+        val db = Room.databaseBuilder(context, FoodTrackerDatabase::class.java, dbFile.absolutePath)
+            .addMigrations(FoodTrackerDatabase.MIGRATION_14_15)
+            .build()
+
+        val milk = db.pantryDao().getById("milk")
+        assertNotNull("pantry items survive the migration", milk)
+        assertEquals("Milk", milk!!.name)
+        assertEquals(2, milk.quantity)
+        assertEquals("Bread", db.shoppingListDao().getAllFlow().first().single().productName)
+        val saved = RoomSavedRecipeRepository(db.savedRecipeDao()).getAllFlow().first().single()
+        assertEquals("r1", saved.id)
+        assertEquals("Toast", saved.recipe?.title)
+
+        val staples = RoomStapleRepository(db.stapleDao())
+        assertTrue("the new table starts empty", staples.getAll().isEmpty())
+        val salt = com.foodtracker.model.Staple("staple_1", "Salt", "salt", 1_763_300_000_000L)
+        val own = com.foodtracker.model.Staple("staple_2", "Smoked paprika", null, 1_763_300_100_000L)
+        staples.upsertAll(listOf(salt, own))
+        assertEquals(listOf(salt, own), staples.getAll())
+        assertEquals(listOf(salt, own), staples.getStaplesFlow().first())
 
         db.close()
     }

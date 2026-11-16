@@ -366,9 +366,10 @@ Every LLM call is priced before it is made and paid for by a credit:
 - **Usage logs.** One `llm_call` log line per call: `uidHash` (sha256 of the uid with a fixed
   prefix, not the uid), kind, courses, days (menus; 3 for one reserved before menu sets), `taste`
   (whether the request carried a taste profile: `true` / `false`, null on a line the sweeper
-  writes; never which ids), model, input / output / thinking tokens, finish reason,
+  writes; never which ids), `staples` (how many of the person's staples the prompt held, after
+  the diet and allergen filter; null on a line the sweeper writes; never their names), model, input / output / thinking tokens, finish reason,
   duration, outcome, cost, charged / refunded, reserved and estimated micro-USD. Never ingredient
-  names, taste ids, prompts or outputs. In Logs Explorer: `jsonPayload.message="llm_call"`.
+  names, staple names, taste ids, prompts or outputs. In Logs Explorer: `jsonPayload.message="llm_call"`.
 
 #### Spend ceilings (defaults and arithmetic)
 
@@ -429,6 +430,27 @@ menu (the menu's "vary them over the menu"), about USD 0.0022 a call. The price 
 The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
 0.008); `test/taste.test.ts` checks every menu set and the recipe against it with the judge off
 and on, and that the block adds under 1,700 bytes and USD 0.003.
+
+**Staples add at most 2,600 bytes** (November 2026, CONTRACT.md "Staples"): the third data block
+holds at most 20 names and 400 code points of names (`MAX_STAPLES`, `MAX_STAPLE_NAME_CHARS`), a
+budget of its own beside the 30 names / 1,050 code points of ticked and optional items. Measured
+with 20 staples of 20 four-byte characters each (400 code points, 1,600 bytes of names), every one
+usable, the largest taste profile and everything else at its maximum as above: +2,600 bytes on
+every variant (the block's JSON and markers, the two data lines, the staples instruction line and
+the 20 ids in the schema's `pantryId` enum, which a menu nests once, not per day), USD 0.0039 a
+call. The price is unchanged.
+
+| request | largest with the largest profile, no staples (judge off / on) | the same with the largest staples |
+|---|---|---|
+| recipe | 15,448 bytes, USD 0.08461 / 0.10827 | 18,048 bytes, USD 0.08851 / 0.11217 |
+| 3-day 2-course menu | 16,740 bytes, USD 0.23511 / 0.27511 | 19,340 bytes, USD 0.23901 / 0.27901 |
+| 3-day 3-course menu | 16,759 bytes, USD 0.32514 / 0.37503 | 19,359 bytes, USD 0.32904 / 0.37893 |
+| 4-day 3-course menu | 16,784 bytes, USD 0.38518 / 0.44167 | 19,384 bytes, USD 0.38908 / 0.44557 |
+
+The largest of all, 4 days of 3 courses with the judge on, still fits the per-user USD 0.45 (by
+0.0044), so the server keeps the apps' 400 code points. `test/staples.test.ts` checks every menu
+set and the recipe against it with the judge off and on, with optional items as well, and that
+the staples add at most 2,700 bytes.
 
 **Menu sets** (November 2026, CONTRACT.md "Capability `acceptsMenuDays`"): a menu of 1 to 4 days
 and 1 to 3 courses. The 3-day 2- and 3-course menus are exactly as before (same prompt, schema,
@@ -738,6 +760,20 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    than refusing the request, and is not counted as a rejection: a pantry the person did not tick
    must not lock their account. The answer checks treat them like ticked items (allergens, diet,
    scripts, quoting), except that `NO_PANTRY` still needs a ticked item.
+   **Staples** (`staples`, the basics the person always has at home, CONTRACT.md "Staples") come
+   as a third JSON object between `BEGIN_STAPLES_DATA` and `END_STAPLES_DATA` (`staples`, ids
+   `s1..sN`, names only), framed as untrusted data like the others, and only then does the
+   instruction mention them. Their names go through the same rules (layer 2), but a refused one is
+   dropped and never counts towards the rejection limit, as for optional items. A staple whose own
+   name the request's diet or allergens rule out (`breaksDietOrAllergens`) is dropped before the
+   prompt, so the model never sees "Butter" in a dairy-free request. A staple id can't satisfy
+   `NO_PANTRY` (it is never pantry use, `fromPantry: false`) and is never accepted in a menu
+   day's `uses` (`PANTRY_REF`); the allergen and diet checks see both the written name and the
+   staple's own name, as for items. An ingredient labelled with a staple's id carries `stapleIndex`
+   only when its written name plausibly is that staple (`namesStaple`: every significant word of
+   the staple's name in it, or both names in one one-food group of `foodTerms.ts`); otherwise it
+   is an ordinary ingredient, as with `"none"`, so a mislabelled "Chicken thighs" is never hidden
+   from the shopping list as the person's "Salt". The staples block's markers count for `LEAK`.
    A **taste profile** (`taste`, CONTRACT.md "Taste profile") adds no data block and no user
    text: it is a map of quiz step ids to option ids, an allow-list (the catalogue,
    `src/taste/catalogue.ts`; see "Taste profile quiz"), unknown and hidden ids are dropped, and
@@ -774,7 +810,7 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    spaced-out letters, a short list of words about the model (`ignore`, `instructions`, `prompt`,
    `system`, `assistant`, `forget`, `json`...) in the eleven recipe languages, also when written with
    Cyrillic or Greek look-alikes or digits. The full rule is in CONTRACT.md "Name rules";
-   `test/fixtures/names.json` holds about 180 real product names in 25 languages (`Crème fraîche
+   `test/fixtures/names.json` holds about 280 real product names in 25 languages (the staple presets' names in the eight app languages among them) (`Crème fraîche
    15%`, `Сметана 20%`, `Φέτα ΠΟΠ`, `חלב 3% תנובה`, `可口可乐 Zero`, `明治おいしい牛乳`,
    `서울우유 1L`, `अमूल दूध`...) and about 175 adversarial inputs, with what the server and
    both apps make of each; all three are tested against it (`test/nameFixture.test.ts`, the
@@ -803,7 +839,7 @@ Only a caller with credits reaches the model, and an answer goes back only to th
    | `LEAK` | The canary; 8 consecutive words of the system instruction; the prompt's block names | yes |
    | `SCRIPT`, `LANGUAGE` | A letter in a script that is neither Latin, Cyrillic, nor one the request's item and allergen names use (Japanese names also allow Han, Hiragana and Katakana; Korean, Hangul and Han), or a run of such letters that is not part of one of those names (an item may be quoted in its own script, nothing else written in it); less than 60 % of all letters in the requested language's script | yes |
    | `REPETITION` | A character 10× in a row, a word 4× in a row, duplicate steps | yes |
-   | `PANTRY_REF` | A `pantryId` or `uses` entry that is not a sent item | yes |
+   | `PANTRY_REF` | A `pantryId` that is not a sent item or a usable staple (`s1..sN`), or a `uses` entry that is not a sent item (a staple id never is) | yes |
    | `NON_FOOD`, `SOLICITATION` | Household chemicals, poisons, drugs; passwords, cards, app stores, messengers, downloads, sign-in (10 languages) | yes |
    | `ALLERGEN` | An ingredient name, or the pantry item it points to, matching a requested allergen: the name itself (word starts, whole phrase) plus a multilingual group when the name belongs to one (peanut, tree nuts, milk, egg, gluten, soy, fish, shellfish, sesame, celery, mustard, lupin, sulphite; a gluten allergen also refuses bread, pasta and beer, as the gluten-free diet does); free-from wording ("glutenfri", "gluten-free", "sans gluten"; the inflected Scandinavian "frie", "fria", "fritt", "frit" only inside a compound, since French "frit" and Spanish "fría" are cooking words) and plant-milk style exemptions apply | yes |
    | `DIET` | The same for the diet (meat, fish, seafood, dairy, egg, honey, gluten grains and wheat foods) | yes |

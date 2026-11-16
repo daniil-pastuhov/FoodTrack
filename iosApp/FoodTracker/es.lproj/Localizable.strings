@@ -903,3 +903,32 @@
 "welcome_settings_account_one" = "Esta cuenta puede conseguir una receta gratis de nuestro servidor.";
 "welcome_settings_on_phone_one" = "Al iniciar sesión también consigues una receta gratis.";
 "welcome_delete_note" = "Volver a iniciar sesión más adelante no devolverá las recetas gratis.";
+
+/* Staples: basics the person always has, the Staples screen, its Settings card and the Recipe form's line; copied from Android's strings.xml. */
+"staples_title" = "Básicos";
+"staples_intro" = "Lo básico que siempre tienes en casa, como sal y aceite. No tienen fecha y las recetas pueden usarlos.";
+"staples_common_header" = "Básicos habituales";
+"staples_own_header" = "Los tuyos";
+"staples_add_placeholder" = "Añadir un básico";
+"staples_add" = "Añadir";
+"staples_ran_out" = "Se acabó";
+"staples_ran_out_desc" = "Se acabó %@: añadir a la lista de compras";
+"staples_on_list" = "En tu lista de compras";
+"staples_remove" = "Quitar %@";
+"staples_removed" = "Se quitó %@ de los básicos";
+"staples_added_to_list" = "Se añadió %@ a tu lista de compras";
+"staples_already" = "%@ ya es un básico";
+"staples_full" = "Puedes tener hasta %d básicos. Quita uno para añadir otro.";
+"staples_settings_desc" = "Lo básico que siempre tienes, como sal y aceite. Las recetas pueden usarlo.";
+"staples_manage" = "Gestionar básicos";
+"staples_none" = "Ninguno todavía";
+"staples_open" = "Abrir básicos";
+"recipe_your_staple" = "Tu básico";
+"recipe_prompt_staples_intro" = "También tengo siempre en casa estos básicos. Usa cualquiera de ellos si la receta lo necesita; no hace falta usar ninguno:";
+"staples_note" = "Los nombres de tus básicos se envían con cada solicitud de receta: a nuestro servidor para una receta de un paquete y dentro de un prompt que compartas. Mientras un básico esté en tu lista de compras, no se envía.";
+
+/* Onboarding: the Staples step. */
+"onboarding_staples_title" = "¿Qué tienes siempre en casa?";
+"onboarding_staples_later" = "Puedes saltarte esto y hacerlo más tarde en Ajustes › Básicos.";
+"onboarding_staples_continue" = "Continuar";
+"onboarding_staples_skip" = "Omitir";

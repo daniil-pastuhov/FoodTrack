@@ -1,6 +1,6 @@
 /// The first-run screens. Mirrors Android's `OnboardingFlow.kt`.
 enum OnboardingStep {
-    case welcome, notifications, camera, ready, declined
+    case welcome, notifications, camera, staples, ready, declined
 }
 
 /// Where the first-run flow hands over to the app.
@@ -26,12 +26,13 @@ struct OnboardingFlow {
     private(set) var remindersDeclined = false
     private(set) var cameraDeclined = false
 
+    /// Where the Staples step goes on to: the last screen, saying whether anything was refused.
     private var ending: OnboardingStep {
         remindersDeclined || cameraDeclined ? .declined : .ready
     }
 
     private func afterNotifications(_ asks: OnboardingAsks) -> OnboardingStep {
-        asks.camera ? .camera : ending
+        asks.camera ? .camera : .staples
     }
 
     mutating func start(_ asks: OnboardingAsks) {
@@ -45,7 +46,21 @@ struct OnboardingFlow {
 
     mutating func cameraAnswered(_ answer: Bool?) {
         cameraDeclined = answer == false
+        step = .staples
+    }
+
+    /// Continue or Skip on the Staples step (which every path reaches before the last screen).
+    mutating func staplesDone() {
         step = ending
+    }
+
+    /// Back from the last screen goes to Staples. Staples itself goes back nowhere, as the last
+    /// screen didn't before it. Returns whether the step changed. Android: `OnboardingFlow.back`.
+    @discardableResult
+    mutating func back() -> Bool {
+        guard step == .ready || step == .declined else { return false }
+        step = .staples
+        return true
     }
 
     /// Scanning leads the way unless the camera was refused, when the scanner would have nothing

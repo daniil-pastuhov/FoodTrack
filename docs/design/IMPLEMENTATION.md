@@ -15,7 +15,7 @@ Android lives in `androidApp/.../ui/design/`, iOS in `iosApp/FoodTracker/DesignS
 Widths: `isExpanded` is true at 700dp/pt and up, read from window width. Two-pane layouts use it. There is no navigation rail or sidebar on any device.
 
 ## Routes
-Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), savedRecipes, recipeSettings, buyRecipes (sheet), productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, onboarding.
+Tabs: home, recipe, shopping, settings. Pushed or modal: recipeResult(id), savedRecipes, recipeSettings, buyRecipes (sheet), productDetail(itemId) (sheet on phone, right pane on expanded Home), addItem(new | prefilled | edit), scanner(mode), categories, staples, onboarding.
 
 ## State additions (Wave 0)
 - Lookup result: Found(product), NotFound, Offline, and (2026-11-15) Busy for Open Food Facts' HTTP 429, drawn as the offline panel with a clock icon and its own title and message (scanner/barcode/busy).

@@ -44,6 +44,7 @@ struct ClaimWelcomeResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
+    var acceptsStaples: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?

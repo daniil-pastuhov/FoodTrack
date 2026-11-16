@@ -10,6 +10,7 @@ import com.foodtracker.android.data.local.RoomProductNameRepository
 import com.foodtracker.android.data.local.RoomShoppingListRepository
 import com.foodtracker.android.data.local.RoomSavedRecipeRepository
 import com.foodtracker.android.data.local.RoomShoppingSectionRepository
+import com.foodtracker.android.data.local.RoomStapleRepository
 import com.foodtracker.android.recipe.GeminiNanoRecipeModel
 import com.foodtracker.android.BuildConfig
 import com.foodtracker.android.review.installedAtMillis
@@ -45,6 +46,7 @@ import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.ShoppingSectionRepository
 import com.foodtracker.repository.SettingsRepository
+import com.foodtracker.repository.StapleRepository
 import com.foodtracker.review.ReviewPromptStore
 import com.foodtracker.review.ReviewPrompter
 import com.foodtracker.review.StoreReviewRequester
@@ -71,7 +73,8 @@ val appModule = module {
                 FoodTrackerDatabase.MIGRATION_10_11,
                 FoodTrackerDatabase.MIGRATION_11_12,
                 FoodTrackerDatabase.MIGRATION_12_13,
-                FoodTrackerDatabase.MIGRATION_13_14
+                FoodTrackerDatabase.MIGRATION_13_14,
+                FoodTrackerDatabase.MIGRATION_14_15
             )
             .build()
     }
@@ -82,12 +85,14 @@ val appModule = module {
     single { get<FoodTrackerDatabase>().categoryPreferenceDao() }
     single { get<FoodTrackerDatabase>().shoppingSectionDao() }
     single { get<FoodTrackerDatabase>().savedRecipeDao() }
+    single { get<FoodTrackerDatabase>().stapleDao() }
     single<PantryRepository> { RoomPantryRepository(get()) }
     single<ShoppingListRepository> { RoomShoppingListRepository(get()) }
     single<ProductNameRepository> { RoomProductNameRepository(get()) }
     single<LocalProductRepository> { RoomLocalProductRepository(get()) }
     single<CategoryPreferenceRepository> { RoomCategoryPreferenceRepository(get()) }
     single<ShoppingSectionRepository> { RoomShoppingSectionRepository(get()) }
+    single<StapleRepository> { RoomStapleRepository(get()) }
     single<SettingsRepository> { AndroidSettingsRepository(androidContext()) }
     single<SavedRecipeRepository> { RoomSavedRecipeRepository(get()) }
     single<RecipeConfigRepository> { AndroidRecipeConfigRepository(androidContext()) }
@@ -104,6 +109,7 @@ val appModule = module {
             localProductRepository = get(),
             categoryPreferenceRepository = get(),
             shoppingSectionRepository = get(),
+            stapleRepository = get(),
             uncategorizedLabel = androidContext().getString(R.string.shopping_list_uncategorized),
             openFoodFactsApi = get()
         )

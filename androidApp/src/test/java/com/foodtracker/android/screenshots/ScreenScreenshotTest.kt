@@ -13,6 +13,7 @@ import com.foodtracker.android.perf.FakeProductNameRepository
 import com.foodtracker.android.perf.FakeSettingsRepository
 import com.foodtracker.android.perf.FakeShoppingListRepository
 import com.foodtracker.android.perf.FakeShoppingSectionRepository
+import com.foodtracker.android.perf.FakeStapleRepository
 import com.foodtracker.android.ui.components.ProductDetailActions
 import com.foodtracker.android.ui.components.ProductDetailPane
 import com.foodtracker.android.ui.screens.AddEditItemScreen
@@ -144,6 +145,7 @@ class ScreenScreenshotTest {
             localProductRepository = FakeLocalProductRepository(),
             categoryPreferenceRepository = FakeCategoryPreferenceRepository(),
             shoppingSectionRepository = FakeShoppingSectionRepository(entries = shopping),
+            stapleRepository = FakeStapleRepository(),
             uncategorizedLabel = "Other",
             coroutineScope = scope,
             computationContext = EmptyCoroutineContext,

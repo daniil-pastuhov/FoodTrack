@@ -1746,5 +1746,45 @@
             <string>Удалено %d рецепта</string>
         </dict>
     </dict>
+	<key>staples_count</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d продукт</string>
+			<key>few</key>
+			<string>%d продукта</string>
+			<key>many</key>
+			<string>%d продуктов</string>
+			<key>other</key>
+			<string>%d продукта</string>
+		</dict>
+	</dict>
+	<key>recipe_staples_count</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Можно использовать и базовые продукты: %d</string>
+			<key>few</key>
+			<string>Можно использовать и базовые продукты: %d</string>
+			<key>many</key>
+			<string>Можно использовать и базовые продукты: %d</string>
+			<key>other</key>
+			<string>Можно использовать и базовые продукты: %d</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

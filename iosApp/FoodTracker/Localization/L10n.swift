@@ -179,6 +179,10 @@ public enum L10n {
     }
     public static var onboardingNotificationsAllow: String { NSLocalizedString("onboarding_notifications_allow", comment: "") }
     public static var onboardingNotNow: String { NSLocalizedString("onboarding_not_now", comment: "") }
+    public static var onboardingStaplesTitle: String { NSLocalizedString("onboarding_staples_title", comment: "") }
+    public static var onboardingStaplesLater: String { NSLocalizedString("onboarding_staples_later", comment: "") }
+    public static var onboardingStaplesContinue: String { NSLocalizedString("onboarding_staples_continue", comment: "") }
+    public static var onboardingStaplesSkip: String { NSLocalizedString("onboarding_staples_skip", comment: "") }
     public static var onboardingCameraTitle: String { NSLocalizedString("onboarding_camera_title", comment: "") }
     public static func onboardingCameraBody(_ appName: String) -> String {
         String(format: NSLocalizedString("onboarding_camera_body", comment: ""), appName)

@@ -1398,5 +1398,37 @@
             <string>%d oppskrifter slettet</string>
         </dict>
     </dict>
+	<key>staples_count</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>%d basisvare</string>
+			<key>other</key>
+			<string>%d basisvarer</string>
+		</dict>
+	</dict>
+	<key>recipe_staples_count</key>
+	<dict>
+		<key>NSStringLocalizedFormatKey</key>
+		<string>%#@count@</string>
+		<key>count</key>
+		<dict>
+			<key>NSStringFormatSpecTypeKey</key>
+			<string>NSStringPluralRuleType</string>
+			<key>NSStringFormatValueTypeKey</key>
+			<string>d</string>
+			<key>one</key>
+			<string>Basisvaren din kan også brukes</string>
+			<key>other</key>
+			<string>De %d basisvarene dine kan også brukes</string>
+		</dict>
+	</dict>
 </dict>
 </plist>

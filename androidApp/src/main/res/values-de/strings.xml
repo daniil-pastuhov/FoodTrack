@@ -1285,4 +1285,39 @@
         <item quantity="other">Mit der Anmeldung bekommst du außerdem %1$d kostenlose Rezepte.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Grundzutaten</string>
+    <string name="staples_intro">Grundzutaten, die du immer zu Hause hast, wie Salz und Öl. Sie haben kein Datum, und Rezepte dürfen sie verwenden.</string>
+    <string name="staples_common_header">Häufige Grundzutaten</string>
+    <string name="staples_own_header">Eigene</string>
+    <string name="staples_add_placeholder">Grundzutat hinzufügen</string>
+    <string name="staples_add">Hinzufügen</string>
+    <string name="staples_ran_out">Aufgebraucht</string>
+    <string name="staples_ran_out_desc">%1$s aufgebraucht: auf die Einkaufsliste setzen</string>
+    <string name="staples_on_list">Auf der Einkaufsliste</string>
+    <string name="staples_remove">%1$s entfernen</string>
+    <string name="staples_removed">%1$s aus den Grundzutaten entfernt</string>
+    <string name="staples_added_to_list">%1$s auf die Einkaufsliste gesetzt</string>
+    <string name="staples_already">%1$s ist schon eine Grundzutat</string>
+    <string name="staples_full">Du kannst bis zu %1$d Grundzutaten haben. Entferne eine, um eine andere hinzuzufügen.</string>
+    <string name="staples_settings_desc">Grundzutaten, die du immer hast, wie Salz und Öl. Rezepte dürfen sie verwenden.</string>
+    <string name="staples_manage">Grundzutaten verwalten</string>
+    <string name="staples_none">Noch keine</string>
+    <string name="staples_open">Grundzutaten öffnen</string>
+    <string name="recipe_your_staple">Grundzutat</string>
+    <string name="recipe_prompt_staples_intro">Außerdem habe ich diese Grundzutaten immer zu Hause. Verwende davon, was das Rezept braucht; keine davon muss vorkommen:</string>
+    <string name="staples_note">Die Namen deiner Grundzutaten werden mit jeder Rezeptanfrage gesendet: an unseren Server für ein Rezept aus einem Paket und in einem Prompt, den du teilst. Solange eine Grundzutat auf deiner Einkaufsliste steht, wird sie nicht gesendet.</string>
+    <string name="onboarding_staples_title">Was hast du immer zu Hause?</string>
+    <string name="onboarding_staples_later">Du kannst das überspringen und später unter Einstellungen › Grundzutaten erledigen.</string>
+    <string name="onboarding_staples_continue">Weiter</string>
+    <string name="onboarding_staples_skip">Überspringen</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d Grundzutat</item>
+        <item quantity="other">%1$d Grundzutaten</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Deine Grundzutat darf auch verwendet werden</item>
+        <item quantity="other">Deine %1$d Grundzutaten dürfen auch verwendet werden</item>
+    </plurals>
 </resources>

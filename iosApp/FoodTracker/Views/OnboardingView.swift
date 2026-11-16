@@ -13,14 +13,28 @@ private let onboardingMarkSize: CGFloat = 72
 /// owns every other case. An answer given here carries over through the system's own record, so
 /// the scanner never asks a second time.
 struct OnboardingView: View {
+    /// The person's staples now (normally none at first run; a restored backup may have some).
+    var staples: [Staple] = []
+    /// Continue on the Staples step: what to change, through the ordinary staple calls.
+    var applyStaples: (Staples.PresetChanges) -> Void = { _ in }
     let onFinish: (OnboardingExit) -> Void
 
     @State private var flow: OnboardingFlow
     /// Keeps a second tap from asking twice while the system is answering.
     @State private var isAsking = false
+    /// The Staples step's ticks, held here only (nil until it first shows: then the presets the
+    /// person already has). Kept when the step is left, saved only by Continue.
+    @State private var stapleTicks: Set<String>?
 
-    init(startingAt flow: OnboardingFlow = OnboardingFlow(), onFinish: @escaping (OnboardingExit) -> Void) {
+    init(
+        startingAt flow: OnboardingFlow = OnboardingFlow(),
+        staples: [Staple] = [],
+        applyStaples: @escaping (Staples.PresetChanges) -> Void = { _ in },
+        onFinish: @escaping (OnboardingExit) -> Void
+    ) {
         _flow = State(initialValue: flow)
+        self.staples = staples
+        self.applyStaples = applyStaples
         self.onFinish = onFinish
     }
 
@@ -34,6 +48,7 @@ struct OnboardingView: View {
             case .welcome: welcome
             case .notifications: notifications
             case .camera: camera
+            case .staples: staplesStep
             case .ready: ready
             case .declined: declined
             }
@@ -127,6 +142,43 @@ struct OnboardingView: View {
         }
     }
 
+    /// Staples: tick the basics always at home, or skip; the same can be done later in Settings.
+    private var staplesStep: some View {
+        let ticks = stapleTicks ?? Staples.presetTicks(staples)
+        let full = Staples.count(staples, ticked: ticks) >= Staples.maxCount
+        let language = Staples.appLanguage
+        return OnboardingPage {
+            LarderButton(L10n.onboardingStaplesContinue, fullWidth: true) {
+                let changes = Staples.presetChanges(staples, ticked: ticks)
+                if !changes.isEmpty { applyStaples(changes) }
+                flow.staplesDone()
+            }
+            LarderButton(L10n.onboardingStaplesSkip, variant: .text, fullWidth: true) { flow.staplesDone() }
+        } content: {
+            OnboardingTitle(L10n.onboardingStaplesTitle)
+            OnboardingBody(L10n.staplesIntro)
+            LarderGroup {
+                ForEach(StaplePresets.all, id: \.id) { preset in
+                    let ticked = ticks.contains(preset.id)
+                    StaplePresetRow(name: preset.name(language), ticked: ticked, disabled: !ticked && full) {
+                        var next = ticks
+                        if ticked { next.remove(preset.id) } else { next.insert(preset.id) }
+                        stapleTicks = next
+                    }
+                }
+            }
+            VStack(alignment: .leading, spacing: LarderSpace.s2) {
+                Text(L10n.onboardingStaplesLater)
+                Text(L10n.staplesNote)
+            }
+            .larderFont(.bodySm)
+            .foregroundStyle(LarderColor.onSurfaceVariant)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.top, LarderSpace.s4)
+        }
+        .onAppear { if stapleTicks == nil { stapleTicks = Staples.presetTicks(staples) } }
+    }
+
     private var ready: some View {
         OnboardingPage {
             LarderButton(L10n.homeEmptyScan, fullWidth: true) { onFinish(.scanner) }
@@ -183,27 +235,58 @@ private struct OnboardingPage<Actions: View, Content: View>: View {
         self.content = content()
     }
 
+    /// The footer's height as laid out (its buttons at their full height, whatever the text size).
+    @State private var footerHeight: CGFloat = 0
+
     var body: some View {
-        VStack(spacing: 0) {
-            GeometryReader { proxy in
+        GeometryReader { page in
+            // The footer takes what its buttons need and the content scrolls in the rest. When the
+            // buttons would leave the content less than a third of the page (the largest text sizes
+            // on a small phone), the whole page scrolls instead, with the buttons at its end, so
+            // nothing is ever clipped.
+            if footerHeight <= page.size.height * 2 / 3 {
+                VStack(spacing: 0) {
+                    GeometryReader { proxy in
+                        ScrollView {
+                            column
+                                .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                        }
+                        .scrollBounceBehavior(.basedOnSize)
+                        .clipsBelowStatusBar()
+                    }
+                    footer
+                }
+            } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 0) { content }
-                        .frame(maxWidth: onboardingColumnWidth, alignment: .leading)
-                        .padding(.top, LarderSpace.s6)
-                        .padding(.bottom, LarderSpace.s4)
-                        .padding(.horizontal, LarderSpace.s6)
-                        .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+                    VStack(spacing: 0) {
+                        column.frame(maxWidth: .infinity)
+                        footer
+                    }
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .clipsBelowStatusBar()
             }
-            VStack(spacing: LarderSpace.s1) { actions }
-                .frame(maxWidth: onboardingColumnWidth)
-                .padding(.top, LarderSpace.s2)
-                .padding(.bottom, LarderSpace.s6)
-                .padding(.horizontal, LarderSpace.s6)
         }
         .background(LarderColor.background.ignoresSafeArea())
+    }
+
+    private var column: some View {
+        VStack(alignment: .leading, spacing: 0) { content }
+            .frame(maxWidth: onboardingColumnWidth, alignment: .leading)
+            .padding(.top, LarderSpace.s6)
+            .padding(.bottom, LarderSpace.s4)
+            .padding(.horizontal, LarderSpace.s6)
+    }
+
+    private var footer: some View {
+        VStack(spacing: LarderSpace.s1) { actions }
+            .frame(maxWidth: onboardingColumnWidth)
+            .padding(.top, LarderSpace.s2)
+            .padding(.bottom, LarderSpace.s6)
+            .padding(.horizontal, LarderSpace.s6)
+            // Never squeezed: the buttons always get their whole height.
+            .fixedSize(horizontal: false, vertical: true)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
     }
 }
 
@@ -325,9 +408,13 @@ private extension OnboardingFlow {
             flow.start(OnboardingAsks(notifications: true, camera: true))
         case .camera:
             flow.start(camera)
+        case .staples:
+            flow.notificationsAnswered(nil, camera)
+            flow.cameraAnswered(nil)
         case .ready, .declined:
             flow.notificationsAnswered(remindersDeclined ? false : nil, camera)
             flow.cameraAnswered(cameraDeclined ? false : nil)
+            flow.staplesDone()
         }
         return flow
     }
@@ -337,6 +424,7 @@ private extension OnboardingFlow {
 #Preview("Welcome, dark") { OnboardingView(startingAt: .at(.welcome)) { _ in }.preferredColorScheme(.dark) }
 #Preview("Notifications") { OnboardingView(startingAt: .at(.notifications)) { _ in } }
 #Preview("Camera") { OnboardingView(startingAt: .at(.camera)) { _ in } }
+#Preview("Staples") { OnboardingView(startingAt: .at(.staples)) { _ in } }
 #Preview("Ready") { OnboardingView(startingAt: .at(.ready)) { _ in } }
 #Preview("Declined, both") {
     OnboardingView(startingAt: .at(.declined, remindersDeclined: true, cameraDeclined: true)) { _ in }

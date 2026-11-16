@@ -165,9 +165,23 @@ struct RootTabView: View {
         // Over the shell rather than a cover of its own, so it is up from the first frame and the
         // scanner or the add sheet can open as it goes, with no wait for a dismissal.
         .accessibilityHidden(showOnboarding)
-        .overlay {
+        // Top-aligned and as tall as the window, whatever height the shell under it takes: at the
+        // largest text sizes the shell grows past the screen, and onboarding's buttons with it.
+        .overlay(alignment: .top) {
             if showOnboarding {
-                OnboardingView(onFinish: finishOnboarding)
+                OnboardingView(
+                    staples: viewModel.staples,
+                    applyStaples: { [viewModel] changes in
+                        for staple in changes.remove { viewModel.removeStaple(id: staple.id) }
+                        for id in changes.add {
+                            if let preset = StaplePresets.byId(id) {
+                                viewModel.addStaple(name: preset.name(Staples.appLanguage), presetId: id)
+                            }
+                        }
+                    },
+                    onFinish: finishOnboarding
+                )
+                    .containerRelativeFrame(.vertical)
                     .accessibilityElement(children: .contain)
                     .accessibilityAddTraits(.isModal)
                     .transition(.opacity)
@@ -487,7 +501,7 @@ extension RootTabView {
     /// Screenshot support for scripts/ios_screenshots.sh, compiled out of release builds:
     /// `-demoBackup <path>` replaces the pantry with a backup file, `-demoTab <name>` (home,
     /// recipe, shopping, settings) opens that tab, `-demoSnackbar <text>` shows a snackbar with
-    /// an Undo, and `-demoRoute <name>` (onboarding, categories, productDetail with `-demoItem <name>`,
+    /// an Undo, and `-demoRoute <name>` (onboarding, categories, staples, productDetail with `-demoItem <name>`,
     /// recipeSettings, savedRecipes, recipeResult, which saves a sample recipe first, or the one in
     /// `-demoRecipe <file>`, likewise recipeMenu, and scan, see below) goes to that route, and
     /// `-demoAllergen <name>` adds to the allergen list.
@@ -567,6 +581,10 @@ extension RootTabView {
         case "savedRecipes":
             selectedTab = .recipe
             recipeViewModel.path = [.saved]
+        // The Staples screen, over the Recipe tab (its line under Cook with opens it there too).
+        case "staples":
+            selectedTab = .recipe
+            recipeViewModel.path = [.staples]
         case "recipeResult":
             selectedTab = .recipe
             recipeViewModel.path = [.result(id: recipeViewModel.saveDemoRecipe(demoFile(Recipe.self)))]

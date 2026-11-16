@@ -1,5 +1,9 @@
 package com.foodtracker.recipe
 
+import com.foodtracker.model.Staple
+import com.foodtracker.staples.promptStaples
+import com.foodtracker.staples.stapleLanguage
+import com.foodtracker.staples.stapleRows
 import com.foodtracker.viewmodel.PantryRow
 import com.foodtracker.viewmodel.PantryUiState
 import kotlinx.coroutines.CancellationException
@@ -240,7 +244,11 @@ data class RecipeUiState(
     val intro: RecipeIntro? = null,
     /** The system share sheet has a Copy action of its own (Android 10 and up), so the form
      *  offers no Copy button. A platform fact, given to [RecipeStateHolder] by the app. */
-    val shareSheetCopies: Boolean = true
+    val shareSheetCopies: Boolean = true,
+    /** The person's staples, from the pantry's state ([PantryUiState.staples]). */
+    val staples: List<Staple> = emptyList(),
+    /** The shopping list's names now: a staple on it is out and goes nowhere. */
+    val shoppingNames: List<String> = emptyList()
 ) {
     /** The language recipes are written in. */
     val language: String = config.language ?: appLanguage
@@ -292,6 +300,19 @@ data class RecipeUiState(
     /** The ticked items past their date, soonest first: the form's red warning, the line in the
      *  shared prompt, and what a recipe written on the phone carries ([Recipe.pastDate]). */
     val pastDateTicked: List<PastDateItem> = selectedRows.filter { it.daysRemaining < 0 }.map { PastDateItem(it.item.name, -it.daysRemaining) }
+
+    /**
+     * The staples every route gets, whatever "Send all products" says (B.1, [promptStaples]): the
+     * ones not out, named in the app's language, in their order, without one the route already
+     * lists (a ticked item, or with "Send all products" an other item). iOS: `RecipeRequest.staples`.
+     */
+    val stapleNames: List<String> by lazy {
+        val listed = selectedRows.map { it.item.name } + (if (options.sendAllItems) otherRows.map { it.item.name } else emptyList())
+        promptStaples(stapleRows(staples, shoppingNames, stapleLanguage(appLanguage)), listed)
+    }
+
+    /** How many staples go with a recipe: the form's "Your N staples may be used too" line. */
+    val stapleCount: Int get() = stapleNames.size
 
     /** How many items "Send all products" adds to this recipe; 0 with it off. */
     val optionalCount: Int get() = if (options.sendAllItems) otherRows.size else 0
@@ -491,13 +512,13 @@ class RecipeStateHolder(
     init {
         coroutineScope.launch {
             pantry
-                .map { Triple(it.isLoading, it.allRows, it.settings.allergens) }
+                .map { PantryInputs(it.isLoading, it.allRows, it.settings.allergens, it.staples, it.shoppingList.map { entry -> entry.productName }) }
                 .distinctUntilChanged()
-                .collect { (loading, rows, allergens) ->
+                .collect { (loading, rows, allergens, staples, shoppingNames) ->
                     val sorted = rows.sortedWith(compareBy<PantryRow> { it.daysRemaining }.thenBy { it.sortName })
                     val cleaned = cleanAllergens(allergens)
                     _uiState.update {
-                        it.copy(isLoading = loading, rows = sorted, allergens = cleaned)
+                        it.copy(isLoading = loading, rows = sorted, allergens = cleaned, staples = staples, shoppingNames = shoppingNames)
                     }
                     // Not while the settings are still loading: an empty list then isn't the person's.
                     if (!loading) paid.onAllergensChanged(cleaned.any { it.isNotBlank() })
@@ -721,7 +742,8 @@ class RecipeStateHolder(
         if (state.isBusy || state.selectedRows.isEmpty() || state.onDeviceRoute != OnDeviceRoute.READY) return
         val items = state.selectedRows.map { RecipePromptItem(it.item.name, it.daysRemaining) }
         val optional = if (state.options.sendAllItems) state.otherRows.map { RecipePromptItem(it.item.name, it.daysRemaining) } else emptyList()
-        val prompt = buildOnDeviceRecipePrompt(items, state.config, state.language, state.allergens, optional)
+        val staples = state.stapleNames
+        val prompt = buildOnDeviceRecipePrompt(items, state.config, state.language, state.allergens, optional, staples)
         val names = (items + optional).map { it.name }
         _uiState.update { it.copy(isWriting = true, event = null) }
         // Started lazily so writingJob is set before the body can run and report.
@@ -740,7 +762,7 @@ class RecipeStateHolder(
             }
             try {
                 // Small models get the JSON wrong now and then; one more try is cheap and free.
-                val recipe = writeOnce(prompt, state.config, names) ?: writeOnce(prompt, state.config, names)
+                val recipe = writeOnce(prompt, state.config, names, staples) ?: writeOnce(prompt, state.config, names, staples)
                 if (recipe == null) {
                     report(RecipeEvent.Failed)
                     return@launch
@@ -764,8 +786,8 @@ class RecipeStateHolder(
         started.start()
     }
 
-    private suspend fun writeOnce(prompt: String, config: RecipeConfig, names: List<String>): Recipe? =
-        parseRecipeReply(onDeviceModel.generate(prompt), RecipeSource.DEVICE, config, names)
+    private suspend fun writeOnce(prompt: String, config: RecipeConfig, names: List<String>, staples: List<String>): Recipe? =
+        parseRecipeReply(onDeviceModel.generate(prompt), RecipeSource.DEVICE, config, names, staples)
 
     /** Stops the phone's model. Nothing was paid, so nothing is lost. */
     fun stopWriting() {
@@ -1036,6 +1058,15 @@ class RecipeStateHolder(
         coroutineScope.launch { savedRecipeRepository.clearAll() }
     }
 }
+
+/** What the Recipe tab reads from the pantry's state. */
+private data class PantryInputs(
+    val loading: Boolean,
+    val rows: List<PantryRow>,
+    val allergens: Set<String>,
+    val staples: List<Staple>,
+    val shoppingNames: List<String>
+)
 
 /** The taste quiz screen's content ([RecipeStateHolder.openTasteQuiz]). */
 sealed interface TasteQuizScreen {

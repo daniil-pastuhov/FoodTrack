@@ -3048,6 +3048,906 @@
    "server": "ok",
    "normalized": "चाय",
    "cleanServer": "ok"
+  },
+  {
+   "input": "Salt",
+   "lang": "en",
+   "clean": "Salt",
+   "allergen": "Salt",
+   "server": "ok",
+   "normalized": "Salt",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Соль",
+   "lang": "ru",
+   "clean": "Соль",
+   "allergen": "Соль",
+   "server": "ok",
+   "normalized": "Соль",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sal",
+   "lang": "es",
+   "clean": "Sal",
+   "allergen": "Sal",
+   "server": "ok",
+   "normalized": "Sal",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Salz",
+   "lang": "de",
+   "clean": "Salz",
+   "allergen": "Salz",
+   "server": "ok",
+   "normalized": "Salz",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sel",
+   "lang": "fr",
+   "clean": "Sel",
+   "allergen": "Sel",
+   "server": "ok",
+   "normalized": "Sel",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Black pepper",
+   "lang": "en",
+   "clean": "Black pepper",
+   "allergen": "Black pepper",
+   "server": "ok",
+   "normalized": "Black pepper",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Чёрный перец",
+   "lang": "ru",
+   "clean": "Чёрный перец",
+   "allergen": "Чёрный перец",
+   "server": "ok",
+   "normalized": "Чёрный перец",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sort pepper",
+   "lang": "nb",
+   "clean": "Sort pepper",
+   "allergen": "Sort pepper",
+   "server": "ok",
+   "normalized": "Sort pepper",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Pimienta negra",
+   "lang": "es",
+   "clean": "Pimienta negra",
+   "allergen": "Pimienta negra",
+   "server": "ok",
+   "normalized": "Pimienta negra",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Schwarzer Pfeffer",
+   "lang": "de",
+   "clean": "Schwarzer Pfeffer",
+   "allergen": "Schwarzer Pfeffer",
+   "server": "ok",
+   "normalized": "Schwarzer Pfeffer",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Poivre noir",
+   "lang": "fr",
+   "clean": "Poivre noir",
+   "allergen": "Poivre noir",
+   "server": "ok",
+   "normalized": "Poivre noir",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Svartpeppar",
+   "lang": "sv",
+   "clean": "Svartpeppar",
+   "allergen": "Svartpeppar",
+   "server": "ok",
+   "normalized": "Svartpeppar",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sort peber",
+   "lang": "da",
+   "clean": "Sort peber",
+   "allergen": "Sort peber",
+   "server": "ok",
+   "normalized": "Sort peber",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sugar",
+   "lang": "en",
+   "clean": "Sugar",
+   "allergen": "Sugar",
+   "server": "ok",
+   "normalized": "Sugar",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Сахар",
+   "lang": "ru",
+   "clean": "Сахар",
+   "allergen": "Сахар",
+   "server": "ok",
+   "normalized": "Сахар",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sukker",
+   "lang": "nb",
+   "clean": "Sukker",
+   "allergen": "Sukker",
+   "server": "ok",
+   "normalized": "Sukker",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Azúcar",
+   "lang": "es",
+   "clean": "Azúcar",
+   "allergen": "Azúcar",
+   "server": "ok",
+   "normalized": "Azúcar",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Zucker",
+   "lang": "de",
+   "clean": "Zucker",
+   "allergen": "Zucker",
+   "server": "ok",
+   "normalized": "Zucker",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Sucre",
+   "lang": "fr",
+   "clean": "Sucre",
+   "allergen": "Sucre",
+   "server": "ok",
+   "normalized": "Sucre",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Socker",
+   "lang": "sv",
+   "clean": "Socker",
+   "allergen": "Socker",
+   "server": "ok",
+   "normalized": "Socker",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Flour",
+   "lang": "en",
+   "clean": "Flour",
+   "allergen": "Flour",
+   "server": "ok",
+   "normalized": "Flour",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Мука",
+   "lang": "ru",
+   "clean": "Мука",
+   "allergen": "Мука",
+   "server": "ok",
+   "normalized": "Мука",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Hvetemel",
+   "lang": "nb",
+   "clean": "Hvetemel",
+   "allergen": "Hvetemel",
+   "server": "ok",
+   "normalized": "Hvetemel",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Harina",
+   "lang": "es",
+   "clean": "Harina",
+   "allergen": "Harina",
+   "server": "ok",
+   "normalized": "Harina",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Mehl",
+   "lang": "de",
+   "clean": "Mehl",
+   "allergen": "Mehl",
+   "server": "ok",
+   "normalized": "Mehl",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Farine",
+   "lang": "fr",
+   "clean": "Farine",
+   "allergen": "Farine",
+   "server": "ok",
+   "normalized": "Farine",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Vetemjöl",
+   "lang": "sv",
+   "clean": "Vetemjöl",
+   "allergen": "Vetemjöl",
+   "server": "ok",
+   "normalized": "Vetemjöl",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Hvedemel",
+   "lang": "da",
+   "clean": "Hvedemel",
+   "allergen": "Hvedemel",
+   "server": "ok",
+   "normalized": "Hvedemel",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Cooking oil",
+   "lang": "en",
+   "clean": "Cooking oil",
+   "allergen": "Cooking oil",
+   "server": "ok",
+   "normalized": "Cooking oil",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Растительное масло",
+   "lang": "ru",
+   "clean": "Растительное масло",
+   "allergen": "Растительное масло",
+   "server": "ok",
+   "normalized": "Растительное масло",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Matolje",
+   "lang": "nb",
+   "clean": "Matolje",
+   "allergen": "Matolje",
+   "server": "ok",
+   "normalized": "Matolje",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Aceite vegetal",
+   "lang": "es",
+   "clean": "Aceite vegetal",
+   "allergen": "Aceite vegetal",
+   "server": "ok",
+   "normalized": "Aceite vegetal",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Speiseöl",
+   "lang": "de",
+   "clean": "Speiseöl",
+   "allergen": "Speiseöl",
+   "server": "ok",
+   "normalized": "Speiseöl",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Huile végétale",
+   "lang": "fr",
+   "clean": "Huile végétale",
+   "allergen": "Huile végétale",
+   "server": "ok",
+   "normalized": "Huile végétale",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Matolja",
+   "lang": "sv",
+   "clean": "Matolja",
+   "allergen": "Matolja",
+   "server": "ok",
+   "normalized": "Matolja",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Madolie",
+   "lang": "da",
+   "clean": "Madolie",
+   "allergen": "Madolie",
+   "server": "ok",
+   "normalized": "Madolie",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Olive oil",
+   "lang": "en",
+   "clean": "Olive oil",
+   "allergen": "Olive oil",
+   "server": "ok",
+   "normalized": "Olive oil",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Оливковое масло",
+   "lang": "ru",
+   "clean": "Оливковое масло",
+   "allergen": "Оливковое масло",
+   "server": "ok",
+   "normalized": "Оливковое масло",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Olivenolje",
+   "lang": "nb",
+   "clean": "Olivenolje",
+   "allergen": "Olivenolje",
+   "server": "ok",
+   "normalized": "Olivenolje",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Aceite de oliva",
+   "lang": "es",
+   "clean": "Aceite de oliva",
+   "allergen": "Aceite de oliva",
+   "server": "ok",
+   "normalized": "Aceite de oliva",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Olivenöl",
+   "lang": "de",
+   "clean": "Olivenöl",
+   "allergen": "Olivenöl",
+   "server": "ok",
+   "normalized": "Olivenöl",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Huile d'olive",
+   "lang": "fr",
+   "clean": "Huile d'olive",
+   "allergen": "Huile d'olive",
+   "server": "ok",
+   "normalized": "Huile d'olive",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Olivolja",
+   "lang": "sv",
+   "clean": "Olivolja",
+   "allergen": "Olivolja",
+   "server": "ok",
+   "normalized": "Olivolja",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Olivenolie",
+   "lang": "da",
+   "clean": "Olivenolie",
+   "allergen": "Olivenolie",
+   "server": "ok",
+   "normalized": "Olivenolie",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Butter",
+   "lang": "en",
+   "clean": "Butter",
+   "allergen": "Butter",
+   "server": "ok",
+   "normalized": "Butter",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Сливочное масло",
+   "lang": "ru",
+   "clean": "Сливочное масло",
+   "allergen": "Сливочное масло",
+   "server": "ok",
+   "normalized": "Сливочное масло",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Smør",
+   "lang": "nb",
+   "clean": "Smør",
+   "allergen": "Smør",
+   "server": "ok",
+   "normalized": "Smør",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Mantequilla",
+   "lang": "es",
+   "clean": "Mantequilla",
+   "allergen": "Mantequilla",
+   "server": "ok",
+   "normalized": "Mantequilla",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Beurre",
+   "lang": "fr",
+   "clean": "Beurre",
+   "allergen": "Beurre",
+   "server": "ok",
+   "normalized": "Beurre",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Smör",
+   "lang": "sv",
+   "clean": "Smör",
+   "allergen": "Smör",
+   "server": "ok",
+   "normalized": "Smör",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Eggs",
+   "lang": "en",
+   "clean": "Eggs",
+   "allergen": "Eggs",
+   "server": "ok",
+   "normalized": "Eggs",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Яйца",
+   "lang": "ru",
+   "clean": "Яйца",
+   "allergen": "Яйца",
+   "server": "ok",
+   "normalized": "Яйца",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Egg",
+   "lang": "nb",
+   "clean": "Egg",
+   "allergen": "Egg",
+   "server": "ok",
+   "normalized": "Egg",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Huevos",
+   "lang": "es",
+   "clean": "Huevos",
+   "allergen": "Huevos",
+   "server": "ok",
+   "normalized": "Huevos",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Eier",
+   "lang": "de",
+   "clean": "Eier",
+   "allergen": "Eier",
+   "server": "ok",
+   "normalized": "Eier",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Œufs",
+   "lang": "fr",
+   "clean": "Œufs",
+   "allergen": "Œufs",
+   "server": "ok",
+   "normalized": "Œufs",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Ägg",
+   "lang": "sv",
+   "clean": "Ägg",
+   "allergen": "Ägg",
+   "server": "ok",
+   "normalized": "Ägg",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Æg",
+   "lang": "da",
+   "clean": "Æg",
+   "allergen": "Æg",
+   "server": "ok",
+   "normalized": "Æg",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Milk",
+   "lang": "en",
+   "clean": "Milk",
+   "allergen": "Milk",
+   "server": "ok",
+   "normalized": "Milk",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Молоко",
+   "lang": "ru",
+   "clean": "Молоко",
+   "allergen": "Молоко",
+   "server": "ok",
+   "normalized": "Молоко",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Melk",
+   "lang": "nb",
+   "clean": "Melk",
+   "allergen": "Melk",
+   "server": "ok",
+   "normalized": "Melk",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Leche",
+   "lang": "es",
+   "clean": "Leche",
+   "allergen": "Leche",
+   "server": "ok",
+   "normalized": "Leche",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Milch",
+   "lang": "de",
+   "clean": "Milch",
+   "allergen": "Milch",
+   "server": "ok",
+   "normalized": "Milch",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Lait",
+   "lang": "fr",
+   "clean": "Lait",
+   "allergen": "Lait",
+   "server": "ok",
+   "normalized": "Lait",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Mjölk",
+   "lang": "sv",
+   "clean": "Mjölk",
+   "allergen": "Mjölk",
+   "server": "ok",
+   "normalized": "Mjölk",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Mælk",
+   "lang": "da",
+   "clean": "Mælk",
+   "allergen": "Mælk",
+   "server": "ok",
+   "normalized": "Mælk",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Rice",
+   "lang": "en",
+   "clean": "Rice",
+   "allergen": "Rice",
+   "server": "ok",
+   "normalized": "Rice",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Рис",
+   "lang": "ru",
+   "clean": "Рис",
+   "allergen": "Рис",
+   "server": "ok",
+   "normalized": "Рис",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Ris",
+   "lang": "nb",
+   "clean": "Ris",
+   "allergen": "Ris",
+   "server": "ok",
+   "normalized": "Ris",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Arroz",
+   "lang": "es",
+   "clean": "Arroz",
+   "allergen": "Arroz",
+   "server": "ok",
+   "normalized": "Arroz",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Reis",
+   "lang": "de",
+   "clean": "Reis",
+   "allergen": "Reis",
+   "server": "ok",
+   "normalized": "Reis",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Riz",
+   "lang": "fr",
+   "clean": "Riz",
+   "allergen": "Riz",
+   "server": "ok",
+   "normalized": "Riz",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Pasta",
+   "lang": "en",
+   "clean": "Pasta",
+   "allergen": "Pasta",
+   "server": "ok",
+   "normalized": "Pasta",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Макароны",
+   "lang": "ru",
+   "clean": "Макароны",
+   "allergen": "Макароны",
+   "server": "ok",
+   "normalized": "Макароны",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Nudeln",
+   "lang": "de",
+   "clean": "Nudeln",
+   "allergen": "Nudeln",
+   "server": "ok",
+   "normalized": "Nudeln",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Pâtes",
+   "lang": "fr",
+   "clean": "Pâtes",
+   "allergen": "Pâtes",
+   "server": "ok",
+   "normalized": "Pâtes",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Garlic",
+   "lang": "en",
+   "clean": "Garlic",
+   "allergen": "Garlic",
+   "server": "ok",
+   "normalized": "Garlic",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Чеснок",
+   "lang": "ru",
+   "clean": "Чеснок",
+   "allergen": "Чеснок",
+   "server": "ok",
+   "normalized": "Чеснок",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Hvitløk",
+   "lang": "nb",
+   "clean": "Hvitløk",
+   "allergen": "Hvitløk",
+   "server": "ok",
+   "normalized": "Hvitløk",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Ajo",
+   "lang": "es",
+   "clean": "Ajo",
+   "allergen": "Ajo",
+   "server": "ok",
+   "normalized": "Ajo",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Knoblauch",
+   "lang": "de",
+   "clean": "Knoblauch",
+   "allergen": "Knoblauch",
+   "server": "ok",
+   "normalized": "Knoblauch",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Ail",
+   "lang": "fr",
+   "clean": "Ail",
+   "allergen": "Ail",
+   "server": "ok",
+   "normalized": "Ail",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Vitlök",
+   "lang": "sv",
+   "clean": "Vitlök",
+   "allergen": "Vitlök",
+   "server": "ok",
+   "normalized": "Vitlök",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Hvidløg",
+   "lang": "da",
+   "clean": "Hvidløg",
+   "allergen": "Hvidløg",
+   "server": "ok",
+   "normalized": "Hvidløg",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Onions",
+   "lang": "en",
+   "clean": "Onions",
+   "allergen": "Onions",
+   "server": "ok",
+   "normalized": "Onions",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Лук",
+   "lang": "ru",
+   "clean": "Лук",
+   "allergen": "Лук",
+   "server": "ok",
+   "normalized": "Лук",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Løk",
+   "lang": "nb",
+   "clean": "Løk",
+   "allergen": "Løk",
+   "server": "ok",
+   "normalized": "Løk",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Cebollas",
+   "lang": "es",
+   "clean": "Cebollas",
+   "allergen": "Cebollas",
+   "server": "ok",
+   "normalized": "Cebollas",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Zwiebeln",
+   "lang": "de",
+   "clean": "Zwiebeln",
+   "allergen": "Zwiebeln",
+   "server": "ok",
+   "normalized": "Zwiebeln",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Oignons",
+   "lang": "fr",
+   "clean": "Oignons",
+   "allergen": "Oignons",
+   "server": "ok",
+   "normalized": "Oignons",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Lök",
+   "lang": "sv",
+   "clean": "Lök",
+   "allergen": "Lök",
+   "server": "ok",
+   "normalized": "Lök",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Løg",
+   "lang": "da",
+   "clean": "Løg",
+   "allergen": "Løg",
+   "server": "ok",
+   "normalized": "Løg",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Vinegar",
+   "lang": "en",
+   "clean": "Vinegar",
+   "allergen": "Vinegar",
+   "server": "ok",
+   "normalized": "Vinegar",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Уксус",
+   "lang": "ru",
+   "clean": "Уксус",
+   "allergen": "Уксус",
+   "server": "ok",
+   "normalized": "Уксус",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Eddik",
+   "lang": "nb",
+   "clean": "Eddik",
+   "allergen": "Eddik",
+   "server": "ok",
+   "normalized": "Eddik",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Vinagre",
+   "lang": "es",
+   "clean": "Vinagre",
+   "allergen": "Vinagre",
+   "server": "ok",
+   "normalized": "Vinagre",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Essig",
+   "lang": "de",
+   "clean": "Essig",
+   "allergen": "Essig",
+   "server": "ok",
+   "normalized": "Essig",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Vinaigre",
+   "lang": "fr",
+   "clean": "Vinaigre",
+   "allergen": "Vinaigre",
+   "server": "ok",
+   "normalized": "Vinaigre",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Vinäger",
+   "lang": "sv",
+   "clean": "Vinäger",
+   "allergen": "Vinäger",
+   "server": "ok",
+   "normalized": "Vinäger",
+   "cleanServer": "ok"
+  },
+  {
+   "input": "Eddike",
+   "lang": "da",
+   "clean": "Eddike",
+   "allergen": "Eddike",
+   "server": "ok",
+   "normalized": "Eddike",
+   "cleanServer": "ok"
   }
  ]
 }

@@ -6,6 +6,9 @@ import kotlinx.serialization.json.jsonObject
  *  context window (under 4,000 tokens), and a recipe can't use thirty things anyway. */
 const val MAX_RECIPE_INGREDIENTS = 30
 
+/** At most this many staples go to the phone's model. */
+const val MAX_PROMPT_STAPLES = 20
+
 /** Item names are cut to this length before they reach a model. */
 const val MAX_RECIPE_INGREDIENT_NAME = 40
 
@@ -53,19 +56,25 @@ private fun dayPhrase(days: Int): String = when {
  * [optional] ("Send all products") is the rest of the pantry, listed after the items to use up
  * as ones the recipe may use as well; together with [items] at most [MAX_RECIPE_INGREDIENTS],
  * the soonest first, since the model's context is small.
+ *
+ * [staples] ([RecipeUiState.stapleNames]) are the basics the person always has: listed last, at
+ * most [MAX_PROMPT_STAPLES], as ones the recipe may use and never has to, and never "from the
+ * pantry". They don't count towards the [MAX_RECIPE_INGREDIENTS] items.
  */
 fun buildOnDeviceRecipePrompt(
     items: List<RecipePromptItem>,
     config: RecipeConfig,
     languageCode: String,
     allergens: Collection<String>,
-    optional: List<RecipePromptItem> = emptyList()
+    optional: List<RecipePromptItem> = emptyList(),
+    staples: List<String> = emptyList()
 ): String {
     val normalized = config.normalized()
     fun line(item: RecipePromptItem) = "- ${cutName(item.name.trim())} (${dayPhrase(item.daysRemaining)})"
     val main = items.sortedBy { it.daysRemaining }.take(MAX_RECIPE_INGREDIENTS)
     val lines = main.joinToString("\n", transform = ::line)
     val extra = optional.sortedBy { it.daysRemaining }.take(MAX_RECIPE_INGREDIENTS - main.size)
+    val basics = staples.take(MAX_PROMPT_STAPLES).map { cutName(it.trim()) }
     val rules = buildList {
         add(
             "Difficulty: " + when (normalized.difficulty) {
@@ -126,6 +135,10 @@ fun buildOnDeviceRecipePrompt(
             append("\n\nI also have these at home. Use any of them only where it helps the dish; none is needed:\n")
             append(extra.joinToString("\n", transform = ::line))
         }
+        if (basics.isNotEmpty()) {
+            append("\n\nI always have these basics too. Use any of them if the dish needs them; none is needed, and they are not items to use up:\n")
+            append(basics.joinToString("\n") { "- $it" })
+        }
         append("\n\nKeep to this:\n")
         append(rules.joinToString("\n") { "- $it" })
         append("\n\nWrite every text value in $language. Keep the JSON keys in English.\n")
@@ -136,7 +149,13 @@ fun buildOnDeviceRecipePrompt(
                 """"ingredients":[{"amount":"100 g","name":"","fromPantry":true}],"steps":[""],"tip":""}"""
         )
         append("\nSet fromPantry to true only for items from the ")
-        append(if (extra.isEmpty()) "list above" else "lists above")
+        append(
+            when {
+                basics.isEmpty() -> if (extra.isEmpty()) "list above" else "lists above"
+                extra.isEmpty() -> "first list above"
+                else -> "first two lists above"
+            }
+        )
         append(". Leave tip empty if there is none.")
     }
 }
@@ -145,13 +164,15 @@ fun buildOnDeviceRecipePrompt(
  * Reads a model's reply as a [Recipe], or null when it isn't one: no JSON, no title, no steps or
  * no ingredients. Tolerates what small models do: a code fence or a sentence around the JSON,
  * blank entries, an empty tip. An ingredient also counts as from the pantry when its name
- * matches one of [pantryNames], since a model sometimes forgets the flag.
+ * matches one of [pantryNames], since a model sometimes forgets the flag. One that is not from the
+ * pantry gets the staple among [stapleNames] it is, by name ([stapleNameOf]).
  */
 fun parseRecipeReply(
     text: String,
     source: RecipeSource,
     config: RecipeConfig,
-    pantryNames: Collection<String>
+    pantryNames: Collection<String>,
+    stapleNames: Collection<String> = emptyList()
 ): Recipe? {
     val start = text.indexOf('{')
     val end = text.lastIndexOf('}')
@@ -171,10 +192,12 @@ fun parseRecipeReply(
     val ingredients = recipe.ingredients
         .filter { it.name.isNotBlank() }
         .map {
+            val fromPantry = it.fromPantry || matchesPantry(it.name)
             RecipeIngredient(
                 amount = it.amount.trim(),
                 name = it.name.trim(),
-                fromPantry = it.fromPantry || matchesPantry(it.name)
+                fromPantry = fromPantry,
+                stapleName = if (fromPantry) null else stapleNameOf(it.name.trim(), stapleNames)
             )
         }
     val steps = recipe.steps.map { it.trim() }.filter { it.isNotEmpty() }

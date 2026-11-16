@@ -155,7 +155,13 @@ data class GenerateRequest(
      *  altogether, so the request is the one from before the profile) otherwise, and in a request
      *  kept by an older version. Part of the inputs a request id is bound to, as sent. */
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val taste: Map<String, List<String>>? = null
+    val taste: Map<String, List<String>>? = null,
+    /** The person's staples' names ([stapleWireNames]): only when not empty and only to a server
+     *  that said `acceptsStaples`. Null (and then left out of the JSON altogether, so the request
+     *  is the one from before staples) otherwise, and in a request kept by an older version. Part
+     *  of the inputs a request id is bound to, as sent; a retry keeps it unchanged. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val staples: List<String>? = null
 ) {
     /** Whether [other] asks for the same thing, whatever its id. */
     fun sameAskAs(other: GenerateRequest): Boolean =
@@ -195,7 +201,9 @@ data class GenerateReply(
     /** Read with [acceptsWelcomeOf]. */
     val acceptsWelcome: JsonElement? = null,
     /** Read with [welcomeRecipesFieldOf]. */
-    val welcomeRecipes: JsonElement? = null
+    val welcomeRecipes: JsonElement? = null,
+    /** Read with [acceptsStaplesOf]. */
+    val acceptsStaples: JsonElement? = null
 )
 
 @Serializable
@@ -219,7 +227,8 @@ data class VerifyReply(
     val acceptsTaste: JsonElement? = null,
     val tasteQuizVersion: JsonElement? = null,
     val acceptsWelcome: JsonElement? = null,
-    val welcomeRecipes: JsonElement? = null
+    val welcomeRecipes: JsonElement? = null,
+    val acceptsStaples: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -236,7 +245,9 @@ data class BalanceReply(
     /** The server has `claimWelcome` ([acceptsWelcomeOf]). */
     val acceptsWelcome: Boolean = false,
     /** What a claim would grant now ([welcomeRecipesFieldOf]); null when absent. */
-    val welcomeRecipes: Int? = null
+    val welcomeRecipes: Int? = null,
+    /** The server reads a request's `staples` ([acceptsStaplesOf]). */
+    val acceptsStaples: Boolean = false
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -255,7 +266,9 @@ data class MergeReply(
     /** The server has `claimWelcome` ([acceptsWelcomeOf]). */
     val acceptsWelcome: Boolean = false,
     /** What a claim would grant now ([welcomeRecipesFieldOf]); null when absent. */
-    val welcomeRecipes: Int? = null
+    val welcomeRecipes: Int? = null,
+    /** The server reads a request's `staples` ([acceptsStaplesOf]). */
+    val acceptsStaples: Boolean = false
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -283,6 +296,11 @@ fun acceptsMenuDaysOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 /** A reply's `acceptsTaste` (functions/CONTRACT.md): only a JSON `true` says the server reads a
  *  request's `taste`; absent says it doesn't, and the request goes without it. */
 fun acceptsTasteOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsStaples` (functions/CONTRACT.md "Capability `acceptsStaples`"): only a JSON
+ *  `true` says the server reads a request's `staples`; absent says it doesn't, and the request
+ *  goes without them (no error, nothing blocked). */
+fun acceptsStaplesOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
 
 /** A reply's `tasteQuizVersion` (functions/CONTRACT.md): the version `getTasteQuiz` would answer
  *  with now, so the app can tell new questions without opening the quiz; null when absent or not
@@ -616,6 +634,9 @@ data class RecipePaidSnapshot(
     /** The same for `acceptsTaste`: only then is a non-empty taste profile sent ([wireTasteFor]).
      *  Cleared when a request that carried it is refused as INVALID_REQUEST (a rolled-back server). */
     val serverTakesTaste: Boolean = false,
+    /** The same for `acceptsStaples`: only then are the staples' names sent ([stapleWireNames]).
+     *  Cleared when a request that carried them is refused as INVALID_REQUEST without a field. */
+    val serverTakesStaples: Boolean = false,
     /** The last `tasteQuizVersion` a reply carried; null before one did. */
     val tasteQuizVersion: String? = null,
     /** The last `getWelcomeOffer` answer, with its time: shown while under a day old. */
@@ -712,6 +733,42 @@ fun optionalWireIngredients(ticked: List<WireIngredient>, others: List<WireIngre
         names++
         chars += length
         kept += item
+    }
+    return kept
+}
+
+/** Staples in one request (CONTRACT.md "Staples"), apart from the ticked and optional items. */
+const val MAX_REQUEST_STAPLES = 20
+
+/** Code points of staple names in one request; a budget of their own, not the items'. */
+const val MAX_REQUEST_STAPLE_NAME_CHARS = 400
+
+/**
+ * The staples to send beside [ticked] and [optional] (wire names, already cleaned): [staples]
+ * (the route's names, [promptStaples]) each cleaned with [cleanWireName], a name that cleans to
+ * nothing or to one the server refused before ([refused], lower case) dropped, as is one whose
+ * key is a ticked or optional name or an earlier staple's; then kept in order while the kept ones
+ * stay within [MAX_REQUEST_STAPLES] names and [MAX_REQUEST_STAPLE_NAME_CHARS] code points, a name
+ * that doesn't fit being skipped. iOS: `RecipeWire.stapleNames(_:ticked:optional:)`.
+ */
+fun stapleWireNames(
+    staples: List<String>,
+    ticked: List<WireIngredient>,
+    optional: List<WireIngredient> = emptyList(),
+    refused: Set<String> = emptySet()
+): List<String> {
+    val seen = (ticked + optional).mapTo(HashSet()) { it.name.lowercase() }
+    var chars = 0
+    val kept = mutableListOf<String>()
+    for (raw in staples) {
+        val name = cleanWireName(raw) ?: continue
+        val key = name.lowercase()
+        if (key in refused || key in seen) continue
+        val length = codePointsOf(name).size
+        if (kept.size + 1 > MAX_REQUEST_STAPLES || chars + length > MAX_REQUEST_STAPLE_NAME_CHARS) continue
+        seen += key
+        chars += length
+        kept += name
     }
     return kept
 }

@@ -1285,4 +1285,39 @@
         <item quantity="other">När du loggar in får du också %1$d gratis recept.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Basvaror</string>
+    <string name="staples_intro">Basvaror du alltid har hemma, som salt och olja. De har inget datum, och recept får använda dem.</string>
+    <string name="staples_common_header">Vanliga basvaror</string>
+    <string name="staples_own_header">Dina egna</string>
+    <string name="staples_add_placeholder">Lägg till en basvara</string>
+    <string name="staples_add">Lägg till</string>
+    <string name="staples_ran_out">Slut</string>
+    <string name="staples_ran_out_desc">Slut på %1$s: lägg till i inköpslistan</string>
+    <string name="staples_on_list">På inköpslistan</string>
+    <string name="staples_remove">Ta bort %1$s</string>
+    <string name="staples_removed">Tog bort %1$s från basvaror</string>
+    <string name="staples_added_to_list">%1$s har lagts till i inköpslistan</string>
+    <string name="staples_already">%1$s är redan en basvara</string>
+    <string name="staples_full">Du kan ha upp till %1$d basvaror. Ta bort en för att lägga till en annan.</string>
+    <string name="staples_settings_desc">Basvaror du alltid har, som salt och olja. Recept får använda dem.</string>
+    <string name="staples_manage">Hantera basvaror</string>
+    <string name="staples_none">Inga än</string>
+    <string name="staples_open">Öppna basvaror</string>
+    <string name="recipe_your_staple">Basvara</string>
+    <string name="recipe_prompt_staples_intro">Jag har också alltid de här basvarorna hemma. Använd vilka som helst av dem om receptet behöver dem; ingen av dem måste användas:</string>
+    <string name="staples_note">Namnen på dina basvaror skickas med varje receptförfrågan: till vår server för ett recept från ett paket och i en prompt du delar. Medan en basvara står på inköpslistan skickas den inte.</string>
+    <string name="onboarding_staples_title">Vad har du alltid hemma?</string>
+    <string name="onboarding_staples_later">Du kan hoppa över det här och göra det senare i Inställningar › Basvaror.</string>
+    <string name="onboarding_staples_continue">Fortsätt</string>
+    <string name="onboarding_staples_skip">Hoppa över</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d basvara</item>
+        <item quantity="other">%1$d basvaror</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Din basvara får också användas</item>
+        <item quantity="other">Dina %1$d basvaror får också användas</item>
+    </plurals>
 </resources>

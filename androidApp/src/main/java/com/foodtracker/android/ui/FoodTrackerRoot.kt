@@ -89,6 +89,10 @@ import com.foodtracker.android.ui.screens.RecipeScreen
 import com.foodtracker.android.ui.screens.RecipeSettingsScreen
 import com.foodtracker.android.ui.screens.TasteProfileScreen
 import com.foodtracker.android.ui.screens.SavedRecipesScreen
+import com.foodtracker.android.ui.screens.StaplesScreen
+import com.foodtracker.staples.currentStapleKeys
+import com.foodtracker.staples.StaplePresets
+import com.foodtracker.staples.stapleRows
 import com.foodtracker.android.ui.screens.ScannerScreen
 import com.foodtracker.android.ui.screens.SettingsScreen
 import com.foodtracker.android.ui.screens.ShoppingListMatchDialog
@@ -199,6 +203,21 @@ fun FoodTrackerRoot(
         stateHolder.uiState.map { state -> state.shoppingList.map { it.productName } }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.shoppingList.map { it.productName })
 
+    // The staples not out, every name they answer to: left out of a recipe's "Add to shopping list".
+    val stapleKeys by remember(stateHolder) {
+        stateHolder.uiState.map { state ->
+            currentStapleKeys(stapleRows(state.staples, state.shoppingList.map { it.productName }, "en"))
+        }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(emptySet())
+
+    val staples by remember(stateHolder) {
+        stateHolder.uiState.map { it.staples }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(stateHolder.uiState.value.staples)
+
+    val stapleCount by remember(stateHolder) {
+        stateHolder.uiState.map { it.staples.size }.distinctUntilChanged()
+    }.collectAsStateWithLifecycle(stateHolder.uiState.value.staples.size)
+
     val shoppingListCount by remember(stateHolder) {
         stateHolder.uiState.map { it.shoppingList.size }.distinctUntilChanged()
     }.collectAsStateWithLifecycle(stateHolder.uiState.value.shoppingList.size)
@@ -268,6 +287,8 @@ fun FoodTrackerRoot(
             var remindersCalloutDismissed by rememberSaveable { mutableStateOf(false) }
             // Where a recipe's page goes back to: the Recipe tab, or Saved recipes.
             var recipeResultReturn by remember { mutableStateOf<LarderRoute>(LarderRoute.Recipe) }
+            // Where Staples goes back to: Settings, or the Recipe form's staples line.
+            var staplesReturn by remember { mutableStateOf<LarderRoute>(LarderRoute.Settings) }
             val expanded = isExpanded()
             val openPrefilledItem: (ItemPrefill) -> Unit = { prefill ->
                 currentScreen = LarderRoute.AddItem(AddItemMode.Prefilled(prefill))
@@ -362,6 +383,10 @@ fun FoodTrackerRoot(
                     }
                     is LarderRoute.RecipeResult -> {
                         if (currentScreen !is LarderRoute.RecipeResult && currentScreen !is LarderRoute.MenuDish) recipeResultReturn = currentScreen
+                        currentScreen = route
+                    }
+                    LarderRoute.Staples -> {
+                        staplesReturn = if (currentScreen == LarderRoute.Recipe) LarderRoute.Recipe else LarderRoute.Settings
                         currentScreen = route
                     }
                     else -> currentScreen = route
@@ -501,7 +526,7 @@ fun FoodTrackerRoot(
             }
 
             // A recipe's "Add to shopping list": the ordinary add path, then how many, with the way to the list.
-            val recipeShopping = RecipeShoppingActions(shoppingListNames) { names ->
+            val recipeShopping = RecipeShoppingActions(shoppingListNames, stapleKeys) { names ->
                 stateHolder.addShoppingListEntries(names) { added ->
                     snackbarScope.launch {
                         snackbarHostState.currentSnackbarData?.dismiss()
@@ -687,6 +712,7 @@ fun FoodTrackerRoot(
                             currentScreen = scanReturnScreen
                         }
                         LarderRoute.Categories -> currentScreen = LarderRoute.Settings
+                        LarderRoute.Staples -> currentScreen = staplesReturn
                         is LarderRoute.RecipeResult -> currentScreen = recipeResultReturn
                         is LarderRoute.MenuDish -> currentScreen = LarderRoute.RecipeResult((currentScreen as LarderRoute.MenuDish).savedId)
                         LarderRoute.SavedRecipes, LarderRoute.RecipeSettings -> currentScreen = LarderRoute.Recipe
@@ -849,6 +875,11 @@ fun FoodTrackerRoot(
                                             currentScreen = LarderRoute.Home
                                         },
                                         onManageCategories = { currentScreen = LarderRoute.Categories },
+                                        onManageStaples = {
+                                            staplesReturn = LarderRoute.Settings
+                                            currentScreen = LarderRoute.Staples
+                                        },
+                                        stapleCount = stapleCount,
                                         onExportBackup = onExportBackup,
                                         pantryItemCount = { stateHolder.uiState.value.items.size },
                                         onImportBackup = onImportBackup,
@@ -1028,6 +1059,13 @@ fun FoodTrackerRoot(
                             )
                         }
 
+                        LarderRoute.Staples -> {
+                            StaplesScreen(
+                                pantry = stateHolder,
+                                onBack = { currentScreen = staplesReturn }
+                            )
+                        }
+
                         is LarderRoute.RecipeResult -> {
                             RecipeResultScreen(
                                 stateHolder = recipeStateHolder,
@@ -1086,6 +1124,14 @@ fun FoodTrackerRoot(
                                         OnboardingExit.Scanner -> LarderRoute.Scanner()
                                         OnboardingExit.AddByHand -> LarderRoute.AddItem()
                                         OnboardingExit.Home -> LarderRoute.Home
+                                    }
+                                },
+                                staples = staples,
+                                // The ordinary staple calls: removals first, then additions, each in table order.
+                                onApplyStaples = { changes, language ->
+                                    changes.remove.forEach { stateHolder.removeStaple(it) }
+                                    changes.add.forEach { id ->
+                                        StaplePresets.byId(id)?.let { stateHolder.addStaple(it.name(language), it.id) }
                                     }
                                 }
                             )

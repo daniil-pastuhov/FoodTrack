@@ -12,6 +12,8 @@ import {
   MAX_ALLERGENS,
   MAX_INGREDIENTS,
   MAX_OPTIONAL_NAME_CHARS,
+  MAX_STAPLE_NAME_CHARS,
+  MAX_STAPLES,
   MAX_TOTAL_INGREDIENTS,
   MENU_COURSES,
   MENU_DAYS,
@@ -114,6 +116,13 @@ export interface IngredientInput {
   sentIndex?: number;
 }
 
+/** A kept entry of `staples` (CONTRACT.md "Staples"): a basic the person always has at home. */
+export interface StapleInput {
+  name: string;
+  /** The entry's 0-based index in `staples` as the client sent it (entries left out still count). */
+  sentIndex: number;
+}
+
 export interface GenerateRequest {
   requestId: string;
   kind: GenerationKind;
@@ -132,6 +141,14 @@ export interface GenerateRequest {
    * ingredients"). Empty when the client sent none.
    */
   optionalIngredients: IngredientInput[];
+  /**
+   * The names of the basics the person always has at home, which a recipe may use and never has
+   * to: a name the rules refuse, or one already among the ingredients, the kept optional items or
+   * an earlier staple, is left out rather than refusing the request, and what is kept is capped on
+   * its own (CONTRACT.md "Staples"). Never pantry use, never past their date. Empty when the
+   * client sent none. The prompt and the answer check see only usableStaples (core/outputSafety.ts).
+   */
+  staples: StapleInput[];
   allergens: string[];
   today: string;
   /**
@@ -162,6 +179,10 @@ export interface RecipeIngredient {
    * that list as sent (entries the server left out still count), so a client can find its date.
    */
   optionalIndex?: number;
+  /** Present exactly when this ingredient is one of the request's `staples`: its 0-based index in
+   *  that list as sent (entries the server left out still count). Such an ingredient always has
+   *  fromPantry: false. Absent otherwise and in answers from before it. */
+  stapleIndex?: number;
   /**
    * Present and true only on an ingredient that is not from the pantry and whose name is only a
    * staple (water, ice, oil, salt, pepper, sugar, vinegar, spices: core/foodTerms.ts STAPLE_WORDS).
@@ -260,6 +281,13 @@ export interface BlockFlag {
    * this account has claimed).
    */
   welcomeRecipes?: number;
+  /**
+   * Present and true on every response that carries `balance` from a server that reads
+   * `staples` (CONTRACT.md "Capability `acceptsStaples`"). A client sends the names of the
+   * person's staples only after a response said so; a server from before it ignores the field, so
+   * it is never sent names it would not use.
+   */
+  acceptsStaples?: true;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
@@ -270,6 +298,7 @@ export const CAPABILITIES = {
   acceptsMenuDays: true,
   acceptsTaste: true,
   acceptsWelcome: true,
+  acceptsStaples: true,
 } as const;
 
 /**
@@ -530,6 +559,7 @@ export function validateGenerateRequest(v: unknown, nowMs: number, tasteHidden: 
     return { name: validName(raw && (raw as Record<string, unknown>).name, `ingredients[${i}].name`), ...shape };
   });
   const optionalIngredients = validateOptionalIngredients(v.optionalIngredients, ingredients);
+  const staples = validateStaples(v.staples, ingredients, optionalIngredients);
 
   const allergensRaw = v.allergens === undefined ? [] : v.allergens;
   if (!Array.isArray(allergensRaw) || allergensRaw.length > MAX_ALLERGENS) {
@@ -555,6 +585,7 @@ export function validateGenerateRequest(v: unknown, nowMs: number, tasteHidden: 
     config: validateConfig(v.config),
     ingredients,
     optionalIngredients,
+    staples,
     allergens,
     today: v.today,
     ...(taste ? { taste } : {}),
@@ -644,6 +675,41 @@ export function validateOptionalIngredients(v: unknown, ingredients: readonly In
 }
 
 /**
+ * `staples`: absent or null is none. The list must be an array of at most MAX_STAPLES strings
+ * (INVALID_REQUEST otherwise, with no `field` in the details), but a name the rules refuse, or one
+ * equal (ignoring case, after normalising) to a ticked ingredient, a kept optional item or an
+ * earlier kept staple, is only left out: a staple never stops a recipe and never counts towards
+ * the prompt-rejection limit. What is kept, in the order sent, holds at most MAX_STAPLE_NAME_CHARS
+ * code points of names (and so at most MAX_STAPLES names, the list's own bound); an entry that does
+ * not fit is skipped. This budget is
+ * separate from that of the ticked and optional items (README "Spend ceilings").
+ */
+export function validateStaples(
+  v: unknown,
+  ingredients: readonly IngredientInput[],
+  optionalIngredients: readonly IngredientInput[],
+): StapleInput[] {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > MAX_STAPLES) invalid(`staples must be a list of at most ${MAX_STAPLES} names`);
+  if (v.some((s: unknown) => typeof s !== "string")) invalid("staples must be a list of names");
+  const seen = new Set([...ingredients, ...optionalIngredients].map((i) => i.name.toLowerCase()));
+  let chars = 0;
+  const kept: StapleInput[] = [];
+  (v as string[]).forEach((raw, i) => {
+    const checked = normalizeName(raw);
+    if (!checked.ok) return;
+    const key = checked.name.toLowerCase();
+    const length = Array.from(checked.name).length;
+    // At most MAX_STAPLES are kept by construction: a longer list was refused above.
+    if (seen.has(key) || chars + length > MAX_STAPLE_NAME_CHARS) return;
+    seen.add(key);
+    chars += length;
+    kept.push({ name: checked.name, sentIndex: i });
+  });
+  return kept;
+}
+
+/**
  * Binds a requestId to its inputs: sha256 of the validated request without the id. A stored
  * generation is returned for a retry only when the hash matches.
  */
@@ -662,6 +728,9 @@ export function inputHashOf(req: GenerateRequest): string {
     ...(inputs.optionalIngredients.length > 0
       ? { optionalIngredients: inputs.optionalIngredients.map((i) => [i.name, i.expiresOn, i.quantity]) }
       : {}),
+    // Only when some were kept, so a request without staples hashes exactly as before they existed.
+    // The names as kept, in order; the allergen and diet filter (usableStaples) is not part of it.
+    ...(inputs.staples.length > 0 ? { staples: inputs.staples.map((s) => s.name) } : {}),
     allergens: inputs.allergens,
     today: inputs.today,
     // `taste` as sent (canonical), not the cleaned profile, so a retry with the same answers
