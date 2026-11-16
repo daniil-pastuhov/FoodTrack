@@ -619,6 +619,8 @@
 "recipe_saved_empty_title" = "Inga recept än";
 "recipe_saved_empty_message" = "Recept och menyer som skrivs i appen sparas här.";
 "recipe_saved_deleted" = "Receptet raderades";
+"select_all_button" = "Välj alla";
+"deselect_all_button" = "Avmarkera alla";
 "recipe_saved_today" = "I dag";
 "recipe_saved_yesterday" = "I går";
 "recipe_saved_from_phone" = "Skrivet på din {device}";

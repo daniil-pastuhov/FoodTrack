@@ -64,6 +64,18 @@ private class FakeSavedRecipeRepository : SavedRecipeRepository {
     override suspend fun delete(id: String) {
         rows.value = rows.value.filterNot { it.id == id }
     }
+    /** Batch deletes and restores, each one call: the list changes once. */
+    val batchDeletes = mutableListOf<Set<String>>()
+    var batchSaves = 0
+    override suspend fun delete(ids: Collection<String>) {
+        batchDeletes += ids.toSet()
+        rows.value = rows.value.filterNot { it.id in ids }
+    }
+    override suspend fun saveAll(recipes: List<SavedRecipe>) {
+        batchSaves++
+        val ids = recipes.map { it.id }.toSet()
+        rows.value = rows.value.filterNot { it.id in ids } + recipes
+    }
     override suspend fun clearAll() {
         rows.value = emptyList()
     }
@@ -451,6 +463,47 @@ class RecipeStateHolderTest {
 
         holder.clearAll()
         assertTrue(holder.uiState.value.saved.isEmpty())
+    }
+
+    @Test
+    fun deletingSeveralSavedRecipesIsOneCallWithOneUndo() = runUnconfined {
+        saved.save(SavedRecipe.of("a", Recipe(title = "A", steps = listOf("s")), 1L))
+        saved.save(SavedRecipe.of("b", Recipe(title = "B", steps = listOf("s")), 2L))
+        saved.save(SavedRecipe.of("c", Recipe(title = "C", steps = listOf("s")), 3L))
+        val holder = holder()
+        holder.markSavedUnreadForDemo("a")
+        holder.markSavedUnreadForDemo("c")
+        assertEquals(2, holder.uiState.value.unreadCount)
+
+        var removed: List<SavedRecipe>? = null
+        holder.deleteSaved(setOf("a", "c", "gone")) { removed = it }
+
+        assertEquals(listOf(setOf("a", "c")), saved.batchDeletes, "one repository call, only ids still saved")
+        assertEquals(listOf("b"), holder.uiState.value.saved.map { it.id })
+        assertEquals(listOf("c", "a"), removed!!.map { it.id }, "what was removed, in list order")
+        assertEquals(emptySet(), config.getOptions().unreadSaved, "deleted ids leave the unread ones")
+        assertEquals(0, holder.uiState.value.unreadCount)
+
+        holder.restoreSaved(removed!!)
+        assertEquals(1, saved.batchSaves, "one Undo puts all of them back at once")
+        assertEquals(listOf("c", "b", "a"), holder.uiState.value.saved.map { it.id })
+        assertFalse(holder.uiState.value.isUnread("a"), "as with one row, Undo doesn't bring the dot back")
+    }
+
+    @Test
+    fun deletingTheLastSavedRecipesEmptiesTheListAndNothingSelectedDoesNothing() = runUnconfined {
+        saved.save(SavedRecipe.of("a", Recipe(title = "A", steps = listOf("s")), 1L))
+        saved.save(SavedRecipe.of("b", Recipe(title = "B", steps = listOf("s")), 2L))
+        val holder = holder()
+
+        var called = false
+        holder.deleteSaved(emptySet()) { called = true }
+        holder.deleteSaved(setOf("nothing")) { called = true }
+        assertFalse(called)
+        assertTrue(saved.batchDeletes.isEmpty())
+
+        holder.deleteSaved(setOf("a", "b"))
+        assertFalse(holder.uiState.value.hasSaved, "the header's Saved button goes with the last one")
     }
 
     @Test

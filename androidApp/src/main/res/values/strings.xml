@@ -829,6 +829,14 @@
     <string name="recipe_saved_empty_title">No recipes yet</string>
     <string name="recipe_saved_empty_body">Recipes and menus written in the app are kept here.</string>
     <string name="recipe_deleted">Recipe deleted</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Select</string>
+    <string name="select_all_button">Select all</string>
+    <string name="deselect_all_button">Deselect all</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">%d recipe deleted</item>
+        <item quantity="other">%d recipes deleted</item>
+    </plurals>
     <string name="recipe_cooking">Cooking</string>
     <string name="recipe_cooking_desc">Used for every recipe, prompt and menu until you change them.</string>
     <string name="recipe_detail">Detail</string>

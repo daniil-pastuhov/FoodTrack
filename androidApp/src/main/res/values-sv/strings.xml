@@ -829,6 +829,14 @@
     <string name="recipe_saved_empty_title">Inga recept än</string>
     <string name="recipe_saved_empty_body">Recept och menyer som skrivs i appen sparas här.</string>
     <string name="recipe_deleted">Receptet raderades</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Välj</string>
+    <string name="select_all_button">Välj alla</string>
+    <string name="deselect_all_button">Avmarkera alla</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">%d recept raderat</item>
+        <item quantity="other">%d recept raderade</item>
+    </plurals>
     <string name="recipe_cooking">Matlagning</string>
     <string name="recipe_cooking_desc">Används för alla recept, promptar och menyer tills du ändrar dem.</string>
     <string name="recipe_detail">Detaljnivå</string>

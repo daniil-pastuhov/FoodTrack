@@ -105,6 +105,28 @@ class SavedRecipeDaoTest {
     }
 
     @Test
+    fun severalAreDeletedAndRestoredInOneGo() = runTest {
+        (1..3).forEach { repo.save(SavedRecipe.of("r$it", recipe.copy(title = "R$it"), it.toLong())) }
+        val before = repo.getAllFlow().first()
+
+        repo.delete(listOf("r1", "r3", "missing"))
+        assertEquals(listOf("r2"), repo.getAllFlow().first().map { it.id })
+
+        repo.saveAll(before.filter { it.id != "r2" })
+        assertEquals(before, repo.getAllFlow().first())
+    }
+
+    @Test
+    fun aBatchLargerThanOneStatementIsDeletedWhole() = runTest {
+        val ids = (1..1_200).map { "r$it" }
+        ids.forEachIndexed { i, id -> db.savedRecipeDao().upsert(SavedRecipe.of(id, recipe, i.toLong()).toEntity()) }
+        db.savedRecipeDao().upsert(SavedRecipe.of("kept", recipe, 5_000L).toEntity())
+
+        repo.delete(ids)
+        assertEquals(listOf("kept"), repo.getAllFlow().first().map { it.id })
+    }
+
+    @Test
     fun aRowThatCantBeReadIsSkippedNotFatal() = runTest {
         repo.save(SavedRecipe.of("good", recipe, 1L))
         db.savedRecipeDao().upsert(

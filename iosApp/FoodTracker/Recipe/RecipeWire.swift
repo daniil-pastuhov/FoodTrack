@@ -269,6 +269,42 @@ enum RecipeUnread {
     static func count(_ unread: Set<String>, savedIDs: [String]) -> Int {
         pruned(unread, savedIDs: savedIDs).count
     }
+
+    /// Several deleted at once (Saved recipes' multi-select): none of them unread any more.
+    static func afterDelete(_ unread: Set<String>, ids: Set<String>) -> Set<String> {
+        unread.subtracting(ids)
+    }
+}
+
+/// Saved recipes' multi-select: which saved recipes and menus are selected for one Delete. One
+/// rule on both platforms; Android: `SavedSelection` (`shared/.../recipe/SavedSelection.kt`,
+/// `SavedSelectionTest`, the same cases as `RecipeConfigCheck`). The selection is only ever ids
+/// still listed: one deleted or gone otherwise drops out (`pruned`).
+enum SavedSelection {
+    /// A tap on a row while selecting.
+    static func toggled(_ selected: Set<String>, id: String) -> Set<String> {
+        selected.contains(id) ? selected.subtracting([id]) : selected.union([id])
+    }
+
+    /// Every listed id is selected (and there is at least one): the bar offers Deselect all.
+    static func allSelected(_ selected: Set<String>, savedIDs: [String]) -> Bool {
+        !savedIDs.isEmpty && savedIDs.allSatisfy(selected.contains)
+    }
+
+    /// Select all, or Deselect all once everything is selected.
+    static func toggledAll(_ selected: Set<String>, savedIDs: [String]) -> Set<String> {
+        allSelected(selected, savedIDs: savedIDs) ? [] : Set(savedIDs)
+    }
+
+    /// The selection without ids no longer listed.
+    static func pruned(_ selected: Set<String>, savedIDs: [String]) -> Set<String> {
+        selected.intersection(savedIDs)
+    }
+
+    /// What one Delete removes: the listed rows that are selected, in list order.
+    static func toDelete(_ saved: [SavedRecipe], selected: Set<String>) -> [SavedRecipe] {
+        saved.filter { selected.contains($0.id) }
+    }
 }
 
 /// `costs` as a response carries it. Anything unreadable there reads as nil rather than failing

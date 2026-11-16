@@ -619,6 +619,8 @@
 "recipe_saved_empty_title" = "Ingen opskrifter endnu";
 "recipe_saved_empty_message" = "Opskrifter og menuer, der er skrevet i appen, gemmes her.";
 "recipe_saved_deleted" = "Opskriften er slettet";
+"select_all_button" = "Vælg alle";
+"deselect_all_button" = "Fravælg alle";
 "recipe_saved_today" = "I dag";
 "recipe_saved_yesterday" = "I går";
 "recipe_saved_from_phone" = "Skrevet på denne {device}";

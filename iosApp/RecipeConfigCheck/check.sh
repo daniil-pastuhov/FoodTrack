@@ -2,7 +2,7 @@
 # Checks the iOS ports of the multi-choice recipe config (toggling, normalising, reading old
 # stored configs), its legacy wire mapping, the exact past-date warnings, the shopping-list rows
 # the phone-model language rule, menu sets (prices from costs.menuSets, what is offered and the
-# days/courses request shape), the unread saved-recipe set, the Buy sheet's pack savings and the
+# days/courses request shape), the unread saved-recipe set, Saved recipes' multi-select, the Buy sheet's pack savings and the
 # taste profile (the server's quiz definition decoded leniently; toggling, caps, conflicts, the
 # answers filtered through a changed definition, new questions, summary, gate, request shape,
 # acceptsTaste, never in a free route's request) and free recipes for signing in (what is shown where,
