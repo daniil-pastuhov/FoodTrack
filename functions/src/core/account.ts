@@ -5,9 +5,10 @@ import { RECENT_SIGN_IN_SECONDS, type Costs } from "../constants";
 import { assertOpen, emptyUser, uidHash, userRef, utcDay, type UserDoc } from "../model";
 import type { Caller, Deps } from "../ports";
 import { blockFlag, mergeKeys } from "./buyers";
+import { welcomeFlag } from "./welcome";
 import { APPLE_PROVIDER, dropTokenIfAppleUnlinked, removeAppleLink, revokeStored } from "./appleToken";
 
-type Block = { purchasesBlocked?: true; acceptsOptionalIngredients?: true };
+type Block = { purchasesBlocked?: true; acceptsOptionalIngredients?: true; welcomeRecipes?: number };
 
 /** uid:authTime pairs this instance already handled, so a token's later calls cost no read. Bounded. */
 const scrubbed = new Set<string>();
@@ -64,7 +65,7 @@ export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance:
   return {
     balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0,
     costs: config.costs,
-    ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)),
+    ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)), ...(await welcomeFlag(deps, config)),
   };
 }
 
@@ -138,6 +139,12 @@ export async function mergeBalance(
       // The block follows the merge: the source's buyers are now this account's buyers.
       buyerKeys: mergeKeys(base.buyerKeys, src?.buyerKeys),
     };
+    // Free recipes move with the balance and stay out of the FIFO ledger (fifoConsumed). An
+    // anonymous source cannot have claimed (claimWelcome needs Google or Apple), but whatever it
+    // holds is carried, never dropped. The target's `welcomeAt` is kept as it was.
+    const welcomeCredits = (base.welcomeCredits ?? 0) + (src?.welcomeCredits ?? 0);
+    if (welcomeCredits > 0) merged.welcomeCredits = welcomeCredits;
+    if (base.welcomeAt === undefined && src?.welcomeAt !== undefined) merged.welcomeAt = src.welcomeAt;
     if (merged.buyerKeys!.length === 0) delete merged.buyerKeys;
     const addCount = (x: { day: string; count: number }, y: { count: number }) => ({ day, count: x.count + y.count });
     const dayWindow = mergeDay(day, base.dayWindow, src?.dayWindow, addCount);
@@ -169,7 +176,7 @@ export async function mergeBalance(
   }
   await scrubProfile(deps, caller, true);
   const config = await deps.config();
-  return { balance: result.balance, moved: result.moved, costs: config.costs, ...capabilitiesOf(config), ...(await blockFlag(deps.db, result.target, config)) };
+  return { balance: result.balance, moved: result.moved, costs: config.costs, ...capabilitiesOf(config), ...(await blockFlag(deps.db, result.target, config)), ...(await welcomeFlag(deps, config)) };
 }
 
 /**

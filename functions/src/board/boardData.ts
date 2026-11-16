@@ -29,6 +29,8 @@ export const STAT_FIELDS = [
   "netCreditsGranted",
   "sandboxGrants",
   "sandboxCredits",
+  "welcomeGrants",
+  "welcomeCredits",
 ] as const;
 export type StatField = (typeof STAT_FIELDS)[number];
 export type DayStats = Record<StatField, number>;
@@ -107,6 +109,8 @@ export interface Board {
   costs: RuntimeConfig["costs"];
   prices: RuntimeConfig["prices"];
   netMicroUsdPerCredit: number;
+  /** The welcome grant's setting (config/runtime.welcome): free recipes per claim, grants a day. */
+  welcome: RuntimeConfig["welcome"];
   dailySpendMaxMicroUsd: number;
   dailySpendBaseMicroUsd: number;
   /** What the breaker compares with today's ceiling: spent plus the worst cases still reserved. */
@@ -300,6 +304,7 @@ export function buildBoard(input: BoardInput): Board {
     costs: config.costs,
     prices: config.prices,
     netMicroUsdPerCredit: config.netMicroUsdPerCredit,
+    welcome: config.welcome,
     dailySpendMaxMicroUsd: config.dailySpendMaxMicroUsd,
     dailySpendBaseMicroUsd: config.dailySpendBaseMicroUsd,
     todayBookedMicroUsd,

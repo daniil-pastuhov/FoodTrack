@@ -262,6 +262,11 @@ export interface Deps {
   logger: Logger;
   /** `config/runtime`, parsed fail-closed (cached for CONFIG_CACHE_MS in production). */
   config(): Promise<RuntimeConfig>;
+  /**
+   * Today's welcome grants (`stats/{day}.welcomeGrants`) for the `welcomeRecipes` field, cached
+   * per instance in production (core/welcome.ts WelcomeDayCounter); absent: read afresh.
+   */
+  welcomeDayGrants?(day: string): Promise<number>;
 }
 
 /** The parts of a verified Firebase ID token the core needs. */

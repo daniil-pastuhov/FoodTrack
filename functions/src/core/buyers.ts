@@ -6,7 +6,8 @@
  * FIFO rule: credits are fungible, so a purchase counts as consumed to the extent the credits the
  * account has spent (`consumedCredits`, lifetime, including accounts merged into it) exceed the
  * credits granted to it before that purchase (net of refunds of those earlier purchases), capped at
- * the purchase's own credits. Order is by `grantedAt`, then purchase id.
+ * the purchase's own credits. Order is by `grantedAt`, then purchase id. Free recipes from the
+ * welcome grant (`welcomeCredits`) are not purchases: they count as spent before any bought one.
  */
 import { createHash } from "node:crypto";
 import { Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore";
@@ -122,7 +123,10 @@ export async function fifoConsumed(
     const t = p.grantedAt.toMillis();
     if (t < at || (t === at && d.id < purchaseId)) before += p.credits - p.refundedCredits;
   }
-  const spent = holder.user.consumedCredits ?? 0;
+  // Free recipes (the welcome grant) are not purchases and count as spent first, whenever they
+  // were granted: only spend beyond them is attributed to purchases. So a buyer is never
+  // reported to Apple, or recorded as refunding after use, for recipes that were free.
+  const spent = Math.max(0, (holder.user.consumedCredits ?? 0) - (holder.user.welcomeCredits ?? 0));
   return Math.max(0, Math.min(purchase.credits, spent - before));
 }
 

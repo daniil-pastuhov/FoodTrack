@@ -5,17 +5,20 @@ source of truth is `src/contract.ts`; this file must change with it.
 
 ## Calling
 
-- All seven are Firebase **callable** functions in region **`europe-west1`**
+- All ten are Firebase **callable** functions in region **`europe-west1`**
   (`Firebase.functions("europe-west1")` / `Functions.functions(region: "europe-west1")`).
 - Every call needs a signed-in Firebase Auth user (anonymous counts) and a valid **App Check**
-  token. A call without either fails with `unauthenticated`.
+  token. A call without either fails with `unauthenticated`. The one exception is
+  `getWelcomeOffer`: App Check only, no sign-in. It is the one call the apps make to the server
+  before a sign-in or a purchase, and it carries nothing about the caller (no input; any Auth
+  token sent with it is not looked at).
 - App Check replay protection is **on** for `generateRecipe`, `verifyPurchase`, `mergeBalance`,
-  `deleteAccount` and `registerAppleSignIn` (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a
+  `deleteAccount`, `registerAppleSignIn` and `claimWelcome` (`CONSUME_APP_CHECK_TOKENS` in `src/constants.ts`): each call must carry a
   fresh **limited-use** token (`limitedUseAppCheckTokens = true` in the Kotlin `getHttpsCallable`
   options, `HTTPSCallableOptions(requireLimitedUseAppCheckTokens: true)` in Swift). A reused token
   fails with `unauthenticated` / `APP_CHECK_REPLAYED`; the SDKs fetch a new limited-use token per
   call, so a plain retry works.
-- `getGeneration` and `getBalance` enforce App Check but do **not** consume the token: call them
+- `getGeneration`, `getBalance`, `getTasteQuiz` and `getWelcomeOffer` enforce App Check but do **not** consume the token: call them
   with an ordinary (not limited-use) token, so polling does not spend attestations (Play
   Integrity has a daily quota). **Poll with `getGeneration`, not by re-sending `generateRecipe`.**
 - Every callable is also throttled per user, per IP (IPv6: per /64) and per server instance
@@ -32,7 +35,7 @@ source of truth is `src/contract.ts`; this file must change with it.
 ## Costs
 
 Every response that carries `balance` (`getBalance`, `verifyPurchase`, `generateRecipe`,
-`mergeBalance`) also carries the price table in force:
+`getGeneration`, `mergeBalance`, `claimWelcome`) also carries the price table in force:
 
 ```json
 "costs": {
@@ -81,7 +84,8 @@ not on `message` (English, for logs).
 | `resource-exhausted` | `INFRA_FAILURE_LIMIT` | Generation failed for technical reasons too many times today for this account (each of those was refunded). Further generation is refused until the next UTC day; nothing was charged. Show "having trouble generating right now, try again tomorrow". |
 | `resource-exhausted` | `DAILY_CAP` | Global daily limit reached. Try tomorrow; nothing was charged. |
 | `failed-precondition` | `REQUEST_ID_REUSED` | This `requestId` was already used for a request with different inputs (ingredients, settings, kind, courses, days, allergens or `today`). A client bug: a changed request needs a new `requestId`. Nothing was charged. |
-| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`). Retry; the SDK fetches a new limited-use token. |
+| `unauthenticated` | `APP_CHECK_REPLAYED` | The App Check token was already used (`generateRecipe`, `verifyPurchase`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`, `claimWelcome`). Retry; the SDK fetches a new limited-use token. |
+| `failed-precondition` | `SIGN_IN_REQUIRED` | `claimWelcome`: the account has no Google or Apple sign-in (an anonymous install). Nothing was granted or recorded; sign in first. |
 | `failed-precondition` | `RECENT_SIGN_IN_REQUIRED` | `deleteAccount` needs a sign-in in the last 5 minutes. Re-authenticate, retry. |
 | `failed-precondition` / `permission-denied` | `MERGE_NOT_ALLOWED` | `mergeBalance` refused (see below). |
 | `not-found` | `UNKNOWN_REQUEST` | `getGeneration`: no generation with this `requestId` for this account (never started, or older than the idempotency window below). Re-send `generateRecipe` with the same `requestId` and the same inputs. |
@@ -192,6 +196,25 @@ there are new questions (the dot on Recipe settings) without fetching the quiz; 
 they fetch the quiz the next time it is opened, never in the background for this. It is opaque:
 compare for equality only. A server from before it sends nothing; treat that as "unknown", not as
 a change.
+
+## Capability `acceptsWelcome`
+
+The welcome grant (November 2026): free recipes for signing in, once per Google or Apple account
+(`claimWelcome` below). Every response that carries `balance` from a server that has
+`claimWelcome` carries `"acceptsWelcome": true` and, beside it, **`"welcomeRecipes": n`**: how
+many free recipes a claim grants now (`config/runtime.welcome.recipes`), and `0` when the grant
+is off, generation is paused or today's grants are used up. It is the same for every account (it
+does not say whether this account has claimed: the answer of `claimWelcome` does). A signed-in
+client that has not claimed uses it to name the number ("Get 3 free recipes"); at `0` it shows
+nothing. A server from before it sends neither; treat that as no grant. Before any account
+exists, an install learns the number from `getWelcomeOffer` instead; an old server answers that
+call with `not-found` / unimplemented, which the apps read as `0`.
+
+Free recipes behave exactly like recipes from a pack: same costs, limits and failure refunds,
+spent from the same `balance`. They are **not purchases**: they raise no allowance of refunded
+content failures, are never reported to Apple as bought or consumed (free recipes count as spent
+before bought ones), never count in refund-after-use, and are lost with the account like any
+unused recipes.
 
 ## Types
 
@@ -746,11 +769,58 @@ with no option is left out; `conflicts` and `summary` name only what is shown. I
 reused with another meaning: an id the quiz no longer has is simply gone, and answers to it are
 dropped (see "Taste profile").
 
+### `getWelcomeOffer`
+
+How many free recipes a sign-in gets now, for an install that has no account yet. **The one call
+the apps make before a sign-in or a purchase**, and it carries nothing about the caller: App
+Check enforced with an ordinary token (not consumed), **no sign-in** (an Auth token, if sent, is
+ignored), no input (any is ignored), and the server reads only its own settings and today's
+grant count; it stores nothing and logs nothing per call. Rate-limited per client address and
+per server instance (`RATE_LIMITED`). The apps ask it when the Recipe tab is shown, at most once
+a day, only on installs where buying is possible, and only while signed out or not yet claimed.
+
+Request `{}`. Response `{ "recipes": 3 }`: the number `claimWelcome` would grant now; `0` when
+the grant is off, generation is paused or today's grants are used up. The count may lag the day's
+limit by up to 30 seconds, so `claimWelcome` can still answer `OFF` after a positive offer. An old
+server answers `not-found` / unimplemented: read it as `0`. Never show a number from an answer
+older than a day.
+
+### `claimWelcome`
+
+Grants the free recipes once per sign-in identity, ever. Called as a user signed in with
+**Google or Apple**, with a limited-use App Check token (consumed; a replay is
+`APP_CHECK_REPLAYED`). Request `{}`.
+
+Response:
+
+```json
+{ "status": "GRANTED", "granted": 3, "balance": 3, "costs": { ... }, "acceptsWelcome": true, "welcomeRecipes": 3, ... }
+```
+
+| `status` | meaning |
+|---|---|
+| `GRANTED` | `granted` free recipes were added to `balance`. |
+| `ALREADY` | This account, or any Google or Apple account linked to it, has had its free recipes (also on every later call: it is idempotent). `granted` is 0. Say so plainly ("This account has already had its free recipes") and offer packs. |
+| `OFF` | The grant is off, generation is paused, or today's grants are used up. `granted` is 0, nothing was recorded, and a later claim may still succeed. Say it isn't available right now. |
+
+Plus everything a response with `balance` carries (`costs`, `purchasesBlocked` when set, the
+capability flags, `tasteQuizVersion`, `welcomeRecipes`).
+
+- "Identity" is the Google or Apple account itself (the provider's own user id, read from the
+  Firebase Auth record), not the Firebase uid: deleting the account and signing in again with the
+  same Google or Apple account grants nothing, and an account linked to both claims once. An
+  identity linked later to an account that already claimed is recorded too, so it cannot claim
+  from another account either.
+- Anonymous, or no Google / Apple identity: `SIGN_IN_REQUIRED`, nothing granted. A deleted or
+  merged account: `ACCOUNT_CLOSED`.
+- A sign-in that fails or is cancelled must not call it. After `GRANTED` or `ALREADY` the client
+  never calls it again for that account.
+
 ### `getBalance`
 
 Request `{}`. Response `{ "balance": 0, "costs": { ... } }` (the whole table, see "Costs"),
-plus `"purchasesBlocked": true` when set, the capability flags and `"tasteQuizVersion"` (see
-"Capability `acceptsTaste`"). A new, deleted or merged account reads 0. The balance can
+plus `"purchasesBlocked": true` when set, the capability flags, `"tasteQuizVersion"` (see
+"Capability `acceptsTaste`") and `"welcomeRecipes"` (see "Capability `acceptsWelcome`"). A new, deleted or merged account reads 0. The balance can
 be negative after a store refund of already-spent credits.
 
 ### `mergeBalance`
@@ -808,7 +878,7 @@ token's linked providers, a stored Apple token, or a code sent).
   without re-authenticating and with no code; the apps offer it in that state too.
 - Remaining credits are lost; warn first. The Auth user is deleted; sign out locally afterwards.
   Kept: the `users/{uid}` tombstone (balance 0, `forfeitedBalance`, totals, `buyerKeys`), every
-  `purchases/` document (`uid` null, `formerUid` set) and `buyers/` documents. Deleted: the
+  `purchases/` document (`uid` null, `formerUid` set), `buyers/` and `welcomes/` documents. Deleted: the
   account's `generations` and its rate-limit windows. A purchase made by this uid and not yet
   verified can never be redeemed afterwards (`ACCOUNT_CLOSED` for the uid, `PURCHASE_ACCOUNT_MISMATCH`
   for any other), so clients hold deletion back until it is confirmed.
@@ -817,6 +887,9 @@ token's linked providers, a stored Apple token, or a code sent).
   (README "Deletion requests by email"). Nothing new on the wire: the app then finds its account closed
   as after a merge (`ACCOUNT_CLOSED` from the mutating callables, `balance: 0` from
   `getBalance`, and the Auth SDK's token refresh fails once its ID token expires, within an hour).
+- Free recipes are lost with the account like any unused recipes, and the record that the
+  account's Google or Apple sign-in has had them (`welcomes/`) is kept: signing in again with the
+  same account does not grant them twice.
 
 ### `registerAppleSignIn`
 

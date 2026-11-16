@@ -179,12 +179,12 @@ describe("refund after use", () => {
     }
     expect(await buyer("apple_A-r4")).toMatchObject({ refundAfterUseCount: 2, blocked: true });
     expect(deps.logs.filter((l) => l.message === "buyer_blocked")).toHaveLength(1);
-    expect(await getBalance(deps, callerFor("r4"))).toEqual({ balance: -20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV, purchasesBlocked: true });
+    expect(await getBalance(deps, callerFor("r4"))).toEqual({ balance: -20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV, purchasesBlocked: true });
 
     const res = await verifyPurchase(deps, callerFor("r4"), {
       store: "appstore", signedTransaction: deps.appStore.sign(appleTx({ appTransactionId: "A-r4", productId: "recipes_50" })),
     });
-    expect(res).toEqual({ status: "GRANTED", balance: 30, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV, purchasesBlocked: true });
+    expect(res).toEqual({ status: "GRANTED", balance: 30, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV, purchasesBlocked: true });
     expect(deps.logs.filter((l) => l.message === "purchase_by_blocked_buyer")).toHaveLength(1);
 
     const req = {
@@ -198,7 +198,7 @@ describe("refund after use", () => {
 
   test("a new anonymous install is recognised by its first purchase with the same Apple buyer", async () => {
     await db.collection("buyers").doc("apple_A-r5").set({ events: {}, refundAfterUseCount: 2, blocked: true, createdAt: new Date() });
-    expect(await getBalance(deps, callerFor("fresh-install"))).toEqual({ balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await getBalance(deps, callerFor("fresh-install"))).toEqual({ balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     await buyApple("fresh-install", { appTransactionId: "A-r5" });
     expect(await getBalance(deps, callerFor("fresh-install"))).toMatchObject({ purchasesBlocked: true });
   });
@@ -221,7 +221,7 @@ describe("refund after use", () => {
       await refundApple(tx);
     }
     await db.collection("buyers").doc("apple_A-r6").update({ blocked: false, blockedOverride: true });
-    expect(await getBalance(deps, callerFor("r6"))).toEqual({ balance: -20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await getBalance(deps, callerFor("r6"))).toEqual({ balance: -20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     // A further event does not undo the owner's decision.
     const tx = await buyApple("r6", { appTransactionId: "A-r6" });
     await spend("r6", 10);

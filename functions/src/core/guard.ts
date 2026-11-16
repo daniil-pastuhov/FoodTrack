@@ -101,6 +101,15 @@ export class CallThrottle {
     this.uid = new WindowLimiter(perUidPerMinute, 60_000);
   }
 
+  /**
+   * For the one callable that needs no sign-in (getWelcomeOffer): the client address and the
+   * instance ceiling only, since there is no uid to count.
+   */
+  admitAddress(ip: string, nowMs: number): void {
+    if (!this.ip.hit(ipKey(ip), nowMs)) fail("resource-exhausted", "RATE_LIMITED", "Too many requests");
+    if (!this.all.hit("all", nowMs)) fail("resource-exhausted", "RATE_LIMITED", "Too many requests");
+  }
+
   admit(uid: string, ip: string, nowMs: number): void {
     // Both are counted, so neither key can be used to dodge the other.
     const ipOk = this.ip.hit(ipKey(ip), nowMs);

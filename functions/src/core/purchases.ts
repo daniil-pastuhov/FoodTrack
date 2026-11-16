@@ -1,6 +1,7 @@
 /**
- * Purchase verification and refunds. The only way a balance goes up is a store-verified purchase
- * whose `purchases/` doc does not exist yet; that doc is never deleted, so it is the replay guard.
+ * Purchase verification and refunds. A balance goes up only through a store-verified purchase
+ * whose `purchases/` doc does not exist yet (that doc is never deleted, so it is the replay guard),
+ * or through one welcome grant per sign-in identity (core/welcome.ts, `welcomes/`).
  *
  * Order of checks in verifyPurchase, cheapest first: input validation, the caller's app must match
  * the store (App Check app id), the per-uid throttle, local signature verification (Apple), the
@@ -57,6 +58,7 @@ import {
   writeRefundAfterUse,
   type PendingLogs,
 } from "./buyers";
+import { welcomeFlag } from "./welcome";
 
 export const playPurchaseId = (purchaseToken: string) =>
   `play_${createHash("sha256").update(purchaseToken).digest("hex")}`;
@@ -533,7 +535,7 @@ export async function verifyPurchase(deps: Deps, caller: Caller, data: unknown):
   const status = verdict.status;
   logNotGranted(deps, caller, request.store, status, verdict);
   const user = (await userRef(deps.db, caller.uid).get()).data();
-  return { status, balance: user?.balance ?? 0, costs: config.costs, ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)) };
+  return { status, balance: user?.balance ?? 0, costs: config.costs, ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)), ...(await welcomeFlag(deps, config)) };
 }
 
 // ---------------------------------------------------------------------------------------------

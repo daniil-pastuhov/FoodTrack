@@ -54,6 +54,8 @@ import {
   type UserDoc,
 } from "../model";
 import { blockFlag } from "./buyers";
+import { LogSampler } from "./guard";
+import { welcomeFlag } from "./welcome";
 import {
   GenerationError,
   type Caller,
@@ -126,13 +128,56 @@ type Reservation =
   | { reserved: false; response: GenerateResponse; user: UserDoc | undefined };
 
 /**
+ * The model-spend thresholds that are logged (`spend_threshold`), each at most once per UTC day:
+ * the first reservation that takes the day's booked spend (spent + reserved worst cases, what the
+ * breaker compares) to 50 % or 80 % of the day's ceiling, and the first refusal at the ceiling
+ * (100 %, GENERATION_DISABLED). The marks are `stats/{day}.spendAlerts`, written in the same
+ * transaction, so the "once" holds across instances and retries.
+ */
+export const SPEND_THRESHOLDS = [50, 80] as const;
+
+/** A refusal decided inside the reservation transaction after it recorded a once-a-day mark. */
+type Refusal = { refused: { code: "unavailable" | "resource-exhausted"; reason: "GENERATION_DISABLED" | "DAILY_CAP"; message: string } };
+
+/** Error log lines a reservation writes once it committed (never twice for a retried transaction). */
+type ReserveLogs = [level: "warn" | "error", message: string, data: Record<string, unknown>][];
+
+/**
+ * Per-account daily refusals (USER_DAILY_LIMIT, INFRA_FAILURE_LIMIT) as `generation_refused` lines,
+ * for the spike alert (README "Alerts"): at most 30 a minute per instance, with a suppressed count.
+ */
+const refusalLog = new LogSampler(60_000, 30);
+
+function logRefusal(deps: Deps, uid: string, reason: "USER_DAILY_LIMIT" | "INFRA_FAILURE_LIMIT", why: string): void {
+  const sample = refusalLog.take(deps.now());
+  if (sample.log) deps.logger.warn("generation_refused", { reason, why, uidHash: uidHash(uid), suppressedSinceLast: sample.suppressed });
+}
+
+/**
  * The per-user and existing-generation checks read only the caller's own documents; the shared
  * stats docs (today's, and the trailing days for the revenue-aware ceiling) are read only when a new
  * reservation is about to be made, so refused calls never contend on them.
  */
 async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: RuntimeConfig, plan: Plan): Promise<Reservation> {
+  let logs: ReserveLogs = [];
+  const result = await reserveTx(deps, uid, req, config, plan, (l) => (logs = l));
+  for (const [level, message, data] of logs) deps.logger[level](message, data);
+  if ("refused" in result) fail(result.refused.code, result.refused.reason, result.refused.message);
+  return result;
+}
+
+async function reserveTx(
+  deps: Deps,
+  uid: string,
+  req: GenerateRequest,
+  config: RuntimeConfig,
+  plan: Plan,
+  setLogs: (logs: ReserveLogs) => void,
+): Promise<Reservation | Refusal> {
   const { cost, reservedMicroUsd } = plan;
-  return deps.db.runTransaction(async (tx): Promise<Reservation> => {
+  return deps.db.runTransaction(async (tx): Promise<Reservation | Refusal> => {
+    const logs: ReserveLogs = [];
+    setLogs(logs);
     const now = deps.now();
     const day = utcDay(now);
     const uRef = userRef(deps.db, uid);
@@ -166,25 +211,44 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
     }
     const infra = user.infraRefunds?.day === day ? user.infraRefunds.count : 0;
     if (infra >= config.infraRefundsPerDay) {
+      logRefusal(deps, uid, "INFRA_FAILURE_LIMIT", "infra_refunds");
       fail("resource-exhausted", "INFRA_FAILURE_LIMIT", "Generation failed too often today; try again tomorrow");
     }
     const userSpend = user.spendWindow?.day === day ? user.spendWindow.microUsd : 0;
     if (dw.count >= config.perUserPerDay || userSpend + reservedMicroUsd > config.perUserDailySpendMicroUsd) {
+      logRefusal(deps, uid, "USER_DAILY_LIMIT", dw.count >= config.perUserPerDay ? "generations" : "spend");
       fail("resource-exhausted", "USER_DAILY_LIMIT", "Daily limit for this account reached");
     }
     const pastRefs = Array.from({ length: REVENUE_WINDOW_DAYS - 1 }, (_, i) => statsRef(deps.db, utcDay(now - (i + 1) * 86_400_000)));
     const [sSnap, ...pastSnaps] = await tx.getAll(sRef, ...pastRefs);
     const stats = sSnap.data() ?? {};
     const units = (stats.generationUnits as number | undefined) ?? 0;
-    if (units + cost > config.dailyCap) fail("resource-exhausted", "DAILY_CAP", "Daily generation limit reached");
+    const marks = (stats.spendAlerts ?? {}) as Record<string, unknown>;
+    if (units + cost > config.dailyCap) {
+      // The first refusal of the day records it (stats/{day}.dailyCapReachedAt) and is logged once.
+      if (stats.dailyCapReachedAt !== undefined) fail("resource-exhausted", "DAILY_CAP", "Daily generation limit reached");
+      tx.set(sRef, { dailyCapReachedAt: now }, { merge: true });
+      logs.push(["error", "daily_cap_reached", { day, dailyCap: config.dailyCap, generationUnits: units }]);
+      return { refused: { code: "resource-exhausted", reason: "DAILY_CAP", message: "Daily generation limit reached" } };
+    }
     // The real-time spend breaker: today's estimated spend plus every in-flight worst case, against
     // the revenue-aware ceiling. The worst case is reserved here, inside the transaction, so
     // parallel calls cannot overshoot.
     const netCredits7d = [sSnap, ...pastSnaps].reduce((sum, s) => sum + ((s.data()?.netCreditsGranted as number | undefined) ?? 0), 0);
     const spent = ((stats.spentMicroUsd as number | undefined) ?? 0) + ((stats.reservedMicroUsd as number | undefined) ?? 0);
-    if (spent + reservedMicroUsd > dailySpendCeiling(config, netCredits7d)) {
-      fail("unavailable", "GENERATION_DISABLED", "Recipe generation is paused");
+    const ceiling = dailySpendCeiling(config, netCredits7d);
+    const booked = spent + reservedMicroUsd;
+    const thresholdLine = (percent: number, spentMicroUsd: number) =>
+      ({ percent, spentMicroUsd, ceilingMicroUsd: ceiling, day, netCredits7d });
+    if (booked > ceiling) {
+      // The first refusal of the day at the ceiling is recorded and logged once (100 %).
+      if (marks["100"] !== undefined) fail("unavailable", "GENERATION_DISABLED", "Recipe generation is paused");
+      tx.set(sRef, { spendAlerts: { "100": now } }, { merge: true });
+      logs.push(["error", "spend_threshold", thresholdLine(100, spent)]);
+      return { refused: { code: "unavailable", reason: "GENERATION_DISABLED", message: "Recipe generation is paused" } };
     }
+    const crossed = SPEND_THRESHOLDS.filter((p) => marks[`${p}`] === undefined && booked * 100 >= p * ceiling);
+    for (const p of crossed) logs.push(["warn", "spend_threshold", thresholdLine(p, booked)]);
 
     tx.update(uRef, {
       balance: FieldValue.increment(-cost),
@@ -199,6 +263,7 @@ async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: Ru
         generationUnits: FieldValue.increment(cost),
         generations: FieldValue.increment(1),
         reservedMicroUsd: FieldValue.increment(reservedMicroUsd),
+        ...(crossed.length ? { spendAlerts: Object.fromEntries(crossed.map((p) => [`${p}`, now])) } : {}),
       },
       { merge: true },
     );
@@ -600,7 +665,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   }
   const plan = planFor(req, config);
   const reservation = await reserve(deps, caller.uid, req, config, plan);
-  if (!reservation.reserved) return { ...reservation.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, reservation.user, config)) };
+  if (!reservation.reserved) return { ...reservation.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, reservation.user, config)), ...(await welcomeFlag(deps, config)) };
   const started = deps.now();
   const outcome = await runGenerator(deps, caller.uid, req, plan.limits, config);
   const durationMs = deps.now() - started;
@@ -613,7 +678,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     settled,
     durationMs,
   );
-  return { ...settled.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, settled.user, config)) };
+  return { ...settled.response, ...capabilitiesOf(config), ...(await blockFlag(deps.db, settled.user, config)), ...(await welcomeFlag(deps, config)) };
 }
 
 /**
@@ -632,5 +697,5 @@ export async function getGeneration(deps: Deps, caller: Caller, data: unknown): 
   const gen = gSnap.data();
   if (!gen) fail("not-found", "UNKNOWN_REQUEST", "No generation with this requestId");
   const user = uSnap.data();
-  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)) };
+  return { ...fromDoc(gen, isClosed(user) ? 0 : (user?.balance ?? 0), config.costs), ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)), ...(await welcomeFlag(deps, config)) };
 }

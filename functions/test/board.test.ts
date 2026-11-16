@@ -77,6 +77,20 @@ describe("aggregation", () => {
     expect(b.period.spentMicroUsd).toBe(90_000);
   });
 
+  test("welcome grants: today and the period, apart from sales, with the config's setting", () => {
+    const b = buildBoard(input({ statsByDay: {
+      "2026-11-15": { welcomeGrants: 4, welcomeCredits: 12 },
+      "2026-11-10": { welcomeGrants: 1, welcomeCredits: 3 },
+    } }));
+    expect(b.todayRow).toMatchObject({ welcomeGrants: 4, welcomeCredits: 12, salesCount: 0, salesCredits: 0 });
+    expect(b.period).toMatchObject({ welcomeGrants: 5, welcomeCredits: 15, netCreditsGranted: 0 });
+    expect(b.sales.total.credits).toBe(0);
+    expect(b.welcome).toEqual({ recipes: 3, perDay: 200 });
+    expect(boardSummary(b).join("\n")).toContain("Free recipes (welcome grant, not sales): 4 grants today (12 recipes) of at most 200; 5 in the period (15 recipes); 3 per sign-in.");
+    expect(boardJson(b).welcome).toEqual({ recipesPerClaim: 3, perDay: 200, grantsToday: 4, recipesToday: 12, grantsInPeriod: 5, recipesInPeriod: 15 });
+    expect(renderBoardHtml(b)).toContain("Free recipes (welcome grant)");
+  });
+
   test("the stats read covers the period, the month to date and the revenue window before both", () => {
     const days = boardStatsDays(NOW, 30);
     expect(days[0]).toBe("2026-10-11");

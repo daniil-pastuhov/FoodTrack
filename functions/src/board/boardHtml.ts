@@ -445,6 +445,12 @@ export function renderBoardHtml(b: Board, hosted?: HostedOptions): string {
       esc(int(t.salesCredits)),
       `${esc(int(t.salesCount))} ${t.salesCount === 1 ? "pack" : "packs"}, production only` +
         (t.sandboxPurchases > 0 ? `; plus ${esc(int(t.sandboxPurchases))} sandbox` : "")),
+    tile("Free recipes (welcome grant)",
+      esc(int(t.welcomeGrants)),
+      `${t.welcomeGrants === 1 ? "grant" : "grants"} today (${esc(int(t.welcomeCredits))} recipes) of at most ${esc(int(b.welcome.perDay))} a day; ` +
+        `${esc(int(b.period.welcomeGrants))} in the period (${esc(int(b.period.welcomeCredits))} recipes). ` +
+        (b.welcome.recipes > 0 ? `${esc(int(b.welcome.recipes))} per sign-in. Not sales.` : "Off (<code>welcome.recipes</code> is 0)."),
+      meter(t.welcomeGrants, b.welcome.perDay, "Welcome grants today against the daily limit")),
     tile("Unspent recipes",
       esc(int(b.holders.recipes)),
       `held by ${esc(int(b.holders.accounts))} ${b.holders.accounts === 1 ? "account" : "accounts"} (positive balances now)`),
@@ -617,6 +623,8 @@ export function boardSummary(b: Board): string[] {
       `estimated net revenue ${usd(s.estimatedNetMicroUsd)} (config estimate, not the store payout). ` +
       `iOS (App Store) ${int(s.byStore.appstore.purchases)} packs, ${int(s.byStore.appstore.credits)} recipes; ` +
       `Android (Google Play) ${int(s.byStore.play.purchases)} packs, ${int(s.byStore.play.credits)} recipes. Sandbox: ${int(s.sandbox.purchases)} purchases, ${int(s.sandbox.credits)} recipes.`,
+    `Free recipes (welcome grant, not sales): ${int(t.welcomeGrants)} grants today (${int(t.welcomeCredits)} recipes) of at most ${int(b.welcome.perDay)}; ` +
+      `${int(p.welcomeGrants)} in the period (${int(p.welcomeCredits)} recipes); ${b.welcome.recipes > 0 ? `${int(b.welcome.recipes)} per sign-in` : "off"}.`,
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
     ...(b.purchasesCapped
@@ -651,6 +659,14 @@ export function boardJson(b: Board): Record<string, unknown> {
       packsSold: t.salesCount,
       recipesSold: t.salesCredits,
       sandboxPurchases: t.sandboxPurchases,
+    },
+    welcome: {
+      recipesPerClaim: b.welcome.recipes,
+      perDay: b.welcome.perDay,
+      grantsToday: t.welcomeGrants,
+      recipesToday: t.welcomeCredits,
+      grantsInPeriod: p.welcomeGrants,
+      recipesInPeriod: p.welcomeCredits,
     },
     unspentRecipes: { recipes: b.holders.recipes, accounts: b.holders.accounts },
     negativeBalanceTotal: b.ledger.negativeBalanceTotal,

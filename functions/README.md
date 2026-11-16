@@ -6,8 +6,10 @@ courses − 1 credits: four per 3-day 2-course menu, five per 3-day 3-course men
 days of 3 courses (`DEFAULT_COSTS`, overridable in `config/runtime.costs`; CONTRACT.md "Costs"). TypeScript, Cloud Functions 2nd gen, Node.js 24, Firebase
 project `bestbefore-f9ee1`, region `europe-west1`.
 
-Nothing here is used by anyone who never opens the paid path: the apps create no Auth user and make
-no call until a purchase starts. The client wire contract is in [CONTRACT.md](CONTRACT.md).
+Nothing here is used by anyone who never opens the paid path: the apps create no Auth user until a
+purchase or a sign-in starts. The one call before that is `getWelcomeOffer` (how many free
+recipes a sign-in gets, "Welcome grant" below), which needs no account and carries nothing about
+the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 
 ## Layout
 
@@ -23,6 +25,7 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
+| `src/core/welcome.ts` | The welcome grant: `getWelcomeOffer`, `claimWelcome`, `welcomeRecipes` and the day's brake (see "Welcome grant") |
 | `src/core/appleToken.ts` | `registerAppleSignIn`, and removing the stored Sign in with Apple token (deletion, unlink, tombstones) |
 | `src/board/` | The owner's spend and sales board: reader, aggregation and renderer shared by `npm run admin -- board` and the scheduled `redrawBoard`, and `hosted.ts`, the redraw into a private bucket (see "The board") |
 | `src/admin/` | The owner's offline commands, none deployed as a function: deletion requests by email (`npm run admin`, see "Deletion requests by email"), the spend and sales board by hand (`npm run admin -- board`, see "The board"), the prompt replay (`npm run prompt-body`) and the prompt-injection red-team runner (`npm run redteam`, `src/admin/redteam/`; see "Replaying a prompt against the live model") |
@@ -40,8 +43,9 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 
 | name | trigger | does |
 |---|---|---|
-| `verifyPurchase`, `generateRecipe`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn` | callable, App Check enforced and limited-use tokens consumed (replays refused) | See CONTRACT.md |
+| `verifyPurchase`, `generateRecipe`, `mergeBalance`, `deleteAccount`, `registerAppleSignIn`, `claimWelcome` | callable, App Check enforced and limited-use tokens consumed (replays refused) | See CONTRACT.md |
 | `getBalance`, `getGeneration`, `getTasteQuiz` | callable, App Check enforced, token not consumed | See CONTRACT.md |
+| `getWelcomeOffer` | callable, App Check enforced, token not consumed, **no sign-in** | See CONTRACT.md and "Welcome grant" |
 | `sweepReservations` | every 5 min | Refunds reservations still pending 60 s after their deadline; retries Play consumes and owed consumption answers; watches negative balances |
 | `pollPlayVoidedPurchases` | daily 04:00 UTC | Voided Purchases API, last 3 days, for RTDNs that never arrived |
 | `redrawBoard` | hourly at :17 UTC | Redraws the owner's board (30 days) into the private bucket `BOARD_BUCKET` as `board.html` and `board.json`; read-only on Firestore, and writes nothing unless the bucket is private (see "The board", "Always on") |
@@ -51,9 +55,11 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
 
 ## How the money works
 
-- The only way a balance goes up is a store-verified purchase whose `purchases/{id}` doc does not
-  exist yet (`play_<sha256(token)>`, `appstore_<env>_<transactionId>`). Those docs are never
-  deleted; account deletion only nulls their `uid`.
+- A balance goes up only through a store-verified purchase whose `purchases/{id}` doc does not
+  exist yet (`play_<sha256(token)>`, `appstore_<env>_<transactionId>`), or through one welcome
+  grant per sign-in identity (`welcomes/{key}`, see "Welcome grant"). Neither kind of doc is ever
+  deleted; account deletion only nulls a purchase's `uid`. (Failure refunds and reversals only
+  give back what was taken.)
 - `verifyPurchase` checks cheapest first: input, store vs. the caller's app (App Check app id:
   Play only from the Android app, App Store only from the iOS app), the per-uid throttle, the
   App Store JWS signature (local), the purchase account token, then the local purchase doc. A
@@ -74,7 +80,9 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
   discards its result. The reservation transaction reads the caller's user and generation docs
   first, and the shared `stats` docs only when a new reservation is about to be made.
 - `getGeneration` reads the caller's user and generation docs and nothing else: no reservation,
-  no LLM, no `stats`.
+  no LLM, no `stats` (beyond today's welcome grant count for `welcomeRecipes`, which every
+  response with a balance takes from a per-instance cache: at most one read per instance per
+  30 s).
 - A `requestId` is bound to its inputs: a retry with other inputs is `REQUEST_ID_REUSED`. The
   idempotency window is the generation doc's life: at least 7 days after it finished
   (`GENERATION_TTL_MS`), then whenever Firestore TTL deletes it.
@@ -114,12 +122,78 @@ no call until a purchase starts. The client wire contract is in [CONTRACT.md](CO
   transaction still reports (`revocationDate` with a `revocationPercentage` below 100 %) stays
   refunded.
 
+### Welcome grant
+
+The owner's decision (2026-11-16): a person who signs in with Google or Apple gets
+`config/runtime.welcome.recipes` free recipes (default 3) from the server, once. In the apps they
+are "free recipes"; here, the welcome grant. It is the first way a balance rises without a store
+receipt, so it is bounded like money:
+
+- **Once per sign-in identity, ever.** The identity is the Google or Apple account itself: its
+  provider user id from the Firebase Auth record (not the ID token, which can be an hour stale),
+  keyed exactly as a linked sign-in's buyer key (`providerBuyerKey`: `prov_` + a hash, no personal
+  data). `claimWelcome` reads the account and every identity's `welcomes/{key}` in one
+  transaction and, for a grant, creates all of them (`tx.create`) with the balance increment and
+  today's counter. `welcomes/` is **never deleted**: not by `deleteAccount`, not by
+  `mergeBalance`, not by the owner's deletion command, and not by hand to "give someone another
+  go" (grant recipes by hand instead, if ever). It is the only guard against granting twice.
+- **Free recipes are spent like bought ones** (same costs, limits, spend ceilings, failure refunds
+  back to the balance) **but are not purchases**: they go to `users.welcomeCredits`, never to
+  `purchasedCredits`, so they raise no content or timeout refund allowance (`paidAllowance`: an
+  account with only free recipes has none), never count as revenue (`stats.netCreditsGranted`, so
+  the spend ceiling does not rise with them), add no buyer key and never set `purchasesBlocked`.
+  In the FIFO ledger they count as **spent first**, whenever granted (`fifoConsumed` subtracts
+  `welcomeCredits` from the spent credits): a buyer is never reported to Apple as having consumed,
+  nor recorded as refunding after use, recipes that were free. Free-first can under-report a
+  purchase's consumption by at most the grant (3); it never over-reports. They are lost with the
+  account like any unused recipes (`forfeitedBalance`), and move with `mergeBalance`.
+- **The offer.** `getWelcomeOffer` (no sign-in) and `welcomeRecipes` beside every `balance` say
+  how many a claim grants now: `recipes`, or 0 when the grant is off, generation is paused
+  (`generationEnabled: false`, the kill switch also stops grants) or today's grants are used up.
+  Today's count is cached per instance for 30 s (`WelcomeDayCounter`), so neither costs more than
+  one read per instance per 30 s; `claimWelcome` reads it inside its transaction.
+
+Abuse cases and their bounds (each tested in `test/welcome.test.ts`):
+
+| case | bound |
+|---|---|
+| Many Google (or Apple) accounts | Each is a separate identity and gets the grant once. Across all of them at most `perDay` grants a UTC day (default 200 × 3 = 600 free recipes), counted in `stats/{day}.welcomeGrants` inside the grant transaction. Their model spend is inside the same global spend ceiling as everyone's (see the cost below). |
+| Delete the account and sign in again | The new uid has the same Google/Apple identity, whose `welcomes/` doc survives deletion: `ALREADY`, nothing granted. |
+| Concurrent claims (one account, or many at the day's limit) | One transaction reads every doc it decides on; Firestore serialises conflicting transactions (a losing one retries and then sees the doc / the count), so one grant per identity and never more than `perDay` a day. |
+| A claim racing a merge into the same account | Both are transactions on the target's user doc; whichever commits second re-reads it, so neither the grant nor the moved balance is lost. An anonymous source cannot have claimed. |
+| An account linked to two providers | A grant writes a `welcomes/` doc for each linked identity; a claim by an account that already claimed records any identity linked since (`credits: 0`), so unlinking it and signing in elsewhere gets `ALREADY`. An account that claimed stays claimed (`users.welcomeAt`) whatever is unlinked. Only an identity that was never on a claiming account at a claim can claim again: a person with one Google and one Apple account kept on separate accounts gets two grants, which is "once per identity". |
+| Anonymous, password or phone accounts | `SIGN_IN_REQUIRED`: only `google.com` and `apple.com` identities in the Auth record count. A token naming Google for a user whose record has none is refused too. |
+| A replayed App Check token | `claimWelcome` consumes limited-use tokens (`APP_CHECK_REPLAYED`), like `verifyPurchase`. `getWelcomeOffer` does not (it grants nothing); one valid token can be reused for its life (about an hour) but only reaches the throttles below. |
+| The offer hammered without auth | `getWelcomeOffer` has no uid to count: per client address (IPv6 by /64) and the instance ceiling (120 a minute, 1 instance), reading only the cached config and the cached day count (0 Firestore reads per call in steady state). Exhausting the ceiling only makes the offer fail, which the apps read as no offer. |
+| The day's brake | At `perDay` grants the offer and `welcomeRecipes` read 0 (within 30 s) and claims answer `OFF` without writing anything (the identity is not used up); log `welcome_day_limit` (`event: "reached"` once, `"refused"` sampled). It resets at 00:00 UTC. |
+
+**Worst-case cost per day at the defaults.** 200 grants × 3 = 600 free recipes a day. Their model
+spend is not added on top of the ceiling: every generation, free or bought, goes through the same
+global ceiling (USD 1.20 a day without sales, at most USD 2.00) and the same per-user one (USD
+0.45; 3 recipes are well under it). So the bill can never exceed what "Spend ceilings" states.
+What farming can do is **use up the ceiling for everyone**: at a typical USD 0.02 a recipe, the
+600 a day would be about USD 12 of model use, far above USD 1.20; booked at the worst case (about
+USD 0.08 a recipe, 0.11 with the judge on) the base ceiling holds about 15 such recipes, a typical
+one about 60, i.e. 20 farmed claims. A determined farmer with many Google accounts could therefore
+keep generation paused (`GENERATION_DISABLED`) for paying users for the rest of a UTC day. If that
+shows up (many `welcome_granted` lines and `GENERATION_DISABLED` with little revenue on the board),
+lower `welcome.perDay` (e.g. to 20) or turn the grant off. Firestore and instance cost: see
+"Function limits" (`claimWelcome` ≤ USD 0.44/day, `getWelcomeOffer` ≤ USD 0.47/day under a flood);
+a grant itself is 3 to 4 reads and 3 to 4 writes, so 200 a day are well under a cent.
+
+**Turning it off.** `config/runtime.welcome.recipes = 0` (or `perDay = 0`): within 30 s the offer
+and `welcomeRecipes` read 0 and claims answer `OFF`, writing nothing. An invalid `welcome` value
+turns it off too (warning `welcome`). The kill switch (`generationEnabled: false`) also stops
+grants. Recipes already granted stay in their balances; to stop them being spent, the kill switch
+is the only lever (it stops everyone).
+
 ### FIFO attribution, refund after use, and Apple consumption requests
 
 Credits are fungible, so spend is attributed to purchases first-in-first-out: a purchase counts
 as consumed to the extent the account's lifetime `consumedCredits` (including accounts merged into
-it) exceed the credits granted to it before that purchase (net of refunds of those), capped at the
-purchase's credits. Order: `grantedAt`, then purchase id (`fifoConsumed` in `src/core/buyers.ts`).
+it), less its free recipes (`welcomeCredits`, which count as spent first), exceed the credits
+granted to it before that purchase (net of refunds of those), capped at the purchase's credits.
+Order: `grantedAt`, then purchase id (`fifoConsumed` in `src/core/buyers.ts`).
 
 - **Refund after use**: a store refund (Apple or Play, full or partial) applied to a purchase
   whose refunded credits exceed its FIFO-unused credits. A refund of unused credits never counts.
@@ -399,6 +473,8 @@ concurrency 1 below 1 vCPU), 1 instance:
 | `mergeBalance` | 1 | 10 | 30 s |
 | `deleteAccount` | 1 | 10 | 120 s |
 | `registerAppleSignIn` | 1 | 10 | 30 s |
+| `claimWelcome` | 1 | 10 | 30 s |
+| `getWelcomeOffer` | 1 | 120 (per client address and instance only: no sign-in, so no uid) | 10 s |
 | `appStoreNotifications` | 1 | n/a (no Firestore before Apple's signature checks out) | 30 s |
 | `playNotifications`, `budgetKillSwitch`, `sweepReservations`, `pollPlayVoidedPurchases` | 1 | n/a (Pub/Sub or scheduler; not callable from the internet) | |
 | `redrawBoard` | 1 (no retry: the next hour redraws anyway) | n/a (scheduler); at most 2,000 purchases read a run (`BOARD_PURCHASES_CAP`) | 120 s |
@@ -485,19 +561,22 @@ Calls a flood can push into Firestore per day = instances × per-instance thrott
 | `mergeBalance` | 14,400 | 2 reads + 2 writes | 0.07 | 0.01 | 0.40 | 0.48 |
 | `deleteAccount` | 14,400 | 3 reads + 1 write | 0.05 | 0.01 | 0.40 | 0.46 |
 | `registerAppleSignIn` (no valid Apple code, so no KMS call) | 14,400 | 2 reads + 1 write | 0.04 | 0.01 | 0.40 | 0.45 |
+| `claimWelcome` (claimed already, or `OFF`) | 14,400 | 3 reads (+ an Auth lookup, not billed per call) | 0.03 | 0.01 | 0.40 | 0.44 |
+| `getWelcomeOffer` | 172,800 | 0 (config and the day's count, cached per instance) | 0 | 0.07 | 0.40 | 0.47 |
+| `welcomeRecipes` beside every `balance` (the day's count, cached) | 11 instances × 2,880 | 1 read per instance per 30 s | 0.02 | 0 | 0 | 0.02 |
 | `appStoreNotifications` | (forged bodies never reach Firestore) | 0 | 0 | see below | 0.40 | 0.40 |
-| **infrastructure total** | | | **0.84** | **0.33** | **5.20** | **6.37** |
+| **infrastructure total** | | | **0.89** | **0.41** | **6.00** | **7.30** |
 | model spend, absolute maximum | | | | | | **2.00** |
 
 What this means against the 1000 NOK (≈ USD 95) monthly budget:
 
 - **Model spend** is bounded by code at USD 2.00/day (USD 60/month) and above USD 1.20/day only
   when sales fund it. Without credits nobody can make the model run.
-- **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.17/day.
-- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 5.20/day only
+- **Firestore + requests** under a flood that passes Auth and App Check: ≤ USD 1.30/day.
+- **Instance time** is the part the code cannot bound below `maxInstances`: ≤ USD 6.00/day only
   if every public function is kept busy around the clock (`generateRecipe`'s 5 instances are
   USD 2.00 of it; at 2 instances it was 0.80, so five at once cost USD 1.20 a day more in the
-  worst case). Together the infrastructure worst case is USD 6.37/day (≈ USD 191/month; `getTasteQuiz`, November 2026, added 0.47): **a flood
+  worst case). Together the infrastructure worst case is USD 7.30/day (≈ USD 219/month; `getTasteQuiz`, November 2026, added 0.47, and the welcome grant's two callables 0.93): **a flood
   sustained for a whole month on every endpoint would exceed the budget on its own**; any single
   endpoint's worst case is ≤ USD 2.28/day (≈ USD 68 a month, `generateRecipe`; every other
   endpoint ≤ USD 0.68/day).
@@ -537,6 +616,8 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `apple_token_registered` / `apple_token_removed_unlinked` | info | A Sign in with Apple refresh token was stored (`replaced`), or removed after Apple was unlinked. `uidHash` only. |
 | `apple_code_exchange_failed` / `apple_code_revoke_failed` / `apple_token_revoke_failed` | warning | Apple refused or could not be reached (`kind`: `rejected` / `retryable`; `error`: endpoint, HTTP status and Apple's `error` code, never a code or token; `why` for the last). Many `retryable` ones mean the SIWA key or Apple is down; deletions then answer `appleLinkRemoved: false`. |
 | `apple_token_seal_failed` | error | Cloud KMS refused to wrap a token (key missing, IAM, API off: docs/recipe-setup.md step 5a). Nothing was stored. |
+| `welcome_granted` | info | A welcome grant was made: `uidHash`, `amount`, `identities` (1, or 2 for Google and Apple). Many in a short time from few addresses, with little revenue, is farming ("Welcome grant"). |
+| `welcome_day_limit` | warning | The day's brake: `event: "reached"` on the grant that used up `welcome.perDay` (once a day), `"refused"` for claims refused at it (sampled, one a minute per instance, with `suppressedSinceLast`); `day`, `perDay`. Reaching it every day means `perDay` is binding: farming, or real demand. |
 | `admin_account_deleted` | info | The owner's admin command deleted an account for a request by email (log `admin`, resource `global`, written with the operator's credentials; also printed on the command's stderr). `uidHash`, `kind` (`email`, `play-order`, `apple-order`, `apple-transaction`, `uid`), `state` before (`live` / `deleted` / `merged`), `purchasesDetached`, and `appleLinkRemoved` for an account that carried Apple. Never the email, order id or uid. |
 | `sweep_item_failed` | error | One item of the sweeper's queues threw (the rest still ran). |
 | `callable_failed` | error | Unexpected error in a callable (sampled, 5 a minute per instance). |
@@ -846,6 +927,8 @@ configurable there.
 Server-only. Documents:
 
 - `users/{uid}`: `balance`, `inFlight`, `purchasedCredits`, `consumedCredits`, `refundedCredits`,
+  `welcomeCredits` + `welcomeAt` (free recipes of the welcome grant, lifetime, following merges, and
+  when this account claimed; never in `purchasedCredits`),
   rate windows (`minuteWindow`, `dayWindow`, `verifyWindow`), `spendWindow` (`{day, microUsd}`),
   `infraRefunds` (`{day, count}`), `contentRefundsUsed` and `timeoutRefundsUsed` (lifetime),
   `buyerKeys`, `profileScrubbedAt`, `debtMovedTo` + `debtMovedAt`, `appleToken` (`{sealed,
@@ -865,6 +948,11 @@ Server-only. Documents:
   `consumptionPercentage`, `lastError`, `gaveUp`) + `consumptionPending`, `refundAfterUse`, and for
   Play `purchaseToken` + `consumePending` until consumed, `consumeAttempts`, `consumeGaveUpAt`,
   `consumedAt`, `orderId`.
+- `welcomes/{key}` (**never deleted**: the only guard against granting the welcome twice; the key
+  is the identity's buyer key, a hash of the Google or Apple user id): `uid` (the account that
+  claimed, or for `credits: 0` the account that already had), `provider` (`google.com` /
+  `apple.com`), `credits` (the grant, 0 for an identity recorded after the claim), `at`. No email,
+  name or token.
 - `buyers/{key}` (never deleted; no personal data beyond the key, which is an Apple
   `appTransactionId`, a Firebase uid, or a hash of a sign-in provider's user id): `events`
   (`{purchaseId: {at, store, spentCreditsTaken, active}}`), `refundAfterUseCount`, `blocked`,
@@ -874,7 +962,9 @@ Server-only. Documents:
   `inputTokens`, `outputTokens`, `thinkingTokens`, `succeeded`, `contentFailures`,
   `infraFailures`, `qualityFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
   `netCreditsGranted` (production credits granted minus store refunds that day),
-  `sandboxGrants`, `sandboxCredits`. A call is booked on the day it was reserved.
+  `sandboxGrants`, `sandboxCredits`, `welcomeGrants` and `welcomeCredits` (welcome grants made
+  that day and their free recipes; never in `netCreditsGranted`). A call is booked on the day it
+  was reserved.
   `stats/ledger`: `negativeBalanceTotal` (the sweeper's last sum of negative balances).
 - `config/runtime`: see below.
 
@@ -907,6 +997,7 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
 | `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
+| `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
 
 `dailySpendCapMicroUsd` from earlier drafts is no longer read; use the four `dailySpend*` /
@@ -1013,6 +1104,13 @@ In the emulator App Check tokens are decoded but not verified, so any well-forme
 a missing one is still rejected. Point the clients at the emulators
 (`useEmulator("10.0.2.2", 5001)` on the Android emulator, `127.0.0.1` on the iOS simulator, plus
 the Auth emulator on 9099) and use the App Check debug provider.
+
+The welcome grant needs no fake: a Google or Apple sign-in against the Auth emulator (its fake
+identity provider) has a provider user id like a real one, so `claimWelcome` grants once per such
+identity, and an anonymous user gets `SIGN_IN_REQUIRED`. To claim again with the same test
+identity, delete its `welcomes/` document in the emulator UI (emulator data only; never on the
+live project). `config/runtime.welcome` in the emulator's Firestore tunes it as on the live
+project (e.g. `perDay: 1` to see the brake).
 
 ## Deletion requests by email
 
@@ -1182,6 +1280,7 @@ Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1
 | Purchases by platform: per day (Android and iOS series), the split of packs, recipes granted, net recipes and each pack (counts and shares written out), and a table by platform and pack | the same purchases, by their `store`: `play` is Android, `appstore` is iOS (each store accepts purchases only from its own app); an unrecognised value is shown as "Other store" only when it has purchases. Refunds and sandbox are treated as above. No extra read: it comes from the purchases already read (`board.json` adds `sales.byStoreAndPack`) |
 | Estimated net revenue | net recipes × `netMicroUsdPerCredit`: the config's conservative estimate, not a store payout |
 | Sandbox purchases | the same query, `env: "sandbox"`, shown apart and never as sales |
+| Free recipes (welcome grant) | `stats/{day}.welcomeGrants` / `welcomeCredits` today and over the period, against `config/runtime.welcome.perDay`; never counted as sales (`board.json` `welcome`) |
 | Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
 | Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |
 | Spend per day, ceiling line | `stats/{day}.spentMicroUsd + reservedMicroUsd`; each day's ceiling as above, with **today's** config (past configs are not kept) |

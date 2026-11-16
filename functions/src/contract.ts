@@ -248,6 +248,18 @@ export interface BlockFlag {
    * that there are new questions without fetching the quiz.
    */
   tasteQuizVersion?: string;
+  /**
+   * Present and true on every response that carries `balance` from a server that has
+   * `claimWelcome` (CONTRACT.md "Capability `acceptsWelcome`").
+   */
+  acceptsWelcome?: true;
+  /**
+   * Beside `acceptsWelcome` on every response that carries `balance`: how many free recipes a
+   * claim grants now (`config/runtime.welcome.recipes`), 0 when the grant is off, generation is
+   * paused or today's grants are used up. The same for every account (it does not say whether
+   * this account has claimed).
+   */
+  welcomeRecipes?: number;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
@@ -257,6 +269,7 @@ export const CAPABILITIES = {
   acceptsDanish: true,
   acceptsMenuDays: true,
   acceptsTaste: true,
+  acceptsWelcome: true,
 } as const;
 
 /**
@@ -274,6 +287,25 @@ export interface GenerateResponse extends BlockFlag {
   menu?: Menu;
   balance: number;
   charged: boolean;
+  costs: CostsWire;
+}
+
+/**
+ * getWelcomeOffer: how many free recipes a sign-in gets now (0: off, generation paused, or today's
+ * grants are used up). The one call the apps make before any sign-in or purchase; it carries
+ * nothing about the caller.
+ */
+export interface WelcomeOfferResponse {
+  recipes: number;
+}
+
+export type WelcomeStatus = "GRANTED" | "ALREADY" | "OFF";
+
+/** claimWelcome. `granted` is 0 unless `status` is GRANTED. */
+export interface WelcomeClaimResponse extends BlockFlag {
+  status: WelcomeStatus;
+  granted: number;
+  balance: number;
   costs: CostsWire;
 }
 
@@ -318,7 +350,8 @@ export type ErrorReason =
   | "APPLE_NOT_LINKED"
   | "APPLE_CODE_REJECTED"
   | "APPLE_UNAVAILABLE"
-  | "NOT_ENOUGH_ITEMS";
+  | "NOT_ENOUGH_ITEMS"
+  | "SIGN_IN_REQUIRED";
 
 export function fail(
   code: ConstructorParameters<typeof HttpsError>[0],

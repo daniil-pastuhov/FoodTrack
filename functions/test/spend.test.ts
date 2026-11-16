@@ -21,6 +21,11 @@ import {
 } from "./helpers";
 
 const UID = "user-spend";
+/**
+ * A fixed server time, noon UTC: the stats and rate windows are per UTC day, so a test that read
+ * them on the real clock failed when it ran across midnight (CI, 23:59:57 UTC).
+ */
+const NOW = Date.parse("2026-06-15T12:00:00Z");
 const caller = callerFor(UID);
 
 function request(over: Record<string, unknown> = {}) {
@@ -34,7 +39,7 @@ function request(over: Record<string, unknown> = {}) {
     ingredients: [{ name: "Secretingredient", expiresOn: "2030-01-01", quantity: 1 }],
     allergens: ["peanut"],
     allergenConsent: true,
-    today: new Date().toISOString().slice(0, 10),
+    today: utcDay(NOW),
     ...over,
   };
 }
@@ -57,12 +62,13 @@ const user = async (uid = UID) => (await db.collection("users").doc(uid).get()).
 const stats = async (d: TestDeps) => (await statsRef(db, utcDay(d.now())).get()).data() ?? {};
 /** The worst case the server reserves for `request()` (same inputs, any requestId). */
 const worstCase = (over: Record<string, unknown> = {}) =>
-  planFor(validateGenerateRequest(request(over), Date.now()), parseRuntimeConfig({})).reservedMicroUsd;
+  planFor(validateGenerateRequest(request(over), NOW), parseRuntimeConfig({})).reservedMicroUsd;
 
 let deps: TestDeps;
 beforeEach(async () => {
   await resetEmulators();
   deps = makeDeps();
+  deps.clock.ms = NOW;
 });
 
 describe("stats accounting", () => {
@@ -288,7 +294,7 @@ describe("merge and delete", () => {
 describe("worst case", () => {
   test("the reservation covers twice the output cap and an input bound from the prompt bytes", () => {
     const c = parseRuntimeConfig({});
-    const plan = planFor(validateGenerateRequest(request({ kind: "menu", courses: 3 }), Date.now()), c);
+    const plan = planFor(validateGenerateRequest(request({ kind: "menu", courses: 3 }), NOW), c);
     expect(plan.limits).toEqual({ maxOutputTokens: 20_000, hardTokenCeiling: 40_000 });
     expect(plan.reservedMicroUsd).toBeGreaterThan(40_000 * 7.5);
     // 30 ingredients and 20 allergens of 40 characters, 36 of them two-byte Cyrillic letters (the
@@ -297,7 +303,7 @@ describe("worst case", () => {
     const heavy = validateGenerateRequest(request({
       ingredients: Array.from({ length: 30 }, (_, i) => ({ name: name(i), expiresOn: null, quantity: 9999 })),
       allergens: Array.from({ length: 20 }, (_, i) => name(i)),
-    }), Date.now());
+    }), NOW);
     const p = planFor(heavy, c);
     expect(p.reservedMicroUsd - 8192 * 7.5).toBeGreaterThan(50 * 36 * 2 * 1.5);
   });

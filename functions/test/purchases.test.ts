@@ -38,7 +38,7 @@ async function reason(p: Promise<unknown>): Promise<string> {
 describe("Play", () => {
   test("grants credits from Play's product and quantity, then consumes", async () => {
     const token = deps.play.add(playToken(), { productId: "recipes_50", quantity: 2 });
-    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     expect(deps.play.consumed).toEqual([token]);
     const doc = await purchase(playPurchaseId(token));
     expect(doc).toMatchObject({ uid: "alice", productId: "recipes_50", quantity: 2, credits: 100, state: "consumed" });
@@ -49,7 +49,7 @@ describe("Play", () => {
   test("a second submission is a no-op", async () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, alice, play(token));
-    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 10, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await verifyPurchase(deps, alice, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 10, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     expect(await balanceOf("alice")).toBe(10);
   });
 
@@ -63,7 +63,7 @@ describe("Play", () => {
   test("a replay under another uid grants nothing", async () => {
     const token = deps.play.add(playToken());
     await verifyPurchase(deps, alice, play(token));
-    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     expect(await balanceOf("bob")).toBe(0);
   });
 
@@ -72,7 +72,7 @@ describe("Play", () => {
     await verifyPurchase(deps, alice, play(token));
     await deleteAccount(deps, alice, {});
     expect((await purchase(playPurchaseId(token)))?.uid).toBeNull();
-    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await verifyPurchase(deps, bob, play(token))).toEqual({ status: "ALREADY_GRANTED", balance: 0, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     // The deleted account itself can do nothing more, though its token is still valid for a while.
     expect(await reason(verifyPurchase(deps, alice, play(deps.play.add(playToken()))))).toBe("ACCOUNT_CLOSED");
   });
@@ -126,7 +126,7 @@ describe("Play", () => {
     expect(await purchase(playPurchaseId(t1))).toMatchObject({ state: "granted", consumePending: true, consumeAttempts: 1 });
     deps.play.failConsume = false;
     // Resubmission retries the consume (and grants nothing more).
-    expect(await verifyPurchase(deps, alice, play(t1))).toEqual({ status: "ALREADY_GRANTED", balance: 20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await verifyPurchase(deps, alice, play(t1))).toEqual({ status: "ALREADY_GRANTED", balance: 20, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     expect((await purchase(playPurchaseId(t1)))?.state).toBe("consumed");
     // The sweeper picks up the other one once it is old enough.
     expect((await sweep(deps)).consumed).toBe(0);
@@ -183,7 +183,7 @@ describe("Play", () => {
 describe("App Store", () => {
   test("grants a verified consumable", async () => {
     const tx = appleTx({ productId: "recipes_100", quantity: 1 });
-    expect(await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
+    expect(await verifyPurchase(deps, alice, apple(deps.appStore.sign(tx)))).toEqual({ status: "GRANTED", balance: 100, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, acceptsWelcome: true, welcomeRecipes: 3, tasteQuizVersion: TQV });
     expect(await purchase(applePurchaseId("production", tx.transactionId))).toMatchObject({ uid: "alice", state: "granted" });
   });
 

@@ -56,6 +56,15 @@ export interface UserDoc {
   mergedInto?: string;
   mergedAt?: Timestamp;
   deletedAt?: Timestamp;
+  /**
+   * Free recipes this account (and every account merged into it) was given by the welcome grant
+   * (claimWelcome), lifetime. Never part of `purchasedCredits`: they are not purchases, so they
+   * raise no refund allowance (paidAllowance) and are taken out of the FIFO ledger (fifoConsumed,
+   * spent first).
+   */
+  welcomeCredits?: number;
+  /** When this account's welcome grant was made (claimWelcome); set once, kept on the tombstone. */
+  welcomeAt?: Timestamp;
   /** Balance that was lost when the account was deleted. */
   forfeitedBalance?: number;
   /** When the Auth user's displayName and photoURL were last cleared (scrubProfile). */
@@ -154,6 +163,22 @@ export interface BuyerDoc {
   createdAt: Timestamp;
 }
 
+/**
+ * welcomes/{key}: one welcome grant per sign-in identity, ever (claimWelcome). Never deleted (not
+ * by deleteAccount, not by mergeBalance, not by the owner's deletion command): it is the only
+ * guard against granting twice. The key is the identity's buyer key (`providerBuyerKey`, a hash
+ * of the provider's own user id); no email, name or token is kept.
+ */
+export interface WelcomeDoc {
+  /** The account that claimed (or, for `credits: 0`, the account that already had). */
+  uid: string;
+  /** "google.com" or "apple.com". */
+  provider: string;
+  /** Free recipes granted by this claim; 0 on an identity recorded because its account had already claimed. */
+  credits: number;
+  at: Timestamp;
+}
+
 export type GenerationState = "pending" | "done" | "failed";
 
 export interface GenerationDoc {
@@ -241,7 +266,24 @@ export interface RuntimeConfig {
    * else of the quiz is configurable here.
    */
   tasteQuiz: { hidden: string[] };
+  /**
+   * The welcome grant (claimWelcome, README "Welcome grant"): `recipes` free recipes once per
+   * sign-in identity (0 turns the feature off), at most `perDay` grants per UTC day across all
+   * accounts (the brake on farming).
+   */
+  welcome: WelcomeConfig;
 }
+
+export interface WelcomeConfig {
+  recipes: number;
+  perDay: number;
+}
+
+/** Bounds of `config/runtime.welcome`. */
+export const WELCOME_RECIPES_MAX = 20;
+export const WELCOME_PER_DAY_MAX = 10_000;
+/** What an invalid `welcome` reads as: off (never fail open). */
+export const WELCOME_OFF: Readonly<WelcomeConfig> = { recipes: 0, perDay: 0 };
 
 export type OutputJudgeMode = "off" | "shadow" | "enforce";
 export const OUTPUT_JUDGE_MODES: readonly OutputJudgeMode[] = ["off", "shadow", "enforce"];
@@ -271,6 +313,7 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   costs: DEFAULT_COSTS,
   prices: { ...DEFAULT_PRICES },
   tasteQuiz: { hidden: [] },
+  welcome: { recipes: 3, perDay: 200 },
 };
 
 const COUNT_FIELDS = [
@@ -421,6 +464,15 @@ export function parseRuntimeConfig(data: Record<string, unknown>, logger?: Logge
     if (t) out.tasteQuiz = t;
     else bad.push("tasteQuiz");
   }
+  if (data.welcome !== undefined) {
+    const w = validWelcome(data.welcome);
+    if (w) out.welcome = w;
+    else {
+      // Never fail open: an invalid welcome setting turns the grant off.
+      out.welcome = { ...WELCOME_OFF };
+      bad.push("welcome");
+    }
+  }
   if (bad.length) logger?.warn("config/runtime has invalid fields; safe values used", { fields: bad });
   return out;
 }
@@ -436,6 +488,20 @@ export function validTasteQuiz(v: unknown): RuntimeConfig["tasteQuiz"] | null {
   if (!Array.isArray(hidden) || hidden.length > 200) return null;
   if (!hidden.every((h) => typeof h === "string" && h.length <= 81)) return null;
   return { hidden: [...hidden] as string[] };
+}
+
+/**
+ * `welcome`: an object whose `recipes` (integer 0 to WELCOME_RECIPES_MAX) and `perDay` (integer 0
+ * to WELCOME_PER_DAY_MAX) are each optional (a missing one takes its default); anything else is
+ * refused as a whole, and the caller then turns the grant off.
+ */
+export function validWelcome(v: unknown): WelcomeConfig | null {
+  if (!isObj(v)) return null;
+  const inRange = (n: unknown, max: number) => isCount(n) && n <= max;
+  const recipes = v.recipes === undefined ? DEFAULT_RUNTIME_CONFIG.welcome.recipes : v.recipes;
+  const perDay = v.perDay === undefined ? DEFAULT_RUNTIME_CONFIG.welcome.perDay : v.perDay;
+  if (!inRange(recipes, WELCOME_RECIPES_MAX) || !inRange(perDay, WELCOME_PER_DAY_MAX)) return null;
+  return { recipes: recipes as number, perDay: perDay as number };
 }
 
 export async function loadRuntimeConfig(db: Firestore, logger?: Logger): Promise<RuntimeConfig> {
@@ -521,7 +587,11 @@ export function uidHash(uid: string): string {
   return createHash("sha256").update(`foodtracker-log:${uid}`).digest("hex").slice(0, 16);
 }
 
-/** Lifetime refundable failures of a kind: one per `perRefund` paid credits (net of store refunds), min 1 once paid. */
+/**
+ * Lifetime refundable failures of a kind: one per `perRefund` paid credits (net of store refunds),
+ * min 1 once paid. Only store purchases count: free recipes from the welcome grant
+ * (`welcomeCredits`) are never in `purchasedCredits`, so an account with only those has none.
+ */
 export function paidAllowance(user: UserDoc, perRefund: number): number {
   const paid = (user.purchasedCredits ?? 0) - (user.refundedCredits ?? 0);
   return paid > 0 ? Math.max(1, Math.floor(paid / perRefund)) : 0;
@@ -534,6 +604,7 @@ export const purchaseRef = (db: Firestore, id: string) =>
   db.collection("purchases").doc(id) as DocumentReference<PurchaseDoc>;
 export const statsRef = (db: Firestore, day: string) => db.collection("stats").doc(day.replace(/-/g, ""));
 export const buyerRef = (db: Firestore, key: string) => db.collection("buyers").doc(key) as DocumentReference<BuyerDoc>;
+export const welcomeRef = (db: Firestore, key: string) => db.collection("welcomes").doc(key) as DocumentReference<WelcomeDoc>;
 
 export function utcDay(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
