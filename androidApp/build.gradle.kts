@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.ksp)
     alias(libs.plugins.google.services)
     alias(libs.plugins.firebase.crashlytics)
+    alias(libs.plugins.roborazzi)
 }
 
 // Release signing credentials live in a git-ignored keystore.properties next to this
@@ -145,6 +146,27 @@ kotlin {
     compilerOptions.jvmTarget.set(JvmTarget.JVM_17)
 }
 
+// The UI screenshot check (scripts/ui_check.sh, README "UI screenshot check"): a Robolectric test
+// for every @Preview under ui/, run through FoodTrackerPreviewTester (src/test/.../screenshots/),
+// with the baselines in src/test/snapshots/images/. Plain testDebugUnitTest renders them but
+// compares nothing; -Proborazzi.test.verify=true / .record=true (what the script passes) do.
+@OptIn(com.github.takahirom.roborazzi.ExperimentalRoborazziApi::class)
+roborazzi {
+    outputDir.set(layout.projectDirectory.dir("src/test/snapshots/images"))
+    generateComposePreviewRobolectricTests {
+        enable = true
+        packages = listOf("com.foodtracker.android.ui")
+        includePrivatePreviews = true
+        testerQualifiedClassName = "com.foodtracker.android.screenshots.FoodTrackerPreviewTester"
+        useScanOptionParametersInTester = true
+        robolectricConfig = mapOf(
+            "sdk" to "[34]",
+            // Pixel 5 in en-GB (the constant, in src/test/.../screenshots/ScreenshotSupport.kt).
+            "qualifiers" to "com.foodtracker.android.screenshots.PIXEL_5_EN_GB",
+        )
+    }
+}
+
 // Emits per-composable skippability and per-class stability reports. These are the static half
 // of the performance baseline (see perf/README.md): the "restartable but not skippable"
 // composable count and the "unstable class" count are exact and deterministic, unlike frame
@@ -235,4 +257,10 @@ dependencies {
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.ktor.client.mock)
+    testImplementation(libs.compose.ui.test.junit4)
+    testImplementation(libs.roborazzi)
+    testImplementation(libs.roborazzi.compose)
+    testImplementation(libs.roborazzi.compose.preview.scanner.support)
+    testImplementation(libs.composable.preview.scanner)
+    testImplementation(libs.classgraph)
 }

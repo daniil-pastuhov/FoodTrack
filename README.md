@@ -65,6 +65,22 @@ Requires JDK 17 for Android and Xcode for iOS. See [CONTRIBUTING.md](CONTRIBUTIN
 cd functions && npm ci && npm test   # backend, against the Firebase emulators (Node.js 24, Java 21+)
 ```
 
+### UI screenshot check
+
+A quick answer to "did I change any Android screen I didn't mean to?", on the JVM with no emulator ([Roborazzi](https://github.com/takahirom/roborazzi) on Robolectric, about half a minute):
+
+```bash
+scripts/ui_check.sh            # compare every screen with its baseline: exit 0 none / 1 differences / 2 failed to run
+scripts/ui_check.sh --record   # accept the current UI as the new baseline (then review and commit the images)
+```
+
+- **What is checked**: every `@Preview` under `androidApp/.../ui/`, found automatically (private ones too), with its own size, locale, font scale and dark/light setting; a preview with no dark variant of its own is also taken in dark (`_NIGHT`). A new `@Preview` is covered with no other work, but fails as "without a baseline" until it is recorded. Home, the shopping list and the add/edit form take a `PantryStateHolder` and have no preview, so `ScreenScreenshotTest` builds them over in-memory data.
+- **Baselines**: `androidApp/src/test/snapshots/images/`, one PNG per preview and variant, named after its file, function and variant, so a renamed or removed preview shows in `git status` after a record.
+- **When something changed**: the script lists the screenshots; `androidApp/build/outputs/roborazzi/<name>_compare.png` shows reference, diff and new side by side, and `androidApp/build/reports/roborazzi/debug/index.html` has them all. If the change was meant, record and commit the new images with the code.
+- **Strict and fixed**: one pixel off by more than Roborazzi's anti-aliasing tolerance fails, so a 1dp shift or a small colour change does. Device (Pixel 5, en-GB), SDK 34, time zone (UTC) and the animation clock (10 s) are fixed, dates come from the sample data, never from today, and pictures never load from the network.
+- **macOS only**: the baselines are recorded on macOS, and Robolectric's rendering can differ slightly on Linux, so CI doesn't compare them. Plain `./gradlew :androidApp:testDebugUnitTest` (what CI runs) still renders every preview, so a preview that crashes fails there, but compares nothing.
+- This is not `scripts/screenshot_check.py` (below), which re-takes the store screenshots on an emulator and a simulator and is much slower.
+
 ### Build Android App
 ```bash
 ./gradlew :androidApp:assembleDebug

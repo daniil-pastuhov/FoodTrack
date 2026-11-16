@@ -499,7 +499,8 @@ internal fun LarderSheetPreview() = LarderPreview {
 @PreviewLightDark
 @Composable
 internal fun LarderDatePickerPreview() = LarderPreview {
-    LarderDatePickerDialog(LocalDate(2026, 11, 24), {}, {})
+    // A month already past: the picker rings the real today, which must never be on show here.
+    LarderDatePickerDialog(LocalDate(2025, 3, 24), {}, {})
 }
 
 @PreviewLightDark

@@ -13,6 +13,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -39,6 +40,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.VerticalDivider
@@ -68,6 +70,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -96,6 +99,7 @@ import com.foodtracker.android.ui.navigation.LocalLarderSnackbars
 import com.foodtracker.android.ui.theme.LarderRadius
 import com.foodtracker.android.ui.theme.LarderSize
 import com.foodtracker.android.ui.theme.LarderSpace
+import com.foodtracker.android.ui.theme.LarderTheme
 import com.foodtracker.android.util.storageLocationLabel
 import com.foodtracker.backup.RestoreMode
 import com.foodtracker.model.AppSettings
@@ -1408,3 +1412,28 @@ internal fun RestoreChoicePreview() = LarderPreview {
     RestoreChoice("Add what's missing", "Keeps everything already here.", {})
     RestoreChoice("Replace everything", "Deletes what's on this device first.", {}, destructive = true)
 }
+
+/** The whole screen as it opens, with fixed settings. */
+@Composable
+private fun SettingsScreenSample() = LarderTheme(darkTheme = isSystemInDarkTheme()) {
+    Surface(color = MaterialTheme.colorScheme.background) {
+        SettingsScreen(
+            settings = AppSettings(allergens = setOf("Peanuts", "Milk"), onboardingCompleted = true),
+            onSave = {},
+            onClearAllData = {},
+            onManageCategories = {},
+            onExportBackup = { _, _ -> },
+            onImportBackup = { _, _ -> },
+            backupFileName = "bestbefore-backup-2026-11-04.json"
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+internal fun SettingsScreenPreview() = SettingsScreenSample()
+
+/** Expanded: the list of sections beside the one chosen. */
+@Preview(widthDp = 1024, heightDp = 768)
+@Composable
+internal fun SettingsScreenTabletPreview() = SettingsScreenSample()

@@ -71,12 +71,12 @@ import com.foodtracker.android.util.categoryLabel
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
 import com.foodtracker.model.resolveShoppingSectionId
-import com.foodtracker.util.DateUtils
 import com.foodtracker.viewmodel.PantryDerivation
 import com.foodtracker.viewmodel.PantryStateHolder
 import com.foodtracker.viewmodel.PantryUiState
 import com.foodtracker.viewmodel.ShoppingRow
 import kotlinx.coroutines.delay
+import kotlinx.datetime.LocalDate
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
@@ -692,7 +692,7 @@ private fun previewEntry(name: String, quantity: Int = 1, barcode: String? = nul
     productName = name,
     barcode = barcode,
     quantity = quantity,
-    addedDate = DateUtils.today()
+    addedDate = LocalDate(2026, 11, 4)
 )
 
 @Composable
