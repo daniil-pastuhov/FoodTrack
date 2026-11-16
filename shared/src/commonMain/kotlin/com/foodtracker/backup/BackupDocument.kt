@@ -4,6 +4,7 @@ import com.foodtracker.model.AppSettings
 import com.foodtracker.model.CachedProduct
 import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.PantryItem
+import com.foodtracker.model.Staple
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
 import kotlinx.serialization.Serializable
@@ -37,13 +38,16 @@ data class BackupDocument(
     val categoryPreferences: List<CategoryPreference> = emptyList(),
     val products: List<CachedProduct> = emptyList(),
     val knownProductNames: List<String> = emptyList(),
-    val settings: AppSettings = AppSettings()
+    val settings: AppSettings = AppSettings(),
+    /** The person's staples. Absent from backups made before staples existed, which read as none;
+     *  older versions skip the field. */
+    val staples: List<Staple> = emptyList()
 ) {
     /** Nothing worth restoring. An empty-but-valid backup is a real thing (a new install that
      *  exported immediately), so callers say so rather than reporting a broken file. */
     val isEmpty: Boolean
         get() = items.isEmpty() && shoppingList.isEmpty() && shoppingSections.isEmpty() && products.isEmpty() &&
-                categoryPreferences.isEmpty() && knownProductNames.isEmpty()
+                categoryPreferences.isEmpty() && knownProductNames.isEmpty() && staples.isEmpty()
 
     companion object {
         const val CURRENT_VERSION = 1
@@ -72,11 +76,12 @@ data class RestoreSummary(
     val shoppingEntriesRestored: Int = 0,
     val productsRestored: Int = 0,
     val categoriesRestored: Int = 0,
-    val settingsRestored: Boolean = false
+    val settingsRestored: Boolean = false,
+    val staplesRestored: Int = 0
 ) {
     val isEmpty: Boolean
         get() = itemsRestored == 0 && shoppingEntriesRestored == 0 &&
-                productsRestored == 0 && categoriesRestored == 0
+                productsRestored == 0 && categoriesRestored == 0 && staplesRestored == 0
 }
 
 /** Why a backup file couldn't be read. Distinguished so the UI can tell the user something

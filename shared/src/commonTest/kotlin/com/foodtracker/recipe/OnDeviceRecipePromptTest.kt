@@ -251,4 +251,63 @@ class OnDeviceRecipePromptTest {
         assertTrue(two.contains("Set fromPantry to true only for items from the lists above."), two)
         assertTrue(two.contains("I also have these at home") && two.contains("- Rice (90 days left)"), two)
     }
+
+    private val staplesIntro = "\n\nI always have these basics too. Use any of them if the dish needs them; none is needed, and they are not items to use up:\n"
+
+    @Test
+    fun staplesAreListedLastAsBasicsThatAreNeverNeeded() {
+        val prompt = buildOnDeviceRecipePrompt(
+            items = listOf(RecipePromptItem("Bread", 1)),
+            config = config,
+            languageCode = "en",
+            allergens = emptyList(),
+            optional = listOf(RecipePromptItem("Rice", 90)),
+            staples = listOf(" Salt ", "Olive oil")
+        )
+        assertTrue(prompt.contains("- Rice (90 days left)" + staplesIntro + "- Salt\n- Olive oil\n\nKeep to this:"), prompt)
+    }
+
+    @Test
+    fun theFromPantrySentenceNamesTheListsThatArePantry() {
+        fun closing(optional: Boolean, staples: Boolean) = buildOnDeviceRecipePrompt(
+            items = listOf(RecipePromptItem("Bread", 1)),
+            config = config,
+            languageCode = "en",
+            allergens = emptyList(),
+            optional = if (optional) listOf(RecipePromptItem("Rice", 90)) else emptyList(),
+            staples = if (staples) listOf("Salt") else emptyList()
+        ).substringAfterLast("\n")
+        assertEquals("Set fromPantry to true only for items from the list above. Leave tip empty if there is none.", closing(false, false))
+        assertEquals("Set fromPantry to true only for items from the lists above. Leave tip empty if there is none.", closing(true, false))
+        assertEquals("Set fromPantry to true only for items from the first list above. Leave tip empty if there is none.", closing(false, true))
+        assertEquals("Set fromPantry to true only for items from the first two lists above. Leave tip empty if there is none.", closing(true, true))
+    }
+
+    @Test
+    fun atMostTwentyStaplesEachCutAndNoneCountsTowardsTheItems() {
+        val items = (0 until MAX_RECIPE_INGREDIENTS).map { RecipePromptItem("item $it", it) }
+        val staples = (0 until 25).map { "basic $it" } + ("y".repeat(60))
+        val prompt = buildOnDeviceRecipePrompt(items, config, "en", emptyList(), staples = staples)
+        assertEquals(MAX_RECIPE_INGREDIENTS, prompt.lines().count { it.startsWith("- item ") })
+        assertEquals(20, prompt.lines().count { it.startsWith("- basic ") })
+        assertFalse(prompt.contains("- basic 20"), prompt)
+        assertFalse(prompt.contains("- yyy"), "the 26th is past the cap")
+    }
+
+    @Test
+    fun withoutStaplesThePromptIsAsBefore() {
+        val before = buildOnDeviceRecipePrompt(listOf(RecipePromptItem("Bread", 1)), config, "en", emptyList())
+        assertEquals(before, buildOnDeviceRecipePrompt(listOf(RecipePromptItem("Bread", 1)), config, "en", emptyList(), staples = emptyList()))
+        assertFalse(before.contains("basics"), before)
+    }
+
+    @Test
+    fun aReplyMarksTheIngredientsThatAreTheStaples() {
+        val reply = """{"title":"Toast","ingredients":[{"amount":"2","name":"Bread","fromPantry":true},""" +
+            """{"amount":"","name":"salt, to taste","fromPantry":false},{"amount":"1 tbsp","name":"Olive oil","fromPantry":false},""" +
+            """{"amount":"","name":"Salt and pepper","fromPantry":false},{"amount":"1","name":"Garlic","fromPantry":false}],"steps":["Toast."]}"""
+        val recipe = assertNotNull(parseRecipeReply(reply, RecipeSource.DEVICE, config, listOf("Bread"), stapleNames = listOf("Salt", "Olive oil")))
+        assertEquals(listOf(null, "Salt", "Olive oil", null, null), recipe.ingredients.map { it.stapleName })
+        assertTrue(recipe.ingredients.none { it.stapleName != null && it.fromPantry })
+    }
 }

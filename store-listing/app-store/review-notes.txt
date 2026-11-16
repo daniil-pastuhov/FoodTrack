@@ -2,27 +2,27 @@
 The Calendar tab is replaced by a Recipe tab. It adds the app's first in-app purchases (three consumable recipe packs, submitted with this version) and an optional sign-in. Everything else works as before, with no account.
 
 2. PURPOSE AND AUDIENCE
-BestBefore helps households waste less food. It keeps a list of the food at home with each item's expiry date, reminds the user a few days before something expires, and suggests a recipe for what needs using first. Items that are used up go onto a shopping list. Audience: adults managing a household. The app is free, with no ads or tracking; the pantry stays on the device.
+BestBefore helps households waste less food. It lists the food at home with each item's expiry date, reminds the user a few days before something expires, and suggests a recipe for what needs using first. Used-up items go onto a shopping list. Audience: adults managing a household. The app is free, with no ads or tracking; the pantry stays on the device.
 
 3. SETUP AND MAIN FEATURES
 No login, demo account or sample files are needed.
-- Add food: tap the scan button and scan any food barcode (name and picture come from Open Food Facts), then point the camera at the printed date, or pick a date. "+" adds an item by hand.
+- Add food: tap the scan button and scan a food barcode (name and picture come from Open Food Facts), then point the camera at the printed date, or pick a date. "+" adds an item by hand.
 - Home: everything at home, sorted by expiry.
 - Shopping List: essentials move here when used up.
 - Settings: reminders, and optional "Remind me near a shop" (with "Always" location access the app shows the shopping list on arrival at a saved shop; the location is never sent anywhere).
-- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" hands a text prompt to any app; with Apple Intelligence (iOS 26 or later) "Generate on this iPhone" writes it on the device (Foundation Models). Paid: packs of 10, 50 or 100 recipes; one recipe is one dish written by our server. "Menu set" (1 to 4 days, 1 to 3 courses a day) is server-only and takes several recipes; the form shows how many. "Add to shopping list" adds its missing ingredients.
+- Recipe: writes a recipe from the items closest to their date. Free: "Share prompt" hands a text prompt to any app; with Apple Intelligence (iOS 26 or later) "Generate on this iPhone" writes it on device (Foundation Models). Paid: packs of 10, 50 or 100 recipes; one recipe is one dish from our server. "Menu set" (1 to 4 days, 1 to 3 courses a day) is server-only and takes several recipes; the form shows how many. "Add to shopping list" adds its missing ingredients.
 
 TO TEST THE PURCHASE (sandbox purchases are accepted during this review, within a daily limit shared by all sandbox testers):
 1. Add an item or two.
 2. Open the Recipe tab and tap "Buy recipes".
 3. Choose "On this iPhone, no account", or sign in with Apple or Google.
-4. Buy the 10-recipe pack. The sheet notes that if you ask Apple for a refund, we tell Apple how many of the recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
-5. Tap "Generate recipe". If allergens are set in Settings, the app first asks for consent to send them. The recipe appears after a few seconds and the balance drops to 9.
+4. Buy the 10-recipe pack. The sheet notes that if you ask Apple for a refund, we tell Apple how many recipes were used. The balance shows 10. If it says the purchase is being confirmed, tap "Try now".
+5. Tap "Generate recipe". If allergens are set in Settings, the app first asks consent to send them. The recipe appears in seconds; the balance drops to 9.
 Deletion: Recipe tab > Recipe settings > Account > Delete account (signed in), or Your recipes > "Delete my data from our server" (bought without an account).
 
 4. EXTERNAL SERVICES
-- Open Food Facts (https://world.openfoodfacts.org): on a barcode scan the app requests that product's name, picture and nutrition data. Only the barcode number is sent.
-- Our server (Firebase Cloud Functions, Firebase Authentication, App Check), reached only once a purchase is started: it verifies the purchase with Apple and, for a paid recipe, sends the ticked item names (all items if "Send all products" is on), the recipe settings and the allergen list to Google Gemini (Vertex AI) and returns the recipe. Allergens are sent only after explicit consent.
+- Open Food Facts (https://world.openfoodfacts.org): on a barcode scan the app requests the product's name, picture and nutrition data; only the barcode number is sent.
+- Our server (Firebase Cloud Functions, Firebase Authentication, App Check), reached only once a purchase is started: it verifies the purchase with Apple and, for a paid recipe, sends the ticked item names (all items if "Send all products" is on), the names of the staples kept in Settings > Staples, the recipe settings and the allergen list to Google Gemini (Vertex AI) and returns the recipe. Allergens are sent only after explicit consent.
 - Sign in with Apple and Google Sign-In, both optional. Payments are Apple in-app purchases only.
 - Firebase Crashlytics for crash reports. No analytics, no ads.
 - On the device: AVFoundation, Vision, Core Location region monitoring, UserNotifications, WidgetKit, SwiftData, StoreKit, Foundation Models.

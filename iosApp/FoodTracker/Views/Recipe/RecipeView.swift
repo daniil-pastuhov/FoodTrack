@@ -38,6 +38,7 @@ struct RecipeView: View {
     private var shoppingContext: RecipeShoppingContext {
         RecipeShoppingContext(
             listedNames: pantry.shoppingList.map(\.productName),
+            stapleKeys: pantry.currentStapleKeys,
             add: { [pantry] names in pantry.addShoppingListEntries(names) },
             openShoppingList: onOpenShopping
         )
@@ -64,6 +65,8 @@ struct RecipeView: View {
                         RecipeSettingsView(model: model)
                     case .tasteQuiz:
                         TasteQuizView(model: model)
+                    case .staples:
+                        StaplesView(viewModel: pantry)
                     }
                 }
         }
@@ -102,7 +105,7 @@ struct RecipeView: View {
             let showsRecipe = path.contains { destination in
                 switch destination {
                 case .result, .dish: return true
-                case .saved, .settings, .tasteQuiz: return false
+                case .saved, .settings, .tasteQuiz, .staples: return false
                 }
             }
             if !showsRecipe { ReviewPrompter.shared.recipeLeft { requestReview() } }
@@ -172,7 +175,7 @@ struct RecipeView: View {
             actions: [
                 .cancel(L10n.cancelButton) { model.declineAllergenConsent() },
                 .init(L10n.recipeAllergenConsentAgree) {
-                    if model.agreeToAllergenConsent() { model.writeOnServer(from: pantry.items) }
+                    if model.agreeToAllergenConsent() { model.writeOnServer(from: pantry.items, staples: pantry.stapleRows) }
                 },
             ]
         )
@@ -448,7 +451,7 @@ struct RecipeView: View {
         switch failure {
         case .onDeviceFailed:
             showSnackbar(L10n.recipeFailedOnDevice, actionTitle: L10n.settingsTryAgain) {
-                model.writeOnDevice(from: pantry.items)
+                model.writeOnDevice(from: pantry.items, staples: pantry.stapleRows)
             }
         case .onDeviceRefused:
             showSnackbar(L10n.recipeRefusedOnDevice)
@@ -458,7 +461,7 @@ struct RecipeView: View {
                     model.resumeServerWrite()
                 } else {
                     model.mode = kind == .menu ? .menu : .recipe
-                    model.writeOnServer(from: pantry.items)
+                    model.writeOnServer(from: pantry.items, staples: pantry.stapleRows)
                 }
             }
         case .serverRefused(let kind, let taken):
@@ -571,6 +574,23 @@ struct RecipeView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, LarderSpace.s2)
                     .padding(.top, LarderSpace.s2)
+            }
+            // The person's staples go to every route too: one quiet line, which opens them.
+            let staples = model.stapleNames(for: items, staples: pantry.stapleRows).count
+            if staples > 0 {
+                Button {
+                    model.path.append(.staples)
+                } label: {
+                    Text(L10n.recipeStaplesCount(staples))
+                        .larderFont(.bodySm)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, minHeight: LarderSize.control, alignment: .leading)
+                        .padding(.horizontal, LarderSpace.s2)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(L10n.staplesOpen)
             }
         }
     }
@@ -707,7 +727,7 @@ struct RecipeView: View {
         switch route {
         case .onDevice:
             RecipeWayRow(L10n.recipeGenerateOnPhone, icon: .smartphone, free: L10n.recipeCostFree, supporting: L10n.recipeOnDeviceCaption, showsTile: showsTile) {
-                model.writeOnDevice(from: pantry.items)
+                model.writeOnDevice(from: pantry.items, staples: pantry.stapleRows)
             }
             .disabled(nothingTicked)
         case .share:
@@ -740,7 +760,7 @@ struct RecipeView: View {
                 cost: L10n.recipeCost(model.menuCost),
                 subtitle: model.sendsTaste ? L10n.tasteUsesProfile : nil
             ) {
-                model.writeOnServer(from: pantry.items)
+                model.writeOnServer(from: pantry.items, staples: pantry.stapleRows)
             }
             .disabled(nothingTicked)
         } else if !credits.serverPaused {
@@ -792,12 +812,12 @@ struct RecipeView: View {
                 // Only when a profile will really be sent with it.
                 subtitle: model.sendsTaste ? L10n.tasteUsesProfile : nil
             ) {
-                model.writeOnServer(from: pantry.items)
+                model.writeOnServer(from: pantry.items, staples: pantry.stapleRows)
             }
             .disabled(nothingTicked)
         case .onDevice:
             RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
-                model.writeOnDevice(from: pantry.items)
+                model.writeOnDevice(from: pantry.items, staples: pantry.stapleRows)
             }
             .disabled(nothingTicked)
         default:
@@ -840,7 +860,7 @@ struct RecipeView: View {
     }
 
     private func sharePrompt() {
-        sharedPrompt = SharedText(text: model.sharePrompt(for: pantry.items))
+        sharedPrompt = SharedText(text: model.sharePrompt(for: pantry.items, staples: pantry.stapleRows))
     }
 }
 

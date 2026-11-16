@@ -905,3 +905,32 @@
 "welcome_settings_account_one" = "This account can get a free recipe from our server.";
 "welcome_settings_on_phone_one" = "Signing in also gets you a free recipe.";
 "welcome_delete_note" = "Signing in again later won't bring back free recipes.";
+
+/* Staples: basics the person always has, the Staples screen, its Settings card and the Recipe form's line; copied from Android's strings.xml. */
+"staples_title" = "Staples";
+"staples_intro" = "Basics you always have at home, like salt and oil. They have no date, and recipes may use them.";
+"staples_common_header" = "Common staples";
+"staples_own_header" = "Your own";
+"staples_add_placeholder" = "Add a staple";
+"staples_add" = "Add";
+"staples_ran_out" = "Ran out";
+"staples_ran_out_desc" = "Ran out of %@: add it to your shopping list";
+"staples_on_list" = "On your shopping list";
+"staples_remove" = "Remove %@";
+"staples_removed" = "%@ removed from staples";
+"staples_added_to_list" = "%@ added to your shopping list";
+"staples_already" = "%@ is already a staple";
+"staples_full" = "You can have up to %d staples. Remove one to add another.";
+"staples_settings_desc" = "Basics you always have, like salt and oil. Recipes may use them.";
+"staples_manage" = "Manage staples";
+"staples_none" = "None yet";
+"staples_open" = "Open staples";
+"recipe_your_staple" = "Your staple";
+"recipe_prompt_staples_intro" = "I always have these basics at home too. Use any of them if the recipe needs them; none of them has to be used:";
+"staples_note" = "Your staples are sent with every recipe request, as names only: to our server for a recipe from a pack, and inside a prompt you share. While a staple is on your shopping list, it isn't sent.";
+
+/* Onboarding: the Staples step. */
+"onboarding_staples_title" = "What do you always have at home?";
+"onboarding_staples_later" = "You can skip this and set it up later in Settings › Staples.";
+"onboarding_staples_continue" = "Continue";
+"onboarding_staples_skip" = "Skip";

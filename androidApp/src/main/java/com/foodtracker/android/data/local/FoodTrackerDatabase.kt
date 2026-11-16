@@ -14,9 +14,10 @@ import com.foodtracker.model.DEFAULT_SHOPPING_SECTION_ID
         LocalProductEntity::class,
         CategoryPreferenceEntity::class,
         ShoppingSectionEntity::class,
-        SavedRecipeEntity::class
+        SavedRecipeEntity::class,
+        StapleEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 abstract class FoodTrackerDatabase : RoomDatabase() {
@@ -27,6 +28,7 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
     abstract fun categoryPreferenceDao(): CategoryPreferenceDao
     abstract fun shoppingSectionDao(): ShoppingSectionDao
     abstract fun savedRecipeDao(): SavedRecipeDao
+    abstract fun stapleDao(): StapleDao
 
     companion object {
         const val DB_NAME = "foodtracker.db"
@@ -396,6 +398,14 @@ abstract class FoodTrackerDatabase : RoomDatabase() {
                     "CREATE INDEX IF NOT EXISTS index_saved_recipes_createdAtEpochMillis " +
                         "ON saved_recipes (createdAtEpochMillis)"
                 )
+            }
+        }
+
+        // Adds the staples table (names the person always has, apart from the pantry). Nothing
+        // existing is touched: every other table keeps its rows as they are.
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS staples (id TEXT NOT NULL PRIMARY KEY, name TEXT NOT NULL, presetId TEXT, addedAtEpochMillis INTEGER NOT NULL)")
             }
         }
     }

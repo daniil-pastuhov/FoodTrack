@@ -377,7 +377,8 @@ the file `store-listing/google-play/data-safety.csv`, sent by `scripts/play_data
     has the matching Name entry (linked, not tracking, App Functionality).
   - **User Content > Other User Content**: the ticked items' names, expiry dates and quantities
     (with "Send all products" on in Recipe settings, every pantry item's, the others as items the
-    recipe may use)
+    recipe may use), and the names of the person's staples (Settings > Staples), sent with every
+    recipe or menu from a pack,
     and the recipe settings sent to write a recipe or menu, and the recipe written back (kept on
     the server for 7 days after it finished, for retries, then deleted). The request itself is
     not stored, only a hash of it; it is screened automatically for prompt injection, and
@@ -432,7 +433,8 @@ the file `store-listing/google-play/data-safety.csv`, sent by `scripts/play_data
     provider entry although the server clears the top-level name), **Account management** only:
     nothing in the app uses it.
   - **Other user-generated content** (the ticked items' names, dates and quantities, every pantry
-    item's with "Send all products" on, the recipe settings, the recipe returned): optional,
+    item's with "Send all products" on, and the names of the person's staples (Settings > Staples),
+    sent with every recipe or menu from a pack, the recipe settings, the recipe returned): optional,
     **App functionality**.
   - **Health and fitness > Health info** (the allergen list, "Information about a user's health,
     such as medical records or symptoms"): optional (only with allergens set, and only after the

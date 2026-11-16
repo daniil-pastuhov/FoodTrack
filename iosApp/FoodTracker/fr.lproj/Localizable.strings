@@ -905,3 +905,32 @@
 "welcome_settings_account_one" = "Ce compte peut recevoir une recette gratuite de notre serveur.";
 "welcome_settings_on_phone_one" = "En vous connectant, vous recevez aussi une recette gratuite.";
 "welcome_delete_note" = "Vous reconnecter plus tard ne redonnera pas de recettes gratuites.";
+
+/* Staples: basics the person always has, the Staples screen, its Settings card and the Recipe form's line; copied from Android's strings.xml. */
+"staples_title" = "Produits de base";
+"staples_intro" = "Les produits de base que vous avez toujours chez vous, comme le sel et l'huile. Ils n'ont pas de date, et les recettes peuvent les utiliser.";
+"staples_common_header" = "Produits de base courants";
+"staples_own_header" = "Les vôtres";
+"staples_add_placeholder" = "Ajouter un produit de base";
+"staples_add" = "Ajouter";
+"staples_ran_out" = "Épuisé";
+"staples_ran_out_desc" = "Plus de %@ : ajouter à la liste de courses";
+"staples_on_list" = "Sur votre liste de courses";
+"staples_remove" = "Retirer %@";
+"staples_removed" = "%@ retiré des produits de base";
+"staples_added_to_list" = "%@ ajouté à votre liste de courses";
+"staples_already" = "%@ est déjà un produit de base";
+"staples_full" = "Vous pouvez avoir jusqu'à %d produits de base. Retirez-en un pour en ajouter un autre.";
+"staples_settings_desc" = "Les produits de base que vous avez toujours, comme le sel et l'huile. Les recettes peuvent les utiliser.";
+"staples_manage" = "Gérer les produits de base";
+"staples_none" = "Aucun pour l'instant";
+"staples_open" = "Ouvrir les produits de base";
+"recipe_your_staple" = "Produit de base";
+"recipe_prompt_staples_intro" = "J'ai aussi toujours ces produits de base à la maison. Utilisez ceux dont la recette a besoin ; aucun n'est obligatoire :";
+"staples_note" = "Les noms de vos produits de base sont envoyés avec chaque demande de recette : à notre serveur pour une recette d'un pack, et dans un prompt que vous partagez. Tant qu'un produit de base est sur votre liste de courses, il n'est pas envoyé.";
+
+/* Onboarding: the Staples step. */
+"onboarding_staples_title" = "Qu'avez-vous toujours chez vous ?";
+"onboarding_staples_later" = "Vous pouvez passer cette étape et le faire plus tard dans Réglages › Produits de base.";
+"onboarding_staples_continue" = "Continuer";
+"onboarding_staples_skip" = "Passer";

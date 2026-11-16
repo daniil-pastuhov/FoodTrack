@@ -213,6 +213,19 @@ export const MAX_TOTAL_INGREDIENTS = 30;
  * test/optionalIngredients.test.ts checks it.
  */
 export const MAX_OPTIONAL_NAME_CHARS = 1050;
+/**
+ * Entries of `staples` in one request (the names of the basics a person always has at home,
+ * CONTRACT.md "Staples"): a longer list is INVALID_REQUEST, and at most this many are kept. Its own
+ * budget, apart from MAX_TOTAL_INGREDIENTS: staples never use up room meant for pantry items.
+ */
+export const MAX_STAPLES = 20;
+/**
+ * Code points of the kept staples' names together; an entry that does not fit is skipped and a
+ * later, shorter one may still be kept. Chosen so that the largest request of every kind, with
+ * every staple at its longest in 4-byte characters, still fits the per-user daily spend ceiling
+ * (README "Spend ceilings"; test/staples.test.ts checks it). The apps cap at 400 as well.
+ */
+export const MAX_STAPLE_NAME_CHARS = 400;
 export const MAX_ALLERGENS = 20;
 export const NAME_MAX_LENGTH = 40;
 export const LANGUAGES = ["en", "nb", "ru", "de", "es", "fr", "it", "pl", "sv", "uk", "da"] as const;

@@ -19,7 +19,16 @@ enum RecipePromptBuilder {
         let past = request.items.filter { $0.daysRemaining < 0 }.count
         let pastLine = past == 0 ? "" : "\n\n" + L10n.recipePromptPastDate(count: past)
         return L10n.recipePromptIntro + "\n\n" + items + pastLine + otherItemsSection(request.otherItems)
+            + staplesSection(request.staples)
             + "\n\n" + L10n.recipePromptPreferencesIntro + "\n" + preferences
+    }
+
+    /// The person's staples after the other items: one line each, no date, as basics the recipe
+    /// may use and never has to. Empty without any. At most 20 names of 40 characters, so uncapped.
+    /// Android: `buildRecipePrompt`'s `staples`.
+    static func staplesSection(_ staples: [String]) -> String {
+        guard !staples.isEmpty else { return "" }
+        return "\n\n" + L10n.recipePromptStaplesIntro + "\n" + staples.map { "- " + $0 }.joined(separator: "\n")
     }
 
     /// Cap on the "other items" section, in characters, as `MAX_OTHER_ITEMS_CHARS` on Android:
@@ -93,9 +102,16 @@ enum RecipePromptBuilder {
         ingredient as from the pantry only when it is one of the listed pantry items, and then \
         copy that item's name exactly as listed into pantryItem, untranslated. Write every other \
         text field in \(request.config.resolvedLanguage.englishName).\(request.otherItems.isEmpty ? "" : " " + onDeviceOtherItemsRule)\
-        \(request.items.contains { $0.daysRemaining < 0 } ? " " + onDevicePastDateRule : "")
+        \(request.items.contains { $0.daysRemaining < 0 } ? " " + onDevicePastDateRule : "")\
+        \(request.staples.isEmpty ? "" : " " + onDeviceStaplesRule)
         """
     }
+
+    /// With staples: what the last list is for. As Android's on-device prompt.
+    static let onDeviceStaplesRule = "Basics the person always has may be listed last; use any of them freely if the dish needs them, none is needed, and they are not pantry items: never mark one as from the pantry."
+
+    /// Staples the phone's model sees at most.
+    static let maxOnDeviceStaples = 20
 
     /// The owner's rule: an item past its date is the cook's choice and is used, never dropped
     /// for its age; the app warns about it itself. As Android's on-device prompt.
@@ -121,6 +137,11 @@ enum RecipePromptBuilder {
             lines.append("")
             lines.append("Also at home, use only where it helps, none is needed:")
             lines += extra.map { "- \($0.name) (\(englishExpiry($0.daysRemaining)))" }
+        }
+        if !request.staples.isEmpty {
+            lines.append("")
+            lines.append("Basics always at home, use any if the dish needs them, none is needed:")
+            lines += request.staples.prefix(maxOnDeviceStaples).map { "- \($0)" }
         }
         lines.append("")
         lines.append("Preferences:")

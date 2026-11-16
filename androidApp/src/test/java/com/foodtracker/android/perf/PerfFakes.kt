@@ -17,6 +17,8 @@ import com.foodtracker.repository.ProductNameRepository
 import com.foodtracker.repository.SettingsRepository
 import com.foodtracker.repository.ShoppingListRepository
 import com.foodtracker.repository.ShoppingSectionRepository
+import com.foodtracker.repository.StapleRepository
+import com.foodtracker.model.Staple
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -235,5 +237,23 @@ class FakeCategoryPreferenceRepository(
 
     override suspend fun clearAll() {
         preferencesFlow.value = emptyList()
+    }
+}
+
+/** The staples' table in memory. */
+class FakeStapleRepository(staples: List<Staple> = emptyList()) : StapleRepository {
+    val staplesFlow = MutableStateFlow(staples)
+    override fun getStaplesFlow(): Flow<List<Staple>> = staplesFlow
+    override suspend fun getAll(): List<Staple> = staplesFlow.value
+    override suspend fun upsert(staple: Staple) = upsertAll(listOf(staple))
+    override suspend fun upsertAll(staples: List<Staple>) {
+        val ids = staples.mapTo(HashSet()) { it.id }
+        staplesFlow.value = staplesFlow.value.filterNot { it.id in ids } + staples
+    }
+    override suspend fun delete(id: String) {
+        staplesFlow.value = staplesFlow.value.filterNot { it.id == id }
+    }
+    override suspend fun clearAll() {
+        staplesFlow.value = emptyList()
     }
 }

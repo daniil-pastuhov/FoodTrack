@@ -4,7 +4,7 @@
  * answer can still show what the model did), and the classification of an attempt. Pure.
  */
 import { menuDates, menuDaysOf, type GenerateRequest } from "../../contract";
-import { idNamesFor, isStapleName, leakSourceOf, promptLeak } from "../../core/outputSafety";
+import { idNamesFor, isStapleName, leakSourceOf, promptLeak, stapleIdsFor, usableStaples } from "../../core/outputSafety";
 import type { Outcome } from "../../core/generation";
 import type { LlmUsage } from "../../ports";
 import {
@@ -215,7 +215,12 @@ export function evaluate(a: Assertion, ctx: EvalContext): Violation | null | "n/
     case "datesRespected": {
       if (!isMenu) return "n/a";
       const dates = menuDates(ctx.req.today, menuDaysOf(ctx.req));
-      const items = [...ctx.req.ingredients.map((i, n) => [`p${n + 1}`, i] as const), ...ctx.req.optionalIngredients.map((i, n) => [`o${n + 1}`, i] as const)];
+      // Staples have no date; listed so that a staple id is never misread as an item.
+      const items = [
+        ...ctx.req.ingredients.map((i, n) => [`p${n + 1}`, i] as const),
+        ...ctx.req.optionalIngredients.map((i, n) => [`o${n + 1}`, i] as const),
+        ...usableStaples(ctx.req).map((s, n) => [`s${n + 1}`, { name: s.name, expiresOn: null }] as const),
+      ];
       const out: string[] = [];
       for (const d of dishes) {
         for (const ing of ingredientsOf(d)) {
@@ -227,7 +232,7 @@ export function evaluate(a: Assertion, ctx: EvalContext): Violation | null | "n/
       return v(out);
     }
     case "idsInEnum": {
-      const allowed = new Set(["none", ...names.keys()]);
+      const allowed = new Set(["none", ...names.keys(), ...stapleIdsFor(usableStaples(ctx.req).length)]);
       const out: string[] = [];
       for (const d of dishes) for (const i of ingredientsOf(d)) if (!allowed.has(i.pantryId)) out.push(`${d.where}: "${i.name}" has pantryId "${i.pantryId}", not in the schema's enum`);
       usesOf(ctx.raw).forEach((u, n) => u.filter((id) => !names.has(id)).forEach((id) => out.push(`day ${n + 1} uses "${id}", not in the schema's enum`)));

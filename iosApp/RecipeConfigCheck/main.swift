@@ -795,6 +795,235 @@ let linkTokenFails = await linked(tokenFails: true)
 expect(linkTokenFails.0, nil, "a failed token refresh is silent")
 expect(linkTokenFails.1.balances, 0, "no balance call with a stale token")
 
+// Staples (Staple.swift, RecipeWire.stapleNames, RecipeShopping), as Android's StaplesTest,
+// StapleWireTest and the shopping cases of RecipeShoppingTest.
+expect(StaplePresets.all.count, 14, "14 presets")
+expect(Set(StaplePresets.all.map(\.id)).count, 14, "unique ids")
+expect(StaplePresets.all.map(\.id), ["salt", "black_pepper", "sugar", "flour", "cooking_oil", "olive_oil", "butter", "eggs", "milk", "rice", "pasta", "garlic", "onions", "vinegar"], "table order")
+expect(StaplePresets.all.allSatisfy { p in Staples.languages.allSatisfy { !(p.names[$0] ?? "").trimmingCharacters(in: .whitespaces).isEmpty } }, true, "every language named")
+expect(StaplePresets.byId("eggs")?.name("fr"), "Œufs", "a preset's name")
+expect(StaplePresets.byId("eggs")?.name("it"), "Eggs", "English outside the eight")
+expect(Staples.language("nn-NO"), "nb", "nn is nb")
+expect(Staples.language("no"), "nb", "no is nb")
+expect(Staples.language("de-AT"), "de", "the base")
+expect(Staples.language("pt-BR"), "en", "outside the eight: en")
+expect(Staples.language(preferredLocalizations: ["it", "de"]), "en", "Italian is a recipe language, not an app one: en")
+expect(Staples.language(preferredLocalizations: ["xx", "sv"]), "sv", "the first recipe language")
+let sSalt = Staple(id: "a", name: "Соль", presetId: "salt", addedAtEpochMillis: 9)
+let sEggs = Staple(id: "b", name: "Eggs", presetId: "eggs", addedAtEpochMillis: 1)
+let sOwn = Staple(id: "c", name: "Smoked paprika", presetId: nil, addedAtEpochMillis: 5)
+let sFuture = Staple(id: "d", name: "Truffle oil", presetId: "truffle_oil", addedAtEpochMillis: 3)
+let sOwn2 = Staple(id: "e", name: "Soy sauce", presetId: nil, addedAtEpochMillis: 5)
+expect(Staples.ordered([sOwn2, sOwn, sFuture, sEggs, sSalt]).map(\.id), ["a", "b", "d", "c", "e"], "presets in table order, then the rest by time, then id")
+expect(Staples.displayName(sSalt, language: "de"), "Salz", "a preset shows in the app's language")
+expect(Staples.displayName(sFuture, language: "de"), "Truffle oil", "an unknown preset shows its name")
+let saltKeys = Staples.matchKeys(sSalt)
+expect(["salt", "sel", "sal", "salz", "соль"].allSatisfy(saltKeys.contains), true, "a preset's keys in every language")
+expect(Staples.matchKeys(sOwn), ["smoked paprika"], "an own entry's key")
+expect(Staples.matchKeys(Staple(id: "f", name: "  Paprika   powder ", presetId: nil)).contains("paprika powder"), true, "and as cleaned for the request")
+expect(Staples.isOut(sSalt, shoppingNames: ["  SEL "]), true, "on the list in another language: out")
+expect(Staples.isOut(sSalt, shoppingNames: ["Sea salt"]), false, "another name: not out")
+expect(Staples.isOut(sEggs, shoppingNames: []), false, "an empty list")
+let sRows = Staples.rows([sOwn, sEggs, sSalt], shoppingNames: ["eggs"], language: "en")
+expect(sRows.map(\.name), ["Salt", "Eggs", "Smoked paprika"], "rows, shown names")
+expect(sRows.map(\.out), [false, true, false], "eggs on the list: out")
+expect(Staples.namesToSend(sRows), ["Salt", "Smoked paprika"], "out staples are not sent")
+expect(Staples.currentKeys(sRows).contains("eggs"), false, "an out staple is no current key")
+expect(Staples.currentKeys(sRows).contains("sel"), true, "a current preset in every language")
+expect(Staples.addCheck([sSalt], typed: "   ", language: "en"), .empty, "empty")
+expect(Staples.addCheck([sSalt], typed: " SALT ", language: "en"), .duplicate("Salt"), "already a staple, shown in the app's language")
+expect(Staples.addCheck([sSalt], typed: "Sel", language: "fr"), .duplicate("Sel"), "in another language too")
+expect(Staples.addCheck([sSalt], typed: "sukker", language: "en"), .preset("sugar"), "a preset's name ticks it")
+expect(Staples.addCheck([sSalt], typed: " Smoked paprika ", language: "en"), .own("Smoked paprika"), "an own entry, trimmed")
+let twenty = (0..<20).map { Staple(id: "x\($0)", name: "Thing \($0)", addedAtEpochMillis: Int64($0)) }
+expect(Staples.addCheck(twenty, typed: "Sugar", language: "en"), .full, "20 already: full")
+expect(Staples.addCheck(twenty, typed: "thing 3", language: "en"), .duplicate("Thing 3"), "a duplicate is said before full")
+expect(Staples.ticking(StaplePresets.byId("butter")!, language: "nb", id: "z", now: 7), Staple(id: "z", name: "Smør", presetId: "butter", addedAtEpochMillis: 7), "a tick stores the name in the app's language")
+let pRows = Staples.rows([Staple(id: "p1", name: "Salt", presetId: "salt", addedAtEpochMillis: 1), Staple(id: "p2", name: "Olive oil", presetId: "olive_oil", addedAtEpochMillis: 2),
+                          Staple(id: "p3", name: "Eggs", presetId: "eggs", addedAtEpochMillis: 3), Staple(id: "p4", name: " salt ", addedAtEpochMillis: 4),
+                          Staple(id: "p5", name: "Milk", presetId: "milk", addedAtEpochMillis: 5)], shoppingNames: ["milk"], language: "en")
+expect(Staples.promptStaples(pRows, ticked: ["eggs"], others: ["Olive Oil"]), ["Salt"], "less ticked, other items, out staples and repeats")
+expect(Staples.promptStaples(pRows, ticked: []), ["Salt", "Olive oil", "Eggs"], "nothing listed: every staple not out, in order")
+// C4: any of a staple's names counts, so a German "Eier" isn't sent beside a pantry item "Eggs".
+let deRows = Staples.rows([Staple(id: "q1", name: "Eier", presetId: "eggs", addedAtEpochMillis: 1), Staple(id: "q2", name: "Salz", presetId: "salt", addedAtEpochMillis: 2)], shoppingNames: [], language: "de")
+expect(Staples.promptStaples(deRows, ticked: ["Eggs"]), ["Salz"], "Eier is left out beside Eggs, shown names kept")
+expect(Staples.promptStaples(deRows, ticked: [], others: ["sel"]), ["Eier"], "and beside an other item in another language")
+// C1: Undo of a removal only while no staple shares a name, and under 20.
+let rSalt = Staple(id: "r1", name: "Salt", presetId: "salt", addedAtEpochMillis: 1)
+expect(Staples.mayRestore(rSalt, into: [Staple(id: "r2", name: "Salt", presetId: "salt", addedAtEpochMillis: 2)]), false, "salt ticked again meanwhile: Undo does nothing")
+expect(Staples.mayRestore(rSalt, into: [Staple(id: "r3", name: "sel")]), false, "nor beside the same name in another language")
+expect(Staples.mayRestore(rSalt, into: (0..<20).map { Staple(id: "c\($0)", name: "Item \($0)") }), false, "20 already: nothing")
+expect(Staples.mayRestore(rSalt, into: (0..<19).map { Staple(id: "c\($0)", name: "Item \($0)") }), true, "19 and no clash: restored")
+expect(Staples.mayRestore(rSalt, into: [rSalt]), false, "already there")
+// C3: 40 code points, never cut inside one.
+expect(Staples.limitedName(String(repeating: "𠮷", count: 45)).unicodeScalars.count, 40, "astral characters count once each")
+expect(Staples.limitedName(String(repeating: "e\u{301}", count: 25)).unicodeScalars.count, 40, "combining marks count as code points")
+expect(Staples.limitedName("Smoked paprika"), "Smoked paprika", "short names untouched")
+
+// The wire: cleaned, deduped against ticked, optional and earlier staples, 20 names and 400 code points.
+let sTicked = [WireIngredient(name: "Eggs", expiresOn: nil, quantity: nil)]
+let sOptional = [WireIngredient(name: "Milk", expiresOn: nil, quantity: nil)]
+expect(RecipeWire.stapleNames(["  Salt  ", "eggs", "MILK", "salt", "Olive   oil", "!!!", "Butter"], ticked: sTicked, optional: sOptional, refused: ["butter"]),
+       ["Salt", "Olive oil"], "cleaned, request names and repeats out, refused out")
+let many = (0..<25).map { "Herb \(Character(UnicodeScalar(97 + $0)!))" }
+expect(RecipeWire.stapleNames(many, ticked: [], optional: []).count, 20, "at most 20 names")
+let sWide = ["Alpha spiced pumpkin seed and herb crumb", "Bravo spiced pumpkin seed and herb crumb", "Charlie spiced pumpkin seed and herb cru", "Delta spiced pumpkin seed and herb crumb", "Echo spiced pumpkin seed and herb crumbl", "Foxtrot spiced pumpkin seed and herb cru", "Golf spiced pumpkin seed and herb crumbl", "Hotel spiced pumpkin seed and herb crumb", "India spiced pumpkin seed and herb crumb", "Juliet spiced pumpkin seed and herb cr", "Kilo spiced pumpkin seed and herb crumbl", "Ox"]
+let keptWide = RecipeWire.stapleNames(sWide, ticked: [], optional: [])
+expect(keptWide.count, 11, "one that doesn't fit is skipped, a later shorter one kept")
+expect(keptWide.reduce(0) { $0 + $1.unicodeScalars.count }, 400, "400 code points at most")
+expect(keptWide.contains("Kilo spiced pumpkin seed and herb crumbl"), false, "the one over is the one skipped")
+expect(keptWide.last, "Ox", "skip and continue")
+expect(RecipeWire.stapleNames(["𠮷𠮷"], ticked: [], optional: []).first?.unicodeScalars.count, 2, "code points, not UTF-16")
+
+// The request: staples only to a server that said acceptsStaples, never empty; a retry keeps them.
+let sRequest = RecipeRequest(items: [RecipeIngredientInput(name: "Eggs", daysRemaining: 1, expiryText: ""), RecipeIngredientInput(name: "Leeks", daysRemaining: 2, expiryText: "")],
+                             config: RecipeConfig(), allergens: [], staples: ["Salt", "Eggs", "Olive oil"])
+let sWith = RecipeWire.request(for: sRequest, kind: .recipe, courses: 2, requestID: UUID(), withStaples: true)
+expect(sWith?.staples, ["Salt", "Olive oil"], "sent, less a ticked name")
+let sWithout = RecipeWire.request(for: sRequest, kind: .recipe, courses: 2, requestID: UUID())
+expect(sWithout?.staples, nil, "no flag: no staples")
+expect(String(decoding: try! JSONEncoder().encode(sWithout!), as: UTF8.self).contains("staples"), false, "and none in the JSON")
+expect(String(decoding: try! JSONEncoder().encode(sWith!), as: UTF8.self).contains(#""staples":["Salt","Olive oil"]"#), true, "names only, in order")
+let sNone = RecipeWire.request(for: RecipeRequest(items: sRequest.items, config: RecipeConfig(), allergens: []), kind: .recipe, courses: 2, requestID: UUID(), withStaples: true)
+expect(sNone?.staples, nil, "no staples: the field is left out")
+expect(RecipeWire.dropping(ingredientAt: 1, from: sWith!, newID: UUID())?.staples, ["Salt", "Olive oil"], "a retry keeps them")
+expect(sWith!.hasSameInputs(as: sWithout!), false, "staples are bound to the request id")
+let sOld = try! JSONDecoder().decode(GenerateRequest.self, from: JSONEncoder().encode(sWithout!))
+expect(sOld.staples, nil, "a stored request without them reads as none")
+expect(RecipeWire.clearsStaplesFlag(after: .invalidRequest, request: sWith!), true, "INVALID_REQUEST with staples: flag cleared")
+expect(RecipeWire.clearsStaplesFlag(after: .refusedName(field: "ingredients[0].name"), request: sWith!), false, "a refused name is not a rollback")
+expect(RecipeWire.clearsStaplesFlag(after: .invalidRequest, request: sWithout!), false, "no staples sent: not theirs")
+expect(try! JSONDecoder().decode(BalanceResponse.self, from: Data(#"{"balance":3,"acceptsStaples":true}"#.utf8)).acceptsStaples?.value, true, "acceptsStaples on getBalance")
+expect(try! JSONDecoder().decode(GenerateResponse.self, from: Data(#"{"status":"DONE","balance":3,"charged":true}"#.utf8)).acceptsStaples?.value ?? false, false, "absent: no")
+// The free routes take the RecipeRequest's staples; the server's request carries them only as above.
+expect(sRequest.staples, ["Salt", "Eggs", "Olive oil"], "a free route gets them as given")
+
+// stapleIndex -> stapleName, for a recipe and every dish of a menu.
+let sDecoded = try! JSONDecoder().decode(Recipe.self, from: Data(#"{"title":"T","ingredients":[{"amount":"1 tsp","name":"salt","fromPantry":false,"stapleIndex":0,"staple":true},{"amount":"","name":"oil","fromPantry":false,"stapleIndex":7},{"amount":"2","name":"eggs","fromPantry":true,"pantryIndex":0,"stapleName":"Injected"}]}"#.utf8))
+expect(sDecoded.ingredients[0].stapleIndex, 0, "stapleIndex read")
+let sNamed = sDecoded.withStapleNames(["Salt", "Olive oil"])
+expect(sNamed.ingredients.map(\.stapleName), ["Salt", nil, nil], "by index; out of range and none: nil, overwriting what came")
+let sMenu = RecipeMenu(days: [RecipeMenuDay(date: "2026-11-16", uses: [], courses: [RecipeMenuCourse(course: .main, recipe: sDecoded)])])
+expect(sMenu.withStapleNames(["Salt"]).days[0].courses[0].recipe.ingredients[0].stapleName, "Salt", "every menu dish")
+expect(try! JSONDecoder().decode(Recipe.self, from: JSONEncoder().encode(sNamed)).ingredients[0].stapleName, "Salt", "kept in the saved payload")
+
+// stapleName(of:), the shared table.
+let sTable: [(String, String?)] = [("Salt", "Salt"), ("salt", "Salt"), ("Salt, to taste", "Salt"), ("Salt and pepper", nil), ("Salt, pepper", nil),
+                                   ("Olive oil", "Olive oil"), ("Extra virgin olive oil", nil), ("Eggs, beaten", "Eggs"), ("Water", nil)]
+for (input, result) in sTable {
+    expect(RecipeShopping.stapleName(of: input, staples: ["Salt", "Olive oil", "Eggs"]), result, "stapleName(of: \(input))")
+}
+// Add to shopping list leaves out current staples.
+let sShop = Recipe(title: "S", summary: "", minutes: 0, servings: 0, difficulty: .easy, ingredients: [
+    RecipeIngredient(amount: "", name: "Salt", fromPantry: false),
+    RecipeIngredient(amount: "", name: "Salt, pepper", fromPantry: false),
+    RecipeIngredient(amount: "", name: "Olive oil", fromPantry: false, stapleName: "Olive oil"),
+    RecipeIngredient(amount: "", name: "Onion", fromPantry: false),
+    RecipeIngredient(amount: "", name: "Sea salt", fromPantry: false, stapleName: "Salt"),
+], steps: [], source: .server)
+expect(RecipeShopping.candidates([sShop], listedNames: [], stapleKeys: ["salt", "olive oil"]).map(\.name), ["Pepper", "Onion"], "current staples left out")
+expect(RecipeShopping.candidates([sShop], listedNames: []).map(\.name), ["Salt", "Pepper", "Olive oil", "Onion", "Sea salt"], "without staples, as before")
+
+// Backup: the field read leniently, absent as none.
+struct SBackup: Decodable {
+    var staples: [Staple]
+    enum CodingKeys: String, CodingKey { case staples }
+    init(from decoder: Decoder) throws { staples = try Staples.decodeBackup(decoder.container(keyedBy: CodingKeys.self), forKey: .staples) }
+}
+expect(try! JSONDecoder().decode(SBackup.self, from: Data(#"{"version":1}"#.utf8)).staples, [], "a backup without staples")
+let sBackup = try! JSONDecoder().decode(SBackup.self, from: Data(#"{"staples":[{"id":"staple_1763300000000_123","name":"Salt","presetId":"salt","addedAtEpochMillis":1763300000000},{"id":"x","name":"Smoked paprika","presetId":null,"addedAtEpochMillis":1763300100000},{"id":"y","name":"Yuzu","presetId":"yuzu"},{"id":"z","name":"Miso"}]}"#.utf8)).staples
+expect(sBackup.map(\.presetId), ["salt", nil, "yuzu", nil], "presetId as written, an unknown one kept")
+expect(sBackup[2].addedAtEpochMillis, 0, "no time: 0")
+expect(String(decoding: try! JSONEncoder().encode(sBackup[1]), as: UTF8.self).contains(#""presetId":null"#), true, "none written as null, as Android")
+expect(try! JSONDecoder().decode(Staple.self, from: JSONEncoder().encode(sBackup[0])), sBackup[0], "round trip")
+expect(Staples.toRestore(replacing: sBackup).map(\.id), ["staple_1763300000000_123", "y", "z", "x"], "replace: in order")
+expect(Staples.toRestore(replacing: twenty + sBackup).count, 20, "replace: at most 20")
+// C2: a file with two Salt rows restores as one.
+expect(Staples.toRestore(replacing: [Staple(id: "s1", name: "Salt", presetId: "salt", addedAtEpochMillis: 1), Staple(id: "s2", name: "salt", addedAtEpochMillis: 2), Staple(id: "s3", name: "Sel", presetId: "salt", addedAtEpochMillis: 3)]).map(\.id), ["s1"], "replace: two Salt rows restore as one")
+expect(Staples.toRestore(merging: sBackup, into: [Staple(id: "m", name: "sel", presetId: nil)]).map(\.id), ["y", "z", "x"], "merge: a name already a staple, in any language, is left out")
+expect(Staples.toRestore(merging: sBackup, into: Array(twenty.prefix(18))).map(\.id), ["staple_1763300000000_123", "y"], "merge: up to 20 in all")
+
+// Onboarding's Staples step (OnboardingFlow.swift, Staples.presetChanges), as Android's OnboardingFlowTest.
+func oFlow(_ notifications: Bool, _ camera: Bool) -> OnboardingFlow {
+    var f = OnboardingFlow(); f.start(OnboardingAsks(notifications: notifications, camera: camera)); return f
+}
+var oAll = oFlow(true, true)
+expect(oAll.step, .notifications, "notifications first")
+oAll.notificationsAnswered(true, OnboardingAsks(notifications: false, camera: true))
+expect(oAll.step, .camera, "then camera")
+oAll.cameraAnswered(false)
+expect(oAll.step, .staples, "then Staples, before the last screen")
+oAll.staplesDone()
+expect(oAll.step, .declined, "Staples goes on to Declined when the camera was refused")
+oAll.back(OnboardingAsks(notifications: false, camera: false))
+expect(oAll.step, .staples, "back from Declined is Staples")
+oAll.staplesDone()
+expect(oAll.step, .declined, "and on again")
+var oNone = oFlow(false, false)
+expect(oNone.step, .staples, "nothing to ask: straight to Staples")
+oNone.staplesDone()
+expect(oNone.step, .ready, "then Ready")
+var oNoCamera = oFlow(true, false)
+oNoCamera.notificationsAnswered(nil, OnboardingAsks(notifications: false, camera: false))
+expect(oNoCamera.step, .staples, "camera not asked: Staples after notifications")
+oNoCamera.staplesDone()
+expect(oNoCamera.step, .ready, "Not now is not declined: Ready")
+var oCameraOnly = oFlow(false, true)
+expect(oCameraOnly.step, .camera, "notifications not asked: camera")
+oCameraOnly.cameraAnswered(true)
+expect(oCameraOnly.step, .staples, "then Staples")
+var oDeclinedReminders = oFlow(true, false)
+oDeclinedReminders.notificationsAnswered(false, OnboardingAsks(notifications: false, camera: false))
+oDeclinedReminders.staplesDone()
+expect(oDeclinedReminders.step, .declined, "reminders refused: Declined after Staples")
+// Back, as Android's OnboardingFlowTest: retraces the screens shown, skipping those with nothing left to ask.
+let oAskBoth = OnboardingAsks(notifications: true, camera: true)
+let oAskCamera = OnboardingAsks(notifications: false, camera: true)
+let oAskNone = OnboardingAsks(notifications: false, camera: false)
+func oBack(from step: OnboardingStep, _ asks: OnboardingAsks) -> OnboardingStep {
+    var f = OnboardingFlow()
+    f.start(oAskBoth)
+    if step != .notifications { f.notificationsAnswered(nil, oAskBoth) }
+    if step == .staples || step == .ready || step == .declined { f.cameraAnswered(nil) }
+    if step == .ready || step == .declined { f.staplesDone() }
+    if step == .welcome { f.back(oAskBoth) }
+    f.back(asks)
+    return f.step
+}
+expect(oBack(from: .welcome, oAskBoth), .welcome, "Welcome has nothing before it")
+expect(oBack(from: .notifications, oAskBoth), .welcome, "notifications back to Welcome")
+expect(oBack(from: .camera, oAskBoth), .notifications, "camera back to notifications")
+expect(oBack(from: .camera, oAskCamera), .welcome, "camera back skips answered notifications")
+expect(oBack(from: .staples, oAskBoth), .camera, "Staples back to camera")
+expect(oBack(from: .staples, OnboardingAsks(notifications: true, camera: false)), .notifications, "Staples back skips an answered camera")
+expect(oBack(from: .staples, oAskNone), .welcome, "Staples back to Welcome when nothing is left to ask")
+expect(oBack(from: .ready, oAskNone), .staples, "Ready back to Staples")
+var oCanBack = OnboardingFlow()
+expect(oCanBack.canGoBack, false, "no Back on Welcome")
+oCanBack.start(oAskNone)
+expect(oCanBack.canGoBack, true, "Back from Staples")
+// Going back and answering again replaces the answer, as on Android.
+var oChanged = oFlow(false, true)
+oChanged.cameraAnswered(false)
+oChanged.staplesDone()
+expect(oChanged.step, .declined, "camera refused: Declined")
+oChanged.back(oAskCamera); oChanged.back(oAskCamera)
+expect(oChanged.step, .camera, "back twice is the camera again")
+oChanged.cameraAnswered(true)
+oChanged.staplesDone()
+expect(oChanged.step, .ready, "a new answer replaces the refusal")
+let oHad = [Staple(id: "h1", name: "Salt", presetId: "salt", addedAtEpochMillis: 1), Staple(id: "h2", name: "Eggs", presetId: "eggs", addedAtEpochMillis: 2), Staple(id: "h3", name: "Soy sauce", addedAtEpochMillis: 3)]
+expect(Staples.presetTicks(oHad), ["salt", "eggs"], "first ticks: the presets already there")
+expect(Staples.presetTicks([]), [], "none at first run")
+expect(Staples.presetChanges(oHad, ticked: ["salt", "eggs"]).isEmpty, true, "nothing changed: the same as Skip")
+let oChange = Staples.presetChanges(oHad, ticked: ["vinegar", "salt", "black_pepper"])
+expect(oChange.add, ["black_pepper", "vinegar"], "added in table order")
+expect(oChange.remove.map(\.id), ["h2"], "the unticked preset removed; own entries untouched")
+let oOwn18 = (0..<18).map { Staple(id: "o\($0)", name: "Own \($0)", addedAtEpochMillis: Int64($0)) }
+expect(Staples.count(oOwn18, ticked: ["salt", "sugar"]), 20, "18 own + 2 ticked is the cap")
+expect(Staples.presetChanges(oOwn18, ticked: ["salt", "sugar", "rice"]).add, ["salt", "sugar"], "never past 20")
+expect(Staples.presetChanges(oOwn18 + [oHad[0]], ticked: ["sugar", "rice"]).add, ["sugar", "rice"], "a removal makes room")
+
 if failures > 0 {
     print("\(failures) failed")
     exit(1)

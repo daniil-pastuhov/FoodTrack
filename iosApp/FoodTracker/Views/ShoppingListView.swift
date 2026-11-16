@@ -220,7 +220,9 @@ struct ShoppingListView: View {
             }
         } else {
             VStack(spacing: 0) {
-                header
+                // Offered its height first: with the keyboard up at large text sizes the list
+                // pane below scrolls in what is left rather than squeezing the title to "…".
+                header.layoutPriority(1)
                 listPane
             }
         }

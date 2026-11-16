@@ -1288,4 +1288,39 @@
         <item quantity="other">Når du logger ind, får du også %1$d gratis opskrifter.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Basisvarer</string>
+    <string name="staples_intro">Basisvarer, du altid har derhjemme, som salt og olie. De har ingen dato, og opskrifter må bruge dem.</string>
+    <string name="staples_common_header">Almindelige basisvarer</string>
+    <string name="staples_own_header">Dine egne</string>
+    <string name="staples_add_placeholder">Tilføj en basisvare</string>
+    <string name="staples_add">Tilføj</string>
+    <string name="staples_ran_out">Løbet tør</string>
+    <string name="staples_ran_out_desc">Løbet tør for %1$s: føj til indkøbslisten</string>
+    <string name="staples_on_list">På indkøbslisten</string>
+    <string name="staples_remove">Fjern %1$s</string>
+    <string name="staples_removed">%1$s fjernet fra basisvarer</string>
+    <string name="staples_added_to_list">%1$s er føjet til indkøbslisten</string>
+    <string name="staples_already">%1$s er allerede en basisvare</string>
+    <string name="staples_full">Du kan have op til %1$d basisvarer. Fjern en for at tilføje en anden.</string>
+    <string name="staples_settings_desc">Basisvarer, du altid har, som salt og olie. Opskrifter må bruge dem.</string>
+    <string name="staples_manage">Administrér basisvarer</string>
+    <string name="staples_none">Ingen endnu</string>
+    <string name="staples_open">Åbn basisvarer</string>
+    <string name="recipe_your_staple">Basisvare</string>
+    <string name="recipe_prompt_staples_intro">Jeg har også altid disse basisvarer derhjemme. Brug hvilke som helst af dem, hvis opskriften har brug for dem; ingen af dem skal bruges:</string>
+    <string name="staples_note">Navnene på dine basisvarer sendes med hver anmodning om en opskrift: til vores server for en opskrift fra en pakke og i en prompt, du deler. Mens en basisvare står på din indkøbsliste, sendes den ikke.</string>
+    <string name="onboarding_staples_title">Hvad har du altid derhjemme?</string>
+    <string name="onboarding_staples_later">Du kan springe det over og gøre det senere i Indstillinger › Basisvarer.</string>
+    <string name="onboarding_staples_continue">Fortsæt</string>
+    <string name="onboarding_staples_skip">Spring over</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d basisvare</item>
+        <item quantity="other">%1$d basisvarer</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Din basisvare må også bruges</item>
+        <item quantity="other">Dine %1$d basisvarer må også bruges</item>
+    </plurals>
 </resources>

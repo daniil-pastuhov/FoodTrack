@@ -830,4 +830,77 @@ class RecipeStateHolderTest {
         assertTrue(this@RecipeStateHolderTest.config.storedTaste.isEmpty)
         assertTrue(holder.uiState.value.taste.isEmpty)
     }
+
+    // --- Staples ---------------------------------------------------------------------------
+
+    private fun staple(id: String, name: String, presetId: String? = null, at: Long = 0) = com.foodtracker.model.Staple(id, name, presetId, at)
+
+    private fun withStaples(vararg staples: com.foodtracker.model.Staple, shopping: List<String> = emptyList()) {
+        pantry.value = pantry.value.copy(
+            staples = com.foodtracker.staples.ordered(staples.toList()),
+            shoppingList = shopping.mapIndexed { i, name -> com.foodtracker.model.ShoppingListEntry("s$i", name, addedDate = today) }
+        )
+    }
+
+    @Test
+    fun theStaplesAtHomeGoNamedInTheAppsLanguageWithoutOnesTheRouteListsAlready() = runUnconfined {
+        withStaples(
+            staple("own", "Smoked paprika", at = 1),
+            staple("eggs", "Eggs", "eggs"),
+            staple("salt", "Соль", "salt"),
+            staple("bread", "bread ", at = 2),
+            staple("oil", "Olive oil", "olive_oil"),
+            shopping = listOf("Olivenöl")
+        )
+        val holder = holder()
+        val state = holder.uiState.value
+        // Olive oil is out (on the list in German); Bread is ticked; Eggs is in the pantry but not
+        // ticked, and "Send all products" is off, so it still goes as a staple.
+        assertEquals(listOf("Salt", "Eggs", "Smoked paprika"), state.stapleNames)
+        assertEquals(3, state.stapleCount)
+
+        holder.setSendAllItems(true)
+        assertEquals(listOf("Salt", "Smoked paprika"), holder.uiState.value.stapleNames, "the other items are listed already")
+    }
+
+    @Test
+    fun aPresetGoesInTheAppsLanguageWhateverItWasTickedIn() = runUnconfined {
+        withStaples(staple("salt", "Соль", "salt"), staple("own", "Smoked paprika", at = 1))
+        assertEquals(listOf("Salz", "Smoked paprika"), holder(appLanguage = "de-DE").uiState.value.stapleNames)
+    }
+
+    @Test
+    fun aStapleIsNotSentBesideAnItemOfTheSameThingInAnotherLanguage() = runUnconfined {
+        withStaples(staple("eggs", "Eggs", "eggs"), staple("salt", "Salt", "salt"))
+        val holder = holder(appLanguage = "de-DE")
+        assertEquals(listOf("Salz", "Eier"), holder.uiState.value.stapleNames, "Eggs isn't ticked")
+        holder.setSendAllItems(true)
+        assertEquals(listOf("Salz"), holder.uiState.value.stapleNames, "the pantry's Eggs goes as an other item: no Eier beside it")
+    }
+
+    @Test
+    fun theStapleLineFollowsTheShoppingList() = runUnconfined {
+        withStaples(staple("salt", "Salt", "salt"))
+        val holder = holder()
+        assertEquals(1, holder.uiState.value.stapleCount)
+        pantry.value = pantry.value.copy(shoppingList = listOf(com.foodtracker.model.ShoppingListEntry("s", "salt", addedDate = today)))
+        assertEquals(0, holder.uiState.value.stapleCount, "ran out: on the list, so not sent")
+        pantry.value = pantry.value.copy(shoppingList = emptyList())
+        assertEquals(listOf("Salt"), holder.uiState.value.stapleNames, "bought: back by itself")
+    }
+
+    @Test
+    fun thePhonesModelGetsTheStaplesAndMarksTheOnesItUsed() = runUnconfined {
+        withStaples(staple("salt", "Salt", "salt"))
+        model.replies += {
+            """{"title":"Toast","ingredients":[{"amount":"2","name":"Bread","fromPantry":true},{"amount":"","name":"Salt","fromPantry":false}],"steps":["Toast."]}"""
+        }
+        val holder = holder()
+        holder.generateOnDevice()
+
+        assertTrue(model.prompts.single().contains("I always have these basics too.") && model.prompts.single().contains("\n- Salt"), model.prompts.single())
+        val recipe = saved.rows.value.single().recipe!!
+        assertEquals(listOf(null, "Salt"), recipe.ingredients.map { it.stapleName })
+        assertTrue(recipe.pastDate.none { it.name == "Salt" }, "a staple is never past its date")
+    }
 }

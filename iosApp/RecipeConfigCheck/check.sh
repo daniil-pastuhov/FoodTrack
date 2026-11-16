@@ -5,10 +5,12 @@
 # days/courses request shape), the unread saved-recipe set, Saved recipes' multi-select, the Buy sheet's pack savings and the
 # taste profile (the server's quiz definition decoded leniently; toggling, caps, conflicts, the
 # answers filtered through a changed definition, new questions, summary, gate, request shape,
-# acceptsTaste, never in a free route's request) and free recipes for signing in (what is shown where,
-# the offer's age and refresh, the claim's outcomes, the menu line):
+# acceptsTaste, never in a free route's request), free recipes for signing in (what is shown where,
+# the offer's age and refresh, the claim's outcomes, the menu line) and staples (presets, order,
+# keys, out, adding, what each route gets, the wire names and caps, acceptsStaples, stapleIndex,
+# the shopping list's exclusion, the backup field, onboarding's Staples step):
 #   iosApp/RecipeConfigCheck/check.sh
-# Compiles RecipeModels.swift, RecipeWire.swift, TasteProfile.swift and WelcomeRecipes.swift (with a stub of the pantry item)
+# Compiles RecipeModels.swift, RecipeWire.swift, TasteProfile.swift, WelcomeRecipes.swift and Staple.swift (with a stub of the pantry item)
 # outside the Xcode project and runs main.swift, the same cases as Android's
 # RecipeConfigChoicesTest. Needs only the Xcode toolchain; not run by CI, so run it after
 # touching those files.
@@ -22,5 +24,7 @@ swiftc -swift-version 5 -o "$work/check" \
   "$root/iosApp/FoodTracker/Recipe/RecipeWire.swift" \
   "$root/iosApp/FoodTracker/Recipe/TasteProfile.swift" \
   "$root/iosApp/FoodTracker/Recipe/WelcomeRecipes.swift" \
+  "$root/iosApp/FoodTracker/Models/Staple.swift" \
+  "$root/iosApp/FoodTracker/Views/OnboardingFlow.swift" \
   "$here/main.swift"
 "$work/check"

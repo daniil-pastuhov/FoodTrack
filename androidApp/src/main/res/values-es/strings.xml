@@ -1373,4 +1373,41 @@
         <item quantity="other">Al iniciar sesión también consigues %1$d recetas gratis.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Básicos</string>
+    <string name="staples_intro">Lo básico que siempre tienes en casa, como sal y aceite. No tienen fecha y las recetas pueden usarlos.</string>
+    <string name="staples_common_header">Básicos habituales</string>
+    <string name="staples_own_header">Los tuyos</string>
+    <string name="staples_add_placeholder">Añadir un básico</string>
+    <string name="staples_add">Añadir</string>
+    <string name="staples_ran_out">Se acabó</string>
+    <string name="staples_ran_out_desc">Se acabó %1$s: añadir a la lista de compras</string>
+    <string name="staples_on_list">En tu lista de compras</string>
+    <string name="staples_remove">Quitar %1$s</string>
+    <string name="staples_removed">Se quitó %1$s de los básicos</string>
+    <string name="staples_added_to_list">Se añadió %1$s a tu lista de compras</string>
+    <string name="staples_already">%1$s ya es un básico</string>
+    <string name="staples_full">Puedes tener hasta %1$d básicos. Quita uno para añadir otro.</string>
+    <string name="staples_settings_desc">Lo básico que siempre tienes, como sal y aceite. Las recetas pueden usarlo.</string>
+    <string name="staples_manage">Gestionar básicos</string>
+    <string name="staples_none">Ninguno todavía</string>
+    <string name="staples_open">Abrir básicos</string>
+    <string name="recipe_your_staple">Tu básico</string>
+    <string name="recipe_prompt_staples_intro">También tengo siempre en casa estos básicos. Usa cualquiera de ellos si la receta lo necesita; no hace falta usar ninguno:</string>
+    <string name="staples_note">Los nombres de tus básicos se envían con cada solicitud de receta: a nuestro servidor para una receta de un paquete y dentro de un prompt que compartas. Mientras un básico esté en tu lista de compras, no se envía.</string>
+    <string name="onboarding_staples_title">¿Qué tienes siempre en casa?</string>
+    <string name="onboarding_staples_later">Puedes saltarte esto y hacerlo más tarde en Ajustes › Básicos.</string>
+    <string name="onboarding_staples_continue">Continuar</string>
+    <string name="onboarding_staples_skip">Omitir</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d básico</item>
+        <item quantity="many">%1$d básicos</item>
+        <item quantity="other">%1$d básicos</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Tu básico también se puede usar</item>
+        <item quantity="many">Tus %1$d básicos también se pueden usar</item>
+        <item quantity="other">Tus %1$d básicos también se pueden usar</item>
+    </plurals>
 </resources>

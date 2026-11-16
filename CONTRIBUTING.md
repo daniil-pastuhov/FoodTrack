@@ -67,7 +67,8 @@ xcodebuild -project iosApp/FoodTracker.xcodeproj -scheme FoodTracker \
   for crash reports, the app stores for purchases and, only once someone starts a purchase, the
   recipe backend (Firebase Auth, App Check and the Cloud Functions in `functions/`). Nothing
   else, and nothing at all from the free routes. Pantry data leaves the phone only as the items
-  someone ticks for a recipe from a pack.
+  someone ticks for a recipe from a pack, the names of their staples, and the rest of the pantry
+  when "Send all products" is on.
 - **Purchase and buyer records are never deleted.** A `purchases/` document in Firestore is the
   only thing that stops one store purchase being redeemed twice; account deletion detaches it from
   the user and keeps it. A `buyers/` document is the record of refunds after use that turns buying

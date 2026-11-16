@@ -17,11 +17,12 @@ public struct RestoreSummary: Equatable {
     public var shoppingEntriesRestored = 0
     public var productsRestored = 0
     public var categoriesRestored = 0
+    public var staplesRestored = 0
     public var settingsRestored = false
 
     public var isEmpty: Bool {
         itemsRestored == 0 && shoppingEntriesRestored == 0 &&
-        productsRestored == 0 && categoriesRestored == 0
+        productsRestored == 0 && categoriesRestored == 0 && staplesRestored == 0
     }
 }
 
@@ -67,10 +68,13 @@ public struct BackupDocument: Codable, Equatable {
     public var products: [CachedProduct]
     public var knownProductNames: [String]
     public var settings: AppSettings
+    /// The person's staples (`Staple`). Absent from backups made before staples existed, which
+    /// read as none; older versions ignore the field (explicit `CodingKeys`).
+    public var staples: [Staple]
 
     public var isEmpty: Bool {
         items.isEmpty && shoppingList.isEmpty && shoppingSections.isEmpty && products.isEmpty &&
-        categoryPreferences.isEmpty && knownProductNames.isEmpty
+        categoryPreferences.isEmpty && knownProductNames.isEmpty && staples.isEmpty
     }
 
     public init(
@@ -82,7 +86,8 @@ public struct BackupDocument: Codable, Equatable {
         categoryPreferences: [CategoryPreference] = [],
         products: [CachedProduct] = [],
         knownProductNames: [String] = [],
-        settings: AppSettings = AppSettings()
+        settings: AppSettings = AppSettings(),
+        staples: [Staple] = []
     ) {
         self.version = version
         self.exportedAtEpochMillis = exportedAtEpochMillis
@@ -93,13 +98,14 @@ public struct BackupDocument: Codable, Equatable {
         self.products = products
         self.knownProductNames = knownProductNames
         self.settings = settings
+        self.staples = staples
     }
 
     // MARK: - Wire format
 
     private enum CodingKeys: String, CodingKey {
         case version, exportedAtEpochMillis, items, shoppingList, shoppingSections
-        case categoryPreferences, products, knownProductNames, settings
+        case categoryPreferences, products, knownProductNames, settings, staples
     }
 
     public init(from decoder: Decoder) throws {
@@ -113,6 +119,7 @@ public struct BackupDocument: Codable, Equatable {
         products = try container.decodeIfPresent([CachedProduct].self, forKey: .products) ?? []
         knownProductNames = try container.decodeIfPresent([String].self, forKey: .knownProductNames) ?? []
         settings = (try container.decodeIfPresent(WireSettings.self, forKey: .settings))?.asSettings ?? AppSettings()
+        staples = try Staples.decodeBackup(container, forKey: .staples)
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -126,6 +133,7 @@ public struct BackupDocument: Codable, Equatable {
         try container.encode(products, forKey: .products)
         try container.encode(knownProductNames, forKey: .knownProductNames)
         try container.encode(WireSettings(from: settings), forKey: .settings)
+        try container.encode(staples, forKey: .staples)
     }
 }
 

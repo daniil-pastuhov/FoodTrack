@@ -368,6 +368,18 @@ binding exist on the live project (created and read back 2026-11-14).
       (privacy-policy-changes.md). The server reads the new field only after the next backend
       deploy (`acceptsOptionalIngredients`, functions/CONTRACT.md); until then the apps send the
       ticked items only.
+- [ ] Staples (Settings > Staples, 2026-11-16): a recipe from a pack also sends the names of the
+      person's staples (names only, those on the shopping list left out), whatever "Send all
+      products" says, and a shared prompt lists them. The store answers do not change (still User
+      Content > Other User Content / App activity > Other user-generated content, App
+      Functionality, linked, not tracking, and in data-safety.csv; only the descriptions in
+      store-listing/app-store/README.md section 5 and app-privacy-apple.md grew; confirm when
+      submitting), but the hosted privacy policy's sentence about what a recipe from a pack sends
+      (`daniil-pastuhov/bestbefore-privacy`, `build.py`, every language) must name staples before
+      the release that ships them (privacy-policy-changes.md). The server reads the new field only
+      after the next backend deploy (`cd functions && npm ci && npx firebase deploy --only
+      functions,firestore --project bestbefore-f9ee1`; `acceptsStaples`, functions/CONTRACT.md);
+      until then the apps send no staples to it.
 - [x] Retake the store screenshots (the Recipe tab replaced Calendar) **(agent)**:
       `scripts/ios_screenshots.sh`, `scripts/android_screenshots.sh`, then
       `scripts/frame_screenshots.py` (store-listing/app-store/README.md). Done 2026-11-14 for

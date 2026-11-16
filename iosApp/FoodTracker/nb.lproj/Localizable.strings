@@ -905,3 +905,32 @@
 "welcome_settings_account_one" = "Denne kontoen kan få en gratis oppskrift fra serveren vår.";
 "welcome_settings_on_phone_one" = "Når du logger inn, får du også en gratis oppskrift.";
 "welcome_delete_note" = "Logger du inn igjen senere, får du ikke de gratis oppskriftene på nytt.";
+
+/* Staples: basics the person always has, the Staples screen, its Settings card and the Recipe form's line; copied from Android's strings.xml. */
+"staples_title" = "Basisvarer";
+"staples_intro" = "Basisvarer du alltid har hjemme, som salt og olje. De har ingen dato, og oppskrifter kan bruke dem.";
+"staples_common_header" = "Vanlige basisvarer";
+"staples_own_header" = "Dine egne";
+"staples_add_placeholder" = "Legg til en basisvare";
+"staples_add" = "Legg til";
+"staples_ran_out" = "Gått tom";
+"staples_ran_out_desc" = "Gått tom for %@: legg til på handlelisten";
+"staples_on_list" = "På handlelisten";
+"staples_remove" = "Fjern %@";
+"staples_removed" = "%@ fjernet fra basisvarer";
+"staples_added_to_list" = "%@ lagt til på handlelisten";
+"staples_already" = "%@ er allerede en basisvare";
+"staples_full" = "Du kan ha opptil %d basisvarer. Fjern én for å legge til en annen.";
+"staples_settings_desc" = "Basisvarer du alltid har, som salt og olje. Oppskrifter kan bruke dem.";
+"staples_manage" = "Administrer basisvarer";
+"staples_none" = "Ingen ennå";
+"staples_open" = "Åpne basisvarer";
+"recipe_your_staple" = "Basisvare";
+"recipe_prompt_staples_intro" = "Jeg har alltid disse basisvarene hjemme også. Bruk hvilke som helst av dem hvis oppskriften trenger dem; ingen av dem må brukes:";
+"staples_note" = "Navnene på basisvarene dine sendes med hver forespørsel om oppskrift: til serveren vår for en oppskrift fra en pakke, og i en ledetekst du deler. Mens en basisvare står på handlelisten, sendes den ikke.";
+
+/* Onboarding: the Staples step. */
+"onboarding_staples_title" = "Hva har du alltid hjemme?";
+"onboarding_staples_later" = "Du kan hoppe over dette og gjøre det senere i Innstillinger › Basisvarer.";
+"onboarding_staples_continue" = "Fortsett";
+"onboarding_staples_skip" = "Hopp over";

@@ -120,4 +120,37 @@ class BackupSerializerTest {
         // ones would otherwise report success on an empty file.
         assertTrue(RestoreSummary(settingsRestored = true).isEmpty)
     }
+
+    @Test
+    fun staplesRoundTripAndAnUnknownPresetIsKeptAsItIs() {
+        val withStaples = document.copy(
+            staples = listOf(
+                com.foodtracker.model.Staple("staple_1763300000000_123", "Salt", "salt", 1_763_300_000_000L),
+                com.foodtracker.model.Staple("staple_2", "Smoked paprika", null, 1_763_300_100_000L),
+                com.foodtracker.model.Staple("staple_3", "Truffle oil", "truffle_oil", 1_763_300_200_000L)
+            )
+        )
+        val encoded = BackupSerializer.encode(withStaples)
+        assertTrue(encoded.contains("\"staples\""), encoded)
+        assertTrue(encoded.contains("\"presetId\": null"), "written out in full: $encoded")
+        val decoded = assertIs<BackupReadResult.Success>(BackupSerializer.decode(encoded)).document
+        assertEquals(withStaples.staples, decoded.staples)
+        assertFalse(decoded.isEmpty)
+        assertFalse(BackupDocument(staples = withStaples.staples).isEmpty, "staples alone are worth restoring")
+    }
+
+    @Test
+    fun aBackupFromBeforeStaplesReadsAsNone() {
+        val old = BackupSerializer.encode(document).replace(Regex(",\\s*\"staples\":\\s*\\[\\s*]"), "")
+        assertFalse(old.contains("staples"), old)
+        val decoded = assertIs<BackupReadResult.Success>(BackupSerializer.decode(old)).document
+        assertEquals(emptyList(), decoded.staples)
+    }
+
+    @Test
+    fun aStapleWithoutPresetIdReadsAsAnOwnEntry() {
+        val raw = """{"version":1,"staples":[{"id":"a","name":"Honey","addedAtEpochMillis":5}]}"""
+        val decoded = assertIs<BackupReadResult.Success>(BackupSerializer.decode(raw)).document
+        assertEquals(listOf(com.foodtracker.model.Staple("a", "Honey", null, 5)), decoded.staples)
+    }
 }

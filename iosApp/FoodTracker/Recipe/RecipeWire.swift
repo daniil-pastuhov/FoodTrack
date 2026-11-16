@@ -426,6 +426,10 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     /// there are any and the server said `acceptsTaste`; nil (left out of the JSON) otherwise, and in a request stored by an older
     /// version. Part of the inputs a `requestId` is bound to.
     var taste: [String: [String]]? = nil
+    /// The names of the person's staples (`RecipeWire.stapleNames`): only when there are any and
+    /// the server said `acceptsStaples`; nil (left out of the JSON) otherwise, and in a request
+    /// stored by an older version. Part of the inputs a `requestId` is bound to; a retry keeps it.
+    var staples: [String]? = nil
 
     /// Everything the server binds a `requestId` to: the whole body but the id and the consent
     /// flag, which isn't an input.
@@ -521,6 +525,8 @@ protocol BalanceCarrying {
     var acceptsMenuDays: WireFlag? { get }
     /// From a server that reads a taste profile (`taste`): `acceptsTaste: true`.
     var acceptsTaste: WireFlag? { get }
+    /// From a server that reads the person's staples (`staples`): `acceptsStaples: true`.
+    var acceptsStaples: WireFlag? { get }
     /// The taste quiz's current `version` (as `getTasteQuiz` returns it), beside `acceptsTaste`.
     var tasteQuizVersion: WireText? { get }
     /// From a server that has `claimWelcome`: `acceptsWelcome: true`, and beside it
@@ -548,6 +554,7 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
+    var acceptsStaples: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -573,6 +580,7 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
+    var acceptsStaples: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -587,6 +595,7 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
+    var acceptsStaples: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -603,6 +612,7 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
+    var acceptsStaples: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -1145,6 +1155,41 @@ enum RecipeWire {
     /// (ignoring case) is left out, then items are taken in order while ticked and taken together
     /// stay within 30 names and 1,050 code points, an item that doesn't fit being skipped. Android:
     /// `optionalWireIngredients`.
+    /// Staples in one request, and their code points, apart from the 30 names / 1,050 code points
+    /// of the ticked and optional items (CONTRACT.md "Staples"). Android: `MAX_REQUEST_STAPLES`,
+    /// `MAX_REQUEST_STAPLE_NAME_CHARS`.
+    static let maxStaples = 20
+    static let maxStapleNameChars = 400
+
+    /// The staples to send beside `ticked` and `optional` (as sent), from `names`
+    /// (`RecipeRequest.staples`): each cleaned as a ticked name (`cleanName`), one that cleans to
+    /// nothing or to a name refused earlier (`refused`, lower-cased) left out, one already in the
+    /// request or earlier in the list (ignoring case) left out, then kept in order while the list
+    /// stays within 20 names and 400 code points, one that doesn't fit being skipped. Android:
+    /// `stapleWireNames`.
+    static func stapleNames(_ names: [String], ticked: [WireIngredient], optional: [WireIngredient], refused: Set<String> = []) -> [String] {
+        var seen = Set((ticked + optional).map { $0.name.lowercased() })
+        var chars = 0
+        var kept: [String] = []
+        for raw in names {
+            guard let name = cleanName(raw) else { continue }
+            let key = name.lowercased()
+            guard !refused.contains(key), !seen.contains(key) else { continue }
+            let length = name.unicodeScalars.count
+            guard kept.count + 1 <= maxStaples, chars + length <= maxStapleNameChars else { continue }
+            seen.insert(key)
+            chars += length
+            kept.append(name)
+        }
+        return kept
+    }
+
+    /// A request that carried `staples` refused as invalid without naming a field: the server was
+    /// rolled back to one from before staples, so the flag is cleared (and the balance asked again).
+    static func clearsStaplesFlag(after error: RecipeServerError, request: GenerateRequest) -> Bool {
+        error == .invalidRequest && request.staples != nil
+    }
+
     static func optionalIngredients(ticked: [WireIngredient], others: [WireIngredient]) -> [WireIngredient] {
         var seen = Set(ticked.map { $0.name.lowercased() })
         var names = ticked.count
@@ -1167,7 +1212,9 @@ enum RecipeWire {
     /// `acceptsMultiChoiceConfig`. `menuDays`: the server said `acceptsMenuDays`, so a menu
     /// carries `days` when not 3 and may have one course a day (`MenuSet.wireDays` /
     /// `wireCourses`); otherwise it is the 3-day menu of two or three. `taste`: the answers as
-    /// `TasteProfile.toSend` gave them (nil: none, or the server doesn't read them). Nil when the selected diets can't all be sent to this server
+    /// `TasteProfile.toSend` gave them (nil: none, or the server doesn't read them). `withStaples`:
+    /// the server said `acceptsStaples`; then the request's `staples` go as `staples`
+    /// (`stapleNames`). Nil when the selected diets can't all be sent to this server
     /// (`WireRecipeConfig.make`): never sent with one left out.
     static func request(
         for request: RecipeRequest,
@@ -1180,7 +1227,8 @@ enum RecipeWire {
         withOptional: Bool = false,
         multiChoice: Bool = false,
         menuDays: Bool = false,
-        taste: [String: [String]]? = nil
+        taste: [String: [String]]? = nil,
+        withStaples: Bool = false
     ) -> GenerateRequest? {
         guard let config = WireRecipeConfig.make(request.config, takesMultiChoice: multiChoice) else { return nil }
         // Names the server refused earlier (lower-cased) stay out: sending one again would only
@@ -1208,6 +1256,10 @@ enum RecipeWire {
                 }
             )
             : []
+        // Always beside the items, whatever "Send all products" says, but only to a server that reads them.
+        let staples = withStaples
+            ? stapleNames(request.staples, ticked: Array(ingredients.prefix(maxIngredients)), optional: optional, refused: refused)
+            : []
         // One per name regardless of case, as on Android.
         var seenAllergens = Set<String>()
         let allergens = request.allergens.compactMap(cleanAllergenName).sorted()
@@ -1224,7 +1276,8 @@ enum RecipeWire {
             // Built only past the consent step (`writeOnServer`), so allergens here were agreed to.
             allergenConsent: AllergenConsent.flag(for: Array(allergens)),
             optionalIngredients: optional.isEmpty ? nil : optional,
-            taste: taste
+            taste: taste,
+            staples: staples.isEmpty ? nil : staples
         )
     }
 
@@ -1431,14 +1484,19 @@ enum RecipeShopping {
     /// tidied into one or more entries (`tidyNames`) and listed once (ignoring case), marked when `listedNames` has them already. Plain
     /// water is left out when the server marked it a staple; without that mark every non-pantry
     /// ingredient is listed.
-    static func candidates(_ recipes: [Recipe], listedNames: [String]) -> [ShoppingCandidate] {
+    /// `stapleKeys` (`Staples.currentKeys`): the person's staples not on the list; an ingredient
+    /// that is one of them (by its `stapleName`) is left out, and so is every tidied entry that is
+    /// one. A staple on the list (out) is not in it, so it shows as "Already on your list".
+    static func candidates(_ recipes: [Recipe], listedNames: [String], stapleKeys: Set<String> = []) -> [ShoppingCandidate] {
         let listed = Set(listedNames.map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
         var order: [String] = []
         var rows: [String: ShoppingCandidate] = [:]
         for ingredient in recipes.flatMap(\.ingredients) where !ingredient.fromPantry {
+            if let staple = ingredient.stapleName, stapleKeys.contains(Staples.key(staple)) { continue }
             for name in tidyNames(ingredient.name) {
                 if ingredient.staple && isPlainWater(name) { continue }
                 let key = name.lowercased()
+                if stapleKeys.contains(key) { continue }
                 if let known = rows[key] {
                     // A staple elsewhere in the menu stays one only if every mention is one.
                     if known.staple && !ingredient.staple { rows[key]?.staple = false }
@@ -1450,6 +1508,21 @@ enum RecipeShopping {
         }
         let all = order.compactMap { rows[$0] }
         return all.filter { !$0.staple } + all.filter(\.staple)
+    }
+
+    /// The staple of `staples` (names as sent or listed) an ingredient named `name` is: when
+    /// every one of its tidied entries (`tidyNames`) is a staple's name (ignoring case), the
+    /// staple the first one names; otherwise nil. "Salt, to taste" is Salt; "Salt and pepper" and
+    /// "Extra virgin olive oil" are none. The phone's model's recipes. Android: `stapleNameOf`.
+    static func stapleName(of name: String, staples: [String]) -> String? {
+        let entries = tidyNames(name)
+        guard let first = entries.first else { return nil }
+        func match(_ entry: String) -> String? {
+            let key = entry.lowercased()
+            return staples.first { Staples.key($0) == key }
+        }
+        guard entries.allSatisfy({ match($0) != nil }) else { return nil }
+        return match(first)
     }
 
     /// Whether "Add to shopping list" has anything to offer: a row not on the list already. With

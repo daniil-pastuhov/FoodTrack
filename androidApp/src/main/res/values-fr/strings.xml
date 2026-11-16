@@ -1374,4 +1374,41 @@
         <item quantity="other">En vous connectant, vous recevez aussi %1$d recettes gratuites.</item>
     </plurals>
     <!-- /Free recipes for signing in -->
+
+    <!-- Staples -->
+    <string name="staples_title">Produits de base</string>
+    <string name="staples_intro">Les produits de base que vous avez toujours chez vous, comme le sel et l\'huile. Ils n\'ont pas de date, et les recettes peuvent les utiliser.</string>
+    <string name="staples_common_header">Produits de base courants</string>
+    <string name="staples_own_header">Les vôtres</string>
+    <string name="staples_add_placeholder">Ajouter un produit de base</string>
+    <string name="staples_add">Ajouter</string>
+    <string name="staples_ran_out">Épuisé</string>
+    <string name="staples_ran_out_desc">Plus de %1$s : ajouter à la liste de courses</string>
+    <string name="staples_on_list">Sur votre liste de courses</string>
+    <string name="staples_remove">Retirer %1$s</string>
+    <string name="staples_removed">%1$s retiré des produits de base</string>
+    <string name="staples_added_to_list">%1$s ajouté à votre liste de courses</string>
+    <string name="staples_already">%1$s est déjà un produit de base</string>
+    <string name="staples_full">Vous pouvez avoir jusqu\'à %1$d produits de base. Retirez-en un pour en ajouter un autre.</string>
+    <string name="staples_settings_desc">Les produits de base que vous avez toujours, comme le sel et l\'huile. Les recettes peuvent les utiliser.</string>
+    <string name="staples_manage">Gérer les produits de base</string>
+    <string name="staples_none">Aucun pour l\'instant</string>
+    <string name="staples_open">Ouvrir les produits de base</string>
+    <string name="recipe_your_staple">Produit de base</string>
+    <string name="recipe_prompt_staples_intro">J\'ai aussi toujours ces produits de base à la maison. Utilisez ceux dont la recette a besoin ; aucun n\'est obligatoire :</string>
+    <string name="staples_note">Les noms de vos produits de base sont envoyés avec chaque demande de recette : à notre serveur pour une recette d\'un pack, et dans un prompt que vous partagez. Tant qu\'un produit de base est sur votre liste de courses, il n\'est pas envoyé.</string>
+    <string name="onboarding_staples_title">Qu\'avez-vous toujours chez vous ?</string>
+    <string name="onboarding_staples_later">Vous pouvez passer cette étape et le faire plus tard dans Réglages › Produits de base.</string>
+    <string name="onboarding_staples_continue">Continuer</string>
+    <string name="onboarding_staples_skip">Passer</string>
+    <plurals name="staples_count">
+        <item quantity="one">%1$d produit de base</item>
+        <item quantity="many">%1$d produits de base</item>
+        <item quantity="other">%1$d produits de base</item>
+    </plurals>
+    <plurals name="recipe_staples_count">
+        <item quantity="one">Votre produit de base peut aussi être utilisé</item>
+        <item quantity="many">Vos %1$d produits de base peuvent aussi être utilisés</item>
+        <item quantity="other">Vos %1$d produits de base peuvent aussi être utilisés</item>
+    </plurals>
 </resources>

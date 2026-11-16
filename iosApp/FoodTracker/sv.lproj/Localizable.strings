@@ -905,3 +905,32 @@
 "welcome_settings_account_one" = "Det här kontot kan få ett gratis recept från vår server.";
 "welcome_settings_on_phone_one" = "När du loggar in får du också ett gratis recept.";
 "welcome_delete_note" = "Loggar du in igen senare får du inte gratis recept på nytt.";
+
+/* Staples: basics the person always has, the Staples screen, its Settings card and the Recipe form's line; copied from Android's strings.xml. */
+"staples_title" = "Basvaror";
+"staples_intro" = "Basvaror du alltid har hemma, som salt och olja. De har inget datum, och recept får använda dem.";
+"staples_common_header" = "Vanliga basvaror";
+"staples_own_header" = "Dina egna";
+"staples_add_placeholder" = "Lägg till en basvara";
+"staples_add" = "Lägg till";
+"staples_ran_out" = "Slut";
+"staples_ran_out_desc" = "Slut på %@: lägg till i inköpslistan";
+"staples_on_list" = "På inköpslistan";
+"staples_remove" = "Ta bort %@";
+"staples_removed" = "Tog bort %@ från basvaror";
+"staples_added_to_list" = "%@ har lagts till i inköpslistan";
+"staples_already" = "%@ är redan en basvara";
+"staples_full" = "Du kan ha upp till %d basvaror. Ta bort en för att lägga till en annan.";
+"staples_settings_desc" = "Basvaror du alltid har, som salt och olja. Recept får använda dem.";
+"staples_manage" = "Hantera basvaror";
+"staples_none" = "Inga än";
+"staples_open" = "Öppna basvaror";
+"recipe_your_staple" = "Basvara";
+"recipe_prompt_staples_intro" = "Jag har också alltid de här basvarorna hemma. Använd vilka som helst av dem om receptet behöver dem; ingen av dem måste användas:";
+"staples_note" = "Namnen på dina basvaror skickas med varje receptförfrågan: till vår server för ett recept från ett paket och i en prompt du delar. Medan en basvara står på inköpslistan skickas den inte.";
+
+/* Onboarding: the Staples step. */
+"onboarding_staples_title" = "Vad har du alltid hemma?";
+"onboarding_staples_later" = "Du kan hoppa över det här och göra det senare i Inställningar › Basvaror.";
+"onboarding_staples_continue" = "Fortsätt";
+"onboarding_staples_skip" = "Hoppa över";

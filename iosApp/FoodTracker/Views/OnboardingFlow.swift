@@ -1,6 +1,6 @@
 /// The first-run screens. Mirrors Android's `OnboardingFlow.kt`.
-enum OnboardingStep {
-    case welcome, notifications, camera, ready, declined
+enum OnboardingStep: String {
+    case welcome, notifications, camera, staples, ready, declined
 }
 
 /// Where the first-run flow hands over to the app.
@@ -26,12 +26,13 @@ struct OnboardingFlow {
     private(set) var remindersDeclined = false
     private(set) var cameraDeclined = false
 
+    /// Where the Staples step goes on to: the last screen, saying whether anything was refused.
     private var ending: OnboardingStep {
         remindersDeclined || cameraDeclined ? .declined : .ready
     }
 
     private func afterNotifications(_ asks: OnboardingAsks) -> OnboardingStep {
-        asks.camera ? .camera : ending
+        asks.camera ? .camera : .staples
     }
 
     mutating func start(_ asks: OnboardingAsks) {
@@ -45,8 +46,32 @@ struct OnboardingFlow {
 
     mutating func cameraAnswered(_ answer: Bool?) {
         cameraDeclined = answer == false
+        step = .staples
+    }
+
+    /// Continue or Skip on the Staples step (which every path reaches before the last screen).
+    mutating func staplesDone() {
         step = ending
     }
+
+    /// The screen before this one, skipping those with nothing left to ask (a permission already
+    /// answered on the system prompt can't be asked again). Welcome is the first and stays.
+    /// Answers already given are kept: a later answer replaces them. Android: `OnboardingFlow.back`.
+    mutating func back(_ asks: OnboardingAsks) {
+        switch step {
+        case .welcome, .notifications:
+            step = .welcome
+        case .camera:
+            step = asks.notifications ? .notifications : .welcome
+        case .staples:
+            step = asks.camera ? .camera : asks.notifications ? .notifications : .welcome
+        case .ready, .declined:
+            step = .staples
+        }
+    }
+
+    /// Whether the screen offers Back: every one but the first.
+    var canGoBack: Bool { step != .welcome }
 
     /// Scanning leads the way unless the camera was refused, when the scanner would have nothing
     /// to show. Reminders being off doesn't get in the way of a scan.

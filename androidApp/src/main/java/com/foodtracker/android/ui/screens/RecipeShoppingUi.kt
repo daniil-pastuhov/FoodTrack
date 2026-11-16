@@ -38,6 +38,9 @@ import com.foodtracker.recipe.shoppingCandidates
  *  to add some. Without [onAdd] (previews) nothing is offered. */
 data class RecipeShoppingActions(
     val listedNames: List<String> = emptyList(),
+    /** The person's staples not out, every name they answer to (`currentStapleKeys`): at home, so
+     *  never offered to buy. */
+    val stapleKeys: Set<String> = emptySet(),
     val onAdd: ((List<String>) -> Unit)? = null
 )
 
@@ -48,7 +51,7 @@ data class RecipeShoppingActions(
 @Composable
 internal fun AddToShoppingButton(recipes: List<Recipe>, shopping: RecipeShoppingActions, modifier: Modifier = Modifier) {
     val onAdd = shopping.onAdd ?: return
-    val candidates = remember(recipes, shopping.listedNames) { shoppingCandidates(recipes, shopping.listedNames) }
+    val candidates = remember(recipes, shopping.listedNames, shopping.stapleKeys) { shoppingCandidates(recipes, shopping.listedNames, shopping.stapleKeys) }
     // Hidden when nothing can be added (nothing to buy, or every row on the list already); it
     // comes back as soon as the list changes, since [RecipeShoppingActions.listedNames] is live.
     if (!hasShoppingToAdd(candidates)) return
@@ -144,11 +147,12 @@ private fun ShoppingRow(candidate: ShoppingCandidate, checked: Boolean, onChecke
     }
 }
 
-/** The quiet line under a recipe's ingredients when some aren't from the pantry: true for staples
- *  and extras alike, so no row is labelled wrongly. */
+/** The quiet line under a recipe's ingredients when some are neither from the pantry nor one of the
+ *  person's staples (those carry their own chip): true for the server's staples and extras alike,
+ *  so no row is labelled wrongly. */
 @Composable
 internal fun NotFromPantryHint(recipe: Recipe, modifier: Modifier = Modifier) {
-    if (recipe.ingredients.all { it.fromPantry }) return
+    if (recipe.ingredients.all { it.fromPantry || it.stapleName != null }) return
     Text(
         text = stringResource(R.string.recipe_not_from_pantry_hint),
         modifier = modifier,

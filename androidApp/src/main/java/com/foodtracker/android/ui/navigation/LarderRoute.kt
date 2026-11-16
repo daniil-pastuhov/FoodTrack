@@ -20,6 +20,9 @@ sealed interface LarderRoute {
     data class Scanner(val mode: CameraScanMode = CameraScanMode.BARCODE) : LarderRoute
     data object Categories : LarderRoute
 
+    /** Settings › Staples, also opened from the Recipe form's staples line. */
+    data object Staples : LarderRoute
+
     /** A saved recipe or menu, by its saved row's id. */
     data class RecipeResult(val savedId: String) : LarderRoute
 

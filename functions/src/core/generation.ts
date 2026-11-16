@@ -36,7 +36,7 @@ import {
 } from "../constants";
 import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
-import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkOutput, hasEnoughItems } from "./outputSafety";
+import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkOutput, hasEnoughItems, usableStaples } from "./outputSafety";
 import {
   assertOpen,
   costKeyOf,
@@ -642,13 +642,14 @@ async function recordInputRejection(deps: Deps, uid: string, details: { field: s
 
 /**
  * One structured line per LLM call. Never ingredient names, prompts or outputs; the uid is hashed.
- * `taste` is whether the request carried a taste profile (never which ids); null when the line is
- * written from a stored generation (sweeper, deletion), which does not keep it.
+ * `taste` is whether the request carried a taste profile (never which ids), and `staples` how many
+ * of the person's staples the prompt held (usableStaples; never their names); each is null when
+ * the line is written from a stored generation (sweeper, deletion), which does not keep it.
  */
 export function logLlmCall(
   deps: Deps,
   uid: string,
-  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd"> & { taste?: boolean },
+  gen: Pick<GenerationDoc, "kind" | "courses" | "days" | "cost" | "reservedMicroUsd"> & { taste?: boolean; staples?: number },
   outcome: Outcome,
   settled: Settled,
   durationMs: number | null,
@@ -660,6 +661,7 @@ export function logLlmCall(
     courses: gen.courses ?? null,
     days: gen.kind === "menu" ? (gen.days ?? 3) : null,
     taste: gen.taste ?? null,
+    staples: gen.staples ?? null,
     model: u?.model ?? null,
     inputTokens: u?.inputTokens ?? null,
     outputTokens: u?.outputTokens ?? null,
@@ -714,7 +716,7 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
   logLlmCall(
     deps,
     caller.uid,
-    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd, taste: req.taste !== undefined },
+    { kind: req.kind, courses: req.courses, days: req.days, cost: plan.cost, reservedMicroUsd: plan.reservedMicroUsd, taste: req.taste !== undefined, staples: usableStaples(req).length },
     outcome,
     settled,
     durationMs,

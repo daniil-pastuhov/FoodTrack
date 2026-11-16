@@ -1398,5 +1398,37 @@
             <string>%d Rezepte gelöscht</string>
         </dict>
     </dict>
+    <key>staples_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Grundzutat</string>
+            <key>other</key>
+            <string>%d Grundzutaten</string>
+        </dict>
+    </dict>
+    <key>recipe_staples_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Deine Grundzutat darf auch verwendet werden</string>
+            <key>other</key>
+            <string>Deine %d Grundzutaten dürfen auch verwendet werden</string>
+        </dict>
+    </dict>
 </dict>
 </plist>
