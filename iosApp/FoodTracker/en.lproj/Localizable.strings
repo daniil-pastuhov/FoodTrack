@@ -319,7 +319,9 @@
 "notif_action_snooze" = "Tomorrow";
 
 "scan_mode_batch" = "Batch";
-"reticle_hint_batch" = "Keep scanning. Everything lands in the list";
+"reticle_hint_batch" = "Scan a barcode, then show its date";
+"batch_date_read_format" = "Date read: %@";
+"batch_date_rescan" = "Scan the date again";
 "scan_mode_receipt" = "Receipt";
 "reticle_hint_receipt" = "Fit the whole receipt in the frame, then tap to read it";
 "scan_receipt_button" = "Read receipt";

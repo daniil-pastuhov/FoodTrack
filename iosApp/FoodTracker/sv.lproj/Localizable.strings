@@ -319,7 +319,9 @@
 "notif_action_snooze" = "I morgon";
 
 "scan_mode_batch" = "Flera";
-"reticle_hint_batch" = "Fortsätt skanna. Allt hamnar i listan";
+"reticle_hint_batch" = "Skanna en streckkod och visa sedan datumet";
+"batch_date_read_format" = "Datum läst: %@";
+"batch_date_rescan" = "Skanna datumet igen";
 "scan_mode_receipt" = "Kvitto";
 "reticle_hint_receipt" = "Få med hela kvittot i bilden och tryck för att läsa det";
 "scan_receipt_button" = "Läs kvitto";

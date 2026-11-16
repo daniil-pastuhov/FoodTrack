@@ -144,7 +144,9 @@
     <string name="camera_off_allow">Tillad kamera</string>
     <string name="camera_off_add_by_hand">Skriv det selv</string>
     <string name="scan_mode_batch">Flere</string>
-    <string name="reticle_hint_batch">Bliv ved med at scanne. Alt havner på listen</string>
+    <string name="reticle_hint_batch">Scan en stregkode, og vis derefter datoen</string>
+    <string name="batch_date_rescan">Scan datoen igen</string>
+    <string name="batch_date_read">Dato læst: %1$s</string>
     <string name="scan_mode_receipt">Kvittering</string>
     <string name="reticle_hint_receipt">Få hele kvitteringen med i rammen, og tryk så for at læse den</string>
     <string name="scan_receipt_button">Læs kvittering</string>

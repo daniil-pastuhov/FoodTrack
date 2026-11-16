@@ -319,7 +319,9 @@
 "notif_action_snooze" = "I morgen";
 
 "scan_mode_batch" = "Flere";
-"reticle_hint_batch" = "Bliv ved med at scanne. Alt havner på listen";
+"reticle_hint_batch" = "Scan en stregkode, og vis derefter datoen";
+"batch_date_read_format" = "Dato læst: %@";
+"batch_date_rescan" = "Scan datoen igen";
 "scan_mode_receipt" = "Kvittering";
 "reticle_hint_receipt" = "Få hele kvitteringen med i rammen, og tryk så for at læse den";
 "scan_receipt_button" = "Læs kvittering";

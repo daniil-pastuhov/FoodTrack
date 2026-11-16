@@ -55,12 +55,14 @@ import com.foodtracker.android.ui.design.LarderSnackbar
 import com.foodtracker.android.ui.design.isExpanded
 import com.foodtracker.android.ui.theme.LocalIsDarkTheme
 import com.foodtracker.android.util.foodLabelName
+import com.foodtracker.android.util.formatLocalDate
 import com.foodtracker.api.ProductLookupResult
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.share.ShoppingListShare
 import com.foodtracker.viewmodel.BatchScanEntry
 import com.foodtracker.viewmodel.PantryStateHolder
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -188,8 +190,6 @@ fun ScannerScreen(
     var askDuplicate by remember { mutableStateOf(false) }
     var torchEnabled by remember { mutableStateOf(false) }
     var torchAvailable by remember { mutableStateOf(false) }
-    // A product's date came off its barcode unless Scan date read it.
-    var dateReadOffPack by remember { mutableStateOf(false) }
 
     // The Root's host sits at the bottom, under the shutter and the panel, so the scanner has
     // its own at the top. As there, a new message replaces the last rather than queueing.
@@ -217,7 +217,8 @@ fun ScannerScreen(
     }
 
     fun clearResults() {
-        dateReadOffPack = false
+        // Scan again: a date read meanwhile belongs to the scan being let go.
+        stateHolder.forgetRecentDate()
         stateHolder.clearScanResults()
     }
 
@@ -264,6 +265,33 @@ fun ScannerScreen(
     fun discardQueueAndLeave() {
         stateHolder.clearBatchQueue()
         onNavigateBack()
+    }
+
+    fun showDateRead(read: BatchScanEntry) {
+        showMessage(
+            context.getString(
+                R.string.batch_date_read,
+                formatLocalDate(read.expiryDate, context.resources.configuration.locales[0])
+            ),
+            context.getString(R.string.undo_action)
+        ) { stateHolder.undoBatchDateRead(read.id) }
+    }
+
+    // A date read in one mode, or before the scanner opened, says nothing about the next scan.
+    LaunchedEffect(currentMode) { stateHolder.forgetScanDates() }
+    DisposableEffect(Unit) { onDispose { stateHolder.forgetScanDates() } }
+
+    // The row whose date is being read again (a tap on its date), while its window is open.
+    val dateWindow by stateHolder.batchDateWindowState.collectAsStateWithLifecycle()
+    var rescanRowId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(dateWindow) {
+        val window = dateWindow?.takeIf { it.rescan }
+        val remaining = if (window != null) stateHolder.batchDateWindowRemainingMillis() else 0L
+        rescanRowId = window?.rowId?.takeIf { remaining > 0 }
+        if (remaining > 0) {
+            delay(remaining)
+            rescanRowId = null
+        }
     }
 
     fun removeQueueRow(entry: BatchScanEntry) {
@@ -435,7 +463,8 @@ fun ScannerScreen(
                 showMessage(context.getString(R.string.shopping_list_scan_unsupported))
             }
         } else if (currentMode == CameraScanMode.BATCH) {
-            stateHolder.enqueueBatchScan(barcode)
+            // A date read just before the barcode lands on its row at once.
+            stateHolder.enqueueBatchScan(barcode)?.let { showDateRead(it) }
         } else {
             val taken = stateHolder.onBarcodeScanned(barcode)
             // Only where the host offers it, and only outside batch: batch collapses repeats into
@@ -448,10 +477,17 @@ fun ScannerScreen(
 
     fun dateFound(date: LocalDate) {
         val held = stateHolder.uiState.value
-        if (held.scannedProduct != null) {
+        if (currentMode == CameraScanMode.BATCH) {
+            // The printed date after a scan, or the one tapped for a rescan: on that row, if it
+            // may take it. Otherwise kept for the next barcode.
+            stateHolder.onBatchDateRead(date)?.let { showDateRead(it) }
+        } else if (currentMode == CameraScanMode.BARCODE) {
+            // Read alongside the barcode: the held scan's date when it has none yet, otherwise
+            // kept for the next barcode. The product card shows it; Scan date still replaces it.
+            stateHolder.onScanDateRead(date)
+        } else if (held.scannedProduct != null) {
             // Scan date: the date lands on the product, which comes back to show it.
             stateHolder.onDateOcrDetected(date)
-            dateReadOffPack = true
             currentMode = CameraScanMode.BARCODE
         } else if (held.detectedDate == null) {
             // Held like a barcode result, so the date being confirmed can't change under the
@@ -479,6 +515,7 @@ fun ScannerScreen(
                     mode = currentMode,
                     onBarcodeFound = { barcodeFound(it) },
                     onDateFound = { dateFound(it) },
+                    dateReadIntervalMillis = { stateHolder.dateReadIntervalMillis() },
                     onImageCaptureReady = { imageCapture = it },
                     torchEnabled = torchEnabled,
                     onTorchAvailabilityChanged = { torchAvailable = it }
@@ -508,7 +545,9 @@ fun ScannerScreen(
                 CameraScanMode.BARCODE -> R.string.reticle_hint_barcode
                 CameraScanMode.DATE_OCR -> R.string.reticle_hint_date_ocr
                 CameraScanMode.PHOTO -> R.string.reticle_hint_photo
-                CameraScanMode.BATCH -> R.string.reticle_hint_batch
+                // While a row's date is being read again, the camera is after a date.
+                CameraScanMode.BATCH ->
+                    if (rescanRowId != null) R.string.reticle_hint_date_ocr else R.string.reticle_hint_batch
                 CameraScanMode.RECEIPT -> R.string.reticle_hint_receipt
             }
         ).takeIf { showsAimHint(currentMode, panel, state.batchQueue.isEmpty(), isReadingReceipt) },
@@ -560,6 +599,12 @@ fun ScannerScreen(
                             }
                         ),
                         today = state.today,
+                        rescanRowId = rescanRowId.takeIf { currentMode == CameraScanMode.BATCH },
+                        onRescanDate = if (currentMode == CameraScanMode.BATCH) {
+                            { stateHolder.startBatchDateRescan(it.id) }
+                        } else {
+                            null
+                        },
                         onRemove = { removeQueueRow(it) },
                         onClear = { clearQueue() },
                         onCommit = {
@@ -603,7 +648,7 @@ fun ScannerScreen(
                     expanded = wide,
                     product = found,
                     date = state.detectedDate,
-                    dateSource = if (dateReadOffPack) ScanDateSource.Packaging else ScanDateSource.Barcode,
+                    dateSource = if (state.detectedDateReadOffPack) ScanDateSource.Packaging else ScanDateSource.Barcode,
                     allergens = state.allergenWarnings,
                     inPantry = inPantry?.quantity,
                     forDate = currentMode == CameraScanMode.DATE_OCR,

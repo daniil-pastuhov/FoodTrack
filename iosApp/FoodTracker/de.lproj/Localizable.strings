@@ -319,7 +319,9 @@
 "notif_action_snooze" = "Morgen";
 
 "scan_mode_batch" = "Serie";
-"reticle_hint_batch" = "Scanne einfach weiter. Alles landet in der Liste";
+"reticle_hint_batch" = "Barcode scannen, dann das Datum zeigen";
+"batch_date_read_format" = "Datum gelesen: %@";
+"batch_date_rescan" = "Datum erneut scannen";
 "scan_mode_receipt" = "Kassenbon";
 "reticle_hint_receipt" = "Bring den ganzen Kassenbon ins Bild und tippe dann, um ihn zu lesen";
 "scan_receipt_button" = "Bon lesen";
