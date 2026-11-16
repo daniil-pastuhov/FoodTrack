@@ -43,6 +43,9 @@ protocol RecipeBackend: Sendable {
     /// Hands the server the code of an Apple sign-in or link, so it can remove Apple's link when
     /// the account is deleted from any phone. Callers ignore its failures.
     func registerAppleSignIn(authorizationCode: String) async throws
+    /// The taste-profile quiz in `language` (an ordinary App Check token, as `getBalance`). Only
+    /// when the person opens the quiz, and only after a reply said `acceptsTaste`.
+    func tasteQuiz(language: String) async throws -> TasteQuiz
 }
 
 // MARK: Configuration
@@ -53,6 +56,17 @@ protocol RecipeConfigStore {
     /// The tab's settings that aren't part of a request's configuration.
     func loadOptions() -> RecipeOptions
     func saveOptions(_ options: RecipeOptions)
+    /// The taste profile as saved (never rewritten for a changed definition); empty when none was.
+    func loadTaste() -> TasteProfile
+    /// Saving one with no answers removes it ("Clear taste profile").
+    func saveTaste(_ taste: TasteProfile)
+    /// The quiz steps the person has been through, kept apart from the answers (so with no profile
+    /// saved, and through clearing it).
+    func loadTasteSeen() -> Set<String>
+    func saveTasteSeen(_ seen: Set<String>)
+    /// The last good quiz definition received in `language`, if any.
+    func loadTasteQuiz(language: String) -> TasteQuiz?
+    func saveTasteQuiz(_ quiz: TasteQuiz, language: String)
 }
 
 /// Recipe settings kept beside `RecipeConfig` but never sent as part of it. Read field by field
@@ -130,6 +144,58 @@ struct UserDefaultsRecipeConfigStore: RecipeConfigStore {
     func saveOptions(_ options: RecipeOptions) {
         if let data = try? JSONEncoder().encode(options) {
             defaults.set(data, forKey: Self.optionsKey)
+        }
+    }
+
+    /// The taste profile, under a key of its own beside the options: on this phone only, never in
+    /// `RecipeConfig`, backups or `WireSettings`. Android: `AndroidRecipeConfigRepository`'s taste key.
+    static let tasteKey = "com.foodtracker.recipe_taste"
+    /// The quiz definitions received, by language: `[language: TasteQuiz]`, likewise outside backups.
+    static let tasteQuizKey = "com.foodtracker.recipe_taste_quiz"
+
+    func loadTaste() -> TasteProfile {
+        guard let data = defaults.data(forKey: Self.tasteKey),
+              let taste = try? JSONDecoder().decode(TasteProfile.self, from: data) else {
+            return TasteProfile()
+        }
+        return taste
+    }
+
+    func saveTaste(_ taste: TasteProfile) {
+        if taste.isEmpty {
+            defaults.removeObject(forKey: Self.tasteKey)
+        } else if let data = try? JSONEncoder().encode(taste) {
+            defaults.set(data, forKey: Self.tasteKey)
+        }
+    }
+
+    /// The steps been through, under their own key. Android: `recipe_taste_seen`.
+    static let tasteSeenKey = "com.foodtracker.recipe_taste_seen"
+
+    func loadTasteSeen() -> Set<String> {
+        Set(defaults.stringArray(forKey: Self.tasteSeenKey) ?? [])
+    }
+
+    func saveTasteSeen(_ seen: Set<String>) {
+        defaults.set(seen.sorted(), forKey: Self.tasteSeenKey)
+    }
+
+    private func tasteQuizzes() -> [String: TasteQuiz] {
+        guard let data = defaults.data(forKey: Self.tasteQuizKey),
+              let quizzes = try? JSONDecoder().decode([String: TasteQuiz].self, from: data) else { return [:] }
+        return quizzes
+    }
+
+    func loadTasteQuiz(language: String) -> TasteQuiz? {
+        tasteQuizzes()[language].flatMap { $0.isUsable ? $0 : nil }
+    }
+
+    func saveTasteQuiz(_ quiz: TasteQuiz, language: String) {
+        guard quiz.isUsable else { return }
+        var quizzes = tasteQuizzes()
+        quizzes[language] = quiz
+        if let data = try? JSONEncoder().encode(quizzes) {
+            defaults.set(data, forKey: Self.tasteQuizKey)
         }
     }
 }

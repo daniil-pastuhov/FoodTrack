@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
-import { CAPABILITIES, fail, validateVerifyRequest, type VerifyResponse, type VerifyStatus } from "../contract";
+import { capabilitiesOf, fail, validateVerifyRequest, type VerifyResponse, type VerifyStatus } from "../contract";
 import {
   ANDROID_FIREBASE_APP_ID,
   CONSUME_MAX_ATTEMPTS,
@@ -533,7 +533,7 @@ export async function verifyPurchase(deps: Deps, caller: Caller, data: unknown):
   const status = verdict.status;
   logNotGranted(deps, caller, request.store, status, verdict);
   const user = (await userRef(deps.db, caller.uid).get()).data();
-  return { status, balance: user?.balance ?? 0, costs: config.costs, ...CAPABILITIES, ...(await blockFlag(deps.db, user, config)) };
+  return { status, balance: user?.balance ?? 0, costs: config.costs, ...capabilitiesOf(config), ...(await blockFlag(deps.db, user, config)) };
 }
 
 // ---------------------------------------------------------------------------------------------

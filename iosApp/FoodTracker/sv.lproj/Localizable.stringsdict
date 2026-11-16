@@ -1170,5 +1170,39 @@
             <string>Ett recept är en rätt som skrivs av vår server. Ett menyset kräver {min} till %d recept, beroende på dagar och rätter per dag. De går inte ut.</string>
         </dict>
     </dict>
+    <!-- Taste profile: copied from Android's strings.xml -->
+    <key>taste_answers</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d svar</string>
+            <key>other</key>
+            <string>%d svar</string>
+        </dict>
+    </dict>
+    <key>taste_new_questions</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d ny fråga</string>
+            <key>other</key>
+            <string>%d nya frågor</string>
+        </dict>
+    </dict>
+    <!-- /Taste profile -->
 </dict>
 </plist>

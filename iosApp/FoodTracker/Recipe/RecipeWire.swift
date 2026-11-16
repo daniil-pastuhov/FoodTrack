@@ -386,6 +386,10 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     /// `RecipeWire.optionalIngredients`; nil (left out of the JSON) otherwise, and in a request
     /// stored by an older version. Part of the inputs a `requestId` is bound to.
     var optionalIngredients: [WireIngredient]?
+    /// The taste profile's answers, step id to option ids (`TasteProfile.toSend`): only when
+    /// there are any and the server said `acceptsTaste`; nil (left out of the JSON) otherwise, and in a request stored by an older
+    /// version. Part of the inputs a `requestId` is bound to.
+    var taste: [String: [String]]? = nil
 
     /// Everything the server binds a `requestId` to: the whole body but the id and the consent
     /// flag, which isn't an input.
@@ -432,6 +436,11 @@ struct RegisterAppleSignInResponse: Decodable, Sendable {
 
 struct EmptyRequest: Encodable, Sendable {}
 
+/// `getTasteQuiz`: the quiz in the app's language.
+struct TasteQuizRequest: Encodable, Sendable {
+    var language: String
+}
+
 /// `getGeneration`: an existing generation's state, by its id. Never starts one.
 struct GetGenerationRequest: Encodable, Sendable {
     var requestId: String
@@ -446,6 +455,16 @@ struct WireFlag: Decodable, Sendable {
 
     init(from decoder: Decoder) throws {
         value = (try? decoder.singleValueContainer().decode(Bool.self)) ?? false
+    }
+}
+
+/// A string a response may carry, such as `tasteQuizVersion`: nil when it isn't a string, rather
+/// than failing the call.
+struct WireText: Decodable, Sendable {
+    let value: String?
+
+    init(from decoder: Decoder) throws {
+        value = try? decoder.singleValueContainer().decode(String.self)
     }
 }
 
@@ -464,6 +483,10 @@ protocol BalanceCarrying {
     /// From a server that writes menu sets (`days`, `courses: 1`, `costs.menuSets`):
     /// `acceptsMenuDays: true`.
     var acceptsMenuDays: WireFlag? { get }
+    /// From a server that reads a taste profile (`taste`): `acceptsTaste: true`.
+    var acceptsTaste: WireFlag? { get }
+    /// The taste quiz's current `version` (as `getTasteQuiz` returns it), beside `acceptsTaste`.
+    var tasteQuizVersion: WireText? { get }
 }
 
 enum GenerateStatus: String, Decodable, Sendable {
@@ -484,6 +507,8 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
+    var acceptsTaste: WireFlag?
+    var tasteQuizVersion: WireText?
 }
 
 enum VerifyStatus: String, Decodable, Sendable {
@@ -505,6 +530,8 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
+    var acceptsTaste: WireFlag?
+    var tasteQuizVersion: WireText?
 }
 
 struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
@@ -515,6 +542,8 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
+    var acceptsTaste: WireFlag?
+    var tasteQuizVersion: WireText?
 }
 
 /// `moved` can be negative: a store refund's debt moves with the recipes.
@@ -527,6 +556,8 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMultiChoiceConfig: WireFlag?
     var acceptsDanish: WireFlag?
     var acceptsMenuDays: WireFlag?
+    var acceptsTaste: WireFlag?
+    var tasteQuizVersion: WireText?
 }
 
 struct DeleteAccountResponse: Decodable, Sendable, Equatable {
@@ -1083,7 +1114,8 @@ enum RecipeWire {
     /// request's `otherItems` go as `optionalIngredients`. `multiChoice`: the server said
     /// `acceptsMultiChoiceConfig`. `menuDays`: the server said `acceptsMenuDays`, so a menu
     /// carries `days` when not 3 and may have one course a day (`MenuSet.wireDays` /
-    /// `wireCourses`); otherwise it is the 3-day menu of two or three. Nil when the selected diets can't all be sent to this server
+    /// `wireCourses`); otherwise it is the 3-day menu of two or three. `taste`: the answers as
+    /// `TasteProfile.toSend` gave them (nil: none, or the server doesn't read them). Nil when the selected diets can't all be sent to this server
     /// (`WireRecipeConfig.make`): never sent with one left out.
     static func request(
         for request: RecipeRequest,
@@ -1095,7 +1127,8 @@ enum RecipeWire {
         excluding refused: Set<String> = [],
         withOptional: Bool = false,
         multiChoice: Bool = false,
-        menuDays: Bool = false
+        menuDays: Bool = false,
+        taste: [String: [String]]? = nil
     ) -> GenerateRequest? {
         guard let config = WireRecipeConfig.make(request.config, takesMultiChoice: multiChoice) else { return nil }
         // Names the server refused earlier (lower-cased) stay out: sending one again would only
@@ -1138,7 +1171,8 @@ enum RecipeWire {
             today: isoDay(today),
             // Built only past the consent step (`writeOnServer`), so allergens here were agreed to.
             allergenConsent: AllergenConsent.flag(for: Array(allergens)),
-            optionalIngredients: optional.isEmpty ? nil : optional
+            optionalIngredients: optional.isEmpty ? nil : optional,
+            taste: taste
         )
     }
 
@@ -1501,3 +1535,4 @@ enum RecipeShopping {
         name.lowercased().split { $0.isWhitespace || $0 == "'" || $0 == "’" || $0 == "-" }.contains { waterWords.contains(String($0)) }
     }
 }
+

@@ -568,8 +568,29 @@ extension RootTabView {
         case "buyRecipes":
             selectedTab = .recipe
             recipeViewModel.showsBuySheet = true
+        // The taste profile from a bundled sample definition in the app's language (en, de, ru;
+        // English otherwise), nothing fetched or stored: `tasteQuiz` (`-demoTasteStep N` from 1),
+        // `tasteQuizError`, `tasteQuizLoading`, `tastePromo` (over Recipe settings). With
+        // `-demoTasteAnswers YES` a saved profile comes along (also for `recipeSettings` and the
+        // form's "Uses your taste profile"); `-demoTasteNew N` leaves the last N steps unseen.
+        case "tasteQuiz", "tasteQuizError", "tasteQuizLoading":
+            selectedTab = .recipe
+            showTasteDemo(failing: arguments.string(forKey: "demoRoute") == "tasteQuizError")
+            if arguments.string(forKey: "demoRoute") == "tasteQuizLoading" { recipeViewModel.showTasteLoadingForDemo() }
+            if arguments.object(forKey: "demoTasteStep") != nil {
+                recipeViewModel.demoTasteStep = arguments.integer(forKey: "demoTasteStep") - 1
+            }
+            recipeViewModel.path = [.settings, .tasteQuiz]
+        case "tastePromo":
+            selectedTab = .recipe
+            showTasteDemo(failing: false)
+            recipeViewModel.path = [.settings]
+            recipeViewModel.showsTastePromo = true
         default: break
         }
+        // `-demoTasteQuiz YES`: the sample definition cached, nothing answered or seen (the dot).
+        if arguments.bool(forKey: "demoTasteAnswers") || arguments.bool(forKey: "demoTasteQuiz"),
+           recipeViewModel.demoTasteQuiz == nil { showTasteDemo(failing: false) }
         // `-demoRecipeIntro YES`: "How recipes work" as on a first visit (demo launches never
         // open it by themselves).
         if arguments.bool(forKey: "demoRecipeIntro") { recipeViewModel.showIntroForDemo() }
@@ -579,6 +600,18 @@ extension RootTabView {
         if arguments.object(forKey: "demoRecipeOnDevice") != nil {
             recipeViewModel.demoOnDevice = arguments.bool(forKey: "demoRecipeOnDevice")
         }
+    }
+
+    private func showTasteDemo(failing: Bool) {
+        let arguments = UserDefaults.standard
+        let quiz = TasteQuizSample.quiz(language: RecipeLanguage.app.rawValue)
+        let unseen = max(0, arguments.integer(forKey: "demoTasteNew"))
+        let answers: [String: [String]] = arguments.bool(forKey: "demoTasteAnswers") ? [
+            "cuisines": ["italian", "nordic"], "heat": ["medium"], "flavours": ["garlic", "citrus"],
+            "favourites": ["tomatoes", "eggs", "berries"], "avoid": ["mushrooms", "olives"], "methods": ["oven"],
+        ] : [:]
+        let seen = answers.isEmpty && arguments.bool(forKey: "demoTasteQuiz") ? [] : Set(quiz.steps.dropLast(unseen).map(\.id))
+        recipeViewModel.showTasteDemo(quiz: quiz, profile: TasteProfile(answers: answers, version: quiz.version), seen: seen, failing: failing)
     }
 
     /// The JSON file `-demoRecipe` names, decoded, or nil.

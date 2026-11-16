@@ -1226,4 +1226,54 @@
         <item quantity="many">%d días</item>
         <item quantity="other">%d días</item>
     </plurals>
+
+    <!-- Recipe: taste profile (recipes from packs only). Only the chrome: the questions, options and their texts come from our server (getTasteQuiz). -->
+    <string name="taste_title">Perfil de gustos</string>
+    <string name="taste_choose_up_to">Elige hasta %1$d</string>
+    <string name="taste_choose_one">Elige una u omite</string>
+    <string name="taste_progress">Paso %1$d de %2$d</string>
+    <string name="taste_intro">Unas pocas preguntas cortas, y puedes omitir cualquiera. Tus respuestas se quedan en este dispositivo y solo se envían con las solicitudes de recetas de un paquete.</string>
+    <string name="taste_skip">Omitir</string>
+    <string name="taste_back">Atrás</string>
+    <string name="taste_next">Siguiente</string>
+    <string name="taste_save">Guardar</string>
+    <string name="taste_settings_empty">Para recetas de paquetes</string>
+    <string name="taste_summary_more">%1$d más</string>
+    <string name="taste_clear">Borrar perfil de gustos</string>
+    <string name="taste_uses_profile">Usa tu perfil de gustos</string>
+    <string name="taste_settings_badge">preguntas nuevas del perfil de gustos</string>
+    <string name="taste_error_title">No se han podido cargar las preguntas</string>
+    <string name="taste_error_body">Comprueba la conexión y vuelve a intentarlo.</string>
+    <string name="taste_new_tag">Pregunta nueva</string>
+    <string name="taste_loading">Cargando las preguntas…</string>
+    <string name="taste_retry">Reintentar</string>
+    <string name="taste_close">Cerrar</string>
+    <plurals name="taste_answers">
+        <item quantity="one">%1$d respuesta</item>
+        <item quantity="other">%1$d respuestas</item>
+    </plurals>
+    <plurals name="taste_new_questions">
+        <item quantity="one">%1$d pregunta nueva</item>
+        <item quantity="other">%1$d preguntas nuevas</item>
+    </plurals>
+    <string name="taste_chosen">Elegidos: %1$d</string>
+    <string name="taste_chosen_of">%1$d de %2$d</string>
+    <string name="taste_cap_reached">Ya son %1$d. Quita uno para elegir otro.</string>
+    <string name="taste_on_skip_note">Los marcados están en tu lista de lo que prefieres evitar. Si eliges uno aquí, sale de esa lista.</string>
+    <string name="taste_on_love_note">Los marcados son cosas que te encantan. Si eliges uno aquí, sale de esa lista.</string>
+    <string name="taste_chip_on_skip">%1$s, en tu lista de lo que prefieres evitar</string>
+    <string name="taste_chip_on_love">%1$s, entre lo que te encanta</string>
+    <string name="taste_chip_at_cap">%1$s. Ya has elegido el máximo</string>
+    <string name="taste_moved_off_skip">%1$s ya no está en tu lista de lo que prefieres evitar</string>
+    <string name="taste_moved_off_love">%1$s ya no está entre lo que te encanta</string>
+    <string name="taste_saved_snackbar">Perfil de gustos guardado. Las recetas de paquetes lo usarán.</string>
+    <string name="taste_cleared_snackbar">Perfil de gustos borrado</string>
+    <string name="taste_discard_message">Tus respuestas no se han guardado, así que tu perfil de gustos sigue como estaba.</string>
+    <string name="taste_promo_lede">Recetas de tus paquetes, escritas a tu gusto.</string>
+    <string name="taste_promo_questions_title">Unas pocas preguntas cortas</string>
+    <string name="taste_promo_questions_body">Cocinas, picante, sabores, lo que te encanta, lo que prefieres evitar y cómo te gusta cocinar. Puedes omitir cualquiera.</string>
+    <string name="taste_promo_taste_title">Recetas y menús a tu gusto</string>
+    <string name="taste_promo_taste_body">Nuestro servidor se inclina por lo que te gusta y deja fuera lo que prefieres evitar. Tu despensa, tus alérgenos y tu dieta siguen siendo lo primero.</string>
+    <string name="taste_promo_device_title">Se queda en este dispositivo</string>
+    <string name="taste_promo_device_body">Solo se envía con las solicitudes de recetas de un paquete.</string>
 </resources>

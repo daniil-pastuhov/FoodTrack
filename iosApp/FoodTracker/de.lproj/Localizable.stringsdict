@@ -1170,5 +1170,39 @@
             <string>Ein Rezept ist ein Gericht, das unser Server erstellt. Ein Menü-Set kostet {min} bis %d Rezepte, je nach Tagen und Gängen pro Tag. Sie verfallen nicht.</string>
         </dict>
     </dict>
+    <!-- Taste profile: copied from Android's strings.xml -->
+    <key>taste_answers</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Antwort</string>
+            <key>other</key>
+            <string>%d Antworten</string>
+        </dict>
+    </dict>
+    <key>taste_new_questions</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d neue Frage</string>
+            <key>other</key>
+            <string>%d neue Fragen</string>
+        </dict>
+    </dict>
+    <!-- /Taste profile -->
 </dict>
 </plist>

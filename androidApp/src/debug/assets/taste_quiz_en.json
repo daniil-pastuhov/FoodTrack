@@ -1,0 +1,402 @@
+{
+ "version": "demo-2026-11-16",
+ "language": "en",
+ "steps": [
+  {
+   "id": "cuisines",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "globe",
+   "question": "Which cuisines do you like?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "italian",
+       "label": "Italian"
+      },
+      {
+       "id": "french",
+       "label": "French"
+      },
+      {
+       "id": "spanish",
+       "label": "Spanish"
+      },
+      {
+       "id": "greek",
+       "label": "Greek"
+      },
+      {
+       "id": "nordic",
+       "label": "Nordic"
+      },
+      {
+       "id": "eastern_european",
+       "label": "Eastern European"
+      },
+      {
+       "id": "georgian",
+       "label": "Georgian"
+      },
+      {
+       "id": "middle_eastern",
+       "label": "Middle Eastern"
+      },
+      {
+       "id": "indian",
+       "label": "Indian"
+      },
+      {
+       "id": "chinese",
+       "label": "Chinese"
+      },
+      {
+       "id": "japanese",
+       "label": "Japanese"
+      },
+      {
+       "id": "korean",
+       "label": "Korean"
+      },
+      {
+       "id": "thai",
+       "label": "Thai"
+      },
+      {
+       "id": "mexican",
+       "label": "Mexican"
+      },
+      {
+       "id": "american",
+       "label": "American"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "heat",
+   "kind": "single",
+   "tone": "like",
+   "icon": "flame",
+   "question": "How hot do you like it?",
+   "note": null,
+   "max": 1,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "mild",
+       "label": "Mild",
+       "sub": "Little or no chilli",
+       "level": 1
+      },
+      {
+       "id": "medium",
+       "label": "Medium",
+       "sub": "A gentle warmth",
+       "level": 2
+      },
+      {
+       "id": "hot",
+       "label": "Hot",
+       "sub": "Bring on the chilli",
+       "level": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flavours",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "citrus",
+   "question": "Which flavours do you reach for?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "garlic",
+       "label": "Garlic"
+      },
+      {
+       "id": "fresh_herbs",
+       "label": "Fresh herbs"
+      },
+      {
+       "id": "citrus",
+       "label": "Citrus"
+      },
+      {
+       "id": "smoky",
+       "label": "Smoky"
+      },
+      {
+       "id": "creamy",
+       "label": "Creamy"
+      },
+      {
+       "id": "tangy",
+       "label": "Tangy and pickled"
+      },
+      {
+       "id": "sweet_savoury",
+       "label": "Sweet and savoury"
+      },
+      {
+       "id": "umami",
+       "label": "Umami"
+      },
+      {
+       "id": "peppery",
+       "label": "Peppery"
+      },
+      {
+       "id": "warm_spices",
+       "label": "Warm spices"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "favourites",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "heart",
+   "question": "What do you love to eat?",
+   "note": null,
+   "max": 8,
+   "groups": [
+    {
+     "title": "Vegetables and beans",
+     "options": [
+      {
+       "id": "tomatoes",
+       "label": "Tomatoes"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Mushrooms"
+      },
+      {
+       "id": "potatoes",
+       "label": "Potatoes"
+      },
+      {
+       "id": "leafy_greens",
+       "label": "Leafy greens"
+      },
+      {
+       "id": "peppers",
+       "label": "Peppers"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "legumes",
+       "label": "Beans and lentils"
+      }
+     ]
+    },
+    {
+     "title": "Protein and dairy",
+     "options": [
+      {
+       "id": "cheese",
+       "label": "Cheese"
+      },
+      {
+       "id": "eggs",
+       "label": "Eggs"
+      },
+      {
+       "id": "chicken",
+       "label": "Chicken"
+      },
+      {
+       "id": "fish_seafood",
+       "label": "Fish and seafood"
+      },
+      {
+       "id": "red_meat",
+       "label": "Red meat"
+      }
+     ]
+    },
+    {
+     "title": "Fruit",
+     "options": [
+      {
+       "id": "berries",
+       "label": "Berries"
+      },
+      {
+       "id": "apples_pears",
+       "label": "Apples and pears"
+      },
+      {
+       "id": "citrus_fruit",
+       "label": "Citrus fruit"
+      },
+      {
+       "id": "bananas",
+       "label": "Bananas"
+      },
+      {
+       "id": "stone_fruit",
+       "label": "Stone fruit"
+      },
+      {
+       "id": "tropical_fruit",
+       "label": "Tropical fruit"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "avoid",
+   "kind": "multi",
+   "tone": "avoid",
+   "icon": "heart-off",
+   "question": "What would you rather skip?",
+   "note": "This is a preference, not an allergy setting. Allergies are set under Allergen warnings in Settings.",
+   "max": 8,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "onion",
+       "label": "Onion"
+      },
+      {
+       "id": "garlic",
+       "label": "Garlic"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Mushrooms"
+      },
+      {
+       "id": "fresh_coriander",
+       "label": "Fresh coriander"
+      },
+      {
+       "id": "olives",
+       "label": "Olives"
+      },
+      {
+       "id": "fish",
+       "label": "Fish"
+      },
+      {
+       "id": "seafood",
+       "label": "Seafood"
+      },
+      {
+       "id": "offal",
+       "label": "Offal"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "bell_pepper",
+       "label": "Bell pepper"
+      },
+      {
+       "id": "blue_cheese",
+       "label": "Blue cheese"
+      },
+      {
+       "id": "mayonnaise",
+       "label": "Mayonnaise"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "methods",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "cooking-pot",
+   "question": "How do you like to cook?",
+   "note": null,
+   "max": 5,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "oven",
+       "label": "Oven"
+      },
+      {
+       "id": "pan",
+       "label": "Pan"
+      },
+      {
+       "id": "one_pot",
+       "label": "One pot"
+      },
+      {
+       "id": "grill",
+       "label": "Grill"
+      },
+      {
+       "id": "slow_cook",
+       "label": "Slow cooking"
+      },
+      {
+       "id": "air_fryer",
+       "label": "Air fryer"
+      },
+      {
+       "id": "no_cook",
+       "label": "No cooking"
+      },
+      {
+       "id": "steam",
+       "label": "Steaming"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "conflicts": [
+  [
+   "favourites:mushrooms",
+   "avoid:mushrooms"
+  ],
+  [
+   "favourites:aubergine",
+   "avoid:aubergine"
+  ],
+  [
+   "flavours:garlic",
+   "avoid:garlic"
+  ]
+ ],
+ "summary": [
+  "cuisines",
+  "flavours",
+  "favourites",
+  "methods"
+ ]
+}

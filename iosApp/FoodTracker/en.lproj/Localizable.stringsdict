@@ -1170,5 +1170,39 @@
             <string>One recipe is one dish written by our server. A menu set takes {min} to %d recipes, depending on its days and courses a day. They don't expire.</string>
         </dict>
     </dict>
+    <!-- Taste profile: copied from Android's strings.xml -->
+    <key>taste_answers</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d answer</string>
+            <key>other</key>
+            <string>%d answers</string>
+        </dict>
+    </dict>
+    <key>taste_new_questions</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d new question</string>
+            <key>other</key>
+            <string>%d new questions</string>
+        </dict>
+    </dict>
+    <!-- /Taste profile -->
 </dict>
 </plist>

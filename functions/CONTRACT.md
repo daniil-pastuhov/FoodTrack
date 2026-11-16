@@ -166,6 +166,35 @@ the flag keeps a new client from asking it for something else. It refuses `cours
 `INVALID_REQUEST` (a rolled-back server) they stop sending `days` and `courses: 1` until a
 response says `true` again. Old clients ignore the flag and `menuSets`.
 
+## Capability `acceptsTaste`
+
+The taste profile (November 2026, "Taste profile" below): every response that carries `balance`
+from a server that has `getTasteQuiz` and reads `taste` on `generateRecipe` as a map of quiz step
+ids to option ids carries `"acceptsTaste": true`. The apps hold no list of questions or options:
+they fetch the quiz with `getTasteQuiz`, and do so only after a response said `true`; without the
+flag they hide the Taste profile row. Clients send `taste` only when the latest such response
+said `true`, and only when what they send is not empty (keep the flag with the cached balance;
+absent in a later response withdraws it). Without the flag the request goes **without** `taste`:
+no error, nothing blocked. A server from before it ignores the field (unknown fields are
+ignored), so the flag keeps a client from saying "Uses your taste profile" when it would not be
+used. Answers to steps or options the current quiz no longer has (removed, renamed to a new id,
+hidden) are dropped by the server, never refused, and do not withdraw the flag: a client must
+not clear it for that. A request with `taste` refused as `INVALID_REQUEST` (only a malformed
+shape is) makes the apps stop sending it until a response says `true` again. Old clients ignore
+the flag. A taste profile costs nothing: the price, the limits and every check are the same with
+and without one.
+
+Beside it, every response that carries `balance` also carries **`"tasteQuizVersion":
+"<version>"`**: the quiz's current `version`, exactly what `getTasteQuiz` would return as
+`version` now (it reflects the catalogue and `config/runtime.tasteQuiz.hidden`, and is the same
+in every language). The apps compare it with the version of the quiz they cached to show that
+there are new questions (the dot on Recipe settings) without fetching the quiz; when it differs
+they fetch the quiz quietly in the background, at most once per version and language and only for
+an account that already exists (never for someone who would see the promo), so a new question can
+be noted before the quiz is opened; an open quiz is never swapped. It is opaque:
+compare for equality only. A server from before it sends nothing; treat that as "unknown", not as
+a change.
+
 ## Types
 
 ### RecipeConfig
@@ -329,6 +358,61 @@ word lists; an allergen written in another script can only be matched **literall
 folded, normalised text; as a substring for Chinese, Japanese, Korean and Thai), so a translation
 of it in the answer is not caught unless the word lists have it.
 
+### Taste profile (request)
+
+`taste` (`generateRecipe`, optional, a recipe or a menu alike) is the person's answers to the
+taste quiz (`getTasteQuiz`): a map from **step id to the chosen option ids**. There is no free
+text. Absent or `null` is none.
+
+```json
+"taste": { "cuisines": ["italian", "nordic"], "heat": ["medium"], "avoid": ["olives"] }
+```
+
+1. **Shape (strict, `INVALID_REQUEST`)**: `taste` is an object of at most **16** keys, each a
+   string of at most **40** characters; each value is `null` (nothing chosen), one string (read
+   as a list of one; a `single` step is normally sent as a list of one) or an array of at most
+   **32** strings, every string at most **40** characters. A malformed value refuses the request,
+   whatever the step is.
+2. **Against the quiz (lenient, never an error)**: steps and options the server's catalogue does
+   not have, or that `config/runtime.tasteQuiz.hidden` hides, are **dropped** (a newer or older
+   client may know ids this server does not); repeats collapse.
+3. **Caps and conflicts**: the `avoid`-tone steps are cut to their `max` in catalogue order;
+   then for every pair of `conflicts` with both sides chosen, the side on a `like` step is
+   dropped (the `avoid` tone wins: `favourites:mushrooms` against `avoid:mushrooms`,
+   `flavours:garlic` against `avoid:garlic`); then every other step is cut to its `max` in
+   catalogue order. So a `multi` step that became `single` keeps the first answer in catalogue
+   order, and a dropped or hidden option never uses up a cap.
+4. Every list is put in catalogue order, steps in catalogue order. Nothing left is **no
+   profile**: the prompt is then exactly that of a request without `taste`.
+
+**Binding**: `taste` **as sent** is part of the inputs a `requestId` is bound to, in canonical
+form (keys sorted, each list without repeats and sorted, a bare string as a list of one, empty
+lists and `null` left out), not the cleaned profile. So a retry with the same `requestId` and the
+same answers after the quiz or the hidden list changed is the same request (recovered as usual,
+never `REQUEST_ID_REUSED`), and the same answers in another order or with repeats are the same
+inputs. Absent `taste`, `{}` or only empty values bind exactly as before the field existed. Any
+other difference, including answers this server drops, is another request
+(`REQUEST_ID_REUSED` for the same id).
+
+What the model gets: one block of **fixed wording** in the system instruction, built only from
+the catalogue's English prompt words (each step's fixed label line and each kept option's words;
+never an id or any text as sent), and only for a non-empty profile. It states the order of
+precedence: the pantry items stay the core of every dish and are used up first, the allergens and
+the diet always win, the time limit and the meal type stand; within those, lean towards the
+`like` answers; leave out the `avoid` answers unless a ticked item is one (then use it: the
+person ticked it), and leave out an optional item that is one. On every `like` step (favourites,
+flavours, heat) an option the request's diet or allergens rule out (by the answer checks' own
+word lists: chicken for a vegetarian, cheese for a milk allergy, garlic as a flavour for a garlic
+allergy) is left out of the block. **An `avoid` answer is a
+preference, not an allergen**: it is never added to `allergens`, never checked in the answer, and
+never refuses an answer; the allergen and diet checks, the quality gate and every other output
+check are unchanged. The price is unchanged.
+
+What the server keeps of it: **nothing but the request hash.** As for `config`, the profile is
+not written to the generation record (`users/{uid}/generations/{requestId}` holds `inputHash`, a
+sha256 of the validated request, and no inputs); it is not logged either (`llm_call` carries only
+`taste: true | false`, whether the request had a non-empty cleaned profile).
+
 ### Recipe (response)
 
 ```json
@@ -414,6 +498,7 @@ Request:
   "optionalIngredients": [{ "name": "Basil", "expiresOn": null, "quantity": 1 }],
   "allergens": ["peanut"],
   "allergenConsent": true,
+  "taste": { "cuisines": ["italian"], "heat": ["medium"], "avoid": ["olives"] },
   "today": "YYYY-MM-DD (device local date; must be within a day of the server's UTC date)"
 }
 ```
@@ -427,7 +512,9 @@ absent or null is 3, anything else, or `days` on a recipe, is `INVALID_REQUEST`;
 server that says `acceptsMenuDays`, and only when it is not 3 (see that section). `days` is part
 of the inputs a `requestId` is bound to; `days: 3` binds exactly as no `days`. 1 to 30 ingredients.
 `optionalIngredients`: see "Optional ingredients"; send it only to a server that says
-`acceptsOptionalIngredients` (see that section).
+`acceptsOptionalIngredients` (see that section). `taste` (optional): the quiz answers, step id →
+option ids (see "Taste profile"); send it only to a server that says `acceptsTaste`, and only when
+it is not empty. It does not change the cost.
 Cost: `costs.recipe` for a recipe, `costs.menuSets["<days>"]["<courses>"]` for a menu (see
 "Costs"; by default 1 for a recipe and days + courses − 1 for a menu; a 3-day menu is
 `costs.menu2` / `costs.menu3`, 4 and 5).
@@ -438,7 +525,7 @@ Response:
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
   "costs": { "recipe": 1, "menu2": 4, "menu3": 5, "menuSets": { "...": "see Costs" } },
   "acceptsOptionalIngredients": true, "acceptsMultiChoiceConfig": true, "acceptsDanish": true,
-  "acceptsMenuDays": true }
+  "acceptsMenuDays": true, "acceptsTaste": true, "tasteQuizVersion": "35244e855cd4327f" }
 ```
 
 | status | meaning | `charged` | client action |
@@ -540,7 +627,8 @@ The polling call. App Check enforced, token **not** consumed; per-user throttled
 Request `{ "requestId": "<the id sent to generateRecipe>" }`.
 
 Response: exactly `generateRecipe`'s response for that generation (`status`, `recipe` / `menu`,
-`balance`, `charged`, `costs`, and `purchasesBlocked` when set). It never charges, never starts a
+`balance`, `charged`, `costs`, the capability flags, `tasteQuizVersion`, and `purchasesBlocked`
+when set). It never charges, never starts a
 generation and never calls the model. Unknown id (never sent, another account's, or past the
 idempotency window): `not-found` / `UNKNOWN_REQUEST`; then re-send `generateRecipe` with the same
 `requestId` and the same inputs.
@@ -564,7 +652,7 @@ resubmission withdraws it. Only the account that redeemed the purchase can set i
 Play purchases are accepted only from the Android app and App Store purchases only from the iOS
 app (`STORE_MISMATCH` otherwise).
 
-Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { ... } }` (the whole table, see "Costs"), plus `"purchasesBlocked": true` when set.
+Response: `{ "status": "GRANTED | ALREADY_GRANTED | REJECTED_PERMANENT | RETRY", "balance": 10, "costs": { ... } }` (the whole table, see "Costs"), plus `"purchasesBlocked": true` when set. Like every response that carries `balance`, it also carries the capability flags and `"tasteQuizVersion"` (see "Capability `acceptsTaste`").
 
 | status | client action |
 |---|---|
@@ -605,10 +693,66 @@ every new purchase.
 - The server reads the value from the store (never from the request). When present it must be the
   caller's or that of an account merged into the caller; otherwise `PURCHASE_ACCOUNT_MISMATCH`.
 
+### `getTasteQuiz`
+
+The taste quiz's definition, so the apps hold no questions or options of their own (README
+"Taste profile quiz"). A signed-in caller (anonymous included), App Check enforced with an
+ordinary token (not consumed), rate-limited like `getBalance`; it reads no account, reserves
+nothing, calls no model and charges nothing. Call it only after a response said `acceptsTaste`.
+
+Request: `{ "language": "de" }`: an app language (`en`, `ru`, `nb`, `es`, `de`, `fr`, `sv`, `da`;
+case and a region are ignored, `de-DE` is `de`, `no` / `nn` are `nb`). Anything else, or none,
+answers in English. Never an error.
+
+Response:
+
+```json
+{
+  "version": "3f9c2a81d04b6e57",
+  "language": "en",
+  "steps": [
+    {
+      "id": "heat", "kind": "single", "tone": "like", "icon": "flame",
+      "question": "How hot do you like it?", "note": null, "max": 1,
+      "groups": [ { "title": null, "options": [
+        { "id": "mild", "label": "Mild", "sub": "Little or no chilli", "level": 1 } ] } ]
+    }
+  ],
+  "conflicts": [ ["favourites:mushrooms", "avoid:mushrooms"] ],
+  "summary": ["cuisines", "flavours", "favourites", "methods"]
+}
+```
+
+| field | type | meaning |
+|---|---|---|
+| `version` | string | Opaque (today 16 hex characters). Changes whenever anything of the quiz changes (structure, any text in any language, a prompt word) or `tasteQuiz.hidden` hides something else; the same in every language. Store it with the answers; never parse it. |
+| `language` | string | The language the texts are in. |
+| `steps[]` | array | Shown in order. A client skips a step whose `kind`, `tone` or any field it does not understand, and ignores unknown fields. |
+| `steps[].id` | string | Step id, the key in `taste`. Lower-case ASCII, at most 40 characters. |
+| `steps[].kind` | `"multi"` \| `"single"` | `multi`: chips, up to `max`. `single`: cards, one choice (tap the chosen one to clear it); sent as a list of one. |
+| `steps[].tone` | `"like"` \| `"avoid"` | `avoid`: the person would rather skip these (chip drawn with a ban sign); wins every conflict. |
+| `steps[].icon` | string | A Lucide icon name from the allow-list (README "Taste profile quiz"); a client draws `utensils` for one it does not have. |
+| `steps[].question` | string | The question. |
+| `steps[].note` | string or null | A line under the question. |
+| `steps[].max` | int | At most this many choices (1 for `single`). |
+| `steps[].groups[]` | array | At least one; each `{ "title": string or null, "options": [...] }`, never empty. |
+| `options[].id` | string | Option id, the value in `taste`. Lower-case ASCII, at most 40 characters. |
+| `options[].label` | string | The chip or card label. |
+| `options[].sub` | string | Optional: a second line (on `single` cards). |
+| `options[].level` | int | Optional: 1 to 3, drawn as that many flames on a `single` card. |
+| `conflicts[]` | `[string, string]` | `"<step>:<option>"` pairs that cannot both be chosen: choosing one takes the other off (with Undo). The server resolves a request's conflicts towards the `avoid` side. |
+| `summary[]` | string | The steps, in order, the settings row's summary names labels from. |
+
+Hidden steps and options (`config/runtime.tasteQuiz.hidden`) are left out; a group or step left
+with no option is left out; `conflicts` and `summary` name only what is shown. Ids are never
+reused with another meaning: an id the quiz no longer has is simply gone, and answers to it are
+dropped (see "Taste profile").
+
 ### `getBalance`
 
 Request `{}`. Response `{ "balance": 0, "costs": { ... } }` (the whole table, see "Costs"),
-plus `"purchasesBlocked": true` when set. A new, deleted or merged account reads 0. The balance can
+plus `"purchasesBlocked": true` when set, the capability flags and `"tasteQuizVersion"` (see
+"Capability `acceptsTaste`"). A new, deleted or merged account reads 0. The balance can
 be negative after a store refund of already-spent credits.
 
 ### `mergeBalance`
@@ -619,7 +763,8 @@ anonymous user to the provider is not possible because the credential already ha
 Request `{ "sourceIdToken": "<ID token of the anonymous user, fetched before switching users>" }`,
 called **as the signed-in (non-anonymous) user**, with a limited-use App Check token. Response
 `{ "balance": 12, "moved": 7, "costs": { ... } }`, plus
-`"purchasesBlocked": true` when set (a block on the anonymous install's buyer follows the merge).
+`"purchasesBlocked": true` when set (a block on the anonymous install's buyer follows the merge),
+the capability flags and `"tasteQuizVersion"` (see "Capability `acceptsTaste`").
 `moved` can be negative when a store refund left the anonymous balance below zero: the debt moves
 too.
 

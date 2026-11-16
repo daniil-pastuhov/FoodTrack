@@ -1462,5 +1462,47 @@
             <string>Один рецепт — одно блюдо от нашего сервера. Набор меню стоит от {min} до %d рецептов в зависимости от числа дней и блюд в день. Срок у рецептов не ограничен.</string>
         </dict>
     </dict>
+    <!-- Taste profile: copied from Android's strings.xml -->
+    <key>taste_answers</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d ответ</string>
+            <key>few</key>
+            <string>%d ответа</string>
+            <key>many</key>
+            <string>%d ответов</string>
+            <key>other</key>
+            <string>%d ответа</string>
+        </dict>
+    </dict>
+    <key>taste_new_questions</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d новый вопрос</string>
+            <key>few</key>
+            <string>%d новых вопроса</string>
+            <key>many</key>
+            <string>%d новых вопросов</string>
+            <key>other</key>
+            <string>%d новых вопроса</string>
+        </dict>
+    </dict>
+    <!-- /Taste profile -->
 </dict>
 </plist>

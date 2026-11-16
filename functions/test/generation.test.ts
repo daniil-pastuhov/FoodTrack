@@ -6,6 +6,9 @@ import { sweep } from "../src/core/sweeper";
 import { DEFAULT_COSTS } from "../src/constants";
 import { emptyUser } from "../src/model";
 import { balanceOf, callerFor, db, fakeUsage, makeDeps, resetEmulators, sampleMenu, setConfig, type TestDeps } from "./helpers";
+import { tasteQuizVersion } from "../src/taste/quiz";
+
+const TQV = tasteQuizVersion([]);
 
 /** An error before the model produced anything: usage known, nothing billed for output. */
 const nothingGenerated = fakeUsage({ inputTokens: 0, outputTokens: 0, thinkingTokens: 0 });
@@ -105,7 +108,7 @@ describe("generateRecipe charging", () => {
     slow.release();
     const res = await pending;
     expect(res).toMatchObject({ status: "DONE", balance: 8, costs: { recipe: 2, menu2: 3, menu3: 6 } });
-    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true });
+    expect(await getBalance(deps, caller)).toEqual({ balance: 8, costs: DEFAULT_COSTS, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
   });
 
   test.each([

@@ -1,0 +1,402 @@
+{
+ "version": "demo-2026-11-16",
+ "language": "sv",
+ "steps": [
+  {
+   "id": "cuisines",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "globe",
+   "question": "Vilka kök gillar du?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "italian",
+       "label": "Italienskt"
+      },
+      {
+       "id": "french",
+       "label": "Franskt"
+      },
+      {
+       "id": "spanish",
+       "label": "Spanskt"
+      },
+      {
+       "id": "greek",
+       "label": "Grekiskt"
+      },
+      {
+       "id": "nordic",
+       "label": "Nordiskt"
+      },
+      {
+       "id": "eastern_european",
+       "label": "Östeuropeiskt"
+      },
+      {
+       "id": "georgian",
+       "label": "Georgiskt"
+      },
+      {
+       "id": "middle_eastern",
+       "label": "Mellanöstern"
+      },
+      {
+       "id": "indian",
+       "label": "Indiskt"
+      },
+      {
+       "id": "chinese",
+       "label": "Kinesiskt"
+      },
+      {
+       "id": "japanese",
+       "label": "Japanskt"
+      },
+      {
+       "id": "korean",
+       "label": "Koreanskt"
+      },
+      {
+       "id": "thai",
+       "label": "Thailändskt"
+      },
+      {
+       "id": "mexican",
+       "label": "Mexikanskt"
+      },
+      {
+       "id": "american",
+       "label": "Amerikanskt"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "heat",
+   "kind": "single",
+   "tone": "like",
+   "icon": "flame",
+   "question": "Hur starkt vill du ha det?",
+   "note": null,
+   "max": 1,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "mild",
+       "label": "Mild",
+       "sub": "Lite eller ingen chili",
+       "level": 1
+      },
+      {
+       "id": "medium",
+       "label": "Medel",
+       "sub": "Lagom hetta",
+       "level": 2
+      },
+      {
+       "id": "hot",
+       "label": "Stark",
+       "sub": "Gärna mycket chili",
+       "level": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flavours",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "citrus",
+   "question": "Vilka smaker väljer du helst?",
+   "note": null,
+   "max": 6,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "garlic",
+       "label": "Vitlök"
+      },
+      {
+       "id": "fresh_herbs",
+       "label": "Färska örter"
+      },
+      {
+       "id": "citrus",
+       "label": "Citrus"
+      },
+      {
+       "id": "smoky",
+       "label": "Rökigt"
+      },
+      {
+       "id": "creamy",
+       "label": "Krämigt"
+      },
+      {
+       "id": "tangy",
+       "label": "Syrligt och inlagt"
+      },
+      {
+       "id": "sweet_savoury",
+       "label": "Sött och salt"
+      },
+      {
+       "id": "umami",
+       "label": "Umami"
+      },
+      {
+       "id": "peppery",
+       "label": "Pepprigt"
+      },
+      {
+       "id": "warm_spices",
+       "label": "Varma kryddor"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "favourites",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "heart",
+   "question": "Vad älskar du att äta?",
+   "note": null,
+   "max": 8,
+   "groups": [
+    {
+     "title": "Grönsaker och baljväxter",
+     "options": [
+      {
+       "id": "tomatoes",
+       "label": "Tomater"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Svamp"
+      },
+      {
+       "id": "potatoes",
+       "label": "Potatis"
+      },
+      {
+       "id": "leafy_greens",
+       "label": "Bladgrönsaker"
+      },
+      {
+       "id": "peppers",
+       "label": "Paprika"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "legumes",
+       "label": "Bönor och linser"
+      }
+     ]
+    },
+    {
+     "title": "Protein och mejeri",
+     "options": [
+      {
+       "id": "cheese",
+       "label": "Ost"
+      },
+      {
+       "id": "eggs",
+       "label": "Ägg"
+      },
+      {
+       "id": "chicken",
+       "label": "Kyckling"
+      },
+      {
+       "id": "fish_seafood",
+       "label": "Fisk och skaldjur"
+      },
+      {
+       "id": "red_meat",
+       "label": "Rött kött"
+      }
+     ]
+    },
+    {
+     "title": "Frukt",
+     "options": [
+      {
+       "id": "berries",
+       "label": "Bär"
+      },
+      {
+       "id": "apples_pears",
+       "label": "Äpplen och päron"
+      },
+      {
+       "id": "citrus_fruit",
+       "label": "Citrusfrukter"
+      },
+      {
+       "id": "bananas",
+       "label": "Bananer"
+      },
+      {
+       "id": "stone_fruit",
+       "label": "Stenfrukter"
+      },
+      {
+       "id": "tropical_fruit",
+       "label": "Tropiska frukter"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "avoid",
+   "kind": "multi",
+   "tone": "avoid",
+   "icon": "heart-off",
+   "question": "Vad vill du helst slippa?",
+   "note": "Det här är en preferens, inte en allergiinställning. Allergier ställer du in under Allergenvarningar i Inställningar.",
+   "max": 8,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "onion",
+       "label": "Lök"
+      },
+      {
+       "id": "garlic",
+       "label": "Vitlök"
+      },
+      {
+       "id": "mushrooms",
+       "label": "Svamp"
+      },
+      {
+       "id": "fresh_coriander",
+       "label": "Färsk koriander"
+      },
+      {
+       "id": "olives",
+       "label": "Oliver"
+      },
+      {
+       "id": "fish",
+       "label": "Fisk"
+      },
+      {
+       "id": "seafood",
+       "label": "Skaldjur"
+      },
+      {
+       "id": "offal",
+       "label": "Inälvsmat"
+      },
+      {
+       "id": "aubergine",
+       "label": "Aubergine"
+      },
+      {
+       "id": "bell_pepper",
+       "label": "Paprika"
+      },
+      {
+       "id": "blue_cheese",
+       "label": "Ädelost"
+      },
+      {
+       "id": "mayonnaise",
+       "label": "Majonnäs"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "methods",
+   "kind": "multi",
+   "tone": "like",
+   "icon": "cooking-pot",
+   "question": "Hur gillar du att laga mat?",
+   "note": null,
+   "max": 5,
+   "groups": [
+    {
+     "title": null,
+     "options": [
+      {
+       "id": "oven",
+       "label": "Ugn"
+      },
+      {
+       "id": "pan",
+       "label": "Stekpanna"
+      },
+      {
+       "id": "one_pot",
+       "label": "Allt i en gryta"
+      },
+      {
+       "id": "grill",
+       "label": "Grill"
+      },
+      {
+       "id": "slow_cook",
+       "label": "Långkok"
+      },
+      {
+       "id": "air_fryer",
+       "label": "Airfryer"
+      },
+      {
+       "id": "no_cook",
+       "label": "Utan tillagning"
+      },
+      {
+       "id": "steam",
+       "label": "Ångkokning"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "conflicts": [
+  [
+   "favourites:mushrooms",
+   "avoid:mushrooms"
+  ],
+  [
+   "favourites:aubergine",
+   "avoid:aubergine"
+  ],
+  [
+   "flavours:garlic",
+   "avoid:garlic"
+  ]
+ ],
+ "summary": [
+  "cuisines",
+  "flavours",
+  "favourites",
+  "methods"
+ ]
+}

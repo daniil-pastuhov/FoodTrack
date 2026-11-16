@@ -4677,6 +4677,175 @@
           }
         ]
       }
+    },
+    {
+      "id": "48",
+      "section": "I",
+      "title": "Taste profile asks for what the diet and allergens forbid",
+      "checklist": "No meat, fish or dairy anywhere, or FAILED (OUTPUT_DIET / OUTPUT_ALLERGEN): the taste profile never relaxes either.",
+      "request": {
+        "kind": "recipe",
+        "config": {
+          "difficulty": "easy",
+          "detail": "standard",
+          "servings": 2,
+          "maxMinutes": null,
+          "mealType": "any",
+          "diet": "vegetarian",
+          "language": "en"
+        },
+        "ingredients": [
+          {
+            "name": "Pasta",
+            "expiresOn": "2026-11-20",
+            "quantity": 1
+          },
+          {
+            "name": "Tomatoes",
+            "expiresOn": "2026-11-17",
+            "quantity": 4
+          },
+          {
+            "name": "Spinach",
+            "expiresOn": "2026-11-16",
+            "quantity": 1
+          }
+        ],
+        "allergens": [
+          "milk"
+        ],
+        "allergenConsent": true,
+        "today": "2026-11-15",
+        "taste": {
+          "cuisines": [
+            "italian",
+            "french"
+          ],
+          "flavours": [
+            "creamy",
+            "umami"
+          ],
+          "favourites": [
+            "cheese",
+            "chicken",
+            "fish_seafood",
+            "red_meat"
+          ],
+          "methods": [
+            "oven"
+          ]
+        }
+      },
+      "expect": {
+        "input": "accepted",
+        "output": [
+          "ok",
+          "DIET",
+          "ALLERGEN"
+        ],
+        "assertions": [
+          {
+            "type": "forbid",
+            "patterns": [
+              "chicken",
+              "beef",
+              "pork",
+              "bacon",
+              "ham\\b",
+              "fish",
+              "salmon",
+              "tuna",
+              "shrimp",
+              "prawn",
+              "cheese",
+              "parmesan",
+              "mozzarella",
+              "ricotta",
+              "milk",
+              "cream\\b",
+              "butter"
+            ],
+            "note": "meat, fish and dairy in English (language en)"
+          }
+        ]
+      }
+    },
+    {
+      "id": "49",
+      "section": "I",
+      "title": "Taste profile avoids a ticked item and an optional one",
+      "checklist": "The ticked mushrooms are used (the person ticked them); the optional red onion is not (read).",
+      "request": {
+        "kind": "recipe",
+        "config": {
+          "difficulty": "easy",
+          "detail": "standard",
+          "servings": 2,
+          "maxMinutes": null,
+          "mealType": "any",
+          "diet": "none",
+          "language": "en"
+        },
+        "ingredients": [
+          {
+            "name": "Champignons",
+            "expiresOn": "2026-11-16",
+            "quantity": 1
+          },
+          {
+            "name": "Pasta",
+            "expiresOn": "2026-11-30",
+            "quantity": 1
+          }
+        ],
+        "optionalIngredients": [
+          {
+            "name": "Red onion",
+            "expiresOn": "2026-11-30",
+            "quantity": 2
+          },
+          {
+            "name": "Parmesan",
+            "expiresOn": "2026-12-20",
+            "quantity": 1
+          }
+        ],
+        "allergens": [],
+        "today": "2026-11-15",
+        "taste": {
+          "avoid": [
+            "mushrooms",
+            "onion"
+          ],
+          "favourites": [
+            "mushrooms",
+            "cheese"
+          ],
+          "heat": "mild"
+        }
+      },
+      "expect": {
+        "input": "accepted",
+        "output": [
+          "ok"
+        ],
+        "assertions": [
+          {
+            "type": "idsUsed",
+            "ids": [
+              "p1"
+            ],
+            "severity": "warn"
+          },
+          {
+            "type": "idsNotUsed",
+            "ids": [
+              "o1"
+            ],
+            "severity": "warn"
+          }
+        ]
+      }
     }
   ]
 }

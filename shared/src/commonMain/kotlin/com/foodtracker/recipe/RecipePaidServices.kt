@@ -149,7 +149,13 @@ data class GenerateRequest(
      *  `acceptsMenuDays`. Null (and then left out of the JSON altogether, so the request is the
      *  legacy one) otherwise, and in a request kept by an older version. */
     @EncodeDefault(EncodeDefault.Mode.NEVER)
-    val days: Int? = null
+    val days: Int? = null,
+    /** The taste profile's answers, step id to option ids ([wireTasteFor]): only when not empty
+     *  and only to a server that said `acceptsTaste`. Null (and then left out of the JSON
+     *  altogether, so the request is the one from before the profile) otherwise, and in a request
+     *  kept by an older version. Part of the inputs a request id is bound to, as sent. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    val taste: Map<String, List<String>>? = null
 ) {
     /** Whether [other] asks for the same thing, whatever its id. */
     fun sameAskAs(other: GenerateRequest): Boolean =
@@ -181,7 +187,11 @@ data class GenerateReply(
     /** Read with [acceptsDanishOf]. */
     val acceptsDanish: JsonElement? = null,
     /** Read with [acceptsMenuDaysOf]. */
-    val acceptsMenuDays: JsonElement? = null
+    val acceptsMenuDays: JsonElement? = null,
+    /** Read with [acceptsTasteOf]. */
+    val acceptsTaste: JsonElement? = null,
+    /** Read with [tasteQuizVersionOf]. */
+    val tasteQuizVersion: JsonElement? = null
 )
 
 @Serializable
@@ -201,7 +211,9 @@ data class VerifyReply(
     val acceptsOptionalIngredients: JsonElement? = null,
     val acceptsMultiChoiceConfig: JsonElement? = null,
     val acceptsDanish: JsonElement? = null,
-    val acceptsMenuDays: JsonElement? = null
+    val acceptsMenuDays: JsonElement? = null,
+    val acceptsTaste: JsonElement? = null,
+    val tasteQuizVersion: JsonElement? = null
 )
 
 /** `getBalance`'s answer. */
@@ -212,7 +224,9 @@ data class BalanceReply(
     val acceptsOptional: Boolean = false,
     val acceptsMultiChoice: Boolean = false,
     val acceptsDanish: Boolean = false,
-    val acceptsMenuDays: Boolean = false
+    val acceptsMenuDays: Boolean = false,
+    val acceptsTaste: Boolean = false,
+    val tasteQuizVersion: String? = null
 )
 
 /** `mergeBalance`'s answer: the joined [balance], what [moved] from this install (negative when a
@@ -225,7 +239,9 @@ data class MergeReply(
     val acceptsOptional: Boolean = false,
     val acceptsMultiChoice: Boolean = false,
     val acceptsDanish: Boolean = false,
-    val acceptsMenuDays: Boolean = false
+    val acceptsMenuDays: Boolean = false,
+    val acceptsTaste: Boolean = false,
+    val tasteQuizVersion: String? = null
 )
 
 /** A reply's `purchasesBlocked`, read leniently: only a JSON `true` blocks; anything else
@@ -249,6 +265,16 @@ fun acceptsDanishOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
  *  menu's `days` (1 to 4) and `courses: 1`, priced by `costs.menuSets`; absent says it writes only
  *  3-day menus of 2 or 3 courses. */
 fun acceptsMenuDaysOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `acceptsTaste` (functions/CONTRACT.md): only a JSON `true` says the server reads a
+ *  request's `taste`; absent says it doesn't, and the request goes without it. */
+fun acceptsTasteOf(json: JsonElement?): Boolean = purchasesBlockedOf(json)
+
+/** A reply's `tasteQuizVersion` (functions/CONTRACT.md): the version `getTasteQuiz` would answer
+ *  with now, so the app can tell new questions without opening the quiz; null when absent or not
+ *  a non-empty string. */
+fun tasteQuizVersionOf(json: JsonElement?): String? =
+    (json as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }?.take(64)
 
 /** A failed call, by the contract's `details.reason`, plus the two the client sees itself. */
 enum class ServerError {
@@ -358,6 +384,11 @@ interface RecipeBackend {
     suspend fun getGeneration(requestId: String): ServerResult<GenerateReply> = ServerResult.Err(ServerError.CALLABLE_MISSING)
     suspend fun verifyPurchase(purchaseToken: String): ServerResult<VerifyReply>
     suspend fun getBalance(): ServerResult<BalanceReply>
+
+    /** `getTasteQuiz`: the taste profile's questions in [language] (an app language code), as the
+     *  server's JSON, read with [tasteQuizOf]. Only once a reply said `acceptsTaste`. An ordinary
+     *  App Check token, as for the balance; charges nothing. */
+    suspend fun getTasteQuiz(language: String): ServerResult<JsonElement> = ServerResult.Err(ServerError.CALLABLE_MISSING)
 
     /** Deletes the signed-in account on the server. The caller signs out afterwards. */
     suspend fun deleteAccount(): ServerResult<DeleteReply>
@@ -554,7 +585,12 @@ data class RecipePaidSnapshot(
     val serverTakesDanish: Boolean = false,
     /** The same for `acceptsMenuDays`: only then are the Days choice and one course a day
      *  offered, and a menu's `days` (other than 3) or `courses: 1` sent. */
-    val serverTakesMenuDays: Boolean = false
+    val serverTakesMenuDays: Boolean = false,
+    /** The same for `acceptsTaste`: only then is a non-empty taste profile sent ([wireTasteFor]).
+     *  Cleared when a request that carried it is refused as INVALID_REQUEST (a rolled-back server). */
+    val serverTakesTaste: Boolean = false,
+    /** The last `tasteQuizVersion` a reply carried; null before one did. */
+    val tasteQuizVersion: String? = null
 )
 
 interface RecipePaidRepository {

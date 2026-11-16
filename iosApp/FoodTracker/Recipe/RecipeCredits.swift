@@ -83,6 +83,7 @@ struct RecipeCreditsStorage {
         static let serverTakesMultiChoice = "com.foodtracker.recipe.server_takes_multi_choice"
         static let serverTakesDanish = "com.foodtracker.recipe.server_takes_danish"
         static let serverTakesMenuDays = "com.foodtracker.recipe.server_takes_menu_days"
+        static let serverTakesTaste = "com.foodtracker.recipe.server_takes_taste"
     }
 
     /// The server's last answer that carried a balance said `acceptsOptionalIngredients`: only
@@ -110,6 +111,13 @@ struct RecipeCreditsStorage {
     var serverTakesMenuDays: Bool {
         get { defaults.bool(forKey: Key.serverTakesMenuDays) }
         nonmutating set { defaults.set(newValue, forKey: Key.serverTakesMenuDays) }
+    }
+
+    /// The same for `acceptsTaste`: only then does a non-empty taste profile go as `taste`
+    /// (`TasteProfile.toSend`). Cleared when a request that carried it was refused as invalid.
+    var serverTakesTaste: Bool {
+        get { defaults.bool(forKey: Key.serverTakesTaste) }
+        nonmutating set { defaults.set(newValue, forKey: Key.serverTakesTaste) }
     }
 
     /// The answer to sending allergens to our server (`AllergenConsent`), with its time and the
@@ -232,6 +240,9 @@ final class RecipeCredits: ObservableObject {
     /// The server's last answer with a balance said `acceptsMenuDays` (kept in `storage`):
     /// the form offers Days and one course a day.
     @Published private(set) var serverTakesMenuDays: Bool
+    /// The taste quiz's version as the last reply with a balance named it (`tasteQuizVersion`):
+    /// when it isn't the cached one, the definition is fetched quietly (`RecipeViewModel`).
+    @Published private(set) var serverTasteQuizVersion: String?
     @Published private(set) var account: RecipeAccountState = .none
     @Published private(set) var packs: RecipePacksState = .idle { didSet { if packs == .unreachable { Self.noteReviewProblem() } } }
     @Published private(set) var unconfirmed: [UnconfirmedPurchase] = []
@@ -443,6 +454,9 @@ final class RecipeCredits: ObservableObject {
         storage.serverTakesMultiChoice = response.acceptsMultiChoiceConfig?.value ?? false
         storage.serverTakesDanish = response.acceptsDanish?.value ?? false
         setServerTakesMenuDays(response.acceptsMenuDays?.value ?? false)
+        storage.serverTakesTaste = response.acceptsTaste?.value ?? false
+        let quizVersion = response.tasteQuizVersion?.value
+        if serverTasteQuizVersion != quizVersion { serverTasteQuizVersion = quizVersion }
     }
 
     /// Kept, and republished so the form's choices follow at once. Cleared too when a request
@@ -450,6 +464,15 @@ final class RecipeCredits: ObservableObject {
     func setServerTakesMenuDays(_ takes: Bool) {
         storage.serverTakesMenuDays = takes
         if serverTakesMenuDays != takes { serverTakesMenuDays = takes }
+    }
+
+    /// The server's last answer with a balance said `acceptsTaste`: the taste profile's row shows,
+    /// the quiz can be fetched and answers are sent. Demo launches act as such a server.
+    var serverTakesTaste: Bool {
+        #if DEBUG
+        if demoMode { return true }
+        #endif
+        return storage.serverTakesTaste
     }
 
     /// The cheapest pack as the store formats its price, once the store has answered (the tab

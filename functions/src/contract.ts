@@ -19,6 +19,7 @@ import {
   type MenuDays,
 } from "./constants";
 import { SUSPICIOUS_INPUT_RULES, normalizeName, type InputRule } from "./core/inputSafety";
+import { cleanTaste, tasteQuizVersion } from "./taste/quiz";
 
 export const DIFFICULTIES = ["easy", "medium", "ambitious"] as const;
 export const DETAILS = ["brief", "standard", "stepByStep"] as const;
@@ -34,11 +35,53 @@ export const DIET_CHOICES = ["vegetarian", "vegan", "pescatarian", "glutenFree",
 export const MINUTES_RANGE = { min: 10, max: 120, step: 5 } as const;
 export const COURSES = ["starter", "main", "dessert"] as const;
 
+/** `taste` shape bounds (CONTRACT.md "Taste profile"): beyond any of them the request is INVALID_REQUEST. */
+export const TASTE_MAX_KEYS = 16;
+export const TASTE_MAX_ENTRIES = 32;
+export const TASTE_MAX_ID_CHARS = 40;
+
 export type Difficulty = (typeof DIFFICULTIES)[number];
 export type Language = (typeof LANGUAGES)[number];
 export type Course = (typeof COURSES)[number];
 
 export type MealChoice = (typeof MEAL_CHOICES)[number];
+/**
+ * A cleaned, non-empty taste profile (taste/quiz.ts cleanTaste): the visible catalogue steps that
+ * have an answer, in catalogue order, each with its kept option ids in catalogue order. Soft
+ * preferences for the prompt only; never an allergen or a diet.
+ */
+export type TasteProfile = { step: string; options: string[] }[];
+
+/** One option of a quiz step, as getTasteQuiz sends it. */
+export interface TasteQuizOption {
+  id: string;
+  label: string;
+  /** A second line, on `single` cards. */
+  sub?: string;
+  /** 1-3 flames on a `single` card. */
+  level?: number;
+}
+
+export interface TasteQuizStep {
+  id: string;
+  kind: "multi" | "single";
+  tone: "like" | "avoid";
+  /** A Lucide icon name from taste/catalogue.ts TASTE_ICONS. */
+  icon: string;
+  question: string;
+  note: string | null;
+  max: number;
+  groups: { title: string | null; options: TasteQuizOption[] }[];
+}
+
+/** getTasteQuiz's response (CONTRACT.md `getTasteQuiz`). */
+export interface TasteQuizResponse {
+  version: string;
+  language: string;
+  steps: TasteQuizStep[];
+  conflicts: [string, string][];
+  summary: string[];
+}
 export type DietChoice = (typeof DIET_CHOICES)[number];
 
 /**
@@ -91,6 +134,18 @@ export interface GenerateRequest {
   optionalIngredients: IngredientInput[];
   allergens: string[];
   today: string;
+  /**
+   * The cleaned taste profile, present only when what was sent is not empty after cleaning
+   * against the visible catalogue; without it the prompt is exactly that of a request without
+   * `taste`.
+   */
+  taste?: TasteProfile;
+  /**
+   * `taste` as sent, canonical (keys sorted, each list without repeats and sorted, empty lists
+   * left out), present only when not empty: what inputHashOf binds, so a retry with the same
+   * answers is the same request whatever the catalogue or the hidden list became meanwhile.
+   */
+  tasteSent?: [string, string[]][];
 }
 
 export interface RecipeIngredient {
@@ -179,10 +234,38 @@ export interface BlockFlag {
    * ignores the field and would write a 3-day menu at the 3-day price.
    */
   acceptsMenuDays?: true;
+  /**
+   * Present and true on every response that carries `balance` from a server that reads `taste` as
+   * a map of quiz step ids to option ids and has `getTasteQuiz` (CONTRACT.md "Capability
+   * `acceptsTaste`"). A client fetches the quiz and sends a taste profile only after a response
+   * said so; a server from before it ignores the field and would write without it.
+   */
+  acceptsTaste?: true;
+  /**
+   * Present beside `acceptsTaste` on every response that carries `balance`: the taste quiz's
+   * current `version` (the value getTasteQuiz returns, so it reflects the catalogue and
+   * `config/runtime.tasteQuiz.hidden`). The apps compare it with the quiz they cached to show
+   * that there are new questions without fetching the quiz.
+   */
+  tasteQuizVersion?: string;
 }
 
 /** Spread into every response that carries `balance` (see BlockFlag). */
-export const CAPABILITIES = { acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true } as const;
+export const CAPABILITIES = {
+  acceptsOptionalIngredients: true,
+  acceptsMultiChoiceConfig: true,
+  acceptsDanish: true,
+  acceptsMenuDays: true,
+  acceptsTaste: true,
+} as const;
+
+/**
+ * What to spread into every response that carries `balance`: the constant capabilities plus the
+ * taste quiz's current version, which depends on the runtime config's hidden list.
+ */
+export function capabilitiesOf(config: { tasteQuiz: { hidden: readonly string[] } }): typeof CAPABILITIES & { tasteQuizVersion: string } {
+  return { ...CAPABILITIES, tasteQuizVersion: tasteQuizVersion(config.tasteQuiz.hidden) };
+}
 
 /** generateRecipe and getGeneration. */
 export interface GenerateResponse extends BlockFlag {
@@ -381,8 +464,12 @@ export function validateRequestId(v: unknown): string {
   return v.toLowerCase();
 }
 
-/** `nowMs` is the server clock; `today` must be within a day of the server's UTC date either way. */
-export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequest {
+/**
+ * `nowMs` is the server clock; `today` must be within a day of the server's UTC date either way.
+ * `tasteHidden` is `config/runtime.tasteQuiz.hidden`: those steps and options are dropped from
+ * `taste`.
+ */
+export function validateGenerateRequest(v: unknown, nowMs: number, tasteHidden: readonly string[] = []): GenerateRequest {
   if (!isObject(v)) invalid("request must be an object");
   const requestId = validateRequestId(v.requestId);
   const kind = oneOf(["recipe", "menu"] as const, v.kind, "kind");
@@ -423,6 +510,9 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
     fail("failed-precondition", "ALLERGEN_CONSENT_REQUIRED", "allergens are sent only with allergenConsent: true");
   }
   const allergens = allergensRaw.map((a: unknown, i: number) => validName(a, `allergens[${i}]`));
+  const tasteSent = parseTaste(v.taste);
+  const taste = tasteSent ? cleanTaste(tasteSent, tasteHidden) : undefined;
+  const tasteHash = tasteSent ? canonicalTaste(tasteSent) : undefined;
 
   return {
     requestId,
@@ -434,7 +524,45 @@ export function validateGenerateRequest(v: unknown, nowMs: number): GenerateRequ
     optionalIngredients,
     allergens,
     today: v.today,
+    ...(taste ? { taste } : {}),
+    ...(tasteHash ? { tasteSent: tasteHash } : {}),
   };
+}
+
+/**
+ * `taste`'s shape (CONTRACT.md "Taste profile"): absent or null is none; otherwise an object of at
+ * most TASTE_MAX_KEYS keys, each a string of at most TASTE_MAX_ID_CHARS characters whose value is
+ * null (nothing chosen), one string (read as a list of one) or an array of at most
+ * TASTE_MAX_ENTRIES strings, every string at most TASTE_MAX_ID_CHARS characters; anything else is
+ * INVALID_REQUEST. Nothing is checked against the catalogue here: an unknown step or option is
+ * never an error (cleanTaste drops it). Returns step → ids, repeats removed, in the order sent.
+ */
+export function parseTaste(v: unknown): Map<string, string[]> | undefined {
+  if (!present(v)) return undefined;
+  if (!isObject(v)) invalid("taste must be an object");
+  const entries = Object.entries(v);
+  if (entries.length > TASTE_MAX_KEYS) invalid(`taste must have at most ${TASTE_MAX_KEYS} steps`);
+  const out = new Map<string, string[]>();
+  for (const [key, value] of entries) {
+    if (key.length > TASTE_MAX_ID_CHARS) invalid(`taste step ids must be at most ${TASTE_MAX_ID_CHARS} characters`);
+    if (!present(value)) continue;
+    const list = typeof value === "string" ? [value] : value;
+    if (!Array.isArray(list) || list.length > TASTE_MAX_ENTRIES) invalid(`taste values must be an id or a list of at most ${TASTE_MAX_ENTRIES} ids`);
+    for (const x of list as unknown[]) {
+      if (typeof x !== "string" || x.length > TASTE_MAX_ID_CHARS) invalid(`taste ids must be strings of at most ${TASTE_MAX_ID_CHARS} characters`);
+    }
+    out.set(key, [...new Set(list as string[])]);
+  }
+  return out;
+}
+
+/** `taste` as sent, canonical for inputHashOf: keys sorted, lists sorted, empty lists left out; undefined when nothing is left. */
+function canonicalTaste(sent: ReadonlyMap<string, readonly string[]>): [string, string[]][] | undefined {
+  const pairs = [...sent.entries()]
+    .filter(([, ids]) => ids.length > 0)
+    .map(([k, ids]): [string, string[]] => [k, [...ids].sort()])
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return pairs.length ? pairs : undefined;
 }
 
 /** An ingredient's date and quantity, checked; a malformed one refuses the request. */
@@ -503,6 +631,10 @@ export function inputHashOf(req: GenerateRequest): string {
       : {}),
     allergens: inputs.allergens,
     today: inputs.today,
+    // `taste` as sent (canonical), not the cleaned profile, so a retry with the same answers
+    // matches after the catalogue or the hidden list changed; absent when nothing was sent, so a
+    // request without it hashes exactly as before taste profiles existed.
+    ...(inputs.tasteSent ? { taste: inputs.tasteSent } : {}),
   });
   return createHash("sha256").update(canonical).digest("hex");
 }

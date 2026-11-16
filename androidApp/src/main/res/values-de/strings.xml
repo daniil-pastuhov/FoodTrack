@@ -1152,4 +1152,54 @@
         <item quantity="one">%d Tag</item>
         <item quantity="other">%d Tagen</item>
     </plurals>
+
+    <!-- Recipe: taste profile (recipes from packs only). Only the chrome: the questions, options and their texts come from our server (getTasteQuiz). -->
+    <string name="taste_title">Geschmacksprofil</string>
+    <string name="taste_choose_up_to">Wähle bis zu %1$d</string>
+    <string name="taste_choose_one">Wähle eins oder überspringe</string>
+    <string name="taste_progress">Schritt %1$d von %2$d</string>
+    <string name="taste_intro">Ein paar kurze Fragen, und jede kannst du überspringen. Deine Antworten bleiben auf diesem Gerät und werden nur mit Anfragen nach Rezepten aus einem Paket gesendet.</string>
+    <string name="taste_skip">Überspringen</string>
+    <string name="taste_back">Zurück</string>
+    <string name="taste_next">Weiter</string>
+    <string name="taste_save">Speichern</string>
+    <string name="taste_settings_empty">Für Rezepte aus Paketen</string>
+    <string name="taste_summary_more">%1$d weitere</string>
+    <string name="taste_clear">Geschmacksprofil löschen</string>
+    <string name="taste_uses_profile">Nutzt dein Geschmacksprofil</string>
+    <string name="taste_settings_badge">neue Fragen im Geschmacksprofil</string>
+    <string name="taste_error_title">Die Fragen konnten nicht geladen werden</string>
+    <string name="taste_error_body">Prüfe deine Verbindung und versuche es noch einmal.</string>
+    <string name="taste_new_tag">Neue Frage</string>
+    <string name="taste_loading">Fragen werden geladen …</string>
+    <string name="taste_retry">Erneut versuchen</string>
+    <string name="taste_close">Schließen</string>
+    <plurals name="taste_answers">
+        <item quantity="one">%1$d Antwort</item>
+        <item quantity="other">%1$d Antworten</item>
+    </plurals>
+    <plurals name="taste_new_questions">
+        <item quantity="one">%1$d neue Frage</item>
+        <item quantity="other">%1$d neue Fragen</item>
+    </plurals>
+    <string name="taste_chosen">%1$d gewählt</string>
+    <string name="taste_chosen_of">%1$d von %2$d</string>
+    <string name="taste_cap_reached">Das sind %1$d. Wähle eins ab, um ein anderes zu wählen.</string>
+    <string name="taste_on_skip_note">Markierte Einträge stehen auf deiner Verzichtliste. Wählst du einen hier, wird er dort entfernt.</string>
+    <string name="taste_on_love_note">Markierte Einträge isst du gern. Wählst du einen hier, wird er von dieser Liste entfernt.</string>
+    <string name="taste_chip_on_skip">%1$s, auf deiner Verzichtliste</string>
+    <string name="taste_chip_on_love">%1$s, bei dem, was du gern isst</string>
+    <string name="taste_chip_at_cap">%1$s. Du hast schon die Höchstzahl gewählt</string>
+    <string name="taste_moved_off_skip">%1$s von deiner Verzichtliste genommen</string>
+    <string name="taste_moved_off_love">%1$s von deinen Lieblingen genommen</string>
+    <string name="taste_saved_snackbar">Geschmacksprofil gespeichert. Rezepte aus Paketen nutzen es.</string>
+    <string name="taste_cleared_snackbar">Geschmacksprofil gelöscht</string>
+    <string name="taste_discard_message">Deine Antworten wurden nicht gespeichert, dein Geschmacksprofil bleibt, wie es war.</string>
+    <string name="taste_promo_lede">Rezepte aus deinen Paketen, so geschrieben, wie du gern isst.</string>
+    <string name="taste_promo_questions_title">Ein paar kurze Fragen</string>
+    <string name="taste_promo_questions_body">Küchen, Schärfe, Aromen, was du liebst, was du lieber weglässt und wie du gern kochst. Jede Frage kannst du überspringen.</string>
+    <string name="taste_promo_taste_title">Rezepte und Menüs nach deinem Geschmack</string>
+    <string name="taste_promo_taste_body">Unser Server richtet sich nach deinen Vorlieben und lässt weg, was du lieber nicht isst. Deine Vorräte, Allergene und deine Ernährungsweise haben weiterhin Vorrang.</string>
+    <string name="taste_promo_device_title">Bleibt auf diesem Gerät</string>
+    <string name="taste_promo_device_body">Es wird nur mit Anfragen nach Rezepten aus einem Paket gesendet.</string>
 </resources>

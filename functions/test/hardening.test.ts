@@ -47,6 +47,9 @@ import {
   verifyPurchase,
   type TestDeps,
 } from "./helpers";
+import { tasteQuizVersion } from "../src/taste/quiz";
+
+const TQV = tasteQuizVersion([]);
 
 let deps: TestDeps;
 beforeEach(async () => {
@@ -531,5 +534,5 @@ describe("11. emulator fakes", () => {
 
 test("getBalance carries no purchasesBlocked for an ordinary buyer", async () => {
   await verifyPurchase(deps, callerFor("ord"), { store: "play", purchaseToken: deps.play.add(playToken()) });
-  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true });
+  expect(await getBalance(deps, callerFor("ord"))).toEqual({ balance: 10, costs: DEFAULT_RUNTIME_CONFIG.costs, acceptsOptionalIngredients: true, acceptsMultiChoiceConfig: true, acceptsDanish: true, acceptsMenuDays: true, acceptsTaste: true, tasteQuizVersion: TQV });
 });

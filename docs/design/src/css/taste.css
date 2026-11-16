@@ -1,0 +1,102 @@
+/* Taste profile (2026-11-15): the Recipe settings row, the promo sheet and the six-step quiz.
+   The quiz screen is `.app.recipe.taste`, so it reuses Recipe's cards, hints and radio cards. Tokens only. */
+
+/* Recipe settings: the row sits on its own between Language and the recipes-from-packs card */
+.recipe .tp-row + .r-card { margin-top: var(--space-3); }
+.recipe .tp-row .text > :nth-child(2) { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Quiz screen: top bar, progress, the question scrolling, the actions fixed at the foot */
+.taste .tp-top .title { padding-left: 0; }
+.taste .tp-top .btn.text { min-height: var(--size-touch); }
+.taste .tp-progress { flex: none; padding: 0 var(--space-4) var(--space-2); }
+.taste .tp-progress .col { display: grid; gap: var(--space-2); }
+.taste .tp-steps { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--space-1); }
+.taste .tp-steps span { height: 6px; border-radius: var(--radius-full); background: var(--color-outline-variant); }
+.taste .tp-steps span.is-done { background: var(--color-primary); }
+.taste .tp-steps span.is-now { background: var(--color-primary); box-shadow: 0 0 0 2px var(--color-primary-container); }
+.taste .tp-count { font: var(--type-caption); letter-spacing: var(--type-caption-tracking); color: var(--color-on-surface-variant); }
+
+.taste .tp-q { display: grid; gap: var(--space-3); padding: var(--space-3) 0 var(--space-4); }
+.taste .tp-emblem { display: grid; place-items: center; width: 56px; height: 56px; border-radius: var(--radius-lg); background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.taste .tp-emblem svg.lucide { width: 28px; height: 28px; }
+.taste .tp-q h2 { margin: 0; font: var(--type-headline); letter-spacing: var(--type-headline-tracking); text-wrap: balance; }
+.taste .tp-intro { margin: 0; font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.taste .tp-help { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: var(--space-3); row-gap: 2px; margin: 0; font: var(--type-label); color: var(--color-on-surface-variant); }
+.taste .tp-help .tp-n { font-variant-numeric: tabular-nums; color: var(--color-on-surface); }
+.taste .tp-help.is-full { color: var(--color-on-surface); }
+
+/* Choices: big, friendly chips that wrap; chosen ones carry a check (or a ban sign on "rather skip") */
+.taste .tp-chips { gap: var(--space-2); row-gap: var(--space-3); }
+.taste .tp-chips .chip { min-height: 40px; padding: 0 var(--space-4); font: var(--type-body); letter-spacing: 0; }
+.taste .tp-chips .chip::after { inset: -4px 0; } /* 48 high target with the 12 row gap */
+.taste .tp-chips .chip.is-selected { padding-left: var(--space-3); }
+.taste .tp-chips .chip[aria-disabled="true"] { color: color-mix(in srgb, var(--color-on-surface) 38%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-on-surface) 12%, transparent); cursor: default; }
+/* Ticked in the opposite list: plain chip, a small mark before the name, still tappable */
+.taste .tp-chips .chip.is-other { padding-left: var(--space-3); box-shadow: inset 0 0 0 1px var(--color-outline); }
+.taste .tp-chips .chip.is-other svg.lucide { width: 16px; height: 16px; color: var(--color-on-surface-variant); }
+.taste .tp-group { margin: var(--space-4) 0 var(--space-2); font: var(--type-label); letter-spacing: var(--type-label-tracking); color: var(--color-on-surface-variant); }
+.taste .tp-group:first-of-type { margin-top: 0; }
+.taste .tp-line { display: flex; gap: var(--space-2); align-items: flex-start; margin: var(--space-4) 0 0; font: var(--type-body-sm); color: var(--color-on-surface-variant); }
+.taste .tp-line svg.lucide { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.taste .tp-q + .r-note { margin-bottom: var(--space-4); }
+
+/* Heat: one choice, three radio cards with one to three flames */
+.taste .tp-heat .r-pack { min-height: 72px; }
+.taste .tp-flames { flex: none; display: inline-flex; width: 72px; justify-content: flex-end; color: var(--color-primary); }
+.taste .tp-flames svg.lucide { width: 20px; height: 20px; margin-left: -4px; }
+.taste .tp-heat .r-pack.is-selected .tp-flames { color: var(--color-on-primary-container); }
+.taste .tp-heat .r-pack .tick { margin: 0 calc(var(--space-2) * -1) 0 calc(var(--space-1) * -1); pointer-events: none; }
+
+/* Clear, at the foot of the first step when a profile exists */
+.taste .tp-clear { display: flex; justify-content: center; margin-top: var(--space-6); }
+
+/* Actions at the foot: Back on the left, Skip / Next / Save on the right; always in reach */
+.taste .tp-foot { flex: none; padding: var(--space-3) var(--space-4) var(--space-4); background: var(--color-background); border-top: 1px solid var(--color-outline-variant); }
+.taste .tp-foot .col { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.taste .tp-foot .tp-gap { flex: 1; }
+.taste .tp-foot .btn { min-width: 112px; }
+.taste .tp-foot .btn.text { min-width: 0; }
+.taste .snackbar-host { bottom: 88px; }
+
+/* Promo sheet for someone without recipes in a pack */
+.recipe .tp-promo .tp-emblem { display: grid; place-items: center; width: 56px; height: 56px; margin-bottom: var(--space-3); border-radius: var(--radius-lg); background: var(--color-primary-container); color: var(--color-on-primary-container); }
+.recipe .tp-promo .tp-emblem svg.lucide { width: 28px; height: 28px; }
+.recipe .tp-promo h2 { margin-bottom: var(--space-2); }
+.recipe .tp-promo .r-intro { margin-bottom: var(--space-4); }
+
+/* Recipe form: the quiet line under the server action */
+.recipe .tp-uses { display: flex; justify-content: center; align-items: center; gap: var(--space-1); }
+.recipe .tp-uses svg.lucide { flex: none; width: 16px; height: 16px; color: var(--color-primary); }
+.recipe .r-actions .btn.block.tp-primary { min-height: 56px; border-radius: var(--radius-lg); }
+
+/* Design-only frames: a small phone (360 x 640) inside the phone frame, and large text (about 150%) */
+.v-frame .app.tp-small { width: 360px; height: 640px; margin: 24px auto 0; border-radius: 16px; box-shadow: 0 0 0 1px var(--color-outline); }
+.tp-large { --type-display: 600 44px/54px var(--font-display); --type-headline: 600 34px/42px var(--font-display); --type-title: 600 27px/36px var(--font-display);
+  --type-title-sm: 600 23px/30px var(--font-body); --type-body: 400 23px/32px var(--font-body); --type-body-sm: 400 20px/28px var(--font-body);
+  --type-label: 600 20px/28px var(--font-body); --type-caption: 500 17px/22px var(--font-body); }
+.tp-large .tp-chips .chip { min-height: 48px; }
+.tp-large .tp-chips .chip::after { inset: 0; }
+
+@container (min-width: 700px) {
+  .taste .tp-q { padding-top: var(--space-8); }
+  .taste .tp-foot { padding-bottom: var(--space-6); }
+}
+.v-frame .app.tp-scrolled .scroll > .col { margin-top: -232px; } /* design-only: shows the step scrolled part way */
+.v-frame .app.tp-at-row .scroll > .col { margin-top: -952px; } /* design-only: Recipe settings scrolled to the row */
+.v-frame .app.tp-at-end .scroll > .col { margin-top: -680px; } /* design-only: scrolled to the end */
+@container (max-width: 699px) { .v-frame .app.tp-off .scroll > :first-child { margin-top: var(--tp-off); } } /* design-only: the Recipe form scrolled to its actions on phones */
+
+/* 2026-11-16: the quiz is the server's content. Any number of steps; first load and its failure. */
+.taste .tp-steps { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.taste.tp-center .scroll > .col { min-height: 100%; display: grid; }
+.taste .tp-wait { display: grid; place-content: center; justify-items: center; gap: var(--space-3); text-align: center; }
+.taste .screen-error > svg.lucide { width: 40px; height: 40px; color: var(--color-on-surface-variant); }
+.taste .screen-error .stack { width: min(100%, 320px); margin-top: var(--space-2); }
+/* A question added since the profile was saved: the note on the row and the tag on the step */
+.recipe .tp-row .tp-new { color: var(--color-primary); font-weight: 600; white-space: nowrap; }
+.taste .tp-newtag { justify-self: start; background: var(--color-primary-container); color: var(--color-on-primary-container); }
+/* 2026-11-16: badges on the Recipe header. The count (Saved recipes, unread) and the dot (settings, questions not seen yet) are one family: same colour, same corner */
+.recipe .tp-badged { position: relative; }
+.recipe .tp-badged .tp-count { position: absolute; top: 6px; right: 4px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; line-height: 16px; background: var(--color-primary); color: var(--color-on-primary); box-shadow: 0 0 0 2px var(--color-background); }
+.recipe .tp-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--color-primary); box-shadow: 0 0 0 2px var(--color-surface); }
+.recipe .tp-badged .tp-dot { position: absolute; top: 9px; right: 7px; box-shadow: 0 0 0 2px var(--color-background); }

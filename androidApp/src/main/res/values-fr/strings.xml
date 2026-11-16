@@ -1227,4 +1227,54 @@
         <item quantity="many">%d jours</item>
         <item quantity="other">%d jours</item>
     </plurals>
+
+    <!-- Recipe: taste profile (recipes from packs only). Only the chrome: the questions, options and their texts come from our server (getTasteQuiz). -->
+    <string name="taste_title">Profil de goûts</string>
+    <string name="taste_choose_up_to">Choisissez-en jusqu\'à %1$d</string>
+    <string name="taste_choose_one">Choisissez-en un, ou passez</string>
+    <string name="taste_progress">Étape %1$d sur %2$d</string>
+    <string name="taste_intro">Quelques petites questions, et vous pouvez passer chacune d\'elles. Vos réponses restent sur cet appareil et ne sont envoyées qu\'avec les demandes de recettes d\'un pack.</string>
+    <string name="taste_skip">Passer</string>
+    <string name="taste_back">Retour</string>
+    <string name="taste_next">Suivant</string>
+    <string name="taste_save">Enregistrer</string>
+    <string name="taste_settings_empty">Pour les recettes des packs</string>
+    <string name="taste_summary_more">%1$d de plus</string>
+    <string name="taste_clear">Effacer le profil de goûts</string>
+    <string name="taste_uses_profile">Tient compte de votre profil de goûts</string>
+    <string name="taste_settings_badge">nouvelles questions du profil de goûts</string>
+    <string name="taste_error_title">Impossible de charger les questions</string>
+    <string name="taste_error_body">Vérifiez votre connexion et réessayez.</string>
+    <string name="taste_new_tag">Nouvelle question</string>
+    <string name="taste_loading">Chargement des questions…</string>
+    <string name="taste_retry">Réessayer</string>
+    <string name="taste_close">Fermer</string>
+    <plurals name="taste_answers">
+        <item quantity="one">%1$d réponse</item>
+        <item quantity="other">%1$d réponses</item>
+    </plurals>
+    <plurals name="taste_new_questions">
+        <item quantity="one">%1$d nouvelle question</item>
+        <item quantity="other">%1$d nouvelles questions</item>
+    </plurals>
+    <string name="taste_chosen">Choisis : %1$d</string>
+    <string name="taste_chosen_of">%1$d sur %2$d</string>
+    <string name="taste_cap_reached">Vous en avez %1$d. Décochez-en un pour en choisir un autre.</string>
+    <string name="taste_on_skip_note">Les éléments marqués font partie de ce dont vous préférez vous passer. En choisir un ici l\'en retire.</string>
+    <string name="taste_on_love_note">Les éléments marqués sont ceux que vous aimez. En choisir un ici le retire de cette liste.</string>
+    <string name="taste_chip_on_skip">%1$s, dans ce dont vous préférez vous passer</string>
+    <string name="taste_chip_on_love">%1$s, parmi ce que vous aimez</string>
+    <string name="taste_chip_at_cap">%1$s. Vous en avez déjà choisi le maximum</string>
+    <string name="taste_moved_off_skip">Retiré de ce dont vous préférez vous passer : %1$s</string>
+    <string name="taste_moved_off_love">Retiré de ce que vous aimez : %1$s</string>
+    <string name="taste_saved_snackbar">Profil de goûts enregistré. Les recettes des packs en tiendront compte.</string>
+    <string name="taste_cleared_snackbar">Profil de goûts effacé</string>
+    <string name="taste_discard_message">Vos réponses n\'ont pas été enregistrées : votre profil de goûts reste tel quel.</string>
+    <string name="taste_promo_lede">Les recettes de vos packs, écrites selon vos goûts.</string>
+    <string name="taste_promo_questions_title">Quelques petites questions</string>
+    <string name="taste_promo_questions_body">Cuisines, piquant, saveurs, ce que vous aimez, ce dont vous préférez vous passer et votre façon de cuisiner. Chaque question peut être passée.</string>
+    <string name="taste_promo_taste_title">Des recettes et des menus selon vos goûts</string>
+    <string name="taste_promo_taste_body">Notre serveur privilégie ce que vous aimez et laisse de côté ce dont vous préférez vous passer. Votre garde-manger, vos allergènes et votre régime restent prioritaires.</string>
+    <string name="taste_promo_device_title">Reste sur cet appareil</string>
+    <string name="taste_promo_device_body">Il n\'est envoyé qu\'avec les demandes de recettes d\'un pack.</string>
 </resources>

@@ -360,7 +360,7 @@ describe("generateRecipe (emulators)", () => {
     await ref.set(before);
     expect((await ref.get()).data()).not.toHaveProperty("days");
     const polled = await getGeneration(deps, caller, { requestId: req.requestId });
-    expect(polled).toMatchObject({ status: "DONE", balance: 5, costs: DEFAULT_COSTS, acceptsMenuDays: true });
+    expect(polled).toMatchObject({ status: "DONE", balance: 5, costs: DEFAULT_COSTS, acceptsMenuDays: true, acceptsTaste: true });
     expect(polled.menu?.days).toHaveLength(3);
     // A retry by the old client (same body, no days) returns it without charging or calling the model.
     expect(await generateRecipe(deps, caller, req)).toMatchObject({ status: "DONE", balance: 5 });
@@ -375,7 +375,7 @@ describe("generateRecipe (emulators)", () => {
   });
 
   test("getBalance carries the full table and the capability", async () => {
-    expect(await getBalance(deps, caller)).toEqual({ balance: 0, costs: DEFAULT_COSTS, ...CAPABILITIES });
-    expect(CAPABILITIES).toMatchObject({ acceptsMenuDays: true });
+    expect(await getBalance(deps, caller)).toEqual({ balance: 0, costs: DEFAULT_COSTS, ...CAPABILITIES, tasteQuizVersion: expect.any(String) });
+    expect(CAPABILITIES).toMatchObject({ acceptsMenuDays: true, acceptsTaste: true });
   });
 });

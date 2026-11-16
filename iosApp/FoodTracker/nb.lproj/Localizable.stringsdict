@@ -1170,5 +1170,39 @@
             <string>Én oppskrift er én rett skrevet av serveren vår. Et menysett bruker {min} til %d oppskrifter, etter antall dager og retter om dagen. De utløper ikke.</string>
         </dict>
     </dict>
+    <!-- Taste profile: copied from Android's strings.xml -->
+    <key>taste_answers</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d svar</string>
+            <key>other</key>
+            <string>%d svar</string>
+        </dict>
+    </dict>
+    <key>taste_new_questions</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d nytt spørsmål</string>
+            <key>other</key>
+            <string>%d nye spørsmål</string>
+        </dict>
+    </dict>
+    <!-- /Taste profile -->
 </dict>
 </plist>

@@ -38,6 +38,21 @@ private class FakeConfigRepository(
     override fun saveOptions(options: RecipeOptions) {
         storedOptions = options
     }
+    var storedTaste = TasteProfile()
+    override fun getTaste(): TasteProfile = storedTaste
+    override fun saveTaste(taste: TasteProfile) {
+        storedTaste = taste
+    }
+    val storedQuizzes = mutableMapOf<String, String>()
+    override fun getTasteQuiz(language: String): String? = storedQuizzes[language]
+    override fun saveTasteQuiz(language: String, json: String) {
+        storedQuizzes[language] = json
+    }
+    var storedSeen: List<String> = emptyList()
+    override fun getTasteSeen(): List<String> = storedSeen
+    override fun saveTasteSeen(seen: List<String>) {
+        storedSeen = seen
+    }
 }
 
 private class FakeSavedRecipeRepository : SavedRecipeRepository {
@@ -693,5 +708,73 @@ class RecipeStateHolderTest {
         assertEquals(OnDeviceRoute.READY, holder.uiState.value.onDeviceRoute, "and back")
         assertFalse(holder.uiState.value.onDeviceLanguageUnsupported)
         assertEquals(RecipeAction.ON_DEVICE, holder.uiState.value.actions.primary)
+    }
+
+    // --- The taste profile never reaches the free routes ------------------------------------
+
+    private val everyTaste = TasteQuizFixture.quiz().let { quiz -> TasteProfile(quiz.steps.associate { step -> step.id to step.options.map { it.id } }) }
+
+    private val promptStrings = RecipePromptStrings(
+        intro = "INTRO",
+        itemFormat = { name, expiry -> "$name ($expiry)" },
+        otherItemsIntro = "ALSO:",
+        otherItemsOmitted = { count -> "(+$count more)" },
+        daysRemainingLabel = { days -> "${days}d" },
+        preferencesIntro = "KEEP:",
+        difficulty = { "difficulty=${it.name}" },
+        detail = { "detail=${it.name}" },
+        servings = { "servings=$it" },
+        maxMinutes = { "minutes=$it" },
+        minMinutes = { "atLeast=$it" },
+        mealTypes = { meals -> "meal=" + meals.joinToString("|") { it.name } },
+        diet = { "diet=${it.name}" },
+        allergens = { "allergens=$it" },
+        language = { "language=$it" }
+    )
+
+    /** The shared prompt as the Recipe tab builds it from the state (RecipeScreen's prompt()). */
+    private fun RecipeUiState.sharedPrompt(): String = buildRecipePrompt(
+        strings = promptStrings,
+        today = today,
+        items = selectedRows.map { it.item },
+        otherItems = if (options.sendAllItems) otherRows.map { it.item } else emptyList(),
+        config = config,
+        allergens = allergens
+    )
+
+    @Test
+    fun theProfileIsNeverInThePhonesModelsPromptOrTheSharedPrompt() = runUnconfined {
+        model.replies += { GOOD_REPLY }
+        model.replies += { GOOD_REPLY }
+        val holder = holder()
+        holder.setSendAllItems(true)
+        val sharedBefore = holder.uiState.value.sharedPrompt()
+        holder.generateOnDevice()
+        holder.consumeEvent()
+
+        holder.saveTaste(everyTaste)
+        assertFalse(holder.uiState.value.taste.isEmpty)
+        assertEquals(sharedBefore, holder.uiState.value.sharedPrompt(), "the shared prompt is the same with a profile")
+        holder.generateOnDevice()
+        assertEquals(2, model.prompts.size)
+        assertEquals(model.prompts[0], model.prompts[1], "the phone's model is asked exactly the same")
+        for (id in listOf("nordic", "Nordic", "olives", "Olives", "berries", "smoky")) {
+            assertFalse(model.prompts[1].contains(id), id)
+            assertFalse(sharedBefore.contains(id), id)
+        }
+    }
+
+    @Test
+    fun theProfileIsKeptBesideTheConfigNeverInIt() = runUnconfined {
+        val holder = holder()
+        val config = holder.uiState.value.config
+        holder.saveTaste(TasteProfile(mapOf("cuisines" to listOf("thai", "korean"))))
+        assertEquals(TasteProfile(mapOf("cuisines" to listOf("thai", "korean"))), this@RecipeStateHolderTest.config.storedTaste, "kept as given")
+        assertEquals(config, holder.uiState.value.config)
+        assertFalse(RecipeJson.encodeToString(RecipeConfig.serializer(), holder.uiState.value.config).contains("korean"))
+        assertEquals(TasteProfile(mapOf("cuisines" to listOf("thai", "korean"))), holder().uiState.value.taste, "read back on the next start")
+        holder.clearTaste()
+        assertTrue(this@RecipeStateHolderTest.config.storedTaste.isEmpty)
+        assertTrue(holder.uiState.value.taste.isEmpty)
     }
 }

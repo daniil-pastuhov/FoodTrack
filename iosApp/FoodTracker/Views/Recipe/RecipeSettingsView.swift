@@ -3,11 +3,13 @@ import SwiftUI
 /// The tab's own settings, separate from app Settings: everything about how recipes are written,
 /// of which the quick form shows three. Changes save as they are made.
 struct RecipeSettingsView: View {
+    private static let tasteRowID = "taste-profile"
     @ObservedObject var model: RecipeViewModel
     @ObservedObject private var settingsStore = SettingsStore.shared
     @State private var choosingLanguage = false
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: LarderSpace.s3) {
                 RecipeFormCard {
@@ -92,6 +94,11 @@ struct RecipeSettingsView: View {
                     }
                 }
 
+                // On its own, in the part about recipes from packs; only where it can be used.
+                if model.tasteEntry != .hidden {
+                    TasteProfileRow(model: model).id(Self.tasteRowID)
+                }
+
                 RecipeAccountCard(model: model)
 
                 LarderGroup {
@@ -111,6 +118,13 @@ struct RecipeSettingsView: View {
             .padding(.bottom, LarderSpace.s8)
             .frame(maxWidth: 640)
             .frame(maxWidth: .infinity)
+        }
+        #if DEBUG
+        // `-demoTasteScroll YES`: the taste profile's row in view, for screenshots.
+        .onAppear {
+            if UserDefaults.standard.bool(forKey: "demoTasteScroll") { proxy.scrollTo(Self.tasteRowID, anchor: .center) }
+        }
+        #endif
         }
         .background(LarderColor.background.ignoresSafeArea())
         .navigationTitle(L10n.recipeSettingsButton)
@@ -132,6 +146,9 @@ struct RecipeSettingsView: View {
             fitsContent: true
         ) {
             RecipeIntroSheet(model: model)
+        }
+        .larderSheet(isPresented: $model.showsTastePromo, fitsContent: true) {
+            TastePromoSheet(model: model)
         }
         .larderSheet(isPresented: $choosingLanguage) {
             LanguagePicker(selection: model.config.language) { language in

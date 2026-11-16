@@ -63,7 +63,7 @@ import com.foodtracker.recipe.recipeLanguageEndonym
  * language, and where bought recipes are kept. Changes save as they are made.
  */
 @Composable
-fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit) {
+fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit, onOpenTaste: () -> Unit = {}) {
     val state by stateHolder.uiState.collectAsStateWithLifecycle()
     Scaffold(
         topBar = { LarderTopBar(title = stringResource(R.string.recipe_settings_action), onBack = onBack) },
@@ -86,7 +86,8 @@ fun RecipeSettingsScreen(stateHolder: RecipeStateHolder, onBack: () -> Unit) {
             onAllergenConsent = stateHolder::setAllergenConsent,
             options = state.options,
             onSendAllItems = stateHolder::setSendAllItems,
-            onHowItWorks = stateHolder::showIntro
+            onHowItWorks = stateHolder::showIntro,
+            tasteRow = { TasteProfileEntry(stateHolder, onOpenTaste) }
         )
     }
     RecipePaidOverlays(state, stateHolder)
@@ -109,7 +110,9 @@ private fun RecipeSettingsContent(
     onSendAllItems: (Boolean) -> Unit = {},
     onHowItWorks: () -> Unit = {},
     /** See [com.foodtracker.recipe.RecipeUiState.onDeviceLanguageUnsupported]. */
-    onDeviceLanguageUnsupported: Boolean = false
+    onDeviceLanguageUnsupported: Boolean = false,
+    /** The Taste profile row, on its own between Language and the packs card (TasteProfileEntry). */
+    tasteRow: @Composable () -> Unit = {}
 ) {
     val resources = LocalContext.current.resources
     var pickingLanguage by remember { mutableStateOf(false) }
@@ -180,6 +183,8 @@ private fun RecipeSettingsContent(
                     SettingsDescription(stringResource(R.string.recipe_on_device_language_note))
                 }
             }
+
+            tasteRow()
 
             // Builds without the paid route have no account to speak of.
             if (paid.available) AccountCard(paid, accountActions)

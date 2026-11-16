@@ -27,6 +27,9 @@ sealed interface LarderRoute {
     data class MenuDish(val savedId: String, val day: Int, val course: Int) : LarderRoute
     data object SavedRecipes : LarderRoute
     data object RecipeSettings : LarderRoute
+
+    /** The taste profile quiz, over Recipe settings. */
+    data object TasteProfile : LarderRoute
     data object Onboarding : LarderRoute
 }
 

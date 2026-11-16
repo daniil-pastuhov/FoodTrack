@@ -338,11 +338,7 @@ internal fun RecipeTabContent(
                     }
                     // Only once something is saved; it follows the saved list as it changes.
                     if (state.hasSaved) SavedButton(state.unreadCount, actions.onOpenSaved)
-                    LarderIconButton(
-                        icon = LarderIcons.SlidersHorizontal,
-                        contentDescription = stringResource(R.string.recipe_settings_action),
-                        onClick = actions.onOpenSettings
-                    )
+                    SettingsButton(state.tasteBadge, actions.onOpenSettings)
                 }
             )
             when {
@@ -401,6 +397,28 @@ internal fun RecipeTabContent(
             onToggle = actions.onToggle,
             onDismiss = { showingOthers = false }
         )
+    }
+}
+
+/** The header's way to Recipe settings, with a dot while the taste profile has questions not
+ *  yet been through ([com.foodtracker.recipe.RecipeUiState.tasteBadge]); its label says so. */
+@Composable
+private fun SettingsButton(badge: Boolean, onClick: () -> Unit) {
+    Box {
+        LarderIconButton(
+            icon = LarderIcons.SlidersHorizontal,
+            contentDescription = if (badge) {
+                stringResource(R.string.recipe_settings_action) + ", " + stringResource(R.string.taste_settings_badge)
+            } else {
+                stringResource(R.string.recipe_settings_action)
+            },
+            onClick = onClick
+        )
+        if (badge) {
+            // Centred where the Saved recipes count's corner sits: 7 from the top, 5 from the end
+            // for the 14dp ring (the 10dp dot 9 from the top and 7 from the end).
+            TasteDot(Modifier.align(Alignment.TopEnd).offset(x = (-5).dp, y = 7.dp).clearAndSetSemantics { })
+        }
     }
 }
 
@@ -747,6 +765,7 @@ private fun ColumnScope.RouteActions(state: RecipeUiState, actions: RecipeTabAct
         if (nothingTicked) return@Column
         when (primary) {
             RecipePrimary.Server -> {
+                if (state.sendsTaste) TasteProfileHint()
                 if (state.onDeviceRoute == OnDeviceRoute.READY) {
                     LarderButton(
                         text = stringResource(R.string.recipe_generate_on_phone) + " · " + stringResource(R.string.recipe_cost_free),
@@ -847,6 +866,7 @@ private fun MenuActions(state: RecipeUiState, actions: RecipeTabActions, enabled
             }
             PrimaryAction(state, recipePrimary(state), actions, enabled)
             if (enabled) RecipeHint(stringResource(R.string.recipe_menu_hint, cost))
+            if (enabled && state.sendsTaste) TasteProfileHint()
         }
     }
 }

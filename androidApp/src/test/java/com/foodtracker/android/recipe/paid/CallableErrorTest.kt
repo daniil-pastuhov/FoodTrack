@@ -94,6 +94,21 @@ class CallableErrorTest {
     }
 
     @Test
+    fun balanceMergeAndGenerateRepliesSayWhetherTheServerReadsTaste() {
+        val reply = JsonObject(mapOf("balance" to JsonPrimitive(4), "acceptsTaste" to JsonPrimitive(true)))
+        assertEquals(true, balanceReplyOf(reply)?.acceptsTaste, "getBalance")
+        assertEquals(true, mergeReplyOf(reply)?.acceptsTaste, "mergeBalance")
+        val generate = com.foodtracker.recipe.RecipeJson.decodeFromString(
+            com.foodtracker.recipe.GenerateReply.serializer(),
+            JsonObject(reply + ("status" to JsonPrimitive("DONE"))).toString()
+        )
+        assertEquals(true, com.foodtracker.recipe.acceptsTasteOf(generate.acceptsTaste), "generateRecipe")
+        val old = JsonObject(mapOf("balance" to JsonPrimitive(4)))
+        assertEquals(false, balanceReplyOf(old)?.acceptsTaste, "a server from before taste profiles")
+        assertEquals(false, balanceReplyOf(JsonObject(mapOf("balance" to JsonPrimitive(4), "acceptsTaste" to JsonPrimitive("true"))))?.acceptsTaste, "only a JSON true")
+    }
+
+    @Test
     fun balanceAndMergeRepliesCarryMenuSetsAndTheirPrices() {
         val reply = JsonObject(
             mapOf(

@@ -62,6 +62,8 @@ struct RecipeView: View {
                         SavedRecipesView(model: model)
                     case .settings:
                         RecipeSettingsView(model: model)
+                    case .tasteQuiz:
+                        TasteQuizView(model: model)
                     }
                 }
         }
@@ -97,7 +99,7 @@ struct RecipeView: View {
             let showsRecipe = path.contains { destination in
                 switch destination {
                 case .result, .dish: return true
-                case .saved, .settings: return false
+                case .saved, .settings, .tasteQuiz: return false
                 }
             }
             if !showsRecipe { ReviewPrompter.shared.recipeLeft { requestReview() } }
@@ -213,8 +215,27 @@ struct RecipeView: View {
             if model.hasSaved {
                 savedButton
             }
-            LarderIconButton(.slidersHorizontal, label: L10n.recipeSettingsButton) { model.path.append(.settings) }
+            settingsButton
         }
+    }
+
+    /// Recipe settings, with a dot while the taste profile has questions not yet been through.
+    private var settingsButton: some View {
+        let isNew = model.hasNewTasteQuestions
+        return LarderIconButton(
+            .slidersHorizontal,
+            label: isNew ? "\(L10n.recipeSettingsButton), \(L10n.tasteSettingsBadge)" : L10n.recipeSettingsButton
+        ) { model.path.append(.settings) }
+            .overlay(alignment: .topTrailing) {
+                if isNew {
+                    // Centred where the Saved recipes count badge's corner is.
+                    LarderBadge.dot
+                        .padding(.top, 9 - 2)
+                        .padding(.trailing, 7 - 2)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
     }
 
     /// Saved recipes, with a count of those not seen yet (written or recovered while the writing
@@ -660,6 +681,7 @@ struct RecipeView: View {
             }
             .disabled(nothingTicked)
             hint(nothingTicked ? L10n.recipeNoneSelectedHint : L10n.recipeMenuServerHint(model.menuCost))
+            if model.sendsTaste { TasteUsesProfileLine() }
         } else if !credits.serverPaused {
             LarderCallout(
                 .info,
@@ -680,6 +702,8 @@ struct RecipeView: View {
                 model.writeOnServer(from: pantry.items)
             }
             .disabled(nothingTicked)
+            // Only when a profile will really be sent with it.
+            if model.sendsTaste { TasteUsesProfileLine() }
         case .onDevice:
             RecipeGoButton(title: L10n.recipeGenerateOnPhone, icon: .smartphone, cost: L10n.recipeCostFree) {
                 model.writeOnDevice(from: pantry.items)
