@@ -329,6 +329,27 @@ expect(RecipeUnread.count(unread, savedIDs: ["a", "b"]), 1, "only ids still save
 unread = RecipeUnread.afterOpen(unread, id: "b")
 expect(unread, ["c"], "opened is read")
 expect(RecipeUnread.pruned(unread, savedIDs: []), [], "deleted ones go")
+expect(RecipeUnread.afterDelete(["a", "b", "c"], ids: ["a", "c", "gone"]), ["b"], "several deleted at once leave the unread ones")
+
+// Saved recipes' multi-select (Android: SavedSelectionTest, the same cases).
+let savedIDs = ["c", "b", "a"]
+expect(SavedSelection.toggled([], id: "a"), ["a"], "a tap selects")
+expect(SavedSelection.toggled(["a"], id: "b"), ["a", "b"], "another tap adds")
+expect(SavedSelection.toggled(["a", "b"], id: "a"), ["b"], "a tap on a selected row clears it")
+expect(SavedSelection.allSelected([], savedIDs: savedIDs), false, "nothing selected")
+expect(SavedSelection.allSelected(["a", "b"], savedIDs: savedIDs), false, "some selected")
+expect(SavedSelection.allSelected(["a", "b", "c"], savedIDs: savedIDs), true, "all selected")
+expect(SavedSelection.allSelected(["a", "b", "c", "gone"], savedIDs: savedIDs), true, "a stale id doesn't count against")
+expect(SavedSelection.allSelected([], savedIDs: []), false, "an empty list is never all selected")
+expect(SavedSelection.toggledAll(["b"], savedIDs: savedIDs), ["a", "b", "c"], "Select all")
+expect(SavedSelection.toggledAll(["a", "b", "c"], savedIDs: savedIDs), [], "Deselect all")
+expect(SavedSelection.pruned(["a", "gone"], savedIDs: savedIDs), ["a"], "ids that leave the list leave the selection")
+expect(SavedSelection.pruned(["a"], savedIDs: []), [], "an emptied list empties it")
+let savedRows = savedIDs.enumerated().map { index, id in
+    SavedRecipe(id: id, createdAt: Date(timeIntervalSince1970: Double(10 - index)), content: .recipe(Recipe(title: id, summary: "", minutes: 10, servings: 2, difficulty: .easy, ingredients: [], steps: ["s"], source: .server)))
+}
+expect(SavedSelection.toDelete(savedRows, selected: ["a", "c", "gone"]).map(\.id), ["c", "a"], "Delete removes the selected rows still listed, in list order")
+expect(SavedSelection.toDelete(savedRows, selected: []).map(\.id), [], "nothing selected, nothing removed")
 
 // The Buy sheet's saving badge, from the store's prices only (Android: the same cases).
 func offers(_ currency: String?, _ list: [(Int, String?)]) -> [PackOffer] {

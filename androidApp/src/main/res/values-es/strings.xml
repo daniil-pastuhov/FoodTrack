@@ -868,6 +868,15 @@
     <string name="recipe_saved_empty_title">Aún no hay recetas</string>
     <string name="recipe_saved_empty_body">Aquí se guardan las recetas y los menús escritos en la app.</string>
     <string name="recipe_deleted">Receta eliminada</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Seleccionar</string>
+    <string name="select_all_button">Seleccionar todo</string>
+    <string name="deselect_all_button">Deseleccionar todo</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">%d receta eliminada</item>
+        <item quantity="many">%d recetas eliminadas</item>
+        <item quantity="other">%d recetas eliminadas</item>
+    </plurals>
     <string name="recipe_cooking">Cocina</string>
     <string name="recipe_cooking_desc">Se usan en cada receta, prompt y menú hasta que los cambies.</string>
     <string name="recipe_detail">Detalle</string>

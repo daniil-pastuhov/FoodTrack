@@ -1306,6 +1306,27 @@ final class RecipeViewModel: ObservableObject {
         saved = savedStore.all()
     }
 
+    /// Saved recipes' multi-select: deletes the saved recipes and menus among `ids` with one store
+    /// call, like `deleteSaved(id:)` taking them out of the unread ones. Returns what one Undo
+    /// puts back (`restoreSaved(_:)`); empty when none of them is saved. Android:
+    /// `RecipeStateHolder.deleteSaved(ids)`.
+    func deleteSaved(ids: Set<String>) -> [SavedRecipe] {
+        let removed = SavedSelection.toDelete(saved, selected: ids)
+        guard !removed.isEmpty else { return [] }
+        let removedIDs = Set(removed.map(\.id))
+        savedStore.delete(ids: removedIDs)
+        saved = savedStore.all()
+        updateOptions { $0.unreadSaved = RecipeUnread.afterDelete($0.unreadSaved, ids: removedIDs) }
+        return removed
+    }
+
+    /// Undo of the multi-select Delete: everything it removed back at once.
+    func restoreSaved(_ entries: [SavedRecipe]) {
+        guard !entries.isEmpty else { return }
+        savedStore.save(entries)
+        saved = savedStore.all()
+    }
+
     #if DEBUG
     /// `-demoRecipeState busy`: the writing screen while every server instance is busy and the
     /// request is sent again. Nothing is sent.

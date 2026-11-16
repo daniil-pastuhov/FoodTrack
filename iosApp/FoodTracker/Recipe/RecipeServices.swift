@@ -215,6 +215,10 @@ protocol SavedRecipeStore {
     func all() -> [SavedRecipe]
     func save(_ entry: SavedRecipe)
     func delete(id: String)
+    /// Saved recipes' multi-select Delete: all of `ids` with one save.
+    func delete(ids: Set<String>)
+    /// Undo of that Delete: `entries` back as they were, ids intact, with one save.
+    func save(_ entries: [SavedRecipe])
 }
 
 /// Saved recipes in the shared SwiftData store, as `SavedRecipeRecord` rows.
@@ -232,16 +236,29 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
     }
 
     func save(_ entry: SavedRecipe) {
-        guard let record = Self.record(from: entry) else { return }
-        let id = entry.id
-        let existing = (try? context.fetch(FetchDescriptor<SavedRecipeRecord>(predicate: #Predicate { $0.id == id }))) ?? []
-        existing.forEach(context.delete)
-        context.insert(record)
+        save([entry])
+    }
+
+    func save(_ entries: [SavedRecipe]) {
+        for entry in entries {
+            guard let record = Self.record(from: entry) else { continue }
+            let id = entry.id
+            let existing = (try? context.fetch(FetchDescriptor<SavedRecipeRecord>(predicate: #Predicate { $0.id == id }))) ?? []
+            existing.forEach(context.delete)
+            context.insert(record)
+        }
         try? context.save()
     }
 
     func delete(id: String) {
         try? context.delete(model: SavedRecipeRecord.self, where: #Predicate { $0.id == id })
+        try? context.save()
+    }
+
+    func delete(ids: Set<String>) {
+        guard !ids.isEmpty else { return }
+        let list = Array(ids)
+        try? context.delete(model: SavedRecipeRecord.self, where: #Predicate { list.contains($0.id) })
         try? context.save()
     }
 

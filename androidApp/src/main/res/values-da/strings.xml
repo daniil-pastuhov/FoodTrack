@@ -830,6 +830,14 @@
     <string name="recipe_saved_empty_title">Ingen opskrifter endnu</string>
     <string name="recipe_saved_empty_body">Opskrifter og menuer, der er skrevet i appen, gemmes her.</string>
     <string name="recipe_deleted">Opskriften er slettet</string>
+    <!-- Saved recipes' multi-select -->
+    <string name="select_items_button">Vælg</string>
+    <string name="select_all_button">Vælg alle</string>
+    <string name="deselect_all_button">Fravælg alle</string>
+    <plurals name="recipe_saved_deleted_count">
+        <item quantity="one">%d opskrift slettet</item>
+        <item quantity="other">%d opskrifter slettet</item>
+    </plurals>
     <string name="recipe_cooking">Madlavning</string>
     <string name="recipe_cooking_desc">Bruges til alle opskrifter, prompter og menuer, indtil du ændrer dem.</string>
     <string name="recipe_detail">Detaljegrad</string>

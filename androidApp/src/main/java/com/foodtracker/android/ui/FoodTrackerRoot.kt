@@ -629,6 +629,15 @@ fun FoodTrackerRoot(
                     ) { recipeStateHolder.restoreSaved(removed) }
                 }
             }
+            // Saved recipes' multi-select: one Undo for all of them, as single delete has one.
+            val onDeleteSavedRecipes: (Set<String>) -> Unit = { ids ->
+                recipeStateHolder.deleteSaved(ids) { removed ->
+                    larderSnackbars.show(
+                        context.resources.getQuantityString(R.plurals.recipe_saved_deleted_count, removed.size, removed.size),
+                        context.getString(R.string.undo_action)
+                    ) { recipeStateHolder.restoreSaved(removed) }
+                }
+            }
             val productDetailActions = ProductDetailActions(
                 onUseOne = onUseOneHandler,
                 onEdit = { onNavigateToAddEdit(it) },
@@ -1048,7 +1057,8 @@ fun FoodTrackerRoot(
                             SavedRecipesScreen(
                                 stateHolder = recipeStateHolder,
                                 onBack = { currentScreen = LarderRoute.Recipe },
-                                onDelete = onDeleteSavedRecipe
+                                onDelete = onDeleteSavedRecipe,
+                                onDeleteSelected = onDeleteSavedRecipes
                             )
                         }
 

@@ -1382,5 +1382,21 @@
         </dict>
     </dict>
     <!-- /Free recipes -->
+    <key>recipe_saved_deleted_count</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@n@</string>
+        <key>n</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>%d Rezept gelöscht</string>
+            <key>other</key>
+            <string>%d Rezepte gelöscht</string>
+        </dict>
+    </dict>
 </dict>
 </plist>
