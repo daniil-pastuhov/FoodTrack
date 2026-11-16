@@ -930,6 +930,22 @@
             <string>Denne {the_device} skyldte %d oppskrifter etter en refusjon i butikken. De ble trukket fra kontoen din.</string>
         </dict>
     </dict>
+    <key>recipe_menu_few_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Bare %d vare til {dishes} retter. Det meste til denne menyen må kjøpes inn.</string>
+            <key>other</key>
+            <string>Bare %d varer til {dishes} retter. Det meste til denne menyen må kjøpes inn.</string>
+        </dict>
+    </dict>
     <key>recipe_optional_count</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

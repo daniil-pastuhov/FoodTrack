@@ -930,6 +930,22 @@
             <string>Din {device} var skyldig %d recept efter en återbetalning från butiken. De drogs från ditt konto.</string>
         </dict>
     </dict>
+    <key>recipe_menu_few_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Bara %d vara till {dishes} rätter. Det mesta till den här menyn behöver handlas.</string>
+            <key>other</key>
+            <string>Bara %d varor till {dishes} rätter. Det mesta till den här menyn behöver handlas.</string>
+        </dict>
+    </dict>
     <key>recipe_optional_count</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>

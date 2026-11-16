@@ -819,13 +819,11 @@
     <string name="recipe_method">Gör så här</string>
     <string name="recipe_in_pantry">I ditt skafferi</string>
     <string name="recipe_tip">Tips</string>
-    <string name="recipe_source_phone">Skrivet på den här enheten · Inget skickades någonstans</string>
-    <string name="recipe_source_server">Skrivet av vår server · Sparat på den här enheten</string>
+    <string name="recipe_source_phone">Inget skickades någonstans</string>
     <string name="recipe_not_found">Receptet är inte längre sparat.</string>
     <string name="recipe_saved_today">I dag</string>
     <string name="recipe_saved_yesterday">I går</string>
     <string name="recipe_saved_from_phone">Skrivet på den här enheten</string>
-    <string name="recipe_saved_from_pack">Från ditt paket</string>
     <string name="recipe_saved_empty_title">Inga recept än</string>
     <string name="recipe_saved_empty_body">Recept och menyer som skrivs i appen sparas här.</string>
     <string name="recipe_deleted">Receptet raderades</string>
@@ -914,6 +912,12 @@
     </plurals>
     <string name="recipe_buy">Köp recept</string>
     <string name="recipe_menu_hint">En meny skrivs på vår server och drar %1$s från ett paket.</string>
+    <string name="recipe_on_device_weak">Modellen på den här enheten är fortfarande svag på matlagning, så kontrollera att receptet verkar rimligt.</string>
+    <string name="recipe_on_device_upsides">Det är gratis, och inget lämnar enheten.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Bara %1$d vara till %2$d rätter. Det mesta till den här menyn behöver handlas.</item>
+        <item quantity="other">Bara %1$d varor till %2$d rätter. Det mesta till den här menyn behöver handlas.</item>
+    </plurals>
     <string name="recipe_menu_short_title">En meny kräver %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Du har %1$d kvar. Ett enskilt recept fungerar fortfarande.</item>

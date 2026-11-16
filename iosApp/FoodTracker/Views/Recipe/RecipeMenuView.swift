@@ -52,14 +52,6 @@ struct RecipeMenuView: View {
                     }
                 }
 
-                HStack(alignment: .top, spacing: LarderSpace.s2) {
-                    LarderIcon(.cloud, size: .custom(16))
-                    Text(L10n.recipeSource(.server))
-                        .larderFont(.caption)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .foregroundStyle(LarderColor.onSurfaceVariant)
-                .padding(.top, LarderSpace.s6)
             }
             .padding(.horizontal, LarderSpace.s4)
             .padding(.top, LarderSpace.s2)

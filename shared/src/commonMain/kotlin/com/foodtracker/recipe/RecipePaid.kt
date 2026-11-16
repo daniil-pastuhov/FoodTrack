@@ -138,6 +138,9 @@ data class PaidUiState(
     val takesTaste: Boolean = false,
     /** The server's taste quiz version from its last reply ([RecipePaidSnapshot.tasteQuizVersion]). */
     val tasteQuizVersion: String? = null,
+    /** The server said `acceptsOptionalIngredients`: "Send all products" sends the other items
+     *  to it (and the menu form counts them as usable). */
+    val serverTakesOptional: Boolean = false,
     /** The days of the menu being written ([writing] MENU), for the writing screen's title. */
     val writingDays: Int = DEFAULT_MENU_DAYS,
     /** The server won't sell to this account (earlier purchases refunded after use). */
@@ -353,7 +356,8 @@ internal class RecipePaid(
                 allergenConsent = kept.allergenConsent,
                 menuSets = kept.serverTakesMenuDays,
                 takesTaste = kept.serverTakesTaste,
-                tasteQuizVersion = kept.tasteQuizVersion
+                tasteQuizVersion = kept.tasteQuizVersion,
+                serverTakesOptional = kept.serverTakesOptional
             )
         }
         if (termsArrived) {

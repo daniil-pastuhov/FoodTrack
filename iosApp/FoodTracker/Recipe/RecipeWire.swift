@@ -172,6 +172,26 @@ struct MenuSet: Equatable, Sendable {
     }
 }
 
+/// The menu form's "few items" hint: `items` usable items for `dishes` dishes.
+struct MenuItemsHint: Equatable, Sendable {
+    let items: Int
+    let dishes: Int
+}
+
+extension MenuSet {
+    /// Whether this menu set, from `ticked` ticked items and `optional` other items that would go
+    /// with it ("Send all products", as the request would carry them), is mostly dishes made up
+    /// plus shopping: fewer usable items than half its dishes, rounded up, with at least one item
+    /// ticked (nothing ticked has its own hint). A warning only: it never blocks the menu. Nil
+    /// when there is nothing to say. One rule on both platforms; Android: `menuItemsHint` in
+    /// `RecipeStateHolder.kt`.
+    func itemsHint(ticked: Int, optional: Int) -> MenuItemsHint? {
+        let dishes = days * courses
+        let usable = ticked + optional
+        return ticked > 0 && usable < (dishes + 1) / 2 ? MenuItemsHint(items: usable, dishes: dishes) : nil
+    }
+}
+
 /// One pack as the store offers it, for the Buy sheet's saving badge: its recipes, the store's
 /// own price and currency (nil when the store gave none).
 struct PackOffer: Equatable, Sendable {

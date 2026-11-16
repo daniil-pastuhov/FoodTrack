@@ -859,13 +859,11 @@
     <string name="recipe_method">Préparation</string>
     <string name="recipe_in_pantry">Chez vous</string>
     <string name="recipe_tip">Astuce</string>
-    <string name="recipe_source_phone">Rédigée sur cet appareil · Rien n\'a été envoyé</string>
-    <string name="recipe_source_server">Rédigée par notre serveur · Enregistrée sur cet appareil</string>
+    <string name="recipe_source_phone">Rien n\'a été envoyé</string>
     <string name="recipe_not_found">Cette recette n\'est plus enregistrée.</string>
     <string name="recipe_saved_today">Aujourd\'hui</string>
     <string name="recipe_saved_yesterday">Hier</string>
     <string name="recipe_saved_from_phone">Rédigée sur cet appareil</string>
-    <string name="recipe_saved_from_pack">De votre pack</string>
     <string name="recipe_saved_empty_title">Aucune recette pour l\'instant</string>
     <string name="recipe_saved_empty_body">Les recettes et menus rédigés dans l\'appli sont conservés ici.</string>
     <string name="recipe_deleted">Recette supprimée</string>
@@ -961,6 +959,13 @@
     </plurals>
     <string name="recipe_buy">Acheter des recettes</string>
     <string name="recipe_menu_hint">Un menu est rédigé sur notre serveur et décompte %1$s d\'un pack.</string>
+    <string name="recipe_on_device_weak">Le modèle de cet appareil est encore faible en cuisine, alors vérifiez que la recette tient la route.</string>
+    <string name="recipe_on_device_upsides">C\'est gratuit, et rien ne quitte cet appareil.</string>
+    <plurals name="recipe_menu_few_items">
+        <item quantity="one">Seulement %1$d produit pour %2$d plats. Il faudra acheter presque tout pour ce menu.</item>
+        <item quantity="many">Seulement %1$d produits pour %2$d plats. Il faudra acheter presque tout pour ce menu.</item>
+        <item quantity="other">Seulement %1$d produits pour %2$d plats. Il faudra acheter presque tout pour ce menu.</item>
+    </plurals>
     <string name="recipe_menu_short_title">Un menu décompte %1$s</string>
     <plurals name="recipe_menu_short_body">
         <item quantity="one">Il vous en reste %1$d. Une recette seule reste possible.</item>

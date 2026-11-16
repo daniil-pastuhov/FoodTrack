@@ -12,6 +12,7 @@ import com.foodtracker.recipe.Menu
 import com.foodtracker.recipe.MenuCourse
 import com.foodtracker.recipe.MenuCourseKind
 import com.foodtracker.recipe.MenuDay
+import com.foodtracker.recipe.MenuItemsHint
 import com.foodtracker.recipe.Recipe
 import com.foodtracker.android.R
 import com.foodtracker.recipe.RecipeConfig
@@ -263,14 +264,15 @@ class RecipePaidWordingTest {
         assertEquals("Menu for 3 days", savedRecipeTitle(context.resources, saved))
         val oneDay = SavedRecipe.of("m1", "Menu for one day", Menu(listOf(MenuDay(LocalDate(2026, 11, 4), courses = listOf(MenuCourse(MenuCourseKind.MAIN, recipe))))), 1L)
         assertEquals("Menu for one day", savedRecipeTitle(context.resources, oneDay))
-        assertEquals(listOf("1 dish", "From your pack"), savedRecipeDetails(context.resources, oneDay))
+        // Written by the server: no source wording.
+        assertEquals(listOf("1 dish"), savedRecipeDetails(context.resources, oneDay))
         assertEquals("One course a day for 2, using what expires first.", context.resources.getQuantityString(R.plurals.recipe_menu_summary, 1, 1, 2))
         assertEquals(
             "Not enough for one day. Tick a few more items, or ask for a single recipe. No recipes were taken.",
             context.resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, 1, 1)
         )
         assertEquals(true, context.resources.getQuantityString(R.plurals.recipe_not_enough_items_menu, 4, 4).startsWith("Not enough for 4 days."))
-        assertEquals(listOf("9 dishes", "From your pack"), savedRecipeDetails(context.resources, saved))
+        assertEquals(listOf("9 dishes"), savedRecipeDetails(context.resources, saved))
         val label = menuDayLabel(context.resources, LocalDate(2026, 11, 4), LocalDate(2026, 11, 4))
         assertEquals(true, label.startsWith("Today, ") && "Wed" in label && "4" in label)
         assertEquals(false, menuDayLabel(context.resources, LocalDate(2026, 11, 4), today = null).startsWith("Today"))
@@ -335,5 +337,33 @@ class RecipePaidWordingTest {
         assertEquals(RecipeCosts(1, 4, 6), read.costs)
         assertEquals(listOf(UnverifiedPurchase("tok", 50)), read.unverified)
         assertEquals(true, read.paymentPending)
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "en")
+    fun theFewItemsHintAndThePhoneModelNoteReadAsWritten() {
+        val r = context.resources
+        assertEquals(
+            "Only 1 item for 3 dishes. Most of this menu will need shopping.",
+            recipeMenuFewItems(r, MenuItemsHint(1, 3))
+        )
+        assertEquals(
+            "Only 5 items for 12 dishes. Most of this menu will need shopping.",
+            recipeMenuFewItems(r, MenuItemsHint(5, 12))
+        )
+        assertEquals(
+            "The model on this device is still weak at cooking, so check the recipe makes sense. " +
+                "It's free, and nothing leaves this device.",
+            recipeOnDeviceNote(r)
+        )
+    }
+
+    @Test
+    @Config(sdk = [34], qualifiers = "ru")
+    fun theRussianFewItemsHintAgreesWithItsCount() {
+        val r = context.resources
+        assert(recipeMenuFewItems(r, MenuItemsHint(1, 3)).startsWith("Только 1 продукт для 3 блюд."))
+        assert(recipeMenuFewItems(r, MenuItemsHint(2, 6)).startsWith("Только 2 продукта для 6 блюд."))
+        assert(recipeMenuFewItems(r, MenuItemsHint(5, 12)).startsWith("Только 5 продуктов для 12 блюд."))
     }
 }

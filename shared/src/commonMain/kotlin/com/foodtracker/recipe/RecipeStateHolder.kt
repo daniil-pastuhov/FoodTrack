@@ -181,6 +181,23 @@ const val DEFAULT_MENU_COURSES = 3
 /** The courses a menu falls back to when the ones chosen can't be asked for ([RecipeUiState.menuCourses]). */
 const val FALLBACK_MENU_COURSES = 2
 
+/** The menu form's "few items" hint: [items] usable items for [dishes] dishes. */
+data class MenuItemsHint(val items: Int, val dishes: Int)
+
+/**
+ * Whether a menu set of [days] days and [courses] courses a day, from [ticked] ticked items and
+ * [optional] other items that would go with it ("Send all products", as the request would carry
+ * them), is mostly dishes made up plus shopping: fewer usable items than half the dishes, rounded
+ * up, with at least one item ticked (nothing ticked has its own hint). A warning only: it never
+ * blocks the menu. Null when there is nothing to say. One rule on both platforms; iOS:
+ * `MenuSet.itemsHint(ticked:optional:)` in `RecipeWire.swift`.
+ */
+fun menuItemsHint(ticked: Int, optional: Int, days: Int, courses: Int): MenuItemsHint? {
+    val dishes = days * courses
+    val usable = ticked + optional
+    return if (ticked > 0 && usable < (dishes + 1) / 2) MenuItemsHint(usable, dishes) else null
+}
+
 data class RecipeUiState(
     val isLoading: Boolean = true,
     /** Every pantry item, soonest date first. */
@@ -278,6 +295,21 @@ data class RecipeUiState(
 
     /** How many items "Send all products" adds to this recipe; 0 with it off. */
     val optionalCount: Int get() = if (options.sendAllItems) otherRows.size else 0
+
+    /** The other items a menu request would carry as optional ingredients: with "Send all
+     *  products" on and a server that reads them, the cleaned names [optionalWireIngredients]
+     *  keeps beside the ticked ones; 0 otherwise. */
+    private val optionalSent: Int
+        get() {
+            if (!options.sendAllItems || !paid.serverTakesOptional) return 0
+            fun wire(rows: List<PantryRow>) = rows.mapNotNull { row -> cleanWireName(row.item.name)?.let { WireIngredient(it, null, null) } }
+            return optionalWireIngredients(wire(selectedRows).take(MAX_REQUEST_INGREDIENTS), wire(otherRows)).size
+        }
+
+    /** The menu form's "few items for this menu" hint ([menuItemsHint]) for the menu set asked
+     *  for; null in single-recipe mode and when there are enough. */
+    val menuItemsHint: MenuItemsHint?
+        get() = if (mode != RecipeMode.MENU) null else menuItemsHint(selectedRows.size, optionalSent, menuDays, menuCourses)
 
     /** Something is saved, so the header offers the saved list. Follows the saved recipes as
      *  they change: the first one written shows it, deleting the last one hides it. */

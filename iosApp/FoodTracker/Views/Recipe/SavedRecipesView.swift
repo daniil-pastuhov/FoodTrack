@@ -86,7 +86,8 @@ struct SavedRecipesView: View {
         }
     }
 
-    /// "Today · 15 min · Written on this phone", "Today · 9 dishes · From your pack".
+    /// "Today · 15 min · Written on this iPhone", "Today · 9 dishes": only the phone's model's
+    /// recipes say where they were written.
     static func supporting(_ entry: SavedRecipe, now: Date = Date(), calendar: Calendar = .current) -> String {
         var parts = [day(entry.createdAt, now: now, calendar: calendar)]
         switch entry.content {
@@ -95,7 +96,7 @@ struct SavedRecipesView: View {
         case .menu(let menu):
             parts.append(L10n.recipeDishes(menu.days.reduce(0) { $0 + $1.courses.count }))
         }
-        parts.append(L10n.recipeSavedOrigin(entry.source))
+        if entry.source == .device { parts.append(L10n.recipeSavedFromPhone) }
         return parts.joined(separator: " · ")
     }
 

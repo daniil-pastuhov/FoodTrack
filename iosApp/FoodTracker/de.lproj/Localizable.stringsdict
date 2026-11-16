@@ -930,6 +930,22 @@
             <string>Dieses {device} schuldete nach einer Store-Erstattung %d Rezepte. Sie wurden von deinem Konto abgezogen.</string>
         </dict>
     </dict>
+    <key>recipe_menu_few_items</key>
+    <dict>
+        <key>NSStringLocalizedFormatKey</key>
+        <string>%#@count@</string>
+        <key>count</key>
+        <dict>
+            <key>NSStringFormatSpecTypeKey</key>
+            <string>NSStringPluralRuleType</string>
+            <key>NSStringFormatValueTypeKey</key>
+            <string>d</string>
+            <key>one</key>
+            <string>Nur %d Artikel für {dishes} Gerichte. Für dieses Menü musst du das meiste einkaufen.</string>
+            <key>other</key>
+            <string>Nur %d Artikel für {dishes} Gerichte. Für dieses Menü musst du das meiste einkaufen.</string>
+        </dict>
+    </dict>
     <key>recipe_optional_count</key>
     <dict>
         <key>NSStringLocalizedFormatKey</key>
