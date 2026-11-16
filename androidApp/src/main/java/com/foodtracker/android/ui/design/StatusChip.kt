@@ -92,7 +92,7 @@ fun StatusChip(
             .padding(
                 start = if (status == ExpiryStatus.FRESH) 0.dp else LarderSpace.s1,
                 end = LarderSpace.s2,
-                top = 3.dp,
+                top = 1.dp,
                 bottom = 1.dp
             )
             .then(
