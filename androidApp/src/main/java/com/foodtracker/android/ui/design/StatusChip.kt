@@ -142,3 +142,4 @@ internal fun StatusChipPreview() = LarderPreview {
         StatusChip(ExpiryStatus.FRESH, "19 Nov")
     }
 }
+// probe: no visible change
