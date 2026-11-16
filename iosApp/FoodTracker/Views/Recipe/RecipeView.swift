@@ -315,6 +315,8 @@ struct RecipeView: View {
             .frame(maxWidth: .infinity)
         }
         .defaultScrollAnchor(Self.opensAtEnd ? .bottom : .top)
+        // The header scrolls away with the form, as on Home; the status bar keeps the page colour.
+        .clipsBelowStatusBar()
     }
 
     /// `-demoRecipeScrollEnd YES` (Debug): the form opens scrolled to its buttons, for layout

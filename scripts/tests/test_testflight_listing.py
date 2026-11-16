@@ -1182,6 +1182,18 @@ class IapTests(unittest.TestCase):
         self.assertEqual(writes[-1][2]["data"]["attributes"], {"submitted": True})
         self.assertIn("::warning::In-app purchase recipes_100: MISSING_METADATA", out)
 
+    def test_iap_versions_withdrawn_from_review_go_back_as_they_are(self):
+        # Cancelling a review submission leaves its in-app purchase versions DEVELOPER_REJECTED
+        # (seen on 2026-11-16, when 2.1.0 was withdrawn to replace its screenshots).
+        self.gets["/v2/inAppPurchases/i10/versions"] = [iap_version("v10", 1, "DEVELOPER_REJECTED")]
+        self.gets["/v2/inAppPurchases/i50/versions"] = [iap_version("v50", 2, "DEVELOPER_REJECTED")]
+        asc = self.fake()
+        result, _ = self.submit(asc)
+        self.assertEqual(result, 0)
+        self.assertEqual(self.items(asc), [{"appStoreVersion": "asv"},
+                                           {"inAppPurchaseVersion": "v10"},
+                                           {"inAppPurchaseVersion": "v50"}])
+
     def test_a_refused_iap_stops_before_the_version_is_submitted(self):
         asc = self.fake(refuse='{"errors":[{"detail":"must be submitted with a new app version"}]}')
         with self.assertRaises(SystemExit) as stop:

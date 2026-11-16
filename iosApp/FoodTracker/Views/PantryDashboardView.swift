@@ -179,10 +179,8 @@ struct PantryDashboardView<DetailPane: View>: View {
             }
         }
         .larderList()
-        // Keeps rows out from under the status bar once the header has scrolled away. Only the
-        // top: the bottom stays open so rows scroll on under Scan and the pill (the root's
-        // clearance inset keeps the last one reachable).
-        .clipShape(TopEdgeClip())
+        // The header scrolls away with the rows; the status bar keeps the page colour.
+        .clipsBelowStatusBar()
         .scrollDismissesKeyboard(.immediately)
         .animation(.default, value: rows)
     }
@@ -494,13 +492,6 @@ struct PantryDashboardView<DetailPane: View>: View {
         }
     }
     #endif
-}
-
-/// Clips at the top edge only, leaving the bottom free to run under the floating chrome.
-private struct TopEdgeClip: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path(CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height + 10_000))
-    }
 }
 
 /// Outside the generic view, because a generic type can't hold a stored static.
