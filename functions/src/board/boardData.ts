@@ -82,8 +82,20 @@ export interface Totals {
 
 export interface BoardDay extends DayStats {
   day: string;
-  /** The server's spend ceiling for that day, from today's config (dailySpendCeiling). */
+  /**
+   * The day's spend ceiling: for a past day the one its last reservation was checked against
+   * (`stats/{day}.ceilingMicroUsd`) when recorded, else, like today's, dailySpendCeiling over
+   * today's config and that day's 7-day net recipes.
+   */
   ceilingMicroUsd: number;
+  /** Where `ceilingMicroUsd` came from. */
+  ceilingSource: "recorded" | "computed";
+  /** A reservation was refused at the spend ceiling that day (`stats/{day}.spendAlerts["100"]`). */
+  ceilingReached: boolean;
+  /** The 50 % / 80 % marks the server logged that day (`spend_threshold`). */
+  spendThresholds: number[];
+  /** A reservation was refused at `dailyCap` that day (`stats/{day}.dailyCapReachedAt`). */
+  dailyCapReached: boolean;
   /** Production recipes granted, net of refunds, over the day and the REVENUE_WINDOW_DAYS - 1 before it. */
   netCredits7d: number;
   /** Production purchases granted that day, per pack (count and recipes). */
@@ -229,12 +241,21 @@ export function buildBoard(input: BoardInput): Board {
   const { startMs, endMs } = periodRange(input.generatedAtMs, input.days);
   const inPeriod = input.purchases.filter((p) => p.grantedAtMs >= startMs && p.grantedAtMs < endMs);
 
+  const todayDay = utcDay(input.generatedAtMs);
   const days: BoardDay[] = periodDays(input.generatedAtMs, input.days).map((day) => {
     const netCredits7d = netWindow(day);
+    const raw = input.stats.get(day);
+    const recorded = num(raw?.ceilingMicroUsd);
+    const useRecorded = day !== todayDay && typeof raw?.ceilingMicroUsd === "number" && recorded >= 0;
+    const marks = (raw?.spendAlerts ?? {}) as Record<string, unknown>;
     return {
       day,
       ...statsOf(day),
-      ceilingMicroUsd: dailySpendCeiling(config, netCredits7d),
+      ceilingMicroUsd: useRecorded ? recorded : dailySpendCeiling(config, netCredits7d),
+      ceilingSource: useRecorded ? "recorded" : "computed",
+      ceilingReached: marks["100"] !== undefined,
+      spendThresholds: [50, 80].filter((p) => marks[`${p}`] !== undefined),
+      dailyCapReached: raw?.dailyCapReachedAt !== undefined,
       netCredits7d,
       sales: record(PACKS, () => ({ count: 0, credits: 0 })),
       salesByStore: record(STORES, () => ({ count: 0, credits: 0 })),

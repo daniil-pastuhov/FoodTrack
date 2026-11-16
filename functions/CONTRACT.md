@@ -215,7 +215,8 @@ call with `not-found` / unimplemented, which the apps read as `0`.
 Free recipes behave exactly like recipes from a pack: same costs, limits and failure refunds,
 spent from the same `balance`. They are **not purchases**: they raise no allowance of refunded
 content failures, are never reported to Apple as bought or consumed (free recipes count as spent
-before bought ones), never count in refund-after-use, and are lost with the account like any
+before bought ones used after the grant; bought recipes used before the grant still count as
+used), never count in refund-after-use, and are lost with the account like any
 unused recipes.
 
 ## Types
@@ -778,8 +779,10 @@ the apps make before a sign-in or a purchase**, and it carries nothing about the
 Check enforced with an ordinary token (not consumed), **no sign-in** (an Auth token, if sent, is
 ignored), no input (any is ignored), and the server reads only its own settings and today's
 grant count; it stores nothing and logs nothing per call. Rate-limited per client address and
-per server instance (`RATE_LIMITED`). The apps ask it when the Recipe tab is shown, at most once
-a day, only on installs where buying is possible, and only while signed out or not yet claimed.
+per server instance (`RATE_LIMITED`). The apps ask it when the Recipe tab is shown, but not more often than every 15 minutes, and once
+more right before their sign-in sheet opens; they show the last answer meanwhile and treat one
+older than a day as none. Only on installs where buying is possible, and only while signed out or
+not yet claimed.
 
 Request `{}`. Response `{ "recipes": 3 }`: the number `claimWelcome` would grant now; `0` when
 the grant is off, generation is paused or today's grants are used up. The count may lag the day's
@@ -811,8 +814,11 @@ capability flags, `tasteQuizVersion`, `welcomeRecipes`).
 - "Identity" is the Google or Apple account itself (the provider's own user id, read from the
   Firebase Auth record), not the Firebase uid: deleting the account and signing in again with the
   same Google or Apple account grants nothing, and an account linked to both claims once. An
-  identity linked later to an account that already claimed is recorded too, so it cannot claim
-  from another account either.
+  identity linked later to an account that already claimed is recorded too, without the client
+  calling `claimWelcome` again: by the server when it sees the link (`getBalance` with an ID token
+  that names the new provider, `registerAppleSignIn`, `mergeBalance`) and, at the latest, by
+  `deleteAccount`, from the Auth record before it is deleted. So it cannot claim from another
+  account either.
 - Anonymous, or no Google / Apple identity: `SIGN_IN_REQUIRED`, nothing granted. A deleted or
   merged account: `ACCOUNT_CLOSED`.
 - A sign-in that fails or is cancelled must not call it. After `GRANTED` or `ALREADY` the client

@@ -59,12 +59,25 @@ export interface UserDoc {
   /**
    * Free recipes this account (and every account merged into it) was given by the welcome grant
    * (claimWelcome), lifetime. Never part of `purchasedCredits`: they are not purchases, so they
-   * raise no refund allowance (paidAllowance) and are taken out of the FIFO ledger (fifoConsumed,
-   * spent first).
+   * raise no refund allowance (paidAllowance); the FIFO ledger leaves out those charged
+   * (`welcomeSpent`), which the charges after the grant spend first.
    */
   welcomeCredits?: number;
   /** When this account's welcome grant was made (claimWelcome); set once, kept on the tombstone. */
   welcomeAt?: Timestamp;
+  /**
+   * Free recipes granted and not yet charged. Every charge after the grant (generation settle)
+   * takes from here first and moves it to `welcomeSpent`; credits charged before the grant never
+   * do. Both follow merges (summed).
+   */
+  welcomeUnspent?: number;
+  /** Free recipes charged so far (lifetime, following merges): left out of the FIFO ledger. */
+  welcomeSpent?: number;
+  /**
+   * The sign-in providers ("google.com", "apple.com") whose identities this claimed account has
+   * recorded in `welcomes/`: when an ID token names another, getBalance records it.
+   */
+  welcomeProviders?: string[];
   /** Balance that was lost when the account was deleted. */
   forfeitedBalance?: number;
   /** When the Auth user's displayName and photoURL were last cleared (scrubProfile). */

@@ -148,20 +148,56 @@ type ReserveLogs = [level: "warn" | "error", message: string, data: Record<strin
  */
 const refusalLog = new LogSampler(60_000, 30);
 
-function logRefusal(deps: Deps, uid: string, reason: "USER_DAILY_LIMIT" | "INFRA_FAILURE_LIMIT", why: string): void {
-  const sample = refusalLog.take(deps.now());
-  if (sample.log) deps.logger.warn("generation_refused", { reason, why, uidHash: uidHash(uid), suppressedSinceLast: sample.suppressed });
+/**
+ * A charge (settle keeping `cost` spent) takes the free recipes still unspent first
+ * (`welcomeUnspent` to `welcomeSpent`). Only charges after the grant can: one before it found
+ * nothing unspent. fifoConsumed leaves `welcomeSpent` out, so free recipes never count as bought
+ * use, and bought use before the grant is never hidden by them. Writes nothing for an account
+ * without free recipes.
+ */
+function chargeFreeFirst(user: UserDoc | undefined, cost: number, userUpdate: Record<string, unknown>): void {
+  const unspent = user?.welcomeUnspent ?? 0;
+  if (unspent <= 0) return;
+  const take = Math.min(unspent, cost);
+  userUpdate.welcomeUnspent = FieldValue.increment(-take);
+  userUpdate.welcomeSpent = FieldValue.increment(take);
+}
+
+/**
+ * Queues the refusal's line on the current attempt's logs; reserve writes it once the transaction
+ * has ended (a retried attempt starts a fresh list, so a line is never written twice).
+ */
+function logRefusal(logs: ReserveLogs, uid: string, reason: "USER_DAILY_LIMIT" | "INFRA_FAILURE_LIMIT", why: string): void {
+  logs.push(["warn", "generation_refused", { reason, why, uidHash: uidHash(uid) }]);
+}
+
+function flushReserveLogs(deps: Deps, logs: ReserveLogs): void {
+  for (const [level, message, data] of logs) {
+    if (message === "generation_refused") {
+      const sample = refusalLog.take(deps.now());
+      if (sample.log) deps.logger[level](message, { ...data, suppressedSinceLast: sample.suppressed });
+    } else {
+      deps.logger[level](message, data);
+    }
+  }
 }
 
 /**
  * The per-user and existing-generation checks read only the caller's own documents; the shared
  * stats docs (today's, and the trailing days for the revenue-aware ceiling) are read only when a new
- * reservation is about to be made, so refused calls never contend on them.
+ * reservation is about to be made, so refused calls never contend on them. The one exception is
+ * the first refusal of a UTC day at the spend ceiling or at `dailyCap`, which records that once
+ * (`spendAlerts["100"]`, `dailyCapReachedAt`) and logs it for the alerts (README "Alerts").
  */
 async function reserve(deps: Deps, uid: string, req: GenerateRequest, config: RuntimeConfig, plan: Plan): Promise<Reservation> {
   let logs: ReserveLogs = [];
-  const result = await reserveTx(deps, uid, req, config, plan, (l) => (logs = l));
-  for (const [level, message, data] of logs) deps.logger[level](message, data);
+  let result: Reservation | Refusal;
+  try {
+    result = await reserveTx(deps, uid, req, config, plan, (l) => (logs = l));
+  } finally {
+    // The last attempt's lines only, whether it committed or refused.
+    flushReserveLogs(deps, logs);
+  }
   if ("refused" in result) fail(result.refused.code, result.refused.reason, result.refused.message);
   return result;
 }
@@ -211,12 +247,12 @@ async function reserveTx(
     }
     const infra = user.infraRefunds?.day === day ? user.infraRefunds.count : 0;
     if (infra >= config.infraRefundsPerDay) {
-      logRefusal(deps, uid, "INFRA_FAILURE_LIMIT", "infra_refunds");
+      logRefusal(logs, uid, "INFRA_FAILURE_LIMIT", "infra_refunds");
       fail("resource-exhausted", "INFRA_FAILURE_LIMIT", "Generation failed too often today; try again tomorrow");
     }
     const userSpend = user.spendWindow?.day === day ? user.spendWindow.microUsd : 0;
     if (dw.count >= config.perUserPerDay || userSpend + reservedMicroUsd > config.perUserDailySpendMicroUsd) {
-      logRefusal(deps, uid, "USER_DAILY_LIMIT", dw.count >= config.perUserPerDay ? "generations" : "spend");
+      logRefusal(logs, uid, "USER_DAILY_LIMIT", dw.count >= config.perUserPerDay ? "generations" : "spend");
       fail("resource-exhausted", "USER_DAILY_LIMIT", "Daily limit for this account reached");
     }
     const pastRefs = Array.from({ length: REVENUE_WINDOW_DAYS - 1 }, (_, i) => statsRef(deps.db, utcDay(now - (i + 1) * 86_400_000)));
@@ -243,7 +279,7 @@ async function reserveTx(
     if (booked > ceiling) {
       // The first refusal of the day at the ceiling is recorded and logged once (100 %).
       if (marks["100"] !== undefined) fail("unavailable", "GENERATION_DISABLED", "Recipe generation is paused");
-      tx.set(sRef, { spendAlerts: { "100": now } }, { merge: true });
+      tx.set(sRef, { spendAlerts: { "100": now }, ceilingMicroUsd: ceiling }, { merge: true });
       logs.push(["error", "spend_threshold", thresholdLine(100, spent)]);
       return { refused: { code: "unavailable", reason: "GENERATION_DISABLED", message: "Recipe generation is paused" } };
     }
@@ -263,6 +299,9 @@ async function reserveTx(
         generationUnits: FieldValue.increment(cost),
         generations: FieldValue.increment(1),
         reservedMicroUsd: FieldValue.increment(reservedMicroUsd),
+        // The ceiling this reservation was checked against, for the owner's board (a day's
+        // history: config/runtime itself keeps none).
+        ceilingMicroUsd: ceiling,
         ...(crossed.length ? { spendAlerts: Object.fromEntries(crossed.map((p) => [`${p}`, now])) } : {}),
       },
       { merge: true },
@@ -371,6 +410,7 @@ export async function settle(
 
     if (outcome.ok) {
       userUpdate.consumedCredits = FieldValue.increment(gen.cost);
+      chargeFreeFirst(user, gen.cost, userUpdate);
       finalDoc = {
         ...gen,
         state: "done",
@@ -413,6 +453,7 @@ export async function settle(
         balance += gen.cost;
       } else {
         userUpdate.consumedCredits = FieldValue.increment(gen.cost);
+        chargeFreeFirst(user, gen.cost, userUpdate);
       }
       if (outcome.rejection) {
         rejectionsToday = (user?.promptRejections?.day === today ? user.promptRejections.count : 0) + 1;

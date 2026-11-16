@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: backend errors",
+  "documentation": {
+    "content": "An unexpected error in a callable, the sweeper, or the Cloud KMS wrap of an Apple token. See functions/README.md, \"Logs to alert on\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=(\"sweep_item_failed\" OR \"callable_failed\" OR \"apple_token_seal_failed\")"
+      },
+      "displayName": "Recipe: backend errors"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

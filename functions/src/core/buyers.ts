@@ -7,7 +7,8 @@
  * account has spent (`consumedCredits`, lifetime, including accounts merged into it) exceed the
  * credits granted to it before that purchase (net of refunds of those earlier purchases), capped at
  * the purchase's own credits. Order is by `grantedAt`, then purchase id. Free recipes from the
- * welcome grant (`welcomeCredits`) are not purchases: they count as spent before any bought one.
+ * welcome grant are not purchases: the charges after the grant spend them before bought ones
+ * (`welcomeSpent`), and those are left out of the spent credits.
  */
 import { createHash } from "node:crypto";
 import { Timestamp, type Firestore, type Transaction } from "firebase-admin/firestore";
@@ -123,10 +124,11 @@ export async function fifoConsumed(
     const t = p.grantedAt.toMillis();
     if (t < at || (t === at && d.id < purchaseId)) before += p.credits - p.refundedCredits;
   }
-  // Free recipes (the welcome grant) are not purchases and count as spent first, whenever they
-  // were granted: only spend beyond them is attributed to purchases. So a buyer is never
-  // reported to Apple, or recorded as refunding after use, for recipes that were free.
-  const spent = Math.max(0, (holder.user.consumedCredits ?? 0) - (holder.user.welcomeCredits ?? 0));
+  // Free recipes (the welcome grant) are not purchases: the charges after the grant spend them
+  // first (`welcomeSpent`, generation settle), and only the rest is attributed to purchases. So a
+  // buyer is never reported to Apple, or recorded as refunding after use, for recipes that were
+  // free, and bought recipes used before the grant still count as used.
+  const spent = Math.max(0, (holder.user.consumedCredits ?? 0) - (holder.user.welcomeSpent ?? 0));
   return Math.max(0, Math.min(purchase.credits, spent - before));
 }
 

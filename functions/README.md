@@ -33,6 +33,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/core/guard.ts` | Pre-Firestore throttles, client address, log sampling |
 | `src/ports.ts` | `PlayVerifier`, `AppStoreVerifier`, `RecipeGenerator`, `AppleTokenRevoker` interfaces |
 | `src/adapters/` | Production implementations (Play Developer API, App Store Server Library, Gemini on Vertex AI, Sign in with Apple, KMS envelope encryption, the board's Cloud Storage bucket) and the prompt |
+| `alerts/` | The alerting as code: log-based metric (`metrics/`), alert policies (`policies/`) and `alerts.py`, which applies them (see "Alerts") |
 | `src/emulatorFakes.ts` | Fake stores and LLM, only inside the Functions emulator with `EMULATOR_FAKES=true` and a `demo-` project |
 | `src/index.ts` | Triggers, params, secrets, per-function limits |
 | `certs/AppleRootCA-G3.cer` | Apple's public root CA (SHA-256 `63:34:3A:BF:…:91:79`, checked by a test) |
@@ -78,7 +79,9 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
   the charge; failure refunds by the rules below. Settle replaces the worst case by the measured
   cost whenever usage is known. Whoever loses the condition (a late live call vs. the sweeper)
   discards its result. The reservation transaction reads the caller's user and generation docs
-  first, and the shared `stats` docs only when a new reservation is about to be made.
+  first, and the shared `stats` docs only when a new reservation is about to be made. A refusal
+  there writes nothing, except the first refusal of a UTC day at the spend ceiling or at
+  `dailyCap`, which records it once on `stats/{day}` for the alerts and the board ("Alerts").
 - `getGeneration` reads the caller's user and generation docs and nothing else: no reservation,
   no LLM, no `stats` (beyond today's welcome grant count for `welcomeRecipes`, which every
   response with a balance takes from a per-instance cache: at most one read per instance per
@@ -142,10 +145,15 @@ receipt, so it is bounded like money:
   `purchasedCredits`, so they raise no content or timeout refund allowance (`paidAllowance`: an
   account with only free recipes has none), never count as revenue (`stats.netCreditsGranted`, so
   the spend ceiling does not rise with them), add no buyer key and never set `purchasesBlocked`.
-  In the FIFO ledger they count as **spent first**, whenever granted (`fifoConsumed` subtracts
-  `welcomeCredits` from the spent credits): a buyer is never reported to Apple as having consumed,
-  nor recorded as refunding after use, recipes that were free. Free-first can under-report a
-  purchase's consumption by at most the grant (3); it never over-reports. They are lost with the
+  In the FIFO ledger they count as **spent first by the charges after the grant**: every charge
+  (generation settle) takes from `welcomeUnspent` first and moves it to `welcomeSpent`, and
+  `fifoConsumed` leaves `welcomeSpent` out of the spent credits. A buyer is never reported to
+  Apple as having consumed, nor recorded as refunding after use, recipes that were free, and
+  bought recipes used before the grant still count as used (buy, use 3, claim, refund: 30 %
+  consumed, a refund after use). Free-first after the grant can under-report a purchase's
+  consumption by at most the grant (3); it never over-reports. `mergeBalance` sums
+  `welcomeUnspent` and `welcomeSpent`, so neither side's bought or free use is hidden by the
+  other's. They are lost with the
   account like any unused recipes (`forfeitedBalance`), and move with `mergeBalance`.
 - **The offer.** `getWelcomeOffer` (no sign-in) and `welcomeRecipes` beside every `balance` say
   how many a claim grants now: `recipes`, or 0 when the grant is off, generation is paused
@@ -161,7 +169,7 @@ Abuse cases and their bounds (each tested in `test/welcome.test.ts`):
 | Delete the account and sign in again | The new uid has the same Google/Apple identity, whose `welcomes/` doc survives deletion: `ALREADY`, nothing granted. |
 | Concurrent claims (one account, or many at the day's limit) | One transaction reads every doc it decides on; Firestore serialises conflicting transactions (a losing one retries and then sees the doc / the count), so one grant per identity and never more than `perDay` a day. |
 | A claim racing a merge into the same account | Both are transactions on the target's user doc; whichever commits second re-reads it, so neither the grant nor the moved balance is lost. An anonymous source cannot have claimed. |
-| An account linked to two providers | A grant writes a `welcomes/` doc for each linked identity; a claim by an account that already claimed records any identity linked since (`credits: 0`), so unlinking it and signing in elsewhere gets `ALREADY`. An account that claimed stays claimed (`users.welcomeAt`) whatever is unlinked. Only an identity that was never on a claiming account at a claim can claim again: a person with one Google and one Apple account kept on separate accounts gets two grants, which is "once per identity". |
+| An account linked to two providers | A grant writes a `welcomes/` doc for each linked identity. An identity linked after the claim is recorded (`credits: 0`) without a second claim, wherever the server sees the link: `getBalance` when the ID token names a provider not in `users.welcomeProviders` (one Auth lookup then, none otherwise), `registerAppleSignIn` (every Apple sign-in or link on iOS), `mergeBalance`, a later `claimWelcome`, and at the latest `deleteAccount` (every Google/Apple identity of the Auth record, in the deletion's transaction, before the Auth user is deleted). So linking, deleting and signing in again with the new identity gets `ALREADY`. Left open: a Google identity linked on iOS, then unlinked again before any of those runs, and signed in on another account. An account that claimed stays claimed (`users.welcomeAt`) whatever is unlinked. Only an identity that was never on a claiming account at a claim can claim again: a person with one Google and one Apple account kept on separate accounts gets two grants, which is "once per identity". |
 | Anonymous, password or phone accounts | `SIGN_IN_REQUIRED`: only `google.com` and `apple.com` identities in the Auth record count. A token naming Google for a user whose record has none is refused too. |
 | A replayed App Check token | `claimWelcome` consumes limited-use tokens (`APP_CHECK_REPLAYED`), like `verifyPurchase`. `getWelcomeOffer` does not (it grants nothing); one valid token can be reused for its life (about an hour) but only reaches the throttles below. |
 | The offer hammered without auth | `getWelcomeOffer` has no uid to count: per client address (IPv6 by /64) and the instance ceiling (120 a minute, 1 instance), reading only the cached config and the cached day count (0 Firestore reads per call in steady state). Exhausting the ceiling only makes the offer fail, which the apps read as no offer. |
@@ -181,6 +189,19 @@ lower `welcome.perDay` (e.g. to 20) or turn the grant off. Firestore and instanc
 "Function limits" (`claimWelcome` ≤ USD 0.44/day, `getWelcomeOffer` ≤ USD 0.47/day under a flood);
 a grant itself is 3 to 4 reads and 3 to 4 writes, so 200 a day are well under a cent.
 
+**The owner's choice (2026-11-16): keep `perDay` at 200 and raise the daily spend ceiling to USD 5** (`config/runtime.dailySpendBaseMicroUsd` and `dailySpendMaxMicroUsd` both `5000000`, set on the live project that day), with the alerts in "Alerts" telling them when spend passes 50 % and 80 % of it. At USD 5 a day the ceiling holds about 250 typical recipes, so farmed grants no longer crowd out buyers at the default limit; the month's worst case is USD 150 of model spend, above the 1000 NOK budget whose kill switch then pauses generation. The alternative, if the ceiling is ever lowered again: **Recommended launch value: `perDay: 10`** (the default stays 200; set it in `config/runtime`
+before release). The arithmetic: without sales the whole service has USD 1.20 a day of model
+spend. A typical recipe books about USD 0.02, so one grant spent in full is about USD 0.06, and
+10 grants a day are about USD 0.60 even if every one were farmed and spent the same day: half the
+base ceiling, leaving about USD 0.60 (some 30 typical recipes) for buyers. While calls are in
+flight they hold their worst case (about USD 0.08 a recipe), so 5 farmed recipes running at once
+hold USD 0.40 for a minute at most. At 200 a day, the same full farming is about USD 36 of
+model use asked for, and the base ceiling is gone after about 20 grants. Raise `perDay` when real
+sign-ins reach it (the `welcome_threshold` alert at half of it tells you, and the board's
+"Free recipes" chart shows it per day) or when sales lift the ceiling: each recipe sold adds
+USD 0.03 to every day's ceiling for 7 days, so 27 sold in a week reach the USD 2.00 maximum,
+which affords about 20 grants a day on the same terms.
+
 **Turning it off.** `config/runtime.welcome.recipes = 0` (or `perDay = 0`): within 30 s the offer
 and `welcomeRecipes` read 0 and claims answer `OFF`, writing nothing. An invalid `welcome` value
 turns it off too (warning `welcome`). The kill switch (`generationEnabled: false`) also stops
@@ -191,7 +212,8 @@ is the only lever (it stops everyone).
 
 Credits are fungible, so spend is attributed to purchases first-in-first-out: a purchase counts
 as consumed to the extent the account's lifetime `consumedCredits` (including accounts merged into
-it), less its free recipes (`welcomeCredits`, which count as spent first), exceed the credits
+it), less the free recipes charged since a welcome grant (`welcomeSpent`, spent first by the
+charges after the grant), exceed the credits
 granted to it before that purchase (net of refunds of those), capped at the purchase's credits.
 Order: `grantedAt`, then purchase id (`fifoConsumed` in `src/core/buyers.ts`).
 
@@ -616,6 +638,8 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `apple_token_registered` / `apple_token_removed_unlinked` | info | A Sign in with Apple refresh token was stored (`replaced`), or removed after Apple was unlinked. `uidHash` only. |
 | `apple_code_exchange_failed` / `apple_code_revoke_failed` / `apple_token_revoke_failed` | warning | Apple refused or could not be reached (`kind`: `rejected` / `retryable`; `error`: endpoint, HTTP status and Apple's `error` code, never a code or token; `why` for the last). Many `retryable` ones mean the SIWA key or Apple is down; deletions then answer `appleLinkRemoved: false`. |
 | `apple_token_seal_failed` | error | Cloud KMS refused to wrap a token (key missing, IAM, API off: docs/recipe-setup.md step 5a). Nothing was stored. |
+| `welcome_count_unavailable` | warning | Today's welcome grant count could not be read for `welcomeRecipes` / `getWelcomeOffer`: they answered 0 and the response went ahead (`error`, `suppressedSinceLast`; one a minute per instance). Persistent ones mean Firestore trouble. |
+| `welcome_identities_recorded` / `welcome_identity_record_failed` | info / warning | An identity linked after the claim was recorded in `welcomes/` (`recorded`, `via`: `getBalance`, `registerAppleSignIn`, `mergeBalance`), or recording it failed (best effort there; the call went ahead, and deletion records it again). `uidHash` only. |
 | `welcome_granted` | info | A welcome grant was made: `uidHash`, `amount`, `identities` (1, or 2 for Google and Apple). Many in a short time from few addresses, with little revenue, is farming ("Welcome grant"). |
 | `welcome_day_limit` | warning | The day's brake: `event: "reached"` on the grant that used up `welcome.perDay` (once a day), `"refused"` for claims refused at it (sampled, one a minute per instance, with `suppressedSinceLast`); `day`, `perDay`. Reaching it every day means `perDay` is binding: farming, or real demand. |
 | `admin_account_deleted` | info | The owner's admin command deleted an account for a request by email (log `admin`, resource `global`, written with the operator's credentials; also printed on the command's stderr). `uidHash`, `kind` (`email`, `play-order`, `apple-order`, `apple-transaction`, `uid`), `state` before (`live` / `deleted` / `merged`), `purchasesDetached`, and `appleLinkRemoved` for an account that carried Apple. Never the email, order id or uid. |
@@ -625,7 +649,58 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `Budget kill switch flipped: generation disabled` | error | The budget alert paused generation. |
 | `board_redraw_failed` | error | The hourly `redrawBoard` failed (Firestore, Storage permission, upload). `bucket`, `code`, a short `error`. The page keeps its last version and shows its own stale warning after 3 hours. |
 | `board_bucket_public` | error | `redrawBoard` refused to write: the board bucket is missing, not private (`reason`: `missing`, `public_access_prevention_not_enforced`, `uniform_access_off`, `public_binding` with the `role`, `default_firebase_bucket`), or its settings could not be read (then `board_redraw_failed`). Never a member. Check the bucket at once ("The board", "Always on"). |
+| `spend_threshold` | warning / error | Today's booked model spend (settled + worst cases in flight, what the breaker compares) reached `percent` 50 or 80 (warning) of today's ceiling, or a reservation was refused at the ceiling (`percent` 100, error: `GENERATION_DISABLED`). `spentMicroUsd`, `ceilingMicroUsd`, `day`, `netCredits7d`. Each at most once per UTC day (`stats/{day}.spendAlerts`). |
+| `daily_cap_reached` | error | The first `DAILY_CAP` refusal of the UTC day (`dailyCap`, `generationUnits`, `day`); recorded as `stats/{day}.dailyCapReachedAt`. |
+| `welcome_threshold` | warning | The welcome grant that took the day's count to half of `welcome.perDay` (rounded up): `percent` 50, `grants`, `perDay`, `day`. Once per UTC day (`welcome_day_limit` is the other half). |
+| `generation_refused` | warning | `generateRecipe` refused for an account's daily limits: `reason` `USER_DAILY_LIMIT` (`why`: `generations` or `spend`) or `INFRA_FAILURE_LIMIT` (`why`: `infra_refunds`), `uidHash`. Sampled: 30 a minute per instance, with `suppressedSinceLast`. Counted by the log-based metric `recipe_generation_refused`. |
 | `board_purchases_capped` | warning | The period held more purchases than one redraw reads (`total`, `read`); the board says so and its purchase figures are partial. |
+
+### Alerts
+
+The owner is emailed by Cloud Monitoring alert policies on the log lines above, through the
+existing email channel "Recipe backend alerts (owner)". They are code in `functions/alerts/`: one
+log-based metric (`metrics/recipe_generation_refused.json`) and nine policies (`policies/*.json`,
+no channel in them). `alerts.py` applies them: dry run by default (local checks, every log filter
+checked against the project with a read-only `gcloud logging read`, then the plan), `--apply` to
+create or update (matched by display name, so re-running is safe and prints "unchanged"). The
+channel is chosen by `--channel <id>` or `--channel-name` (default the one above); the script never
+reads or prints a channel's address. If the project has no such channel, create an email channel
+in the console (Monitoring > Alerting > Edit notification channels) and type the address there.
+
+```bash
+python3 functions/alerts/alerts.py --project bestbefore-f9ee1                # dry run
+python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply        # create / update
+python3 functions/alerts/alerts.py --check-files                             # offline checks (also run by npm test)
+```
+
+It needs `gcloud` with the beta component, and for `--apply` an account with Monitoring Editor
+and Logs Configuration Writer (`--account` picks one other than the active account).
+
+| policy (file) | when you are told | log line |
+|---|---|---|
+| Recipe: model spend at 50 % or 80 % of the daily ceiling (`spend-thresholds`) | the day's booked spend passes 50 % or 80 % of its ceiling, at most once each per UTC day | `spend_threshold` with `percent` 50 / 80 |
+| Recipe: daily spend ceiling or daily cap reached (`spend-ceiling-reached`) | the first refusal of the day at the spend ceiling (`GENERATION_DISABLED`) or at `dailyCap` (`DAILY_CAP`) | `spend_threshold` with `percent` 100; `daily_cap_reached` |
+| Recipe: budget kill switch paused generation (`kill-switch`, existing) | the billing budget flipped `generationEnabled` off | `Budget kill switch flipped: generation disabled` |
+| Recipe: free recipes (welcome grant) day limit (`welcome-grants`) | the day's welcome grants reach half of `welcome.perDay`, and when they reach it | `welcome_threshold` (`percent` 50); `welcome_day_limit` with `event` `reached` |
+| Recipe: spike of per-account limit refusals (`limit-refusals`) | more than 20 `USER_DAILY_LIMIT` or more than 5 `INFRA_FAILURE_LIMIT` refusals in an hour (metric threshold, summed over all accounts) | `generation_refused` through the metric `recipe_generation_refused` |
+| Recipe: owner board (`owner-board`, existing) | the hourly redraw failed or the bucket check refused to write | `board_redraw_failed`, `board_bucket_public` |
+| Recipe: backend errors, refunds, blocked buyers, stuck purchases, prompt safety (existing) | as in the two "Logs to alert on" tables | see those tables |
+
+The thresholds are logged where the day's stats are already read: the reservation transaction in
+`generateRecipe` (`reserve`), which reads `stats/{day}` and computes the ceiling for its breaker
+anyway. The marks (`spendAlerts`, `dailyCapReachedAt`) are written in that same transaction, so
+"once per UTC day" holds across instances and retried transactions, at no extra read; no
+scheduled function was added (one would need its own reads and could only notice a threshold
+after the fact). What crosses 50 % or 80 % is the booked amount the breaker compares, including
+the worst cases of calls still in flight, so it can fire a little before settled spend gets there.
+The welcome grant's lines come from its grant transaction, which reads the day's count anyway.
+
+Notifications: log-match policies email at most once per 5 minutes (the new ones) or per hour
+(the existing ones) and close by themselves after 7 days; the metric policy closes a day after
+the hour that tripped it. If 50 % and 80 % are crossed within 5 minutes, only the first is
+emailed (the 80 % line is still in the logs and on the board). The billing budget's own emails
+at 25, 50, 90 and 100 % (docs/recipe-setup.md) stay as the backstop for everything that is not
+model spend.
 
 ## Prompt injection defences
 
@@ -928,7 +1003,9 @@ Server-only. Documents:
 
 - `users/{uid}`: `balance`, `inFlight`, `purchasedCredits`, `consumedCredits`, `refundedCredits`,
   `welcomeCredits` + `welcomeAt` (free recipes of the welcome grant, lifetime, following merges, and
-  when this account claimed; never in `purchasedCredits`),
+  when this account claimed; never in `purchasedCredits`), `welcomeUnspent` + `welcomeSpent` (free
+  recipes not yet charged, and charged: the FIFO ledger leaves the latter out), `welcomeProviders`
+  (the providers whose identities are recorded in `welcomes/`),
   rate windows (`minuteWindow`, `dayWindow`, `verifyWindow`), `spendWindow` (`{day, microUsd}`),
   `infraRefunds` (`{day, count}`), `contentRefundsUsed` and `timeoutRefundsUsed` (lifetime),
   `buyerKeys`, `profileScrubbedAt`, `debtMovedTo` + `debtMovedAt`, `appleToken` (`{sealed,
@@ -963,8 +1040,11 @@ Server-only. Documents:
   `infraFailures`, `qualityFailures`, `refundedCredits`, `unknownUsageCalls` (booked at the worst case),
   `netCreditsGranted` (production credits granted minus store refunds that day),
   `sandboxGrants`, `sandboxCredits`, `welcomeGrants` and `welcomeCredits` (welcome grants made
-  that day and their free recipes; never in `netCreditsGranted`). A call is booked on the day it
-  was reserved.
+  that day and their free recipes; never in `netCreditsGranted`), `ceilingMicroUsd` (the spend
+  ceiling the day's last reservation was checked against: the board's ceiling history),
+  `spendAlerts` (`{"50" | "80" | "100": ms}`: when each `spend_threshold` was logged) and
+  `dailyCapReachedAt` (ms of the first `DAILY_CAP` refusal). A call is booked on the day it was
+  reserved.
   `stats/ledger`: `negativeBalanceTotal` (the sweeper's last sum of negative balances).
 - `config/runtime`: see below.
 
@@ -1283,7 +1363,8 @@ Application Default Credentials impersonating `recipe-functions@bestbefore-f9ee1
 | Free recipes (welcome grant) | `stats/{day}.welcomeGrants` / `welcomeCredits` today and over the period, against `config/runtime.welcome.perDay`; never counted as sales (`board.json` `welcome`) |
 | Unspent recipes | one aggregation: count and `sum(balance)` of `users` with `balance > 0` |
 | Negative balances | `stats/ledger.negativeBalanceTotal` (the sweeper's last sum) |
-| Spend per day, ceiling line | `stats/{day}.spentMicroUsd + reservedMicroUsd`; each day's ceiling as above, with **today's** config (past configs are not kept) |
+| Model spend per day: settled and reserved bars, the ceiling line, ▲ on days it was reached | `stats/{day}.spentMicroUsd` and `reservedMicroUsd` (reserved is in-flight worst cases, normally only today's); the line is `stats/{day}.ceilingMicroUsd` for a past day that recorded it, else (and always for today) `dailySpendCeiling` with **today's** config (past configs are not kept); ▲ where `stats/{day}.spendAlerts["100"]` is set (a reservation was refused at the ceiling). Days that reached `dailyCap` (`dailyCapReachedAt`) are listed under the chart. No extra read: the same `stats` docs. `board.json` `spendPerDay` |
+| Free recipes: welcome grants per day | `stats/{day}.welcomeGrants` against today's `welcome.perDay` (line), ▲ on days at it |
 | Month to date, month-end worst case | the month's `stats` days; worst case = month to date + what is left of today's ceiling + every remaining day at `dailySpendMaxMicroUsd` |
 | Answers per day | `succeeded`, `contentFailures`, `infraFailures`, `qualityFailures`; also `refundedCredits`, `unknownUsageCalls`, token counts, `generationUnits` |
 | Average cost | period spend / written answers, and / recipes kept (`generationUnits − refundedCredits`) |

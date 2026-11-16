@@ -5,7 +5,7 @@ import { RECENT_SIGN_IN_SECONDS, type Costs } from "../constants";
 import { assertOpen, emptyUser, uidHash, userRef, utcDay, type UserDoc } from "../model";
 import type { Caller, Deps } from "../ports";
 import { blockFlag, mergeKeys } from "./buyers";
-import { welcomeFlag } from "./welcome";
+import { authIdentities, hasUnrecordedProvider, prepareWelcomeRecord, recordWelcomeIdentities, welcomeFlag } from "./welcome";
 import { APPLE_PROVIDER, dropTokenIfAppleUnlinked, removeAppleLink, revokeStored } from "./appleToken";
 
 type Block = { purchasesBlocked?: true; acceptsOptionalIngredients?: true; welcomeRecipes?: number };
@@ -62,6 +62,9 @@ export async function getBalance(deps: Deps, caller: Caller): Promise<{ balance:
   // Apple unlinked since its token was stored: the token goes (and is revoked). No extra read
   // unless the ID token says Apple is gone.
   if (user?.appleToken) await dropTokenIfAppleUnlinked(deps, caller, user.appleToken);
+  // An account that had its free recipes and whose ID token names a Google or Apple provider it
+  // has not recorded yet (a link since the claim): recorded now. No extra read otherwise.
+  if (hasUnrecordedProvider(user, caller)) await recordWelcomeIdentities(deps, caller.uid, "getBalance");
   return {
     balance: user && user.deletedAt === undefined && user.mergedInto === undefined ? user.balance : 0,
     costs: config.costs,
@@ -142,8 +145,13 @@ export async function mergeBalance(
     // Free recipes move with the balance and stay out of the FIFO ledger (fifoConsumed). An
     // anonymous source cannot have claimed (claimWelcome needs Google or Apple), but whatever it
     // holds is carried, never dropped. The target's `welcomeAt` is kept as it was.
-    const welcomeCredits = (base.welcomeCredits ?? 0) + (src?.welcomeCredits ?? 0);
-    if (welcomeCredits > 0) merged.welcomeCredits = welcomeCredits;
+    // Free and bought use stay apart: each side's charged free recipes (`welcomeSpent`) and those
+    // still to be spent first (`welcomeUnspent`) are summed, so neither side's earlier bought use
+    // is hidden by the other's free recipes, nor the reverse.
+    for (const k of ["welcomeCredits", "welcomeUnspent", "welcomeSpent"] as const) {
+      const sum = (base[k] ?? 0) + (src?.[k] ?? 0);
+      if (sum > 0) merged[k] = sum;
+    }
     if (base.welcomeAt === undefined && src?.welcomeAt !== undefined) merged.welcomeAt = src.welcomeAt;
     if (merged.buyerKeys!.length === 0) delete merged.buyerKeys;
     const addCount = (x: { day: string; count: number }, y: { count: number }) => ({ day, count: x.count + y.count });
@@ -175,6 +183,9 @@ export async function mergeBalance(
     deps.logger.warn("Could not delete merged anonymous user", { uidHash: uidHash(source.uid), error: String(e).slice(0, 200) });
   }
   await scrubProfile(deps, caller, true);
+  // The target took over an install (a fresh sign-in): if it had its free recipes, any identity it
+  // has gained since is recorded.
+  if (result.target.welcomeAt !== undefined) await recordWelcomeIdentities(deps, caller.uid, "mergeBalance");
   const config = await deps.config();
   return { balance: result.balance, moved: result.moved, costs: config.costs, ...capabilitiesOf(config), ...(await blockFlag(deps.db, result.target, config)), ...(await welcomeFlag(deps, config)) };
 }
@@ -218,9 +229,18 @@ export async function eraseAccount(
   freshCode: string | undefined,
 ): Promise<{ deleted: true; balance: 0; appleLinkRemoved?: boolean }> {
   const uRef = userRef(deps.db, uid);
+  // Every Google and Apple identity the Auth record still has, read before it is deleted: an
+  // account that had its free recipes records each in `welcomes/` in the deletion's transaction
+  // (an identity linked after the claim included), so signing in again with any of them on a new
+  // account grants nothing. A failed lookup fails the deletion (the client retries) rather than
+  // lose that record.
+  const identities = await authIdentities(deps, uid);
   const { mergedAway, storedApple } = await deps.db.runTransaction(async (tx) => {
     const user = (await tx.get(uRef)).data();
     const storedApple = user?.appleToken;
+    const recordWelcome = user?.mergedInto === undefined && user?.deletedAt === undefined
+      ? await prepareWelcomeRecord(tx, deps, uid, user, identities)
+      : () => 0;
     // A merged-away account holds nothing, and its purchases must keep their uid so refunds still
     // follow `mergedInto` to the account that holds the credits now.
     if (user?.mergedInto !== undefined) {
@@ -233,6 +253,7 @@ export async function eraseAccount(
     }
     // Deleting mid-generation would delete the pending reservation before it settles.
     if (user && user.inFlight > 0) fail("failed-precondition", "BUSY", "A recipe is being generated; try again shortly");
+    recordWelcome({ updateUser: false });
     tx.set(uRef, {
       ...(user ?? emptyUser()),
       balance: 0,

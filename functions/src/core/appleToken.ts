@@ -16,6 +16,7 @@ import { fail } from "../contract";
 import { appleTokenContext } from "../constants";
 import { emptyUser, uidHash, userRef, type StoredAppleToken } from "../model";
 import { AppleTokenError, type Caller, type Deps } from "../ports";
+import { recordWelcomeIdentities } from "./welcome";
 
 export const APPLE_PROVIDER = "apple.com";
 
@@ -71,6 +72,9 @@ export async function registerAppleSignIn(deps: Deps, caller: Caller, data: unkn
   if (before && (before.deletedAt !== undefined || before.mergedInto !== undefined)) {
     fail("failed-precondition", "ACCOUNT_CLOSED", "The account was deleted or merged");
   }
+  // An Apple identity linked to an account that already had its free recipes is recorded now,
+  // whatever Apple answers below, so it cannot claim them again from another account.
+  if (before?.welcomeAt !== undefined) await recordWelcomeIdentities(deps, caller.uid, "registerAppleSignIn");
 
   let token: string;
   try {

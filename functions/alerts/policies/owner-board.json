@@ -1,0 +1,24 @@
+{
+  "displayName": "Recipe: owner board",
+  "documentation": {
+    "content": "The hourly redraw of the owner board failed (`board_redraw_failed`), or it refused to write because the board bucket is missing or not private (`board_bucket_public`, with a `reason`). The board at storage.cloud.google.com/bestbefore-f9ee1-owner-board/board.html is then stale. See functions/README.md, \"The board\" > \"Always on\" and \"Logs to alert on\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=(\"board_redraw_failed\" OR \"board_bucket_public\")"
+      },
+      "displayName": "Recipe: owner board"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "3600s"
+    }
+  }
+}

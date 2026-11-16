@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { HttpsError } from "firebase-functions/v2/https";
 import { deleteAccount, getBalance, mergeBalance } from "../src/core/account";
+import { registerAppleSignIn } from "../src/core/appleToken";
 import { generateRecipe } from "../src/core/generation";
 import { handleAppleNotification } from "../src/core/notifications";
 import { applePurchaseId } from "../src/core/purchases";
@@ -176,6 +177,32 @@ describe("getWelcomeOffer and welcomeRecipes", () => {
     expect(await counter.grants("2026-06-17")).toBe(7);
   });
 
+  test("a failed read of the day's count never fails a response: welcomeRecipes 0, one log line", async () => {
+    deps.welcomeDayGrants = async () => {
+      throw new Error("firestore unavailable");
+    };
+    await setConfig({ perUserPerMinute: 100 });
+    expect(await getBalance(deps, callerFor("nobody"))).toMatchObject({ balance: 0, welcomeRecipes: 0 });
+    const a = await account({ "google.com": "g-down" });
+    expect(await claimWelcome(deps, google(a))).toMatchObject({ status: "GRANTED", granted: 3, balance: 3, welcomeRecipes: 0 });
+    expect(await generateRecipe(deps, google(a), request())).toMatchObject({ status: "DONE", charged: true, balance: 2, welcomeRecipes: 0 });
+    expect(await getWelcomeOffer(deps)).toEqual({ recipes: 0 });
+    const lines = deps.logs.filter((l) => l.message === "welcome_count_unavailable");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatchObject({ level: "warn", data: { error: "firestore unavailable" } });
+  });
+
+  test("the day counter never hands one day's load in flight to a call for another day", async () => {
+    const pending = new Map<string, (v: number) => void>();
+    const counter = new WelcomeDayCounter((day) => new Promise<number>((r) => pending.set(day, r)), deps.now);
+    const a = counter.grants("2026-06-15");
+    const b = counter.grants("2026-06-16");
+    expect([...pending.keys()]).toEqual(["2026-06-15", "2026-06-16"]);
+    pending.get("2026-06-16")!(9);
+    pending.get("2026-06-15")!(4);
+    expect(await Promise.all([a, b])).toEqual([4, 9]);
+  });
+
   test("flooding the offer without sign-in: the address and the instance ceiling bound it", () => {
     const t = new CallThrottle(120);
     for (let i = 0; i < 120; i++) t.admitAddress("203.0.113.7", NOW);
@@ -246,6 +273,61 @@ describe("claimWelcome", () => {
     expect(await claimWelcome(deps, signedIn(b, "apple.com"))).toMatchObject({ status: "ALREADY", granted: 0, balance: 0 });
     expect(await userDoc(a)).toMatchObject({ welcomeCredits: 3 });
     expect(await stats()).toMatchObject({ welcomeGrants: 1 });
+  });
+
+  test("Google, claim, add Apple, delete, sign in with Apple: ALREADY with no second claim", async () => {
+    const a = await account({ "google.com": "g-del" });
+    expect((await claimWelcome(deps, google(a))).status).toBe("GRANTED");
+    await auth.updateUser(a, { providerToLink: { providerId: "apple.com", uid: "a-del" } });
+    // No claim, no getBalance: the deletion itself records Apple from the Auth record.
+    await deleteAccount(deps, google(a), {});
+    expect(await welcomeDoc(welcomeKey("apple.com", "a-del"))).toMatchObject({ uid: a, provider: "apple.com", credits: 0 });
+    const b = await account({ "apple.com": "a-del" });
+    expect(await claimWelcome(deps, signedIn(b, "apple.com"))).toMatchObject({ status: "ALREADY", granted: 0, balance: 0 });
+    expect(await stats()).toMatchObject({ welcomeGrants: 1 });
+  });
+
+  test("deleting an account that never claimed records nothing", async () => {
+    const a = await account({ "google.com": "g-never", "apple.com": "a-never" });
+    await deleteAccount(deps, google(a), {});
+    expect(await welcomeCount()).toBe(0);
+    const b = await account({ "apple.com": "a-never" });
+    expect((await claimWelcome(deps, signedIn(b, "apple.com"))).status).toBe("GRANTED");
+  });
+
+  test("getBalance records a provider linked since the claim, once, when the ID token names it", async () => {
+    const a = await account({ "google.com": "g-gb" });
+    await claimWelcome(deps, google(a));
+    expect(await userDoc(a)).toMatchObject({ welcomeProviders: ["google.com"] });
+    await auth.updateUser(a, { providerToLink: { providerId: "apple.com", uid: "a-gb" } });
+    // A token from before the link names only Google: nothing to look up.
+    await getBalance(deps, google(a));
+    expect(await welcomeDoc(welcomeKey("apple.com", "a-gb"))).toBeUndefined();
+    const both = signedIn(a, "apple.com", ["google.com", "apple.com"]);
+    await getBalance(deps, both);
+    expect(await welcomeDoc(welcomeKey("apple.com", "a-gb"))).toMatchObject({ uid: a, credits: 0 });
+    expect(await userDoc(a)).toMatchObject({ welcomeProviders: ["apple.com", "google.com"] });
+    await getBalance(deps, both);
+    expect(deps.logs.filter((l) => l.message === "welcome_identities_recorded")).toEqual([
+      { level: "info", message: "welcome_identities_recorded", data: { uidHash: expect.any(String), recorded: 1, via: "getBalance" } },
+    ]);
+  });
+
+  test("registerAppleSignIn records the Apple identity of an account that claimed", async () => {
+    const a = await account({ "google.com": "g-reg" });
+    await claimWelcome(deps, google(a));
+    await auth.updateUser(a, { providerToLink: { providerId: "apple.com", uid: "a-reg" } });
+    await registerAppleSignIn(deps, signedIn(a, "apple.com", ["google.com", "apple.com"]), { appleAuthorizationCode: "code-reg" });
+    expect(await welcomeDoc(welcomeKey("apple.com", "a-reg"))).toMatchObject({ uid: a, credits: 0 });
+  });
+
+  test("mergeBalance records the target's identities when it had claimed", async () => {
+    const a = await account({ "google.com": "g-mrg" });
+    await claimWelcome(deps, google(a));
+    await auth.updateUser(a, { providerToLink: { providerId: "apple.com", uid: "a-mrg" } });
+    const anon = await anonymousUser();
+    await mergeBalance(deps, google(a), { sourceIdToken: anon.idToken });
+    expect(await welcomeDoc(welcomeKey("apple.com", "a-mrg"))).toMatchObject({ uid: a, credits: 0 });
   });
 
   test("an account linked to both from the start claims once, and neither identity claims again", async () => {
@@ -435,52 +517,135 @@ describe("free recipes are not purchases", () => {
     expect((await generateRecipe(deps, google(a), request())).charged).toBe(true);
   });
 
-  describe("FIFO: free recipes count as spent first", () => {
+  describe("FIFO: free recipes are spent first by the charges after the grant", () => {
     let signedAt = NOW;
+    beforeEach(async () => {
+      await setConfig({ perUserPerMinute: 100 });
+    });
     const notify = (type: string, tx: AppleTransaction) =>
       handleAppleNotification(deps, { signedPayload: deps.appStore.signNotification(type, tx, ++signedAt) });
-    const spend = async (uid: string, n: number) => {
-      const u = (await userDoc(uid))!;
-      await db.collection("users").doc(uid).update({ balance: u.balance - n, consumedCredits: (u.consumedCredits ?? 0) + n });
+    /** Spends n recipes the real way (generateRecipe, settle). */
+    const spend = async (caller: Caller, n: number) => {
+      for (let i = 0; i < n; i++) expect((await generateRecipe(deps, caller, request())).status).toBe("DONE");
     };
-    async function claimThenBuy(sub: string): Promise<{ uid: string; tx: AppleTransaction }> {
-      const uid = await account({ "apple.com": sub });
-      await claimWelcome(deps, signedIn(uid, "apple.com"));
+    const consumption = async (tx: AppleTransaction) => {
+      deps.appStore.consumptionSent.length = 0;
+      await notify("CONSUMPTION_REQUEST", tx);
+      return deps.appStore.consumptionSent.map((x) => x.info.consumptionPercentage);
+    };
+    const purchaseOf = async (tx: AppleTransaction) =>
+      (await db.collection("purchases").doc(applePurchaseId("production", tx.transactionId)).get()).data();
+    async function buy(caller: Caller, sub: string): Promise<AppleTransaction> {
       deps.clock.advance(1000);
       const tx = appleTx({ appTransactionId: `T-${sub}` });
-      const res = await verifyPurchase(deps, signedIn(uid, "apple.com"), { store: "appstore", signedTransaction: deps.appStore.sign(tx), consumptionConsent: true });
+      const res = await verifyPurchase(deps, caller, { store: "appstore", signedTransaction: deps.appStore.sign(tx), consumptionConsent: true });
       expect(res.status).toBe("GRANTED");
-      return { uid, tx };
+      return tx;
+    }
+    async function apple(sub: string): Promise<Caller> {
+      return signedIn(await account({ "apple.com": sub }), "apple.com");
     }
 
-    test("Apple's consumption answer leaves the free recipes out", async () => {
-      const { uid, tx } = await claimThenBuy("f-1");
-      await spend(uid, 3);
-      await notify("CONSUMPTION_REQUEST", tx);
-      await spend(uid, 2);
-      await notify("CONSUMPTION_REQUEST", tx);
-      expect(deps.appStore.consumptionSent.map((s) => s.info.consumptionPercentage)).toEqual([0, 20_000]);
+    test("claim, then buy: Apple's consumption answer leaves the free recipes out", async () => {
+      const c = await apple("f-1");
+      await claimWelcome(deps, c);
+      const tx = await buy(c, "f-1");
+      await spend(c, 3);
+      expect(await consumption(tx)).toEqual([0]);
+      await spend(c, 2);
+      expect(await consumption(tx)).toEqual([20_000]);
+      expect(await userDoc(c.uid)).toMatchObject({ consumedCredits: 5, welcomeSpent: 3, welcomeUnspent: 0 });
     });
 
-    test("refunding a pack after using only the free recipes is not a refund after use", async () => {
-      const { uid, tx } = await claimThenBuy("f-2");
-      await spend(uid, 3);
+    test("claim, then buy: refunding after using only the free recipes is not a refund after use", async () => {
+      const c = await apple("f-2");
+      await claimWelcome(deps, c);
+      const tx = await buy(c, "f-2");
+      await spend(c, 3);
       await notify("REFUND", { ...tx, revocationDate: signedAt });
-      const p = (await db.collection("purchases").doc(applePurchaseId("production", tx.transactionId)).get()).data();
-      expect(p).toMatchObject({ refundAfterUse: false, refundedCredits: 10 });
+      expect(await purchaseOf(tx)).toMatchObject({ refundAfterUse: false, refundedCredits: 10 });
       expect((await db.collection("buyers").doc("apple_T-f-2").get()).exists).toBe(false);
-      // The free recipes were spent; the refund takes the pack's 10 back.
-      expect(await balanceOf(uid)).toBe(0);
+      expect(await balanceOf(c.uid)).toBe(0);
     });
 
-    test("using more than the free recipes, then refunding, is a refund after use of the excess only", async () => {
-      const { uid, tx } = await claimThenBuy("f-3");
-      await spend(uid, 5);
+    test("claim, then buy: using more than the free recipes, then refunding, is a refund after use of the excess", async () => {
+      const c = await apple("f-3");
+      await claimWelcome(deps, c);
+      const tx = await buy(c, "f-3");
+      await spend(c, 5);
       await notify("REFUND", { ...tx, revocationDate: signedAt });
       expect((await db.collection("buyers").doc("apple_T-f-3").get()).data()?.events).toMatchObject({
         [applePurchaseId("production", tx.transactionId)]: { spentCreditsTaken: 2, active: true },
       });
-      expect(await balanceOf(uid)).toBe(-2);
+      expect(await balanceOf(c.uid)).toBe(-2);
+    });
+
+    test("buy, use 3, then claim: free recipes do not hide the bought use (30 %, refund after use)", async () => {
+      const c = await apple("f-4");
+      const tx = await buy(c, "f-4");
+      await spend(c, 3);
+      await claimWelcome(deps, c);
+      expect(await userDoc(c.uid)).toMatchObject({ consumedCredits: 3, welcomeUnspent: 3 });
+      expect(await consumption(tx)).toEqual([30_000]);
+      await notify("REFUND", { ...tx, revocationDate: signedAt });
+      expect(await purchaseOf(tx)).toMatchObject({ refundAfterUse: true });
+      expect((await db.collection("buyers").doc("apple_T-f-4").get()).data()?.events).toMatchObject({
+        [applePurchaseId("production", tx.transactionId)]: { spentCreditsTaken: 3, active: true },
+      });
+      // 7 bought + 3 free = 10, and the refund takes the pack's 10 back.
+      expect(await balanceOf(c.uid)).toBe(0);
+    });
+
+    test("claim, spend 2 free, buy, spend 1: the third is the last free recipe, so the pack is unused (0 %)", async () => {
+      // Free first after the grant: 3 charges after it, all free; the pack's 10 are untouched.
+      const c = await apple("f-5");
+      await claimWelcome(deps, c);
+      await spend(c, 2);
+      const tx = await buy(c, "f-5");
+      await spend(c, 1);
+      expect(await consumption(tx)).toEqual([0]);
+      await spend(c, 1);
+      expect(await consumption(tx)).toEqual([10_000]);
+      await notify("REFUND", { ...tx, revocationDate: signedAt });
+      expect(await purchaseOf(tx)).toMatchObject({ refundAfterUse: true });
+    });
+
+    test("merge an anonymous buyer's used pack into an account that spent free recipes: neither side hides the other", async () => {
+      const anon = await anonymousUser();
+      const anonCaller = callerFor(anon.uid, "anonymous", Math.floor(NOW / 1000));
+      const tx = await buy(anonCaller, "f-6");
+      await spend(anonCaller, 3);
+      const c = await apple("f-6g");
+      await claimWelcome(deps, c);
+      await spend(c, 1);
+      await mergeBalance(deps, c, { sourceIdToken: anon.idToken });
+      expect(await userDoc(c.uid)).toMatchObject({ consumedCredits: 4, welcomeSpent: 1, welcomeUnspent: 2, welcomeCredits: 3 });
+      expect(await consumption(tx)).toEqual([30_000]);
+      // The target's 2 free recipes left go first, then the pack.
+      await spend(c, 3);
+      expect(await consumption(tx)).toEqual([40_000]);
+    });
+
+    test("merge first, claim after: the bought use before the grant still counts", async () => {
+      const anon = await anonymousUser();
+      const anonCaller = callerFor(anon.uid, "anonymous", Math.floor(NOW / 1000));
+      const tx = await buy(anonCaller, "f-7");
+      await spend(anonCaller, 3);
+      const c = await apple("f-7g");
+      await mergeBalance(deps, c, { sourceIdToken: anon.idToken });
+      await claimWelcome(deps, c);
+      await spend(c, 2);
+      expect(await userDoc(c.uid)).toMatchObject({ consumedCredits: 5, welcomeSpent: 2, welcomeUnspent: 1 });
+      expect(await consumption(tx)).toEqual([30_000]);
+    });
+
+    test("an account without free recipes is unchanged: no welcome fields, the plain ledger", async () => {
+      const c = await apple("f-8");
+      const tx = await buy(c, "f-8");
+      await spend(c, 4);
+      const u = await userDoc(c.uid);
+      expect(Object.keys(u!).filter((k) => k.startsWith("welcome"))).toEqual([]);
+      expect(await consumption(tx)).toEqual([40_000]);
     });
   });
 

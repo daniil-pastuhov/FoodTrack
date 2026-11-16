@@ -1,0 +1,53 @@
+{
+  "displayName": "Recipe: spike of per-account limit refusals",
+  "documentation": {
+    "content": "More generations than usual were refused for an account's daily limits in the last hour: `USER_DAILY_LIMIT` (the account's generations or estimated spend for the day) or `INFRA_FAILURE_LIMIT` (too many refunded technical failures today), counted from `generation_refused` lines (`reason`, `why`, `uidHash`; sampled at 30 a minute per instance). Many at once point at a script, a client retry loop, or the model failing. See functions/README.md, \"Alerts\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "displayName": "USER_DAILY_LIMIT refusals above 20 in an hour",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/recipe_generation_refused\" AND metric.labels.reason = \"USER_DAILY_LIMIT\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 20,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    },
+    {
+      "displayName": "INFRA_FAILURE_LIMIT refusals above 5 in an hour",
+      "conditionThreshold": {
+        "filter": "resource.type = \"cloud_run_revision\" AND metric.type = \"logging.googleapis.com/user/recipe_generation_refused\" AND metric.labels.reason = \"INFRA_FAILURE_LIMIT\"",
+        "aggregations": [
+          {
+            "alignmentPeriod": "3600s",
+            "perSeriesAligner": "ALIGN_SUM",
+            "crossSeriesReducer": "REDUCE_SUM"
+          }
+        ],
+        "comparison": "COMPARISON_GT",
+        "thresholdValue": 5,
+        "duration": "0s",
+        "trigger": {
+          "count": 1
+        }
+      }
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "WARNING",
+  "alertStrategy": {
+    "autoClose": "86400s"
+  }
+}

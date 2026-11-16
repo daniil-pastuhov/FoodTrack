@@ -16,12 +16,13 @@
  *   purchase (no account needed, nothing about the caller read or stored), and `welcomeRecipes`
  *   beside every `balance` (welcomeFlag) for an account that already exists.
  */
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import { FieldValue, Timestamp, type Transaction } from "firebase-admin/firestore";
 import { capabilitiesOf, fail, type WelcomeClaimResponse, type WelcomeOfferResponse, type WelcomeStatus } from "../contract";
 import { CONFIG_CACHE_MS } from "../constants";
 import {
   assertOpen,
   emptyUser,
+  isClosed,
   statsRef,
   uidHash,
   userRef,
@@ -54,15 +55,17 @@ export async function readDayGrants(deps: Pick<Deps, "db">, day: string): Promis
 /**
  * Today's grant count cached per instance for `ttlMs`, so neither a flood of getWelcomeOffer calls
  * nor the `welcomeRecipes` field of every response that carries `balance` costs more than one
- * read per instance per 30 s. Concurrent loads
- * share one read; a failed read fails the call and is not cached. The field may therefore lag the
- * day's brake by up to `ttlMs`; claimWelcome reads the counter inside its own transaction.
+ * read per instance per 30 s. Concurrent loads of the same day share one read (a load in flight
+ * for one day is never handed to a call for another, around midnight). A failed read rejects and
+ * is not cached; welcomeFlag turns that into `welcomeRecipes: 0`, so it never fails a response.
+ * The field may lag the day's brake by up to `ttlMs`; claimWelcome reads the counter inside its
+ * own transaction.
  */
 export class WelcomeDayCounter {
   private day = "";
   private value = 0;
   private loadedAt = Number.NEGATIVE_INFINITY;
-  private inFlight: Promise<number> | undefined;
+  private readonly inFlight = new Map<string, Promise<number>>();
 
   constructor(
     private readonly read: (day: string) => Promise<number>,
@@ -72,20 +75,23 @@ export class WelcomeDayCounter {
 
   grants(day: string): Promise<number> {
     if (this.day === day && this.now() - this.loadedAt < this.ttlMs) return Promise.resolve(this.value);
-    this.inFlight ??= this.read(day).then(
+    const pending = this.inFlight.get(day);
+    if (pending) return pending;
+    const load = this.read(day).then(
       (v) => {
         this.day = day;
         this.value = v;
         this.loadedAt = this.now();
-        this.inFlight = undefined;
+        this.inFlight.delete(day);
         return v;
       },
       (e: unknown) => {
-        this.inFlight = undefined;
+        this.inFlight.delete(day);
         throw e;
       },
     );
-    return this.inFlight;
+    this.inFlight.set(day, load);
+    return load;
   }
 }
 
@@ -94,12 +100,30 @@ export class WelcomeDayCounter {
  * grants now, 0 when the grant is off (`recipes` or `perDay` 0, or generation paused) or today's
  * grants are used up. The same for every account. Reads only the runtime config and today's
  * count (through `deps.welcomeDayGrants`, cached in production; afresh without it).
+ *
+ * It is a hint beside an answer that is already decided, and most callers await it after their
+ * transaction has committed (a grant, a settled generation, a verified purchase, a merge). So a
+ * failed read of the day's count never fails the response: it answers 0 and logs one warning.
+ * A claim reads the count inside its own transaction, so a 0 here cannot cause a wrong grant.
  */
+const countUnavailableLog = new LogSampler(60_000, 1);
+
 export async function welcomeFlag(deps: Deps, config: RuntimeConfig): Promise<{ welcomeRecipes: number }> {
   if (!welcomeOn(config)) return { welcomeRecipes: 0 };
-  const day = utcDay(deps.now());
-  const grants = deps.welcomeDayGrants ? await deps.welcomeDayGrants(day) : await readDayGrants(deps, day);
-  return { welcomeRecipes: grants >= config.welcome.perDay ? 0 : config.welcome.recipes };
+  try {
+    const day = utcDay(deps.now());
+    const grants = deps.welcomeDayGrants ? await deps.welcomeDayGrants(day) : await readDayGrants(deps, day);
+    return { welcomeRecipes: grants >= config.welcome.perDay ? 0 : config.welcome.recipes };
+  } catch (e) {
+    // At most one line a minute per instance, however many responses carry the field meanwhile.
+    const sample = countUnavailableLog.take(deps.now());
+    if (sample.log) {
+      deps.logger.warn("welcome_count_unavailable", {
+        error: (e instanceof Error ? e.message : String(e)).slice(0, 200), suppressedSinceLast: sample.suppressed,
+      });
+    }
+    return { welcomeRecipes: 0 };
+  }
 }
 
 /**
@@ -111,9 +135,96 @@ export async function getWelcomeOffer(deps: Deps): Promise<WelcomeOfferResponse>
   return { recipes: (await welcomeFlag(deps, config)).welcomeRecipes };
 }
 
-interface Identity {
+export interface Identity {
   provider: string;
   key: string;
+}
+
+/** The Google and Apple identities among an Auth record's providers, sorted by key. */
+function identitiesFrom(providerData: readonly { providerId?: string; uid?: string }[]): Identity[] {
+  const out = new Map<string, Identity>();
+  for (const p of providerData) {
+    if (!p.providerId || !p.uid || !WELCOME_PROVIDERS.includes(p.providerId)) continue;
+    const key = welcomeKey(p.providerId, p.uid);
+    out.set(key, { provider: p.providerId, key });
+  }
+  return [...out.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+}
+
+/** A uid's Google and Apple identities from its Auth record; [] when there is no record. */
+export async function authIdentities(deps: Deps, uid: string): Promise<Identity[]> {
+  try {
+    return identitiesFrom((await deps.auth.getUser(uid)).providerData);
+  } catch (e) {
+    if ((e as { code?: string }).code === "auth/user-not-found") return [];
+    throw e;
+  }
+}
+
+/**
+ * For an account that has claimed (`welcomeAt`): reads, inside `tx` and before any write, the
+ * `welcomes/` documents of `ids`, and returns the writer that creates the missing ones (credits 0)
+ * and keeps `welcomeProviders` current. So an identity linked after the claim is recorded as soon
+ * as the server sees it (claimWelcome, getBalance, registerAppleSignIn, mergeBalance, deletion),
+ * and can never claim again from another account. A no-op for an account that never claimed.
+ */
+export async function prepareWelcomeRecord(
+  tx: Transaction,
+  deps: Deps,
+  uid: string,
+  user: UserDoc | undefined,
+  ids: readonly Identity[],
+): Promise<(opts?: { updateUser?: boolean }) => number> {
+  if (!user || user.welcomeAt === undefined || ids.length === 0) return () => 0;
+  const snaps = await tx.getAll(...ids.map((id) => welcomeRef(deps.db, id.key)));
+  return ({ updateUser = true } = {}) => {
+    const at = Timestamp.fromMillis(deps.now());
+    let created = 0;
+    ids.forEach((id, i) => {
+      if (snaps[i].exists) return;
+      tx.create(welcomeRef(deps.db, id.key), { uid, provider: id.provider, credits: 0, at });
+      created++;
+    });
+    const providers = [...new Set([...(user.welcomeProviders ?? []), ...ids.map((id) => id.provider)])].sort();
+    if (updateUser && providers.join() !== [...(user.welcomeProviders ?? [])].sort().join()) {
+      tx.update(userRef(deps.db, uid), { welcomeProviders: providers });
+    }
+    return created;
+  };
+}
+
+/**
+ * Records the identities an account that claimed has gained since (see prepareWelcomeRecord), in
+ * its own transaction, from the Auth record. Best effort for the callers that only observe a link
+ * (getBalance, registerAppleSignIn, mergeBalance): it never throws, and logs what it did.
+ */
+export async function recordWelcomeIdentities(deps: Deps, uid: string, via: string): Promise<number> {
+  try {
+    const ids = await authIdentities(deps, uid);
+    if (ids.length === 0) return 0;
+    const created = await deps.db.runTransaction(async (tx) => {
+      const user = (await tx.get(userRef(deps.db, uid))).data();
+      if (!user || isClosed(user)) return 0;
+      const write = await prepareWelcomeRecord(tx, deps, uid, user, ids);
+      return write();
+    });
+    if (created > 0) deps.logger.info("welcome_identities_recorded", { uidHash: uidHash(uid), recorded: created, via });
+    return created;
+  } catch (e) {
+    deps.logger.warn("welcome_identity_record_failed", { uidHash: uidHash(uid), via, error: String(e).slice(0, 200) });
+    return 0;
+  }
+}
+
+/**
+ * Whether the ID token names a Google or Apple provider the claimed account has not recorded yet
+ * (`welcomeProviders`): the cheap signal, from data already at hand, that recordWelcomeIdentities
+ * is worth an Auth lookup.
+ */
+export function hasUnrecordedProvider(user: UserDoc | undefined, caller: Caller): boolean {
+  if (!user || user.welcomeAt === undefined || isClosed(user)) return false;
+  const known = user.welcomeProviders ?? [];
+  return caller.providers.some((p) => WELCOME_PROVIDERS.includes(p) && !known.includes(p));
 }
 
 function signInRequired(): never {
@@ -128,21 +239,9 @@ function signInRequired(): never {
 async function identitiesOf(deps: Deps, caller: Caller): Promise<Identity[]> {
   const tokenHasOne = caller.providers.some((p) => WELCOME_PROVIDERS.includes(p));
   if (!tokenHasOne && (caller.signInProvider === "anonymous" || caller.signInProvider === "")) signInRequired();
-  let record;
-  try {
-    record = await deps.auth.getUser(caller.uid);
-  } catch (e) {
-    if ((e as { code?: string }).code === "auth/user-not-found") signInRequired();
-    throw e;
-  }
-  const out = new Map<string, Identity>();
-  for (const p of record.providerData) {
-    if (!p.providerId || !p.uid || !WELCOME_PROVIDERS.includes(p.providerId)) continue;
-    const key = welcomeKey(p.providerId, p.uid);
-    out.set(key, { provider: p.providerId, key });
-  }
-  if (out.size === 0) signInRequired();
-  return [...out.values()].sort((a, b) => (a.key < b.key ? -1 : 1));
+  const ids = await authIdentities(deps, caller.uid);
+  if (ids.length === 0) signInRequired();
+  return ids;
 }
 
 type ClaimOutcome = {
@@ -196,6 +295,10 @@ export async function claimWelcome(deps: Deps, caller: Caller): Promise<WelcomeC
         tx.create(welcomeRef(deps.db, id.key), { uid: caller.uid, provider: id.provider, credits: 0, at: now });
         recorded++;
       });
+      if (user?.welcomeAt !== undefined) {
+        const providers = [...new Set([...(user.welcomeProviders ?? []), ...identities.map((id) => id.provider)])].sort();
+        if (providers.join() !== [...(user.welcomeProviders ?? [])].sort().join()) tx.update(uRef, { welcomeProviders: providers });
+      }
       return { status: "ALREADY", granted: 0, user, recorded };
     }
     if (!welcomeOn(config)) return { status: "OFF", granted: 0, user };
@@ -212,7 +315,10 @@ export async function claimWelcome(deps: Deps, caller: Caller): Promise<WelcomeC
       ...base,
       balance: base.balance + recipes,
       welcomeCredits: (base.welcomeCredits ?? 0) + recipes,
+      // Spent first by the charges after the grant (generation settle), never before it.
+      welcomeUnspent: (base.welcomeUnspent ?? 0) + recipes,
       welcomeAt: now,
+      welcomeProviders: [...new Set(identities.map((id) => id.provider))].sort(),
     };
     tx.set(uRef, next);
     // Not revenue: never `netCreditsGranted`, so the spend ceiling does not rise with free recipes.
