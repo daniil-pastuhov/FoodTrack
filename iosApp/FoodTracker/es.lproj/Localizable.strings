@@ -319,7 +319,9 @@
 "notif_action_snooze" = "Mañana";
 
 "scan_mode_batch" = "Varios";
-"reticle_hint_batch" = "Sigue escaneando. Todo va a la lista";
+"reticle_hint_batch" = "Escanea un código de barras y luego muestra la fecha";
+"batch_date_read_format" = "Fecha leída: %@";
+"batch_date_rescan" = "Volver a escanear la fecha";
 "scan_mode_receipt" = "Ticket";
 "reticle_hint_receipt" = "Encuadra el ticket entero y toca para leerlo";
 "scan_receipt_button" = "Leer ticket";

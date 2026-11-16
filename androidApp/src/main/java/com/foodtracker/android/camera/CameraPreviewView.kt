@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.concurrent.futures.await
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.foodtracker.viewmodel.BACKGROUND_DATE_READ_INTERVAL_MILLIS
 import kotlinx.datetime.LocalDate
 import java.util.concurrent.Executors
 
@@ -31,8 +32,9 @@ enum class CameraScanMode {
 
     /**
      * Keeps the camera live and queues each scanned product instead of stopping to fill in a
-     * form, for unpacking a whole shop. Uses the same analyzer as [BARCODE]; only what the
-     * screen does with each result differs.
+     * form, for unpacking a whole shop. Uses the same analyzer as [BARCODE], which reads the
+     * printed date alongside the barcode (see `ScanFrameAnalyzer`); only what the screen does
+     * with each result differs.
      */
     BATCH,
 
@@ -51,6 +53,9 @@ fun CameraPreviewView(
     mode: CameraScanMode,
     onBarcodeFound: (String) -> Unit,
     onDateFound: (LocalDate) -> Unit,
+    /** Barcode and Batch: how long to leave between printed-date reads on the barcode's frames,
+     *  null for none. Called on the analyzer thread. */
+    dateReadIntervalMillis: () -> Long? = { BACKGROUND_DATE_READ_INTERVAL_MILLIS },
     onImageCaptureReady: (ImageCapture) -> Unit = {},
     torchEnabled: Boolean = false,
     onTorchAvailabilityChanged: (Boolean) -> Unit = {},
@@ -70,7 +75,15 @@ fun CameraPreviewView(
     // published by a screen that has already cleared its scan state. Both are read on the main
     // thread, as is onDispose, so checking them at delivery is enough.
     val currentMode by rememberUpdatedState(mode)
+    val currentDateReadInterval by rememberUpdatedState(dateReadIntervalMillis)
     var disposed by remember { mutableStateOf(false) }
+    // The analyzers of the current binding: each holds ML Kit clients, closed when a new binding
+    // replaces it or the camera goes (each waits for its reads still running).
+    val boundAnalyzers = remember { mutableListOf<AutoCloseable>() }
+    fun closeBoundAnalyzers() {
+        boundAnalyzers.forEach { it.close() }
+        boundAnalyzers.clear()
+    }
     fun deliverable(analyzerMode: CameraScanMode) = !disposed && currentMode == analyzerMode
 
     // The analyzer thread belongs to this composable, not to the process: without this, every
@@ -81,6 +94,7 @@ fun CameraPreviewView(
         onDispose {
             disposed = true
             boundProvider?.unbindAll()
+            closeBoundAnalyzers()
             cameraExecutor.shutdown()
         }
     }
@@ -94,17 +108,25 @@ fun CameraPreviewView(
                 it.surfaceProvider = previewView.surfaceProvider
             }
 
-            fun analyzer(analyzer: ImageAnalysis.Analyzer): ImageAnalysis =
-                ImageAnalysis.Builder()
+            val created = mutableListOf<AutoCloseable>()
+            fun <A> analyzer(analyzer: A): ImageAnalysis where A : ImageAnalysis.Analyzer, A : AutoCloseable {
+                created += analyzer
+                return ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                     .apply { setAnalyzer(cameraExecutor, analyzer) }
+            }
 
             val imageAnalysis = when (mode) {
-                // Batch shares the barcode analyzer verbatim; only what ScannerScreen does with
-                // each result differs (queue it, rather than stop and look it up).
-                CameraScanMode.BARCODE, CameraScanMode.BATCH ->
-                    analyzer(BarcodeAnalyzer { barcode -> if (deliverable(mode)) onBarcodeFound(barcode) })
+                // The barcode and Date mode's own date reader on the same frames; what
+                // ScannerScreen does with each result differs by mode.
+                CameraScanMode.BARCODE, CameraScanMode.BATCH -> analyzer(
+                    ScanFrameAnalyzer(
+                        barcodes = BarcodeAnalyzer { barcode -> if (deliverable(mode)) onBarcodeFound(barcode) },
+                        dates = TextOcrAnalyzer { result -> if (deliverable(mode)) onDateFound(result.date) },
+                        dateReadIntervalMillis = { currentDateReadInterval() }
+                    )
+                )
                 CameraScanMode.DATE_OCR ->
                     analyzer(TextOcrAnalyzer { result -> if (deliverable(mode)) onDateFound(result.date) })
                 // Both capture a still and process it afterwards, so neither wants a
@@ -114,6 +136,8 @@ fun CameraPreviewView(
             }
 
             cameraProvider.unbindAll()
+            closeBoundAnalyzers()
+            boundAnalyzers += created
             val boundCamera = cameraProvider.bindToLifecycle(
                 lifecycleOwner,
                 CameraSelector.DEFAULT_BACK_CAMERA,

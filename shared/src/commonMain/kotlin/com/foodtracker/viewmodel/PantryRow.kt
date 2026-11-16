@@ -4,6 +4,7 @@ import com.foodtracker.model.CategoryPreference
 import com.foodtracker.model.ExpiryStatus
 import com.foodtracker.model.PantryItem
 import com.foodtracker.model.ShelfLifeSource
+import com.foodtracker.model.ShelfLifeSuggestion
 import com.foodtracker.model.ShoppingListEntry
 import com.foodtracker.model.ShoppingSection
 import kotlinx.datetime.LocalDate
@@ -97,8 +98,18 @@ data class BatchScanEntry(
     val storageLocation: String,
     /** Where [expiryDate] came from, so the review list can flag the rows that are guesses. */
     val expirySource: ShelfLifeSource,
-    val isLookingUp: Boolean = false
+    val isLookingUp: Boolean = false,
+    /** True once the date has been changed by hand (`PantryStateHolder.updateBatchEntry`), so a
+     *  date the camera reads afterwards doesn't overwrite it (see [BatchDateRead]). */
+    val dateSetByHand: Boolean = false,
+    /** What [expiryDate] and [expirySource] were before the camera read the date off the pack
+     *  in Batch mode, for its Undo; null when no read is there to undo. */
+    val dateBeforeRead: ShelfLifeSuggestion? = null
 ) {
+    /** A row made from a receipt line rather than a scanned barcode. */
+    val isReceiptRow: Boolean
+        get() = id.startsWith(RECEIPT_ROW_ID_PREFIX)
+
     /** True when nothing better than the fallback was known, so the user should look at it. */
     val needsAttention: Boolean
         get() = expirySource == ShelfLifeSource.FALLBACK
@@ -107,7 +118,7 @@ data class BatchScanEntry(
      *  receipt row, because a receipt prints no dates. Only a date read off a pack is exempt. */
     val showsCheckDate: Boolean
         get() = !isLookingUp && (needsAttention ||
-            (id.startsWith(RECEIPT_ROW_ID_PREFIX) && expirySource != ShelfLifeSource.DETECTED))
+            (isReceiptRow && expirySource != ShelfLifeSource.DETECTED))
 }
 
 /** What `PantryStateHolder.enqueueReceiptLines` starts its generated row ids with. */
