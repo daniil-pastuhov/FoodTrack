@@ -173,7 +173,7 @@ def edit_notes(notes, version):
     subprocess.run(f'{editor} "{file.name}"', shell=True, check=False)
     edited, current = {}, None
     for line in Path(file.name).read_text(encoding="utf-8").splitlines():
-        header = re.fullmatch(r"\[([A-Za-z-]+)\]\s*", line)
+        header = re.fullmatch(r"\[([A-Za-z0-9-]+)\]\s*", line)  # digits: es-419
         if header and header.group(1) in LOCALES:
             current = header.group(1)
             edited[current] = []
