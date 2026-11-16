@@ -2,4 +2,4 @@
 • Ny smakprofil i receptinställningarna: svara på ett kort quiz så följer recept från paket din smak.
 • Menyset säger nu till när du har bockat för få varor och det mesta av menyn skulle behöva handlas.
 • Recept som skrivits på telefonen är nu tydligt märkta.
-• Prydligare layout: innehållet håller sig undan statusfältet och skannerns flikar får plats på en rad.
+• Tydligare receptknappar; innehållet håller sig undan statusfältet och skannerns flikar får plats på en rad.

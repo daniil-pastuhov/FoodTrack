@@ -2,4 +2,4 @@
 • Nuevo perfil de gustos en los ajustes de recetas: responde a un breve cuestionario y las recetas de los paquetes se adaptarán a tus gustos.
 • Los menús ahora te avisan si has marcado muy pocos productos y habría que comprar casi todo.
 • Las recetas escritas en tu teléfono ahora están claramente indicadas.
-• Diseño más cuidado: nada queda bajo la barra de estado y las pestañas del escáner caben en una línea.
+• Botones de receta más claros; nada queda bajo la barra de estado y las pestañas del escáner caben en una línea.

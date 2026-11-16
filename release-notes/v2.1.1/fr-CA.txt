@@ -2,4 +2,4 @@
 • Nouveau profil de goûts dans les réglages des recettes : répondez à un court questionnaire et les recettes des packs suivront vos goûts.
 • Les menus vous avertissent si vous avez coché trop peu de produits.
 • Les recettes écrites sur votre téléphone sont clairement indiquées.
-• Affichage plus net : rien ne passe sous la barre d'état et les onglets du lecteur tiennent sur une ligne.
+• Boutons de recette plus clairs ; rien ne passe sous la barre d'état et les onglets du lecteur tiennent sur une ligne.

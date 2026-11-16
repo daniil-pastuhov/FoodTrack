@@ -2,4 +2,4 @@
 • Ny smagsprofil i opskriftsindstillingerne: svar på en kort quiz, så følger opskrifter fra pakker din smag.
 • Menusæt siger nu til, når du har valgt for få varer, og det meste af menuen skal købes ind.
 • Opskrifter skrevet på telefonen er nu tydeligt mærket.
-• Pænere layout: indholdet holder sig fri af statuslinjen, og scannerens faner kan være på én linje.
+• Tydeligere opskriftsknapper; indholdet holder sig fri af statuslinjen, og scannerens faner kan være på én linje.
