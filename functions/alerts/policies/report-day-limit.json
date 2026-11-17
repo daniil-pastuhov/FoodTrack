@@ -1,0 +1,27 @@
+{
+  "displayName": "Recipe: report day limit reached",
+  "documentation": {
+    "content": "The service-wide daily cap on reports (`config/runtime.reports.perDay`) refused its first report of the UTC day (`report_day_limit`: `day`, `perDay`, `reports`; once a day, `stats/{day}.reportCapReachedAt`). Someone may be flooding reports, or the cap is too low. Read `reports/` in the Firestore console. See functions/README.md, \"Reports\" and \"Alerts\".",
+    "mimeType": "text/markdown"
+  },
+  "conditions": [
+    {
+      "conditionMatchedLog": {
+        "filter": "resource.type=\"cloud_run_revision\" AND jsonPayload.message=\"report_day_limit\"",
+        "labelExtractors": {
+          "day": "EXTRACT(jsonPayload.day)"
+        }
+      },
+      "displayName": "Recipe: report day limit reached"
+    }
+  ],
+  "combiner": "OR",
+  "enabled": true,
+  "severity": "ERROR",
+  "alertStrategy": {
+    "autoClose": "604800s",
+    "notificationRateLimit": {
+      "period": "300s"
+    }
+  }
+}

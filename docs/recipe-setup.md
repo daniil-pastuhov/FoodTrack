@@ -426,9 +426,12 @@ them with `allowSandbox` only.
   after `config/runtime.reports.keepDays`, 90 days, and on `reportable.expiresAt`, the year-long
   record of each delivered result), then check `gcloud firestore fields ttls list` shows all
   four ACTIVE.
-- [ ] **Alert on reports** (functions/README.md "Reports", "Alerts"): a log-based alert on
-  `jsonPayload.message="recipe_reported"` (any) and one on `report_day_limit`, to the owner's email channel like the other
-  "Recipe: …" policies; read the report in the Firestore console (`reports/`).
+- [x] (Done 2026-11-17: made in the console, then kept as code in `functions/alerts/policies/`,
+  `recipe-reported.json` and `report-day-limit.json`, and applied with `alerts.py`.) **Alert on
+  reports** (functions/README.md "Reports", "Alerts"): "Recipe: recipe reported" on
+  `jsonPayload.message="recipe_reported"` (any) and "Recipe: report day limit reached" on
+  `report_day_limit`, to the owner's email channel like the other "Recipe: …" policies; read the
+  report in the Firestore console (`reports/`).
 - [ ] Decide the prices (`config/runtime.costs.recipeImage`, default 2 = twice a recipe, and
   `recipeImageSteps`, default 3, for the dish and up to `image.maxStepImages` = 2 step pictures) and leave
   `prices.imageUsdPerImage` at its defaults unless Google's price changed (USD 0.04 Flash-Lite
