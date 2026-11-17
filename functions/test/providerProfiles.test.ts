@@ -5,7 +5,7 @@
  * Auth emulator ID tokens (unsigned, not Google, not listed, revoked, disabled, an old sign-in),
  * the admin command's dry run and --apply, and the board and console page showing nothing more.
  */
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { HttpsError } from "firebase-functions/v2/https";
@@ -30,6 +30,12 @@ import {
   setProviderProfile,
   type OwnerEnv,
 } from "../src/core/providerSwitch";
+import {
+  OWNER_OTHERS_PER_MINUTE,
+  OWNER_PER_ADDRESS_PER_MINUTE,
+  OwnerCallGate,
+  type OwnerCallRequest,
+} from "../src/core/ownerCall";
 import {
   PROVIDER_PROFILES,
   activeProfileOf,
@@ -278,25 +284,37 @@ describe("activateProfile", () => {
 
 // --- The owner gate with Auth emulator tokens ------------------------------------------------
 
-/** A Google sign-in in the Auth emulator (it accepts an unsigned id_token). */
-async function googleUser(email = `owner-${randomUUID()}@example.com`): Promise<{ uid: string; idToken: string; email: string }> {
+/**
+ * A sign-in with an identity provider in the Auth emulator (it accepts an unsigned id_token);
+ * with `linkTo` (a session's ID token) the identity is linked to that user instead.
+ */
+async function idpSignIn(providerId: string, claims: { sub: string; email: string; email_verified: boolean }, linkTo?: string): Promise<{ uid: string; idToken: string }> {
   const res = await fetch(
     `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST}/identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=fake-api-key`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
-        postBody: `id_token=${encodeURIComponent(JSON.stringify({ sub: randomUUID(), email, email_verified: true, name: "Some Name" }))}&providerId=google.com`,
+        postBody: `id_token=${encodeURIComponent(JSON.stringify({ ...claims, name: "Some Name" }))}&providerId=${providerId}`,
         requestUri: "http://localhost",
         returnSecureToken: true,
         returnIdpCredential: true,
+        ...(linkTo ? { idToken: linkTo } : {}),
       }),
     },
   );
   const json = (await res.json()) as { localId: string; idToken: string };
   if (!res.ok) throw new Error(`signInWithIdp failed: ${JSON.stringify(json)}`);
-  return { uid: json.localId, idToken: json.idToken, email };
+  return { uid: json.localId, idToken: json.idToken };
 }
+
+/** A Google sign-in in the Auth emulator. */
+async function googleUser(email = `owner-${randomUUID()}@example.com`, emailVerified = true): Promise<{ uid: string; idToken: string; email: string; sub: string }> {
+  const sub = randomUUID();
+  return { ...(await idpSignIn("google.com", { sub, email, email_verified: emailVerified })), email, sub };
+}
+
+const newEmail = (who: string) => `${who}-${randomUUID()}@example.com`;
 
 const bearer = (t: string) => `Bearer ${t}`;
 
@@ -371,6 +389,81 @@ describe("the owner callables", () => {
     expect(await runtime()).toBeUndefined();
   });
 
+  test("a Google sign-in whose email is not verified is refused, listed by uid or by email", async () => {
+    const env = makeEnv();
+    const owner = await googleUser(newEmail("unverified"), false);
+    const token = await auth.verifyIdToken(owner.idToken);
+    expect(token.firebase.sign_in_provider).toBe("google.com");
+    expect(token.email_verified).toBe(false);
+    await db.doc(OWNER_DOC).set({ uids: [owner.uid], emails: [owner.email] });
+    expect(await reason(getProviderProfiles(env, bearer(owner.idToken)))).toBe("NOT_OWNER");
+    expect(await reason(setProviderProfile(env, bearer(owner.idToken), { profile: "off", expect: "flash-lite", confirm: true }))).toBe("NOT_OWNER");
+    // Refused before anything else: Google's name stays on the user (no write for a non-owner).
+    expect((await auth.getUser(owner.uid)).displayName).toBe("Some Name");
+    expect(await runtime()).toBeUndefined();
+  });
+
+  test("an account whose own email is another sign-in's: only its Google identity's email counts", async () => {
+    const env = makeEnv();
+    const appleEmail = newEmail("apple");
+    const googleEmail = newEmail("google");
+    // Made with Apple (verified email A), then Google (email B) linked to it.
+    const apple = await idpSignIn("apple.com", { sub: randomUUID(), email: appleEmail, email_verified: true });
+    const googleSub = randomUUID();
+    await idpSignIn("google.com", { sub: googleSub, email: googleEmail, email_verified: true }, apple.idToken);
+    const session = await idpSignIn("google.com", { sub: googleSub, email: googleEmail, email_verified: true });
+    expect(session.uid).toBe(apple.uid);
+    const token = await auth.verifyIdToken(session.idToken);
+    expect(token.firebase.sign_in_provider).toBe("google.com");
+    // The scenario: the account's (and the token's) email is the Apple one, and verified.
+    expect(token.email).toBe(appleEmail);
+    expect(token.email_verified).toBe(true);
+    expect((await auth.getUser(apple.uid)).email).toBe(appleEmail);
+
+    await db.doc(OWNER_DOC).set({ emails: [appleEmail] });
+    expect(await reason(getProviderProfiles(env, bearer(session.idToken)))).toBe("NOT_OWNER");
+    await db.doc(OWNER_DOC).set({ emails: [googleEmail.toUpperCase()] });
+    expect((await getProviderProfiles(env, bearer(session.idToken))).active.profile).toBe("flash-lite");
+    // The Apple session itself is not a Google sign-in, whatever the list says.
+    await db.doc(OWNER_DOC).set({ uids: [apple.uid], emails: [googleEmail, appleEmail] });
+    expect(await reason(getProviderProfiles(env, bearer(apple.idToken)))).toBe("NOT_OWNER");
+  });
+
+  test("unlink and relink: the Google identity linked now decides, never the email left behind", async () => {
+    const env = makeEnv();
+    const first = await googleUser(newEmail("first"));
+    // Google account G1 unlinked: the user keeps G1's email but has no Google identity.
+    await auth.updateUser(first.uid, { providersToUnlink: ["google.com"] });
+    expect((await auth.getUser(first.uid)).email).toBe(first.email);
+    expect((await auth.getUser(first.uid)).providerData.map((p) => p.providerId)).not.toContain("google.com");
+    await db.doc(OWNER_DOC).set({ uids: [first.uid], emails: [first.email] });
+    // G1's session token is still valid (not revoked), but the user has no Google identity now.
+    expect(await reason(getProviderProfiles(env, bearer(first.idToken)))).toBe("NOT_OWNER");
+
+    // Google account G2 linked: the account email is still G1's.
+    const secondEmail = newEmail("second");
+    const secondSub = randomUUID();
+    await auth.updateUser(first.uid, { providerToLink: { providerId: "google.com", uid: secondSub, email: secondEmail } });
+    const session = await idpSignIn("google.com", { sub: secondSub, email: secondEmail, email_verified: true });
+    expect(session.uid).toBe(first.uid);
+    expect((await auth.verifyIdToken(session.idToken)).email).toBe(first.email);
+    await db.doc(OWNER_DOC).set({ emails: [first.email] });
+    expect(await reason(getProviderProfiles(env, bearer(session.idToken)))).toBe("NOT_OWNER");
+    await db.doc(OWNER_DOC).set({ emails: [secondEmail] });
+    expect((await getProviderProfiles(env, bearer(session.idToken))).active.profile).toBe("flash-lite");
+    // Listed by uid, the account passes with any Google session of it, since it has one again.
+    await db.doc(OWNER_DOC).set({ uids: [first.uid] });
+    expect((await getProviderProfiles(env, bearer(session.idToken))).active.profile).toBe("flash-lite");
+  });
+
+  test("an empty allowlist is nobody", async () => {
+    const owner = await googleUser();
+    await db.doc(OWNER_DOC).set({ uids: [], emails: [] });
+    expect(await reason(getProviderProfiles(makeEnv(), bearer(owner.idToken)))).toBe("NOT_OWNER");
+    await db.doc(OWNER_DOC).set({});
+    expect(await reason(getProviderProfiles(makeEnv(), bearer(owner.idToken)))).toBe("NOT_OWNER");
+  });
+
   test("parseOwnerDoc and the console's origins", () => {
     expect(parseOwnerDoc({ emails: ["A@Example.com"] })).toEqual({ uids: [], emails: ["a@example.com"] });
     expect(parseOwnerDoc(null)).toBeNull();
@@ -378,9 +471,112 @@ describe("the owner callables", () => {
     expect(parseOwnerDoc({ uids: Array.from({ length: 11 }, (_, i) => `u${i}`) })).toBeNull();
     expect(parseOwnerDoc({ emails: [""] })).toBeNull();
     expect(ownerConsoleOrigins("bestbefore-f9ee1", false)).toEqual(["https://bestbefore-f9ee1.firebaseapp.com", "https://bestbefore-f9ee1.web.app"]);
-    expect(ownerConsoleOrigins("demo-foodtracker", true)).toContain("http://127.0.0.1:5000");
+    expect(ownerConsoleOrigins("demo-foodtracker", true)).toContain("http://127.0.0.1:5050");
     expect(ownerConsoleOrigins("", false)).toBe(false);
     expect(ownerConsoleOrigins("x.evil.com", false)).toBe(false);
+  });
+});
+
+// --- The callables' gate (src/core/ownerCall.ts, used by src/index.ts) ------------------------
+
+describe("OwnerCallGate", () => {
+  // At the start of a minute, so no test crosses a throttle window.
+  const NOW = Math.floor(Date.now() / 60_000) * 60_000 + 1_000;
+  const gateEnv = () => {
+    const env = makeEnv({ now: () => NOW });
+    return { env, gate: new OwnerCallGate(env) };
+  };
+  const req = (ip: string, auth?: OwnerCallRequest["auth"], authorization?: string): OwnerCallRequest => ({
+    ...(auth ? { auth } : {}),
+    rawRequest: { headers: { "x-forwarded-for": ip, ...(authorization ? { authorization } : {}) }, socket: { remoteAddress: "10.0.0.1" } },
+  });
+  const anyone = (n: number | string) => ({ uid: `u-${n}`, token: { email: `x${n}@example.com`, firebase: { sign_in_provider: "anonymous" } } });
+  const ok = async () => "ok";
+
+  test("a call without a token is refused with SIGN_IN, logged, and not counted", async () => {
+    const { env, gate } = gateEnv();
+    for (let i = 0; i < OWNER_OTHERS_PER_MINUTE * 3; i++) {
+      expect(await reason(gate.run("getProviderProfiles", req("203.0.113.7"), ok))).toBe("SIGN_IN");
+    }
+    // Neither the address nor the instance ceiling was used up.
+    expect(await gate.run("getProviderProfiles", req("203.0.113.7", anyone(1)), ok)).toBe("ok");
+    const refused = env.logs.filter((l) => l.message === "owner_call_refused");
+    expect(refused.length).toBe(10);
+    expect(refused[0].data).toEqual({ function: "getProviderProfiles", reason: "SIGN_IN", suppressedSinceLast: 0 });
+  });
+
+  test("per address below the instance ceiling; the ceiling holds across addresses", async () => {
+    const { env, gate } = gateEnv();
+    expect(OWNER_PER_ADDRESS_PER_MINUTE).toBeLessThan(OWNER_OTHERS_PER_MINUTE);
+    for (let i = 0; i < OWNER_PER_ADDRESS_PER_MINUTE; i++) expect(await gate.run("f", req("198.51.100.1", anyone(i)), ok)).toBe("ok");
+    expect(await reason(gate.run("f", req("198.51.100.1", anyone("next")), ok))).toBe("resource-exhausted:RATE_LIMITED");
+    // An IPv6 /64 is one address.
+    for (let i = 0; i < OWNER_PER_ADDRESS_PER_MINUTE; i++) expect(await gate.run("f", req(`2001:db8:1:2::${i + 1}`, anyone(`v6-${i}`)), ok)).toBe("ok");
+    expect(await reason(gate.run("f", req("2001:db8:1:2::ff", anyone("v6-next")), ok))).toBe("resource-exhausted:RATE_LIMITED");
+    // Other addresses, until the instance ceiling (the refused calls above counted toward it).
+    let admitted = 2 * OWNER_PER_ADDRESS_PER_MINUTE;
+    let counted = admitted + 2;
+    for (let i = 0; counted < OWNER_OTHERS_PER_MINUTE; i++, counted++, admitted++) {
+      expect(await gate.run("f", req(`192.0.2.${i + 1}`, anyone(`c${i}`)), ok)).toBe("ok");
+    }
+    expect(await reason(gate.run("f", req("192.0.2.200", anyone("late")), ok))).toBe("resource-exhausted:RATE_LIMITED");
+    expect(admitted).toBeLessThanOrEqual(OWNER_OTHERS_PER_MINUTE);
+    expect(env.logs.filter((l) => l.message === "owner_call_refused").map((l) => l.data?.reason)).toEqual(["RATE_LIMITED", "RATE_LIMITED", "RATE_LIMITED"]);
+  });
+
+  test("nobody else's calls starve a listed owner", async () => {
+    const { gate } = gateEnv();
+    const byEmail = newEmail("owner");
+    await db.doc(OWNER_DOC).set({ uids: ["owner-uid"], emails: [byEmail] });
+    // Others use up the instance ceiling.
+    for (let i = 0; i < OWNER_OTHERS_PER_MINUTE; i++) await gate.run("f", req(`192.0.2.${i + 1}`, anyone(i)), ok);
+    expect(await reason(gate.run("f", req("192.0.2.250", anyone("late")), ok))).toBe("resource-exhausted:RATE_LIMITED");
+    // Listed by uid, from an address that is also used up.
+    expect(await gate.run("f", req("192.0.2.1", { uid: "owner-uid", token: { firebase: { sign_in_provider: "google.com" } } }), ok)).toBe("ok");
+    // Listed by email, a Google session (the bucket only: the core decides who is an owner).
+    expect(await gate.run("f", req("192.0.2.1", { uid: "email-owner", token: { email: byEmail, firebase: { sign_in_provider: "google.com" } } }), ok)).toBe("ok");
+    // The same email on a session that is not Google gets no owner bucket.
+    expect(await reason(gate.run("f", req("192.0.2.251", { uid: "apple-user", token: { email: byEmail, firebase: { sign_in_provider: "apple.com" } } }), ok))).toBe("resource-exhausted:RATE_LIMITED");
+  });
+
+  test("a uid the core let in keeps the owner's bucket on this instance", async () => {
+    const { gate } = gateEnv();
+    const owner = { uid: "let-in", token: { firebase: { sign_in_provider: "google.com" } } };
+    expect(await gate.run("f", req("192.0.2.9", owner), ok)).toBe("ok");
+    for (let i = 0; i < OWNER_OTHERS_PER_MINUTE; i++) await gate.run("f", req(`198.51.100.${i + 1}`, anyone(i)), ok).catch(() => undefined);
+    expect(await gate.run("f", req("192.0.2.9", owner), ok)).toBe("ok");
+  });
+
+  test("with the real core: the owner gets through, refusals are logged by reason, no log carries a uid or email", async () => {
+    const { env, gate } = gateEnv();
+    const owner = await googleUser(newEmail("owner"));
+    const other = await googleUser(newEmail("other"));
+    await db.doc(OWNER_DOC).set({ emails: [owner.email] });
+    const call = (u: { uid: string; idToken: string; email: string }, ip: string) =>
+      gate.run("getProviderProfiles", req(ip, { uid: u.uid, token: { email: u.email, firebase: { sign_in_provider: "google.com" } } }, bearer(u.idToken)),
+        (authorization) => getProviderProfiles(env, authorization));
+    expect((await call(owner, "192.0.2.1")).active.profile).toBe("flash-lite");
+    expect(await reason(call(other, "192.0.2.2"))).toBe("NOT_OWNER");
+    expect(await reason(gate.run("setProviderProfile", req("192.0.2.2", { uid: other.uid }, "Bearer garbage"),
+      (authorization) => setProviderProfile(env, authorization, {})))).toBe("SIGN_IN");
+    const refused = env.logs.filter((l) => l.message === "owner_call_refused").map((l) => l.data);
+    expect(refused).toEqual([
+      { function: "getProviderProfiles", reason: "NOT_OWNER", suppressedSinceLast: 0 },
+      { function: "setProviderProfile", reason: "SIGN_IN", suppressedSinceLast: 0 },
+    ]);
+    const logged = JSON.stringify(env.logs);
+    for (const s of [owner.uid, owner.email, other.uid, other.email]) expect(logged).not.toContain(s);
+  });
+
+  test("src/index.ts binds both callables through the gate, one instance each, no App Check", () => {
+    const index = readFileSync(join(__dirname, "../src/index.ts"), "utf8");
+    expect(index).toContain("return guarded(name, () => ownerGate().run(name, request, (authorization) => fn(ownerEnv(), authorization)));");
+    expect(index).toMatch(/const ownerCallable = \{\s*enforceAppCheck: false,\s*invoker: "public",\s*cors: ownerConsoleOrigins\(projectId\(\), process\.env\.FUNCTIONS_EMULATOR === "true"\),\s*timeoutSeconds: 30,\s*maxInstances: 1,\s*concurrency: 1,\s*\} as const;/);
+    expect(index).toMatch(/export const getProviderProfiles = onCall\(ownerCallable, \(request\) =>\s*ownerCall\("getProviderProfiles", request,/);
+    expect(index).toMatch(/export const setProviderProfile = onCall\(ownerCallable, \(request\) =>\s*ownerCall\("setProviderProfile", request,/);
+    // Nothing of the caller's is logged there.
+    const section = index.slice(index.indexOf("// --- The owner console"), index.indexOf("function decodePubSub"));
+    expect(section).not.toMatch(/logger\.(info|warn|error)\(/);
   });
 });
 
@@ -475,11 +671,56 @@ describe("the board and the console page", () => {
     expect(html + js).not.toContain("@");
     expect(js).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(|localStorage|sessionStorage/);
     expect(js).toContain("inMemoryPersistence");
-    const hosting = JSON.parse(readFileSync(join(__dirname, "../../firebase.json"), "utf8")).hosting;
+  });
+
+  test("the SDK is served from the site, as recorded in its SOURCE.txt", () => {
+    const dir = join(__dirname, "../../owner-console");
+    const js = readFileSync(join(dir, "console.js"), "utf8");
+    const imports = [...js.matchAll(/from "([^"]+)"/g)].map((m) => m[1]);
+    expect(imports).toEqual(["/vendor/firebasejs/13.4.0/firebase-app.js", "/vendor/firebasejs/13.4.0/firebase-auth.js"]);
+    const vendor = join(dir, "vendor/firebasejs/13.4.0");
+    const note = readFileSync(join(vendor, "SOURCE.txt"), "utf8");
+    const sha = (f: string) => createHash("sha256").update(readFileSync(join(vendor, f))).digest("hex");
+    expect(note).toContain(`${sha("firebase-app.js")} (served here unchanged)`);
+    expect(note).toContain(`${sha("firebase-auth.js")} as served here`);
+    // Nothing is loaded from elsewhere but the one Google sign-in script the SDK adds itself.
+    const auth = readFileSync(join(vendor, "firebase-auth.js"), "utf8");
+    expect(auth).not.toContain("www.gstatic.com");
+    expect(auth.startsWith('import{') && auth.includes('from"./firebase-app.js"')).toBe(true);
+  });
+
+  test("Hosting's headers cover the console's own files only, never Hosting's reserved /__/ paths", () => {
+    const root = join(__dirname, "../..");
+    const hosting = JSON.parse(readFileSync(join(root, "firebase.json"), "utf8")).hosting;
     expect(hosting.public).toBe("owner-console");
-    const csp = hosting.headers[0].headers.find((h: { key: string }) => h.key === "Content-Security-Policy").value as string;
+    expect(hosting.headers).toHaveLength(1);
+    const rule = hosting.headers[0];
+    expect(rule.source).toBeUndefined();
+    const re = new RegExp(rule.regex);
+    for (const p of ["/", "/index.html", "/console.js", "/console.css", "/vendor/firebasejs/13.4.0/firebase-app.js", "/vendor/firebasejs/13.4.0/firebase-auth.js"]) {
+      expect(re.test(p), p).toBe(true);
+    }
+    for (const p of ["/__/auth/handler", "/__/auth/iframe", "/__/auth/handler.js", "/__/firebase/init.json", "/__/auth/iframe?apiKey=x", "/x/index.html", "/index.html/x"]) {
+      expect(re.test(p), p).toBe(false);
+    }
+    const csp = rule.headers.find((h: { key: string }) => h.key === "Content-Security-Policy").value as string;
     expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toMatch(/script-src 'self' https:\/\/apis\.google\.com;/);
+    expect(csp).not.toContain("gstatic");
     expect(csp).not.toContain("unsafe-inline");
+    expect(csp).not.toContain("127.0.0.1");
+
+    // firebase.local.json (the Hosting emulator only) is the same but for the emulators in the CSP.
+    const local = JSON.parse(readFileSync(join(root, "firebase.local.json"), "utf8"));
+    expect(Object.keys(local).sort()).toEqual(["emulators", "hosting"]);
+    const localCsp = local.hosting.headers[0].headers.find((h: { key: string }) => h.key === "Content-Security-Policy").value;
+    expect(localCsp).toBe(csp
+      .replace("connect-src 'self'", "connect-src 'self' http://127.0.0.1:9099 http://127.0.0.1:5001")
+      .replace("frame-src ", "frame-src http://127.0.0.1:9099 "));
+    const withoutCsp = (h: typeof hosting) => JSON.stringify({ ...h, headers: h.headers.map((r: typeof rule) => ({ ...r, headers: r.headers.filter((x: { key: string }) => x.key !== "Content-Security-Policy") })) });
+    expect(withoutCsp(local.hosting)).toBe(withoutCsp(hosting));
+    expect(local.emulators.hosting.port).toBe(5050);
+    expect(ownerConsoleOrigins("demo-foodtracker", true)).toContain(`http://127.0.0.1:${local.emulators.hosting.port}`);
   });
 });

@@ -3,16 +3,18 @@
 // and setProviderProfile, which accept only the owner's Google sign-in (config/owner). Nothing is
 // kept in the browser: the sign-in lives in memory only (inMemoryPersistence), so each visit
 // signs in afresh, and Google's name and photo are never read. Text goes in with textContent only.
-import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
+// The Firebase JS SDK is served from this site (vendor/, pinned; vendor/firebasejs/13.4.0/SOURCE.txt).
+import { initializeApp } from "/vendor/firebasejs/13.4.0/firebase-app.js";
 import {
   GoogleAuthProvider,
   connectAuthEmulator,
+  getAdditionalUserInfo,
   getAuth,
   inMemoryPersistence,
   setPersistence,
   signInWithPopup,
   signOut,
-} from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+} from "/vendor/firebasejs/13.4.0/firebase-auth.js";
 
 const REGION = "europe-west1";
 const $ = (id) => document.getElementById(id);
@@ -127,8 +129,32 @@ async function load() {
 async function signIn() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
-  await signInWithPopup(auth, provider);
+  const result = await signInWithPopup(auth, provider);
+  // A Google account with no Firebase user yet just got one. Left in place, it would stop that
+  // Google account being linked in the app later (credential already in use), and no owner can be
+  // such a user anyway (config/owner names an existing account), so it is removed at once.
+  // The local emulators keep theirs.
+  if (getAdditionalUserInfo(result)?.isNewUser && !local) {
+    try {
+      await result.user.delete();
+    } catch {
+      await signOut(auth);
+      throw Object.assign(new Error("new-account-not-removed"), { code: "new-account-not-removed" });
+    }
+    show(false);
+    throw Object.assign(new Error("no-app-account"), { code: "no-app-account" });
+  }
   show(true);
+}
+
+function signInFailed(e) {
+  if (e.code === "no-app-account") {
+    say("This Google account has no account with the app, so it may not use the owner console. Nothing was kept.", true);
+  } else if (e.code === "new-account-not-removed") {
+    say("This Google account has no account with the app, and the one this sign-in made could not be removed; delete it in the Firebase console (Authentication > Users).", true);
+  } else {
+    say(`Sign-in failed: ${e.code ?? e.message}`, true);
+  }
 }
 
 async function doSwitch() {
@@ -156,7 +182,7 @@ async function start() {
   if (local) connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
   await setPersistence(auth, inMemoryPersistence);
   show(false);
-  $("sign-in").addEventListener("click", () => signIn().then(load).catch((e) => say(`Sign-in failed: ${e.code ?? e.message}`, true)));
+  $("sign-in").addEventListener("click", () => signIn().then(load).catch(signInFailed));
   $("sign-out").addEventListener("click", () => signOut(auth).then(() => { view = null; show(false); say("Signed out."); }));
   $("profile").addEventListener("change", describe);
   $("switch").addEventListener("click", () => {
