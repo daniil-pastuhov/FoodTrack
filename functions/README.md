@@ -26,7 +26,7 @@ the caller. The client wire contract is in [CONTRACT.md](CONTRACT.md).
 | `src/providers/types.ts`, `registry.ts`, `router.ts`, `failure.ts`, `balance.ts` | The common provider interface: the descriptor every text or picture adapter exports, the registry of them (one entry each), the routers that pick the adapter per call, the shared failure taxonomy and the balance probe (see "Adding a provider") |
 | `src/providers/profiles.ts`, `src/core/providerSwitch.ts` | The named provider setups (profiles: text and pictures) and the one core that switches between them, for `npm run admin -- providers` and the owner console (see "Provider profiles", "The owner console") |
 | `src/core/recipeImage.ts` | A recipe's picture: the fixed prompt template around the checked brief, the call under its time limit, the `image_call` line (see "Recipe pictures") |
-| `src/adapters/image.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture adapters (Vertex AI, OpenAI) and their descriptors, the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
+| `src/adapters/image.ts`, `bfl.ts`, `imageNormalize.ts`, `secretManager.ts` | The picture adapters (Vertex AI, OpenAI; Black Forest Labs in `bfl.ts`) and their descriptors, the re-encoding of every picture to the delivered JPEG (sharp), and the run-time read of a provider's API key |
 | `src/core/sweeper.ts` | Stale reservations, Play consume retries, owed consumption answers, negative-balance watch |
 | `src/core/notifications.ts` | Play RTDN, Voided Purchases poll, App Store Server Notifications v2, budget kill switch |
 | `src/core/account.ts` | `getBalance`, `mergeBalance`, `deleteAccount` |
@@ -1193,6 +1193,7 @@ normalised to the same JPEG.
 |---|---|---|---|---|
 | `vertex` | `VertexImageGenerator`: `@google/genai` `generateContent`, `responseModalities: [IMAGE]`, `4:3`, `1K`, JPEG quality 85, `personGeneration: ALLOW_NONE`, safety settings; token counts from `usageMetadata` | `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1` (both location `global` only, the same request shape); `gemini-3.1-flash-image`, `gemini-3-pro-image` also listed by Google | the functions' service account (Vertex AI User), as for the recipe text | USD 0.04 / 0.06 |
 | `openai` | `OpenAIImageGenerator`: `POST https://api.openai.com/v1/images/generations`, `n: 1`, `1536x1024` (`1024x768` for the models that take any size), `quality: "medium"`, `output_format: "jpeg"`, `output_compression: 85`, `moderation: "auto"` | `gpt-image-1-mini`; `gpt-image-2`, `gpt-image-2.5-flare` etc. need a price first | API key in Secret Manager (`OPENAI_API_KEY`), read at run time | USD 0.02 |
+| `bfl` | `BflImageGenerator` (`src/adapters/bfl.ts`): `POST https://api.eu.bfl.ai/v1/<model>`, then the returned `polling_url`, then the picture's delivery URL; `aspect_ratio: "4:3"`, `resolution: "1k"` (1184 × 880), `safety_tolerance: 2`, JPEG where the model takes a format ("FLUX by Black Forest Labs") | `flux-3-image-klein`; `flux-3-image` (dearer, slower) | API key in Secret Manager (`BFL_API_KEY`), read at run time | USD 0.01 / 0.05 reserved (0.009 / 0.048 charged; BFL's own `cost` is booked) |
 | `off` | none | | | no pictures |
 
 The usual way to switch is by **provider profile** ("Provider profiles" below: `npm run admin -- providers use <profile>` or the owner console), which writes the fields named here, the price included, in one checked transaction. By hand, to switch **model** at the same provider, without a deploy: put its price in
@@ -1224,7 +1225,9 @@ our server). Before switching, the privacy policy and processor list must name i
 processes: OpenAI's API has no EU-only processing by default), its data terms checked (OpenAI
 says API data is not used for training by default and kept up to 30 days for abuse monitoring),
 and the App Privacy / Data safety answers re-read. Vertex AI is already our processor for the
-recipe text.
+recipe text. Black Forest Labs (`bfl`) processes on its EU clusters by default (`BFL_REGION`), but
+its API terms let it keep and train on the prompts and pictures, with no retention period stated
+("FLUX by Black Forest Labs"): the policy must say that too.
 
 **Dependency**: `sharp` (libvips) decodes and re-encodes the pictures. It ships prebuilt binaries
 for linux-x64 glibc, which Cloud Functions 2nd gen (Cloud Run, Node 24) uses, installed by
@@ -1251,6 +1254,7 @@ without a price (which would turn pictures off) or a provider without its key.
 | `nano-banana` | `vertex` / `gemini-nano-banana-2.1` | `gemini-3.1-flash-lite-image` | USD 0.06 / 0.04 | always |
 | `off` | `off` (only `image.provider` is written; the model fields are kept for the way back) | | | always |
 | `openai` | `openai` / `gpt-image-1-mini` | none | USD 0.02 | **no**: listed only. Needs the owner's privacy decision (a code flag, `approved: false`: OpenAI is not in the privacy policy's processor list, "What a new provider means for privacy") and the `OPENAI_API_KEY` secret readable by the service account |
+| `flux-eu` | `bfl` / `flux-3-image-klein` on BFL's EU endpoint; the text stays Gemini | `vertex` / `gemini-3.1-flash-lite-image` | USD 0.01 / 0.04 | **no**: listed only, for the same two reasons (BFL's `approved: false`, `BFL_API_KEY` readable). The picture half of a later "EU pair" profile (the same picture part plus an EU text provider); read "FLUX by Black Forest Labs" on its latency before switching |
 
 **The switch** (`activateProfile` in `src/core/providerSwitch.ts`, the one core behind the command
 and the console): refuses an unknown profile (`UNKNOWN_PROFILE`) or one not ready (`NOT_READY`,
@@ -1411,6 +1415,8 @@ gcloud secrets add-iam-policy-binding BFL_API_KEY --project bestbefore-f9ee1 \
 
 ### A picture provider, step by step (e.g. FLUX by Black Forest Labs)
 
+Done for FLUX ("FLUX by Black Forest Labs" below); the steps as they were followed:
+
 1. `src/adapters/bfl.ts`: the adapter (submit, poll the result URL until ready within `signal`,
    download the image) and `export const bflImage: ImageProviderDescriptor` (id `bfl`, secret
    `BFL_API_KEY` / param `BFL_API_KEY_SECRET`, `usdPerImage`, `privacy`, `create`, and
@@ -1422,14 +1428,117 @@ gcloud secrets add-iam-policy-binding BFL_API_KEY --project bestbefore-f9ee1 \
    "gemini-3.1-flash-lite-image", usdPerImage: {...}}` (both prices).
 4. Optionally `config/runtime.providerBalanceAlerts: {bfl: <credits>}`.
 
+### FLUX by Black Forest Labs
+
+`src/adapters/bfl.ts`, provider id `bfl`, profile `flux-eu`. **Not switchable**: `privacy.approved`
+is `false` until the privacy policy names Black Forest Labs (docs/privacy-policy-changes.md,
+"Pending"); the owner's steps are docs/recipe-setup.md step 13a.
+
+**From BFL's documentation, read 2026-11-17** (docs.bfl.ml: `llms.txt`,
+`quick_start/pricing.md`, `release-notes.md`, `api_integration/integration_guidelines.md`,
+`api_integration/errors.md`, `api-reference/utility/get-result.md`,
+`api-reference/get-the-users-credits.md`, `api-reference/utility/generate-an-image-with-flux-3-klein.md`,
+`flux_3/flux3_image_klein.md`, `flux_3/flux3_image_generate.md`; `https://api.bfl.ai/openapi.json`;
+bfl.ai/pricing; bfl.ai/legal/eu-api-service-terms, revised 2026-08-26; bfl.ai/legal/privacy-policy):
+
+- **Models and prices** (USD per picture at the `1k` tier, about one megapixel, any aspect ratio;
+  one price for the API and the Playground, none by region; 1 credit = USD 0.01): FLUX 3 Image
+  Klein (`flux-3-image-klein`, 5.6B, distilled, released 2026-10-15) **0.009** (768sq 0.008, 1.5k
+  0.011, 2k 0.014); FLUX 3 Image (`flux-3-image`) **0.048** (768sq 0.041, 2k 0.10). Older:
+  FLUX.2 [klein] 4B 0.014 for the first megapixel plus 0.001 per further one (rounded up, so 1184 ×
+  896 would be 2 MP), [pro] 0.03 + 0.015, FLUX1.1 [pro] 0.04. Rejected requests, failed tasks and
+  moderated outputs are not charged. The submit answer says each task's `cost` in credits, and the
+  live calls confirmed 0.9 credits (USD 0.009) per Klein picture and 4.8 (0.048) per FLUX 3 Image
+  picture on the EU endpoint, which is what is booked.
+- **Endpoints**: `api.bfl.ai` (global routing), `api.eu.bfl.ai` ("multi-cluster routing limited to
+  EU regions, GDPR compliant"), `api.us.bfl.ai`. The key goes in the `x-key` header.
+- **Shape**: `POST /v1/<model>` answers `{id, polling_url, cost, input_mp, output_mp}` at once;
+  `GET polling_url` (always the returned one, it names the cluster: `api.eu9.bfl.ai` live) gives
+  `status`: `Pending`, `Reasoning`, `Generating` (keep polling), `Ready` (`result.sample` is the
+  picture's URL, `result.prompt` the rewritten prompt), `Request Moderated` / `Content Moderated`
+  (`details["Moderation Reasons"]`), `Error`, `Task not found`, `No Card Generated`. A failed task
+  may come back as HTTP 503 with a normal JSON body. Webhooks exist for FLUX.2, not for FLUX 3
+  Image Klein; the adapter polls.
+- **Pictures** come from `delivery.<cluster>.bfl.ai` (`delivery.eu9.bfl.ai` live), expire after 10
+  minutes ("download within 1 hour" on the FLUX 3 page), have no CORS and are not for serving to
+  users. Klein answers the JPEG asked for (`output_format`, default `jpeg`); FLUX 3 Image has no
+  format field and answered a 1.8 MB PNG. Both carry a C2PA manifest naming Black Forest Labs.
+- **Size**: `aspect_ratio` (4:3 among 15) and `resolution` (`768sq`, `1k`, `1.5k`, `2k`, `4k`), or
+  `width` / `height` billed at the smallest tier with as many pixels. `4:3` at `1k` is 1184 × 880.
+- **Moderation**: `safety_tolerance` 0 (strictest) to 7 (route and organisation cap it; FLUX 3
+  accepts 0 to 4), default 2. A moderated task is `Request Moderated` or `Content Moderated`.
+- **Errors**: 400 bad request, 402 out of credit, 403 key without permission, 422 invalid body
+  (both FLUX 3 endpoints refuse unknown fields), 429 rate limited, 500, 503. **Rate limit**: 24
+  tasks at once for most endpoints (6 for `flux-kontext-max`).
+- **Prompt upsampling**: Klein's API always rewrites the prompt into a full scene caption with
+  BFL's own model before drawing (it cannot be turned off). FLUX 3 Image may also ground the
+  prompt in web and image search (`grounding`, default true): the adapter sends `false`.
+- **Data terms**: the EU API Service Terms (revised 2026-08-26) grant BFL a perpetual,
+  irrevocable licence to inputs and outputs, including "to train and improve its artificial
+  intelligence models"; they name no retention period and offer no data processing agreement on
+  the page. BFL GmbH (Freiburg, Germany) is the controller for EEA users under its privacy policy.
+  What BFL would receive from us is the fixed template and the brief (no personal data, below), but
+  the processor list must say so ("Privacy" below).
+
+**The choice**: FLUX 3 Image Klein, the cheapest model with good food photographs (USD 0.009, a
+quarter of Flash-Lite Image's 0.0336), on the EU endpoint. The dearer alternative is FLUX 3 Image
+(USD 0.048, priced in the adapter, selectable by config only, no profile): in the live test it was
+slower (36 s and two aborts at 35 s) and its one picture (onion rings drawn as spirals) was no
+better than Klein's.
+
+**What is sent** (`bflBody`): `{prompt, aspect_ratio: "4:3", resolution: "1k", safety_tolerance: 2,
+output_format: "jpeg"}` for Klein, `{..., grounding: false}` without `output_format` for FLUX 3
+Image. The prompt is the production picture prompt unchanged (`imagePromptFor`): Klein's upsampler
+kept its rules in every rewrite seen ("its single handle", "no utensil or other objects"). Never
+BFL's `user` field, a webhook or any identifier.
+
+**Hosts**: the key goes only to the region's API host and to a `polling_url` on that region's
+API cluster (`api.eu<n>.bfl.ai` for `eu`); the picture is downloaded only from that region's
+delivery cluster (`delivery.eu<n>.bfl.ai`), over https, without the key, with redirects refused and
+at most 8 MiB read (`IMAGE.maxInputBytes`, checked on the declared length and while streaming).
+Anything else is an `INFRA` failure before the request is made (`billed`, since the task ran).
+
+**Failures**: 402 `OUT_OF_CREDIT` (to the fallback, else the deploy default, and
+`provider_out_of_credit`); 429 and 500/502/503/504 capacity (retried after at least `Retry-After`,
+then the fallback); 401/403 `CONFIG`; 400/422 a refused request; `Request Moderated` /
+`Content Moderated` `SAFETY` (never to the fallback, nothing charged); `Error` and `Task not
+found` `INFRA`, not billed; three unreadable polls in a row `INFRA`, billed. Polling waits 0.5 s,
+then half as long again each time up to 1.5 s, and stops the moment the core's signal aborts; a
+task abandoned that way is booked at its flat price (BFL finishes and charges it).
+
+**Delivery**: Klein's JPEG (450–590 KB) is over the 400,000-byte pass-through limit, so every BFL
+picture is re-encoded (1184 × 880, about 145–190 KB at quality 80), which drops BFL's C2PA
+manifest; Vertex's pictures keep Google's.
+
+**Live check, 2026-11-17** (`api.eu.bfl.ai`, through this adapter, the production prompt around
+test briefs; 9 Klein and 3 FLUX 3 Image tasks, at most USD 0.225 as BFL quoted them):
+
+| | Klein | FLUX 3 Image |
+|---|---|---|
+| End to end, submit to downloaded | 21.2, 22.5, 22.5, 22.7, 27.1, 31.7, 33.2, 75.9 s, and one aborted at 35 s | 36.3 s, and two aborted at 35 s |
+| BFL's own `duration` | 3.6–11.2 s (the rest: 1.5–5 s `Pending`, then `Generating`, which includes the prompt rewrite) | 21.3 s |
+| Answer | JPEG 1184 × 880, 451–588 KB | PNG 1184 × 880, 1.8 MB |
+| Charged | 0.9 credits | 4.8 credits |
+
+Klein's pictures were plausible home-cooking photographs: the overhead frying pans had one long
+handle (2 of 2), a sauté pan one, no people, hands or writing; weaknesses were a flat omelette
+where the brief said folded, spaghetti drawn thick, and garnish placed in tidy patterns.
+**Latency is the open problem**: with a fallback configured each attempt gets 30 s of the dish's
+50 s budget (`IMAGE`), and about half of these Klein pictures took longer, so with `flux-eu` many
+pictures would come from Flash-Lite Image after BFL had already charged for its (abandoned) one,
+costing USD 0.049 instead of 0.009. Measure again (`image_call` `durationMs`, `image_fallback`
+reason `TIMEOUT`) before switching, and change the budgets only as a decision of its own.
+
 ### Provider balances
 
 `checkProviderBalances` (hourly at :41 UTC) asks each provider that has a `balance` probe and a
 threshold in `config/runtime.providerBalanceAlerts` for its balance, and logs
 `provider_balance_low` (error: `provider`, `amount`, `unit`, `threshold`) under it, or
 `provider_balance_unavailable` (warning: `provider`, `reason` `TIMEOUT` / `FAILED`) when the
-probe fails. No provider implements a probe yet, and with no threshold it calls nothing. It is a new
-scheduled function: the next deploy creates its Cloud Scheduler job.
+probe fails. Black Forest Labs (`bfl`) implements a probe (`GET https://api.eu.bfl.ai/v1/credits`,
+the organisation's balance in **credits**, 1 credit = USD 0.01, so a threshold of 500 is USD 5,
+about 550 Klein pictures); with no threshold it calls nothing. It is a new scheduled function: the
+next deploy creates its Cloud Scheduler job.
 
 ## Reports
 
@@ -2193,11 +2302,13 @@ which holds no secrets and may be committed), or set there beforehand:
 | `GEMINI_MODEL` | `gemini-3.8-flash` | Vertex AI model id. Any Flash-tier Gemini; `gemini-2.x` models get thinking budget 0 (`config/runtime.text.model` overrides it) |
 | `GEMINI_THINKING_LEVEL` | `LOW` | Thinking level for Gemini 3+ (`MINIMAL` where the model supports it; 3.8 Flash does not) |
 | `VERTEX_LOCATION` | `global` | Vertex AI location. The default is `global` by the owner's decision; set a region only if the model is not offered in `global` |
-| `IMAGE_PROVIDER` | `vertex` | Default provider of recipe pictures: `vertex`, `openai` or `off` (`config/runtime.image.provider` overrides it at run time) |
+| `IMAGE_PROVIDER` | `vertex` | Default provider of recipe pictures: `vertex`, `openai`, `bfl` or `off` (`config/runtime.image.provider` overrides it at run time) |
 | `IMAGE_MODEL` | `gemini-3.1-flash-lite-image` | Default picture model id at that provider (`config/runtime.image.model` overrides it); needs a price ("Recipe pictures") |
 | `IMAGE_FALLBACK_MODEL` | `gemini-nano-banana-2.1` | Default fallback model at the same provider, asked once when the model fails for capacity; empty for none (`config/runtime.image.fallbackModel` overrides it) |
 | `VERTEX_IMAGE_LOCATION` | `global` | Vertex AI location of the picture models (Flash-Lite Image and Nano Banana 2.1 are offered on `global` only) |
 | `OPENAI_API_KEY_SECRET` | `OPENAI_API_KEY` | Name of the Secret Manager secret with the OpenAI API key, read at run time only while `openai` is the picture provider |
+| `BFL_API_KEY_SECRET` | `BFL_API_KEY` | Name of the Secret Manager secret with the Black Forest Labs API key, read at run time only while `bfl` is the picture provider (or the balance probe has a `bfl` threshold) |
+| `BFL_REGION` | `eu` | Black Forest Labs endpoint: `eu` (`api.eu.bfl.ai`, EU clusters only), `us` or `global`; anything else is a `CONFIG` picture failure. The polling and delivery hosts are held to the same region |
 | (each provider's own) | | A provider's params and its secret's param are declared by its adapter ("Adding a provider") and defined by `src/index.ts`: `GEMINI_*`, `VERTEX_*` and `OPENAI_API_KEY_SECRET` above are those of `google`, `vertex` and `openai`; a new one adds, say, `MISTRAL_API_KEY_SECRET` (default `MISTRAL_API_KEY`) |
 | `APPLE_APP_ID` | none | Numeric App Store app id (App Store Connect > App Information > Apple ID) |
 | `APPSTORE_KEY_ID`, `APPSTORE_ISSUER_ID` | none | App Store Server API key id and issuer id |
