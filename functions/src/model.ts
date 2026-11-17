@@ -6,13 +6,12 @@ import {
   CONFIG_CACHE_MS,
   COST_MAX,
   DEFAULT_COSTS,
-  DEFAULT_IMAGE_PRICES,
   DEFAULT_IMAGE_SELECTION,
   DEFAULT_MENU_DAYS,
   MAX_STEP_IMAGES_LIMIT,
   DEFAULT_MENU_SETS,
   DEFAULT_PRICES,
-  IMAGE_PROVIDERS,
+  DEFAULT_TEXT_SELECTION,
   MENU_COURSES,
   MENU_DAYS,
   PURCHASE_TOKEN_NAMESPACE,
@@ -26,7 +25,9 @@ import {
   type MenuDays,
   type MenuSetCosts,
 } from "./constants";
-import type { FailureClass, LlmUsage, Logger, SealedSecret } from "./ports";
+import type { FailureClass, ImageTarget, LlmUsage, Logger, SealedSecret, TextTarget } from "./ports";
+import { defaultImagePrices, imageProviderIds, textDefaultPrices, textProviderById } from "./providers/registry";
+import type { TokenPrices } from "./providers/types";
 import type { Menu, Recipe } from "./contract";
 
 export interface UserDoc {
@@ -253,6 +254,8 @@ export interface GenerationDoc {
   /** The provider and model the picture was asked of (no prompt, no brief). */
   imageProvider?: string;
   imageModel?: string;
+  /** The text provider that answered, when it was not the deploy default or a fallback was asked. */
+  textProvider?: string;
   /** Set when the recipe was delivered with its picture, which is in imageRef. */
   imageStored?: true;
   /** Set when the recipe was delivered without its picture (and imageCost given back). */
@@ -288,16 +291,40 @@ export interface Prices {
   inputUsdPerMTok: number;
   outputUsdPerMTok: number;
   /**
-   * USD per delivered picture, by "provider/model" (DEFAULT_IMAGE_PRICES plus
-   * `config/runtime.prices.imageUsdPerImage`, which adds to or overrides them).
+   * USD per delivered picture, by "provider/model" (the adapters' prices, providers/registry.ts
+   * defaultImagePrices, plus `config/runtime.prices.imageUsdPerImage`, which adds to or overrides them).
    */
   imageUsdPerImage?: Readonly<Record<string, number>>;
+  /**
+   * Text prices by "provider/model" for providers other than "google" (whose prices are the two
+   * fields above), over the adapters' own tables. Present only when config/runtime sets it.
+   */
+  textUsdPerMTok?: Readonly<Record<string, TokenPrices>>;
+}
+
+/**
+ * Which provider and model write the recipe text (README "Adding a provider"):
+ * `config/runtime.text` over the TEXT_PROVIDER / GEMINI_MODEL parameters over
+ * DEFAULT_TEXT_SELECTION. `fallbackProvider` / `fallbackModel` ("" for none) are asked once
+ * when the model failed before writing anything for a reason about the provider (capacity, a
+ * refused credential, out of credit), never after a safety refusal or a content failure.
+ */
+export interface TextSelection {
+  provider: string;
+  model: string;
+  fallbackProvider: string;
+  fallbackModel: string;
 }
 
 /** Which provider and model make a recipe's picture (README "Recipe pictures", "Switching"). */
 export interface ImageSelection {
   provider: ImageProvider;
   model: string;
+  /**
+   * The fallback's provider, when it is not `provider` (absent: the same provider). Lets a
+   * profile fall back across providers, e.g. FLUX to Vertex AI.
+   */
+  fallbackProvider?: string;
   /**
    * The model at the same provider asked once when `model` could not make a picture for a reason
    * about the model or capacity (core/recipeImage.ts makeRecipeImage); "" for none. A fallback
@@ -358,6 +385,18 @@ export interface RuntimeConfig {
    * IMAGE_MODEL parameters over DEFAULT_IMAGE_SELECTION. An invalid `image` turns pictures off.
    */
   image: ImageSelection;
+  /** The recipe text's provider and model (TextSelection). */
+  text: TextSelection;
+  /**
+   * The deploy defaults (parameters over DEFAULT_TEXT_SELECTION / DEFAULT_IMAGE_SELECTION), where an
+   * out-of-credit failure goes when no fallback is named; `image` null when pictures are off by default.
+   */
+  providerDefaults: { text: TextTarget; image: ImageTarget | null };
+  /**
+   * Balance thresholds by provider id, in the provider's own unit (`config/runtime.providerBalanceAlerts`):
+   * the scheduled checkProviderBalances logs `provider_balance_low` under them. Empty: no probe runs.
+   */
+  providerBalanceAlerts: Readonly<Record<string, number>>;
   /**
    * "Report this recipe" (reportRecipe, README "Reports"): at most `perUserPerDay` reports per
    * signed-in account and `perDay` across the service per UTC day; each report is kept
@@ -436,8 +475,14 @@ export const DEFAULT_RUNTIME_CONFIG: Readonly<RuntimeConfig> = {
   rejectedPromptsPerDay: 5,
   outputJudge: "off",
   costs: DEFAULT_COSTS,
-  prices: { ...DEFAULT_PRICES, imageUsdPerImage: { ...DEFAULT_IMAGE_PRICES } },
+  prices: { ...DEFAULT_PRICES, imageUsdPerImage: defaultImagePrices() },
   image: { ...DEFAULT_IMAGE_SELECTION },
+  text: { ...DEFAULT_TEXT_SELECTION },
+  providerDefaults: {
+    text: { provider: DEFAULT_TEXT_SELECTION.provider, model: DEFAULT_TEXT_SELECTION.model },
+    image: { provider: DEFAULT_IMAGE_SELECTION.provider, model: DEFAULT_IMAGE_SELECTION.model },
+  },
+  providerBalanceAlerts: {},
   reports: { perUserPerDay: 10, perDay: 500, keepDays: 90 },
   tasteQuiz: { hidden: [] },
   welcome: { recipes: 3, perDay: 200 },
@@ -576,19 +621,52 @@ export function validImageSelection(v: unknown, base: ImageSelection): ImageSele
   const model = v.model === undefined ? base.model : v.model;
   const fallback = v.fallbackModel === undefined ? base.fallbackModel : v.fallbackModel === null ? "" : v.fallbackModel;
   const max = v.maxStepImages === undefined ? base.maxStepImages : v.maxStepImages;
-  if (!(IMAGE_PROVIDERS as readonly unknown[]).includes(provider)) return null;
+  const fbProvider = v.fallbackProvider === undefined ? (base.fallbackProvider ?? "") : v.fallbackProvider === null ? "" : v.fallbackProvider;
+  if (!imageProviderIds().includes(provider as string)) return null;
   if (typeof model !== "string" || !IMAGE_MODEL.test(model)) return null;
   if (typeof fallback !== "string" || (fallback !== "" && !IMAGE_MODEL.test(fallback))) return null;
   if (!isCount(max) || max > MAX_STEP_IMAGES_LIMIT) return null;
-  return { provider: provider as ImageProvider, model, fallbackModel: fallback === model ? "" : fallback, maxStepImages: max };
+  if (typeof fbProvider !== "string" || (fbProvider !== "" && (fbProvider === "off" || !imageProviderIds().includes(fbProvider)))) return null;
+  // The fallback's provider is kept only when it is another one (absent: the same provider).
+  const across = fbProvider !== "" && fbProvider !== provider;
+  const same = !across && fallback === model;
+  return {
+    provider: provider as ImageProvider,
+    model,
+    ...(across ? { fallbackProvider: fbProvider } : {}),
+    fallbackModel: same ? "" : fallback,
+    maxStepImages: max,
+  };
+}
+
+/** The picture's fallback target, when one is named (at `fallbackProvider`, else the same provider). */
+export function imageFallbackOf(config: Pick<RuntimeConfig, "image">): ImageTarget | null {
+  const img = config.image;
+  if (img.provider === "off" || !img.fallbackModel) return null;
+  return { provider: img.fallbackProvider || img.provider, model: img.fallbackModel };
+}
+
+/**
+ * Where a picture goes when its provider is out of credit: the named fallback, else the deploy
+ * default when that is another provider (owner's rule, README "Adding a provider"); null for none.
+ */
+export function imageOutOfCreditTargetOf(config: Pick<RuntimeConfig, "image" | "providerDefaults">): ImageTarget | null {
+  const named = imageFallbackOf(config);
+  if (named) return named;
+  const d = config.providerDefaults?.image;
+  if (!d || config.image.provider === "off" || d.provider === config.image.provider) return null;
+  return { ...d };
 }
 
 /** The flat micro-USD price of one picture of `provider/model`, or null without a price (or provider "off"). */
 export function imagePriceMicroUsd(config: Pick<RuntimeConfig, "prices">, provider: string, model: string): number | null {
   if (provider === "off") return null;
   const key = `${provider}/${model}`;
-  const prices = config.prices.imageUsdPerImage ?? DEFAULT_IMAGE_PRICES;
-  const usd = Object.prototype.hasOwnProperty.call(prices, key) ? prices[key] : undefined;
+  const has = (t: Readonly<Record<string, number>>) => Object.prototype.hasOwnProperty.call(t, key);
+  const prices = config.prices.imageUsdPerImage ?? defaultImagePrices();
+  // The adapters' own table holds every default; config/runtime's map was merged over it at parse.
+  const defaults = defaultImagePrices();
+  const usd = has(prices) ? prices[key] : has(defaults) ? defaults[key] : undefined;
   return usd === undefined ? null : Math.ceil(usd * 1_000_000);
 }
 
@@ -604,18 +682,121 @@ export function imageMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices">)
  * What every picture a request may get is reserved at: the dearer of the selected model and its
  * fallback (either may make it); null when pictures cannot be made.
  */
-export function imageReservedMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices">): number | null {
+export function imageReservedMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices"> & Partial<Pick<RuntimeConfig, "providerDefaults">>): number | null {
   const primary = imageMicroUsdOf(config);
   if (primary === null) return null;
-  const fallback = config.image.fallbackModel ? imagePriceMicroUsd(config, config.image.provider, config.image.fallbackModel) : null;
-  return Math.max(primary, fallback ?? 0);
+  const named = imageFallbackOf(config);
+  const fallback = named ? imagePriceMicroUsd(config, named.provider, named.model) : null;
+  // The out-of-credit default (only when no fallback is named and it is another provider).
+  const d = config.providerDefaults ? imageOutOfCreditTargetOf(config as Pick<RuntimeConfig, "image" | "providerDefaults">) : null;
+  const viaDefault = !named && d ? imagePriceMicroUsd(config, d.provider, d.model) : null;
+  return Math.max(primary, fallback ?? 0, viaDefault ?? 0);
+}
+
+// --- The recipe text's provider ------------------------------------------------------------------
+
+/** The text selection in force (a hand-built config without one reads as the deploy default). */
+export function textSelectionOf(config: Partial<Pick<RuntimeConfig, "text">>): TextSelection {
+  return config.text ?? { ...DEFAULT_TEXT_SELECTION };
+}
+
+/**
+ * USD per 1M tokens of a text target: "google" (runtimeTokenPrices) is priced by
+ * `config/runtime.prices.inputUsdPerMTok` / `outputUsdPerMTok`, as before; any other provider by
+ * `prices.textUsdPerMTok["<provider>/<model>"]` over its adapter's table. null: unpriced (never used).
+ */
+export function textPricesOf(config: Pick<RuntimeConfig, "prices">, target: TextTarget): TokenPrices | null {
+  const d = textProviderById(target.provider);
+  if (!d) return null;
+  if (d.runtimeTokenPrices) return { inputUsdPerMTok: config.prices.inputUsdPerMTok, outputUsdPerMTok: config.prices.outputUsdPerMTok };
+  const key = `${target.provider}/${target.model}`;
+  const over = config.prices.textUsdPerMTok;
+  if (over && Object.prototype.hasOwnProperty.call(over, key)) return over[key];
+  return textDefaultPrices(target.provider, target.model) ?? null;
+}
+
+/** The text's named fallback target, or null. */
+export function textFallbackOf(config: Partial<Pick<RuntimeConfig, "text">>): TextTarget | null {
+  const t = textSelectionOf(config);
+  return t.fallbackModel ? { provider: t.fallbackProvider || t.provider, model: t.fallbackModel } : null;
+}
+
+/** Where the text goes when its provider is out of credit: the named fallback, else the deploy default when that is another provider. */
+export function textOutOfCreditTargetOf(config: Partial<Pick<RuntimeConfig, "text" | "providerDefaults">>): TextTarget | null {
+  const named = textFallbackOf(config);
+  if (named) return named;
+  const d = config.providerDefaults?.text;
+  const t = textSelectionOf(config);
+  if (!d || d.provider === t.provider) return null;
+  return { ...d };
+}
+
+/**
+ * The token prices a request's worst case is reserved at: the dearer, input and output each, of
+ * the model and every provider it may fall back to (the named fallback, the out-of-credit default).
+ * With the deploy default and no fallback this is exactly `config.prices`'s token prices.
+ */
+export function textReservePricesOf(config: Pick<RuntimeConfig, "prices"> & Partial<Pick<RuntimeConfig, "text" | "providerDefaults">>): TokenPrices {
+  const t = textSelectionOf(config);
+  const targets = [{ provider: t.provider, model: t.model }, textFallbackOf(config), textOutOfCreditTargetOf(config)];
+  let input = 0;
+  let output = 0;
+  let any = false;
+  for (const target of targets) {
+    if (!target) continue;
+    const p = textPricesOf(config, target);
+    if (!p) continue;
+    any = true;
+    input = Math.max(input, p.inputUsdPerMTok);
+    output = Math.max(output, p.outputUsdPerMTok);
+  }
+  return any ? { inputUsdPerMTok: input, outputUsdPerMTok: output } : { inputUsdPerMTok: config.prices.inputUsdPerMTok, outputUsdPerMTok: config.prices.outputUsdPerMTok };
+}
+
+const TEXT_MODEL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/;
+
+/**
+ * `config/runtime.text`: { provider?, model?, fallbackProvider?, fallbackModel? }, each optional
+ * over `base`; null when invalid or when the model has no price. A fallbackModel without a
+ * fallbackProvider is at the same provider; a fallback without a price, or equal to the model, is
+ * dropped.
+ */
+export function validTextSelection(v: unknown, base: TextSelection, prices: Pick<RuntimeConfig, "prices">): TextSelection | null {
+  if (!isObj(v)) return null;
+  const provider = v.provider === undefined ? base.provider : v.provider;
+  const providerChanged = v.provider !== undefined && v.provider !== base.provider;
+  // A new provider without a model takes its adapter's default model.
+  const model = v.model === undefined ? (providerChanged ? textProviderById(provider)?.defaultModel : base.model) : v.model;
+  const fbModel = v.fallbackModel === undefined ? base.fallbackModel : v.fallbackModel === null ? "" : v.fallbackModel;
+  const fbProvider = v.fallbackProvider === undefined ? base.fallbackProvider : v.fallbackProvider === null ? "" : v.fallbackProvider;
+  if (!textProviderById(provider)) return null;
+  if (typeof model !== "string" || !TEXT_MODEL.test(model)) return null;
+  if (typeof fbModel !== "string" || (fbModel !== "" && !TEXT_MODEL.test(fbModel))) return null;
+  if (typeof fbProvider !== "string" || (fbProvider !== "" && !textProviderById(fbProvider))) return null;
+  const p = provider as string;
+  if (!textPricesOf(prices, { provider: p, model })) return null;
+  const fallbackAt = fbModel ? fbProvider || p : "";
+  const keepFallback = fbModel !== "" && !(fallbackAt === p && fbModel === model) && textPricesOf(prices, { provider: fallbackAt, model: fbModel }) !== null;
+  return { provider: p, model, fallbackProvider: keepFallback ? fallbackAt : "", fallbackModel: keepFallback ? fbModel : "" };
+}
+
+/** `providerBalanceAlerts`: provider id -> a threshold of 0 to 1e9 in its own unit; null when invalid. */
+function validBalanceAlerts(v: unknown): Record<string, number> | null {
+  if (!isObj(v) || Object.keys(v).length > 20) return null;
+  const out: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v)) {
+    if (!/^[a-z][a-z0-9]{1,19}$/.test(k) || typeof n !== "number" || !Number.isFinite(n) || n < 0 || n > 1e9) return null;
+    out[k] = n;
+  }
+  return out;
 }
 
 /**
  * The token prices are required; `imageUsdPerImage` is optional and adds to or overrides
- * DEFAULT_IMAGE_PRICES entry by entry. Any invalid part refuses the whole override.
+ * the adapters' picture prices entry by entry. Any invalid part refuses the whole override.
  */
 function validPrices(v: unknown): Prices | null {
+  // (`textUsdPerMTok`, optional: "provider/model" -> {inputUsdPerMTok, outputUsdPerMTok}, the same bounds.)
   if (!isObj(v)) return null;
   const ok = (n: unknown) => typeof n === "number" && Number.isFinite(n) && n >= 0.01 && n <= 1000;
   if (!ok(v.inputUsdPerMTok) || !ok(v.outputUsdPerMTok)) return null;
@@ -625,10 +806,21 @@ function validPrices(v: unknown): Prices | null {
     if (!parsed) return null;
     image = parsed;
   }
+  let text: Record<string, TokenPrices> | undefined;
+  if (v.textUsdPerMTok !== undefined && v.textUsdPerMTok !== null) {
+    const t = v.textUsdPerMTok;
+    if (!isObj(t) || Object.keys(t).length > 50) return null;
+    text = {};
+    for (const [k, p] of Object.entries(t)) {
+      if (!IMAGE_KEY.test(k) || !isObj(p) || !ok(p.inputUsdPerMTok) || !ok(p.outputUsdPerMTok)) return null;
+      text[k] = { inputUsdPerMTok: p.inputUsdPerMTok as number, outputUsdPerMTok: p.outputUsdPerMTok as number };
+    }
+  }
   return {
     inputUsdPerMTok: v.inputUsdPerMTok as number,
     outputUsdPerMTok: v.outputUsdPerMTok as number,
-    imageUsdPerImage: { ...DEFAULT_IMAGE_PRICES, ...image },
+    imageUsdPerImage: { ...defaultImagePrices(), ...image },
+    ...(text ? { textUsdPerMTok: text } : {}),
   };
 }
 
@@ -641,8 +833,17 @@ export function parseRuntimeConfig(
   data: Record<string, unknown>,
   logger?: Logger,
   imageDefaults: ImageSelection = DEFAULT_IMAGE_SELECTION,
+  textDefaults: TextTarget = DEFAULT_TEXT_SELECTION,
 ): RuntimeConfig {
-  const out: RuntimeConfig = { ...DEFAULT_RUNTIME_CONFIG, image: { ...imageDefaults } };
+  const out: RuntimeConfig = {
+    ...DEFAULT_RUNTIME_CONFIG,
+    image: { ...imageDefaults },
+    text: { provider: textDefaults.provider, model: textDefaults.model, fallbackProvider: "", fallbackModel: "" },
+    providerDefaults: {
+      text: { provider: textDefaults.provider, model: textDefaults.model },
+      image: imageDefaults.provider === "off" ? null : { provider: imageDefaults.provider, model: imageDefaults.model },
+    },
+  };
   const bad: string[] = [];
   for (const key of ["generationEnabled", "allowSandbox", "consumptionSampleContentProvided"] as const) {
     if (data[key] === undefined) continue;
@@ -720,8 +921,25 @@ export function parseRuntimeConfig(
     }
   }
   // A fallback model without a price is never asked (it could spend unbooked money).
-  if (out.image.fallbackModel && imagePriceMicroUsd(out, out.image.provider, out.image.fallbackModel) === null) {
-    out.image = { ...out.image, fallbackModel: "" };
+  const fb = imageFallbackOf(out);
+  if (fb && imagePriceMicroUsd(out, fb.provider, fb.model) === null) {
+    const { fallbackProvider: _dropped, ...rest } = out.image;
+    void _dropped;
+    out.image = { ...rest, fallbackModel: "" };
+  }
+  if (data.text !== undefined) {
+    const t = validTextSelection(data.text, out.text, out);
+    if (t) out.text = t;
+    else {
+      // Never fail open, and never stop the service: an invalid text setting (an unknown provider,
+      // an unpriced model) is the deploy default, the provider that was in force before switching.
+      bad.push("text");
+    }
+  }
+  if (data.providerBalanceAlerts !== undefined) {
+    const b = validBalanceAlerts(data.providerBalanceAlerts);
+    if (b) out.providerBalanceAlerts = b;
+    else bad.push("providerBalanceAlerts");
   }
   // The table says a picture's price only while one can be made at a booked price.
   if (imageMicroUsdOf(out) === null) out.costs = withoutImage(out.costs);
@@ -757,9 +975,9 @@ export function validWelcome(v: unknown): WelcomeConfig | null {
   return { recipes: recipes as number, perDay: perDay as number };
 }
 
-export async function loadRuntimeConfig(db: Firestore, logger?: Logger, imageDefaults?: ImageSelection): Promise<RuntimeConfig> {
+export async function loadRuntimeConfig(db: Firestore, logger?: Logger, imageDefaults?: ImageSelection, textDefaults?: TextTarget): Promise<RuntimeConfig> {
   const snap = await db.doc("config/runtime").get();
-  return parseRuntimeConfig((snap.data() ?? {}) as Record<string, unknown>, logger, imageDefaults);
+  return parseRuntimeConfig((snap.data() ?? {}) as Record<string, unknown>, logger, imageDefaults, textDefaults);
 }
 
 /**

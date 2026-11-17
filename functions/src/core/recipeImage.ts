@@ -12,10 +12,11 @@
  * to repeat may appear in it (briefs naming the dish's food are expected and not refused).
  * Neither the prompt nor the brief is ever logged or stored.
  */
-import { IMAGE, IMAGE_TOKEN_PRICES } from "../constants";
+import { IMAGE } from "../constants";
 import { ImageNormalizeError, normalizeImage, type NormalizedImage } from "../adapters/imageNormalize";
-import { imagePriceMicroUsd, uidHash, type RuntimeConfig } from "../model";
+import { imageFallbackOf, imageOutOfCreditTargetOf, imagePriceMicroUsd, uidHash, type RuntimeConfig } from "../model";
 import { ImageGenerationError, type Deps, type ImagePrompt, type ImageTarget, type ImageUsage } from "../ports";
+import { imageTokenPricesOf } from "../providers/registry";
 
 /**
  * The fixed parts of every picture prompt; only the checked brief goes between them (README "The
@@ -46,8 +47,8 @@ export function imagePromptFor(brief: string, kind: "dish" | "step" = "dish"): I
 export type ImageOutcome =
   | { ok: true; image: NormalizedImage; microUsd: number; model: string }
   /**
-   * `failure`: a fixed code (BRIEF_<rule>, SAFETY, CONFIG, TIMEOUT, INFRA, DECODE, NO_TIME, NO_DISH,
-   * SETTLED, MISSING). `microUsd`: what is booked for it, the price of every attempt the provider
+   * `failure`: a fixed code (BRIEF_<rule>, SAFETY, CONFIG, OUT_OF_CREDIT, TIMEOUT, INFRA, DECODE,
+   * NO_TIME, NO_DISH, SETTLED, MISSING). `microUsd`: what is booked for it, the price of every attempt the provider
    * may have charged for, else 0.
    */
   | { ok: false; failure: string; microUsd: number; model: string | null };
@@ -68,19 +69,20 @@ type Attempt =
       retryable: boolean;
       /** About the model or capacity, not the brief: the fallback model may be asked. */
       fallbackOk: boolean;
-      /** The reason class for the logs: QUOTA, SERVER, NOT_FOUND, REFUSED_REQUEST, TIMEOUT, DECODE, INFRA, SAFETY, CONFIG. */
+      /** The reason class for the logs: QUOTA, SERVER, NOT_FOUND, REFUSED_REQUEST, TIMEOUT, DECODE, INFRA, SAFETY, CONFIG, OUT_OF_CREDIT. */
       reason: string;
       inputBytes: number | null;
+      /** How long the provider asked to wait before another attempt, when it said. */
+      retryAfterMs?: number;
     };
 
 /**
- * What one picture costs: from the provider's token counts at IMAGE_TOKEN_PRICES when it reported
- * them and the model has rates there, else the model's flat price (DEFAULT_IMAGE_PRICES and
- * `config/runtime.prices.imageUsdPerImage`). Micro-USD, rounded up.
+ * What one picture costs: from the provider's token counts at its adapter's token rates when it
+ * reported them and the model has rates there, else the model's flat price (the adapter's
+ * `usdPerImage` and `config/runtime.prices.imageUsdPerImage`). Micro-USD, rounded up.
  */
 export function pictureMicroUsd(config: Pick<RuntimeConfig, "prices">, target: ImageTarget, usage: ImageUsage | undefined): number {
-  const key = `${target.provider}/${target.model}`;
-  const rates = Object.prototype.hasOwnProperty.call(IMAGE_TOKEN_PRICES, key) ? IMAGE_TOKEN_PRICES[key] : undefined;
+  const rates = imageTokenPricesOf(target.provider, target.model);
   if (usage && rates) {
     // Tokens x USD per 1M tokens = micro-USD.
     return Math.ceil(usage.inputTokens * rates.input + usage.outputTextTokens * rates.outputText + usage.outputImageTokens * rates.outputImage);
@@ -90,6 +92,7 @@ export function pictureMicroUsd(config: Pick<RuntimeConfig, "prices">, target: I
 
 function reasonOf(e: ImageGenerationError, aborted: boolean): string {
   if (aborted) return "TIMEOUT";
+  if (e.kind === "out_of_credit") return "OUT_OF_CREDIT";
   if (e.kind !== "infra") return e.kind.toUpperCase();
   const s = e.status ?? 0;
   if (s === 429) return "QUOTA";
@@ -126,17 +129,20 @@ async function attemptOnce(
   } catch (e) {
     if (e instanceof ImageGenerationError) {
       const aborted = controller.signal.aborted;
-      const failure = aborted ? "TIMEOUT" : e.kind === "safety" ? "SAFETY" : e.kind === "config" ? "CONFIG" : "INFRA";
+      const failure = aborted
+        ? "TIMEOUT"
+        : e.kind === "safety" ? "SAFETY" : e.kind === "config" ? "CONFIG" : e.kind === "out_of_credit" ? "OUT_OF_CREDIT" : "INFRA";
       return {
         ok: false,
         failure,
         microUsd: e.billed || aborted ? flat : 0,
         retryable: !aborted && e.kind === "infra" && e.retryable,
-        // Never after a safety refusal (the brief is not shopped around) or a configuration
-        // failure (the fallback is at the same provider): only the model's or capacity's failures.
+        // Never after a safety refusal (the brief is not shopped around). A configuration failure
+        // only to a fallback at another provider (makeRecipeImage); an out-of-credit one always.
         fallbackOk: failure === "INFRA" || failure === "TIMEOUT",
         reason: reasonOf(e, aborted),
         inputBytes,
+        ...(e.retryAfterMs !== undefined ? { retryAfterMs: e.retryAfterMs } : {}),
       };
     }
     deps.logger.error("Image generator threw unexpectedly", { error: String(e).slice(0, 200) });
@@ -144,6 +150,14 @@ async function attemptOnce(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * One structured line when a provider says its prepaid balance or spending limit is exhausted:
+ * the provider id, the model and what it was asked for, never the provider's own message.
+ */
+export function logOutOfCredit(deps: Pick<Deps, "logger">, target: { provider: string; model: string }, surface: "text" | "image"): void {
+  deps.logger.error("provider_out_of_credit", { provider: target.provider, model: target.model, surface });
 }
 
 /** The pause before retry `n` (1-based): IMAGE.retryBaseMs x 2^(n-1), jittered by 0.5..1.5. */
@@ -161,9 +175,12 @@ const realSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(reso
  *    fewer than IMAGE.maxAttempts were made and IMAGE.minAttemptMs (twice that with a fallback)
  *    is still left after the pause; one `image_retry` line per retry;
  * 2. when it still failed for a reason about the model or capacity (an INFRA failure, a
- *    timeout, an answer that could not be decoded; never SAFETY or CONFIG) and a fallback model is
- *    configured (`image.fallbackModel`) and IMAGE.minAttemptMs is left: one attempt of the
- *    fallback model, and one `image_fallback` line.
+ *    timeout, an answer that could not be decoded; CONFIG only when the fallback is at another
+ *    provider; never SAFETY) and a fallback is configured (`image.fallbackModel`, at
+ *    `image.fallbackProvider` or the same provider) and IMAGE.minAttemptMs is left: one attempt of
+ *    the fallback, and one `image_fallback` line. OUT_OF_CREDIT is never retried: it logs
+ *    `provider_out_of_credit` and goes to the fallback, or, when none is named, to the deploy
+ *    default provider (model.ts imageOutOfCreditTargetOf), whose price the reservation covers.
  * Every attempt the provider may have charged for is booked at its model's price. Never throws:
  * every failure is an ImageOutcome. Logs one `image_call` line (never the prompt).
  */
@@ -178,7 +195,9 @@ export async function makeRecipeImage(
 ): Promise<ImageOutcome> {
   const prompt = imagePromptFor(brief, step === undefined ? "dish" : "step");
   const primary: ImageTarget = { provider: config.image.provider, model: config.image.model };
-  const fallback: ImageTarget | null = config.image.fallbackModel ? { provider: config.image.provider, model: config.image.fallbackModel } : null;
+  const named = imageFallbackOf(config);
+  const outOfCredit = config.providerDefaults ? imageOutOfCreditTargetOf(config) : named;
+  let fallback: ImageTarget | null = named;
   const sleep = deps.sleep ?? realSleep;
   const random = deps.random ?? Math.random;
   const picture = step === undefined ? "dish" : "step";
@@ -196,7 +215,7 @@ export async function makeRecipeImage(
     booked += last.microUsd;
     madeBy = primary.model;
     if (last.ok || !last.retryable || n >= IMAGE.maxAttempts) break;
-    const wait = retryDelayMs(n, random);
+    const wait = Math.max(retryDelayMs(n, random), last.retryAfterMs ?? 0);
     if (deadlineAt - deps.now() - wait < IMAGE.minAttemptMs + keepForFallback) break;
     deps.logger.info("image_retry", {
       uidHash: uidHash(uid),
@@ -209,16 +228,27 @@ export async function makeRecipeImage(
     });
     await sleep(wait);
   }
-  if (last && !last.ok && last.fallbackOk && fallback && deadlineAt - deps.now() >= IMAGE.minAttemptMs) {
+  if (last && !last.ok && last.failure === "OUT_OF_CREDIT") {
+    logOutOfCredit(deps, primary, "image");
+    fallback = outOfCredit;
+  }
+  const across = !!fallback && fallback.provider !== primary.provider;
+  const mayFallBack = !!last && !last.ok &&
+    (last.fallbackOk || last.failure === "OUT_OF_CREDIT" || (last.failure === "CONFIG" && across));
+  let usedFallback = false;
+  if (last && !last.ok && mayFallBack && fallback && deadlineAt - deps.now() >= IMAGE.minAttemptMs) {
     const reason = last.reason;
     last = await attemptOnce(deps, prompt, fallback, config, Math.min(IMAGE.abortMs, deadlineAt - deps.now()));
     attempts++;
     booked += last.microUsd;
     madeBy = fallback.model;
+    usedFallback = true;
+    if (!last.ok && last.failure === "OUT_OF_CREDIT") logOutOfCredit(deps, fallback, "image");
     deps.logger.info("image_fallback", {
       uidHash: uidHash(uid),
       provider: primary.provider,
       model: primary.model,
+      ...(across ? { fallbackProvider: fallback.provider } : {}),
       fallbackModel: fallback.model,
       picture,
       reason,
@@ -237,7 +267,8 @@ export async function makeRecipeImage(
     picture,
     outcome: outcome.ok ? "done" : outcome.failure,
     attempts,
-    fallback: madeBy !== null && madeBy === fallback?.model,
+    fallback: usedFallback,
+    ...(usedFallback && across ? { fallbackProvider: fallback!.provider } : {}),
     durationMs: deps.now() - started,
     inputBytes: last?.inputBytes ?? null,
     passedThrough: outcome.ok ? outcome.image.passedThrough : null,

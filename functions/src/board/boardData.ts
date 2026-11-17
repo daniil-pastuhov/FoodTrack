@@ -7,7 +7,7 @@
  */
 import { REVENUE_WINDOW_DAYS } from "../constants";
 import { dailySpendCeiling, imageMicroUsdOf, utcDay, type RuntimeConfig } from "../model";
-import { activeProfileOf } from "../providers/profiles";
+import { PROVIDER_PROFILES, activeProfileOf } from "../providers/profiles";
 
 /** The owner console (README "The owner console"): the project's default Firebase Hosting site. */
 export const ownerConsoleUrl = (project: string) => `https://${project}.firebaseapp.com/`;
@@ -368,7 +368,8 @@ export function buildBoard(input: BoardInput): Board {
 }
 
 function picturesOf(config: RuntimeConfig, project: string): Board["pictures"] {
-  const p = activeProfileOf(config.image);
+  // A profile matches only with its text setup in force too (the board's "picture setup" line names it).
+  const p = activeProfileOf(config.image, PROVIDER_PROFILES, config.text, config.providerDefaults?.text);
   return {
     profile: p?.id ?? "custom",
     label: p?.label ?? "Set by hand (no profile)",

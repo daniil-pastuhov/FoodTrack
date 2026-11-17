@@ -19,12 +19,13 @@
   <button id="sign-in" type="button" class="primary">Sign in with Google</button>
 </section>
 
-<section id="console" hidden aria-labelledby="h-pictures">
-  <h2 id="h-pictures">Recipe pictures</h2>
+<section id="console" hidden aria-labelledby="h-providers">
+  <h2 id="h-providers">Recipe providers (text and pictures)</h2>
   <dl class="facts">
     <dt>In force</dt><dd id="active"></dd>
-    <dt>Models</dt><dd id="active-models"></dd>
-    <dt>Offered to the apps</dt><dd id="active-on"></dd>
+    <dt>Recipe text</dt><dd id="active-text"></dd>
+    <dt>Pictures</dt><dd id="active-models"></dd>
+    <dt>Pictures for the apps</dt><dd id="active-on"></dd>
     <dt>Last change</dt><dd id="last-change"></dd>
   </dl>
   <label for="profile">Switch to</label>
@@ -38,7 +39,7 @@
 <p id="account" hidden><button id="sign-out" type="button">Sign out</button></p>
 
 <dialog id="confirm" aria-labelledby="confirm-title">
-  <h2 id="confirm-title">Switch recipe pictures?</h2>
+  <h2 id="confirm-title">Switch the recipe providers?</h2>
   <p id="confirm-text"></p>
   <p class="note">New recipe requests use it within 30 seconds. Every switch is recorded and logged.</p>
   <div class="buttons">

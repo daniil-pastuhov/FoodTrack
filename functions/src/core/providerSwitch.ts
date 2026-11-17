@@ -4,7 +4,8 @@
  * console's callables `getProviderProfiles` / `setProviderProfile`.
  *
  * `activateProfile` checks the profile is ready, then in one transaction reads config/runtime,
- * plans the writes (only `image.provider`, `image.model`, `image.fallbackModel` and, where the
+ * plans the writes (only `image.provider`, `image.model`, `image.fallbackModel`,
+ * `image.fallbackProvider` when it changes, `text.*` when the text setup changes, and, where the
  * price in force is missing or lower, `prices.imageUsdPerImage.<provider/model>`), checks that the
  * document as it would be parses to exactly that setup with no new invalid field, writes it with
  * field paths (every other field untouched), and adds an audit record to
@@ -19,14 +20,16 @@
 import { FieldPath, Timestamp, type Firestore } from "firebase-admin/firestore";
 import type { Auth } from "firebase-admin/auth";
 import { HttpsError } from "firebase-functions/v2/https";
-import { DEFAULT_IMAGE_SELECTION, DEFAULT_PRICES } from "../constants";
-import { imageMicroUsdOf, parseRuntimeConfig, uidHash, type ImageSelection } from "../model";
-import type { Logger } from "../ports";
+import { DEFAULT_IMAGE_SELECTION, DEFAULT_PRICES, DEFAULT_TEXT_SELECTION } from "../constants";
+import { imageMicroUsdOf, parseRuntimeConfig, uidHash, type ImageSelection, type TextSelection } from "../model";
+import type { Logger, TextTarget } from "../ports";
 import {
   PROVIDER_PROFILES,
   activeProfileOf,
+  imageMatches,
   profileById,
   readinessOf,
+  textSelectionFor,
   type ProfileSecret,
   type ProviderProfile,
   type Readiness,
@@ -63,6 +66,8 @@ export interface SwitchEnv {
   logger: Logger;
   /** The deploy parameters' picture defaults (IMAGE_PROVIDER / IMAGE_MODEL / IMAGE_FALLBACK_MODEL). */
   imageDefaults?: ImageSelection;
+  /** The deploy parameters' text default (TEXT_PROVIDER / GEMINI_MODEL). */
+  textDefaults?: TextTarget;
   /** Whether the functions' service account can read the secret now; never returns its value. */
   secretReadable(secret: ProfileSecret): Promise<boolean>;
 }
@@ -77,9 +82,16 @@ export interface SetupView {
   provider: string;
   model: string;
   fallbackModel: string;
+  /** The picture fallback's provider ("" for the same provider). */
+  fallbackProvider: string;
   maxStepImages: number;
   /** Whether the apps are offered pictures now (a priced provider and `costs.recipeImage` on). */
   picturesOn: boolean;
+  /** The recipe text's provider, model and fallback in force ("" for no fallback). */
+  textProvider: string;
+  textModel: string;
+  textFallbackProvider: string;
+  textFallbackModel: string;
 }
 
 export interface ProfileView {
@@ -89,7 +101,15 @@ export interface ProfileView {
   provider: string;
   model: string;
   fallbackModel: string;
+  fallbackProvider: string;
   usdPerImage: Record<string, number>;
+  /** The text this profile puts in force (its own part, or the deploy default). */
+  textProvider: string;
+  textModel: string;
+  textFallbackProvider: string;
+  textFallbackModel: string;
+  /** Whether the profile carries its own text part (else: the text's deploy default). */
+  setsText: boolean;
   ready: boolean;
   missing: string[];
 }
@@ -176,21 +196,27 @@ export async function assertOwner(db: Firestore, caller: OwnerCaller, opts: { wr
 
 // --- Listing ----------------------------------------------------------------------------------
 
-function setupOf(data: Record<string, unknown>, imageDefaults: ImageSelection | undefined): SetupView {
-  const config = parseRuntimeConfig(data, undefined, imageDefaults ?? DEFAULT_IMAGE_SELECTION);
-  const p = activeProfileOf(config.image);
+function setupOf(data: Record<string, unknown>, imageDefaults: ImageSelection | undefined, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): SetupView {
+  const config = parseRuntimeConfig(data, undefined, imageDefaults ?? DEFAULT_IMAGE_SELECTION, textDefaults);
+  const p = activeProfileOf(config.image, PROVIDER_PROFILES, config.text, textDefaults);
   return {
     profile: p?.id ?? "custom",
     label: p?.label ?? "Set by hand (no profile)",
     provider: config.image.provider,
     model: config.image.model,
     fallbackModel: config.image.fallbackModel,
+    fallbackProvider: config.image.fallbackProvider ?? "",
     maxStepImages: config.image.maxStepImages,
     picturesOn: imageMicroUsdOf(config) !== null && config.costs.recipeImage !== undefined,
+    textProvider: config.text.provider,
+    textModel: config.text.model,
+    textFallbackProvider: config.text.fallbackProvider,
+    textFallbackModel: config.text.fallbackModel,
   };
 }
 
-function profileView(p: ProviderProfile, r: Readiness): ProfileView {
+function profileView(p: ProviderProfile, r: Readiness, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): ProfileView {
+  const t = textSelectionFor(p, textDefaults);
   return {
     id: p.id,
     label: p.label,
@@ -198,7 +224,13 @@ function profileView(p: ProviderProfile, r: Readiness): ProfileView {
     provider: p.image.provider,
     model: p.image.model ?? "",
     fallbackModel: p.image.fallbackModel ?? "",
+    fallbackProvider: p.image.fallbackProvider ?? "",
     usdPerImage: { ...p.image.usdPerImage },
+    textProvider: t.provider,
+    textModel: t.model,
+    textFallbackProvider: t.fallbackProvider,
+    textFallbackModel: t.fallbackModel,
+    setsText: p.text !== undefined,
     ready: r.ready,
     missing: r.missing,
   };
@@ -223,8 +255,8 @@ export async function listProfiles(env: SwitchEnv): Promise<ProfilesView> {
     Promise.all(PROVIDER_PROFILES.map((p) => readinessOf(p, (s) => env.secretReadable(s)))),
   ]);
   return {
-    active: setupOf((snap.data() ?? {}) as Record<string, unknown>, env.imageDefaults),
-    profiles: PROVIDER_PROFILES.map((p, i) => profileView(p, readiness[i])),
+    active: setupOf((snap.data() ?? {}) as Record<string, unknown>, env.imageDefaults, env.textDefaults),
+    profiles: PROVIDER_PROFILES.map((p, i) => profileView(p, readiness[i], env.textDefaults)),
     lastChange,
   };
 }
@@ -247,7 +279,7 @@ export interface Plan {
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
 /** The fields `parseRuntimeConfig` reports invalid in `data`. */
-function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelection): string[] {
+function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelection, textDefaults: TextTarget = DEFAULT_TEXT_SELECTION): string[] {
   let fields: string[] = [];
   parseRuntimeConfig(data, {
     info: () => undefined,
@@ -255,9 +287,12 @@ function invalidFields(data: Record<string, unknown>, imageDefaults: ImageSelect
     warn: (_m, d) => {
       fields = Array.isArray(d?.fields) ? (d.fields as string[]) : [];
     },
-  }, imageDefaults);
+  }, imageDefaults, textDefaults);
   return fields;
 }
+
+const sameText = (a: TextSelection, b: TextSelection) =>
+  a.provider === b.provider && a.model === b.model && a.fallbackProvider === b.fallbackProvider && a.fallbackModel === b.fallbackModel;
 
 function withWrites(data: Record<string, unknown>, writes: PlannedWrite[]): Record<string, unknown> {
   const out = structuredClone(data);
@@ -276,20 +311,31 @@ function withWrites(data: Record<string, unknown>, writes: PlannedWrite[]): Reco
  * Pure: the writes that put `profile` in force over the document `data` (config/runtime as
  * stored), checked by parsing the result. Throws PRICES_INVALID or INVALID_RESULT.
  */
-export function planProfile(data: Record<string, unknown>, profile: ProviderProfile, imageDefaults: ImageSelection = DEFAULT_IMAGE_SELECTION): Plan {
-  const from = setupOf(data, imageDefaults);
+export function planProfile(
+  data: Record<string, unknown>,
+  profile: ProviderProfile,
+  imageDefaults: ImageSelection = DEFAULT_IMAGE_SELECTION,
+  textDefaults: TextTarget = DEFAULT_TEXT_SELECTION,
+): Plan {
+  const from = setupOf(data, imageDefaults, textDefaults);
   const img = profile.image;
   const writes: PlannedWrite[] = [];
-  const before = parseRuntimeConfig(data, undefined, imageDefaults);
+  const before = parseRuntimeConfig(data, undefined, imageDefaults, textDefaults);
 
   // The picture part. Field paths keep image.maxStepImages and anything else in the map; an
   // image value that is not a map (invalid, pictures off) is replaced as a whole.
+  const stored = data.image;
+  const across = img.fallbackProvider !== undefined && img.fallbackProvider !== img.provider ? img.fallbackProvider : "";
   const imageFields: Record<string, string> = img.provider === "off"
     ? { provider: "off" }
-    : { provider: img.provider, model: img.model!, fallbackModel: img.fallbackModel ?? "" };
-  const stored = data.image;
-  const inForce = before.image.provider === img.provider &&
-    (img.provider === "off" || (before.image.model === img.model && before.image.fallbackModel === (img.fallbackModel ?? "")));
+    : {
+        provider: img.provider,
+        model: img.model!,
+        fallbackModel: img.fallbackModel ?? "",
+        // Written only when it is set, or to clear one a setup before left (absent: the same provider).
+        ...(across || (isObj(stored) && typeof stored.fallbackProvider === "string" && stored.fallbackProvider !== "") ? { fallbackProvider: across } : {}),
+      };
+  const inForce = imageMatches(img, before.image);
   if (!inForce) {
     if (stored !== undefined && !isObj(stored)) {
       writes.push({ path: ["image"], value: imageFields });
@@ -297,6 +343,27 @@ export function planProfile(data: Record<string, unknown>, profile: ProviderProf
       for (const [k, v] of Object.entries(imageFields)) {
         if (!isObj(stored) || stored[k] !== v) writes.push({ path: ["image", k], value: v });
       }
+    }
+  }
+
+  // The text part: the profile's, or the deploy default for a profile without one. A text map that
+  // is not a map, or a profile without text over a stored one, is written as a whole ({} reads as
+  // the deploy default); otherwise field paths.
+  const wantText = textSelectionFor(profile, textDefaults);
+  const storedText = data.text;
+  const textInForce = sameText(before.text, wantText) && (storedText === undefined || isObj(storedText));
+  if (!textInForce) {
+    if (!profile.text) {
+      writes.push({ path: ["text"], value: {} });
+    } else {
+      const textFields: Record<string, string> = {
+        provider: wantText.provider,
+        model: wantText.model,
+        fallbackProvider: wantText.fallbackProvider,
+        fallbackModel: wantText.fallbackModel,
+      };
+      if (!isObj(storedText)) writes.push({ path: ["text"], value: textFields });
+      else for (const [k, v] of Object.entries(textFields)) if (storedText[k] !== v) writes.push({ path: ["text", k], value: v });
     }
   }
 
@@ -311,7 +378,7 @@ export function planProfile(data: Record<string, unknown>, profile: ProviderProf
         path: ["prices"],
         value: { inputUsdPerMTok: DEFAULT_PRICES.inputUsdPerMTok, outputUsdPerMTok: DEFAULT_PRICES.outputUsdPerMTok, imageUsdPerImage: Object.fromEntries(raise) },
       });
-    } else if (invalidFields(data, imageDefaults).includes("prices") || !isObj(storedPrices)) {
+    } else if (invalidFields(data, imageDefaults, textDefaults).includes("prices") || !isObj(storedPrices)) {
       throw new SwitchRefused("failed-precondition", "PRICES_INVALID",
         "config/runtime.prices is invalid, so a picture price can't be added to it; fix it first (README \"config/runtime\")");
     } else if (storedPrices.imageUsdPerImage === undefined || storedPrices.imageUsdPerImage === null) {
@@ -324,17 +391,21 @@ export function planProfile(data: Record<string, unknown>, profile: ProviderProf
   // The check: the document as it would be selects exactly this profile, priced, with no field
   // newly invalid.
   const next = withWrites(data, writes);
-  const to = setupOf(next, imageDefaults);
-  const after = parseRuntimeConfig(next, undefined, imageDefaults);
-  const newlyInvalid = invalidFields(next, imageDefaults).filter((f) => !invalidFields(data, imageDefaults).includes(f));
+  const to = setupOf(next, imageDefaults, textDefaults);
+  const after = parseRuntimeConfig(next, undefined, imageDefaults, textDefaults);
+  const newlyInvalid = invalidFields(next, imageDefaults, textDefaults).filter((f) => !invalidFields(data, imageDefaults, textDefaults).includes(f));
   const priced = img.provider === "off" || imageMicroUsdOf(after) !== null;
-  const selects = after.image.provider === img.provider &&
-    (img.provider === "off" || (after.image.model === img.model && after.image.fallbackModel === (img.fallbackModel ?? "")));
+  const selects = imageMatches(img, after.image) && sameText(after.text, wantText);
   if (!selects || !priced || newlyInvalid.length) {
     throw new SwitchRefused("failed-precondition", "INVALID_RESULT",
       `config/runtime would not select ${profile.id} as written${newlyInvalid.length ? ` (invalid: ${newlyInvalid.join(", ")})` : ""}; nothing changed`);
   }
   return { from, to, writes };
+}
+
+/** Whether a setup's text is the deploy default with no fallback. */
+function isDefaultText(s: SetupView, d: TextTarget): boolean {
+  return s.textProvider === d.provider && s.textModel === d.model && !s.textFallbackModel;
 }
 
 export interface ActivateOptions {
@@ -367,10 +438,11 @@ export async function activateProfile(env: SwitchEnv, id: unknown, opts: Activat
   const ref = env.db.doc(RUNTIME_DOC);
   const auditRef = env.db.collection(PROFILE_CHANGES).doc();
   const imageDefaults = env.imageDefaults ?? DEFAULT_IMAGE_SELECTION;
+  const textDefaults = env.textDefaults ?? DEFAULT_TEXT_SELECTION;
   const result = await env.db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const data = (snap.data() ?? {}) as Record<string, unknown>;
-    const plan = planProfile(data, profile, imageDefaults);
+    const plan = planProfile(data, profile, imageDefaults, textDefaults);
     if (opts.expect !== undefined && plan.from.profile !== opts.expect) {
       throw new SwitchRefused("aborted", "STALE", `The active setup is now ${plan.from.profile}, not ${opts.expect}; reload and try again`);
     }
@@ -382,7 +454,15 @@ export async function activateProfile(env: SwitchEnv, id: unknown, opts: Activat
       const more = rest.flatMap((w) => [new FieldPath(...w.path), w.value]);
       tx.update(ref, new FieldPath(...first.path), first.value, ...more);
     }
-    const strip = (s: SetupView) => ({ profile: s.profile, provider: s.provider, model: s.model, fallbackModel: s.fallbackModel });
+    // The text and a cross-provider picture fallback only when not the defaults (older records have neither).
+    const strip = (s: SetupView) => ({
+      profile: s.profile,
+      provider: s.provider,
+      model: s.model,
+      fallbackModel: s.fallbackModel,
+      ...(s.fallbackProvider ? { fallbackProvider: s.fallbackProvider } : {}),
+      ...(isDefaultText(s, textDefaults) ? {} : { textProvider: s.textProvider, textModel: s.textModel, textFallbackProvider: s.textFallbackProvider, textFallbackModel: s.textFallbackModel }),
+    });
     tx.create(auditRef, {
       at: Timestamp.fromMillis(env.now()),
       actor: opts.actor,
@@ -401,6 +481,9 @@ export async function activateProfile(env: SwitchEnv, id: unknown, opts: Activat
       provider: result.plan.to.provider,
       model: result.plan.to.model,
       fallbackModel: result.plan.to.fallbackModel,
+      ...(isDefaultText(result.plan.from, textDefaults) && isDefaultText(result.plan.to, textDefaults)
+        ? {}
+        : { textProvider: result.plan.to.textProvider, textModel: result.plan.to.textModel, textFallbackModel: result.plan.to.textFallbackModel }),
       change: auditRef.id,
     });
   }
