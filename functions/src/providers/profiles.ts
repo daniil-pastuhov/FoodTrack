@@ -113,6 +113,7 @@ export function withProviderRequirements(p: Omit<ProviderProfile, "requires"> & 
 const FLASH_LITE = "gemini-3.1-flash-lite-image";
 const NANO_BANANA = "gemini-nano-banana-2.1";
 const OPENAI_MINI = "gpt-image-1-mini";
+const FLUX_KLEIN = "flux-3-image-klein";
 
 export const PROVIDER_PROFILES: readonly ProviderProfile[] = ([
   {
@@ -152,6 +153,22 @@ export const PROVIDER_PROFILES: readonly ProviderProfile[] = ([
     summary: "OpenAI's Images API; needs its API key in Secret Manager and OpenAI named as a processor in the privacy policy.",
     image: { provider: "openai", model: OPENAI_MINI, fallbackModel: "", usdPerImage: price("openai", OPENAI_MINI) },
     // From the provider (adapters/image.ts openaiImage): the privacy approval, then the key.
+    requires: [],
+  },
+  {
+    // The EU picture half: an "EU pair" profile later adds an EU text provider (a `text` part) to
+    // this same picture part. Without `text` the recipe text stays Gemini (the deploy default).
+    id: "flux-eu",
+    label: "FLUX 3 Image Klein, EU endpoint (Flash-Lite Image as fallback)",
+    summary: "Black Forest Labs' EU endpoint for pictures, Gemini for the text; Flash-Lite Image on Vertex AI is asked once when FLUX fails for capacity, time or credit.",
+    image: {
+      provider: "bfl",
+      model: FLUX_KLEIN,
+      fallbackProvider: "vertex",
+      fallbackModel: FLASH_LITE,
+      usdPerImage: { ...price("bfl", FLUX_KLEIN), ...price("vertex", FLASH_LITE) },
+    },
+    // From the provider (adapters/bfl.ts bflImage): the privacy approval, then the key.
     requires: [],
   },
 ] satisfies (Omit<ProviderProfile, "requires"> & { requires: readonly Requirement[] })[]).map(withProviderRequirements);

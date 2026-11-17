@@ -33,7 +33,7 @@ import { RuntimeConfigCache, loadRuntimeConfig, validImageSelection, type ImageS
 import type { Caller, Deps, TextTarget } from "./ports";
 import { GeminiOutputJudge } from "./adapters/gemini";
 import { SecretReader } from "./adapters/secretManager";
-import { allProviders, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
+import { allProviders, imageProviderIds, imageProviders, providerSecrets, textProviderById, textProviders } from "./providers/registry";
 import { ImageRouter, TextRouter } from "./providers/router";
 import { checkProviderBalances as checkProviderBalancesCore } from "./providers/balance";
 import type { ProviderContext, ProviderDescriptor } from "./providers/types";
@@ -118,7 +118,7 @@ function providerParam(name: string): string {
 // the provider's own default param (GEMINI_MODEL for google).
 const textProvider = defineString("TEXT_PROVIDER", {
   default: "google",
-  description: "Default provider of the recipe text: google (config/runtime.text.provider overrides it).",
+  description: `Default provider of the recipe text: one of ${textProviders().map((d) => d.id).join(", ")} (config/runtime.text.provider overrides it).`,
 });
 const judgeModel = defineString("GEMINI_JUDGE_MODEL", {
   default: "",
@@ -128,7 +128,8 @@ const judgeModel = defineString("GEMINI_JUDGE_MODEL", {
 // config/runtime.image overrides them at run time, without a deploy.
 const imageProvider = defineString("IMAGE_PROVIDER", {
   default: DEFAULT_IMAGE_SELECTION.provider,
-  description: "Default provider of recipe pictures: one in providers/registry.ts (vertex, openai) or off (config/runtime.image.provider overrides it).",
+  // The ids come from the registry, so the description lists every picture adapter (and off).
+  description: `Default provider of recipe pictures: one of ${imageProviderIds().join(", ")} (config/runtime.image.provider overrides it).`,
 });
 const imageModel = defineString("IMAGE_MODEL", {
   default: DEFAULT_IMAGE_SELECTION.model,

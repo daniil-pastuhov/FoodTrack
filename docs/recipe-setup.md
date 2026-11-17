@@ -541,10 +541,22 @@ the service account can read it. When the adapter is merged and before switching
 - [ ] The privacy policy's processor list names the provider (and where it processes: Mistral's EU
   endpoint, Black Forest Labs' region), then the adapter's `privacy.approved` is set to `true` in
   code. Until both, its profiles are listed but not switchable.
-- [ ] Optional, for a prepaid account: `config/runtime.providerBalanceAlerts`, e.g. `{bfl: 100}`
-  (its own unit), so `provider_balance_low` warns before calls fail as out of credit.
+- [ ] Optional, for a prepaid account: `config/runtime.providerBalanceAlerts`, e.g. `{bfl: 500}`
+  (its own unit), so `provider_balance_low` warns before calls fail as out of credit. BFL's unit is
+  credits, 1 credit = USD 0.01: 500 warns under USD 5, about 550 FLUX 3 Image Klein pictures. Set
+  it below what BFL's own auto top-up keeps (its dashboard, API > Credits; minimum trigger USD 5)
+  if that is on. The probe reads the key, so it needs the grant above.
 - [ ] Apply the new alert policies (`python3 functions/alerts/alerts.py --project bestbefore-f9ee1 --apply`,
   step 9): out of credit, balance low, pictures failing broadly.
+- [ ] **Black Forest Labs (FLUX pictures, profile `flux-eu`)**: the adapter is in
+  (`functions/src/adapters/bfl.ts`, functions/README.md "FLUX by Black Forest Labs"). Before the
+  approval flag can be turned on: (1) the grant on `BFL_API_KEY` above, nothing else (no role on
+  the project, no other secret); (2) the privacy policy names Black Forest Labs as a processor of
+  the picture prompts, its EU processing, and that its terms let it keep and train on prompts and
+  pictures (docs/privacy-policy-changes.md, "Pending"), merged in all eight languages; (3) only then
+  `privacy.approved: true` in `bflImage` (a code change and a deploy). Also decide on its latency:
+  in the test of 2026-11-17 about half of the pictures took longer than the 30 s an attempt gets,
+  and each of those would be made again by Flash-Lite Image after BFL had charged for it.
 
 ### App Review switch
 

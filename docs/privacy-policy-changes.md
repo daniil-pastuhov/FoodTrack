@@ -36,6 +36,16 @@ don't offer them). Checked against `functions/README.md` "Recipe pictures" and "
   are not in the app's backup file, nor in Android's cloud backup). (If the provider is ever switched, for example to OpenAI,
   the policy must name it before the switch: functions/README.md "What a new provider means for
   privacy".)
+- **Black Forest Labs, only if pictures are ever switched to FLUX** (functions/README.md "FLUX by
+  Black Forest Labs"; not switchable until this is published and the code's approval flag is
+  turned on). Wording to add to the recipe pictures paragraph and the processor list: "Pictures may
+  instead be made by Black Forest Labs (BFL GmbH, Freiburg, Germany), on its servers in the EU. It
+  receives the same short English description of the dish and nothing else: no items you typed,
+  allergens, taste answers, account or device identifier, or IP address (the request comes from our
+  server). Black Forest Labs' terms allow it to keep these descriptions and the pictures made from
+  them and to use them to train and improve its models; they state no retention period." Re-read
+  the App Privacy / Data safety answers then (no new data type is expected: the description is
+  not personal data, and nothing of the person is sent).
 - **Reports.** If you report a recipe or menu from a pack ("Report this recipe"), we receive the
   reason you chose, any note you write (up to 500 characters), your app's platform, version and
   language, and keep it under your account together with a copy of the reported recipe or menu
