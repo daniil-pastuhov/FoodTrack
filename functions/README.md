@@ -741,6 +741,7 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `provider_out_of_credit` | error | **Alerted on** (`provider-out-of-credit`): a text or picture provider said its prepaid balance or spending limit is exhausted ("Adding a provider"): `provider`, `model`, `surface` (`text` / `image`). Never the provider's message. The request went to the fallback or the default provider; anything not made was given back. |
 | `text_fallback` | info | **Worth watching**: the recipe text's provider failed before writing anything and the fallback was asked once: `uidHash`, `provider`, `model`, `fallbackProvider`, `fallbackModel`, `reason` (`OUT_OF_CREDIT`, `CAPACITY`, `CONFIG`). The `llm_call` line then has `provider` (who answered) and `textFallback: true`. |
 | `provider_balance_low` / `provider_balance_unavailable` | error / warning | The hourly balance probe ("Provider balances"): `provider`, `amount`, `unit`, `threshold`; or `provider`, `reason` (`TIMEOUT`, `FAILED`). The first is **alerted on** (`provider-balance-low`). |
+| `provider_balance_unprobed` | warning | A `providerBalanceAlerts` threshold nothing can probe ("Provider balances"): `provider`, `reason` (`UNKNOWN_PROVIDER`, `NO_PROBE`); once per such threshold per hourly run. Remove the threshold or fix its id. |
 | `owner_call_refused` | warning | A call to the owner console's callables was refused: `function`, `reason` (`SIGN_IN`, `RATE_LIMITED`, `NOT_OWNER`, `RECENT_SIGN_IN`, `NOT_READY`, `STALE`, `UNKNOWN_PROFILE`, `PRICES_INVALID`, `INVALID_RESULT`), `suppressedSinceLast`; sampled, 10 a minute per instance. Never who. Many `NOT_OWNER` mean someone is trying the page. |
 | `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackProvider` (only when it is another provider), `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`, `CONFIG`, `OUT_OF_CREDIT`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
 | `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
@@ -1160,7 +1161,9 @@ and each Firestore document is at most 600,000 bytes plus a few fields, under 60
    is asked **once**, and `image_fallback` is logged. Never after a `SAFETY` refusal (the same
    brief is not shopped around to another model), and after a `CONFIG` failure only when the
    fallback is at another provider. `OUT_OF_CREDIT` ("Adding a provider") is never retried and
-   goes to the fallback, or to the deploy default provider when none is named. A picture the fallback made is delivered like
+   goes to the fallback, or, when none is named and the provider is not the deploy default's, to the deploy default
+   (`IMAGE_PROVIDER` / `IMAGE_MODEL`; its fallback model is not asked), whose price the reservation then also covers
+   (owner's rule; "Config switches and params", `image`). A picture the fallback made is delivered like
    any other and booked at its own cost; the reservation already covers the dearer model.
 3. A picture that still failed follows the give-back rules ("How the money works").
 
@@ -1350,7 +1353,7 @@ optional `kind`) or an `ImageGenerationError` (`kind`, `billed`, `retryable`, `s
 |---|---|---|---|---|
 | `config` | 401, 403; no adapter; no key | can't be called at all; nothing sent or billed | text: refunded (known usage); picture: its share given back | text: the named fallback; picture: only a fallback at another provider |
 | `capacity` | 429, 500/502/503/504 | quota or overload | as `config` | text: the named fallback (never retried at the same provider); picture: retried after the backoff, at least `Retry-After`, then the named fallback |
-| `out_of_credit` | 402, or a 429 that says the balance or limit is exhausted | prepaid balance empty, spending limit reached; nothing made, nothing billed | refunded / given back by the existing rules | the named fallback, **else the deploy default provider** (owner's rule: an EU profile may fall back to Google); `provider_out_of_credit` is logged (error) with `provider`, `model`, `surface`, never the provider's message |
+| `out_of_credit` | 402, or a 429 that says the balance or limit is exhausted | prepaid balance empty, spending limit reached; nothing made, nothing billed | refunded / given back by the existing rules | the named fallback, **else the deploy default provider** (owner's rule: an EU profile may fall back to Google; its price is then reserved too); `provider_out_of_credit` is logged (error) with `provider`, `model`, `surface`, never the provider's message |
 | `safety` | a provider's own refusal | | text: a content failure and a prompt rejection, as for Gemini | **never** |
 | `content` | an answer cut off (`finish_reason: length`, MAX_TOKENS), not JSON, empty | | content-failure allowance | never |
 | `infra` | anything else; anything mid-stream | | unknown usage: the timeout allowance | never |
@@ -1368,8 +1371,12 @@ The reservation covers the dearest provider a request may reach: the text at the
 output each, of its provider, the named fallback and the out-of-credit default
 (`textReservePricesOf`); every picture at the dearest of its model, the fallback and, when no
 fallback is named and the provider is not the default, the default's price
-(`imageReservedMicroUsdOf`). Settle books each call at its own provider's price (`Outcome.spend`;
-the judge always at Gemini's), so a cheaper provider books less than it reserved. With the deploy
+(`imageReservedMicroUsdOf`): so a hand-written `config/runtime.image` at another provider with no
+fallback named reserves at least the default picture model's price, even when its own is cheaper.
+Settle books each call at its own provider's price (`Outcome.spend`;
+the judge always at Gemini's), so a cheaper provider books less than it reserved. When any call's
+usage is unknown, the reservation stays booked (`bookedMicroUsd`), never the measured part at
+Gemini's prices. With the deploy
 default and no fallback all of this is exactly what it was (`test/providerPin.test.ts`).
 
 ### Secrets
@@ -1428,7 +1435,11 @@ gcloud secrets add-iam-policy-binding BFL_API_KEY --project bestbefore-f9ee1 \
 threshold in `config/runtime.providerBalanceAlerts` for its balance, and logs
 `provider_balance_low` (error: `provider`, `amount`, `unit`, `threshold`) under it, or
 `provider_balance_unavailable` (warning: `provider`, `reason` `TIMEOUT` / `FAILED`) when the
-probe fails. No provider implements a probe yet, and with no threshold it calls nothing. It is a new
+probe fails. A threshold for a provider id the registry doesn't have, or for one without a probe,
+asks nothing and logs `provider_balance_unprobed` (warning: `provider`, `reason`
+`UNKNOWN_PROVIDER` / `NO_PROBE`) once per such threshold per run. The logged `unit` is a short
+lower-case word (`usd`, `credits`) or `unknown`, never a provider's text. No provider implements
+a probe yet, and with no threshold it calls nothing and logs nothing. It is a new
 scheduled function: the next deploy creates its Cloud Scheduler job.
 
 ## Reports
@@ -1644,9 +1655,9 @@ its default, and a warning "config/runtime has invalid fields" names them. Insta
 | `costs` | map | `{recipe: 1, menu2: 4, menu3: 5}` (and `menuSets` days + courses − 1) | Credits per request. `recipeImage` optional: a recipe with a picture, an integer from `recipe` to 100; absent is twice `recipe` (at most 100), `0` turns pictures off (the table then has no `recipeImage` and no `recipeImageSteps`). `recipeImageSteps` optional: a recipe with the dish's and step pictures, from `recipeImage` to 100; absent is three times `recipe`, `0` turns that level off. `recipe`, `menu2`, `menu3` required, integers 1–100; `menu2` / `menu3` are the 3-day 2- and 3-course menus and the only source of those two prices. `menuSets` optional: `{"<days 1-4>": {"<courses 1-3>": n}}`, any cells; its 3-day `"2"` / `"3"` cells are accepted only when equal to `menu2` / `menu3`. A missing cell (all of them in a document from before menu sets) takes the default table's step from the 3-day row (±1 a day or course; the 3-day 1-course cell from `menu2`), held within [`recipe`, 100]. More days or courses never cheaper, no menu below `recipe`. Anything invalid: the whole default table is used (warning `costs`). Sent to clients in full (with `menuSets`) in every response with `balance`. |
 | `prices` | map | `{inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5}` | LLM price table for the estimates (see "Price table"). Optional `imageUsdPerImage`: `{"<provider>/<model>": USD}` (0.001–2 each, at most 50), added to or overriding the picture adapters' own prices entry by entry. Optional `textUsdPerMTok`: `{"<provider>/<model>": {inputUsdPerMTok, outputUsdPerMTok}}` (0.01–1000 each, at most 50), over a text adapter's own table for every provider but `google`, whose prices are the two token fields themselves. Anything invalid: the whole default `prices` (warning `prices`). |
 | `reports` | map | `{perUserPerDay: 10, perDay: 500, keepDays: 90}` | "Report this recipe" ("Reports"): reports per signed-in account per UTC day (0–1000), per day across the service (0–100,000), and days each report is kept (1–400). Either may be left out. Anything invalid: the defaults (warning `reports`). |
-| `image` | map | `{provider, model, fallbackModel, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` (`vertex`, `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1`), `maxStepImages` 2 | Usually set by provider profile ("Provider profiles": `npm run admin -- providers use`, the owner console), which writes `provider`, `model`, `fallbackModel` (and `fallbackProvider` when it changes) and leaves the rest. The recipe picture's provider (one in `src/providers/registry.ts`: `vertex`, `openai`; or `off`), model id, `fallbackModel` (asked once on a capacity failure; `""` or null for none), `fallbackProvider` (the fallback's provider when it is another one; absent or `""`: the same provider), and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. |
+| `image` | map | `{provider, model, fallbackModel, maxStepImages}` from the params `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` (`vertex`, `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1`), `maxStepImages` 2 | Usually set by provider profile ("Provider profiles": `npm run admin -- providers use`, the owner console), which writes `provider`, `model`, `fallbackModel` (and `fallbackProvider` when it changes) and leaves the rest. The recipe picture's provider (one in `src/providers/registry.ts`: `vertex`, `openai`; or `off`), model id, `fallbackModel` (asked once on a capacity failure; `""` or null for none), `fallbackProvider` (the fallback's provider when it is another one; absent or `""`: the same provider), and `maxStepImages` (integer 0–4, default 2: step pictures beside the dish's for `image: "steps"`; 0 turns that level off); each may be left out. Takes effect within 30 s, no deploy ("Recipe pictures"). Anything invalid: pictures **off** (warning `image`). A provider and model without a price in `prices.imageUsdPerImage` also turn pictures off. **Out of credit with no fallback named**: when `provider` is not the `IMAGE_PROVIDER` default's (and pictures are not off by default), a picture whose provider is out of credit goes to the deploy default, `IMAGE_PROVIDER` / `IMAGE_MODEL` (not `IMAGE_FALLBACK_MODEL`), so every picture is also **reserved at the default's price** when that is dearer (`imageOutOfCreditTargetOf`, `imageReservedMicroUsdOf`): `{provider: "openai", model: "gpt-image-1-mini", fallbackModel: ""}` reserves USD 0.04 a picture (Flash-Lite Image), not its own 0.02, and books what was made. A named `fallbackModel` replaces the default (only it is then reserved and asked); a `provider` equal to the default's adds nothing (`test/providerReview.test.ts`). |
 | `text` | map | `{provider, model}` from the params `TEXT_PROVIDER` / `GEMINI_MODEL` (`google`, `gemini-3.8-flash`), no fallback | Usually set by provider profile. The recipe text's provider (one in `src/providers/registry.ts`), model (absent with a new provider: its adapter's default model), `fallbackProvider` and `fallbackModel` (`""` or null for none; a fallback model without a provider is at the same provider) ("Adding a provider", "Fallback"). Each may be left out; `{}` is the deploy default. Anything invalid, or a model without a price: the deploy default (warning `text`), never no text. The judge always runs on Gemini. |
-| `providerBalanceAlerts` | map | `{}` | `{"<provider>": threshold}` (0 to 1e9, the provider's own unit, at most 20): the hourly `checkProviderBalances` logs `provider_balance_low` under it, for providers with a balance probe ("Provider balances"). Anything invalid: none (warning `providerBalanceAlerts`). |
+| `providerBalanceAlerts` | map | `{}` | `{"<provider>": threshold}` (0 to 1e9, the provider's own unit, at most 20): the hourly `checkProviderBalances` logs `provider_balance_low` under it, for providers with a balance probe ("Provider balances"); one for an unknown provider or one without a probe logs `provider_balance_unprobed` instead. Anything invalid: none (warning `providerBalanceAlerts`). |
 | `budgetKillFraction` | number in (0, 2] | `1` | The budget alert flips the kill switch at cost ≥ budget × this. |
 | `welcome` | map | `{recipes: 3, perDay: 200}` | The welcome grant ("Welcome grant"): `recipes` (integer 0–20) free recipes once per Google or Apple sign-in, 0 turns it off; `perDay` (integer 0–10,000) grants at most per UTC day across all accounts, then the offer reads 0 and claims answer `OFF`. Either may be left out (its default). Anything invalid: the grant is **off** (warning `welcome`). |
 | `tasteQuiz` | map | `{hidden: []}` | `hidden`: at most 200 `"<step>"` or `"<step>:<option>"` ids left out of `getTasteQuiz` and dropped from requests' `taste` (see "Taste profile quiz"). Nothing else of the quiz is configurable here. Anything invalid: nothing hidden (warning `tasteQuiz`). |
@@ -2184,7 +2195,9 @@ and remove their exports from `src/index.ts`) and `npx firebase hosting:disable`
 ## Parameters and secrets
 
 Asked for by `firebase deploy` the first time (and saved to `functions/.env.bestbefore-f9ee1`,
-which holds no secrets and may be committed), or set there beforehand:
+which holds no secrets and may be committed), or set there beforehand. The CLI ignores a default
+for a param the file doesn't list (a non-interactive deploy fails, an interactive one prompts), so
+every param, an adapter's included, has a line there; `test/deployParams.test.ts` fails otherwise:
 
 | param | default | what |
 |---|---|---|

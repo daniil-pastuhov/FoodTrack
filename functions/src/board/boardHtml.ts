@@ -682,7 +682,7 @@ export function boardSummary(b: Board): string[] {
     `Generations: ${int(p.succeeded)} written, ${int(p.contentFailures)} content failures, ${int(p.infraFailures)} infrastructure failures, ` +
       `${int(p.qualityFailures)} quality refusals; ${int(p.refundedCredits)} recipes refunded; ${int(p.unknownUsageCalls)} calls at worst case.`,
     `Picture setup: ${b.pictures.profile} (${b.pictures.provider === "off" ? "off" : `${b.pictures.provider}/${b.pictures.model}, fallback ${b.pictures.fallbackModel || "none"}`}); ` +
-      `offered to the apps: ${b.pictures.on ? "yes" : "no"}. Switch: npm run admin -- image use <profile>, or ${b.pictures.consoleUrl}`,
+      `offered to the apps: ${b.pictures.on ? "yes" : "no"}. Switch: npm run admin -- providers use <profile>, or ${b.pictures.consoleUrl}`,
     `Pictures: ${int(p.imageRequests)} recipes asked with pictures, ${int(p.imagesDelivered)} pictures delivered, ${int(p.imageFailures)} not. ` +
       `Reports (recipe_reported): ${int(t.reports)} today, ${int(p.reports)} in the period.`,
     ...(b.purchasesCapped

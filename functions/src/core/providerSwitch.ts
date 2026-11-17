@@ -1,6 +1,6 @@
 /**
  * Switching the provider setup by named profile (providers/profiles.ts; README "Provider
- * profiles"): the one core behind `npm run admin -- image list | use <id>` and the owner
+ * profiles"): the one core behind `npm run admin -- providers list | use <id>` and the owner
  * console's callables `getProviderProfiles` / `setProviderProfile`.
  *
  * `activateProfile` checks the profile is ready, then in one transaction reads config/runtime,
