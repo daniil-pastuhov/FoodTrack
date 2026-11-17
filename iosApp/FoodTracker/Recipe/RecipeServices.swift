@@ -53,6 +53,10 @@ protocol RecipeBackend: Sendable {
     /// `claimWelcome`: the free recipes, once per Apple or Google account. Signed in only, with a
     /// limited-use App Check token. Idempotent: a retry after a lost answer never grants twice.
     func claimWelcome() async throws -> ClaimWelcomeResponse
+    /// `reportRecipe`: "Report this recipe" on a result the server wrote, with no recipe text. A
+    /// limited-use App Check token; the same `reportId` again is the same report. Only to a server
+    /// that said `acceptsReports`, for an account that exists (never one made for it).
+    func reportRecipe(_ request: ReportRecipeRequest) async throws
 }
 
 // MARK: Configuration
@@ -88,20 +92,32 @@ struct RecipeOptions: Codable, Equatable, Sendable {
     /// Saved recipes and menus not seen yet (`RecipeUnread`), by saved id: the header's badge.
     /// JSON key `unreadSaved`, a list of ids. Android: `RecipeOptions.unreadSaved`.
     var unreadSaved: Set<String> = []
+    /// The Pictures row's choice for a recipe from a pack: no pictures until the person picks a
+    /// level, then remembered (what is sent is `RecipePictures.choice`'s, which the pack may hold
+    /// lower). JSON key `pictureLevel`. Android: `RecipeOptions.pictureLevel`.
+    var pictureLevel: RecipePictureLevel = .none
+    /// Results reported from this device, by request id, oldest first and at most
+    /// `RecipeReporting.remembered`: their foot reads "You've reported this" across launches.
+    /// Android: `RecipeOptions.reportedRequests`.
+    var reportedRequests: [String] = []
 
-    init(sendAllItems: Bool = false, introSeen: Bool = false, unreadSaved: Set<String> = []) {
+    init(sendAllItems: Bool = false, introSeen: Bool = false, unreadSaved: Set<String> = [], pictureLevel: RecipePictureLevel = .none, reportedRequests: [String] = []) {
         self.sendAllItems = sendAllItems
         self.introSeen = introSeen
         self.unreadSaved = unreadSaved
+        self.pictureLevel = pictureLevel
+        self.reportedRequests = reportedRequests
     }
 
-    private enum CodingKeys: String, CodingKey { case sendAllItems, introSeen, unreadSaved }
+    private enum CodingKeys: String, CodingKey { case sendAllItems, introSeen, unreadSaved, pictureLevel, reportedRequests }
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(sendAllItems, forKey: .sendAllItems)
         try container.encode(introSeen, forKey: .introSeen)
         try container.encode(unreadSaved.sorted(), forKey: .unreadSaved)
+        try container.encode(pictureLevel, forKey: .pictureLevel)
+        try container.encode(reportedRequests, forKey: .reportedRequests)
     }
 
     init(from decoder: Decoder) throws {
@@ -109,6 +125,9 @@ struct RecipeOptions: Codable, Equatable, Sendable {
         sendAllItems = (try? container.decodeIfPresent(Bool.self, forKey: .sendAllItems)) ?? false
         introSeen = (try? container.decodeIfPresent(Bool.self, forKey: .introSeen)) ?? false
         unreadSaved = Set((try? container.decodeIfPresent([String].self, forKey: .unreadSaved)) ?? nil ?? [])
+        // A level a later version adds reads as none.
+        pictureLevel = (try? container.decodeIfPresent(RecipePictureLevel.self, forKey: .pictureLevel)) ?? nil ?? RecipePictureLevel.none
+        reportedRequests = Array(((try? container.decodeIfPresent([String].self, forKey: .reportedRequests)) ?? nil ?? []).suffix(RecipeReporting.remembered))
     }
 }
 
@@ -219,14 +238,20 @@ protocol SavedRecipeStore {
     func delete(ids: Set<String>)
     /// Undo of that Delete: `entries` back as they were, ids intact, with one save.
     func save(_ entries: [SavedRecipe])
+    /// The pictures kept with `id`, read now (for Undo, before a delete). Nil without any.
+    func pictures(id: String) -> SavedRecipePictures?
+    /// The same, read off the main actor (opening a saved recipe).
+    func loadPictures(id: String) async -> SavedRecipePictures?
 }
 
 /// Saved recipes in the shared SwiftData store, as `SavedRecipeRecord` rows.
 @MainActor
 final class SwiftDataSavedRecipeStore: SavedRecipeStore {
     private let context: ModelContext
+    private let container: ModelContainer
 
     init(container: ModelContainer = NativePantryViewModel.sharedModelContainer) {
+        self.container = container
         context = ModelContext(container)
     }
 
@@ -244,6 +269,12 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
             guard let record = Self.record(from: entry) else { continue }
             let id = entry.id
             let existing = (try? context.fetch(FetchDescriptor<SavedRecipeRecord>(predicate: #Predicate { $0.id == id }))) ?? []
+            // An entry saved without its pictures in hand keeps the ones already stored for it.
+            if entry.pictures == nil, let old = existing.first {
+                record.dishImage = old.dishImage
+                record.stepImages = old.stepImages
+                record.thumbnail = record.thumbnail ?? old.thumbnail
+            }
             existing.forEach(context.delete)
             context.insert(record)
         }
@@ -278,7 +309,37 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
         case nil:
             return nil
         }
-        return SavedRecipe(id: record.id, createdAt: record.createdAt, content: content)
+        return SavedRecipe(id: record.id, createdAt: record.createdAt, content: content, thumbnail: record.thumbnail)
+    }
+
+    func pictures(id: String) -> SavedRecipePictures? {
+        let records = (try? context.fetch(FetchDescriptor<SavedRecipeRecord>(predicate: #Predicate { $0.id == id }))) ?? []
+        return records.first.flatMap(Self.pictures(of:))
+    }
+
+    func loadPictures(id: String) async -> SavedRecipePictures? {
+        let container = container
+        return await Task.detached(priority: .userInitiated) {
+            let context = ModelContext(container)
+            let records = (try? context.fetch(FetchDescriptor<SavedRecipeRecord>(predicate: #Predicate { $0.id == id }))) ?? []
+            return records.first.flatMap(Self.pictures(of:))
+        }.value
+    }
+
+    nonisolated static func pictures(of record: SavedRecipeRecord) -> SavedRecipePictures? {
+        let steps = record.stepImages.flatMap { try? PropertyListDecoder().decode([String: Data].self, from: $0) } ?? [:]
+        let pictures = SavedRecipePictures(
+            dish: record.dishImage,
+            steps: Dictionary(uniqueKeysWithValues: steps.compactMap { key, value in Int(key).map { ($0, value) } })
+        )
+        return pictures.isEmpty ? nil : pictures
+    }
+
+    nonisolated static func encodedSteps(_ steps: [Int: Data]) -> Data? {
+        guard !steps.isEmpty else { return nil }
+        let encoder = PropertyListEncoder()
+        encoder.outputFormat = .binary
+        return try? encoder.encode(Dictionary(uniqueKeysWithValues: steps.map { (String($0.key), $0.value) }))
     }
 
     static func record(from entry: SavedRecipe) -> SavedRecipeRecord? {
@@ -294,7 +355,7 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
             title = menu.days.first?.courses.first?.recipe.title ?? ""
         }
         guard let payload else { return nil }
-        return SavedRecipeRecord(
+        let record = SavedRecipeRecord(
             id: entry.id,
             kind: entry.kind.rawValue,
             payload: payload,
@@ -302,5 +363,11 @@ final class SwiftDataSavedRecipeStore: SavedRecipeStore {
             createdAt: entry.createdAt,
             source: entry.source.rawValue
         )
+        record.thumbnail = entry.thumbnail
+        if let pictures = entry.pictures {
+            record.dishImage = pictures.dish
+            record.stepImages = encodedSteps(pictures.steps)
+        }
+        return record
     }
 }

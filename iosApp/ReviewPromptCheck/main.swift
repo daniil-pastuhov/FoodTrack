@@ -62,6 +62,11 @@ MainActor.assumeIsolated {
     let t = ReviewPrompter(store: { let s = MemStore(); s.record = ReviewPromptRecord(firstLaunch: start, mostItemsSeen: 2); return s }(), appVersion: "2.1.0", now: { now }, suppressed: false)
     t.problemShown(); t.recipeArrived()
     check(!t.recipeLeft { asks += 1 }, "problem blocks")
+    let u = ReviewPrompter(store: { let s = MemStore(); s.record = ReviewPromptRecord(firstLaunch: start, mostItemsSeen: 2, usesBeforeDate: 5); return s }(), appVersion: "2.1.0", now: { now }, suppressed: false)
+    u.reportSent(); u.recipeArrived()
+    check(!u.recipeLeft { asks += 1 }, "a sent report blocks the recipe moment")
+    check(!u.usedOne(daysRemaining: 2) { asks += 1 }, "a sent report blocks the use-one moment")
+    check(u.sessionBlocked, "a sent report rules the session out")
 
     // Codable round trip through UserDefaults
     let defaults = UserDefaults(suiteName: "reviewcheck-\(UUID().uuidString)")!

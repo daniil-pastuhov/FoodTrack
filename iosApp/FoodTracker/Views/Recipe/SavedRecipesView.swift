@@ -97,10 +97,20 @@ struct SavedRecipesView: View {
                         .accessibilityHidden(true)
                         .padding(.horizontal, -LarderSpace.s2)
                 }
-                LarderIcon(entry.kind == .menu ? .calendarRange : .utensils, size: .large)
-                    .foregroundStyle(LarderColor.onSurfaceVariant)
-                    .frame(width: 44, height: 44)
-                    .background(isSelected ? LarderColor.surface : LarderColor.surfaceContainer, in: RoundedRectangle(cornerRadius: LarderRadius.md))
+                // A recipe saved with its dish picture shows it, cropped square; the others their icon.
+                if let thumbnail = entry.thumbnail.flatMap(UIImage.init(data:)) {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: LarderRadius.md))
+                        .accessibilityHidden(true)
+                } else {
+                    LarderIcon(entry.kind == .menu ? .calendarRange : .utensils, size: .large)
+                        .foregroundStyle(LarderColor.onSurfaceVariant)
+                        .frame(width: 44, height: 44)
+                        .background(isSelected ? LarderColor.surface : LarderColor.surfaceContainer, in: RoundedRectangle(cornerRadius: LarderRadius.md))
+                }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(Self.title(entry))
                         .larderFont(.titleSm)

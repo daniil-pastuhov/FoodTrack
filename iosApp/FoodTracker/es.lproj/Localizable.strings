@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "Puedes saltarte esto y hacerlo más tarde en Ajustes › Básicos.";
 "onboarding_staples_continue" = "Continuar";
 "onboarding_staples_skip" = "Omitir";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Imágenes";
+"recipe_image_title" = "Imágenes creadas con IA";
+"recipe_image_none" = "Sin imágenes";
+"recipe_image_dish" = "El plato";
+"recipe_image_dish_desc" = "Una imagen del plato terminado";
+"recipe_image_steps" = "El plato y los pasos difíciles";
+"recipe_image_steps_desc" = "Y además imágenes de los pasos difíciles de seguir solo con palabras";
+"recipe_image_short" = "Tienes %@: no basta para imágenes.";
+"recipe_image_short_steps" = "Tienes %@: basta para la imagen del plato, no para los pasos.";
+"recipe_image_with" = "Con imagen del plato";
+"recipe_image_with_steps" = "Con imágenes del plato y de los pasos";
+"recipe_writing_server_image_message" = "Hasta un minuto con imagen. Puedes salir de esta pantalla; la receta estará en Recetas guardadas.";
+"recipe_writing_server_images_message" = "Hasta dos minutos con imágenes de los pasos. Puedes salir de esta pantalla; la receta estará en Recetas guardadas.";
+"recipe_image_caption" = "Imagen creada con IA. Tu plato puede verse diferente.";
+"recipe_image_steps_caption" = "Las imágenes de los pasos están creadas con IA. Lo tuyo puede verse diferente.";
+"recipe_image_desc" = "Imagen de %@, creada con IA";
+"recipe_image_step_desc" = "Imagen del paso %d, creada con IA";
+"recipe_image_failed" = "Esta vez no se ha podido crear una imagen del plato.";
+"recipe_image_steps_failed" = "Esta vez no se han podido crear imágenes de algunos pasos.";
+"recipe_image_cost_line" = "Una receta con imagen del plato, creada con IA, descuenta %@.";
+"recipe_image_steps_cost_line" = "Con imágenes de los pasos difíciles, descuenta %@.";
+"recipe_image_unavailable" = "Ahora mismo no se pueden hacer imágenes. No se ha descontado ninguna receta.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Denunciar esta receta";
+"recipe_report_menu_action" = "Denunciar este menú";
+"recipe_report_lede" = "¿Qué le pasa?";
+"recipe_report_reason_offensive" = "Ofensivo o inapropiado";
+"recipe_report_reason_unsafe" = "Consejo alimentario poco seguro";
+"recipe_report_reason_picture" = "Una imagen es incorrecta u ofensiva";
+"recipe_report_reason_other" = "Otra cosa";
+"recipe_report_reason_required" = "Elige un motivo.";
+"recipe_report_note_label" = "Añadir una nota (opcional)";
+"recipe_report_note_count" = "%1$d de %2$d caracteres";
+"recipe_report_sends_server" = "Recibimos el motivo y tu nota, vinculados a esta receta, para revisarlo.";
+"recipe_report_sends_server_menu" = "Recibimos el motivo y tu nota, vinculados a este menú, para revisarlo.";
+"recipe_report_send" = "Enviar denuncia";
+"recipe_report_cancel" = "Cancelar";
+"recipe_report_sending" = "Enviando…";
+"recipe_report_sent" = "Gracias. Lo revisaremos.";
+"recipe_report_failed" = "No se ha podido enviar la denuncia. Inténtalo de nuevo cuando tengas conexión.";
+"recipe_report_limit" = "Has llegado al límite de denuncias de hoy. Vuelve a intentarlo mañana.";
+"recipe_report_unknown" = "Esta receta ya no se puede denunciar.";
+"recipe_report_try_again" = "Reintentar";
+"recipe_report_done" = "Ya lo has denunciado";

@@ -14,8 +14,28 @@ struct FirebaseRecipeBackend: RecipeBackend {
     }
 
     func generate(_ request: GenerateRequest) async throws -> GenerateResponse {
-        // A recipe takes up to ~40 s and a menu up to ~2 min on the server.
-        try await call("generateRecipe", request, timeout: request.kind == .menu ? 190 : 70)
+        // A recipe takes up to ~40 s and a menu up to ~2 min on the server; a recipe with pictures
+        // up to ~80 s for the dish (at least 120 s, CONTRACT.md) and longer with steps, within the
+        // function's own 180 s. The pictures' base64 is decoded as the response is read, here,
+        // off the main actor (`WireRecipePicture`).
+        try await call("generateRecipe", request, timeout: Self.timeout(for: request))
+    }
+
+    /// The callable's timeout for `request`: a menu or a recipe with step pictures 190 s, one
+    /// with the dish's picture 130 s, a plain recipe 70 s.
+    static func timeout(for request: GenerateRequest) -> TimeInterval {
+        if request.kind == .menu { return 190 }
+        switch request.image {
+        case .steps?: return 190
+        case .dish?: return 130
+        case .none?, nil: return 70
+        }
+    }
+
+    /// Consumes a limited-use App Check token, as the server consumes it. Nothing but the
+    /// request id, the reason and the note is sent.
+    func reportRecipe(_ request: ReportRecipeRequest) async throws {
+        let _: ReportRecipeResponse = try await call("reportRecipe", request)
     }
 
     /// Not consumed on the server, so a normal (cached) App Check token rather than a limited-use
@@ -83,7 +103,7 @@ struct FirebaseRecipeBackend: RecipeBackend {
             throw RecipeServerError.unauthenticated
         }
         // A limited-use App Check token for `generateRecipe`, `verifyPurchase`, `mergeBalance`,
-        // `deleteAccount`, `registerAppleSignIn` and `claimWelcome`, which consume theirs (CONTRACT.md, "Calling"), so none may be
+        // `deleteAccount`, `registerAppleSignIn`, `claimWelcome` and `reportRecipe`, which consume theirs (CONTRACT.md, "Calling"), so none may be
         // reused: the SDK asks App Check for a new one on every `call`, which covers each
         // fallback to `generateRecipe` and each purchase resubmission, and nothing here keeps a
         // token. `getGeneration`, `getBalance`, `getTasteQuiz` and `getWelcomeOffer` take an ordinary one.

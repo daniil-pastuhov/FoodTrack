@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "Du kan springe det over og gøre det senere i Indstillinger › Basisvarer.";
 "onboarding_staples_continue" = "Fortsæt";
 "onboarding_staples_skip" = "Spring over";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Billeder";
+"recipe_image_title" = "Billeder, lavet af AI";
+"recipe_image_none" = "Ingen billeder";
+"recipe_image_dish" = "Retten";
+"recipe_image_dish_desc" = "Ét billede af den færdige ret";
+"recipe_image_steps" = "Retten og svære trin";
+"recipe_image_steps_desc" = "Plus billeder af trin, der er svære at følge med ord alene";
+"recipe_image_short" = "Du har %@ tilbage: ikke nok til billeder.";
+"recipe_image_short_steps" = "Du har %@ tilbage: nok til et billede af retten, ikke trinnene.";
+"recipe_image_with" = "Med billede af retten";
+"recipe_image_with_steps" = "Med billeder af retten og trinnene";
+"recipe_writing_server_image_message" = "Op til et minut med billede. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.";
+"recipe_writing_server_images_message" = "Op til to minutter med billeder af trinnene. Du kan godt forlade skærmen; opskriften kommer i Gemte opskrifter.";
+"recipe_image_caption" = "Billedet er lavet af AI. Din ret kan se anderledes ud.";
+"recipe_image_steps_caption" = "Billederne af trinnene er lavet af AI. Hos dig kan det se anderledes ud.";
+"recipe_image_desc" = "Billede af %@, lavet af AI";
+"recipe_image_step_desc" = "Billede af trin %d, lavet af AI";
+"recipe_image_failed" = "Der kunne ikke laves et billede af retten denne gang.";
+"recipe_image_steps_failed" = "Der kunne ikke laves billeder af nogle af trinnene denne gang.";
+"recipe_image_cost_line" = "En opskrift med et AI-lavet billede af retten bruger %@.";
+"recipe_image_steps_cost_line" = "Med billeder af svære trin også bruger den %@.";
+"recipe_image_unavailable" = "Billeder kan ikke laves lige nu. Der er ikke trukket nogen opskrift.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Rapportér opskriften";
+"recipe_report_menu_action" = "Rapportér menuen";
+"recipe_report_lede" = "Hvad er der galt?";
+"recipe_report_reason_offensive" = "Stødende eller upassende";
+"recipe_report_reason_unsafe" = "Usikre råd om mad";
+"recipe_report_reason_picture" = "Et billede er forkert eller stødende";
+"recipe_report_reason_other" = "Noget andet";
+"recipe_report_reason_required" = "Vælg en grund.";
+"recipe_report_note_label" = "Tilføj en note (valgfrit)";
+"recipe_report_note_count" = "%1$d af %2$d tegn";
+"recipe_report_sends_server" = "Vi får din grund og note, knyttet til denne opskrift, så vi kan se på det.";
+"recipe_report_sends_server_menu" = "Vi får din grund og note, knyttet til denne menu, så vi kan se på det.";
+"recipe_report_send" = "Send rapport";
+"recipe_report_cancel" = "Annuller";
+"recipe_report_sending" = "Sender …";
+"recipe_report_sent" = "Tak. Vi kigger på det.";
+"recipe_report_failed" = "Rapporten kunne ikke sendes. Prøv igen, når du er online.";
+"recipe_report_limit" = "Det er grænsen for rapporter i dag. Prøv igen i morgen.";
+"recipe_report_unknown" = "Denne opskrift kan ikke længere rapporteres.";
+"recipe_report_try_again" = "Prøv igen";
+"recipe_report_done" = "Du har rapporteret det";

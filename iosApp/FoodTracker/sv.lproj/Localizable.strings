@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "Du kan hoppa över det här och göra det senare i Inställningar › Basvaror.";
 "onboarding_staples_continue" = "Fortsätt";
 "onboarding_staples_skip" = "Hoppa över";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Bilder";
+"recipe_image_title" = "Bilder, skapade av AI";
+"recipe_image_none" = "Inga bilder";
+"recipe_image_dish" = "Rätten";
+"recipe_image_dish_desc" = "En bild på den färdiga rätten";
+"recipe_image_steps" = "Rätten och knepiga steg";
+"recipe_image_steps_desc" = "Plus bilder på steg som är svåra att följa med bara ord";
+"recipe_image_short" = "Du har %@ kvar: inte nog för bilder.";
+"recipe_image_short_steps" = "Du har %@ kvar: nog för en bild på rätten, inte stegen.";
+"recipe_image_with" = "Med bild på rätten";
+"recipe_image_with_steps" = "Med bilder på rätten och stegen";
+"recipe_writing_server_image_message" = "Upp till en minut med bild. Du kan lämna den här skärmen; receptet hamnar i Sparade recept.";
+"recipe_writing_server_images_message" = "Upp till två minuter med bilder på stegen. Du kan lämna den här skärmen; receptet hamnar i Sparade recept.";
+"recipe_image_caption" = "Bilden är skapad av AI. Din rätt kan se annorlunda ut.";
+"recipe_image_steps_caption" = "Bilderna på stegen är skapade av AI. Hos dig kan det se annorlunda ut.";
+"recipe_image_desc" = "Bild på %@, skapad av AI";
+"recipe_image_step_desc" = "Bild på steg %d, skapad av AI";
+"recipe_image_failed" = "Det gick inte att skapa en bild på rätten den här gången.";
+"recipe_image_steps_failed" = "Det gick inte att skapa bilder på några av stegen den här gången.";
+"recipe_image_cost_line" = "Ett recept med en AI-skapad bild på rätten drar %@.";
+"recipe_image_steps_cost_line" = "Med bilder på knepiga steg också drar det %@.";
+"recipe_image_unavailable" = "Bilder kan inte göras just nu. Inget recept drogs.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Rapportera receptet";
+"recipe_report_menu_action" = "Rapportera menyn";
+"recipe_report_lede" = "Vad är fel med det?";
+"recipe_report_reason_offensive" = "Stötande eller olämpligt";
+"recipe_report_reason_unsafe" = "Osäkra råd om mat";
+"recipe_report_reason_picture" = "En bild är fel eller stötande";
+"recipe_report_reason_other" = "Något annat";
+"recipe_report_reason_required" = "Välj en anledning.";
+"recipe_report_note_label" = "Lägg till en kommentar (valfritt)";
+"recipe_report_note_count" = "%1$d av %2$d tecken";
+"recipe_report_sends_server" = "Vi får din anledning och kommentar, kopplade till det här receptet, så att vi kan titta på det.";
+"recipe_report_sends_server_menu" = "Vi får din anledning och kommentar, kopplade till den här menyn, så att vi kan titta på det.";
+"recipe_report_send" = "Skicka rapport";
+"recipe_report_cancel" = "Avbryt";
+"recipe_report_sending" = "Skickar …";
+"recipe_report_sent" = "Tack. Vi tittar på det.";
+"recipe_report_failed" = "Det gick inte att skicka rapporten. Försök igen när du är online.";
+"recipe_report_limit" = "Det är gränsen för rapporter i dag. Försök igen i morgon.";
+"recipe_report_unknown" = "Det här receptet kan inte rapporteras längre.";
+"recipe_report_try_again" = "Försök igen";
+"recipe_report_done" = "Du har rapporterat det här";

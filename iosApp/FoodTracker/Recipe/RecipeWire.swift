@@ -22,6 +22,13 @@ struct RecipeCosts: Codable, Equatable, Sendable {
     var menu3: Int
     /// Nil from a server that predates menu sets, and in a table cached by an earlier version.
     var menuSets: [String: [String: Int]]?
+    /// A single recipe with a picture of the dish (`image: "dish"`), the whole price; nil while
+    /// the server doesn't offer that level (CONTRACT.md "Capability `acceptsRecipeImage`"). Never a
+    /// price made up on the phone: no price, no level. Android: `RecipeCosts.recipeImage`.
+    var recipeImage: Int? = nil
+    /// The same with pictures of tricky steps too (`image: "steps"`); nil while that level is off,
+    /// and always when `recipeImage` is.
+    var recipeImageSteps: Int? = nil
 
     static let fallback = RecipeCosts(recipe: 1, menu2: 4, menu3: 5)
     /// A price above this is not believed (as Android's `MAX_COST`).
@@ -36,19 +43,33 @@ struct RecipeCosts: Codable, Equatable, Sendable {
         return prices.min()!...prices.max()!
     }
 
-    init(recipe: Int, menu2: Int, menu3: Int, menuSets: [String: [String: Int]]? = nil) {
+    init(recipe: Int, menu2: Int, menu3: Int, menuSets: [String: [String: Int]]? = nil, recipeImage: Int? = nil, recipeImageSteps: Int? = nil) {
         self.recipe = recipe
         self.menu2 = menu2
         self.menu3 = menu3
         self.menuSets = menuSets
+        self.recipeImage = recipeImage
+        self.recipeImageSteps = recipeImage == nil ? nil : recipeImageSteps
     }
 
-    private enum CodingKeys: String, CodingKey { case recipe, menu2, menu3, menuSets }
+    private enum CodingKeys: String, CodingKey { case recipe, menu2, menu3, menuSets, recipeImage, recipeImageSteps }
+
+    /// What one recipe at picture level `level` takes: `recipe` for none, else that level's
+    /// price; nil when the server doesn't price it (so it isn't offered). Android: `RecipeCosts.picture`.
+    func picture(_ level: RecipePictureLevel) -> Int? {
+        switch level {
+        case .none: return recipe
+        case .dish: return recipeImage
+        case .steps: return recipeImageSteps
+        }
+    }
 
     /// Leniently: a field that is missing, not a whole number, below 1 or above `maxCost` takes
     /// its fallback value; in `menuSets` such an entry (or a day or course count outside 1...4 / 1...3) is
-    /// left out, and an unreadable `menuSets` reads as absent. Throws only when `costs` isn't an
-    /// object at all.
+    /// left out, and an unreadable `menuSets` reads as absent. The picture prices are optional:
+    /// kept only when present and whole within 1...`maxCost`; a dish price below the recipe's, or a
+    /// steps price below the dish's, reads as absent, and a steps price without a dish price is
+    /// dropped (as Android's `recipeCostsOf`). Throws only when `costs` isn't an object at all.
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         func read(_ key: CodingKeys, _ fallback: Int) -> Int {
@@ -60,6 +81,14 @@ struct RecipeCosts: Codable, Equatable, Sendable {
         recipe = read(.recipe, Self.fallback.recipe)
         menu2 = read(.menu2, Self.fallback.menu2)
         menu3 = read(.menu3, Self.fallback.menu3)
+        func optional(_ key: CodingKeys) -> Int? {
+            guard let value = (try? container.decodeIfPresent(Int.self, forKey: key)) ?? nil, (1...Self.maxCost).contains(value) else { return nil }
+            return value
+        }
+        let recipePrice = recipe
+        let dish = optional(.recipeImage).flatMap { $0 >= recipePrice ? $0 : nil }
+        recipeImage = dish
+        recipeImageSteps = dish.flatMap { dishPrice in optional(.recipeImageSteps).flatMap { $0 >= dishPrice ? $0 : nil } }
         let raw = (try? container.decodeIfPresent([String: [String: LenientInt]].self, forKey: .menuSets)) ?? nil
         menuSets = raw.map { rows in
             var sets: [String: [String: Int]] = [:]
@@ -98,9 +127,11 @@ struct RecipeCosts: Codable, Equatable, Sendable {
         }
     }
 
-    /// What `request` takes, by its own kind, course count and days (absent: 3).
+    /// What `request` takes, by its own kind, course count and days (absent: 3), and for a recipe
+    /// its picture level (absent: none; a level no longer priced reads as the plain recipe).
     func cost(of request: GenerateRequest) -> Int {
-        cost(of: request.kind, courses: request.courses ?? 2, days: request.days ?? MenuSet.defaultDays)
+        if request.kind == .recipe, let image = request.image { return picture(image) ?? recipe }
+        return cost(of: request.kind, courses: request.courses ?? 2, days: request.days ?? MenuSet.defaultDays)
     }
 }
 
@@ -430,6 +461,11 @@ struct GenerateRequest: Codable, Equatable, Sendable {
     /// the server said `acceptsStaples`; nil (left out of the JSON) otherwise, and in a request
     /// stored by an older version. Part of the inputs a `requestId` is bound to; a retry keeps it.
     var staples: [String]? = nil
+    /// Pictures with a single recipe: `.dish` or `.steps`, only to a server that said
+    /// `acceptsRecipeImage` and prices that level (`RecipePictures.choice`). Nil (left out of the
+    /// JSON, so the request is the one from before pictures) for none, for a menu, and in a request
+    /// stored by an older version. Part of the inputs a `requestId` is bound to. Never `.none`.
+    var image: RecipePictureLevel? = nil
 
     /// Everything the server binds a `requestId` to: the whole body but the id and the consent
     /// flag, which isn't an input.
@@ -529,6 +565,11 @@ protocol BalanceCarrying {
     var acceptsStaples: WireFlag? { get }
     /// The taste quiz's current `version` (as `getTasteQuiz` returns it), beside `acceptsTaste`.
     var tasteQuizVersion: WireText? { get }
+    /// From a server that reads a recipe request's `image`: `acceptsRecipeImage: true`. Which
+    /// levels are on now is said by `costs.recipeImage` / `costs.recipeImageSteps`.
+    var acceptsRecipeImage: WireFlag? { get }
+    /// From a server that has `reportRecipe`: `acceptsReports: true`.
+    var acceptsReports: WireFlag? { get }
     /// From a server that has `claimWelcome`: `acceptsWelcome: true`, and beside it
     /// `welcomeRecipes`, how many free recipes a claim grants now (`WelcomeRecipes`).
     var acceptsWelcome: WireFlag? { get }
@@ -545,6 +586,15 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var status: GenerateStatus
     var recipe: Recipe?
     var menu: RecipeMenu?
+    /// DONE, for a request with `image` whose dish picture was made: the picture, decoded from
+    /// base64 as the response is read (inside the backend call, off the main actor). Never logged.
+    var image: WireRecipePicture?
+    /// DONE, for a request with `image` delivered without the dish's picture.
+    var imageFailed: WireFlag?
+    /// DONE, level "steps": the step pictures made, each tied to its step (possibly none).
+    var stepImages: WireStepPictures?
+    /// DONE, level "steps": at least one step picture that was tried wasn't delivered.
+    var stepImagesFailed: WireFlag?
     var balance: Int
     var charged: Bool
     var costs: WireCosts?
@@ -555,6 +605,8 @@ struct GenerateResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var acceptsStaples: WireFlag?
+    var acceptsRecipeImage: WireFlag?
+    var acceptsReports: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -581,6 +633,8 @@ struct VerifyPurchaseResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var acceptsStaples: WireFlag?
+    var acceptsRecipeImage: WireFlag?
+    var acceptsReports: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -596,6 +650,8 @@ struct BalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var acceptsStaples: WireFlag?
+    var acceptsRecipeImage: WireFlag?
+    var acceptsReports: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -613,6 +669,8 @@ struct MergeBalanceResponse: Decodable, Sendable, BalanceCarrying {
     var acceptsMenuDays: WireFlag?
     var acceptsTaste: WireFlag?
     var acceptsStaples: WireFlag?
+    var acceptsRecipeImage: WireFlag?
+    var acceptsReports: WireFlag?
     var tasteQuizVersion: WireText?
     var acceptsWelcome: WireFlag?
     var welcomeRecipes: LenientInt?
@@ -691,6 +749,13 @@ enum RecipeServerError: Error, Equatable, Sendable {
     /// menu, some day has nothing it may use): `NOT_ENOUGH_ITEMS`. Nothing was charged and no model
     /// was called; a changed request needs a new id.
     case notEnoughItems
+    /// `generateRecipe` with `image` while the server doesn't make that level now
+    /// (`IMAGE_UNAVAILABLE`): refused before anything was reserved, nothing taken. The table is
+    /// asked for again (which withdraws the level) and the next try is a new request.
+    case imageUnavailable
+    /// `reportRecipe`: this account's reports today, or the service's, reached the ceiling
+    /// (`REPORT_LIMIT`). Nothing was stored; not asked again by itself.
+    case reportLimit
     /// `claimWelcome` from an account with no Google or Apple sign-in (`SIGN_IN_REQUIRED`).
     /// Nothing was granted or recorded.
     case signInRequired
@@ -731,6 +796,8 @@ enum RecipeServerError: Error, Equatable, Sendable {
         case "ALLERGEN_CONSENT_REQUIRED": return .allergenConsentRequired
         case "NOT_ENOUGH_ITEMS": return .notEnoughItems
         case "SIGN_IN_REQUIRED": return .signInRequired
+        case "IMAGE_UNAVAILABLE": return .imageUnavailable
+        case "REPORT_LIMIT": return .reportLimit
         case nil: break
         default: return .unrecognised(charged: charged ?? false)
         }
@@ -1190,6 +1257,13 @@ enum RecipeWire {
         error == .invalidRequest && request.staples != nil
     }
 
+    /// A request that carried `image` refused as invalid without naming a field: the server was
+    /// rolled back to one from before pictures, so `acceptsRecipeImage` is cleared (and the balance
+    /// asked again, which says it anew). Android: the same check in `RecipePaid`.
+    static func clearsPictureFlag(after error: RecipeServerError, request: GenerateRequest) -> Bool {
+        error == .invalidRequest && request.image != nil
+    }
+
     static func optionalIngredients(ticked: [WireIngredient], others: [WireIngredient]) -> [WireIngredient] {
         var seen = Set(ticked.map { $0.name.lowercased() })
         var names = ticked.count
@@ -1228,7 +1302,8 @@ enum RecipeWire {
         multiChoice: Bool = false,
         menuDays: Bool = false,
         taste: [String: [String]]? = nil,
-        withStaples: Bool = false
+        withStaples: Bool = false,
+        image: RecipePictureLevel = .none
     ) -> GenerateRequest? {
         guard let config = WireRecipeConfig.make(request.config, takesMultiChoice: multiChoice) else { return nil }
         // Names the server refused earlier (lower-cased) stay out: sending one again would only
@@ -1277,7 +1352,9 @@ enum RecipeWire {
             allergenConsent: AllergenConsent.flag(for: Array(allergens)),
             optionalIngredients: optional.isEmpty ? nil : optional,
             taste: taste,
-            staples: staples.isEmpty ? nil : staples
+            staples: staples.isEmpty ? nil : staples,
+            // Only a single recipe has pictures; none is left out of the JSON.
+            image: kind == .recipe && image != .none ? image : nil
         )
     }
 
@@ -1402,6 +1479,311 @@ enum RecipeWire {
         recipe.source = .server
         return recipe
     }
+}
+
+// MARK: Recipe pictures
+
+/// How many pictures a server recipe comes with (owner's decisions 2026-11-17; CONTRACT.md
+/// "Capability `acceptsRecipeImage`"). Only a single recipe written by our server: never the
+/// shared prompt, the phone's own model or a menu. The raw value is the request's `image`;
+/// `.none` is never sent (the field is left out). Android: `PictureLevel` in `RecipePictures.kt`.
+enum RecipePictureLevel: String, Codable, CaseIterable, Sendable {
+    case none, dish, steps
+
+    /// none < dish < steps.
+    var rank: Int {
+        switch self {
+        case .none: return 0
+        case .dish: return 1
+        case .steps: return 2
+        }
+    }
+}
+
+/// Why the level sent is below the one chosen: the pack doesn't cover it. Android: `PictureShort`.
+enum RecipePictureShort: Equatable, Sendable {
+    /// Not even the dish's picture: "You have N left: not enough for pictures."
+    case noneCovered
+    /// The dish, not the steps: "…enough for a picture of the dish, not the steps."
+    case dishOnly
+}
+
+/// The form's Pictures row (`RecipePictures.choice`). `levels` are the sheet's rows (no pictures
+/// first, then each level the server prices); empty when the row is hidden. `chosen` is the
+/// remembered choice, `sent` what a request really carries (and the primary's pill and subtitle
+/// show), `covered` the levels the pack covers now (the others are dimmed in the sheet), `short`
+/// the row's second line when `sent` is below what was chosen for lack of recipes. Android:
+/// `PictureChoice`.
+struct RecipePictureChoice: Equatable, Sendable {
+    var levels: [RecipePictureLevel] = []
+    var chosen: RecipePictureLevel = .none
+    var sent: RecipePictureLevel = .none
+    var covered: Set<RecipePictureLevel> = [.none]
+    var short: RecipePictureShort? = nil
+
+    /// The row is on the form.
+    var shown: Bool { !levels.isEmpty }
+}
+
+/// A picture as a reply carried it, decoded from base64. Never printed: its descriptions say only
+/// its size, so the bytes can't reach a log or a crash report by accident.
+struct RecipePictureBytes: Equatable, Sendable, CustomStringConvertible, CustomDebugStringConvertible {
+    let data: Data
+    let width: Int
+    let height: Int
+
+    var description: String { "RecipePictureBytes(\(width)x\(height), \(data.count) bytes)" }
+    var debugDescription: String { description }
+}
+
+/// A step's picture from a reply: `step` is the 0-based index into the recipe's steps.
+struct RecipeStepPictureBytes: Equatable, Sendable {
+    let step: Int
+    let picture: RecipePictureBytes
+}
+
+/// `image` (or a step's `image`) as a response carries it (CONTRACT.md "Recipe picture
+/// (response)"): a JPEG as standard base64 with its pixel size. Read leniently: anything
+/// unreadable, too large or not a JPEG reads as nil rather than failing the response (the recipe
+/// still arrives). The base64 is decoded here, while the backend call decodes its response, so
+/// never on the main actor.
+struct WireRecipePicture: Decodable, Sendable {
+    let value: RecipePictureBytes?
+
+    private enum CodingKeys: String, CodingKey { case mimeType, data, width, height }
+
+    init(from decoder: Decoder) throws {
+        value = Self.read(decoder)
+    }
+
+    private static func read(_ decoder: Decoder) -> RecipePictureBytes? {
+        guard let c = try? decoder.container(keyedBy: CodingKeys.self) else { return nil }
+        if let mime = (try? c.decodeIfPresent(String.self, forKey: .mimeType)) ?? nil, mime != "image/jpeg" { return nil }
+        guard let text = try? c.decode(String.self, forKey: .data),
+              // Base64 of at most `maxBytes`, with padding: refused before decoding anything larger.
+              text.utf8.count <= (RecipePictures.maxBytes + 2) / 3 * 4,
+              let data = Data(base64Encoded: text),
+              let width = try? c.decode(Int.self, forKey: .width),
+              let height = try? c.decode(Int.self, forKey: .height) else { return nil }
+        return RecipePictures.accepted(data: data, width: width, height: height)
+    }
+
+    init(value: RecipePictureBytes?) {
+        self.value = value
+    }
+}
+
+/// `stepImages`: every readable entry, an unreadable one left out.
+struct WireStepPictures: Decodable, Sendable {
+    let value: [RecipeStepPictureBytes]
+
+    private struct Entry: Decodable {
+        let value: RecipeStepPictureBytes?
+        private enum CodingKeys: String, CodingKey { case step, image }
+
+        init(from decoder: Decoder) throws {
+            guard let c = try? decoder.container(keyedBy: CodingKeys.self),
+                  let step = try? c.decode(Int.self, forKey: .step),
+                  let picture = (try? c.decode(WireRecipePicture.self, forKey: .image))?.value else {
+                value = nil
+                return
+            }
+            value = RecipeStepPictureBytes(step: step, picture: picture)
+        }
+    }
+
+    init(from decoder: Decoder) throws {
+        var out: [RecipeStepPictureBytes] = []
+        if var list = try? decoder.unkeyedContainer() {
+            while !list.isAtEnd {
+                guard let entry = try? list.decode(Entry.self) else { break }
+                if let value = entry.value { out.append(value) }
+            }
+        }
+        value = out
+    }
+
+    init(value: [RecipeStepPictureBytes]) {
+        self.value = value
+    }
+}
+
+/// The quiet lines on a result that has just arrived with fewer pictures than asked for; never on
+/// a result opened later. Android: `PictureNotice`.
+struct RecipePictureNotice: Equatable, Sendable {
+    let dishFailed: Bool
+    let stepsFailed: Bool
+}
+
+/// The pictures' pure rules, one rule on both platforms (Android: `RecipePictures.kt`, checked
+/// by `RecipeConfigCheck` with the same cases).
+enum RecipePictures {
+    /// The longest edge and the most bytes a reply's picture may have (the contract says 768 px and
+    /// 600,000 bytes; a little room on the edge, nothing near what could hurt memory). Android:
+    /// `MAX_PICTURE_EDGE`, `MAX_PICTURE_BYTES`.
+    static let maxEdge = 4096
+    static let maxBytes = 600_000
+
+    /// A picture kept only when it is a plausible one: a JPEG (it starts with the JPEG markers
+    /// FF D8 FF, as Android's `replyPicturesOf` checks), at most `maxBytes`, a size of
+    /// 1...`maxEdge` on each side. One left out reads on the result as a picture not made this
+    /// time; nothing there says anything about recipes given back.
+    static func accepted(data: Data, width: Int, height: Int) -> RecipePictureBytes? {
+        guard data.count >= 3, data.count <= maxBytes, data.prefix(3).elementsEqual([0xFF, 0xD8, 0xFF]),
+              (1...maxEdge).contains(width), (1...maxEdge).contains(height) else { return nil }
+        return RecipePictureBytes(data: data, width: width, height: height)
+    }
+
+    /// The Pictures row. Shown only where the server writes the recipe as the primary
+    /// (`serverPrimary`: single-recipe mode, recipes in the pack, nothing in the way), the server
+    /// said `acceptsRecipeImage` (`serverTakes`) and `costs` price at least the dish. Each level is
+    /// offered only while the costs price it. What is sent is the highest level, not above the
+    /// choice (a choice no longer priced falls to the highest one priced below it, without a word),
+    /// that the `balance` covers; `short` says why when that is below it. Never sent with pictures
+    /// dropped quietly: the button shows `sent`. Android: `pictureChoice`.
+    static func choice(chosen: RecipePictureLevel, costs: RecipeCosts, serverTakes: Bool, balance: Int, serverPrimary: Bool) -> RecipePictureChoice {
+        guard serverPrimary, serverTakes, costs.recipeImage != nil else { return RecipePictureChoice(chosen: chosen) }
+        let levels = RecipePictureLevel.allCases.filter { costs.picture($0) != nil }
+        var covered: Set<RecipePictureLevel> = [.none]
+        for level in levels where (costs.picture(level) ?? Int.max) <= balance { covered.insert(level) }
+        let target = levels.last { $0.rank <= chosen.rank } ?? RecipePictureLevel.none
+        let sent = levels.last { $0.rank <= target.rank && covered.contains($0) } ?? RecipePictureLevel.none
+        let short: RecipePictureShort?
+        if sent == target {
+            short = nil
+        } else if sent == .none {
+            short = .noneCovered
+        } else {
+            short = .dishOnly
+        }
+        return RecipePictureChoice(levels: levels, chosen: chosen, sent: sent, covered: covered, short: short)
+    }
+
+    /// Only the step pictures of real steps, each step once, in step order. Android: `forSteps`.
+    static func forSteps(_ steps: [RecipeStepPictureBytes], stepCount: Int) -> [RecipeStepPictureBytes] {
+        var seen = Set<Int>()
+        return steps.filter { (0..<stepCount).contains($0.step) && seen.insert($0.step).inserted }.sorted { $0.step < $1.step }
+    }
+
+    /// What a reply to a request that `asked` for pictures says failed: the dish when the server
+    /// said `imageFailed` or no dish picture could be kept; the steps when it said
+    /// `stepImagesFailed` (at least one tried step picture wasn't delivered). A "steps" recipe whose
+    /// steps were all plain carries neither and says nothing. Nil when there is nothing to say.
+    /// Android: `pictureNoticeOf`.
+    static func notice(asked: RecipePictureLevel?, imageFailed: Bool, stepImagesFailed: Bool, dishKept: Bool) -> RecipePictureNotice? {
+        guard let asked, asked != .none else { return nil }
+        let dish = imageFailed || !dishKept
+        let steps = asked == .steps && stepImagesFailed
+        return dish || steps ? RecipePictureNotice(dishFailed: dish, stepsFailed: steps) : nil
+    }
+}
+
+// MARK: Report this recipe
+
+/// A report's reason, as `reportRecipe` names it. Android: `ReportReason`.
+enum RecipeReportReason: String, CaseIterable, Sendable {
+    case offensive, unsafe
+    /// Only offered on a result with pictures (`RecipeReporting.reasons`).
+    case picture
+    case other
+}
+
+/// What a result's foot shows for reporting. Android: `ReportFoot`.
+enum RecipeReportFoot: Equatable, Sendable {
+    /// Nothing: a phone-written recipe, a row saved before request ids were kept, no account, an
+    /// install without the paid route, or a server that hasn't said `acceptsReports`.
+    case hidden
+    case available
+    /// Sent from this device: "You've reported this" in the button's place.
+    case reported
+}
+
+/// The report sheet's state. Android: `ReportStatus`.
+enum RecipeReportStatus: Equatable, Sendable {
+    case editing, sending
+    /// Not sent (offline, or our server couldn't take it): Try again sends the same report.
+    case failed
+    /// REPORT_LIMIT: no more today.
+    case limit
+    /// UNKNOWN_REQUEST: the server holds no reportable record of this result (delivered before it
+    /// kept one and past its 7-day copy, or older than a year). Nothing was stored; no Try again.
+    case unknown
+}
+
+/// "Report this recipe"'s pure rules, one rule on both platforms (Android: `RecipePictures.kt`,
+/// `reportFoot`, `reportReasons`, `cutReportNote`, `REPORTED_REMEMBERED`).
+enum RecipeReporting {
+    /// The note's limit in code points (Unicode scalars), as the server cuts it.
+    static let noteMax = 500
+    /// How many sent reports this device remembers (`RecipeOptions.reportedRequests`); the oldest go first.
+    static let remembered = 200
+
+    /// The reasons the sheet offers: the picture one only for a result with pictures.
+    static func reasons(hasPictures: Bool) -> [RecipeReportReason] {
+        RecipeReportReason.allCases.filter { hasPictures || $0 != .picture }
+    }
+
+    /// `note` as the field keeps it: at most `noteMax` code points, never cut inside one.
+    static func cutNote(_ note: String) -> String {
+        let scalars = note.unicodeScalars
+        guard scalars.count > noteMax else { return note }
+        return String(String.UnicodeScalarView(scalars.prefix(noteMax)))
+    }
+
+    /// The note's length as its counter shows it, in code points.
+    static func noteLength(_ note: String) -> Int { note.unicodeScalars.count }
+
+    /// The note as sent: cut, trimmed, nil when blank.
+    static func noteToSend(_ note: String) -> String? {
+        let text = cutNote(note).trimmingCharacters(in: .whitespacesAndNewlines)
+        return text.isEmpty ? nil : text
+    }
+
+    /// Whether a result offers "Report this recipe / menu": only a result the server wrote with its
+    /// request id kept, only where the paid route is `available`, an account exists (one is never
+    /// made for a report) and the server said `acceptsReports`; once sent from here (`reported`
+    /// holds the request ids sent), "You've reported this", whatever else holds now.
+    static func foot(source: RecipeSource, requestId: String?, available: Bool, hasAccount: Bool, serverTakesReports: Bool, reported: [String]) -> RecipeReportFoot {
+        guard source == .server, let requestId else { return .hidden }
+        if reported.contains(requestId) { return .reported }
+        guard available, hasAccount, serverTakesReports else { return .hidden }
+        return .available
+    }
+
+    /// `reported` after a report on `requestId` was received: added once at the end, at most
+    /// `remembered` kept, the oldest dropped first.
+    static func remembering(_ reported: [String], _ requestId: String) -> [String] {
+        let next = reported.filter { $0 != requestId } + [requestId]
+        return Array(next.suffix(remembered))
+    }
+
+    /// `app.version` as the server takes it: `[0-9A-Za-z.+-]`, 1 to 32 characters ("0" when none is left).
+    static func wireVersion(_ version: String) -> String {
+        let kept = version.unicodeScalars.filter { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || "+-.".unicodeScalars.contains($0)) }
+        let text = String(String.UnicodeScalarView(kept.prefix(32)))
+        return text.isEmpty ? "0" : text
+    }
+}
+
+/// `reportRecipe` (CONTRACT.md): the generation's request id, the reason and the note; never any
+/// recipe text. `reportId` is new per report and reused for its retries.
+struct ReportRecipeRequest: Encodable, Equatable, Sendable {
+    struct App: Encodable, Equatable, Sendable {
+        let platform = "ios"
+        var version: String
+        var language: String
+    }
+
+    var reportId: String
+    var requestId: String
+    var reason: String
+    /// Nil is left out of the JSON.
+    var note: String?
+    var app: App
+}
+
+struct ReportRecipeResponse: Decodable, Sendable {
+    var status: WireText?
 }
 
 // MARK: Allergen consent

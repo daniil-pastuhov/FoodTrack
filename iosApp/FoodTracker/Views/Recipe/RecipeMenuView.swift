@@ -5,6 +5,8 @@ import SwiftUI
 struct RecipeMenuView: View {
     let menu: RecipeMenu
     let onOpenDish: (_ day: Int, _ course: Int) -> Void
+    /// "Report this menu" at the very end, where it applies.
+    var foot: AnyView? = nil
 
     @State private var sharing = false
 
@@ -51,6 +53,7 @@ struct RecipeMenuView: View {
                         }
                     }
                 }
+                if let foot { foot }
 
             }
             .padding(.horizontal, LarderSpace.s4)
@@ -59,6 +62,7 @@ struct RecipeMenuView: View {
             .frame(maxWidth: 640, alignment: .leading)
             .frame(maxWidth: .infinity)
         }
+        .defaultScrollAnchor(RecipeDocument.opensAt)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 LarderIconButton(.share2, label: L10n.recipeShareMenu, color: LarderColor.primary) { sharing = true }
@@ -135,11 +139,13 @@ struct RecipeDishView: View {
     let date: String
     /// The menu's day count, for "Part of Menu for 2 days".
     var menuDays: Int = MenuSet.defaultDays
+    /// "Report this recipe": that dish of the menu, under the menu's request id.
+    var foot: AnyView? = nil
 
     @State private var sharing = false
 
     var body: some View {
-        RecipeDocument(recipe: recipe.recipe, footer: L10n.recipePartOfMenu(days: menuDays))
+        RecipeDocument(recipe: recipe.recipe, footer: L10n.recipePartOfMenu(days: menuDays), foot: foot)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     LarderIconButton(.share2, label: L10n.recipeShareRecipe, color: LarderColor.primary) { sharing = true }

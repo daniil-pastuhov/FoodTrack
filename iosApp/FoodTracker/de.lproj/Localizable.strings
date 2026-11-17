@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "Du kannst das überspringen und später unter Einstellungen › Grundzutaten erledigen.";
 "onboarding_staples_continue" = "Weiter";
 "onboarding_staples_skip" = "Überspringen";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Bilder";
+"recipe_image_title" = "Bilder, von KI erstellt";
+"recipe_image_none" = "Keine Bilder";
+"recipe_image_dish" = "Das Gericht";
+"recipe_image_dish_desc" = "Ein Bild des fertigen Gerichts";
+"recipe_image_steps" = "Gericht und knifflige Schritte";
+"recipe_image_steps_desc" = "Dazu Bilder von Schritten, die sich mit Worten schwer beschreiben lassen";
+"recipe_image_short" = "Du hast noch %@: nicht genug für Bilder.";
+"recipe_image_short_steps" = "Du hast noch %@: genug für ein Bild des Gerichts, nicht für die Schritte.";
+"recipe_image_with" = "Mit Bild des Gerichts";
+"recipe_image_with_steps" = "Mit Bildern des Gerichts und der Schritte";
+"recipe_writing_server_image_message" = "Mit Bild bis zu einer Minute. Du kannst diesen Bildschirm verlassen; das Rezept landet in „Gespeicherte Rezepte“.";
+"recipe_writing_server_images_message" = "Mit Bildern der Schritte bis zu zwei Minuten. Du kannst diesen Bildschirm verlassen; das Rezept landet in „Gespeicherte Rezepte“.";
+"recipe_image_caption" = "Bild von KI erstellt. Dein Gericht kann anders aussehen.";
+"recipe_image_steps_caption" = "Die Bilder der Schritte sind von KI erstellt. Bei dir kann es anders aussehen.";
+"recipe_image_desc" = "Bild von %@, von KI erstellt";
+"recipe_image_step_desc" = "Bild von Schritt %d, von KI erstellt";
+"recipe_image_failed" = "Diesmal konnte kein Bild des Gerichts erstellt werden.";
+"recipe_image_steps_failed" = "Diesmal konnten nicht alle Bilder der Schritte erstellt werden.";
+"recipe_image_cost_line" = "Ein Rezept mit einem von KI erstellten Bild des Gerichts kostet %@.";
+"recipe_image_steps_cost_line" = "Mit Bildern der kniffligen Schritte kostet es %@.";
+"recipe_image_unavailable" = "Bilder können gerade nicht erstellt werden. Es wurde kein Rezept abgezogen.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Dieses Rezept melden";
+"recipe_report_menu_action" = "Dieses Menü melden";
+"recipe_report_lede" = "Was stimmt damit nicht?";
+"recipe_report_reason_offensive" = "Anstößig oder unangemessen";
+"recipe_report_reason_unsafe" = "Unsicherer Rat zum Essen";
+"recipe_report_reason_picture" = "Ein Bild ist falsch oder anstößig";
+"recipe_report_reason_other" = "Etwas anderes";
+"recipe_report_reason_required" = "Wähle einen Grund.";
+"recipe_report_note_label" = "Notiz hinzufügen (optional)";
+"recipe_report_note_count" = "%1$d von %2$d Zeichen";
+"recipe_report_sends_server" = "Wir erhalten deinen Grund und deine Notiz, verknüpft mit diesem Rezept, damit wir es prüfen können.";
+"recipe_report_sends_server_menu" = "Wir erhalten deinen Grund und deine Notiz, verknüpft mit diesem Menü, damit wir es prüfen können.";
+"recipe_report_send" = "Meldung senden";
+"recipe_report_cancel" = "Abbrechen";
+"recipe_report_sending" = "Wird gesendet …";
+"recipe_report_sent" = "Danke. Wir sehen es uns an.";
+"recipe_report_failed" = "Die Meldung konnte nicht gesendet werden. Versuch es noch einmal, wenn du online bist.";
+"recipe_report_limit" = "Für heute ist das Limit für Meldungen erreicht. Versuch es morgen wieder.";
+"recipe_report_unknown" = "Dieses Rezept kann nicht mehr gemeldet werden.";
+"recipe_report_try_again" = "Erneut versuchen";
+"recipe_report_done" = "Du hast das gemeldet";

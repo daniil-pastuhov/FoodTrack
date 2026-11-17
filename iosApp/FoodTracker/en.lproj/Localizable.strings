@@ -931,3 +931,50 @@
 "onboarding_staples_later" = "You can skip this and set it up later in Settings › Staples.";
 "onboarding_staples_continue" = "Continue";
 "onboarding_staples_skip" = "Skip";
+
+/* Recipe: pictures (recipes from packs only, single recipes; each level only when our server says acceptsRecipeImage and prices it); copied from Android's strings.xml. */
+"recipe_image_row" = "Pictures";
+"recipe_image_title" = "Pictures, made by AI";
+"recipe_image_none" = "No pictures";
+"recipe_image_dish" = "The dish";
+"recipe_image_dish_desc" = "One picture of the finished dish";
+"recipe_image_steps" = "The dish and tricky steps";
+"recipe_image_steps_desc" = "Plus pictures of steps that are hard to follow from words alone";
+"recipe_image_short" = "You have %@ left: not enough for pictures.";
+"recipe_image_short_steps" = "You have %@ left: enough for a picture of the dish, not the steps.";
+"recipe_image_with" = "With a picture of the dish";
+"recipe_image_with_steps" = "With pictures of the dish and steps";
+"recipe_writing_server_image_message" = "Up to a minute with a picture. You can leave this screen; the recipe will be in Saved recipes.";
+"recipe_writing_server_images_message" = "Up to two minutes with pictures of the steps. You can leave this screen; the recipe will be in Saved recipes.";
+"recipe_image_caption" = "Picture made by AI. Your dish may look different.";
+"recipe_image_steps_caption" = "Step pictures are made by AI. Yours may look different.";
+"recipe_image_desc" = "Picture of %@, made by AI";
+"recipe_image_step_desc" = "Picture of step %d, made by AI";
+"recipe_image_failed" = "Couldn't make a picture of the dish this time.";
+"recipe_image_steps_failed" = "Couldn't make pictures of some steps this time.";
+"recipe_image_cost_line" = "A recipe with a picture of the dish, made by AI, takes %@.";
+"recipe_image_steps_cost_line" = "With pictures of tricky steps too, it takes %@.";
+"recipe_image_unavailable" = "Pictures can't be made right now. No recipe was taken.";
+
+/* Recipe: Report this recipe / menu (every model-written result; only when our server says acceptsReports). */
+"recipe_report_action" = "Report this recipe";
+"recipe_report_menu_action" = "Report this menu";
+"recipe_report_lede" = "What's wrong with it?";
+"recipe_report_reason_offensive" = "Offensive or inappropriate";
+"recipe_report_reason_unsafe" = "Unsafe food advice";
+"recipe_report_reason_picture" = "A picture is wrong or offensive";
+"recipe_report_reason_other" = "Something else";
+"recipe_report_reason_required" = "Choose a reason.";
+"recipe_report_note_label" = "Add a note (optional)";
+"recipe_report_note_count" = "%1$d of %2$d characters";
+"recipe_report_sends_server" = "We get your reason and note, tied to this recipe, so we can look into it.";
+"recipe_report_sends_server_menu" = "We get your reason and note, tied to this menu, so we can look into it.";
+"recipe_report_send" = "Send report";
+"recipe_report_cancel" = "Cancel";
+"recipe_report_sending" = "Sending…";
+"recipe_report_sent" = "Thanks. We'll look at it.";
+"recipe_report_failed" = "Couldn't send the report. Try again when you're online.";
+"recipe_report_limit" = "That's the limit for reports today. Try again tomorrow.";
+"recipe_report_unknown" = "This recipe can't be reported any more.";
+"recipe_report_try_again" = "Try again";
+"recipe_report_done" = "You've reported this";
