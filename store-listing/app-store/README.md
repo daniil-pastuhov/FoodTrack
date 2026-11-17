@@ -210,6 +210,18 @@ before it submits it for review, and only what differs from App Store Connect:
   submission and submits everything together. Purchases already in the submission or in review
   are left alone. If App Store Connect shows them with the version but the job can't see them,
   run `appstore` with `--iaps-attached`, which submits without adding them.
+- **After a rejection**: the rejected version is reused for the next release (renamed, new build
+  and listing) and so is its review submission, left `UNRESOLVED_ISSUES` by App Review with the
+  rejected items `REJECTED`. App Store Connect refuses to send it again while an item is still
+  rejected (409 `ENTITY_STATE_INVALID`, "Version is not ready to be submitted yet"), so
+  `appstore` first marks resolved, one `PATCH /v1/reviewSubmissionItems/{id}` with
+  `resolved: true` each, the rejected items the release ships again: the app version's, and
+  those of in-app purchases still to be reviewed whose version is in that submission. Any other
+  rejected item (an older version of a purchase that now has a new draft, an event, a custom
+  product page) stops the job before it writes anything, as whether it is fixed is the owner's
+  call. `testflight.py iaps` prints the step it would take. If the step or the resubmission is
+  refused, resubmit by hand: App Store Connect > App Review > the submission with unresolved
+  issues > Resubmit to App Review; there is no need to re-run the job afterwards.
 - If any of it fails (a text over a limit, a refused upload), the version is not submitted; fix
   it and re-run the job, which skips what is already applied.
 - **What's New**: written once per language in `release-notes/vX.Y.Z/` and set by the same

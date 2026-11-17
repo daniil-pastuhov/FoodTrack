@@ -337,6 +337,7 @@ def app_iaps(asc, app_id):
             "type": attrs.get("inAppPurchaseType"), "state": attrs.get("state"),
             "version": draft["id"] if draft else None,
             "version_state": (draft.get("attributes") or {}).get("state") if draft else None,
+            "version_ids": {v["id"] for v in versions},
             "versions": ", ".join(f"{(v.get('attributes') or {}).get('version')} "
                                   f"{(v.get('attributes') or {}).get('state')}" for v in versions),
             "locales": locales, "screenshot": has_screenshot})
@@ -345,7 +346,9 @@ def app_iaps(asc, app_id):
 
 def open_submissions(asc, app_id):
     """The app's review submissions not sent yet (or sent back), each with the app versions and
-    In-App Purchase versions it holds."""
+    In-App Purchase versions it holds, and its items: {"id", "state", "kind", "target"}, where kind
+    is "appStoreVersion", "inAppPurchaseVersion" or None for any other item (an event, a custom
+    product page...) and target the linked resource's id."""
     submissions = asc.call("GET", "/reviewSubmissions", {
         "filter[app]": app_id, "filter[platform]": "IOS",
         "filter[state]": OPEN_SUBMISSION_STATES}).get("data") or []
@@ -354,13 +357,17 @@ def open_submissions(asc, app_id):
         items, _ = get_all(asc, f"/reviewSubmissions/{submission['id']}/items",
                            {"include": "appStoreVersion,inAppPurchaseVersion", "limit": 200})
         held = {"appStoreVersion": set(), "inAppPurchaseVersion": set()}
+        kept = []
         for item in items:
+            kept.append({"id": item.get("id"), "state": (item.get("attributes") or {}).get("state"),
+                         "kind": None, "target": None})
             for kind in held:
                 linked = ((item.get("relationships") or {}).get(kind) or {}).get("data") or {}
                 if linked.get("id"):
                     held[kind].add(linked["id"])
+                    kept[-1].update(kind=kind, target=linked["id"])
         result.append({"submission": submission, "versions": held["appStoreVersion"],
-                       "iap_versions": held["inAppPurchaseVersion"]})
+                       "iap_versions": held["inAppPurchaseVersion"], "items": kept})
     return result
 
 
@@ -378,6 +385,13 @@ def plan_iaps(iaps, submissions, version_id):
         held_in = [s for s in submissions if iap["version"] and iap["version"] in s["iap_versions"]]
         if chosen and iap["version"] in chosen["iap_versions"]:
             plan.append((iap, "held", "already in the review submission"))
+        elif chosen and submission_state(chosen) == "UNRESOLVED_ISSUES" and \
+                iap["state"] in IAP_TO_SUBMIT_STATES and not iap["version"] and \
+                iap.get("version_ids", set()) & chosen["iap_versions"]:
+            # App Review sent it back with the purchase rejected: its version there is REJECTED,
+            # not a draft, and goes back as it is once its item is marked resolved. (With a newer
+            # draft, the draft is added as usual and the old rejected item stops the run.)
+            plan.append((iap, "held", "already in the review submission App Review sent back"))
         elif held_in:
             plan.append((iap, "elsewhere", "its version is in another open review submission ("
                          + ", ".join(s["submission"]["id"] for s in held_in) + ")"))
@@ -405,6 +419,71 @@ def describe_iaps(plan):
         print(f"    -> {detail}")
 
 
+def submission_state(submission):
+    return ((submission or {}).get("submission", {}).get("attributes") or {}).get("state")
+
+
+# --- Resubmitting after App Review rejected the version ------------------------------------------
+#
+# A rejection leaves the review submission UNRESOLVED_ISSUES with the rejected items REJECTED
+# (developer.apple.com/documentation/appstoreconnectapi: ReviewSubmission.Attributes.state,
+# ReviewSubmissionItem.Attributes.state READY_FOR_REVIEW / ACCEPTED / APPROVED / REJECTED /
+# REMOVED). Sending it again (`submitted: true`) is refused with 409 ENTITY_STATE_INVALID ("Version
+# is not ready to be submitted yet") while an item is still REJECTED, as on 2026-11-17 for 2.1.1.
+# PATCH /v1/reviewSubmissionItems/{id} (ReviewSubmissionItemUpdateRequest, attributes `resolved`
+# and `removed`) marks one resolved, as the website's "Resubmit to App Review" does (Apple's
+# reference gives the shape only, no prose). Only the rejected items this release ships again are
+# resolved: the item of this app version (the release has just put its new build and listing on
+# it), and the item of an in-app purchase still to be reviewed whose version is in that submission
+# (plan_iaps "held"; the release submits it with the version anyway). Any other rejected item
+# (another version, an older version of a purchase that now has a new draft, an event, a custom
+# product page...) stops the run before anything is written: whether it is fixed, or should be
+# removed from the submission, is the owner's call, never marked resolved here.
+ITEM_REJECTED = "REJECTED"
+
+RESUBMIT_BY_HAND = (
+    "Resubmit it by hand: App Store Connect > App Review > the submission with unresolved issues "
+    "> Resubmit to App Review. The build, the listing, the screenshots and What's New are already "
+    "on the version, so there is no need to re-run the job afterwards.")
+
+
+def plan_resolve(chosen, plan, version_id):
+    """The rejected items of a sent-back submission (one in UNRESOLVED_ISSUES), from plan_iaps'
+    choice and plan. Returns ([(item, label)] to mark resolved, in the submission's order,
+    [(item, label)] rejected items this release doesn't ship). Both empty for any other
+    submission, or none."""
+    if not chosen or submission_state(chosen) != "UNRESOLVED_ISSUES":
+        return [], []
+    shipped = {}
+    for iap, action, _ in plan:
+        if action != "held":
+            continue
+        held = ({iap["version"]} | set(iap.get("version_ids") or ())) & chosen["iap_versions"]
+        for vid in held:
+            shipped[vid] = f"in-app purchase {iap['product']}"
+    resolve, other = [], []
+    for item in chosen.get("items") or []:
+        if item["state"] != ITEM_REJECTED:
+            continue
+        if item["kind"] == "appStoreVersion" and item["target"] == version_id:
+            resolve.append((item, "app version"))
+        elif item["kind"] == "inAppPurchaseVersion" and item["target"] in shipped:
+            resolve.append((item, shipped[item["target"]]))
+        else:
+            label = {"appStoreVersion": "another app version",
+                     "inAppPurchaseVersion": "an in-app purchase version not shipped with this release",
+                     }.get(item["kind"], "an item that isn't an app or in-app purchase version")
+            other.append((item, f"{label} ({item['target'] or 'unknown'})"))
+    return resolve, other
+
+
+def describe_resolve(resolve, would):
+    labels = " and ".join(f"{label} item ({item['id']})" for item, label in resolve)
+    if would:
+        return f"would mark the rejected {labels} resolved, then resubmit"
+    return f"marking the rejected {labels} resolved, then resubmitting"
+
+
 IAP_BY_HAND = (
     "Add them by hand, then re-run the job: in App Store Connect, open each in-app purchase "
     "(Monetization > In-App Purchases), click Add for Review and add it to the draft submission "
@@ -418,6 +497,7 @@ IAP_BY_HAND = (
 def submit_for_review(asc, app_id, version, release_type, iaps_attached=False):
     """Puts the app version and every in-app purchase still to be reviewed into one review
     submission and sends it. Stops before sending when an in-app purchase can't be added."""
+    sent_back = False
     try:
         iaps = app_iaps(asc, app_id)
         submissions = open_submissions(asc, app_id)
@@ -434,6 +514,21 @@ def submit_for_review(asc, app_id, version, release_type, iaps_attached=False):
                      "review submission:\n" + "\n".join(f"- {i['product']}: {d}" for i, d in blocking)
                      + "\nPut the app version and the purchases in one draft submission (App Store "
                      "Connect > App Review > Drafts), then re-run the job.")
+        resolve, unshipped = plan_resolve(chosen, plan, version["id"])
+        sent_back = submission_state(chosen) == "UNRESOLVED_ISSUES"
+        if unshipped:
+            sys.exit("::error::Not submitted: the review submission App Review sent back "
+                     f"({chosen['submission']['id']}) has rejected items this release doesn't "
+                     "ship, so the job leaves the decision to you:\n"
+                     + "\n".join(f"- item {i['id']}: {label}" for i, label in unshipped)
+                     + "\nIn App Store Connect > App Review, open the submission with unresolved "
+                     "issues, remove those items or fix them, and Resubmit to App Review. The build, "
+                     "the listing, the screenshots and What's New are already on the version, so "
+                     "there is no need to re-run the job afterwards.")
+        if sent_back:
+            print(f"Review submission {chosen['submission']['id']} was sent back by App Review "
+                  "(UNRESOLVED_ISSUES): " + (describe_resolve(resolve, would=False) if resolve
+                                              else "no rejected item in it; resubmitting"))
         submission = chosen["submission"] if chosen else asc.call("POST", "/reviewSubmissions", body={
             "data": {"type": "reviewSubmissions", "attributes": {"platform": "IOS"},
                      "relationships": {"app": {"data": {"type": "apps", "id": app_id}}}}})["data"]
@@ -470,10 +565,27 @@ def submit_for_review(asc, app_id, version, release_type, iaps_attached=False):
                      "would be rejected without them):\n"
                      + "\n".join(f"- {i['product']}: {body}" for i, body in refused)
                      + "\n" + IAP_BY_HAND)
+        for item, label in resolve:
+            try:
+                asc.call("PATCH", f"/reviewSubmissionItems/{item['id']}", body={"data": {
+                    "type": "reviewSubmissionItems", "id": item["id"],
+                    "attributes": {"resolved": True}}})
+            except AscError as error:
+                sys.exit(f"::error::App Store Connect refused to mark the rejected {label} item "
+                         f"({item['id']}) of review submission {submission['id']} resolved, so "
+                         f"nothing was resubmitted. {RESUBMIT_BY_HAND}\n{error}")
+            print(f"  {label}: rejected item {item['id']} marked resolved")
         asc.call("PATCH", f"/reviewSubmissions/{submission['id']}", body={"data": {
             "type": "reviewSubmissions", "id": submission["id"],
             "attributes": {"submitted": True}}})
     except AscError as error:
+        if sent_back and error.status in (409, 422):
+            sys.exit("::error::App Store Connect refused to resubmit the review submission App "
+                     f"Review sent back ({chosen['submission']['id']}). If it says the version "
+                     "\"is not in valid state\" or \"is not ready to be submitted yet\", an item "
+                     "of it may still be rejected, or App Store Connect may still be processing "
+                     "the new build; the version page may also be missing something (App Privacy, "
+                     f"App Review contact, screenshots). {RESUBMIT_BY_HAND}\n{error.body}")
         if error.status in (409, 422):
             sys.exit("App Store Connect refused the App Review submission. Check that the version "
                      "page in App Store Connect has no missing items (App Privacy, App Review "
@@ -502,17 +614,30 @@ def cmd_iaps(args):
     iaps = app_iaps(asc, app_id)
     submissions = open_submissions(asc, app_id)
     for s in submissions:
+        rejected = [i["id"] for i in s.get("items") or [] if i["state"] == ITEM_REJECTED]
         print(f"Open review submission {s['submission']['id']} "
-              f"({(s['submission'].get('attributes') or {}).get('state')}): "
-              f"{len(s['versions'])} app version(s), {len(s['iap_versions'])} in-app purchase version(s)")
-    if not iaps:
-        print("No in-app purchases")
-        return 0
+              f"({submission_state(s)}): "
+              f"{len(s['versions'])} app version(s), {len(s['iap_versions'])} in-app purchase version(s)"
+              + (f"; rejected items: {', '.join(rejected)}" if rejected else ""))
     chosen, plan = plan_iaps(iaps, submissions, version["id"] if version else None)
-    print("In-app purchases (what `appstore` would do):")
-    describe_iaps(plan)
-    print("Review submission: " + (f"{chosen['submission']['id']} (open)" if chosen else
-                                   "a new one, with the app version"))
+    if iaps:
+        print("In-app purchases (what `appstore` would do):")
+        describe_iaps(plan)
+    else:
+        print("No in-app purchases")
+    resolve, unshipped = plan_resolve(chosen, plan, version["id"] if version else None)
+    if not chosen:
+        print("Review submission: a new one, with the app version")
+    elif submission_state(chosen) != "UNRESOLVED_ISSUES":
+        print(f"Review submission: {chosen['submission']['id']} (open)")
+    elif unshipped:
+        print(f"Review submission: {chosen['submission']['id']} (sent back by App Review): would "
+              "stop, it has rejected items this release doesn't ship: "
+              + "; ".join(f"item {i['id']}, {label}" for i, label in unshipped))
+    else:
+        print(f"Review submission: {chosen['submission']['id']} (sent back by App Review): "
+              + (describe_resolve(resolve, would=True) if resolve
+                 else "no rejected item in it; would resubmit"))
     return 0
 
 
