@@ -1,0 +1,33 @@
+/* Recipe pictures (proposed 2026-11-17): the form's switch card, the picture on a result, the saved thumbnail. */
+.recipe .pic-card .r-switch { gap: var(--space-3); }
+.recipe .pic-card .r-switch.is-off .r-lbl > :first-child { opacity: .6; }
+.recipe .pic-card .pic-short { color: var(--color-on-surface); }
+.recipe .pic { margin: 0 0 var(--space-4); }
+.recipe .pic-img { display: grid; place-items: center; aspect-ratio: 4 / 3; width: 100%; border-radius: var(--radius-lg); overflow: hidden; background: radial-gradient(circle at 50% 55%, var(--color-soon-container) 0 34%, transparent 35%), linear-gradient(160deg, var(--color-primary-container), var(--color-surface-container-high)); color: var(--color-on-soon-container); box-shadow: inset 0 0 0 1px var(--color-outline-variant); }
+.recipe .pic-img svg.lucide { width: 72px; height: 72px; opacity: .7; }
+.recipe .pic.is-loading .pic-img { background: var(--color-surface-container); }
+.recipe .pic-cap { margin: var(--space-2) var(--space-1) 0; font: var(--type-caption); color: var(--color-on-surface-variant); }
+.recipe .pic-failed { display: flex; align-items: flex-start; gap: var(--space-2); margin: var(--space-3) 0 0; }
+.recipe .pic-failed svg.lucide { flex: none; width: 16px; height: 16px; margin-top: 2px; }
+.recipe .pic-thumb { background: radial-gradient(circle at 50% 55%, var(--color-soon-container) 0 40%, transparent 41%), linear-gradient(160deg, var(--color-primary-container), var(--color-surface-container-high)); color: var(--color-on-soon-container); }
+.recipe .pic-buy { display: flex; align-items: flex-start; gap: var(--space-2); }
+.recipe .pic-buy svg.lucide { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--color-primary); }
+.recipe .pic-card .r-head { margin-bottom: var(--space-2); }
+.recipe .pic-card .r-pack.is-off { opacity: .45; cursor: default; }
+.recipe .pic-card .pic-short { margin: var(--space-2) 0 0; color: var(--color-on-surface); }
+.recipe .r-steps .pic-step { margin-top: var(--space-3); }
+.recipe .pic-steps-cap { margin: 0 0 var(--space-3); }
+.recipe .r-report { margin: var(--space-6) auto 0; display: flex; color: var(--color-on-surface-variant); }
+.recipe .r-report.is-done { align-items: center; justify-content: center; gap: var(--space-2); font: var(--type-body-sm); }
+.recipe .r-report svg.lucide { width: 18px; height: 18px; }
+.recipe .rp-reasons { margin-bottom: var(--space-3); }
+.recipe .rp-reasons .r-pack { min-height: var(--size-touch); }
+.recipe .rp-reason-err { margin: calc(var(--space-2) * -1) 0 var(--space-3); }
+.recipe .rp-sheet textarea { width: 100%; min-height: 72px; border: 0; background: none; color: inherit; font: inherit; resize: none; padding: var(--space-2) 0; }
+.recipe .rp-sends { display: flex; align-items: flex-start; gap: var(--space-2); }
+.recipe .rp-sends svg.lucide { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--color-primary); }
+.recipe .rp-sheet .btn .spinner { width: 16px; height: 16px; margin-right: var(--space-2); }
+.recipe .pic-row .text > .pic-short { font: var(--type-body-sm); color: var(--color-on-surface); }
+.recipe .pic-sheet .r-packs { margin: var(--space-3) 0; }
+.recipe .pic-sheet .r-pack.is-off { opacity: .45; cursor: default; }
+.recipe .pic-sheet .pic-short { margin: 0 0 var(--space-3); color: var(--color-on-surface); }
