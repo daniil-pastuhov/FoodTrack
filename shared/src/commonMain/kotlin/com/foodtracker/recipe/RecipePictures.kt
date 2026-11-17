@@ -91,10 +91,13 @@ class ReplyPictures(val dish: PictureBytes? = null, val steps: List<StepPictureB
     override fun toString(): String = "ReplyPictures(dish=$dish, steps=${steps.size})"
 }
 
-/** The longest edge a reply's picture may have, and the most bytes one may take (the contract says
- *  768 px and 600,000 bytes; a little room above, nothing near what could hurt memory). */
+/** The longest edge a reply's picture may have, and the most bytes one may take. The contract says
+ *  4:3 pictures of usually 1200 × 896 (another provider's 1200 × 800), at most 1,280 px on the
+ *  longer side and 600,000 bytes, passed through from the provider with its metadata; these leave
+ *  room above both, nothing near what could hurt memory (pictures are decoded at the size shown).
+ *  Neither side is assumed equal to the other or to any fixed size. */
 const val MAX_PICTURE_EDGE = 4096
-const val MAX_PICTURE_BYTES = 600_000
+const val MAX_PICTURE_BYTES = 1_000_000
 
 /** Only the step pictures of real steps, each step once, in step order. */
 fun ReplyPictures.forSteps(stepCount: Int): List<StepPictureBytes> =

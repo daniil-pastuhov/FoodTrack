@@ -3683,7 +3683,7 @@ class RecipePaidTest {
     // --- Pictures: only to a server that says acceptsRecipeImage and prices the level ---------
 
     private val pictureCosts = RecipeCosts(recipeImage = 2, recipeImageSteps = 3)
-    private val picture = PictureBytes(ByteArray(16) { it.toByte() }, 768, 768)
+    private val picture = PictureBytes(ByteArray(16) { it.toByte() }, 1200, 896)
 
     private fun withPicturesServer(balance: Int, takes: Boolean = true, level: PictureLevel = PictureLevel.DISH, costs: RecipeCosts = pictureCosts) {
         withBalance(balance)
@@ -3728,7 +3728,7 @@ class RecipePaidTest {
         holder.generateOnServer()
         assertEquals(PictureLevel.DISH, backend.generated.single().image)
         val written = saved.rows.value.single().recipe!!
-        assertEquals(RecipePicture(RECIPE_PICTURE_DISH, 768, 768), written.picture)
+        assertEquals(RecipePicture(RECIPE_PICTURE_DISH, 1200, 896), written.picture)
         assertEquals(backend.generated.single().requestId, written.requestId, "kept for a report")
         assertTrue(holder.uiState.value.pictureNotices.isEmpty())
     }

@@ -43,6 +43,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewLightDark
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.foodtracker.android.R
 import com.foodtracker.android.recipe.RecipePictureFiles
 import com.foodtracker.android.ui.design.LarderButton
@@ -218,10 +219,18 @@ internal fun rememberRecipePictures(savedId: String, recipe: Recipe): RecipeDocu
     }
 }
 
-/** A picture at the column's width, 4:3, cropped to fill; [model] is a file (or a painter in
- *  previews). Not tappable in v1. */
+/**
+ * A picture at the column's (or the step text's) width in the 4:3 frame, cropped to fill and
+ * centred, whatever the picture's own shape (usually 1200 × 896, another provider's 3:2 1200 × 800):
+ * no letterboxing, no distortion. The frame is laid out before the file is read, so nothing moves
+ * when the picture appears (a cross-fade; none with reduced motion). Coil decodes it off the main
+ * thread at the frame's size, never as the whole 1,200 px bitmap. [model] is a file (or a painter
+ * in previews). Not tappable in v1.
+ */
 @Composable
 internal fun RecipePictureImage(model: Any, description: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val reducedMotion = rememberReducedMotion()
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -233,7 +242,11 @@ internal fun RecipePictureImage(model: Any, description: String, modifier: Modif
         if (model is Painter) {
             Image(painter = model, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
-            AsyncImage(model = model, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            val request = remember(model, reducedMotion) {
+                // The size comes from the frame's constraints (Coil's default for AsyncImage).
+                ImageRequest.Builder(context).data(model).crossfade(!reducedMotion).build()
+            }
+            AsyncImage(model = request, contentDescription = null, contentScale = ContentScale.Crop, alignment = Alignment.Center, modifier = Modifier.fillMaxSize())
         }
     }
 }
@@ -414,9 +427,11 @@ internal fun PictureNoticeLifetime(stateHolder: RecipeStateHolder, savedId: Stri
 
 // --- Previews (a drawn stand-in, never a real picture) ---------------------------------------------
 
-/** A plate of food drawn in code, for previews: no picture file is ever bundled or loaded. */
-internal class SampleDishPainter(private val step: Int? = null) : Painter() {
-    override val intrinsicSize: Size = Size.Unspecified
+/** A plate of food drawn in code, for previews: no picture file is ever bundled or loaded. It has
+ *  a real picture's shape ([width] × [height], 1200 × 896 by default; 1200 × 800 for another
+ *  provider's 3:2), so previews crop it as they would crop the real one. */
+internal class SampleDishPainter(private val step: Int? = null, width: Float = 1200f, height: Float = 896f) : Painter() {
+    override val intrinsicSize: Size = Size(width, height)
     override fun DrawScope.onDraw() {
         drawRect(Color(0xFFB9825A))
         val c = Offset(size.width * 0.5f, size.height * 0.52f)

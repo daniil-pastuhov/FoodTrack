@@ -212,9 +212,10 @@ private const val BALANCE_REFRESH_MILLIS = 60_000L
  *  deadline (60 s for a recipe, 180 s for a menu) plus the sweeper's margin. */
 private const val RECIPE_POLL_MILLIS = 150_000L
 
-/** The same for a recipe with pictures: its reservation runs 45 s longer (functions/src/constants.ts
- *  IMAGE.reservationExtraMs), so 105 s, plus the sweeper's minute and a wide margin; as long as a
- *  menu, the same on iOS. */
+/** The same for a recipe with pictures: its reservation runs 55 s longer with the dish's picture
+ *  and 105 s with step pictures (functions/src/constants.ts IMAGE.reservationExtraMs), so 115 s and
+ *  165 s, plus the sweeper's minute (225 s at most): 45 s to spare even then; as long as a menu,
+ *  the same on iOS. */
 private const val PICTURE_POLL_MILLIS = 270_000L
 private const val MENU_POLL_MILLIS = 270_000L
 

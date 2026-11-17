@@ -741,7 +741,7 @@ internal fun RecipeDocumentPicturesPreview() = LarderTheme {
     Surface(color = MaterialTheme.colorScheme.background) {
         RecipeDocument(
             previewRecipe.copy(source = RecipeSource.SERVER),
-            pictures = RecipeDocumentPictures(SampleDishPainter(), mapOf(0 to SampleDishPainter(0), 2 to SampleDishPainter(2))),
+            pictures = RecipeDocumentPictures(SampleDishPainter(), mapOf(0 to SampleDishPainter(0), 2 to SampleDishPainter(2, height = 800f))),
             report = ReportFoot.AVAILABLE
         )
     }

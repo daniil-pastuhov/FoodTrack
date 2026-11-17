@@ -28,7 +28,7 @@ class RecipePicturesWireTest {
     private val jpeg = byteArrayOf(0xFF.toByte(), 0xD8.toByte(), 0xFF.toByte(), 1, 2, 3)
     private val decode: (String) -> ByteArray = { Base64.getDecoder().decode(it) }
 
-    private fun picture(bytes: ByteArray = jpeg, mime: String = "image/jpeg", width: Int = 768, height: Int = 768) = JsonObject(
+    private fun picture(bytes: ByteArray = jpeg, mime: String = "image/jpeg", width: Int = 1200, height: Int = 896) = JsonObject(
         mapOf(
             "mimeType" to JsonPrimitive(mime),
             "data" to JsonPrimitive(Base64.getEncoder().encodeToString(bytes)),
@@ -43,13 +43,38 @@ class RecipePicturesWireTest {
             mapOf(
                 "status" to JsonPrimitive("DONE"),
                 "image" to picture(),
-                "stepImages" to JsonArray(listOf(JsonObject(mapOf("step" to JsonPrimitive(2), "image" to picture(width = 768, height = 576)))))
+                "stepImages" to JsonArray(listOf(JsonObject(mapOf("step" to JsonPrimitive(2), "image" to picture(width = 1200, height = 800)))))
             )
         )
         val pictures = replyPicturesOf(reply, decode)!!
         assertArrayEquals(jpeg, pictures.dish!!.bytes)
         assertEquals(listOf(2), pictures.steps.map { it.step })
-        assertEquals(576, pictures.steps.single().picture.height)
+        assertEquals(800, pictures.steps.single().picture.height)
+        assertEquals(1200 to 896, pictures.dish!!.width to pictures.dish!!.height)
+    }
+
+    /** A provider's picture as the server passes it through: 4:3 (or 3:2), a few hundred
+     *  kilobytes up to the contract's 600,000 bytes, its own metadata after the JPEG's start. */
+    @Test
+    fun largeNonSquarePicturesWithMetadataAreKept() {
+        fun jpegOf(size: Int) = ByteArray(size) { i ->
+            when (i) {
+                0 -> 0xFF.toByte(); 1 -> 0xD8.toByte()
+                // An APP11 segment (where Content Credentials live) right after the start.
+                2 -> 0xFF.toByte(); 3 -> 0xEB.toByte()
+                else -> (i % 251).toByte()
+            }
+        }
+        listOf(1200 to 896, 1200 to 800, 1280 to 960, 896 to 1200).forEach { (w, h) ->
+            listOf(260_000, 600_000, 614_400).forEach { size ->
+                val bytes = jpegOf(size)
+                val dish = replyPicturesOf(JsonObject(mapOf("image" to picture(bytes, width = w, height = h))), decode)!!.dish
+                assertNotNull("${w}x$h, $size bytes", dish)
+                assertEquals(w, dish!!.width)
+                assertEquals(h, dish.height)
+                assertEquals(size, dish.bytes.size)
+            }
+        }
     }
 
     @Test
@@ -64,7 +89,7 @@ class RecipePicturesWireTest {
             picture(bytes = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47)),
             picture(width = 0),
             picture(height = 10_000),
-            picture(bytes = ByteArray(700_000) { if (it == 0) 0xFF.toByte() else if (it == 1) 0xD8.toByte() else 0 })
+            picture(bytes = ByteArray(1_100_000) { if (it == 0) 0xFF.toByte() else if (it == 1) 0xD8.toByte() else 0 })
         ).forEach { bad ->
             val pictures = replyPicturesOf(JsonObject(mapOf("image" to bad)), decode)
             assertNotNull(pictures)
@@ -89,11 +114,14 @@ class RecipePicturesWireTest {
         val store = AndroidRecipePictureStore(root)
         val kept = store.save(
             "recipe_1",
-            ReplyPictures(PictureBytes(jpeg, 768, 768), listOf(StepPictureBytes(1, PictureBytes(jpeg, 768, 576)), StepPictureBytes(7, PictureBytes(jpeg, 1, 1)))),
+            ReplyPictures(PictureBytes(jpeg, 1200, 896), listOf(StepPictureBytes(1, PictureBytes(jpeg, 1200, 800)), StepPictureBytes(7, PictureBytes(jpeg, 1, 1)))),
             steps = 3
         )
         assertEquals(RECIPE_PICTURE_DISH, kept.dish!!.file)
         assertEquals(listOf(recipeStepPictureFile(1)), kept.steps.map { it.picture.file })
+        // The real sides are kept with the saved recipe, never made square.
+        assertEquals(1200 to 896, kept.dish!!.width to kept.dish!!.height)
+        assertEquals(1200 to 800, kept.steps.single().picture.width to kept.steps.single().picture.height)
         assertArrayEquals(jpeg, File(root, "recipe_1/dish.jpg").readBytes())
         assertNotNull(RecipePictureFiles.file(root, "recipe_1", RECIPE_PICTURE_DISH))
         // Never outside its folder.

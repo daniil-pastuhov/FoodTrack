@@ -123,7 +123,7 @@ class RecipePicturesTest {
 
     @Test
     fun stepPicturesKeepOnlyRealStepsOnceInOrder() {
-        val bytes = PictureBytes(ByteArray(1), 768, 768)
+        val bytes = PictureBytes(ByteArray(1), 1200, 896)
         val pictures = ReplyPictures(steps = listOf(StepPictureBytes(4, bytes), StepPictureBytes(1, bytes), StepPictureBytes(1, bytes), StepPictureBytes(-1, bytes)))
         assertEquals(listOf(1), pictures.forSteps(stepCount = 3).map { it.step })
         assertFalse(bytes.toString().contains("[B"))
@@ -139,7 +139,7 @@ class RecipePicturesTest {
         val menu = RecipeJson.decodeFromString(Menu.serializer(), """{"days":[]}""")
         assertNull(menu.requestId)
         // And a new one round-trips.
-        val kept = recipe.copy(requestId = "req1", picture = RecipePicture(RECIPE_PICTURE_DISH, 768, 768), stepPictures = listOf(RecipeStepPicture(0, RecipePicture(recipeStepPictureFile(0), 768, 576))))
+        val kept = recipe.copy(requestId = "req1", picture = RecipePicture(RECIPE_PICTURE_DISH, 1200, 896), stepPictures = listOf(RecipeStepPicture(0, RecipePicture(recipeStepPictureFile(0), 1200, 800))))
         assertEquals(kept, RecipeJson.decodeFromString(Recipe.serializer(), RecipeJson.encodeToString(Recipe.serializer(), kept)))
     }
 

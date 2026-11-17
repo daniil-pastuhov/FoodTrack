@@ -10,6 +10,8 @@ import com.foodtracker.recipe.RecipeIngredient
 import com.foodtracker.recipe.RecipeSource
 import com.foodtracker.recipe.ReplyPictures
 import com.foodtracker.recipe.StepPictureBytes
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 
 /**
@@ -46,11 +48,16 @@ object RecipePictureDemo {
         source = RecipeSource.SERVER
     )
 
-    /** The dish, and for [steps] pictures of steps 3 and 4 (as a server marks a technique). */
-    fun pictures(steps: Boolean): ReplyPictures = ReplyPictures(
-        dish = picture(768, 768, null),
-        steps = if (steps) listOf(StepPictureBytes(2, picture(768, 576, 2)), StepPictureBytes(3, picture(768, 576, 3))) else emptyList()
-    )
+    /** The dish, and for [steps] pictures of steps 3 and 4 (as a server marks a technique), in
+     *  the shapes the server sends (functions/CONTRACT.md "Recipe picture (response)"): 4:3 at
+     *  1200 × 896, and step 4 at another provider's 3:2, 1200 × 800. Drawn and encoded off the
+     *  main thread. */
+    suspend fun pictures(steps: Boolean): ReplyPictures = withContext(Dispatchers.Default) {
+        ReplyPictures(
+            dish = picture(1200, 896, null),
+            steps = if (steps) listOf(StepPictureBytes(2, picture(1200, 896, 2)), StepPictureBytes(3, picture(1200, 800, 3))) else emptyList()
+        )
+    }
 
     private fun picture(width: Int, height: Int, step: Int?): PictureBytes {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)

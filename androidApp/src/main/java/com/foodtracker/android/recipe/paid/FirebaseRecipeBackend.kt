@@ -91,8 +91,11 @@ class FirebaseRecipeBackend(
 
     override suspend fun generate(request: GenerateRequest): ServerResult<GenerateReply> {
         // A recipe takes up to ~40 s and a menu up to ~2 min on the server; the contract asks
-        // for at least 70 s and 190 s. With pictures, up to ~80 s more or less (made after the
-        // text, within a reservation 45 s longer): at least 120 s.
+        // for at least 70 s and 190 s. With pictures (made after the text, retried while the
+        // picture model is busy) the server holds a recipe for 115 s with the dish's picture and
+        // 165 s with step pictures (functions/src/constants.ts IMAGE.reservationExtraMs); the
+        // contract asks for at least 130 s and 190 s, 15 s and 25 s past those reservations. A
+        // call cut off before then is recovered by polling getGeneration (RecipePaid).
         val timeout = when {
             request.kind == WireKind.MENU -> 200L
             request.image == PictureLevel.STEPS -> 190L
