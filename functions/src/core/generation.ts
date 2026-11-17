@@ -39,7 +39,7 @@ import {
 import { buildPrompt, inputTokenBound, newCanary } from "../adapters/prompt";
 import { JUDGE_INSTRUCTION } from "../adapters/gemini";
 import { QUALITY_OUTPUT_RULES, SUSPICIOUS_OUTPUT_RULES, checkImageBrief, checkOutput, checkStepBriefs, hasEnoughItems, usableStaples } from "./outputSafety";
-import { briefRefused, makeRecipeImage, type ImageOutcome } from "./recipeImage";
+import { briefRefused, makeRecipeImage, makeStepImages, type ImageOutcome } from "./recipeImage";
 import {
   assertOpen,
   costKeyOf,
@@ -48,7 +48,7 @@ import {
   generationImageRef,
   generationRef,
   reportableRef,
-  imageMicroUsdOf,
+  imageReservedMicroUsdOf,
   isClosed,
   microUsd,
   paidAllowance,
@@ -133,7 +133,8 @@ export function planFor(req: GenerateRequest, config: RuntimeConfig): Plan {
   const text = costOf(config.costs, costKey);
   let image: Plan["image"];
   if (req.image) {
-    const price = imageMicroUsdOf(config);
+    // Every picture at the dearer of the model and its fallback: either may make it.
+    const price = imageReservedMicroUsdOf(config);
     const dish = config.costs.recipeImage;
     const steps = config.costs.recipeImageSteps;
     const max = req.image === "steps" ? (req.stepImagesMax ?? 0) : 0;
@@ -361,7 +362,7 @@ async function reserveTx(
       reservedMicroUsd,
       statsDay: day,
       createdAt: Timestamp.fromMillis(now),
-      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? IMAGE.reservationExtraMs : 0)),
+      deadlineAt: Timestamp.fromMillis(now + TIMINGS[req.kind].reservationMs + (req.image ? IMAGE.reservationExtraMs[req.image] : 0)),
       ...(plan.image && "share" in plan.image
         ? {
             imageLevel: req.image!,
@@ -909,20 +910,22 @@ export async function generateRecipe(deps: Deps, caller: Caller, data: unknown):
     // A generation the sweeper settled meanwhile gets no picture: it would be paid for and discarded.
     const stillPending = (await generationRef(deps.db, caller.uid, req.requestId).get()).data()?.state === "pending";
     const settledAway: ImageOutcome = { ok: false, failure: "SETTLED", microUsd: 0, model: null };
-    // No dish picture, no step pictures: without a dish brief none is asked at all. Otherwise the
-    // dish's picture and every step's are asked at once (one wait, not three); when the dish's then
-    // fails, the step pictures made are not delivered (NO_DISH; their spend stays booked).
+    // No dish picture, no step pictures: without a dish brief none is asked at all. The dish's
+    // picture first, within IMAGE.budgetMs.dish; only when it was made, the step pictures, at most
+    // IMAGE.maxParallel at once, within IMAGE.budgetMs.steps from the same start (constants.ts IMAGE
+    // has the arithmetic). When the dish's fails, no step picture is asked (NO_DISH, nothing spent).
     const withDish = stillPending && outcome.imageBrief !== undefined;
     const stepBriefs = withDish ? (outcome.stepBriefs ?? []) : [];
-    const [dish, ...made] = await Promise.all([
-      !stillPending
-        ? Promise.resolve(settledAway)
-        : outcome.imageBrief !== undefined
-          ? makeRecipeImage(deps, caller.uid, outcome.imageBrief, config)
-          : Promise.resolve(briefRefused(outcome.briefRule ?? "MISSING")),
-      ...stepBriefs.map((s) => makeRecipeImage(deps, caller.uid, s.brief, config, s.step)),
-    ]);
-    const steps = made.map((o): ImageOutcome => (dish.ok || !o.ok ? o : { ok: false, failure: "NO_DISH", microUsd: o.microUsd, model: o.model }));
+    const picturesFrom = deps.now();
+    const dish = !stillPending
+      ? settledAway
+      : outcome.imageBrief !== undefined
+        ? await makeRecipeImage(deps, caller.uid, outcome.imageBrief, config, picturesFrom + IMAGE.budgetMs.dish)
+        : briefRefused(outcome.briefRule ?? "MISSING");
+    const noDish: ImageOutcome = { ok: false, failure: "NO_DISH", microUsd: 0, model: null };
+    const steps = dish.ok && stepBriefs.length > 0
+      ? await makeStepImages(deps, caller.uid, stepBriefs, config, picturesFrom + IMAGE.budgetMs.steps)
+      : stepBriefs.map(() => noDish);
     outcome = { ...outcome, picture: { dish, steps: stepBriefs.map((s, i) => ({ step: s.step, outcome: steps[i] })) } };
   }
   const settled = await settle(deps, caller.uid, req.requestId, outcome, config);

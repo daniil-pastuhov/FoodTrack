@@ -106,9 +106,13 @@ const imageModel = defineString("IMAGE_MODEL", {
   default: DEFAULT_IMAGE_SELECTION.model,
   description: "Default model id of recipe pictures at that provider (config/runtime.image.model overrides it).",
 });
+const imageFallbackModel = defineString("IMAGE_FALLBACK_MODEL", {
+  default: DEFAULT_IMAGE_SELECTION.fallbackModel,
+  description: "Default fallback model id at the same provider, asked once when the model fails for capacity; empty for none (config/runtime.image.fallbackModel overrides it).",
+});
 const vertexImageLocation = defineString("VERTEX_IMAGE_LOCATION", {
   default: "global",
-  description: "Vertex AI location of the picture model (gemini-nano-banana-2.1 is offered on global only).",
+  description: "Vertex AI location of the picture models (gemini-3.1-flash-lite-image and gemini-nano-banana-2.1 are offered on global only).",
 });
 const openAiKeySecret = defineString("OPENAI_API_KEY_SECRET", {
   default: "OPENAI_API_KEY",
@@ -146,8 +150,8 @@ function appleRoots(): Buffer[] {
 
 /** The picture provider and model the parameters name; invalid ones turn pictures off (fail closed). */
 function imageDefaults(): ImageSelection {
-  const s = validImageSelection({ provider: imageProvider.value(), model: imageModel.value() }, DEFAULT_IMAGE_SELECTION);
-  if (!s) logger.warn("IMAGE_PROVIDER or IMAGE_MODEL is invalid; recipe pictures are off");
+  const s = validImageSelection({ provider: imageProvider.value(), model: imageModel.value(), fallbackModel: imageFallbackModel.value() }, DEFAULT_IMAGE_SELECTION);
+  if (!s) logger.warn("IMAGE_PROVIDER, IMAGE_MODEL or IMAGE_FALLBACK_MODEL is invalid; recipe pictures are off");
   return s ?? { ...DEFAULT_IMAGE_SELECTION, provider: "off" };
 }
 

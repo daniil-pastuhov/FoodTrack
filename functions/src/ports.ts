@@ -258,6 +258,19 @@ export interface OutputJudge {
  */
 export interface ImagePrompt {
   text: string;
+  /** The picture's shape, width:height (IMAGE.aspectRatio); each adapter asks its provider for it or its nearest size. */
+  aspectRatio: ImageAspect;
+}
+
+/** The shapes a picture may be asked in. */
+export type ImageAspect = "4:3";
+
+/** Token counts a provider reported for one picture (for booking its real cost). */
+export interface ImageUsage {
+  inputTokens: number;
+  /** Text output and thinking, billed at the text output rate. */
+  outputTextTokens: number;
+  outputImageTokens: number;
 }
 
 /** The selected provider and model (RuntimeConfig.image), passed on every call. */
@@ -273,6 +286,8 @@ export interface GeneratedImage {
   mimeType: string;
   /** The model that answered, when the provider says (logs only). */
   model: string;
+  /** Token counts, when the provider reported them. */
+  usage?: ImageUsage;
 }
 
 /**
@@ -281,13 +296,16 @@ export interface GeneratedImage {
  * API key: nothing was sent, nothing billed), "infra" otherwise (network, 4xx/5xx, timeout, an
  * unusable answer). `billed`: whether the call may have been charged; when true the picture's
  * reserved price is booked. The message is a fixed text (status codes, never provider text, which
- * could quote the prompt).
+ * could quote the prompt). `retryable`: a quota or overload answer (429, 5xx) worth asking again
+ * after a pause (core/recipeImage.ts); `status`: the HTTP status, when there was one (logs only).
  */
 export class ImageGenerationError extends Error {
   constructor(
     readonly kind: "safety" | "config" | "infra",
     message: string,
     readonly billed: boolean,
+    readonly retryable = false,
+    readonly status?: number,
   ) {
     super(message);
   }
@@ -323,6 +341,10 @@ export interface Deps {
   /** Encrypts the stored Sign in with Apple refresh tokens (adapters/envelope.ts). */
   sealer: SecretSealer;
   now(): number;
+  /** Waits (the pause before a picture's retry); absent: a real timer. Tests advance their clock. */
+  sleep?(ms: number): Promise<void>;
+  /** A number in [0, 1) (the retry jitter); absent: Math.random. */
+  random?(): number;
   logger: Logger;
   /** `config/runtime`, parsed fail-closed (cached for CONFIG_CACHE_MS in production). */
   config(): Promise<RuntimeConfig>;

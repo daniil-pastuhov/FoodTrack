@@ -316,9 +316,17 @@ export const SAMPLE_STEP_BRIEFS = [
 
 /** A 1024 x 1024 PNG, as a provider might answer: larger than the delivered picture. */
 let samplePng: Promise<Buffer> | undefined;
+/** A provider's PNG of a 1K 4:3 picture (1200 x 896): always re-encoded. */
 export function sampleProviderPng(): Promise<Buffer> {
-  samplePng ??= sharp({ create: { width: 1024, height: 1024, channels: 3, background: { r: 200, g: 120, b: 60 } } }).png().toBuffer();
+  samplePng ??= sharp({ create: { width: 1200, height: 896, channels: 3, background: { r: 200, g: 120, b: 60 } } }).png().toBuffer();
   return samplePng;
+}
+let sampleJpeg: Promise<Buffer> | undefined;
+/** Vertex's answer: a 1200 x 896 JPEG with metadata, delivered as it came. */
+export function sampleProviderJpeg(): Promise<Buffer> {
+  sampleJpeg ??= sharp({ create: { width: 1200, height: 896, channels: 3, background: { r: 120, g: 160, b: 60 } } })
+    .jpeg({ quality: 85 }).withExif({ IFD0: { Software: "provider" } }).toBuffer();
+  return sampleJpeg;
 }
 
 type ImageBehaviour = (prompt: ImagePrompt, target: ImageTarget, signal: AbortSignal) => Promise<GeneratedImage>;
@@ -339,9 +347,9 @@ export class FakeImageGenerator implements RecipeImageGenerator {
     return { bytes: await sampleProviderPng(), mimeType: "image/png", model: target.model };
   }
 
-  failWith(kind: "safety" | "config" | "infra", billed: boolean) {
+  failWith(kind: "safety" | "config" | "infra", billed: boolean, retryable = false) {
     this.next.push(async () => {
-      throw new ImageGenerationError(kind, `${kind} failure`, billed);
+      throw new ImageGenerationError(kind, `${kind} failure`, billed, retryable, retryable ? (billed ? 503 : 429) : undefined);
     });
   }
 
@@ -419,6 +427,8 @@ export interface TestDeps extends Deps {
   appleRevoker: FakeRevoker;
   clock: Clock;
   logs: LogLine[];
+  /** Every pause asked (deps.sleep), in order; each advances the clock at once. */
+  sleeps: number[];
 }
 
 export interface LogLine {
@@ -430,6 +440,7 @@ export interface LogLine {
 export function makeDeps(): TestDeps {
   const clock = new Clock();
   const logs: LogLine[] = [];
+  const sleeps: number[] = [];
   const record = (level: LogLine["level"]) => (message: string, data?: Record<string, unknown>) => {
     logs.push({ level, message, data });
   };
@@ -446,6 +457,13 @@ export function makeDeps(): TestDeps {
     sealer: new EnvelopeSealer(new LocalKeyWrapper()),
     clock,
     now: clock.now,
+    // Retry pauses take no real time: they move the clock (a jitter of 0.5 is the plain doubling).
+    sleep: async (ms: number) => {
+      sleeps.push(ms);
+      clock.advance(ms);
+    },
+    random: () => 0.5,
+    sleeps,
     logs,
     logger: { info: record("info"), warn: record("warn"), error: record("error") },
     // Uncached in tests: setConfig must take effect on the next call.

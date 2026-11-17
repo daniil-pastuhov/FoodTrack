@@ -298,6 +298,12 @@ export interface Prices {
 export interface ImageSelection {
   provider: ImageProvider;
   model: string;
+  /**
+   * The model at the same provider asked once when `model` could not make a picture for a reason
+   * about the model or capacity (core/recipeImage.ts makeRecipeImage); "" for none. A fallback
+   * without a price is dropped (parseRuntimeConfig).
+   */
+  fallbackModel: string;
   /** Step pictures beside the dish's at most (`image: "steps"`); 0 turns that level off. */
   maxStepImages: number;
 }
@@ -560,28 +566,49 @@ function validImagePrices(v: unknown): Record<string, number> | null {
   return out;
 }
 
-/** `config/runtime.image`: { provider?, model? }, each optional over `base`; null when invalid. */
+/**
+ * `config/runtime.image`: { provider?, model?, fallbackModel?, maxStepImages? }, each optional
+ * over `base` (`fallbackModel` "" or null for none); null when invalid.
+ */
 export function validImageSelection(v: unknown, base: ImageSelection): ImageSelection | null {
   if (!isObj(v)) return null;
   const provider = v.provider === undefined ? base.provider : v.provider;
   const model = v.model === undefined ? base.model : v.model;
+  const fallback = v.fallbackModel === undefined ? base.fallbackModel : v.fallbackModel === null ? "" : v.fallbackModel;
   const max = v.maxStepImages === undefined ? base.maxStepImages : v.maxStepImages;
   if (!(IMAGE_PROVIDERS as readonly unknown[]).includes(provider)) return null;
   if (typeof model !== "string" || !IMAGE_MODEL.test(model)) return null;
+  if (typeof fallback !== "string" || (fallback !== "" && !IMAGE_MODEL.test(fallback))) return null;
   if (!isCount(max) || max > MAX_STEP_IMAGES_LIMIT) return null;
-  return { provider: provider as ImageProvider, model, maxStepImages: max };
+  return { provider: provider as ImageProvider, model, fallbackModel: fallback === model ? "" : fallback, maxStepImages: max };
 }
 
-/**
- * The micro-USD one picture of the selected provider and model is reserved and booked at, or
- * null when pictures cannot be made (provider "off", or no price for this provider and model).
- */
-export function imageMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices">): number | null {
-  if (config.image.provider === "off") return null;
-  const key = `${config.image.provider}/${config.image.model}`;
+/** The flat micro-USD price of one picture of `provider/model`, or null without a price (or provider "off"). */
+export function imagePriceMicroUsd(config: Pick<RuntimeConfig, "prices">, provider: string, model: string): number | null {
+  if (provider === "off") return null;
+  const key = `${provider}/${model}`;
   const prices = config.prices.imageUsdPerImage ?? DEFAULT_IMAGE_PRICES;
   const usd = Object.prototype.hasOwnProperty.call(prices, key) ? prices[key] : undefined;
   return usd === undefined ? null : Math.ceil(usd * 1_000_000);
+}
+
+/**
+ * The flat micro-USD price of one picture of the selected provider and model, or null when
+ * pictures cannot be made (provider "off", or no price for this provider and model).
+ */
+export function imageMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices">): number | null {
+  return imagePriceMicroUsd(config, config.image.provider, config.image.model);
+}
+
+/**
+ * What every picture a request may get is reserved at: the dearer of the selected model and its
+ * fallback (either may make it); null when pictures cannot be made.
+ */
+export function imageReservedMicroUsdOf(config: Pick<RuntimeConfig, "image" | "prices">): number | null {
+  const primary = imageMicroUsdOf(config);
+  if (primary === null) return null;
+  const fallback = config.image.fallbackModel ? imagePriceMicroUsd(config, config.image.provider, config.image.fallbackModel) : null;
+  return Math.max(primary, fallback ?? 0);
 }
 
 /**
@@ -691,6 +718,10 @@ export function parseRuntimeConfig(
       out.image = { ...out.image, provider: "off" };
       bad.push("image");
     }
+  }
+  // A fallback model without a price is never asked (it could spend unbooked money).
+  if (out.image.fallbackModel && imagePriceMicroUsd(out, out.image.provider, out.image.fallbackModel) === null) {
+    out.image = { ...out.image, fallbackModel: "" };
   }
   // The table says a picture's price only while one can be made at a booked price.
   if (imageMicroUsdOf(out) === null) out.costs = withoutImage(out.costs);

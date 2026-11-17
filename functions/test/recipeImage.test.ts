@@ -5,23 +5,28 @@ import sharp from "sharp";
 import { generateRecipe, getGeneration, planFor } from "../src/core/generation";
 import { sweep } from "../src/core/sweeper";
 import { CAPABILITIES, inputHashOf, validateGenerateRequest } from "../src/contract";
-import { DEFAULT_COSTS, IMAGE } from "../src/constants";
+import { ApiError } from "@google/genai";
+import { DEFAULT_COSTS, IMAGE, TIMINGS, GENERATE_TIMEOUT_SECONDS, JUDGE } from "../src/constants";
 import { emptyUser, generationImageRef, imageMicroUsdOf, parseRuntimeConfig, statsRef, utcDay, validCosts } from "../src/model";
-import { IMAGE_PROMPT_HEAD, IMAGE_PROMPT_TAIL, imagePromptFor } from "../src/core/recipeImage";
+import { IMAGE_PROMPT_HEAD, IMAGE_PROMPT_TAIL, imagePromptFor, pictureMicroUsd, retryDelayMs } from "../src/core/recipeImage";
 import { checkImageBrief } from "../src/core/outputSafety";
 import { buildPrompt } from "../src/adapters/prompt";
-import { normalizeImage, ImageNormalizeError } from "../src/adapters/imageNormalize";
-import { ImageRouter, OPENAI_IMAGES_URL, OpenAIImageGenerator, VertexImageGenerator, openAIImageBody, vertexImageParams, type ImageModels } from "../src/adapters/image";
+import { normalizeImage, ImageNormalizeError, readJpegInfo } from "../src/adapters/imageNormalize";
+import { ImageRouter, OPENAI_IMAGES_URL, OpenAIImageGenerator, VertexImageGenerator, openAIImageBody, openAISize, vertexImageParams, vertexImageUsage, type ImageModels } from "../src/adapters/image";
 import { SecretReader } from "../src/adapters/secretManager";
 import { judgeText } from "../src/adapters/gemini";
 import { EMULATOR_IMAGE_JPEG, EmulatorGenerator, EmulatorImageGenerator } from "../src/emulatorFakes";
 import { ImageGenerationError } from "../src/ports";
-import { SAMPLE_BRIEF, SAMPLE_STEP_BRIEFS, sampleProviderPng, callerFor, db, makeDeps, resetEmulators, sampleRecipe, setConfig, type TestDeps } from "./helpers";
+import { SAMPLE_BRIEF, SAMPLE_STEP_BRIEFS, sampleProviderJpeg, sampleProviderPng, callerFor, db, makeDeps, resetEmulators, sampleRecipe, setConfig, type TestDeps } from "./helpers";
 
 const UID = "user-image";
 const NOW = Date.parse("2026-06-15T12:00:00Z");
 const caller = callerFor(UID);
-const PRICE = 50_000; // vertex/gemini-nano-banana-2.1, USD 0.05
+const PRICE = 40_000; // vertex/gemini-3.1-flash-lite-image, USD 0.04 (booked flat: the fake reports no tokens)
+const FALLBACK_PRICE = 60_000; // vertex/gemini-nano-banana-2.1, USD 0.06
+const RESERVED = 60_000; // every picture is reserved at the dearer of the two
+/** The give-back rules without the fallback model's second chance. */
+const noFallback = () => setConfig({ image: { fallbackModel: "" } });
 
 function request(over: Record<string, unknown> = {}) {
   return {
@@ -101,8 +106,8 @@ describe("costs", () => {
   test("no price for the selected provider and model, or the provider off: no recipeImage", () => {
     expect(parseRuntimeConfig({ image: { model: "unpriced-model" } }).costs).not.toHaveProperty("recipeImage");
     expect(parseRuntimeConfig({ image: { provider: "off" } }).costs).not.toHaveProperty("recipeImage");
-    expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-1-mini", maxStepImages: 2 }).costs.recipeImage).toBe(2);
-    expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-2", maxStepImages: 2 }).costs).not.toHaveProperty("recipeImage");
+    expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-1-mini", fallbackModel: "", maxStepImages: 2 }).costs.recipeImage).toBe(2);
+    expect(parseRuntimeConfig({}, undefined, { provider: "openai", model: "gpt-image-2", fallbackModel: "", maxStepImages: 2 }).costs).not.toHaveProperty("recipeImage");
   });
 
   test("an invalid image selection turns pictures off (fail closed)", () => {
@@ -120,10 +125,10 @@ describe("costs", () => {
     });
     expect(imageMicroUsdOf(c)).toBe(80_000);
     expect(c.costs.recipeImage).toBe(2);
-    expect(imageMicroUsdOf({ ...c, image: { provider: "vertex", model: "gemini-nano-banana-2.1", maxStepImages: 2 } })).toBe(40_000);
+    expect(imageMicroUsdOf({ ...c, image: { provider: "vertex", model: "gemini-nano-banana-2.1", fallbackModel: "", maxStepImages: 2 } })).toBe(40_000);
     expect(parseRuntimeConfig({ prices: { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5, imageUsdPerImage: { "openai/x": 9 } } }).prices.imageUsdPerImage)
-      .toMatchObject({ "vertex/gemini-nano-banana-2.1": 0.05 });
-    expect(parseRuntimeConfig({}, undefined, { provider: "vertex", model: "gemini-3.1-flash-image", maxStepImages: 2 }).costs).not.toHaveProperty("recipeImage");
+      .toMatchObject({ "vertex/gemini-nano-banana-2.1": 0.06, "vertex/gemini-3.1-flash-lite-image": 0.04 });
+    expect(parseRuntimeConfig({}, undefined, { provider: "vertex", model: "gemini-3.1-flash-image", fallbackModel: "", maxStepImages: 2 }).costs).not.toHaveProperty("recipeImage");
   });
 });
 
@@ -195,30 +200,30 @@ describe("an old client (no image field)", () => {
 });
 
 describe("a recipe with a picture", () => {
-  test("costs recipeImage, returns a JPEG of at most 768 px, and stores it beside the generation", async () => {
+  test("costs recipeImage, returns a 4:3 JPEG of at most 1200 px, and stores it beside the generation", async () => {
     await seed(5);
     const req = request({ image: "dish" });
     const res = await generateRecipe(deps, caller, req);
     expect(res).toMatchObject({ status: "DONE", charged: true, balance: 3, costs: { recipeImage: 2 }, acceptsRecipeImage: true });
     expect(res).not.toHaveProperty("imageFailed");
-    expect(res.image).toMatchObject({ mimeType: "image/jpeg", width: 768, height: 768 });
+    expect(res.image).toMatchObject({ mimeType: "image/jpeg", width: 1200, height: 896 });
     expect(isJpeg(res.image!.data)).toBe(true);
     const meta = await sharp(Buffer.from(res.image!.data, "base64")).metadata();
-    expect(meta).toMatchObject({ format: "jpeg", width: 768, height: 768 });
+    expect(meta).toMatchObject({ format: "jpeg", width: 1200, height: 896 });
     // The recipe itself carries no brief.
     expect(res.recipe).not.toHaveProperty("imageBrief");
     expect(await user()).toMatchObject({ balance: 3, consumedCredits: 2, inFlight: 0 });
     const gen = await genDoc(req.requestId);
-    expect(gen).toMatchObject({ imageLevel: "dish", imageCost: 1, imageStored: true, imageReservedMicroUsd: PRICE, imageProvider: "vertex", imageModel: "gemini-nano-banana-2.1" });
+    expect(gen).toMatchObject({ imageLevel: "dish", imageCost: 1, imageStored: true, imageReservedMicroUsd: RESERVED, imageProvider: "vertex", imageModel: "gemini-3.1-flash-lite-image" });
     expect(gen.recipe).not.toHaveProperty("imageBrief");
     const stored = (await generationImageRef(db, UID, req.requestId).get()).data()!;
-    expect(stored).toMatchObject({ mimeType: "image/jpeg", width: 768, height: 768 });
+    expect(stored).toMatchObject({ mimeType: "image/jpeg", width: 1200, height: 896 });
     expect(stored.expiresAt.toMillis()).toBe(gen.expiresAt.toMillis());
     expect(Buffer.from(stored.data).toString("base64")).toBe(res.image!.data);
     expect(await stats(deps)).toMatchObject({ imageRequests: 1, imagesDelivered: 1, imageMicroUsd: PRICE, generationUnits: 2 });
     // The image prompt is the fixed template around the brief, nothing else.
     expect(deps.imageGenerator.prompts).toEqual([imagePromptFor(SAMPLE_BRIEF)]);
-    expect(deps.imageGenerator.targets).toEqual([{ provider: "vertex", model: "gemini-nano-banana-2.1" }]);
+    expect(deps.imageGenerator.targets).toEqual([{ provider: "vertex", model: "gemini-3.1-flash-lite-image" }]);
   });
 
   test("getGeneration and a retry with the same requestId return the same picture, never charging again", async () => {
@@ -251,7 +256,7 @@ describe("a recipe with a picture", () => {
     expect(text).not.toContain(SAMPLE_BRIEF.slice(0, 30));
     expect(text).not.toContain(IMAGE_PROMPT_HEAD);
     const line = deps.logs.find((l) => l.message === "image_call")!;
-    expect(line.data).toMatchObject({ provider: "vertex", outcome: "done", width: 768, height: 768, estimatedMicroUsd: PRICE });
+    expect(line.data).toMatchObject({ provider: "vertex", outcome: "done", width: 1200, height: 896, estimatedMicroUsd: PRICE });
     expect(deps.logs.find((l) => l.message === "llm_call")!.data).toMatchObject({ image: "dish", imageOutcome: "done", cost: 2 });
   });
 
@@ -307,8 +312,8 @@ describe("a recipe with a picture", () => {
     const live = generateRecipe(deps, caller, req);
     await slow.started;
     const gen = await genDoc(req.requestId);
-    expect(gen.deadlineAt.toMillis() - gen.createdAt.toMillis()).toBe(60_000 + IMAGE.reservationExtraMs);
-    deps.clock.advance(60_000 + IMAGE.reservationExtraMs + 61_000);
+    expect(gen.deadlineAt.toMillis() - gen.createdAt.toMillis()).toBe(60_000 + IMAGE.reservationExtraMs.dish);
+    deps.clock.advance(60_000 + IMAGE.reservationExtraMs.dish + 61_000);
     await sweep(deps);
     slow.release();
     const res = await live;
@@ -320,6 +325,7 @@ describe("a recipe with a picture", () => {
 
   test("free welcome recipes are spent only for what is kept", async () => {
     await seed(3, { welcomeUnspent: 3, purchasedCredits: 0 });
+    await noFallback();
     deps.imageGenerator.failWith("infra", false);
     await generateRecipe(deps, caller, request({ image: "dish" }));
     expect(await user()).toMatchObject({ balance: 2, welcomeUnspent: 2, welcomeSpent: 1 });
@@ -334,6 +340,7 @@ describe("the picture fails, the text is fine", () => {
     ["no API key", "config", false, "CONFIG", 0],
   ] as const)("%s: delivered with imageFailed, the picture's share given back once", async (_l, kind, billed, code, booked) => {
     await seed(5);
+    await noFallback();
     deps.imageGenerator.failWith(kind, billed);
     const req = request({ image: "dish" });
     const res = await generateRecipe(deps, caller, req);
@@ -357,6 +364,7 @@ describe("the picture fails, the text is fine", () => {
 
   test("a timeout: the call is aborted after IMAGE.abortMs and booked at its price", async () => {
     await seed(5);
+    await noFallback();
     vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     try {
       deps.imageGenerator.next.push((_p, _t, signal) => new Promise((_r, reject) => {
@@ -375,6 +383,7 @@ describe("the picture fails, the text is fine", () => {
 
   test("an answer that is not a picture is DECODE, booked, given back", async () => {
     await seed(5);
+    await noFallback();
     deps.imageGenerator.returns(Buffer.from("not an image at all"));
     const req = request({ image: "dish" });
     expect(await generateRecipe(deps, caller, req)).toMatchObject({ status: "DONE", imageFailed: true, balance: 4 });
@@ -387,7 +396,7 @@ describe("the picture fails, the text is fine", () => {
     const slow = deps.generator.blockNext();
     const pending = generateRecipe(deps, caller, request({ image: "dish" }));
     await slow.started;
-    await setConfig({ costs: { recipe: 1, menu2: 4, menu3: 5, recipeImage: 2 } });
+    await setConfig({ costs: { recipe: 1, menu2: 4, menu3: 5, recipeImage: 2 }, image: { fallbackModel: "" } });
     deps.imageGenerator.failWith("infra", false);
     slow.release();
     // 10 - 3 reserved + 2 given back.
@@ -473,11 +482,17 @@ describe("spend ceilings", () => {
     const config = parseRuntimeConfig({});
     // The picture's price, plus the few hundred input bytes of the brief's instruction lines.
     const extra = planFor(r, config).reservedMicroUsd - planFor(plain, config).reservedMicroUsd;
-    expect(extra).toBeGreaterThan(PRICE);
-    expect(extra).toBeLessThan(PRICE + 2000);
-    expect(planFor(r, config)).toMatchObject({ cost: 2, image: { share: 1, stepsShare: 0, stepsMax: 0, reservedMicroUsd: PRICE } });
+    // Reserved at the dearer of the model (0.04) and its fallback (0.06).
+    expect(extra).toBeGreaterThan(RESERVED);
+    expect(extra).toBeLessThan(RESERVED + 2000);
+    expect(planFor(r, config)).toMatchObject({ cost: 2, image: { share: 1, stepsShare: 0, stepsMax: 0, reservedMicroUsd: RESERVED } });
+    // Without a fallback, the model's own price.
+    const alone = parseRuntimeConfig({ image: { fallbackModel: "" } });
+    expect(planFor(r, alone).reservedMicroUsd - planFor(plain, alone).reservedMicroUsd).toBe(extra - RESERVED + PRICE);
+    // OpenAI: the default fallback has no openai price, so it is dropped.
     const openai = parseRuntimeConfig({ image: { provider: "openai", model: "gpt-image-1-mini" } });
-    expect(planFor(r, openai).reservedMicroUsd - planFor(plain, openai).reservedMicroUsd).toBe(extra - PRICE + 20_000);
+    expect(openai.image.fallbackModel).toBe("");
+    expect(planFor(r, openai).reservedMicroUsd - planFor(plain, openai).reservedMicroUsd).toBe(extra - RESERVED + 20_000);
     expect(planFor(plain, config)).not.toHaveProperty("image");
   });
 
@@ -485,7 +500,7 @@ describe("spend ceilings", () => {
     await seed(10);
     const config = parseRuntimeConfig({});
     const text = planFor(validateGenerateRequest(request(), NOW), config).reservedMicroUsd;
-    await setConfig({ perUserDailySpendMicroUsd: text + PRICE });
+    await setConfig({ perUserDailySpendMicroUsd: text + RESERVED });
     expect(await reason(generateRecipe(deps, caller, request({ image: "dish" })))).toBe("USER_DAILY_LIMIT");
     expect(deps.generator.calls).toBe(0);
     expect(await generateRecipe(deps, caller, request())).toMatchObject({ status: "DONE" });
@@ -495,7 +510,7 @@ describe("spend ceilings", () => {
     await seed(10);
     const config = parseRuntimeConfig({});
     const text = planFor(validateGenerateRequest(request(), NOW), config).reservedMicroUsd;
-    await setConfig({ dailySpendBaseMicroUsd: text + PRICE, dailySpendMaxMicroUsd: text + PRICE });
+    await setConfig({ dailySpendBaseMicroUsd: text + RESERVED, dailySpendMaxMicroUsd: text + RESERVED });
     expect(await reason(generateRecipe(deps, caller, request({ image: "dish" })))).toBe("GENERATION_DISABLED");
     expect(deps.generator.calls).toBe(0);
   });
@@ -521,26 +536,59 @@ describe("switching provider and model at run time", () => {
 // --- Adapters (no network) -----------------------------------------------------------------------
 
 describe("normalizeImage", () => {
-  test("a 1024 PNG becomes a 768 JPEG; a small JPEG is never enlarged", async () => {
-    const big = await sharp({ create: { width: 1024, height: 512, channels: 4, background: { r: 10, g: 200, b: 30, alpha: 0.5 } } }).png().toBuffer();
-    const n = await normalizeImage(big);
-    expect(n).toMatchObject({ mimeType: "image/jpeg", width: 768, height: 384 });
-    expect((await sharp(n.data).metadata()).format).toBe("jpeg");
+  test("Vertex's 1200 x 896 JPEG passes through byte for byte, metadata and all, without sharp", async () => {
+    const jpeg = await sampleProviderJpeg();
+    const n = await normalizeImage(jpeg);
+    expect(n).toMatchObject({ mimeType: "image/jpeg", width: 1200, height: 896, passedThrough: true });
+    expect(n.data.equals(jpeg)).toBe(true);
+    expect(readJpegInfo(jpeg)).toEqual({ width: 1200, height: 896 });
+    // Its metadata stays (a provider's provenance marks are kept on purpose).
+    const withExif = await sharp({ create: { width: 64, height: 48, channels: 3, background: "#884422" } })
+      .jpeg().withExif({ IFD0: { Copyright: "provider manifest" } }).toBuffer();
+    const kept = await normalizeImage(withExif);
+    expect(kept.passedThrough).toBe(true);
+    expect(kept.data.equals(withExif)).toBe(true);
     const small = await normalizeImage(EMULATOR_IMAGE_JPEG);
-    expect(small).toMatchObject({ width: 96, height: 96 });
+    expect(small).toMatchObject({ width: 96, height: 96, passedThrough: true });
   });
 
-  test("metadata is dropped", async () => {
-    const withExif = await sharp({ create: { width: 64, height: 64, channels: 3, background: "#884422" } })
-      .jpeg().withExif({ IFD0: { Copyright: "provider manifest" } }).toBuffer();
-    const n = await normalizeImage(withExif);
-    expect((await sharp(n.data).metadata()).exif).toBeUndefined();
+  test("the real pictures of the size check pass through, at their real size", async () => {
+    // A progressive JPEG and one with a restart interval and APP segments also read without decoding.
+    const progressive = await sharp({ create: { width: 1200, height: 896, channels: 3, background: "#aa6633" } }).jpeg({ progressive: true }).toBuffer();
+    expect(readJpegInfo(progressive)).toEqual({ width: 1200, height: 896 });
+    const grey = await sharp({ create: { width: 640, height: 480, channels: 3, background: "#777777" } }).greyscale().jpeg().toBuffer();
+    expect(readJpegInfo(grey)).toEqual({ width: 640, height: 480 });
+  });
+
+  test.each([
+    ["a PNG", async () => sharp({ create: { width: 1024, height: 512, channels: 4, background: { r: 10, g: 200, b: 30, alpha: 0.5 } } }).png().toBuffer(), 1024, 512],
+    ["a JPEG wider than 1280 px (OpenAI's 1536 x 1024)", async () => sharp({ create: { width: 1536, height: 1024, channels: 3, background: "#336699" } }).jpeg().toBuffer(), 1200, 800],
+    ["a JPEG heavier than the pass-through cap", async () => sharp({ create: { width: 1200, height: 896, channels: 3, background: "#808080", noise: { type: "gaussian", mean: 128, sigma: 60 } } }).jpeg({ quality: 100 }).toBuffer(), 1200, 896],
+    ["a CMYK JPEG", async () => sharp({ create: { width: 200, height: 150, channels: 3, background: "#336699" } }).toColourspace("cmyk").jpeg().toBuffer(), 200, 150],
+    ["a JPEG with bytes after its end", async () => Buffer.concat([await sampleProviderJpeg(), Buffer.from("trailing")]), 1200, 896],
+  ])("re-encoded, metadata dropped: %s", async (_l, make, width, height) => {
+    const bytes = await make();
+    const n = await normalizeImage(bytes);
+    expect(n).toMatchObject({ mimeType: "image/jpeg", width, height, passedThrough: false });
+    expect(n.data.length).toBeLessThanOrEqual(IMAGE.maxOutputBytes);
+    const meta = await sharp(n.data).metadata();
+    expect(meta).toMatchObject({ format: "jpeg", width, height });
+    expect(meta.exif).toBeUndefined();
+  });
+
+  test("the caps: three pictures fit a response, each its Firestore document", () => {
+    // Base64 is 4/3 of the bytes; Firestore's limit is 1 MiB per document.
+    expect(Math.max(IMAGE.passThroughMaxBytes, IMAGE.maxOutputBytes) * 4 / 3 * 3).toBeLessThan(2_500_000);
+    expect(Math.max(IMAGE.passThroughMaxBytes, IMAGE.maxOutputBytes)).toBeLessThan(1_048_576 * 0.6);
+    expect(1200 * 896).toBeLessThan(IMAGE.maxInputPixels / 2);
+    expect(1536 * 1024).toBeLessThan(IMAGE.maxInputPixels);
   });
 
   test.each([
     ["empty", Buffer.alloc(0)],
     ["not an image", Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'/>")],
     ["a truncated JPEG", EMULATOR_IMAGE_JPEG.subarray(0, 200)],
+    ["a JPEG header only", Buffer.from([0xff, 0xd8, 0xff, 0xd9])],
     ["too large", Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(IMAGE.maxInputBytes)])],
   ])("refused: %s", async (_l, bytes) => {
     await expect(normalizeImage(bytes)).rejects.toBeInstanceOf(ImageNormalizeError);
@@ -558,14 +606,21 @@ describe("the Vertex adapter", () => {
     },
   });
 
-  test("asks for one 1:1 1K JPEG, image only, no people, safety settings on", async () => {
+  test("asks for one 4:3 1K JPEG, image only, no people, safety settings on; reads the token counts", async () => {
     const seen: unknown[] = [];
     const b64 = EMULATOR_IMAGE_JPEG.toString("base64");
     const out = await new VertexImageGenerator({ project: "p", location: "global" }, models({
       candidates: [{ finishReason: "STOP", content: { parts: [{ text: "here" }, { inlineData: { mimeType: "image/jpeg", data: b64 } }] } }],
       modelVersion: "gemini-nano-banana-2.1",
+      // As the size check measured it (2026-11-17).
+      usageMetadata: {
+        promptTokenCount: 98, candidatesTokenCount: 1120, totalTokenCount: 2255, thoughtsTokenCount: 1037,
+        candidatesTokensDetails: [{ modality: "IMAGE", tokenCount: 1120 }],
+      },
     }, seen)).generate(prompt, target, new AbortController().signal);
     expect(out).toMatchObject({ mimeType: "image/jpeg", model: "gemini-nano-banana-2.1" });
+    expect(out.usage).toEqual({ inputTokens: 98, outputTextTokens: 1037, outputImageTokens: 1120 });
+    expect(prompt.aspectRatio).toBe("4:3");
     expect(out.bytes.equals(EMULATOR_IMAGE_JPEG)).toBe(true);
     const p = seen[0] as ReturnType<typeof vertexImageParams>;
     expect(p.model).toBe("gemini-nano-banana-2.1");
@@ -573,7 +628,7 @@ describe("the Vertex adapter", () => {
     expect(p.config).toMatchObject({
       responseModalities: ["IMAGE"],
       candidateCount: 1,
-      imageConfig: { aspectRatio: "1:1", imageSize: "1K", personGeneration: "ALLOW_NONE", imageOutputOptions: { mimeType: "image/jpeg" } },
+      imageConfig: { aspectRatio: "4:3", imageSize: "1K", personGeneration: "ALLOW_NONE", imageOutputOptions: { mimeType: "image/jpeg" } },
     });
     expect(p.config!.safetySettings!.length).toBeGreaterThanOrEqual(4);
   });
@@ -584,8 +639,28 @@ describe("the Vertex adapter", () => {
     ["no picture", { candidates: [{ finishReason: "STOP", content: { parts: [{ text: "sorry" }] } }] }, "infra", true],
   ])("%s", async (_l, res, kind, billed) => {
     const err = await new VertexImageGenerator({ project: "p", location: "global" }, models(res)).generate(prompt, target, new AbortController().signal).catch((e) => e);
+    expect(err.retryable).toBe(false);
     expect(err).toBeInstanceOf(ImageGenerationError);
     expect(err).toMatchObject({ kind, billed });
+  });
+
+  test.each([
+    [429, false, true],
+    [503, true, true],
+    [500, true, true],
+    [404, false, false],
+    [400, false, false],
+  ])("Vertex %s: billed %s, retryable %s", async (status, billed, retryable) => {
+    const err = await new VertexImageGenerator({ project: "p", location: "global" }, models(new ApiError({ message: "quoted prompt", status })))
+      .generate(prompt, target, new AbortController().signal).catch((e) => e);
+    expect(err).toMatchObject({ kind: "infra", billed, retryable, status });
+    expect(String(err.message)).not.toMatch(/quoted prompt/);
+  });
+
+  test("usage without counts books the flat price", () => {
+    expect(vertexImageUsage({ usageMetadata: {} } as never)).toBeUndefined();
+    expect(vertexImageUsage({} as never)).toBeUndefined();
+    expect(vertexImageUsage({ usageMetadata: { candidatesTokenCount: 1120 } } as never)).toEqual({ inputTokens: 0, outputTextTokens: 0, outputImageTokens: 1120 });
   });
 });
 
@@ -598,16 +673,20 @@ describe("the OpenAI adapter", () => {
     const calls: { url: string; init: RequestInit }[] = [];
     const fetchMock = (async (url: string, init: RequestInit) => {
       calls.push({ url, init });
-      return json(200, { created: 1, data: [{ b64_json: EMULATOR_IMAGE_JPEG.toString("base64") }], output_format: "jpeg" });
+      return json(200, {
+        created: 1, data: [{ b64_json: EMULATOR_IMAGE_JPEG.toString("base64") }], output_format: "jpeg",
+        usage: { input_tokens: 90, output_tokens: 1300, total_tokens: 1390, input_tokens_details: { text_tokens: 90, image_tokens: 0 } },
+      });
     }) as unknown as typeof fetch;
     const out = await new OpenAIImageGenerator({ apiKey: async () => "sk-test", fetch: fetchMock }).generate(prompt, target, new AbortController().signal);
     expect(out).toMatchObject({ mimeType: "image/jpeg", model: "gpt-image-1-mini" });
+    expect(out.usage).toEqual({ inputTokens: 90, outputTextTokens: 0, outputImageTokens: 1300 });
     expect(out.bytes.equals(EMULATOR_IMAGE_JPEG)).toBe(true);
     expect(calls[0].url).toBe(OPENAI_IMAGES_URL);
     expect((calls[0].init.headers as Record<string, string>).authorization).toBe("Bearer sk-test");
     const body = JSON.parse(String(calls[0].init.body));
     expect(body).toEqual(openAIImageBody(prompt, "gpt-image-1-mini", "medium"));
-    expect(body).toEqual({ model: "gpt-image-1-mini", prompt: prompt.text, n: 1, size: "1024x1024", quality: "medium", output_format: "jpeg", output_compression: 85, moderation: "auto" });
+    expect(body).toEqual({ model: "gpt-image-1-mini", prompt: prompt.text, n: 1, size: "1536x1024", quality: "medium", output_format: "jpeg", output_compression: 85, moderation: "auto" });
     // Nothing that identifies the person.
     expect(body).not.toHaveProperty("user");
     expect(body).not.toHaveProperty("safety_identifier");
@@ -616,15 +695,24 @@ describe("the OpenAI adapter", () => {
   test.each([
     ["moderation", 400, { error: { code: "moderation_blocked", type: "image_generation_user_error" } }, "safety", false],
     ["a bad key", 401, { error: { code: "invalid_api_key" } }, "config", false],
-    ["rate limited", 429, { error: { code: "rate_limit_exceeded" } }, "infra", false],
-    ["a server error", 500, { error: { code: null } }, "infra", true],
-    ["no picture", 200, { data: [] }, "infra", true],
-  ])("%s", async (_l, status, body, kind, billed) => {
+    ["rate limited", 429, { error: { code: "rate_limit_exceeded" } }, "infra", false, true],
+    ["out of money", 429, { error: { code: "insufficient_quota" } }, "infra", false, false],
+    ["a server error", 500, { error: { code: null } }, "infra", true, true],
+    ["overloaded", 503, { error: { code: null } }, "infra", true, true],
+    ["no picture", 200, { data: [] }, "infra", true, false],
+  ])("%s", async (_l, status, body, kind, billed, retryable = false) => {
     const fetchMock = (async () => json(status, body)) as unknown as typeof fetch;
     const err = await new OpenAIImageGenerator({ apiKey: async () => "sk-test", fetch: fetchMock }).generate(prompt, target, new AbortController().signal).catch((e) => e);
-    expect(err).toMatchObject({ kind, billed });
+    expect(err).toMatchObject({ kind, billed, retryable });
     // A fixed message: never the provider's own text.
     expect(String(err.message)).not.toMatch(/moderation_blocked|invalid_api_key/);
+  });
+
+  test("asks for its nearest landscape size: 1536x1024, or exactly 1024x768 where any size is taken", () => {
+    expect(openAISize("gpt-image-1-mini", "4:3")).toBe("1536x1024");
+    expect(openAISize("gpt-image-1", "4:3")).toBe("1536x1024");
+    expect(openAISize("gpt-image-2", "4:3")).toBe("1024x768");
+    expect(openAISize("gpt-image-2.5-flare", "4:3")).toBe("1024x768");
   });
 
   test("no key: a config failure, nothing sent", async () => {
@@ -706,7 +794,7 @@ describe("step pictures (image: \"steps\")", () => {
     const dish = buildPrompt(validateGenerateRequest(request({ image: "dish" }), NOW), "LRD-0000000000000000");
     expect(dish.systemInstruction).not.toMatch(/stepBriefs/);
     const config = parseRuntimeConfig({});
-    expect(planFor(r, config)).toMatchObject({ cost: 3, image: { share: 1, stepsShare: 1, stepsMax: 2, reservedMicroUsd: 3 * PRICE } });
+    expect(planFor(r, config)).toMatchObject({ cost: 3, image: { share: 1, stepsShare: 1, stepsMax: 2, reservedMicroUsd: 3 * RESERVED } });
     expect(inputHashOf(r)).not.toBe(inputHashOf(validateGenerateRequest(request({ image: "dish" }), NOW)));
   });
 
@@ -717,7 +805,7 @@ describe("step pictures (image: \"steps\")", () => {
     expect(res).toMatchObject({ status: "DONE", balance: 7, costs: { recipeImageSteps: 3 } });
     expect(res).not.toHaveProperty("imageFailed");
     expect(res).not.toHaveProperty("stepImagesFailed");
-    expect(res.image).toMatchObject({ width: 768 });
+    expect(res.image).toMatchObject({ width: 1200, height: 896 });
     expect(res.stepImages!.map((s) => s.step)).toEqual([0, 1]);
     for (const s of res.stepImages!) expect(isJpeg(s.image.data)).toBe(true);
     expect(deps.imageGenerator.prompts.map((p) => p.text)).toEqual([SAMPLE_BRIEF, ...SAMPLE_STEP_BRIEFS.map((s) => s.brief)].map((b) => imagePromptFor(b).text));
@@ -738,6 +826,7 @@ describe("step pictures (image: \"steps\")", () => {
     ["every step picture fails: flagged, the steps' share back", SAMPLE_STEP_BRIEFS, ["infra", "safety"], 8, { stepImagesFailed: true }, 0],
   ] as const)("%s", async (_l, briefs, fails, balance, flags, delivered) => {
     await seed(10);
+    await noFallback();
     deps.generator.returns({ ...sampleRecipe(), imageBrief: SAMPLE_BRIEF, stepBriefs: briefs });
     deps.imageGenerator.next.push(async (_p, t) => ({ bytes: await sampleProviderPng(), mimeType: "image/png", model: t.model }));
     for (const f of fails) {
@@ -762,6 +851,7 @@ describe("step pictures (image: \"steps\")", () => {
 
   test("the dish's picture fails at the provider: no step picture delivered, everything picture-related back", async () => {
     await seed(10);
+    await noFallback();
     deps.imageGenerator.failWith("infra", false);
     const req = request({ image: "steps" });
     const res = await generateRecipe(deps, caller, req);
@@ -769,8 +859,9 @@ describe("step pictures (image: \"steps\")", () => {
     expect(res).not.toHaveProperty("image");
     expect(await genDoc(req.requestId)).toMatchObject({ stepImagesStored: [] });
     for (const i of [0, 1]) expect((await generationImageRef(db, UID, req.requestId, i).get()).exists).toBe(false);
-    // The step pictures were made (in parallel) and are booked, though not delivered.
-    expect(await stats(deps)).toMatchObject({ imageMicroUsd: 2 * PRICE, imageFailures: 3 });
+    // The dish's picture comes first: without it no step picture is asked, nothing more is spent.
+    expect(deps.imageGenerator.calls).toBe(1);
+    expect(await stats(deps)).toMatchObject({ imageMicroUsd: 0, imageFailures: 3 });
   });
 
   test("the dish brief refused: no step picture is even asked", async () => {
@@ -785,6 +876,7 @@ describe("step pictures (image: \"steps\")", () => {
 
   test("nothing delivered: the whole picture share back, once", async () => {
     await seed(10);
+    await noFallback();
     for (let i = 0; i < 3; i++) deps.imageGenerator.failWith("infra", false);
     const req = request({ image: "steps" });
     expect(await generateRecipe(deps, caller, req)).toMatchObject({ status: "DONE", imageFailed: true, stepImagesFailed: true, balance: 9 });
@@ -811,7 +903,7 @@ describe("step pictures (image: \"steps\")", () => {
     const res = await generateRecipe(deps, caller, req);
     expect(res.stepImages!.map((s) => s.step)).toEqual([0]);
     expect(deps.imageGenerator.calls).toBe(2);
-    expect(await genDoc(req.requestId)).toMatchObject({ stepImagesMax: 1, imageReservedMicroUsd: 2 * PRICE });
+    expect(await genDoc(req.requestId)).toMatchObject({ stepImagesMax: 1, imageReservedMicroUsd: 2 * RESERVED });
     expect(deps.logs.filter((l) => l.message === "image_brief_rejected").map((l) => l.data!.rule)).toEqual(["SHAPE", "BRIEF_TERMS", "SHAPE", "LENGTH"]);
   });
 
@@ -819,7 +911,7 @@ describe("step pictures (image: \"steps\")", () => {
     await seed(10);
     await setConfig({ image: { maxStepImages: 0 } });
     expect(await reason(generateRecipe(deps, caller, request({ image: "steps" })))).toBe("IMAGE_UNAVAILABLE");
-    await setConfig({ image: { maxStepImages: 2 }, costs: { recipe: 1, menu2: 4, menu3: 5, recipeImageSteps: 0 } });
+    await setConfig({ image: { fallbackModel: "", maxStepImages: 2 }, costs: { recipe: 1, menu2: 4, menu3: 5, recipeImageSteps: 0 } });
     expect(await reason(generateRecipe(deps, caller, request({ image: "steps" })))).toBe("IMAGE_UNAVAILABLE");
     const dish = await generateRecipe(deps, caller, request({ image: "dish" }));
     expect(dish).toMatchObject({ status: "DONE", balance: 8 });
@@ -831,5 +923,195 @@ describe("step pictures (image: \"steps\")", () => {
   test("the judge sees the step briefs", () => {
     const r = { title: "T", summary: "S", minutes: 10, servings: 2, difficulty: "easy" as const, ingredients: [], steps: ["a"] };
     expect(judgeText({ recipe: r, imageBrief: SAMPLE_BRIEF, stepBriefs: ["Dough folded over itself."] })).toContain("Dough folded over itself.");
+  });
+});
+
+describe("retries, the fallback model, parallel calls and booking", () => {
+  const quota = (model = "m") => async () => {
+    void model;
+    throw new ImageGenerationError("infra", "Vertex AI 429", false, true, 429);
+  };
+  const lines = (m: string) => deps.logs.filter((l) => l.message === m).map((l) => l.data!);
+
+  test("the timings fit: every picture budget inside its reservation and the apps' waits", () => {
+    const before = TIMINGS.recipe.llmAbortMs + JUDGE.abortMs.recipe;
+    for (const level of ["dish", "steps"] as const) {
+      const worst = before + IMAGE.budgetMs[level];
+      const deadline = TIMINGS.recipe.reservationMs + IMAGE.reservationExtraMs[level];
+      expect(worst + 10_000).toBeLessThanOrEqual(deadline);
+      expect(deadline).toBeLessThan(GENERATE_TIMEOUT_SECONDS * 1000);
+    }
+    expect(TIMINGS.recipe.reservationMs + IMAGE.reservationExtraMs.dish).toBeLessThan(130_000);
+    expect(TIMINGS.recipe.reservationMs + IMAGE.reservationExtraMs.steps).toBeLessThan(190_000);
+    // The dish's budget leaves an attempt of the fallback after a timed-out first attempt.
+    expect(IMAGE.budgetMs.dish - (IMAGE.budgetMs.dish - IMAGE.minAttemptMs)).toBeGreaterThanOrEqual(IMAGE.minAttemptMs);
+    expect(IMAGE.budgetMs.steps).toBeGreaterThan(IMAGE.budgetMs.dish + IMAGE.minAttemptMs);
+  });
+
+  test("the backoff is jittered and doubles", () => {
+    expect(retryDelayMs(1, () => 0)).toBe(1000);
+    expect(retryDelayMs(1, () => 0.999)).toBeCloseTo(2998, -1);
+    expect(retryDelayMs(2, () => 0.5)).toBe(4000);
+    expect(retryDelayMs(3, () => 0.5)).toBe(8000);
+  });
+
+  test("a 429 is retried after a pause and then succeeds: delivered, booked once, one image_retry line", async () => {
+    await seed(5);
+    deps.imageGenerator.next.push(quota());
+    const res = await generateRecipe(deps, caller, request({ image: "dish" }));
+    expect(res).toMatchObject({ status: "DONE", balance: 3, image: { width: 1200, height: 896 } });
+    expect(deps.imageGenerator.calls).toBe(2);
+    expect(deps.imageGenerator.targets.map((x) => x.model)).toEqual(["gemini-3.1-flash-lite-image", "gemini-3.1-flash-lite-image"]);
+    expect(deps.sleeps).toEqual([2000]);
+    expect(lines("image_retry")).toEqual([expect.objectContaining({ provider: "vertex", model: "gemini-3.1-flash-lite-image", picture: "dish", attempt: 2, reason: "QUOTA", waitMs: 2000 })]);
+    expect(lines("image_fallback")).toEqual([]);
+    expect(lines("image_call")[0]).toMatchObject({ outcome: "done", attempts: 2, fallback: false, estimatedMicroUsd: PRICE });
+    expect(await stats(deps)).toMatchObject({ imageMicroUsd: PRICE });
+    expect(JSON.stringify(deps.logs)).not.toContain(SAMPLE_BRIEF.slice(0, 30));
+  });
+
+  test("429s until the retries are spent, then the fallback model makes it: delivered, booked at the fallback's price", async () => {
+    await seed(5);
+    // The primary answers 429 every time; the fallback model draws.
+    for (let i = 0; i < IMAGE.maxAttempts + 1; i++) {
+      deps.imageGenerator.next.push(async (_p, target) => {
+        if (target.model === "gemini-3.1-flash-lite-image") return quota()();
+        return { bytes: await sampleProviderJpeg(), mimeType: "image/jpeg", model: target.model };
+      });
+    }
+    const res = await generateRecipe(deps, caller, request({ image: "dish" }));
+    expect(res).toMatchObject({ status: "DONE", balance: 3 });
+    // 2 s and 4 s pauses; a third (8 s) would leave less than two attempts' time of the 50 s.
+    expect(deps.sleeps).toEqual([2000, 4000]);
+    expect(res).not.toHaveProperty("imageFailed");
+    const models = deps.imageGenerator.targets.map((x) => x.model);
+    expect(models.at(-1)).toBe("gemini-nano-banana-2.1");
+    expect(models.slice(0, -1).every((m) => m === "gemini-3.1-flash-lite-image")).toBe(true);
+    // Retries stop while IMAGE.minAttemptMs is still kept for the fallback within the dish's 50 s.
+    expect(deps.clock.ms - NOW).toBeLessThanOrEqual(IMAGE.budgetMs.dish);
+    expect(lines("image_fallback")).toEqual([expect.objectContaining({ model: "gemini-3.1-flash-lite-image", fallbackModel: "gemini-nano-banana-2.1", picture: "dish", reason: "QUOTA", outcome: "done" })]);
+    expect(lines("image_call")[0]).toMatchObject({ outcome: "done", fallback: true, model: "gemini-nano-banana-2.1", estimatedMicroUsd: FALLBACK_PRICE });
+    expect(await stats(deps)).toMatchObject({ imageMicroUsd: FALLBACK_PRICE });
+  });
+
+  test("retries exhausted without a fallback: delivered without the picture, its share given back, nothing booked", async () => {
+    await seed(5);
+    await noFallback();
+    for (let i = 0; i < IMAGE.maxAttempts + 2; i++) deps.imageGenerator.next.push(quota());
+    const req = request({ image: "dish" });
+    const res = await generateRecipe(deps, caller, req);
+    expect(res).toMatchObject({ status: "DONE", imageFailed: true, balance: 4 });
+    expect(deps.imageGenerator.calls).toBeGreaterThanOrEqual(2);
+    expect(deps.imageGenerator.calls).toBeLessThanOrEqual(IMAGE.maxAttempts);
+    expect(await genDoc(req.requestId)).toMatchObject({ imageFailure: "INFRA" });
+    expect(await stats(deps)).toMatchObject({ imageMicroUsd: 0, imageGivenBackCredits: 1 });
+    expect(lines("image_fallback")).toEqual([]);
+  });
+
+  test("both models fail: the give-back rules, every billed attempt booked at its model's price", async () => {
+    await seed(10);
+    // The primary's 5xx (billed, retryable) every time, then the fallback's 5xx.
+    for (let i = 0; i < 8; i++) deps.imageGenerator.failWith("infra", true, true);
+    const res = await generateRecipe(deps, caller, request({ image: "steps" }));
+    expect(res).toMatchObject({ status: "DONE", imageFailed: true, stepImagesFailed: true, balance: 9 });
+    const primaryCalls = deps.imageGenerator.targets.filter((x) => x.model === "gemini-3.1-flash-lite-image").length;
+    const fallbackCalls = deps.imageGenerator.targets.filter((x) => x.model === "gemini-nano-banana-2.1").length;
+    expect(fallbackCalls).toBe(1);
+    expect(await stats(deps)).toMatchObject({ imageMicroUsd: primaryCalls * PRICE + FALLBACK_PRICE });
+    expect(lines("image_fallback")[0]).toMatchObject({ reason: "SERVER", outcome: "INFRA" });
+  });
+
+  test("a safety refusal is never retried or sent to the fallback model", async () => {
+    await seed(5);
+    deps.imageGenerator.failWith("safety", true);
+    const res = await generateRecipe(deps, caller, request({ image: "dish" }));
+    expect(res).toMatchObject({ status: "DONE", imageFailed: true, balance: 4 });
+    expect(deps.imageGenerator.calls).toBe(1);
+    expect(lines("image_fallback")).toEqual([]);
+    expect(lines("image_retry")).toEqual([]);
+  });
+
+  test("a model that is not served (404) goes straight to the fallback; a config failure never does", async () => {
+    await seed(10);
+    deps.imageGenerator.next.push(async () => { throw new ImageGenerationError("infra", "Vertex AI 404", false, false, 404); });
+    expect(await generateRecipe(deps, caller, request({ image: "dish" }))).toMatchObject({ status: "DONE", balance: 8 });
+    expect(deps.imageGenerator.targets.map((x) => x.model)).toEqual(["gemini-3.1-flash-lite-image", "gemini-nano-banana-2.1"]);
+    expect(lines("image_fallback")[0]).toMatchObject({ reason: "NOT_FOUND" });
+    deps.imageGenerator.failWith("config", false);
+    expect(await generateRecipe(deps, caller, request({ image: "dish" }))).toMatchObject({ imageFailed: true, balance: 7 });
+    expect(deps.imageGenerator.calls).toBe(3);
+  });
+
+  test("the fallback is configurable: config/runtime.image.fallbackModel, empty for none, dropped without a price", () => {
+    expect(parseRuntimeConfig({}).image).toMatchObject({ model: "gemini-3.1-flash-lite-image", fallbackModel: "gemini-nano-banana-2.1" });
+    expect(parseRuntimeConfig({ image: { fallbackModel: "" } }).image.fallbackModel).toBe("");
+    expect(parseRuntimeConfig({ image: { fallbackModel: null } }).image.fallbackModel).toBe("");
+    expect(parseRuntimeConfig({ image: { fallbackModel: "unpriced-model" } }).image.fallbackModel).toBe("");
+    expect(parseRuntimeConfig({ image: { model: "gemini-nano-banana-2.1" } }).image.fallbackModel).toBe("");
+    expect(parseRuntimeConfig({ image: { model: "gemini-nano-banana-2.1", fallbackModel: "gemini-3.1-flash-lite-image" } }).image)
+      .toMatchObject({ model: "gemini-nano-banana-2.1", fallbackModel: "gemini-3.1-flash-lite-image" });
+    expect(parseRuntimeConfig({ image: { fallbackModel: "has spaces" } }).image.provider).toBe("off");
+  });
+
+  test("no fallback configured: a failure stays a failure, one model asked", async () => {
+    await seed(5);
+    await noFallback();
+    deps.imageGenerator.next.push(async () => { throw new ImageGenerationError("infra", "Vertex AI 404", false, false, 404); });
+    expect(await generateRecipe(deps, caller, request({ image: "dish" }))).toMatchObject({ imageFailed: true, balance: 4 });
+    expect(deps.imageGenerator.calls).toBe(1);
+  });
+
+  test("step pictures: the dish's first, then at most two at once", async () => {
+    await seed(10);
+    await setConfig({ image: { maxStepImages: 4 } });
+    const fourSteps = [
+      "The dough rolled thin and even on a floured wooden board.",
+      "A pale sauce whisked until smooth and glossy in a steel pan.",
+      "Onions softened in butter until golden and sticky at the edges.",
+      "Folded parcels of pastry pinched shut along a curved seam.",
+    ].map((brief, step) => ({ step, brief }));
+    const recipe = sampleRecipe();
+    deps.generator.returns({ ...recipe, steps: [...recipe.steps, "Fold it.", "Roll it."], imageBrief: SAMPLE_BRIEF, stepBriefs: fourSteps.map((s) => ({ step: s.step + 1, brief: s.brief })) });
+    let running = 0;
+    let most = 0;
+    const order: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      deps.imageGenerator.next.push(async (p, target) => {
+        running++;
+        most = Math.max(most, running);
+        order.push(p.text.includes(SAMPLE_BRIEF) ? "dish" : "step");
+        await new Promise((r) => setTimeout(r, 20));
+        running--;
+        return { bytes: await sampleProviderJpeg(), mimeType: "image/jpeg", model: target.model };
+      });
+    }
+    const res = await generateRecipe(deps, caller, request({ image: "steps" }));
+    expect(res).toMatchObject({ status: "DONE" });
+    expect(res.stepImages).toHaveLength(4);
+    expect(order).toEqual(["dish", "step", "step", "step", "step"]);
+    expect(most).toBe(2);
+    // Passed through as they came: each the provider's own JPEG.
+    expect(Buffer.from(res.image!.data, "base64").equals(await sampleProviderJpeg())).toBe(true);
+  });
+
+  test("booking from token counts: the real cost when the provider reports it, the flat price when not", async () => {
+    const config = parseRuntimeConfig({});
+    const nb = { provider: "vertex", model: "gemini-nano-banana-2.1" };
+    // The size check's picture: 98 x 1.5 + 1,037 x 7.5 + 1,120 x 30 = 41,524.5 micro-USD (USD 0.0415).
+    expect(pictureMicroUsd(config, nb, { inputTokens: 98, outputTextTokens: 1037, outputImageTokens: 1120 })).toBe(41_525);
+    expect(pictureMicroUsd(config, { provider: "vertex", model: "gemini-3.1-flash-lite-image" }, { inputTokens: 98, outputTextTokens: 0, outputImageTokens: 1120 })).toBe(33_625);
+    expect(pictureMicroUsd(config, nb, undefined)).toBe(FALLBACK_PRICE);
+    // A model priced only in config/runtime (no token rates): its flat price, whatever the counts.
+    const custom = parseRuntimeConfig({ prices: { inputUsdPerMTok: 1.5, outputUsdPerMTok: 7.5, imageUsdPerImage: { "vertex/gemini-3.1-flash-image": 0.08 } } });
+    expect(pictureMicroUsd(custom, { provider: "vertex", model: "gemini-3.1-flash-image" }, { inputTokens: 1, outputTextTokens: 1, outputImageTokens: 1 })).toBe(80_000);
+
+    await seed(5);
+    deps.imageGenerator.next.push(async (_p, target) => ({
+      bytes: await sampleProviderJpeg(), mimeType: "image/jpeg", model: target.model,
+      usage: { inputTokens: 98, outputTextTokens: 0, outputImageTokens: 1120 },
+    }));
+    await generateRecipe(deps, caller, request({ image: "dish" }));
+    expect(lines("image_call")[0]).toMatchObject({ estimatedMicroUsd: 33_625, passedThrough: true });
+    expect(await stats(deps)).toMatchObject({ imageMicroUsd: 33_625, spentMicroUsd: 16_500 + 33_625 });
   });
 });

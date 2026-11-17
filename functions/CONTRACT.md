@@ -273,9 +273,11 @@ step field: they are sent only on a `"steps"` request.
   without one is `REQUEST_ID_REUSED`); a request without it binds exactly as before.
 - Cost: `costs.recipeImage` (`"dish"`) or `costs.recipeImageSteps` (`"steps"`) for the whole
   request, charged at reservation like any request.
-- The pictures are made in the same call, after the recipe's text passed every check, all at
-  once, so a recipe with pictures takes longer: up to ~80 s (set the callable timeout to at least
-  120 s, and poll `getGeneration` as for any request that is cut off).
+- The pictures are made in the same call, after the recipe's text passed every check (the
+  dish's first, then the step pictures), so a recipe with pictures takes longer: typically a few
+  seconds more, at most ~110 s for `"dish"` and ~160 s for `"steps"` when the picture model is
+  busy and retried (set the callable timeout to at least 130 s / 190 s, and poll `getGeneration` as
+  for any request that is cut off).
 - **What is kept** (the shares are from the table at reservation: dish share = `recipeImage` −
   `recipe`, steps share = `recipeImageSteps` − `recipeImage`):
   - the dish's picture delivered (and, for `"steps"`, at least one step picture, even fewer than
@@ -629,9 +631,9 @@ step pictures made, each tied to its step (`step`: the 0-based index into `recip
 step order, at most `maxStepImages`, possibly none):
 
 ```json
-"image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 768, "height": 768 },
+"image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 1200, "height": 896 },
 "stepImages": [
-  { "step": 2, "image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 768, "height": 768 } }
+  { "step": 2, "image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 1200, "height": 896 } }
 ]
 ```
 
@@ -641,9 +643,12 @@ whenever a marked step's picture is missing from it.
 
 - `mimeType`: always `"image/jpeg"`, whatever model drew it (the server re-encodes every picture).
 - `data`: standard base64 (RFC 4648 §4, with `=` padding, no line breaks) of the JPEG's bytes;
-  typically 60–150 KB of JPEG, never more than 600,000 bytes.
-- `width`, `height`: pixels, at most 768 on the longer side (square today; do not assume it).
-- No EXIF or other metadata. The apps keep the picture with the saved recipe on the device; the
+  typically 150–260 KB of JPEG, never more than 600,000 bytes.
+- `width`, `height`: the picture's own pixels. Every picture is asked in 4:3 landscape and is
+  usually 1200 × 896, at most 1,280 on the longer side; another provider's can differ slightly
+  (1200 × 800). Show it in the 4:3 frame, filling it, and never assume a square or a fixed size.
+- It may carry the provider's own metadata (AI-provenance marks such as Content Credentials);
+  nothing about the person is in it. The apps keep the picture with the saved recipe on the device; the
   server keeps it only as long as the generation (the idempotency window), then deletes it.
 
 ### Menu (response)
@@ -722,7 +727,7 @@ Response:
 
 ```json
 { "status": "DONE | IN_PROGRESS | FAILED", "recipe": {}, "menu": {}, "balance": 9, "charged": true,
-  "image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 768, "height": 768 },
+  "image": { "mimeType": "image/jpeg", "data": "<base64>", "width": 1200, "height": 896 },
   "costs": { "recipe": 1, "menu2": 4, "menu3": 5, "menuSets": { "...": "see Costs" }, "recipeImage": 2 },
   "acceptsOptionalIngredients": true, "acceptsMultiChoiceConfig": true, "acceptsDanish": true,
   "acceptsMenuDays": true, "acceptsTaste": true, "tasteQuizVersion": "35244e855cd4327f",

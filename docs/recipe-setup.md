@@ -411,9 +411,11 @@ pictures"). Nothing here is needed for the backend to deploy; until these are do
 pictures off with `config/runtime.costs.recipeImage: 0` (the apps then offer no picture), or test
 them with `allowSandbox` only.
 
-- [ ] **Check** that the picture model answers: Vertex AI `gemini-nano-banana-2.1` on location
-  `global` (the default `IMAGE_MODEL` and `VERTEX_IMAGE_LOCATION`), from Vertex AI Studio or
-  one `generateContent` call as the service account. It uses the Vertex AI API and the
+- [ ] **Check** that both picture models answer: Vertex AI `gemini-3.1-flash-lite-image` (the
+  default `IMAGE_MODEL`) and its fallback `gemini-nano-banana-2.1` (`IMAGE_FALLBACK_MODEL`), both on
+  location `global` (`VERTEX_IMAGE_LOCATION`), each with one 4:3 1K JPEG, from Vertex AI Studio or
+  one `generateContent` call as the service account (a size check on 2026-11-17 got 1200 × 896
+  from both, in about 3 s and 15 s). It uses the Vertex AI API and the
   service account's Vertex AI User role already in place; no new API, key or vendor. If Model
   Garden asks to accept the model's terms, accept them there. The model page lists `global` only:
   the picture prompt (no personal data) is processed wherever Google serves it, like the recipe
@@ -429,7 +431,13 @@ them with `allowSandbox` only.
   "Recipe: …" policies; read the report in the Firestore console (`reports/`).
 - [ ] Decide the prices (`config/runtime.costs.recipeImage`, default 2 = twice a recipe, and
   `recipeImageSteps`, default 3, for the dish and up to `image.maxStepImages` = 2 step pictures) and leave
-  `prices.imageUsdPerImage` at its defaults unless Google's price changed.
+  `prices.imageUsdPerImage` at its defaults unless Google's price changed (USD 0.04 Flash-Lite
+  Image, 0.06 Nano Banana 2.1; a picture is reserved at the dearer of the two and booked at its
+  real cost from the token counts Vertex reports).
+- [ ] Watch `image_retry` and `image_fallback` in the logs after the first days (functions/README.md
+  "Logs to alert on"): many retries mean the shared Vertex capacity is short for the picture model
+  (ask for more quota or Provisioned Throughput); frequent fallbacks mean the primary is failing
+  and each picture costs more.
 - [ ] Privacy policy and store forms: "Report this recipe" stores the reason, the optional note,
   the account id and a copy of the reported recipe or menu (and its pictures) for 90 days; it is
   offered only on results from a pack.

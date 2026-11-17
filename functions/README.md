@@ -384,12 +384,18 @@ Every LLM call is priced before it is made and paid for by a credit:
   so that its worst case with the output judge on still fits the per-user ceiling below.
 - **Pictures.** A recipe with pictures also reserves the selected model's price for every picture
   it may get (1 for `"dish"`, 1 + `image.maxStepImages` for `"steps"`, 3 by default) and books the
-  pictures really asked; the price per picture is
-  (`prices.imageUsdPerImage["<provider>/<model>"]`, default USD 0.05 for Vertex
-  `gemini-nano-banana-2.1`, 0.02 for OpenAI `gpt-image-1-mini`) in the same transaction and against
-  the same ceilings; settle books it when the provider may have charged (a picture delivered, a
-  safety refusal after generation, a timeout, an undecodable answer, a 5xx) and books 0 when
-  nothing was sent or the request was refused (4xx, no key, a refused brief). A provider and
+  pictures really asked; the price per picture reserved is the dearer of the selected model and
+  its fallback model (`prices.imageUsdPerImage["<provider>/<model>"]`, defaults USD 0.04 for Vertex
+  `gemini-3.1-flash-lite-image`, 0.06 for its fallback `gemini-nano-banana-2.1`, 0.02 for OpenAI
+  `gpt-image-1-mini`), in the same transaction and against the same ceilings. Settle books each
+  attempt on the model that made it: a delivered picture at its real cost from the token counts
+  the provider reported (`IMAGE_TOKEN_PRICES` in `src/constants.ts`, code, changed with a deploy),
+  or at its model's flat price when the provider reported none or the model has no token rates;
+  a failed attempt at its model's flat price when the provider may have charged (a safety refusal
+  after generation, a timeout, an undecodable answer, a 5xx) and 0 when nothing was sent or the
+  request was refused (4xx, 429 included, no key, a refused brief). A 5xx retried, or a primary
+  failure followed by the fallback's picture, can book more than the one picture reserved; the
+  ceilings count what is booked. A provider and
   model without a price make no pictures at all (`recipeImage` leaves the table), so switching
   models can never spend unbooked money.
 - **Usage logs.** One `llm_call` log line per call: `uidHash` (sha256 of the uid with a fixed
@@ -511,13 +517,15 @@ checks the inequality for each kind.
 
 **A picture adds its price and 759 bytes** (November 2026, "Recipe pictures"): the brief's two
 instruction lines and its schema field, under USD 0.001, plus the picture's reserved price (USD
-0.05 by default). The largest recipe (every field at its maximum, 4-byte names, multi-choice
-config) is USD 0.0824 without a picture and 0.1331 with one (0.1060 / 0.1568 with the judge on).
-Measured, a recipe with a picture is about 0.02 + 0.034 = USD 0.054 against at least 2 × 0.106 net
-(the 100-pack after a 30 % store cut and 25 % VAT), so the default price of 2 covers it about four
-times typically and 1.4 times at the worst case with the judge on. Per user, at most three
-pictures a day start when every one is booked at its worst case (0.133 × 3 = 0.40), about eight
-at measured cost. Menus get no pictures, so the menu arithmetic below is unchanged.
+0.06 by default: the dearer of Flash-Lite Image, 0.04, and its fallback Nano Banana 2.1, 0.06). The
+largest recipe (every field at its maximum, 4-byte names, multi-choice config) is USD 0.0824 without
+a picture and 0.1431 with one (0.1060 / 0.1668 with the judge on). Measured (2026-11-17), a picture
+is USD 0.0336 on Flash-Lite Image (1,120 image tokens, no thinking) and 0.0415 on Nano Banana 2.1
+(1,120 image tokens plus about 1,037 thinking tokens at the text rate), so a recipe with a picture
+is about 0.02 + 0.034 = USD 0.054 against at least 2 × 0.106 net (the 100-pack after a 30 % store
+cut and 25 % VAT): the default price of 2 covers it about four times typically and 1.3 times at the
+worst case with the judge on. Per user, at most three pictures a day start when every one is
+booked at its worst case (0.143 × 3 = 0.43), about eight at measured cost. Menus get no pictures, so the menu arithmetic below is unchanged.
 
 - **Per user: USD 0.45 a day** (`perUserDailySpendMicroUsd: 450000`). A call starts only if
   today's booked spend + its worst case ≤ 0.45. 3-course menus: start at 0 → 0.11 → refused at
@@ -717,7 +725,9 @@ Create log-based alerts in Cloud Logging on `jsonPayload.message` (all are struc
 | `daily_cap_reached` | error | The first `DAILY_CAP` refusal of the UTC day (`dailyCap`, `generationUnits`, `day`); recorded as `stats/{day}.dailyCapReachedAt`. |
 | `welcome_threshold` | warning | The welcome grant that took the day's count to half of `welcome.perDay` (rounded up): `percent` 50, `grants`, `perDay`, `day`. Once per UTC day (`welcome_day_limit` is the other half). |
 | `generation_refused` | warning | `generateRecipe` refused for an account's daily limits: `reason` `USER_DAILY_LIMIT` (`why`: `generations` or `spend`) or `INFRA_FAILURE_LIMIT` (`why`: `infra_refunds`), `uidHash`. Sampled: 30 a minute per instance, with `suppressedSinceLast`. Counted by the log-based metric `recipe_generation_refused`. |
-| `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model`, `outcome` (`done`, `SAFETY`, `CONFIG`, `TIMEOUT`, `INFRA`, `DECODE`), `durationMs`, `inputBytes`, `bytes`, `width`, `height`, `estimatedMicroUsd`. Never the prompt or the brief. Alert on many `CONFIG` (a missing key or an unknown provider after a switch) or `INFRA`. |
+| `image_call` | info | One per picture asked of a provider: `uidHash`, `provider`, `model` (the one that made it, or the last asked), `outcome` (`done`, `SAFETY`, `CONFIG`, `TIMEOUT`, `INFRA`, `DECODE`, `NO_TIME`), `attempts`, `fallback`, `durationMs`, `inputBytes`, `passedThrough`, `bytes`, `width`, `height`, `estimatedMicroUsd` (every attempt booked). Never the prompt or the brief. Alert on many `CONFIG` (a missing key or an unknown provider after a switch) or `INFRA`. |
+| `image_retry` | info | Informational: a picture call was refused for capacity and is asked again (quota pressure): `uidHash`, `provider`, `model`, `picture` (`dish` / `step`), `attempt` (the one about to be made), `reason` (`QUOTA` for 429, `SERVER` for 5xx), `waitMs`. A few a day are normal on Vertex's shared capacity; many in a row point at quota to raise or Provisioned Throughput. |
+| `image_fallback` | info | **Worth watching**: the selected model could not make a picture and the fallback model was asked once: `uidHash`, `provider`, `model`, `fallbackModel`, `picture`, `reason` (`QUOTA`, `SERVER`, `NOT_FOUND`, `REFUSED_REQUEST`, `TIMEOUT`, `DECODE`, `INFRA`), `outcome` (`done` or the failure code). Frequent fallbacks mean the primary is failing, and each such picture costs more (Nano Banana 2.1 about USD 0.0415 against 0.0336) and takes about 15 s. Never the prompt or the brief. |
 | `recipe_reported` | warning | Someone used "Report this recipe" ("Reports"): `report` (a hash of the report id; the document is `reports/<reportId>`), `reason`, `kind` (null without a snapshot), `snapshot` (whether the generation was still kept), `hasNote`, `pictures`, `imageLevel`, `platform`, `appVersion`, `language`, `uidHash`. Never the note or the recipe. **Alert on any** (or on more than a few an hour), then read the report in the console. |
 | `report_day_limit` | error | The first report of the UTC day refused at `reports.perDay` (`day`, `perDay`, `reports`); once a day (`stats/{day}.reportCapReachedAt`). Alert on it: someone may be flooding reports, or the cap is too low. |
 | `image_brief_rejected` | warning | The text model's picture brief failed its check (`rule`); the recipe was delivered without a picture and its share given back. `uidHash`, `rule` only. Many `BRIEF_TERMS` / `URL` / `LEAK` from one account point at injection attempts. |
@@ -1069,27 +1079,70 @@ A single recipe written by the server can come with one generated picture of the
 
 **Flow** (one call, one reservation, one App Check token): validate (`image` only on a recipe) →
 reserve `costs.recipeImage` / `recipeImageSteps` and the text's worst case plus every picture's price, with a deadline
-`IMAGE.reservationExtraMs` (45 s) longer → the text model, whose answer also carries an
+`IMAGE.reservationExtraMs` longer (55 s for `"dish"`, 105 s for `"steps"`) → the text model, whose answer also carries an
 `imageBrief` (and, for `"steps"`, `stepBriefs`: `{step, brief}`, at most `maxStepImages`) → every
 output rule, the quality gate, the judge (which sees the briefs) → `checkImageBrief` /
 `checkStepBriefs` (a refused step brief, a step number out of range, a repeat or one past the
-maximum is left out) → the picture model, every picture at once, each with the fixed template
-around its brief, aborted after `IMAGE.abortMs` (35 s); without a dish brief no step picture is
-asked, and when the dish's picture fails the step pictures made are not delivered (their spend
-stays booked) → re-encode, one picture at a time per instance
-to a JPEG of at most 768 px, quality 80, no metadata (typically 60–150 KB; at most 600,000 bytes)
-→ settle: each picture into its own document, `generations/{id}/recipeImages/main` and
+maximum is left out) → the dish's picture, with the fixed template around its brief; only when it
+was made, the step pictures, at most two at once (`IMAGE.maxParallel`); without a dish brief or a
+dish picture no step picture is asked → each picture delivered (below) → settle: each picture into its own document, `generations/{id}/recipeImages/main` and
 `step-<i>` (one picture per document, far below the 1 MiB limit), in the same transaction; the
-response carries them as base64 (three pictures are under 1 MB of response). A generation the sweeper settled meanwhile gets no picture (no
+response carries them as base64. A generation the sweeper settled meanwhile gets no picture (no
 money spent on a discarded answer). `getGeneration` and a same-id retry read the stored picture
 back, so a lost answer is recovered with its picture for as long as the generation is kept.
 
+**Shape and size**: every provider is asked for a 4:3 picture (`IMAGE.aspectRatio`, the apps'
+frame) at its 1K size: Vertex returns 1200 × 896 (Flash-Lite Image accepts only 1K; Nano Banana
+2.1 only 1K, 2K and 4K, so no smaller and cheaper size exists), OpenAI its nearest landscape size,
+1536 × 1024 (1024 × 768 for the models that take any size). About 1,200 px across is what a phone
+needs for a sharp full-width picture. Delivery (`adapters/imageNormalize.ts`):
+
+- **Passed through untouched** when the provider's answer is a well-formed JPEG (its markers read
+  without decoding: an 8-bit baseline or progressive frame of 1 or 3 components, EOI at the end) of
+  at most 1,280 px on its longer side and 400,000 bytes (`IMAGE.passThroughMaxEdge`,
+  `passThroughMaxBytes`). Vertex's picture takes this path (about 200–260 KB at its JPEG quality
+  85) and sharp is never loaded for it. **Its embedded metadata is kept, on purpose**: Google's
+  AI-provenance marks (Content Credentials / C2PA, alongside SynthID in the pixels) travel with the
+  picture; nothing of the person is in it (the provider never received anything of theirs).
+- **Re-encoded** otherwise (another format, larger, heavier, CMYK, bytes after the end): decoded and
+  written again as a JPEG of at most 1,200 px (`IMAGE.maxEdge`), quality 80, sRGB, no metadata, one
+  picture at a time per instance (at most 600,000 bytes); OpenAI's 1536 × 1024 becomes 1200 × 800.
+- Refused (`DECODE`): anything that is not a JPEG, PNG or WebP, over 8 MiB, over 1,600 × 1,600
+  pixels, or that cannot be decoded.
+
+`width` and `height` in the response are the delivered picture's own. The arithmetic: a picture
+is at most 600,000 bytes (400,000 passed through), 800,000 base64 characters, so three in one
+response are at most 2.4 MB (typically about 0.8 MB), far below the callable's response limit,
+and each Firestore document is at most 600,000 bytes plus a few fields, under 60 % of its 1 MiB.
+
+**Retries, the fallback model and the time** (`IMAGE` in `src/constants.ts`,
+`makeRecipeImage` in `src/core/recipeImage.ts`). The Vertex image models have no fixed quota
+(dynamic shared capacity): four simultaneous calls gave three 429 RESOURCE_EXHAUSTED on
+2026-11-17, so a recipe never sends more than two at once, and:
+
+1. Each attempt is aborted after 35 s (`abortMs`; less when a fallback must keep its 20 s). A 429 or
+   a 500/502/503/504 is retried after a jittered pause (2 s × 2^(n−1) × 0.5–1.5: about 2, 4, 8 s), at
+   most 4 attempts (`maxAttempts`), and only while 20 s (`minAttemptMs`; 40 s with a fallback
+   configured) is left of the picture's budget after the pause. Each retry logs `image_retry`.
+2. When the selected model still could not make it for a reason about the model or capacity (an
+   `INFRA` failure: quota still exhausted, a server error, a model not found or not served, a
+   refused setting; a timeout; an answer that could not be decoded) and 20 s is left, the
+   **fallback model** (`image.fallbackModel`, same provider) is asked **once**, and
+   `image_fallback` is logged. Never after a `SAFETY` refusal (the same brief is not shopped
+   around to another model) or a `CONFIG` failure. A picture the fallback made is delivered like
+   any other and booked at its own cost; the reservation already covers the dearer model.
+3. A picture that still failed follows the give-back rules ("How the money works").
+
+The budgets run from the start of the pictures: the dish's picture has 50 s
+(`budgetMs.dish`), the step pictures until 100 s (`budgetMs.steps`). Text 40 s + judge 12 s +
+dish 50 s = 102 s inside the 115 s reservation (60 + 55) for `"dish"`; 40 + 12 + 100 = 152 s
+inside the 165 s reservation (60 + 105) and the 180 s function timeout for `"steps"`; the apps
+wait 130 s and 190 s. Typically: Flash-Lite Image about 3 s a picture (a recipe with two step
+pictures about 6 s more than without); a 429 retried once adds 2–6 s; the fallback Nano Banana 2.1
+about 15 s.
+
 **Money**: "How the money works" (the share given back) and "Spend control" (the price reserved
 and booked). `IMAGE_UNAVAILABLE` refuses a level before anything is reserved while it is off.
-
-**Timings**: text 40 s + judge 12 s + picture 35 s stays inside the 105 s reservation and the
-180 s function timeout. A recipe with a picture takes ~10–25 s longer; the apps' callable timeout
-for it should be at least 120 s (the current Android recipe timeout is 75 s).
 
 **Turning pictures off**: `config/runtime.costs.recipeImage: 0`, or `config/runtime.image.provider:
 "off"` (both levels); only step pictures: `costs.recipeImageSteps: 0` or `image.maxStepImages: 0`. Either takes the key out of the table within 30 s, the apps hide the option, and a request
@@ -1106,14 +1159,18 @@ never names a provider. Whatever comes back is normalised to the same JPEG.
 
 | provider | adapter | model (default first) | credentials | price default |
 |---|---|---|---|---|
-| `vertex` | `VertexImageGenerator`: `@google/genai` `generateContent`, `responseModalities: [IMAGE]`, 1:1, `1K`, JPEG, `personGeneration: ALLOW_NONE`, safety settings | `gemini-nano-banana-2.1` (location `global` only); `gemini-3.1-flash-lite-image`, `gemini-3.1-flash-image`, `gemini-3-pro-image` also listed by Google | the functions' service account (Vertex AI User), as for the recipe text | USD 0.05 |
-| `openai` | `OpenAIImageGenerator`: `POST https://api.openai.com/v1/images/generations`, `n: 1`, `1024x1024`, `quality: "medium"`, `output_format: "jpeg"`, `output_compression: 85`, `moderation: "auto"` | `gpt-image-1-mini`; `gpt-image-2`, `gpt-image-2.5-flare` etc. need a price first | API key in Secret Manager (`OPENAI_API_KEY`), read at run time | USD 0.02 |
+| `vertex` | `VertexImageGenerator`: `@google/genai` `generateContent`, `responseModalities: [IMAGE]`, `4:3`, `1K`, JPEG quality 85, `personGeneration: ALLOW_NONE`, safety settings; token counts from `usageMetadata` | `gemini-3.1-flash-lite-image`, fallback `gemini-nano-banana-2.1` (both location `global` only, the same request shape); `gemini-3.1-flash-image`, `gemini-3-pro-image` also listed by Google | the functions' service account (Vertex AI User), as for the recipe text | USD 0.04 / 0.06 |
+| `openai` | `OpenAIImageGenerator`: `POST https://api.openai.com/v1/images/generations`, `n: 1`, `1536x1024` (`1024x768` for the models that take any size), `quality: "medium"`, `output_format: "jpeg"`, `output_compression: 85`, `moderation: "auto"` | `gpt-image-1-mini`; `gpt-image-2`, `gpt-image-2.5-flare` etc. need a price first | API key in Secret Manager (`OPENAI_API_KEY`), read at run time | USD 0.02 |
 | `off` | none | | | no pictures |
 
 To switch **model** at the same provider, without a deploy: put its price in
-`config/runtime.prices.imageUsdPerImage` (e.g. `{"vertex/gemini-3.1-flash-image": 0.08}`) and
-then set `config/runtime.image.model`. Order matters: a model without a price turns pictures off
-until it has one. To switch **provider**: Vertex needs nothing new. OpenAI needs its key once
+`config/runtime.prices.imageUsdPerImage` (e.g. `{"vertex/gemini-3.1-flash-image": 0.08}`; Flash-Lite
+Image and Nano Banana 2.1 already have default prices) and then set `config/runtime.image.model`.
+Order matters: a model without a price turns pictures off until it has one. The fallback is
+`config/runtime.image.fallbackModel` (default `gemini-nano-banana-2.1`; `""` or null for none; a
+fallback without a price, or the same as `model`, is dropped, so switching `provider` to OpenAI
+leaves no fallback unless one is named). To make Nano Banana 2.1 the model again:
+`{model: "gemini-nano-banana-2.1", fallbackModel: "gemini-3.1-flash-lite-image"}` (or `""`). To switch **provider**: Vertex needs nothing new. OpenAI needs its key once
 (docs/recipe-setup.md step 12: `npx firebase functions:secrets:set OPENAI_API_KEY` and Secret
 Accessor for the service account on that secret only); then `config/runtime.image: {provider:
 "openai", model: "gpt-image-1-mini"}`, no deploy. The key is not bound with `defineSecret` (that
@@ -1121,8 +1178,9 @@ would require the secret at every deploy, whichever provider is in use): `Secret
 from Secret Manager on first use and keeps it in memory 10 minutes, so a rotated key is picked up
 within 10 minutes. A missing or refused key is a `CONFIG` picture failure: recipes are delivered
 without pictures and their share given back, and `image_call` lines say `CONFIG`. The
-parameters `IMAGE_PROVIDER` / `IMAGE_MODEL` only set the defaults when `config/runtime.image`
-says nothing. A third provider is a new adapter class and a line in `imageRouter`
+parameters `IMAGE_PROVIDER` / `IMAGE_MODEL` / `IMAGE_FALLBACK_MODEL` only set the defaults when
+`config/runtime.image` says nothing (`.env.bestbefore-f9ee1` sets Flash-Lite Image and Nano Banana
+2.1). A third provider is a new adapter class and a line in `imageRouter`
 (`src/index.ts`), plus a price: nothing in `src/core/`.
 
 **What a new provider means for privacy.** The provider becomes a data processor of the picture
@@ -1139,7 +1197,8 @@ recipe text.
 **Dependency**: `sharp` (libvips) decodes and re-encodes the pictures. It ships prebuilt binaries
 for linux-x64 glibc, which Cloud Functions 2nd gen (Cloud Run, Node 24) uses, installed by
 `npm ci` without an install script; it adds about 18 MB to the deployed source's
-`node_modules` and is loaded on the first picture only. A 1K picture is about 4 MB decoded, with
+`node_modules` and is loaded on the first picture that needs re-encoding only (never for a
+passed-through Vertex picture). A 1K picture is about 4 MB decoded, with
 sharp's cache off and one thread, inside the 256 MiB instance; watch the function's memory after
 the first deploy and raise `generateRecipe` to 512 MiB only if it is short.
 
