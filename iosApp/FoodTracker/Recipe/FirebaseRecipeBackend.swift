@@ -15,14 +15,16 @@ struct FirebaseRecipeBackend: RecipeBackend {
 
     func generate(_ request: GenerateRequest) async throws -> GenerateResponse {
         // A recipe takes up to ~40 s and a menu up to ~2 min on the server; a recipe with pictures
-        // up to ~80 s for the dish (at least 120 s, CONTRACT.md) and longer with steps, within the
-        // function's own 180 s. The pictures' base64 is decoded as the response is read, here,
+        // up to ~110 s for the dish and ~160 s with steps when the picture model is busy and retried
+        // (reservations 115 s / 165 s; CONTRACT.md asks at least 130 s / 190 s), within the
+        // function's own 180 s. A call cut off is asked after with `getGeneration`. The pictures' base64 is decoded as the response is read, here,
         // off the main actor (`WireRecipePicture`).
         try await call("generateRecipe", request, timeout: Self.timeout(for: request))
     }
 
     /// The callable's timeout for `request`: a menu or a recipe with step pictures 190 s, one
-    /// with the dish's picture 130 s, a plain recipe 70 s.
+    /// with the dish's picture 130 s (each past the server's reservation, 165 s / 115 s), a plain
+    /// recipe 70 s.
     static func timeout(for request: GenerateRequest) -> TimeInterval {
         if request.kind == .menu { return 190 }
         switch request.image {

@@ -1618,8 +1618,9 @@ struct RecipePictureNotice: Equatable, Sendable {
 /// The pictures' pure rules, one rule on both platforms (Android: `RecipePictures.kt`, checked
 /// by `RecipeConfigCheck` with the same cases).
 enum RecipePictures {
-    /// The longest edge and the most bytes a reply's picture may have (the contract says 768 px and
-    /// 600,000 bytes; a little room on the edge, nothing near what could hurt memory). Android:
+    /// The longest edge and the most bytes a reply's picture may have (the contract says at most
+    /// 1,280 px on the longer side, usually 1200 × 896 in 4:3, and 600,000 bytes; a lot of room on
+    /// the edge, nothing near what could hurt memory, and no shape required). Android:
     /// `MAX_PICTURE_EDGE`, `MAX_PICTURE_BYTES`.
     static let maxEdge = 4096
     static let maxBytes = 600_000

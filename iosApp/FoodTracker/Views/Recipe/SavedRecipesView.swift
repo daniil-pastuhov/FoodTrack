@@ -98,13 +98,8 @@ struct SavedRecipesView: View {
                         .padding(.horizontal, -LarderSpace.s2)
                 }
                 // A recipe saved with its dish picture shows it, cropped square; the others their icon.
-                if let thumbnail = entry.thumbnail.flatMap(UIImage.init(data:)) {
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 44, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: LarderRadius.md))
-                        .accessibilityHidden(true)
+                if let thumbnail = entry.thumbnail {
+                    SavedRecipeThumbnail(id: entry.id, data: thumbnail)
                 } else {
                     LarderIcon(entry.kind == .menu ? .calendarRange : .utensils, size: .large)
                         .foregroundStyle(LarderColor.onSurfaceVariant)
@@ -224,5 +219,52 @@ struct SavedRecipesView: View {
         let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
         formatter.setLocalizedDateFormatFromTemplate(sameYear ? "dMMM" : "dMMMy")
         return formatter.string(from: date)
+    }
+}
+
+/// A Saved row's picture: the stored square thumbnail (`RecipePictureThumbnail`, 240 px, a few KB),
+/// decoded off the main actor and kept in a small cache, so scrolling the list never decodes a
+/// JPEG on the main thread and a row scrolled back shows at once. While it is read, the tile's
+/// plain surface of the same size, so nothing moves.
+private struct SavedRecipeThumbnail: View {
+    let id: String
+    let data: Data
+
+    @State private var image: UIImage?
+
+    private static let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 200
+        return cache
+    }()
+
+    private var key: NSString { "\(id)#\(data.count)" as NSString }
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: LarderRadius.md)
+            .fill(LarderColor.surfaceContainer)
+            .frame(width: 44, height: 44)
+            .overlay {
+                if let shown = image ?? Self.cache.object(forKey: key) {
+                    Image(uiImage: shown)
+                        .resizable()
+                        .scaledToFill()
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: LarderRadius.md))
+            .accessibilityHidden(true)
+            .task(id: key) {
+                if let cached = Self.cache.object(forKey: key) {
+                    image = cached
+                    return
+                }
+                let data = data
+                let decoded = await Task.detached(priority: .userInitiated) {
+                    UIImage(data: data)?.preparingForDisplay()
+                }.value
+                guard let decoded, !Task.isCancelled else { return }
+                Self.cache.setObject(decoded, forKey: key)
+                image = decoded
+            }
     }
 }

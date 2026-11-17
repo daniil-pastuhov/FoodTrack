@@ -10,21 +10,23 @@ import UniformTypeIdentifiers
 
 // MARK: Picture bytes
 
-/// The Saved row's thumbnail: the dish picture cropped square and small, drawn with ImageIO only,
-/// so it runs off the main actor. Never logs anything about the picture.
+/// The Saved row's thumbnail: the dish picture (4:3 from the server, any shape read) cropped to a
+/// centred square of `edge` pixels, scaled down while it is decoded (ImageIO's thumbnail, so the
+/// full picture is never decoded) and drawn with ImageIO only, so it runs off the main actor.
+/// Never logs anything about the picture.
 enum RecipePictureThumbnail {
-    static let side = 160
+    /// The square's pixels: the row's 44 pt tile at 3x with room to spare.
+    static let edge = 240
 
     nonisolated static func make(from data: Data) -> Data? {
-        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
-        let options: [CFString: Any] = [
-            kCGImageSourceCreateThumbnailFromImageAlways: true,
-            kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: side * 2,
-        ]
-        guard let scaled = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        let edge = min(scaled.width, scaled.height)
-        let square = CGRect(x: (scaled.width - edge) / 2, y: (scaled.height - edge) / 2, width: edge, height: edge)
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let size = RecipePictureDecoder.pixelSize(of: source), size.width > 0, size.height > 0 else { return nil }
+        // The short side scaled to `edge` (never up), so the square crop keeps all of it.
+        let long = max(size.width, size.height), short = min(size.width, size.height)
+        let maxPixel = min(long, (CGFloat(edge) * long / short).rounded(.up))
+        guard let scaled = RecipePictureDecoder.thumbnail(source, maxPixel: maxPixel) else { return nil }
+        let side = min(scaled.width, scaled.height)
+        let square = CGRect(x: (scaled.width - side) / 2, y: (scaled.height - side) / 2, width: side, height: side)
         guard let cropped = scaled.cropping(to: square) else { return nil }
         return jpeg(cropped, quality: 0.8)
     }
@@ -38,41 +40,80 @@ enum RecipePictureThumbnail {
     }
 }
 
+/// Decoding a picture at the size it is shown, never larger: ImageIO reads the JPEG straight to a
+/// bitmap of at most `maxPixel` on its longer side (applying any orientation it carries), so a
+/// 1200 px picture shown at 390 pt never sits in memory at full size. Off the main actor.
+enum RecipePictureDecoder {
+    nonisolated static func pixelSize(of source: CGImageSource) -> CGSize? {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+              let width = properties[kCGImagePropertyPixelWidth] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight] as? Int else { return nil }
+        // Orientations 5–8 turn the picture a quarter: its shown width is the stored height.
+        let orientation = properties[kCGImagePropertyOrientation] as? Int ?? 1
+        return orientation >= 5 ? CGSize(width: height, height: width) : CGSize(width: width, height: height)
+    }
+
+    nonisolated static func thumbnail(_ source: CGImageSource, maxPixel: CGFloat) -> CGImage? {
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, Int(maxPixel.rounded(.up))),
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    }
+
+    /// The picture decoded to fill a frame of `frame` pixels (cropped to fill, so the scale is the
+    /// larger of the two sides' ratios): a 4:3 picture in the 4:3 frame needs the frame's width,
+    /// a 3:2 one a little more for the height. Never scaled up.
+    nonisolated static func decode(_ data: Data, filling frame: CGSize) -> CGImage? {
+        guard frame.width > 0, frame.height > 0,
+              let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let size = pixelSize(of: source), size.width > 0, size.height > 0 else { return nil }
+        let scale = min(1, max(frame.width / size.width, frame.height / size.height))
+        return thumbnail(source, maxPixel: max(size.width, size.height) * scale)
+    }
+}
+
 #if DEBUG
 /// A generated stand-in picture for demo launches (`-demoRecipePictures`): a plate on a table,
 /// tinted by `seed`. Nothing is fetched.
 enum RecipePictureSample {
-    static let side = 768
+    /// The server's usual shape: 4:3 landscape, 1200 × 896 (CONTRACT.md "Recipe picture").
+    static let width = 1200
+    static let height = 896
 
     static func make(seed: Int) -> Data? {
-        let size = side
         guard let context = CGContext(
-            data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         ) else { return nil }
         let hues: [(CGFloat, CGFloat, CGFloat)] = [(0.86, 0.45, 0.30), (0.35, 0.62, 0.32), (0.93, 0.76, 0.35), (0.55, 0.40, 0.65)]
         let tint = hues[abs(seed) % hues.count]
-        let s = CGFloat(size)
+        let w = CGFloat(width), h = CGFloat(height)
+        // The plate is sized by the short side and centred, so it stays round in the wide frame.
+        let s = h, cx = w / 2, cy = h / 2
+        func circle(_ diameter: CGFloat) -> CGRect { CGRect(x: cx - diameter / 2, y: cy - diameter / 2, width: diameter, height: diameter) }
         // Table.
         context.setFillColor(red: 0.55, green: 0.42, blue: 0.32, alpha: 1)
-        context.fill(CGRect(x: 0, y: 0, width: s, height: s))
+        context.fill(CGRect(x: 0, y: 0, width: w, height: h))
         // Plate and rim.
         context.setFillColor(red: 0.96, green: 0.95, blue: 0.92, alpha: 1)
-        context.fillEllipse(in: CGRect(x: s * 0.12, y: s * 0.12, width: s * 0.76, height: s * 0.76))
+        context.fillEllipse(in: circle(s * 0.76))
         context.setFillColor(red: 0.90, green: 0.89, blue: 0.86, alpha: 1)
-        context.fillEllipse(in: CGRect(x: s * 0.2, y: s * 0.2, width: s * 0.6, height: s * 0.6))
+        context.fillEllipse(in: circle(s * 0.6))
         // Food.
         for i in 0..<7 {
             let angle = CGFloat(i + seed) * 0.9
             let r = s * 0.13
-            let x = s / 2 + cos(angle) * s * 0.12 - r / 2
-            let y = s / 2 + sin(angle) * s * 0.12 - r / 2
+            let x = cx + cos(angle) * s * 0.12 - r / 2
+            let y = cy + sin(angle) * s * 0.12 - r / 2
             let shade = 0.75 + 0.05 * CGFloat(i % 3)
             context.setFillColor(red: tint.0 * shade, green: tint.1 * shade, blue: tint.2 * shade, alpha: 1)
             context.fillEllipse(in: CGRect(x: x, y: y, width: r * 1.6, height: r))
         }
         context.setFillColor(red: 0.30, green: 0.55, blue: 0.25, alpha: 1)
-        context.fillEllipse(in: CGRect(x: s * 0.46, y: s * 0.44, width: s * 0.09, height: s * 0.05))
+        context.fillEllipse(in: CGRect(x: cx - s * 0.04, y: cy - s * 0.06, width: s * 0.09, height: s * 0.05))
         guard let image = context.makeImage() else { return nil }
         return RecipePictureThumbnail.jpeg(image, quality: 0.8)
     }
@@ -81,21 +122,38 @@ enum RecipePictureSample {
 
 // MARK: Pictures on a result
 
-/// One picture of a result at the text's width, 4:3, with the card radius. While its bytes are
-/// read, a plain surface of the same size, so nothing moves when it appears (a cross-fade; none
-/// with reduced motion). Not tappable. Read aloud as `label` ("Picture of …, made by AI").
+/// One picture of a result (the dish's or a step's) at the text's width in the design's 4:3 frame,
+/// with the card radius. The frame's height comes from its width alone, so it is reserved before
+/// the bytes are read and nothing moves when the picture appears (a cross-fade; none with reduced
+/// motion). The picture fills it, cropped and centred: a 4:3 one exactly, a 3:2 or a square one
+/// trimmed at the sides or top, never letterboxed or stretched. It is decoded off the main actor at
+/// the frame's pixel size (`RecipePictureDecoder`), never as the full bitmap. Not tappable. Read
+/// aloud as `label` ("Picture of …, made by AI").
 struct RecipePictureFrame: View {
     let data: Data?
     let label: String
 
+    /// The frame's shape (docs/design/src/pages/pictures.html, `.pic-img`).
+    static let aspect: CGFloat = 4.0 / 3.0
+
     @State private var image: UIImage?
+    @State private var width: CGFloat = 0
+    @Environment(\.displayScale) private var displayScale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// What the picture is decoded for: the data and the frame's pixel width (whole points, so
+    /// a sub-point layout change doesn't decode it again).
+    private struct Target: Equatable {
+        let data: Data?
+        let pixelWidth: Int
+    }
 
     var body: some View {
         Rectangle()
             .fill(LarderColor.surfaceContainer)
-            .aspectRatio(4.0 / 3.0, contentMode: .fit)
+            .aspectRatio(Self.aspect, contentMode: .fit)
             .frame(maxWidth: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             .overlay {
                 if let image {
                     Image(uiImage: image)
@@ -108,19 +166,28 @@ struct RecipePictureFrame: View {
             .accessibilityElement()
             .accessibilityLabel(label)
             .accessibilityAddTraits(.isImage)
-            .task(id: data) {
+            .task(id: Target(data: data, pixelWidth: Int((width * displayScale).rounded(.up)))) {
                 guard let data else {
                     image = nil
                     return
                 }
-                let decoded = await Self.decode(data)
-                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { image = decoded }
+                let pixels = CGSize(width: width * displayScale, height: width * displayScale / Self.aspect)
+                guard pixels.width >= 1 else { return }
+                // A wider frame (rotation, iPad split view) decodes again; the old one stays meanwhile.
+                guard let decoded = await Self.decode(data, filling: pixels), !Task.isCancelled else { return }
+                if image == nil {
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.25)) { image = decoded }
+                } else {
+                    image = decoded
+                }
             }
     }
 
-    /// Decoded and prepared off the main actor, so scrolling never waits on a JPEG.
-    nonisolated static func decode(_ data: Data) async -> UIImage? {
-        await Task.detached(priority: .userInitiated) { UIImage(data: data)?.preparingForDisplay() }.value
+    /// Decoded at the frame's size off the main actor, so scrolling never waits on a JPEG.
+    nonisolated static func decode(_ data: Data, filling pixels: CGSize) async -> UIImage? {
+        await Task.detached(priority: .userInitiated) {
+            RecipePictureDecoder.decode(data, filling: pixels).map { UIImage(cgImage: $0) }
+        }.value
     }
 }
 

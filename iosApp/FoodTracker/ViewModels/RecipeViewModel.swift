@@ -1084,7 +1084,9 @@ final class RecipeViewModel: ObservableObject {
     /// nil when the server never got it.
     private func settle(_ wire: GenerateRequest, start: Bool, mayStart: Bool) async throws -> GenerateResponse? {
         let backend = credits.backend
-        // A recipe with pictures takes up to ~80 s, with steps longer: asked after as long as a menu.
+        // A recipe with pictures takes up to ~110 s for the dish and ~160 s with steps when the
+        // picture model is busy (server reservations 115 s / 165 s): asked after as long as a menu,
+        // 270 s, well past either.
         let deadline = Date().addingTimeInterval(wire.kind == .menu || wire.image != nil ? 270 : 150)
         var sendsRequest = start
         // An older server without `getGeneration`: re-sending is how it is asked.
@@ -1684,8 +1686,8 @@ final class RecipeViewModel: ObservableObject {
         let dish = kind == "failed" ? nil : RecipePictureSample.make(seed: 0)
         let stepIndices = kind == "steps" || kind == "stepsFailed" || kind == "failed" ? (kind == "stepsFailed" ? [1] : [1, 3]) : []
         let steps = stepIndices.compactMap { index in RecipePictureSample.make(seed: index).map { (index, $0) } }
-        recipe.picture = dish.map { _ in RecipePictureSize(width: RecipePictureSample.side, height: RecipePictureSample.side) }
-        recipe.stepPictures = steps.map { RecipeStepPictureSize(step: $0.0, width: RecipePictureSample.side, height: RecipePictureSample.side) }
+        recipe.picture = dish.map { _ in RecipePictureSize(width: RecipePictureSample.width, height: RecipePictureSample.height) }
+        recipe.stepPictures = steps.map { RecipeStepPictureSize(step: $0.0, width: RecipePictureSample.width, height: RecipePictureSample.height) }
         let pictures = SavedRecipePictures(dish: dish, steps: Dictionary(uniqueKeysWithValues: steps))
         let entry = SavedRecipe(content: .recipe(recipe), thumbnail: dish.flatMap(RecipePictureThumbnail.make(from:)), pictures: pictures.isEmpty ? nil : pictures)
         savedStore.save(entry)
